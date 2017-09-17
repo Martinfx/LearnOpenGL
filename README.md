@@ -7,3 +7,9 @@ Simple example for OpenGL on Linux
 
 ### How to compile projects
 Compile only Linux, projects are in .pro for QTCreator
+
+### Dependencies 
+  * GLFW 
+  * GLEW 
+
+sudo apt-get install libglew-dev libglfw3-dev
