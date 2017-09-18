@@ -102,6 +102,28 @@ public:
         glfwTerminate();
     }
 
+    void updateFpsCounter()
+    {
+        static double prevSecond = glfwGetTime();
+        static int frameCounter = 0;
+
+        double currentSecond = glfwGetTime();
+        double elapsedSecond = currentSecond - prevSecond;
+
+        if(elapsedSecond > 0.25)
+        {
+            prevSecond = currentSecond;
+            double fps = static_cast<double>(frameCounter) / elapsedSecond;
+
+            char buffer[256];
+            sprintf(buffer, "fps: %.2f", fps);
+            glfwSetWindowTitle(m_window, buffer);
+            frameCounter = 0;
+        }
+
+        frameCounter++;
+    }
+
 private:
 
     void createWindow(int width, int height, std::string name)
