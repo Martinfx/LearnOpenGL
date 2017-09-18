@@ -41,6 +41,8 @@ public:
     // Window width and height, name window
     int window_height;
     int window_width;
+
+    // Main window name
     std::string name_window;
 };
 
@@ -134,10 +136,10 @@ int main(void)
     glShaderSource(fs, 1, &shader_frag, NULL);
     glCompileShader(fs);
 
-    GLuint shader_programme = glCreateProgram();
-    glAttachShader(shader_programme, fs);
-    glAttachShader(shader_programme, vs);
-    glLinkProgram(shader_programme);
+    GLuint shaderProgram = glCreateProgram();
+    glAttachShader(shaderProgram, fs);
+    glAttachShader(shaderProgram, vs);
+    glLinkProgram(shaderProgram);
 
     GLuint vbo = 0;
     glGenBuffers(1, &vbo);
@@ -157,7 +159,7 @@ int main(void)
         // wipe the drawing surface clear
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        glUseProgram(shader_programme);
+        glUseProgram(shaderProgram);
 
         glBindVertexArray(vao);
         // draw points 0-3 from the currently bound VAO with current in-use shader
