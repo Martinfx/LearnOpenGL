@@ -9,7 +9,7 @@ float vertices[] = {
    -0.5f, -0.5f,  0.0f
 };
 
-const char* shader_vert =
+const char* shaderVertex =
 "#version 330 core\n"
 "layout (location = 0) in vec3 pos;\n"
 "void main()\n"
@@ -17,7 +17,7 @@ const char* shader_vert =
 "  gl_Position = vec4(pos.x, pos.y, pos.z, 1.0);\n"
 "}\0";
 
-const char* shader_frag =
+const char* shaderFragment =
 "#version 330 core\n"
 "out vec4 FragColor;\n"
 "void main()\n"
@@ -129,11 +129,11 @@ int main(void)
     glewInit();
 
     GLuint vs = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vs, 1, &shader_vert, NULL);
+    glShaderSource(vs, 1, &shaderVertex, NULL);
     glCompileShader(vs);
 
     GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fs, 1, &shader_frag, NULL);
+    glShaderSource(fs, 1, &shaderFragment, NULL);
     glCompileShader(fs);
 
     GLuint shaderProgram = glCreateProgram();
