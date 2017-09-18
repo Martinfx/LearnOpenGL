@@ -1,5 +1,4 @@
-#include <stdlib.h>
-#include <stdio.h>
+#include <iostream>
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -26,32 +25,82 @@ const char* shader_frag =
 "   FragColor = vec4(1.0f, 0.9f, 0.2f, 1.0f);\n"
 "}\n\0";
 
-//const char *shader_frag = "../shader.frag";
-//const char *shader_vert = "../shader.vert";
+class GLWindow
+{
+public:
+
+    GLWindow() : m_major(3), m_minor(3), m_initialize(true), m_window(NULL)
+    {
+        if(!glfwInit())
+        {
+            std::cout << "Failed initilize GLFW library!" << std::endl;
+            m_initialize = false;
+        }
+    }
+
+    ~GLWindow() {}
+
+    void setOpenGLversion(int major, int minor)
+    {
+        m_major = major;
+        m_minor = minor;
+
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, m_major);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, m_minor);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    }
+
+    void createWindow(int x , int y, std::string name)
+    {
+        m_window = glfwCreateWindow(x, y, name.c_str(), NULL, NULL);
+        if(!m_window)
+        {
+            std::cout << "Failed create GLFW window!" << std::endl;
+            glfwTerminate();
+        }
+
+        /* Make the window's context current */
+        glfwMakeContextCurrent(m_window);
+    }
+
+    int checkCloseWindow()
+    {
+        return glfwWindowShouldClose(m_window);
+    }
+
+    void checkPoolEvents()
+    {
+        // update other events like input handling
+        glfwPollEvents();
+    }
+
+    void checkSwqpBuffers()
+    {
+        // put the stuff we've been drawing onto the display
+        glfwSwapBuffers(m_window);
+    }
+
+    void destroyWindow()
+    {
+         glfwTerminate();
+    }
+
+private:
+
+    int m_major;
+    int m_minor;
+
+    bool m_initialize;
+    GLFWwindow *m_window;
+};
+
 
 int main(void)
 {
-    /* Initialize the library */
-    if (!glfwInit())
-    {
-        return -1;
 
-    }
-
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-    /* Create a windowed mode window and its OpenGL context */
-    GLFWwindow* window = glfwCreateWindow(640, 480, "Hello World", NULL, NULL);
-    if (!window)
-    {
-        glfwTerminate();
-        return -1;
-    }
-
-    /* Make the window's context current */
-    glfwMakeContextCurrent(window);
+    GLWindow w;
+    w.setOpenGLversion(3, 3);
+    w.createWindow(640, 480, "Hello OpenGL");
 
     // start GLEW extension handler
     glewExperimental = GL_TRUE;
@@ -82,7 +131,7 @@ int main(void)
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 
     /* Loop until the user closes the window */
-    while (!glfwWindowShouldClose(window))
+    while (!w.checkCloseWindow())
     {
         // wipe the drawing surface clear
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -92,15 +141,15 @@ int main(void)
         glBindVertexArray(vao);
         // draw points 0-3 from the currently bound VAO with current in-use shader
         glDrawArrays(GL_TRIANGLES, 0, 3);
-        // update other events like input handling
-        glfwPollEvents();
-        // put the stuff we've been drawing onto the display
-        glfwSwapBuffers(window);
+
+        w.checkPoolEvents();
+        w.checkSwqpBuffers();
     }
 
     glDeleteVertexArrays(1, &vao);
     glDeleteBuffers(1, &vbo);
 
-    glfwTerminate();
+    w.destroyWindow();
+
     return 0;
 }
