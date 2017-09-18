@@ -25,43 +25,47 @@ const char* shader_frag =
 "   FragColor = vec4(1.0f, 0.9f, 0.2f, 1.0f);\n"
 "}\n\0";
 
+class GLSettings
+{
+public:
+
+    GLSettings() : major_version(3), minor_version(3),
+        window_height(640), window_width(480), name_window("Hello") { }
+
+    // Major version OpenGL
+    int major_version;
+
+    // Minor version OpenGL
+    int minor_version;
+
+    // Window width and height, name window
+    int window_height;
+    int window_width;
+    std::string name_window;
+};
+
 class GLWindow
 {
 public:
 
-    GLWindow() : m_major(3), m_minor(3), m_initialize(true), m_window(NULL)
+    GLWindow() { }
+
+    GLWindow(GLSettings &settings) : m_settings(settings), m_window(NULL)
     {
         if(!glfwInit())
         {
             std::cout << "Failed initilize GLFW library!" << std::endl;
-            m_initialize = false;
-        }
-    }
-
-    ~GLWindow() {}
-
-    void setOpenGLversion(int major, int minor)
-    {
-        m_major = major;
-        m_minor = minor;
-
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, m_major);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, m_minor);
-        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    }
-
-    void createWindow(int x , int y, std::string name)
-    {
-        m_window = glfwCreateWindow(x, y, name.c_str(), NULL, NULL);
-        if(!m_window)
-        {
-            std::cout << "Failed create GLFW window!" << std::endl;
             glfwTerminate();
         }
 
-        /* Make the window's context current */
-        glfwMakeContextCurrent(m_window);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, m_settings.major_version);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, m_settings.minor_version);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+        createWindow(m_settings.window_height, m_settings.window_width, m_settings.name_window);
     }
+
+    ~GLWindow() {}
 
     int checkCloseWindow()
     {
@@ -82,15 +86,26 @@ public:
 
     void destroyWindow()
     {
-         glfwTerminate();
+        glfwTerminate();
+    }
+private:
+
+    void createWindow(int width, int height, std::string name)
+    {
+        m_window = glfwCreateWindow(width, height, name.c_str(), NULL, NULL);
+        if(!m_window)
+        {
+            std::cout << "Failed create GLFW window!" << std::endl;
+            glfwTerminate();
+        }
+
+       // Make the window's context current
+       glfwMakeContextCurrent(m_window);
     }
 
 private:
 
-    int m_major;
-    int m_minor;
-
-    bool m_initialize;
+    GLSettings m_settings;
     GLFWwindow *m_window;
 };
 
@@ -98,9 +113,14 @@ private:
 int main(void)
 {
 
-    GLWindow w;
-    w.setOpenGLversion(3, 3);
-    w.createWindow(640, 480, "Hello OpenGL");
+    GLSettings settings;
+    settings.name_window = "Hello OpenGL";
+    settings.major_version = 3;
+    settings.minor_version = 3;
+    settings.window_height = 640;
+    settings.window_width = 480;
+
+    GLWindow w(settings);
 
     // start GLEW extension handler
     glewExperimental = GL_TRUE;
@@ -109,6 +129,7 @@ int main(void)
     GLuint vs = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vs, 1, &shader_vert, NULL);
     glCompileShader(vs);
+
     GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(fs, 1, &shader_frag, NULL);
     glCompileShader(fs);
