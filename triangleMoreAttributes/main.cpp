@@ -41,15 +41,11 @@ public:
     GLSettings() : majorVersion(3), minorVersion(3),
         windowHeight(640), windowWidth(480), windowName("Hello") { }
 
-    // Major version OpenGL
-    int majorVersion;
+    // Major version OpenGL, Minor version OpenGL
+    int majorVersion, minorVersion;
 
-    // Minor version OpenGL
-    int minorVersion;
-
-    // Window width and height, name window
-    int windowHeight;
-    int windowWidth;
+    // Window width, height,
+    int windowHeight, windowWidth;
 
     // Main window name
     std::string windowName;
@@ -59,9 +55,7 @@ class GLWindow
 {
 public:
 
-    GLWindow() { }
-
-    GLWindow(GLSettings &settings) : m_settings(settings), m_window(NULL)
+    GLWindow(GLSettings &settings) : m_settings(settings)
     {
         glfwSetErrorCallback(errorCallback);
 
@@ -201,7 +195,7 @@ int main(void)
     GLuint vbo = 0;
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, 9 * sizeof(float), vertices, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER,  sizeof(vertices), vertices, GL_STATIC_DRAW);
 
     GLuint vao = 0;
     glGenVertexArrays(1, &vao);
@@ -240,6 +234,7 @@ int main(void)
 
         // wipe the drawing surface clear
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glClearColor(0.2f, 0.5f, 0.7f, 0.6f);
 
         glm::mat4 transform;
         transform = glm::translate(transform, glm::vec3(0.0f, 0.0f, 1.0f));
@@ -247,7 +242,6 @@ int main(void)
 
         glUseProgram(shaderProgram);
         glUniformMatrix4fv(mvp_location, 1, GL_FALSE, glm::value_ptr(transform));
-        glBindVertexArray(vao);
 
         // draw points 0-3 from the currently bound VAO with current in-use shader
         glDrawArrays(GL_TRIANGLES, 0, 3);
