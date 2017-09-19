@@ -1,15 +1,23 @@
 # LearnOpenGL
 
 ### What is this 
-Simple example for OpenGL on Linux
+Simple example for OpenGL with GLFW, GLEW, GLM
   * Window exmple with GLFW 
-  * Color triangle with GLFW, GLEW 
+  * Color triangle with GLFW, GLEW
+  * Triangle with more atributte
+  * Color plane
+  * Plane with texture
+  * 3D Box with texture
 
 ### How to compile projects
-Compile only Linux, projects are in .pro for QTCreator
+Compile only FreBSD, Linux projects are in .pro for QTCreator
 
 ### Dependencies 
-  * GLFW 
-  * GLEW 
+  * GLFW
+  * GLEW
+  * Stb_image
+  * GLM
 
-sudo apt-get install libglew-dev libglfw3-dev
+### Support OS
+  * FreeBSD
+  * Linux
