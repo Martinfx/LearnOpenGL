@@ -1,4 +1,6 @@
 #include <iostream>
+#include <fstream>
+#include <string>
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -85,7 +87,9 @@ public:
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-        createWindow(m_settings.windowHeight, m_settings.windowWidth, m_settings.windowName);
+        createWindow(m_settings.windowHeight,
+                     m_settings.windowWidth,
+                     m_settings.windowName);
     }
 
     ~GLWindow()
@@ -147,6 +151,11 @@ public:
         fprintf(stderr, "Error callback: %s\n", description);
     }
 
+    static void mouseCallback(GLFWwindow* window, int button, int action, int mods)
+    {
+
+    }
+
     void getFramebufferSize(int *width, int *height)
     {
         glfwGetFramebufferSize(m_window, width, height);
@@ -165,12 +174,132 @@ private:
 
        // Make the window's context current
        glfwMakeContextCurrent(m_window);
+
+       glfwSetMouseButtonCallback(m_window, mouseCallback);
     }
 
 private:
 
     GLSettings m_settings;
     GLFWwindow *m_window;
+};
+
+enum TypeShader
+{
+    VERTEX_SHADER = GL_VERTEX_SHADER,
+    FRAGMENT_SHADER = GL_FRAGMENT_SHADER,
+    GEOMETRY_SHADER = GL_GEOMETRY_SHADER
+};
+
+class Shader
+{
+public:
+
+    Shader() : /*m_vertexShader(0), m_fragmentShader(0),
+        m_geometryShader(0),*/ m_isVertexShader(false),
+        m_isFragmentShader(false), m_isGeometryShader(false)
+    {
+
+    }
+
+    ~Shader() {}
+
+    void loadShader(const std::string &shader, TypeShader type)
+    {
+        if(type == TypeShader::VERTEX_SHADER)
+        {
+            //const char * vertex_shader = getShaderReader(shader);
+            m_vertexShader = glCreateShader(GL_VERTEX_SHADER);
+            glShaderSource(m_vertexShader, 1, &shaderVertex, NULL);
+            glCompileShader(m_vertexShader);
+            m_isVertexShader = true;
+        }
+
+        if(type == TypeShader::FRAGMENT_SHADER)
+        {
+            //const char *fragment_shader = getShaderReader(shader);
+            m_fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+            glShaderSource(m_fragmentShader, 1, &shaderFragment, NULL);
+            glCompileShader(m_fragmentShader);
+            m_isFragmentShader = true;
+        }
+
+        /*if(type == TypeShader::GEOMETRY_SHADER)
+        {
+            const char *geometry_shader = getShaderReader(shader);
+            m_geometryShader = glCreateShader(GL_GEOMETRY_SHADER);
+            glShaderSource(m_geometryShader, 1, &geometry_shader, NULL);
+            glCompileShader(m_geometryShader);
+            m_isGeometryShader = true;
+        }*/
+    }
+
+    void useShaderProgram()
+    {
+        glUseProgram(m_id);
+    }
+
+    GLuint getShaderProgram()
+    {
+        return m_id;
+    }
+
+    void createShaderProgram()
+    {
+        m_id = glCreateProgram();
+
+        if(m_isVertexShader)
+        {
+            glAttachShader(m_id, m_vertexShader);
+        }
+        if(m_isFragmentShader)
+        {
+            glAttachShader(m_id, m_fragmentShader);
+        }
+        /*if(m_isGeometryShader)
+        {
+            glAttachShader(m_id, m_geometryShader);
+        }*/
+
+        glLinkProgram(m_id);
+    }
+
+    /*const char * getShaderReader(const std::string &shader)
+    {
+        std::string line;
+        std::string source;
+        std::ifstream file(shader);
+        if(file.is_open())
+        {
+            while(std::getline(file, line))
+            {
+                std::cerr << line << std::endl;
+                source = source + line; //+ "\n";
+            }
+
+            file.close();
+        }
+        else
+        {
+            std::cerr << "Cannot open file! " << shader << std::endl;
+        }
+
+        std::cerr << source << std::endl;
+
+        return source.c_str();
+    }*/
+
+private:
+
+    // Shader program id
+    GLuint m_id;
+    GLuint m_vertexShader;
+    GLuint m_fragmentShader;
+    GLuint m_geometryShader;
+
+    bool m_isVertexShader;
+    bool m_isFragmentShader;
+    bool m_isGeometryShader;
 };
 
 int main(void)
@@ -186,9 +315,12 @@ int main(void)
     glewExperimental = GL_TRUE;
     glewInit();
 
-    GLint mvp_location, vpos_location, vcol_location, tex_location;
+    Shader shader;
+    shader.loadShader("shader.vert", TypeShader::VERTEX_SHADER);
+    shader.loadShader("shader.frag", TypeShader::FRAGMENT_SHADER);
+    shader.createShaderProgram();
 
-    GLuint vs = glCreateShader(GL_VERTEX_SHADER);
+    /*GLuint vs = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vs, 1, &shaderVertex, NULL);
     glCompileShader(vs);
 
@@ -199,12 +331,13 @@ int main(void)
     GLuint shaderProgram = glCreateProgram();
     glAttachShader(shaderProgram, fs);
     glAttachShader(shaderProgram, vs);
-    glLinkProgram(shaderProgram);
+    glLinkProgram(shaderProgram);*/
 
-    mvp_location  = glGetUniformLocation(shaderProgram, "MVP");
-    vpos_location = glGetAttribLocation(shaderProgram, "vPos");
-    vcol_location = glGetAttribLocation(shaderProgram, "vCol");
-    tex_location  = glGetAttribLocation(shaderProgram, "aTexCoord");
+    GLint mvp_location, vpos_location, vcol_location, tex_location;
+    mvp_location  = glGetUniformLocation(shader.getShaderProgram(), "MVP");
+    vpos_location = glGetAttribLocation(shader.getShaderProgram(), "vPos");
+    vcol_location = glGetAttribLocation(shader.getShaderProgram(), "vCol");
+    tex_location  = glGetAttribLocation(shader.getShaderProgram(), "aTexCoord");
 
     unsigned int vbo, vao, ebo;
     glGenVertexArrays(1, &vao);
@@ -259,8 +392,9 @@ int main(void)
 
     stbi_image_free(data);
 
-    glUseProgram(shaderProgram);
-    glUniform1i(glGetUniformLocation(shaderProgram, "texture1"), 0);
+    //glUseProgram(shader.getShaderProgram());
+    shader.useShaderProgram();
+    glUniform1i(glGetUniformLocation(shader.getShaderProgram(), "texture1"), 0);
 
     // Loop until the user closes the window
     while (!window.checkCloseWindow())
@@ -287,7 +421,8 @@ int main(void)
         transform = glm::translate(transform, glm::vec3(0.0f, 0.0f, 0.0f));
         transform = glm::rotate(transform, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
 
-        glUseProgram(shaderProgram);
+        //glUseProgram(shaderProgram);
+        shader.useShaderProgram();
         glUniformMatrix4fv(mvp_location, 1, GL_FALSE, glm::value_ptr(transform));
 
         // draw points 0-3 from the currently bound vao with current in-use shader

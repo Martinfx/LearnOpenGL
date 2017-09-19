@@ -5,15 +5,15 @@ CONFIG -= console c++11
 
 SOURCES += main.cpp
 
-#linux
-#{
-#    LIBS += -lglfw3 -lGL -lGLEW -lm -lXrandr -lXi -lX11 -lXxf86vm -lpthread
-#}
-
-freebsd
+linux
 {
-    LIBS += -lglfw -lGL -lGLEW -lm -lXrandr -lXi -lX11 -lXxf86vm -lpthread
+    LIBS += -lglfw3 -lGL -lGLEW -lm -lXrandr -lXi -lX11 -lXxf86vm -lpthread
 }
+
+#freebsd
+#{
+#    LIBS += -lglfw -lGL -lGLEW -lm -lXrandr -lXi -lX11 -lXxf86vm -lpthread
+#}
 
 DISTFILES += \
     shader.frag \
