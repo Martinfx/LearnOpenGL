@@ -13,11 +13,47 @@
 #include "../3rdparty/stb_image.h"
 
 float vertices[] = {
-    // positions          // colors           // texture coords
-       0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right
-       0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
-      -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
-      -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left
+    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+     0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+
+    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+    -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+
+    -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+    -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+    -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+     0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+     0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+     0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+     0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+
+    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+    -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
 };
 unsigned int indices[] = {
         0, 1, 3, // first triangle
@@ -26,7 +62,9 @@ unsigned int indices[] = {
 
 const char* shaderVertex =
 "#version 330 core\n"
-"uniform mat4 MVP;\n"
+"uniform mat4 model;\n"
+"uniform mat4 view;\n"
+"uniform mat4 projection;\n"
 "attribute vec3 vCol;\n"
 "attribute vec3 vPos;\n"
 "attribute vec2 aTexCoord;\n"
@@ -34,7 +72,7 @@ const char* shaderVertex =
 "out vec2 TexCoord;"
 "void main()\n"
 "{\n"
-"    gl_Position = MVP * vec4(vPos, 1.0);\n"
+"    gl_Position = projection * view * model * vec4(vPos, 1.0);\n"
 "    TexCoord = vec2(aTexCoord.x, aTexCoord.y);\n"
 "    color = vCol;\n"
 "}\n";
@@ -264,7 +302,7 @@ public:
         glLinkProgram(m_id);
     }
 
-    /*const char * getShaderReader(const std::string &shader)
+    const char * getShaderReader(const std::string &shader)
     {
         std::string line;
         std::string source;
@@ -287,7 +325,7 @@ public:
         std::cerr << source << std::endl;
 
         return source.c_str();
-    }*/
+    }
 
 private:
 
@@ -306,8 +344,8 @@ int main(void)
 {
     GLSettings settings;
     settings.windowName = "Hello OpenGL";
-    //settings.windowHeight = 800;
-    //settings.windowWidth = 600;
+    settings.windowHeight = 800;
+    settings.windowWidth = 600;
 
     GLWindow window(settings);
 
@@ -334,7 +372,7 @@ int main(void)
     glLinkProgram(shaderProgram);*/
 
     GLint mvp_location, vpos_location, vcol_location, tex_location;
-    mvp_location  = glGetUniformLocation(shader.getShaderProgram(), "MVP");
+    //mvp_location  = glGetUniformLocation(shader.getShaderProgram(), "MVP");
     vpos_location = glGetAttribLocation(shader.getShaderProgram(), "vPos");
     vcol_location = glGetAttribLocation(shader.getShaderProgram(), "vCol");
     tex_location  = glGetAttribLocation(shader.getShaderProgram(), "aTexCoord");
@@ -352,14 +390,14 @@ int main(void)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(vpos_location, 3, GL_FLOAT, GL_FALSE,  8 * sizeof(float), (void*)0);
+    glVertexAttribPointer(vpos_location, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(vpos_location);
 
-    glVertexAttribPointer(vcol_location, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(vcol_location);
+    //glVertexAttribPointer(vcol_location, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    //glEnableVertexAttribArray(vcol_location);
 
     // texture coord attribute
-    glVertexAttribPointer(tex_location, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glVertexAttribPointer(tex_location, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(tex_location);
 
     unsigned int texture;
@@ -411,23 +449,50 @@ int main(void)
         glViewport(0, 0, width, height);
 
         // wipe the drawing surface clear
+        glEnable(GL_DEPTH_TEST);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glClearColor(0.2f, 0.5f, 0.7f, 0.6f);
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture);
 
-        glm::mat4 transform;
-        transform = glm::translate(transform, glm::vec3(0.0f, 0.0f, 0.0f));
-        transform = glm::rotate(transform, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
+        glm::mat4 model;
+        glm::mat4 view;
+        glm::mat4 projection;
+        model = model = glm::rotate(model, (float)glfwGetTime() * glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
+        view  = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+        projection = glm::perspective(glm::radians(45.0f),
+                                      (float)window.getWidthWindow() / (float)window.getHeightWindow(),
+                                      0.1f,
+                                      100.0f);
 
-        //glUseProgram(shaderProgram);
+        //glm::mat4 transform;
+        //transform = glm::translate(transform, glm::vec3(0.0f, 0.0f, 0.0f));
+        //transform = glm::rotate(transform, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
+
         shader.useShaderProgram();
-        glUniformMatrix4fv(mvp_location, 1, GL_FALSE, glm::value_ptr(transform));
+
+        glUniformMatrix4fv(glGetUniformLocation(shader.getShaderProgram(),
+                                                "projection"),
+                                                1,
+                                                GL_FALSE,
+                                                &projection[0][0]);
+
+        glUniformMatrix4fv(glGetUniformLocation(shader.getShaderProgram(),
+                                                "view"),
+                                                1,
+                                                GL_FALSE,
+                                                &view[0][0]);
+
+        glUniformMatrix4fv(glGetUniformLocation(shader.getShaderProgram(),
+                                                "model"),
+                                                1,
+                                                GL_FALSE,
+                                                &model[0][0]);
 
         // draw points 0-3 from the currently bound vao with current in-use shader
         glBindVertexArray(vao);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
 
         window.checkPoolEvents();
         window.checkSwapBuffer();
