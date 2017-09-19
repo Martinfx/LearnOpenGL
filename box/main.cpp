@@ -199,6 +199,13 @@ public:
         glfwGetFramebufferSize(m_window, width, height);
     }
 
+    void updateframeBufferSize()
+    {
+        int width, height;
+        glfwGetFramebufferSize(m_window, &width, &height);
+        glViewport(0, 0, width, height);
+    }
+
 private:
 
     void createWindow(int width, int height, std::string name)
@@ -214,6 +221,10 @@ private:
        glfwMakeContextCurrent(m_window);
 
        glfwSetMouseButtonCallback(m_window, mouseCallback);
+
+       // start GLEW extension handler
+       glewExperimental = GL_TRUE;
+       glewInit();
     }
 
 private:
@@ -233,12 +244,10 @@ class Shader
 {
 public:
 
-    Shader() : /*m_vertexShader(0), m_fragmentShader(0),
-        m_geometryShader(0),*/ m_isVertexShader(false),
+    Shader() : m_vertexShader(0), m_fragmentShader(0),
+        m_geometryShader(0), m_isVertexShader(false),
         m_isFragmentShader(false), m_isGeometryShader(false)
-    {
-
-    }
+    { }
 
     ~Shader() {}
 
@@ -250,6 +259,7 @@ public:
             m_vertexShader = glCreateShader(GL_VERTEX_SHADER);
             glShaderSource(m_vertexShader, 1, &shaderVertex, NULL);
             glCompileShader(m_vertexShader);
+            shaderCompileStatus(m_vertexShader, __FILE__ , __LINE__);
             m_isVertexShader = true;
         }
 
@@ -259,6 +269,7 @@ public:
             m_fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
             glShaderSource(m_fragmentShader, 1, &shaderFragment, NULL);
             glCompileShader(m_fragmentShader);
+            shaderCompileStatus(m_fragmentShader, __FILE__ , __LINE__);
             m_isFragmentShader = true;
         }
 
@@ -302,7 +313,7 @@ public:
         glLinkProgram(m_id);
     }
 
-    const char * getShaderReader(const std::string &shader)
+    const char *getShaderReader(const std::string &shader)
     {
         std::string line;
         std::string source;
@@ -327,6 +338,35 @@ public:
         return source.c_str();
     }
 
+    void shaderCompileStatus(GLuint shader, std::string file, int line)
+    {
+        GLint isCompiled;
+
+        glGetShaderiv(shader, GL_COMPILE_STATUS, &isCompiled);
+        if(!isCompiled)
+        {
+            int logLenght;
+            GLchar log[1024];
+            glGetShaderInfoLog(shader, 1024, &logLenght, log);
+            std::cerr << "Shader compilation error : "  << log <<
+                         " - Log lenght: " << logLenght <<
+                         " - File: " << file <<
+                         " - Line: " << line <<
+                         "\n";
+        }
+        else
+        {
+            int logLenght;
+            GLchar log[1024];
+            glGetShaderInfoLog(shader, 1024, &logLenght, log);
+            std::cerr << "Shader compilation success : " << log <<
+                         " - Log lenght: " << logLenght <<
+                         " - File: " << file <<
+                         " - Line: " << line <<
+                         "\n";
+        }
+    }
+
 private:
 
     // Shader program id
@@ -348,10 +388,6 @@ int main(void)
     settings.windowWidth = 600;
 
     GLWindow window(settings);
-
-    // start GLEW extension handler
-    glewExperimental = GL_TRUE;
-    glewInit();
 
     Shader shader;
     shader.loadShader("shader.vert", TypeShader::VERTEX_SHADER);
@@ -438,15 +474,7 @@ int main(void)
     while (!window.checkCloseWindow())
     {
         window.updateFpsCounter();
-
-        float ratio;
-        int width, height;
-        //glm::mat4x4 m, p, mvp;
-
-        window.getFramebufferSize(&width, &height);
-        ratio = static_cast<float>(width) / static_cast<float>(height);
-
-        glViewport(0, 0, width, height);
+        window.updateframeBufferSize();
 
         // wipe the drawing surface clear
         glEnable(GL_DEPTH_TEST);
@@ -459,10 +487,10 @@ int main(void)
         glm::mat4 model;
         glm::mat4 view;
         glm::mat4 projection;
-        model = model = glm::rotate(model, (float)glfwGetTime() * glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
+        model = glm::rotate(model, static_cast<float>(glfwGetTime()) * glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
         view  = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
         projection = glm::perspective(glm::radians(45.0f),
-                                      (float)window.getWidthWindow() / (float)window.getHeightWindow(),
+                                      static_cast<float>(window.getWidthWindow()) / static_cast<float>(window.getHeightWindow()),
                                       0.1f,
                                       100.0f);
 
@@ -471,6 +499,7 @@ int main(void)
         //transform = glm::rotate(transform, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
 
         shader.useShaderProgram();
+        //glUniformMatrix4fv(mvp_location, 1, GL_FALSE, glm::value_ptr(transform));
 
         glUniformMatrix4fv(glGetUniformLocation(shader.getShaderProgram(),
                                                 "projection"),
