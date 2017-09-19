@@ -57,13 +57,14 @@ public:
 
     GLWindow(GLSettings &settings) : m_settings(settings)
     {
-        glfwSetErrorCallback(errorCallback);
 
         if(!glfwInit())
         {
             std::cout << "Failed initilize GLFW library!" << std::endl;
             glfwTerminate();
         }
+
+        glfwSetErrorCallback(errorCallback);
 
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, m_settings.majorVersion);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, m_settings.minorVersion);
@@ -73,7 +74,10 @@ public:
         createWindow(m_settings.windowHeight, m_settings.windowWidth, m_settings.windowName);
     }
 
-    ~GLWindow() {}
+    ~GLWindow()
+    {
+        glfwTerminate();
+    }
 
     int getWidthWindow()
     {
@@ -100,11 +104,6 @@ public:
     {
         // put the stuff we've been drawing onto the display
         glfwSwapBuffers(m_window);
-    }
-
-    void destroyWindow()
-    {
-        glfwTerminate();
     }
 
     void updateFpsCounter()
@@ -237,8 +236,8 @@ int main(void)
         glClearColor(0.2f, 0.5f, 0.7f, 0.6f);
 
         glm::mat4 transform;
-        transform = glm::translate(transform, glm::vec3(0.0f, 0.0f, 1.0f));
-        glm::rotate(transform, glm::radians(0.0f), glm::vec3(10.0f, 0.0f, 0.0f));
+        transform = glm::translate(transform, glm::vec3(0.0f, 0.0f, 0.0f));
+        glm::rotate(transform, glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 0.0f));
 
         glUseProgram(shaderProgram);
         glUniformMatrix4fv(mvp_location, 1, GL_FALSE, glm::value_ptr(transform));
@@ -252,8 +251,6 @@ int main(void)
 
     glDeleteVertexArrays(1, &vao);
     glDeleteBuffers(1, &vbo);
-
-    window.destroyWindow();
 
     return 0;
 }
