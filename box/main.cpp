@@ -339,9 +339,14 @@ public:
      }*/
 
 
-    void setUniformMatrix4x4(const std::string &typ, const glm::mat4 &matrix)
+    void setUniformMatrix4x4(const std::string &type, const glm::mat4 &matrix)
     {
-        glUniformMatrix4fv(glGetUniformLocation(m_id, typ.c_str()), 1, GL_FALSE, &matrix[0][0]);
+        glUniformMatrix4fv(glGetUniformLocation(m_id, type.c_str()), 1, GL_FALSE, &matrix[0][0]);
+    }
+
+    void setUniformInt(const std::string &type, const GLint value)
+    {
+        glUniform1i(glGetUniformLocation(m_id, type.c_str()), value);
     }
 
 protected:
@@ -474,9 +479,10 @@ int main(void)
 
     stbi_image_free(data);
 
-    //glUseProgram(shader.getShaderProgram());
     shader.useShaderProgram();
-    glUniform1i(glGetUniformLocation(shader.getShaderProgram(), "texture1"), 0);
+
+    // Set texture in shader
+    shader.setUniformInt("texture1", 0);
 
     // Loop until the user closes the window
     while (!window.checkCloseWindow())
@@ -522,7 +528,6 @@ int main(void)
 
         shader.useShaderProgram();
         //glUniformMatrix4fv(mvp_location, 1, GL_FALSE, glm::value_ptr(transform));
-
 
         shader.setUniformMatrix4x4("projection", projection);
         shader.setUniformMatrix4x4("view", view);
