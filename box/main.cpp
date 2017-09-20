@@ -313,7 +313,7 @@ public:
         glLinkProgram(m_id);
     }
 
-    const char *getShaderReader(const std::string &shader)
+    /*const char *getShaderReader(const std::string &shader)
     {
         std::string line;
         std::string source;
@@ -323,7 +323,7 @@ public:
             while(std::getline(file, line))
             {
                 std::cerr << line << std::endl;
-                source = source + line; //+ "\n";
+                source = source + line; + "\n";
             }
 
             file.close();
@@ -336,7 +336,15 @@ public:
         std::cerr << source << std::endl;
 
         return source.c_str();
+     }*/
+
+
+    void setUniformMatrix4x4(const std::string &typ, const glm::mat4 &matrix)
+    {
+        glUniformMatrix4fv(glGetUniformLocation(m_id, typ.c_str()), 1, GL_FALSE, &matrix[0][0]);
     }
+
+protected:
 
     void shaderCompileStatus(GLuint shader, std::string file, int line)
     {
@@ -484,13 +492,27 @@ int main(void)
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture);
 
+       /*glm::vec3 cubePositions[] = {
+          glm::vec3( 0.0f,  0.0f,  0.0f),
+          glm::vec3( 2.0f,  5.0f, -15.0f),
+          glm::vec3(-1.5f, -2.2f, -2.5f),
+          glm::vec3(-3.8f, -2.0f, -12.3f),
+          glm::vec3( 2.4f, -0.4f, -3.5f),
+          glm::vec3(-1.7f,  3.0f, -7.5f),
+          glm::vec3( 1.3f, -2.0f, -2.5f),
+          glm::vec3( 1.5f,  2.0f, -2.5f),
+          glm::vec3( 1.5f,  0.2f, -1.5f),
+          glm::vec3(-1.3f,  1.0f, -1.5f)
+        }; */
+
         glm::mat4 model;
         glm::mat4 view;
         glm::mat4 projection;
         model = glm::rotate(model, static_cast<float>(glfwGetTime()) * glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
         view  = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
         projection = glm::perspective(glm::radians(45.0f),
-                                      static_cast<float>(window.getWidthWindow()) / static_cast<float>(window.getHeightWindow()),
+                                      static_cast<float>(window.getWidthWindow()) /
+                                      static_cast<float>(window.getHeightWindow()),
                                       0.1f,
                                       100.0f);
 
@@ -501,23 +523,22 @@ int main(void)
         shader.useShaderProgram();
         //glUniformMatrix4fv(mvp_location, 1, GL_FALSE, glm::value_ptr(transform));
 
-        glUniformMatrix4fv(glGetUniformLocation(shader.getShaderProgram(),
-                                                "projection"),
-                                                1,
-                                                GL_FALSE,
-                                                &projection[0][0]);
 
-        glUniformMatrix4fv(glGetUniformLocation(shader.getShaderProgram(),
-                                                "view"),
-                                                1,
-                                                GL_FALSE,
-                                                &view[0][0]);
+        shader.setUniformMatrix4x4("projection", projection);
+        shader.setUniformMatrix4x4("view", view);
+        shader.setUniformMatrix4x4("model", model);
 
-        glUniformMatrix4fv(glGetUniformLocation(shader.getShaderProgram(),
-                                                "model"),
-                                                1,
-                                                GL_FALSE,
-                                                &model[0][0]);
+        /*glBindVertexArray(vao);
+        for(unsigned int i = 0; i < 10; i++)
+        {
+          glm::mat4 model;
+          model = glm::translate(model, cubePositions[i]);
+          float angle = 20.0f * i;
+          model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(1.0f, 0.3f, 0.5f));
+          shader.setUniformMatrix4x4("model", model);
+
+          glDrawArrays(GL_TRIANGLES, 0, 36);
+        }*/
 
         // draw points 0-3 from the currently bound vao with current in-use shader
         glBindVertexArray(vao);
