@@ -311,6 +311,7 @@ public:
         }*/
 
         glLinkProgram(m_id);
+        programCompileStatus(m_id, __FILE__ , __LINE__);
     }
 
     /*const char *getShaderReader(const std::string &shader)
@@ -361,7 +362,7 @@ protected:
             int logLenght;
             GLchar log[1024];
             glGetShaderInfoLog(shader, 1024, &logLenght, log);
-            std::cerr << "Shader compilation error : "  << log <<
+            std::cerr << "[WARN] Shader compilation error : "  << log <<
                          " - Log lenght: " << logLenght <<
                          " - File: " << file <<
                          " - Line: " << line <<
@@ -372,7 +373,36 @@ protected:
             int logLenght;
             GLchar log[1024];
             glGetShaderInfoLog(shader, 1024, &logLenght, log);
-            std::cerr << "Shader compilation success : " << log <<
+            std::cerr << "[INFO] Shader compilation success ! " << log <<
+                         " - Log lenght: " << logLenght <<
+                         " - File: " << file <<
+                         " - Line: " << line <<
+                         "\n";
+        }
+    }
+
+    void programCompileStatus(GLuint program, std::string file, int line)
+    {
+        GLint isCompiled;
+
+        glGetProgramiv(program, GL_LINK_STATUS, &isCompiled);
+        if(!isCompiled)
+        {
+            int logLenght;
+            GLchar log[1024];
+            glGetProgramInfoLog(program, 1024, &logLenght, log);
+            std::cerr << "[WARN] Program linker error : "  << log <<
+                         " - Log lenght: " << logLenght <<
+                         " - File: " << file <<
+                         " - Line: " << line <<
+                         "\n";
+        }
+        else
+        {
+            int logLenght;
+            GLchar log[1024];
+            glGetProgramInfoLog(program, 1024, &logLenght, log);
+            std::cerr << "[INFO] Pogram linker success ! " << log <<
                          " - Log lenght: " << logLenght <<
                          " - File: " << file <<
                          " - Line: " << line <<
