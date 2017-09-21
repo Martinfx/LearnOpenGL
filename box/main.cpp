@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <vector>
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -11,6 +12,8 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "../3rdparty/stb_image.h"
+
+#include "camera.hpp"
 
 float vertices[] = {
     -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
@@ -194,6 +197,38 @@ public:
 
     }
 
+    glm::vec3 campos;
+    static void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
+    {
+        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        {
+               glfwSetWindowShouldClose(window, true);
+        }
+
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        {
+            campos =+ m_camera.getSpeed() *  m_camera.getCameraFront();
+
+            m_camera.updateCameraPosition(
+                        campos);
+        }
+
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        {
+
+        }
+
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        {
+
+        }
+
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        {
+
+        }
+    }
+
     void getFramebufferSize(int *width, int *height)
     {
         glfwGetFramebufferSize(m_window, width, height);
@@ -205,6 +240,12 @@ public:
         glfwGetFramebufferSize(m_window, &width, &height);
         glViewport(0, 0, width, height);
     }
+
+    void setCamera(Camera camera)
+    {
+        m_camera = camera;
+    }
+
 
 private:
 
@@ -221,6 +262,7 @@ private:
        glfwMakeContextCurrent(m_window);
 
        glfwSetMouseButtonCallback(m_window, mouseCallback);
+       glfwSetKeyCallback(m_window, keyboardCallback);
 
        // start GLEW extension handler
        glewExperimental = GL_TRUE;
@@ -231,6 +273,7 @@ private:
 
     GLSettings m_settings;
     GLFWwindow *m_window;
+    Camera m_camera;
 };
 
 enum TypeShader
@@ -432,6 +475,9 @@ int main(void)
 
     GLWindow window(settings);
 
+    Camera camera;
+    window.setCamera(camera);
+
     Shader shader;
     shader.loadShader("shader.vert", TypeShader::VERTEX_SHADER);
     shader.loadShader("shader.frag", TypeShader::FRAGMENT_SHADER);
@@ -514,9 +560,27 @@ int main(void)
     // Set texture in shader
     shader.setUniformInt("texture1", 0);
 
+    std::vector<glm::vec3> randomPosition;
+    for(int i = 0; i < 10; i++)
+    {
+        randomPosition.push_back(glm::vec3(static_cast <float> (rand() % 15 - 1) ,
+                         static_cast <float> (rand() % 10 - 1) ,
+                         static_cast <float> (rand() % 5 - 1) ));
+    }
+
+    // timing
+    float deltaTime = 0.0f;	// time between current frame and last frame
+    float lastFrame = 0.0f;
+
     // Loop until the user closes the window
     while (!window.checkCloseWindow())
     {
+        float currentFrame = glfwGetTime();
+        deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
+
+        camera.updateSpeedCamera(deltaTime);
+
         window.updateFpsCounter();
         window.updateframeBufferSize();
 
@@ -528,24 +592,15 @@ int main(void)
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture);
 
-       /*glm::vec3 cubePositions[] = {
-          glm::vec3( 0.0f,  0.0f,  0.0f),
-          glm::vec3( 2.0f,  5.0f, -15.0f),
-          glm::vec3(-1.5f, -2.2f, -2.5f),
-          glm::vec3(-3.8f, -2.0f, -12.3f),
-          glm::vec3( 2.4f, -0.4f, -3.5f),
-          glm::vec3(-1.7f,  3.0f, -7.5f),
-          glm::vec3( 1.3f, -2.0f, -2.5f),
-          glm::vec3( 1.5f,  2.0f, -2.5f),
-          glm::vec3( 1.5f,  0.2f, -1.5f),
-          glm::vec3(-1.3f,  1.0f, -1.5f)
-        }; */
-
         glm::mat4 model;
         glm::mat4 view;
         glm::mat4 projection;
-        model = glm::rotate(model, static_cast<float>(glfwGetTime()) * glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
-        view  = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+        model = glm::rotate(model, glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
+       // view  = glm::translate(view, glm::vec3(0.0f, 0.0f, -5.0f));
+        float radius = 6.0f;
+        float camX = sin(glfwGetTime()) * radius;
+        float camZ = cos(glfwGetTime()) * radius;
+        view = glm::lookAt(glm::vec3(camX, 0.0, camZ), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
         projection = glm::perspective(glm::radians(45.0f),
                                       static_cast<float>(window.getWidthWindow()) /
                                       static_cast<float>(window.getHeightWindow()),
@@ -561,23 +616,23 @@ int main(void)
 
         shader.setUniformMatrix4x4("projection", projection);
         shader.setUniformMatrix4x4("view", view);
-        shader.setUniformMatrix4x4("model", model);
+        //shader.setUniformMatrix4x4("model", model);
 
-        /*glBindVertexArray(vao);
+        glBindVertexArray(vao);
         for(unsigned int i = 0; i < 10; i++)
         {
           glm::mat4 model;
-          model = glm::translate(model, cubePositions[i]);
+          model = glm::translate(model, randomPosition[i]);
           float angle = 20.0f * i;
-          model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(1.0f, 0.3f, 0.5f));
+          model = glm::rotate(model, glm::radians(0.0f), glm::vec3(1.0f, 0.3f, 0.5f));
           shader.setUniformMatrix4x4("model", model);
 
           glDrawArrays(GL_TRIANGLES, 0, 36);
-        }*/
+        }
 
         // draw points 0-3 from the currently bound vao with current in-use shader
-        glBindVertexArray(vao);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+        //glBindVertexArray(vao);
+        //glDrawArrays(GL_TRIANGLES, 0, 36);
 
         window.checkPoolEvents();
         window.checkSwapBuffer();
@@ -589,3 +644,6 @@ int main(void)
 
     return 0;
 }
+
+
+

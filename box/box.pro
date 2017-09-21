@@ -18,3 +18,6 @@ linux
 DISTFILES += \
     shader.frag \
     shader.vert
+
+HEADERS += \
+    camera.hpp
