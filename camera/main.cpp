@@ -90,6 +90,59 @@ const char* shaderFragment =
 "    gl_FragColor = texture(texture1, TexCoord);\n"
 "}\n";
 
+class Camera
+{
+public:
+
+    Camera() : m_position(0.0f, 0.0f, 0.0f), m_front(0.0f, 0.0f, 0.0f),
+        m_up(0.0f, 0.0f, 0.0f), m_direction(0.0f, 0.0f, 0.0f), m_cameraSpeed(2.0f)
+    {
+    }
+
+    glm::vec3 getCameraPosition()
+    {
+        return m_position;
+    }
+
+    glm::vec3 getCameraDirection()
+    {
+        return m_direction;
+    }
+
+    glm::vec3 getCameraFront()
+    {
+        return m_front;
+    }
+
+    glm::vec3 getCameraUp()
+    {
+        return m_up;
+    }
+
+    float getSpeed()
+    {
+        return m_cameraSpeed;
+    }
+
+    void updateCameraPosition(glm::vec3 &position)
+    {
+        m_position = position;
+    }
+
+    void updateSpeedCamera(float deltaTime)
+    {
+        m_cameraSpeed = m_cameraSpeed * deltaTime;
+    }
+
+private:
+
+    glm::vec3 m_position = glm::vec3(0.0f, 0.0f, 10.0f);
+    glm::vec3 m_front =  glm::vec3(0.0f, 0.0f, -1.0f);
+    glm::vec3 m_up = glm::vec3(0.0f, 5.0f,  0.0f);
+    glm::vec3 m_direction;
+    float m_cameraSpeed;
+};
+
 class GLSettings
 {
 public:
@@ -193,38 +246,13 @@ public:
 
     static void mouseCallback(GLFWwindow* window, int button, int action, int mods)
     {
-
     }
 
-    //glm::vec3 campos;
     static void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
     {
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         {
                glfwSetWindowShouldClose(window, true);
-        }
-
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        {
-        //    campos =+ m_camera.getSpeed() *  m_camera.getCameraFront();
-        //
-        //    m_camera.updateCameraPosition(
-        //                campos);
-        }
-
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        {
-
-        }
-
-        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        {
-
-        }
-
-        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        {
-
         }
     }
 
@@ -240,13 +268,56 @@ public:
         glViewport(0, 0, width, height);
     }
 
-    //void setCamera(Camera camera)
-    //{
-    //    m_camera = camera;
-    //}
+    void updateCamera(float deltaTime)
+    {
+        float cameraSpeed = 5.0f * deltaTime;
+        if(glfwGetKey(m_window, GLFW_KEY_W) == GLFW_PRESS)
+        {
+            cameraPosition += cameraSpeed * cameraFront;
+            //camera.updateCameraPosition(cameraPosition);
+            //camera.updateSpeedCamera(cameraSpeed);
+        }
 
+        if(glfwGetKey(m_window, GLFW_KEY_S) == GLFW_PRESS)
+        {
+            cameraPosition -= cameraSpeed * cameraFront;
+            //camera.updateCameraPosition(cameraPosition);
+            //camera.updateSpeedCamera(cameraSpeed);
+        }
 
-private:
+        if(glfwGetKey(m_window, GLFW_KEY_A) == GLFW_PRESS)
+        {
+            cameraPosition -= glm::normalize(glm::cross(cameraFront
+                                                         , cameraUp)) * cameraSpeed;
+            //camera.updateCameraPosition(cameraPosition);
+            //camera.updateSpeedCamera(cameraSpeed);
+        }
+
+        if(glfwGetKey(m_window, GLFW_KEY_D) == GLFW_PRESS)
+        {
+            cameraPosition += glm::normalize(glm::cross(cameraFront,
+                                                        cameraUp)) * cameraSpeed;
+            //camera.updateCameraPosition(cameraPosition);
+            //camera.updateSpeedCamera(cameraSpeed);
+        }
+    }
+
+    glm::vec3 getCameraPosition()
+    {
+        return cameraPosition;
+    }
+
+    glm::vec3 getCameraFront()
+    {
+        return cameraFront;
+    }
+
+    glm::vec3 getCameraUp()
+    {
+        return cameraUp;
+    }
+
+protected:
 
     void createWindow(int width, int height, std::string name)
     {
@@ -272,7 +343,11 @@ private:
 
     GLSettings m_settings;
     GLFWwindow *m_window;
+    //Camera camera;
 
+    glm::vec3 cameraPosition = glm::vec3(0.0f, 0.0f, 10.0f);
+    glm::vec3 cameraFront =  glm::vec3(0.0f, 0.0f, -1.0f);
+    glm::vec3 cameraUp = glm::vec3(0.0f, 5.0f,  0.0f);
 };
 
 enum TypeShader
@@ -559,26 +634,29 @@ int main(void)
     std::vector<glm::vec3> randomPosition;
     for(int i = 0; i < 10; i++)
     {
-        randomPosition.push_back(glm::vec3(static_cast <float> (rand() % 15 - 1) ,
-                         static_cast <float> (rand() % 10 - 1) ,
-                         static_cast <float> (rand() % 5 - 1) ));
+        randomPosition.push_back(glm::vec3(static_cast <float> (rand() % 15) ,
+                         static_cast <float> (rand() % 10 ) ,
+                         static_cast <float> (rand() % 5) ));
     }
 
     // timing
     float deltaTime = 0.0f;	// time between current frame and last frame
     float lastFrame = 0.0f;
 
+    glm::mat4 model;
+    glm::mat4 view;
+    glm::mat4 projection;
+
     // Loop until the user closes the window
     while (!window.checkCloseWindow())
     {
-        float currentFrame = glfwGetTime();
+        float currentFrame = static_cast<float>(glfwGetTime());
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        //camera.updateSpeedCamera(deltaTime);
-
         window.updateFpsCounter();
         window.updateframeBufferSize();
+        window.updateCamera(deltaTime);
 
         // wipe the drawing surface clear
         glEnable(GL_DEPTH_TEST);
@@ -588,15 +666,20 @@ int main(void)
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture);
 
-        glm::mat4 model;
-        glm::mat4 view;
-        glm::mat4 projection;
+
+        shader.useShaderProgram();
+
         model = glm::rotate(model, glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
-       // view  = glm::translate(view, glm::vec3(0.0f, 0.0f, -5.0f));
-        float radius = 6.0f;
-        float camX = sin(glfwGetTime()) * radius;
-        float camZ = cos(glfwGetTime()) * radius;
-        view = glm::lookAt(glm::vec3(camX, 0.0, camZ), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+        // view  = glm::translate(view, glm::vec3(0.0f, 0.0f, -5.0f));
+        //float radius = 6.0f;
+        //float camX = sin(glfwGetTime()) * radius;
+        //float camZ = cos(glfwGetTime()) * radius;
+        //view = glm::lookAt(glm::vec3(camX, 0.0, camZ), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+
+        view = glm::lookAt(window.getCameraPosition(),
+                           window.getCameraPosition() + window.getCameraFront()
+                           , window.getCameraUp());
+
         projection = glm::perspective(glm::radians(45.0f),
                                       static_cast<float>(window.getWidthWindow()) /
                                       static_cast<float>(window.getHeightWindow()),
@@ -607,7 +690,7 @@ int main(void)
         //transform = glm::translate(transform, glm::vec3(0.0f, 0.0f, 0.0f));
         //transform = glm::rotate(transform, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
 
-        shader.useShaderProgram();
+
         //glUniformMatrix4fv(mvp_location, 1, GL_FALSE, glm::value_ptr(transform));
 
         shader.setUniformMatrix4x4("projection", projection);
@@ -619,8 +702,8 @@ int main(void)
         {
           glm::mat4 model;
           model = glm::translate(model, randomPosition[i]);
-          float angle = 20.0f * i;
-          model = glm::rotate(model, glm::radians(0.0f), glm::vec3(1.0f, 0.3f, 0.5f));
+          //float angle = 20.0f * i;
+          //model = glm::rotate(model, glm::radians(0.0f), glm::vec3(1.0f, 0.3f, 0.5f));
           shader.setUniformMatrix4x4("model", model);
 
           glDrawArrays(GL_TRIANGLES, 0, 36);
