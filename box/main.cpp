@@ -13,7 +13,6 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "../3rdparty/stb_image.h"
 
-#include "camera.hpp"
 
 float vertices[] = {
     -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
@@ -197,7 +196,7 @@ public:
 
     }
 
-    glm::vec3 campos;
+    //glm::vec3 campos;
     static void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
     {
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -207,10 +206,10 @@ public:
 
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
         {
-            campos =+ m_camera.getSpeed() *  m_camera.getCameraFront();
-
-            m_camera.updateCameraPosition(
-                        campos);
+        //    campos =+ m_camera.getSpeed() *  m_camera.getCameraFront();
+        //
+        //    m_camera.updateCameraPosition(
+        //                campos);
         }
 
         if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
@@ -241,10 +240,10 @@ public:
         glViewport(0, 0, width, height);
     }
 
-    void setCamera(Camera camera)
-    {
-        m_camera = camera;
-    }
+    //void setCamera(Camera camera)
+    //{
+    //    m_camera = camera;
+    //}
 
 
 private:
@@ -273,7 +272,7 @@ private:
 
     GLSettings m_settings;
     GLFWwindow *m_window;
-    Camera m_camera;
+
 };
 
 enum TypeShader
@@ -475,9 +474,6 @@ int main(void)
 
     GLWindow window(settings);
 
-    Camera camera;
-    window.setCamera(camera);
-
     Shader shader;
     shader.loadShader("shader.vert", TypeShader::VERTEX_SHADER);
     shader.loadShader("shader.frag", TypeShader::FRAGMENT_SHADER);
@@ -579,7 +575,7 @@ int main(void)
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        camera.updateSpeedCamera(deltaTime);
+        //camera.updateSpeedCamera(deltaTime);
 
         window.updateFpsCounter();
         window.updateframeBufferSize();
