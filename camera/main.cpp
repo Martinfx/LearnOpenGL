@@ -90,14 +90,36 @@ const char* shaderFragment =
 "    gl_FragColor = texture(texture1, TexCoord);\n"
 "}\n";
 
-class Camera
+
+enum CameraDirection {
+    FORWARD_DIRECTIOM = 0,
+    BACKWARD_DIRECTION = 1,
+    LEFT_DIRECTION = 2,
+    RIGHT_DIRECTION = 3
+};
+
+// Default camera values
+const float YAW        = -90.0f;
+const float PITCH      =  0.0f;
+const float SPEED      =  2.5f;
+const float SENSITIVTY =  0.1f;
+const float ZOOM       =  45.0f;
+
+class BaseCamera
+{
+
+};
+
+class FpsCamera : public BaseCamera
 {
 public:
 
-    Camera() : m_position(0.0f, 0.0f, 0.0f), m_front(0.0f, 0.0f, 0.0f),
-        m_up(0.0f, 0.0f, 0.0f), m_direction(0.0f, 0.0f, 0.0f), m_cameraSpeed(2.0f)
+    FpsCamera() /*: m_position(0.0f, 0.0f, 0.0f), m_front(0.0f, 0.0f, 0.0f),
+        m_up(0.0f, 0.0f, 0.0f), m_direction(0.0f, 0.0f, 0.0f), m_cameraSpeed(5.0f)*/
     {
     }
+
+    ~FpsCamera() { }
 
     glm::vec3 getCameraPosition()
     {
@@ -124,15 +146,86 @@ public:
         return m_cameraSpeed;
     }
 
-    void updateCameraPosition(glm::vec3 &position)
+    void updateCameraDirection(CameraDirection direction, float deltaTime)
     {
-        m_position = position;
+        float cameraSpeed = m_cameraSpeed * deltaTime;
+        if(direction == CameraDirection::FORWARD_DIRECTIOM)
+        {
+            m_position += cameraSpeed * m_front;
+            std::cerr << "FORWARD DIRECTION" << std::endl;
+            std::cerr << "Position x : " << m_position.x
+                                         << " y: " << m_position.y
+                                         << " z: " << m_position.z << std::endl;
+        }
+        if(direction == CameraDirection::BACKWARD_DIRECTION)
+        {
+            m_position -= cameraSpeed * m_front;
+            std::cerr << "BACKWARD DIRECTION" << std::endl;
+        }
+        if(direction == CameraDirection::LEFT_DIRECTION)
+        {
+            /*m_position -= glm::normalize(
+                          glm::cross(m_front,
+                          m_up)) * cameraSpeed;*/
+            m_position -= cameraSpeed * m_right;
+
+            std::cerr << "LEFT DIRECTION" << std::endl;
+        }
+        if(direction == CameraDirection::RIGHT_DIRECTION)
+        {
+            /*m_position += glm::normalize(
+                          glm::cross(m_front,
+                          m_up)) * cameraSpeed;*/
+
+            m_position += cameraSpeed * m_right;
+
+            std::cerr << "RIGHT DIRECTION" << std::endl;
+        }
     }
 
-    void updateSpeedCamera(float deltaTime)
+    void updateMouseCameraDirection(float xoffset, float yoffset, GLboolean constrainPitch = true)
     {
-        m_cameraSpeed = m_cameraSpeed * deltaTime;
+        std::cerr << "xoffset : " << xoffset << " yoffset : " << yoffset << std::endl;
+
+        xoffset *= MouseSensitivity;
+        yoffset *= MouseSensitivity;
+
+        Yaw   += xoffset;
+        Pitch += yoffset;
+
+        if (constrainPitch)
+        {
+            if (Pitch > 89.0f)
+                Pitch = 89.0f;
+            if (Pitch < -89.0f)
+                Pitch = -89.0f;
+        }
+
+        //computeCamera();
     }
+
+    glm::mat4 getLookAtCamera()
+    {
+       return glm::lookAt(m_position,
+                          m_position + m_front,
+                          m_up);
+    }
+
+    /*void computeCamera()
+    {
+        glm::vec3 front;
+        front.x = cos(glm::radians(YAW)) * cos(glm::radians(PITCH));
+        front.y = sin(glm::radians(PITCH));
+        front.z = sin(glm::radians(YAW)) * cos(glm::radians(PITCH));
+        m_front = glm::normalize(front);
+
+        std::cerr << "front x : " << front.x
+                  << " front y : " << front.y
+                  << " front z : " << front.z << std::endl;
+
+        m_right = glm::normalize(glm::cross(m_front, m_up));
+        m_up    = glm::normalize(glm::cross(m_right, m_front));
+    }*/
 
 private:
 
@@ -140,8 +233,23 @@ private:
     glm::vec3 m_front =  glm::vec3(0.0f, 0.0f, -1.0f);
     glm::vec3 m_up = glm::vec3(0.0f, 5.0f,  0.0f);
     glm::vec3 m_direction;
-    float m_cameraSpeed;
+    glm::vec3 m_right = glm::vec3(0.0f, 0.0f, -1.0f);
+
+    float m_cameraSpeed = 5.0f;
+    // Eular Angles
+    float Yaw;
+    float Pitch;
+    // Camera options
+    float MovementSpeed;
+    float MouseSensitivity;
+    float Zoom;
 };
+
+FpsCamera g_camera;
+
+float lastX = 800 / 2.0f;
+float lastY = 600 / 2.0f;
+bool firstMouse = true;
 
 class GLSettings
 {
@@ -244,13 +352,32 @@ public:
         fprintf(stderr, "Error callback: %s\n", description);
     }
 
-    static void mouseCallback(GLFWwindow* window, int button, int action, int mods)
+    static void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
     {
+
+    }
+
+    static void mouseCursorPositionCallback(GLFWwindow* window, double x, double y)
+    {
+        if (firstMouse)
+        {
+            lastX = x;
+            lastY = y;
+            firstMouse = false;
+        }
+
+        float xoffset = x - lastX;
+        float yoffset = lastY - y;
+
+        lastX = x;
+        lastY = y;
+
+        g_camera.updateMouseCameraDirection(xoffset, yoffset);
     }
 
     static void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
     {
-        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         {
                glfwSetWindowShouldClose(window, true);
         }
@@ -270,51 +397,29 @@ public:
 
     void updateCamera(float deltaTime)
     {
-        float cameraSpeed = 5.0f * deltaTime;
         if(glfwGetKey(m_window, GLFW_KEY_W) == GLFW_PRESS)
         {
-            cameraPosition += cameraSpeed * cameraFront;
-            //camera.updateCameraPosition(cameraPosition);
-            //camera.updateSpeedCamera(cameraSpeed);
+            g_camera.updateCameraDirection(CameraDirection::FORWARD_DIRECTIOM,
+                                     deltaTime);
         }
 
         if(glfwGetKey(m_window, GLFW_KEY_S) == GLFW_PRESS)
         {
-            cameraPosition -= cameraSpeed * cameraFront;
-            //camera.updateCameraPosition(cameraPosition);
-            //camera.updateSpeedCamera(cameraSpeed);
+            g_camera.updateCameraDirection(CameraDirection::BACKWARD_DIRECTION,
+                                     deltaTime);
         }
 
         if(glfwGetKey(m_window, GLFW_KEY_A) == GLFW_PRESS)
         {
-            cameraPosition -= glm::normalize(glm::cross(cameraFront
-                                                         , cameraUp)) * cameraSpeed;
-            //camera.updateCameraPosition(cameraPosition);
-            //camera.updateSpeedCamera(cameraSpeed);
+            g_camera.updateCameraDirection(CameraDirection::LEFT_DIRECTION,
+                                     deltaTime);
         }
 
         if(glfwGetKey(m_window, GLFW_KEY_D) == GLFW_PRESS)
         {
-            cameraPosition += glm::normalize(glm::cross(cameraFront,
-                                                        cameraUp)) * cameraSpeed;
-            //camera.updateCameraPosition(cameraPosition);
-            //camera.updateSpeedCamera(cameraSpeed);
+            g_camera.updateCameraDirection(CameraDirection::RIGHT_DIRECTION,
+                                     deltaTime);
         }
-    }
-
-    glm::vec3 getCameraPosition()
-    {
-        return cameraPosition;
-    }
-
-    glm::vec3 getCameraFront()
-    {
-        return cameraFront;
-    }
-
-    glm::vec3 getCameraUp()
-    {
-        return cameraUp;
     }
 
 protected:
@@ -331,8 +436,11 @@ protected:
        // Make the window's context current
        glfwMakeContextCurrent(m_window);
 
-       glfwSetMouseButtonCallback(m_window, mouseCallback);
+       glfwSetMouseButtonCallback(m_window, mouseButtonCallback);
        glfwSetKeyCallback(m_window, keyboardCallback);
+       glfwSetCursorPosCallback(m_window, mouseCursorPositionCallback);
+
+       //glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
        // start GLEW extension handler
        glewExperimental = GL_TRUE;
@@ -343,11 +451,6 @@ private:
 
     GLSettings m_settings;
     GLFWwindow *m_window;
-    //Camera camera;
-
-    glm::vec3 cameraPosition = glm::vec3(0.0f, 0.0f, 10.0f);
-    glm::vec3 cameraFront =  glm::vec3(0.0f, 0.0f, -1.0f);
-    glm::vec3 cameraUp = glm::vec3(0.0f, 5.0f,  0.0f);
 };
 
 enum TypeShader
@@ -666,19 +769,15 @@ int main(void)
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture);
 
-
         shader.useShaderProgram();
 
-        model = glm::rotate(model, glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
+        //model = glm::rotate(model, glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
         // view  = glm::translate(view, glm::vec3(0.0f, 0.0f, -5.0f));
         //float radius = 6.0f;
         //float camX = sin(glfwGetTime()) * radius;
         //float camZ = cos(glfwGetTime()) * radius;
         //view = glm::lookAt(glm::vec3(camX, 0.0, camZ), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
 
-        view = glm::lookAt(window.getCameraPosition(),
-                           window.getCameraPosition() + window.getCameraFront()
-                           , window.getCameraUp());
 
         projection = glm::perspective(glm::radians(45.0f),
                                       static_cast<float>(window.getWidthWindow()) /
@@ -689,11 +788,11 @@ int main(void)
         //glm::mat4 transform;
         //transform = glm::translate(transform, glm::vec3(0.0f, 0.0f, 0.0f));
         //transform = glm::rotate(transform, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
-
-
         //glUniformMatrix4fv(mvp_location, 1, GL_FALSE, glm::value_ptr(transform));
 
         shader.setUniformMatrix4x4("projection", projection);
+
+        view = g_camera.getLookAtCamera();
         shader.setUniformMatrix4x4("view", view);
         //shader.setUniformMatrix4x4("model", model);
 
