@@ -221,7 +221,7 @@ public:
         }
     }
 
-    void updateMouseCameraDirection(float xoffset, float yoffset/*, GLboolean constrainPitch = true*/)
+    void updateMouseCameraDirection(float xoffset, float yoffset)
     {
         float sensitivity = 0.1f;
         xoffset *= sensitivity;
@@ -521,7 +521,9 @@ public:
     {
         if(type == TypeShader::VERTEX_SHADER)
         {
-            //const char * vertex_shader = getShaderReader(shader);
+            //std::string vertexshader = getShaderReader(shader);
+            //const char *vertex_shader = getShaderReader(shader).c_str();
+
             m_vertexShader = glCreateShader(GL_VERTEX_SHADER);
             glShaderSource(m_vertexShader, 1, &shaderVertex, NULL);
             glCompileShader(m_vertexShader);
@@ -531,7 +533,10 @@ public:
 
         if(type == TypeShader::FRAGMENT_SHADER)
         {
-            //const char *fragment_shader = getShaderReader(shader);
+            //const char *fragment_shader = getShaderReader(shader).c_str();
+            //std::string fragmentshader = getShaderReader(shader);
+            //const char *fragment_shader = getShaderReader(shader).c_str();
+
             m_fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
             glShaderSource(m_fragmentShader, 1, &shaderFragment, NULL);
             glCompileShader(m_fragmentShader);
@@ -580,7 +585,7 @@ public:
         programCompileStatus(m_id, __FILE__ , __LINE__);
     }
 
-    /*const char *getShaderReader(const std::string &shader)
+    std::string getShaderReader(const std::string &shader)
     {
         std::string line;
         std::string source;
@@ -590,21 +595,20 @@ public:
             while(std::getline(file, line))
             {
                 std::cerr << line << std::endl;
-                source = source + line; + "\n";
+                source = source + line + "\n";
             }
 
             file.close();
         }
         else
         {
-            std::cerr << "Cannot open file! " << shader << std::endl;
+            std::cerr << "Cannot open file! " << ""<< shader << ""<< std::endl;
         }
 
         std::cerr << source << std::endl;
 
-        return source.c_str();
-     }*/
-
+        return source;
+     }
 
     void setUniformMatrix4x4(const std::string &type, const glm::mat4 &matrix)
     {
