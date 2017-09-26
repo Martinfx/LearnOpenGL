@@ -8,6 +8,7 @@ Simple example for OpenGL with GLFW, GLEW, GLM
   * Color plane
   * Plane with texture
   * 3D Box with texture
+  * Camera fly and rotate 
 
 ### How to compile projects
 Compile only FreBSD, Linux projects are in .pro for QTCreator
