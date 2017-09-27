@@ -91,6 +91,24 @@ const char* shaderFragment =
 "}\n";
 
 
+class Light
+{
+public:
+
+    Light() {}
+    Light(glm::vec3 position) : m_position(position)
+    {
+
+    }
+
+    ~Light() {}
+
+private:
+
+    glm::vec3 m_position;
+};
+
+
 enum CameraDirection {
     FORWARD_DIRECTIOM = 0,
     BACKWARD_DIRECTION = 1,
@@ -729,15 +747,19 @@ int main(void)
     unsigned int vbo, vao, ebo;
     glGenVertexArrays(1, &vao);
     glGenBuffers(1, &vbo);
-    glGenBuffers(1, &ebo);
+    //glGenBuffers(1, &ebo);
+
+    unsigned int lightVAO;
+    glGenVertexArrays(1, &lightVAO);
+    glBindVertexArray(lightVAO);
 
     glBindVertexArray(vao);
 
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    //glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
     glVertexAttribPointer(vpos_location, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(vpos_location);
