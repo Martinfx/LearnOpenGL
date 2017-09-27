@@ -96,16 +96,40 @@ class Light
 public:
 
     Light() {}
-    Light(glm::vec3 position) : m_position(position)
+    Light(glm::vec3 &position) : m_position(position)
     {
 
     }
 
     ~Light() {}
 
+    void setPosition(glm::vec3 &position)
+    {
+        m_position = position;
+    }
+
+    void setDirection(glm::vec3 &direction)
+    {
+        m_direction = direction;
+    }
+
+    void setDiffuseColor(glm::vec3 &diffuse)
+    {
+        m_diffuse = diffuse;
+    }
+
+    void setSpecularColor(glm::vec3 &specular)
+    {
+        m_specular = specular;
+    }
+
 private:
 
     glm::vec3 m_position;
+    glm::vec3 m_direction;
+    glm::vec3 m_diffuse;
+    glm::vec3 m_specular;
+
 };
 
 
@@ -603,7 +627,7 @@ public:
         programCompileStatus(m_id, __FILE__ , __LINE__);
     }
 
-    std::string getShaderReader(const std::string &shader)
+    /*std::string getShaderReader(const std::string &shader)
     {
         std::string line;
         std::string source;
@@ -626,7 +650,7 @@ public:
         std::cerr << source << std::endl;
 
         return source;
-     }
+     }*/s
 
     void setUniformMatrix4x4(const std::string &type, const glm::mat4 &matrix)
     {
