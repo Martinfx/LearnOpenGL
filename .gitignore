@@ -33,3 +33,5 @@
 
 # QT 
 *.pro.user
+*.qmake.stash
+*Makefile

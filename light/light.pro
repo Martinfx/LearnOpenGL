@@ -16,6 +16,5 @@ linux
 #}
 
 DISTFILES += \
-    shader.vert
-
-HEADERS +=
+    shader.vert \
+    shader.frag
