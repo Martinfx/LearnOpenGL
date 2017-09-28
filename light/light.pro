@@ -17,4 +17,6 @@ linux
 
 DISTFILES += \
     shader.vert \
-    shader.frag
+    shader.frag \
+    light.frag \
+    light.vert

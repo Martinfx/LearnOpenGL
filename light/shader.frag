@@ -1,9 +1,7 @@
 #version 330 core
+out vec4 FragColor;
 
-varying vec3 color;
-varying vec2 TexCoord;
-uniform sampler2D texture1;
 void main()
 {
-    gl_FragColor = texture(texture1, TexCoord);
+    FragColor = vec4(1.0); // set alle 4 vector values to 1.0
 }

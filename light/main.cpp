@@ -15,48 +15,49 @@
 #include "../3rdparty/stb_image.h"
 
 float vertices[] = {
-    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-     0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
-     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+      // positions          // normals           // texture coords
+      -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  0.0f,
+       0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  0.0f,
+       0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  1.0f,
+       0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  1.0f,
+      -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  1.0f,
+      -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  0.0f,
 
-    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-    -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+      -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,
+       0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  0.0f,
+       0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  1.0f,
+       0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  1.0f,
+      -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  1.0f,
+      -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,
 
-    -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-    -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-    -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+      -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
+      -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  1.0f,
+      -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
+      -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
+      -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  0.0f,
+      -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
 
-     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-     0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-     0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-     0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+       0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
+       0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  1.0f,
+       0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
+       0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
+       0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  0.0f,
+       0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
 
-    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-     0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
-     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+      -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  1.0f,
+       0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  1.0f,
+       0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  0.0f,
+       0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  0.0f,
+      -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  0.0f,
+      -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  1.0f,
 
-    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-    -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
-    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
-};
+      -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  1.0f,
+       0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  1.0f,
+       0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  0.0f,
+       0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  0.0f,
+      -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  0.0f,
+      -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  1.0f
+  };
 
 unsigned int indices[] = {
         0, 1, 3, // first triangle
@@ -91,6 +92,7 @@ const char* shaderFragment =
 "    gl_FragColor = texture(texture1, TexCoord);\n"
 "}\n";
 */
+
 /*
 class Material
 {
@@ -100,7 +102,7 @@ public:
 
 private:
 
-};
+};*/
 
 class Light
 {
@@ -114,7 +116,7 @@ public:
 
     ~Light() {}
 
-    void setPosition(glm::vec3 &position)
+    void setPosition(glm::vec3 position)
     {
         m_position = position;
     }
@@ -134,19 +136,29 @@ public:
         return m_specular;
     }
 
+    glm::vec3 getAmbientColor()
+    {
+        return m_ambient;
+    }
+
     void setDirection(glm::vec3 &direction)
     {
         m_direction = direction;
     }
 
-    void setDiffuseColor(glm::vec3 &diffuse)
+    void setDiffuseColor(glm::vec3 diffuse)
     {
         m_diffuse = diffuse;
     }
 
-    void setSpecularColor(glm::vec3 &specular)
+    void setSpecularColor(glm::vec3 specular)
     {
         m_specular = specular;
+    }
+
+    void setAmbientColor(glm::vec3 ambient)
+    {
+        m_ambient = ambient;
     }
 
 private:
@@ -155,9 +167,10 @@ private:
     glm::vec3 m_direction;
     glm::vec3 m_diffuse;
     glm::vec3 m_specular;
+    glm::vec3 m_ambient;
 
 };
-*/
+
 enum CameraDirection {
     FORWARD_DIRECTIOM = 0,
     BACKWARD_DIRECTION = 1,
@@ -682,14 +695,29 @@ public:
         glUniform1i(glGetUniformLocation(m_id, type.c_str()), value);
     }
 
+    void setUniformFloat(const std::string &type, const GLfloat value)
+    {
+        glUniform1f(glGetUniformLocation(m_id, type.c_str()), value);
+    }
+
     void setUnifromVec2(const std::string &type, const glm::vec3 &value)
     {
         glUniform2f(glGetUniformLocation(m_id, type.c_str()), value.x, value.y);
     }
 
-    void setUnifromVec3(const std::string &type, const glm::vec3 &value)
+    void setUnifromVec2(const std::string &type, const float &x, const float &y)
     {
-        glUniform3f(glGetUniformLocation(m_id, type.c_str()), value.x, value.y, value.z);
+        glUniform2f(glGetUniformLocation(m_id, type.c_str()), x, y);
+    }
+
+    void setUnifromVec3(const std::string &type, const glm::vec3 value)
+    {
+        glUniform3fv(glGetUniformLocation(m_id, type.c_str()), 1, &value[0]);
+    }
+
+    void setUnifromVec3(const std::string &type, const float &x, const float &y, const float &z)
+    {
+        glUniform3f(glGetUniformLocation(m_id, type.c_str()), x, y, z);
     }
 
 protected:
@@ -757,6 +785,61 @@ private:
     bool m_isGeometryShader;
 };
 
+class Texture
+{
+public:
+
+    Texture() {}
+    ~Texture() {}
+
+    unsigned int loadTexture(const std::string &name)
+    {
+        glGenTextures(1, &m_id);
+        int width, height, nrChannels;
+        unsigned char *data = stbi_load(name.c_str(), &width, &height, &nrChannels, 0);
+        if(data)
+        {
+            GLenum format = 0;
+            if (nrChannels == 1)
+            {
+                format = GL_RED;
+            }
+            else if (nrChannels == 3)
+            {
+                format = GL_RGB;
+            }
+            else if (nrChannels == 4)
+            {
+                format = GL_RGBA;
+            }
+
+            glBindTexture(GL_TEXTURE_2D, m_id);
+            glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+            glGenerateMipmap(GL_TEXTURE_2D);
+
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+            std::cerr << "Load texture: " << name << std::endl;
+            stbi_image_free(data);
+        }
+        else
+        {
+            std::cerr << "Failed to load texture: " << name << std::endl;
+            stbi_image_free(data);
+        }
+
+        return m_id;
+    }
+
+private:
+
+    unsigned int m_id;
+};
+
+
 int main(void)
 {
     GLSettings settings;
@@ -766,75 +849,52 @@ int main(void)
 
     GLWindow window(settings);
 
-    Shader shader;
-    shader.loadShader("shader.vert", TypeShader::VERTEX_SHADER);
-    shader.loadShader("shader.frag", TypeShader::FRAGMENT_SHADER);
-    shader.createShaderProgram();
+    Shader mainShader;
+    mainShader.loadShader("shader.vert", TypeShader::VERTEX_SHADER);
+    mainShader.loadShader("shader.frag", TypeShader::FRAGMENT_SHADER);
+    mainShader.createShaderProgram();
+
+    Shader lightShader;
+    lightShader.loadShader("light.vert", TypeShader::VERTEX_SHADER);
+    lightShader.loadShader("light.frag", TypeShader::FRAGMENT_SHADER);
+    lightShader.createShaderProgram();
 
     GLuint /*mvp_location,*/ vpos_location, vcol_location, tex_location;
     //mvp_location  = glGetUniformLocation(shader.getShaderProgram(), "MVP");
-    vpos_location = glGetAttribLocation(shader.getShaderProgram(), "vPos");
-    vcol_location = glGetAttribLocation(shader.getShaderProgram(), "vCol");
-    tex_location  = glGetAttribLocation(shader.getShaderProgram(), "aTexCoord");
+    vpos_location = glGetAttribLocation(mainShader.getShaderProgram(), "vPos");
+    vcol_location = glGetAttribLocation(mainShader.getShaderProgram(), "vCol");
+    tex_location  = glGetAttribLocation(mainShader.getShaderProgram(), "aTexCoord");
 
-    unsigned int vbo, vao;
-    glGenVertexArrays(1, &vao);
+    unsigned int vbo, vaoCube;
+    glGenVertexArrays(1, &vaoCube);
     glGenBuffers(1, &vbo);
 
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    glBindVertexArray(vaoCube);
+    glVertexAttribPointer(0,
+                          3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    glVertexAttribPointer(1,
+                          3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    glVertexAttribPointer(2,
+                          2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
 
     unsigned int lightVAO;
     glGenVertexArrays(1, &lightVAO);
     glBindVertexArray(lightVAO);
 
-    glBindVertexArray(vao);
-
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3,
+                          GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
 
-    glVertexAttribPointer(vpos_location, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), 0);
-    glEnableVertexAttribArray(vpos_location);
+    glEnableVertexAttribArray(0);
 
-    //glVertexAttribPointer(vcol_location, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-    //glEnableVertexAttribArray(vcol_location);
-
-    // texture coord attribute
-    glVertexAttribPointer(tex_location, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(tex_location);
-
-    unsigned int texture;
-    glGenTextures(1, &texture);
-
-    // all upcoming GL_TEXTURE_2D operations now have effect on this texture object
-    glBindTexture(GL_TEXTURE_2D, texture);
-
-    // set the texture wrapping parameters
-    // set texture wrapping to GL_REPEAT (default wrapping method)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-    // set texture filtering parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    // load image, create texture and generate mipmaps
-    int width, height, nrChannels;
-    unsigned char *data = stbi_load("box.png", &width, &height, &nrChannels, 0);
-    if (data)
-    {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-    }
-    else
-    {
-        std::cout << "Failed to load texture" << std::endl;
-    }
-
-    stbi_image_free(data);
-
-    shader.useShaderProgram();
-
-    // Set texture in shader
-    shader.setUniformInt("texture1", 0);
 
     std::vector<glm::vec3> randomPosition;
     const int countObjects = 40;
@@ -848,12 +908,27 @@ int main(void)
     float deltaTime = 0.0f;	// time between current frame and last frame
     float lastFrame = 0.0f;
 
-    glm::mat4 model;
+    //glm::mat4 model;
     glm::mat4 view;
     glm::mat4 projection;
 
+    Light light;
+    light.setPosition(glm::vec3(1.2f, 1.0f, 2.0f));
+    light.setAmbientColor(glm::vec3(0.2f, 0.2f, 0.2f));
+    light.setDiffuseColor(glm::vec3(0.5f, 0.5f, 0.5f));
+    light.setSpecularColor(glm::vec3(1.0f, 1.0f, 1.0f));
+
+    Texture diffuseTexture;
+    Texture specularTexture;
+    unsigned int diffuseTex  = diffuseTexture.loadTexture("box-diffuse.png");
+    unsigned int specularTex = specularTexture.loadTexture("box-specular.png");
+
+    lightShader.useShaderProgram();
+    lightShader.setUniformInt("material.diffuse", 0);
+    lightShader.setUniformInt("material.specular", 1);
+
     // Loop until the user closes the window
-    while (!window.checkCloseWindow())
+    while(!window.checkCloseWindow())
     {
         float currentFrame = static_cast<float>(glfwGetTime());
         deltaTime = currentFrame - lastFrame;
@@ -863,15 +938,25 @@ int main(void)
         window.updateframeBufferSize();
         window.updateCamera(deltaTime);
 
+        /////////////////////////////////////////////////////////////////
         // wipe the drawing surface clear
         glEnable(GL_DEPTH_TEST);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glClearColor(0.2f, 0.5f, 0.7f, 0.6f);
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture);
+        /////////////////////////////////////////////////////////////////
+        /// Use light shader
 
-        shader.useShaderProgram();
+        lightShader.useShaderProgram();
+        lightShader.setUnifromVec3("light.position", light.getPosition());
+        lightShader.setUnifromVec3("viewPos", g_camera.getCameraPosition());
+
+        /////////////////////////////////////////////////////////////////
+        // light properties
+        lightShader.setUnifromVec3("light.ambient", light.getAmbientColor());
+        lightShader.setUnifromVec3("light.diffuse", light.getDiffuseColor());
+        lightShader.setUnifromVec3("light.specular", light.getSpelecularColor());
+        lightShader.setUniformFloat("material.shininess", 64.0f);
 
         //model = glm::rotate(model, glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
         // view  = glm::translate(view, glm::vec3(0.0f, 0.0f, -5.0f));
@@ -886,33 +971,49 @@ int main(void)
                                       0.1f,
                                       100.0f);
 
-        //glm::mat4 transform;
-        //transform = glm::translate(transform, glm::vec3(0.0f, 0.0f, 0.0f));
-        //transform = glm::rotate(transform, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
-        //glUniformMatrix4fv(mvp_location, 1, GL_FALSE, glm::value_ptr(transform));
-
-        shader.setUniformMatrix4x4("projection", projection);
-
         view = g_camera.getLookAtCamera();
-        shader.setUniformMatrix4x4("view", view);
+        lightShader.setUniformMatrix4x4("projection", projection);
+        lightShader.setUniformMatrix4x4("view", view);
 
-        glBindVertexArray(vao);
+
         for(unsigned int i = 0; i < countObjects; i++)
         {
           glm::mat4 model;
           model = glm::translate(model, randomPosition[i]);
           //float angle = 20.0f * i;
           //model = glm::rotate(model, glm::radians(0.0f), glm::vec3(1.0f, 0.3f, 0.5f));
-          shader.setUniformMatrix4x4("model", model);
+        //glm::mat4 model;
+        lightShader.setUniformMatrix4x4("model", model);
 
-          glDrawArrays(GL_TRIANGLES, 0, 36);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, diffuseTex);
+
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, specularTex);
+
+        glBindVertexArray(vaoCube);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
         }
+
+        mainShader.useShaderProgram();
+        mainShader.setUniformMatrix4x4("projection", projection);
+        mainShader.setUniformMatrix4x4("view", view);
+
+        glm::mat4 models;
+        models = glm::mat4();
+        models = glm::translate(models, light.getPosition());
+        models = glm::scale(models, glm::vec3(0.2f));
+        mainShader.setUniformMatrix4x4("model", models);
+
+        glBindVertexArray(lightVAO);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
 
         window.checkPoolEvents();
         window.checkSwapBuffer();
     }
 
-    glDeleteVertexArrays(1, &vao);
+    glDeleteVertexArrays(1, &vaoCube);
+    glDeleteVertexArrays(1, &lightVAO);
     glDeleteBuffers(1, &vbo);
 
     return 0;
