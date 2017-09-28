@@ -2,6 +2,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <sstream>
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -61,7 +62,7 @@ unsigned int indices[] = {
         0, 1, 3, // first triangle
         1, 2, 3  // second triangle
     };
-
+/*
 const char* shaderVertex =
 "#version 330 core\n"
 "uniform mat4 model;\n"
@@ -89,7 +90,17 @@ const char* shaderFragment =
 "    //gl_FragColor = vec4(color, 1.0);\n"
 "    gl_FragColor = texture(texture1, TexCoord);\n"
 "}\n";
+*/
+/*
+class Material
+{
+public:
+    Material() {}
+    ~Material() {}
 
+private:
+
+};
 
 class Light
 {
@@ -106,6 +117,21 @@ public:
     void setPosition(glm::vec3 &position)
     {
         m_position = position;
+    }
+
+    glm::vec3 getPosition()
+    {
+        return m_position;
+    }
+
+    glm::vec3 getDiffuseColor()
+    {
+        return m_diffuse;
+    }
+
+    glm::vec3 getSpelecularColor()
+    {
+        return m_specular;
     }
 
     void setDirection(glm::vec3 &direction)
@@ -131,8 +157,7 @@ private:
     glm::vec3 m_specular;
 
 };
-
-
+*/
 enum CameraDirection {
     FORWARD_DIRECTIOM = 0,
     BACKWARD_DIRECTION = 1,
@@ -145,8 +170,8 @@ class CameraSettings
 public:
 
     CameraSettings() : position(0.0f, 0.0f, 10.0f), up(0.0f, 5.0f, 0.0f),
-        front(0.0f, 0.0f, -1.0f), cameraSpeed(5.0), fov(45.0), yaw(-90.0),
-        pitch(0.0)
+        front(0.0f, 0.0f, -1.0f), cameraSpeed(5.0f), fov(45.0f), yaw(-90.0f),
+        pitch(0.0f)
     {
     }
 
@@ -178,6 +203,8 @@ public:
         m_fov = settings.fov;
         m_yaw = settings.yaw;
         m_pitch = settings.pitch;
+
+        computeCamera();
     }
 
     ~FpsCamera() { }
@@ -263,9 +290,9 @@ public:
         }
     }
 
-    void updateMouseCameraDirection(float xoffset, float yoffset)
+    void updateMouseCameraDirection(double xoffset, double yoffset)
     {
-        float sensitivity = 0.1f;
+        double sensitivity = 0.1;
         xoffset *= sensitivity;
         yoffset *= sensitivity;
 
@@ -453,8 +480,8 @@ public:
             firstMouse = false;
         }
 
-        float xoffset = x - lastX;
-        float yoffset = lastY - y;
+        double xoffset = x - lastX;
+        double yoffset = lastY - y;
 
         lastX = x;
         lastY = y;
@@ -563,37 +590,36 @@ public:
     {
         if(type == TypeShader::VERTEX_SHADER)
         {
-            //std::string vertexshader = getShaderReader(shader);
-            //const char *vertex_shader = getShaderReader(shader).c_str();
+            std::string vertexshader = getShaderReader(shader);
+            const char *vertex_shader = vertexshader.c_str();
 
             m_vertexShader = glCreateShader(GL_VERTEX_SHADER);
-            glShaderSource(m_vertexShader, 1, &shaderVertex, NULL);
+            glShaderSource(m_vertexShader, 1, &vertex_shader, NULL);
             glCompileShader(m_vertexShader);
-            shaderCompileStatus(m_vertexShader, __FILE__ , __LINE__);
+            shaderCompileStatus(m_vertexShader);
             m_isVertexShader = true;
         }
 
         if(type == TypeShader::FRAGMENT_SHADER)
         {
-            //const char *fragment_shader = getShaderReader(shader).c_str();
-            //std::string fragmentshader = getShaderReader(shader);
-            //const char *fragment_shader = getShaderReader(shader).c_str();
-
+            std::string fragmentshader = getShaderReader(shader);
+            const char *fragment_shader = fragmentshader.c_str();
             m_fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-            glShaderSource(m_fragmentShader, 1, &shaderFragment, NULL);
+            glShaderSource(m_fragmentShader, 1, &fragment_shader, NULL);
             glCompileShader(m_fragmentShader);
-            shaderCompileStatus(m_fragmentShader, __FILE__ , __LINE__);
+            shaderCompileStatus(m_fragmentShader);
             m_isFragmentShader = true;
         }
 
-        /*if(type == TypeShader::GEOMETRY_SHADER)
+        if(type == TypeShader::GEOMETRY_SHADER)
         {
-            const char *geometry_shader = getShaderReader(shader);
+            std::string geometryshader = getShaderReader(shader);
+            const char *geometry_shader = geometryshader.c_str();
             m_geometryShader = glCreateShader(GL_GEOMETRY_SHADER);
             glShaderSource(m_geometryShader, 1, &geometry_shader, NULL);
             glCompileShader(m_geometryShader);
             m_isGeometryShader = true;
-        }*/
+        }
     }
 
     void useShaderProgram()
@@ -618,39 +644,33 @@ public:
         {
             glAttachShader(m_id, m_fragmentShader);
         }
-        /*if(m_isGeometryShader)
+        if(m_isGeometryShader)
         {
             glAttachShader(m_id, m_geometryShader);
-        }*/
+        }
 
         glLinkProgram(m_id);
-        programCompileStatus(m_id, __FILE__ , __LINE__);
+        programCompileStatus(m_id);
     }
 
-    /*std::string getShaderReader(const std::string &shader)
+    std::string getShaderReader(const std::string &shader)
     {
-        std::string line;
-        std::string source;
         std::ifstream file(shader);
+        std::stringstream buffer;
+
         if(file.is_open())
         {
-            while(std::getline(file, line))
-            {
-                std::cerr << line << std::endl;
-                source = source + line + "\n";
-            }
-
-            file.close();
+            buffer << file.rdbuf();
         }
         else
         {
             std::cerr << "Cannot open file! " << ""<< shader << ""<< std::endl;
         }
 
-        std::cerr << source << std::endl;
-
-        return source;
-     }*/s
+        std::string contents(buffer.str());
+        //std::cerr << contents << std::endl;
+        return contents;
+    }
 
     void setUniformMatrix4x4(const std::string &type, const glm::mat4 &matrix)
     {
@@ -662,9 +682,19 @@ public:
         glUniform1i(glGetUniformLocation(m_id, type.c_str()), value);
     }
 
+    void setUnifromVec2(const std::string &type, const glm::vec3 &value)
+    {
+        glUniform2f(glGetUniformLocation(m_id, type.c_str()), value.x, value.y);
+    }
+
+    void setUnifromVec3(const std::string &type, const glm::vec3 &value)
+    {
+        glUniform3f(glGetUniformLocation(m_id, type.c_str()), value.x, value.y, value.z);
+    }
+
 protected:
 
-    void shaderCompileStatus(GLuint shader, std::string file, int line)
+    void shaderCompileStatus(GLuint shader)
     {
         GLint isCompiled;
 
@@ -676,8 +706,6 @@ protected:
             glGetShaderInfoLog(shader, 1024, &logLenght, log);
             std::cerr << "[WARN] Shader compilation error : "  << log <<
                          " - Log lenght: " << logLenght <<
-                         " - File: " << file <<
-                         " - Line: " << line <<
                          "\n";
         }
         else
@@ -687,13 +715,11 @@ protected:
             glGetShaderInfoLog(shader, 1024, &logLenght, log);
             std::cerr << "[INFO] Shader compilation success ! " << log <<
                          " - Log lenght: " << logLenght <<
-                         " - File: " << file <<
-                         " - Line: " << line <<
                          "\n";
         }
     }
 
-    void programCompileStatus(GLuint program, std::string file, int line)
+    void programCompileStatus(GLuint program)
     {
         GLint isCompiled;
 
@@ -705,8 +731,6 @@ protected:
             glGetProgramInfoLog(program, 1024, &logLenght, log);
             std::cerr << "[WARN] Program linker error : "  << log <<
                          " - Log lenght: " << logLenght <<
-                         " - File: " << file <<
-                         " - Line: " << line <<
                          "\n";
         }
         else
@@ -716,8 +740,6 @@ protected:
             glGetProgramInfoLog(program, 1024, &logLenght, log);
             std::cerr << "[INFO] Pogram linker success ! " << log <<
                          " - Log lenght: " << logLenght <<
-                         " - File: " << file <<
-                         " - Line: " << line <<
                          "\n";
         }
     }
@@ -749,29 +771,16 @@ int main(void)
     shader.loadShader("shader.frag", TypeShader::FRAGMENT_SHADER);
     shader.createShaderProgram();
 
-    /*GLuint vs = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vs, 1, &shaderVertex, NULL);
-    glCompileShader(vs);
-
-    GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fs, 1, &shaderFragment, NULL);
-    glCompileShader(fs);
-
-    GLuint shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, fs);
-    glAttachShader(shaderProgram, vs);
-    glLinkProgram(shaderProgram);*/
-
     GLuint /*mvp_location,*/ vpos_location, vcol_location, tex_location;
     //mvp_location  = glGetUniformLocation(shader.getShaderProgram(), "MVP");
     vpos_location = glGetAttribLocation(shader.getShaderProgram(), "vPos");
     vcol_location = glGetAttribLocation(shader.getShaderProgram(), "vCol");
     tex_location  = glGetAttribLocation(shader.getShaderProgram(), "aTexCoord");
 
-    unsigned int vbo, vao, ebo;
+    unsigned int vbo, vao;
     glGenVertexArrays(1, &vao);
     glGenBuffers(1, &vbo);
-    //glGenBuffers(1, &ebo);
+
 
     unsigned int lightVAO;
     glGenVertexArrays(1, &lightVAO);
@@ -782,10 +791,7 @@ int main(void)
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    //glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
-    glVertexAttribPointer(vpos_location, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glVertexAttribPointer(vpos_location, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), 0);
     glEnableVertexAttribArray(vpos_location);
 
     //glVertexAttribPointer(vcol_location, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
@@ -831,11 +837,12 @@ int main(void)
     shader.setUniformInt("texture1", 0);
 
     std::vector<glm::vec3> randomPosition;
-    for(int i = 0; i < 20; i++)
+    const int countObjects = 40;
+    for(int i = 0; i < countObjects; i++)
     {
-        randomPosition.push_back(glm::vec3(static_cast <float> (rand() % 15 - 1) ,
-                         static_cast <float> (rand() % 10 - 1) ,
-                         static_cast <float> (rand() % 5) - 1));
+        randomPosition.push_back(glm::vec3(static_cast <float> (rand() % 30 - 1) ,
+                         static_cast <float> (rand() % 20 - 1) ,
+                         static_cast <float> (rand() % 10) - 1));
     }
 
     float deltaTime = 0.0f;	// time between current frame and last frame
@@ -888,10 +895,9 @@ int main(void)
 
         view = g_camera.getLookAtCamera();
         shader.setUniformMatrix4x4("view", view);
-        //shader.setUniformMatrix4x4("model", model);
 
         glBindVertexArray(vao);
-        for(unsigned int i = 0; i < 20; i++)
+        for(unsigned int i = 0; i < countObjects; i++)
         {
           glm::mat4 model;
           model = glm::translate(model, randomPosition[i]);
@@ -902,14 +908,12 @@ int main(void)
           glDrawArrays(GL_TRIANGLES, 0, 36);
         }
 
-
         window.checkPoolEvents();
         window.checkSwapBuffer();
     }
 
     glDeleteVertexArrays(1, &vao);
     glDeleteBuffers(1, &vbo);
-    glDeleteBuffers(1, &ebo);
 
     return 0;
 }
