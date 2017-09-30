@@ -789,7 +789,7 @@ class Texture
 {
 public:
 
-    Texture() {}
+    Texture() : m_id(0) {}
     ~Texture() {}
 
     unsigned int loadTexture(const std::string &name)
@@ -898,11 +898,12 @@ int main(void)
 
     std::vector<glm::vec3> randomPosition;
     const int countObjects = 40;
+    srand (time(NULL));
     for(int i = 0; i < countObjects; i++)
     {
-        randomPosition.push_back(glm::vec3(static_cast <float> (rand() % 30 - 1) ,
-                         static_cast <float> (rand() % 20 - 1) ,
-                         static_cast <float> (rand() % 10) - 1));
+        randomPosition.push_back(glm::vec3(static_cast <float> (rand() % 30 + 1) ,
+                         static_cast <float> (rand() % 20 + 1) ,
+                         static_cast <float> (rand() % 10 + 1)));
     }
 
     float deltaTime = 0.0f;	// time between current frame and last frame
@@ -978,21 +979,21 @@ int main(void)
 
         for(unsigned int i = 0; i < countObjects; i++)
         {
-          glm::mat4 model;
-          model = glm::translate(model, randomPosition[i]);
-          //float angle = 20.0f * i;
-          //model = glm::rotate(model, glm::radians(0.0f), glm::vec3(1.0f, 0.3f, 0.5f));
-        //glm::mat4 model;
-        lightShader.setUniformMatrix4x4("model", model);
+            glm::mat4 model;
+            model = glm::translate(model, randomPosition[i]);
+            //float angle = 20.0f * i;
+            //model = glm::rotate(model, glm::radians(0.0f), glm::vec3(1.0f, 0.3f, 0.5f));
+            //glm::mat4 model;
+            lightShader.setUniformMatrix4x4("model", model);
 
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, diffuseTex);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, diffuseTex);
 
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, specularTex);
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, specularTex);
 
-        glBindVertexArray(vaoCube);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+            glBindVertexArray(vaoCube);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
         }
 
         mainShader.useShaderProgram();
