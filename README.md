@@ -12,7 +12,7 @@ Simple example for OpenGL with GLFW, GLEW, GLM
   * Light ambient, diffuse, specular color 
 
 ### How to compile projects
-Compile only FreBSD, Linux projects are in .pro for QTCreator
+Compile only FreeBSD, Linux projects are in .pro for QTCreator
 
 ### Dependencies 
   * GLFW
