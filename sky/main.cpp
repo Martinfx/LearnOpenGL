@@ -63,6 +63,52 @@ static unsigned int indices[] = {
         0, 1, 3, // first triangle
         1, 2, 3  // second triangle
     };
+
+static float skyboxVertices[] = {
+    // positions
+    -1.0f,  1.0f, -1.0f,
+    -1.0f, -1.0f, -1.0f,
+     1.0f, -1.0f, -1.0f,
+     1.0f, -1.0f, -1.0f,
+     1.0f,  1.0f, -1.0f,
+    -1.0f,  1.0f, -1.0f,
+
+    -1.0f, -1.0f,  1.0f,
+    -1.0f, -1.0f, -1.0f,
+    -1.0f,  1.0f, -1.0f,
+    -1.0f,  1.0f, -1.0f,
+    -1.0f,  1.0f,  1.0f,
+    -1.0f, -1.0f,  1.0f,
+
+     1.0f, -1.0f, -1.0f,
+     1.0f, -1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f, -1.0f,
+     1.0f, -1.0f, -1.0f,
+
+    -1.0f, -1.0f,  1.0f,
+    -1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,
+     1.0f, -1.0f,  1.0f,
+    -1.0f, -1.0f,  1.0f,
+
+    -1.0f,  1.0f, -1.0f,
+     1.0f,  1.0f, -1.0f,
+     1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,
+    -1.0f,  1.0f,  1.0f,
+    -1.0f,  1.0f, -1.0f,
+
+    -1.0f, -1.0f, -1.0f,
+    -1.0f, -1.0f,  1.0f,
+     1.0f, -1.0f, -1.0f,
+     1.0f, -1.0f, -1.0f,
+    -1.0f, -1.0f,  1.0f,
+     1.0f, -1.0f,  1.0f
+};
+
 /*
 const char* shaderVertex =
 "#version 330 core\n"
@@ -837,6 +883,51 @@ public:
         return m_id;
     }
 
+    unsigned int loadCubeTexture(std::vector<std::string> &faces)
+    {
+        unsigned int textureID;
+        glGenTextures(1, &textureID);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+        int width, height, nrChannels;
+        for (unsigned int i = 0; i < faces.size(); i++)
+        {
+            unsigned char *data = stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
+            if(data)
+            {
+                GLenum format = 0;
+                if (nrChannels == 1)
+                {
+                    format = GL_RED;
+                }
+                else if (nrChannels == 3)
+                {
+                    format = GL_RGB;
+                }
+                else if (nrChannels == 4)
+                {
+                    format = GL_RGBA;
+                }
+
+                glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+                stbi_image_free(data);
+            }
+            else
+            {
+                std::cout << "Cubemap texture failed to load at path: " << faces[i] << std::endl;
+                stbi_image_free(data);
+            }
+        }
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+        return textureID;
+    }
+
+
 private:
 
     unsigned int m_id;
@@ -857,6 +948,11 @@ int main(void)
     mainShader.loadShader("shader.frag", TypeShader::FRAGMENT_SHADER);
     mainShader.createShaderProgram();
 
+    Shader skyShader;
+    skyShader.loadShader("skybox.vert", TypeShader::VERTEX_SHADER);
+    skyShader.loadShader("skybox.frag", TypeShader::FRAGMENT_SHADER);
+    skyShader.createShaderProgram();
+
     Shader lightShader;
     lightShader.loadShader("light.vert", TypeShader::VERTEX_SHADER);
     lightShader.loadShader("light.frag", TypeShader::FRAGMENT_SHADER);
@@ -868,6 +964,10 @@ int main(void)
     vcol_location = glGetAttribLocation(mainShader.getShaderProgram(), "vCol");
     tex_location  = glGetAttribLocation(mainShader.getShaderProgram(), "aTexCoord");
 
+
+    /////////////////////////////////////////////////////////////
+    /// Box vbo, vao
+    ///
     unsigned int vbo, vaoCube;
     glGenVertexArrays(1, &vaoCube);
     glGenBuffers(1, &vbo);
@@ -876,28 +976,54 @@ int main(void)
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
     glBindVertexArray(vaoCube);
-    glVertexAttribPointer(0,
-                          3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
-    glVertexAttribPointer(1,
-                          3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
-    glVertexAttribPointer(2,
-                          2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
     glEnableVertexAttribArray(2);
 
+
+    /////////////////////////////////////////////////////////////
+    /// Light vao
+    ///
     unsigned int lightVAO;
     glGenVertexArrays(1, &lightVAO);
     glBindVertexArray(lightVAO);
 
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glVertexAttribPointer(0, 3,
-                          GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
+    /////////////////////////////////////////////////////////////
+    /// Skybox vao, vbo
+    ///
+    unsigned int skyboxVAO, skyboxVBO;
+    glGenVertexArrays(1, &skyboxVAO);
+    glGenBuffers(1, &skyboxVBO);
+    glBindVertexArray(skyboxVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+
+    std::vector<std::string> skyTextures
+    {
+        "skybox/right.png",
+        "skybox/left.png",
+        "skybox/top.png",
+        "skybox/bottom.png",
+        "skybox/back.png",
+        "skybox/front.png"
+    };
+
+    Texture skyboxTexture;
+    unsigned int skyBoxTexture = skyboxTexture.loadCubeTexture(skyTextures);
+
+    skyShader.useShaderProgram();
+    skyShader.setUniformInt("skybox", 0);
 
     std::vector<glm::vec3> randomPosition;
     const int countObjects = 40;
@@ -923,8 +1049,8 @@ int main(void)
 
     Texture diffuseTexture;
     Texture specularTexture;
-    unsigned int diffuseTex  = diffuseTexture.loadTexture("box-diffuse.png");
-    unsigned int specularTex = specularTexture.loadTexture("box-specular.png");
+    unsigned int diffuseTex  = diffuseTexture.loadTexture("box/box-diffuse.png");
+    unsigned int specularTex = specularTexture.loadTexture("box/box-specular.png");
 
     lightShader.useShaderProgram();
     lightShader.setUniformInt("material.diffuse", 0);
@@ -1010,13 +1136,30 @@ int main(void)
         glBindVertexArray(lightVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
+        // skybox
+        glDepthFunc(GL_LEQUAL);
+        skyShader.useShaderProgram();
+        view = glm::mat4(glm::mat3(g_camera.getLookAtCamera()));
+        skyShader.setUniformMatrix4x4("view", view);
+        skyShader.setUniformMatrix4x4("projection", projection);
+
+        // skybox cube
+        glBindVertexArray(skyboxVAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, skyBoxTexture);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+        glBindVertexArray(0);
+        glDepthFunc(GL_LESS); // set depth function back to default
+
         window.checkPoolEvents();
         window.checkSwapBuffer();
     }
 
     glDeleteVertexArrays(1, &vaoCube);
     glDeleteVertexArrays(1, &lightVAO);
+    glDeleteVertexArrays(1, &skyboxVAO);
     glDeleteBuffers(1, &vbo);
+    glDeleteBuffers(1, &skyboxVBO);
 
     return 0;
 }

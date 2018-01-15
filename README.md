@@ -10,6 +10,7 @@ Simple example for OpenGL with GLFW, GLEW, GLM
   * 3D Box with texture
   * Camera fly and rotate 
   * Light ambient, diffuse, specular color 
+  * Skybox
 
 ### How to compile projects
 Compile only FreBSD, Linux projects are in .pro for QTCreator
