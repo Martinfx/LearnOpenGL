@@ -1011,12 +1011,12 @@ int main(void)
 
     std::vector<std::string> skyTextures
     {
-        "skybox/right.png",
-        "skybox/left.png",
-        "skybox/top.png",
-        "skybox/bottom.png",
-        "skybox/back.png",
-        "skybox/front.png"
+        "skybox/posx.png",
+        "skybox/negx.png",
+        "skybox/posy.png",
+        "skybox/negy.png",
+        "skybox/posz.png",
+        "skybox/negz.png"
     };
 
     Texture skyboxTexture;
