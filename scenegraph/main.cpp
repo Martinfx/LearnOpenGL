@@ -18,6 +18,13 @@
 
 /////////////////////////////////////////////////////////////////////////////////////
 
+struct VertexPNT
+{
+    glm::vec3 position;
+    glm::vec3 normal;
+    glm::vec2 texCoords;
+};
+
 static float CubeVertices[] =
 {
     // positions          // normals           // texture coords
@@ -71,6 +78,8 @@ static unsigned int CubeIndices[] = {
 
 /////////////////////////////////////////////////////////////////////////////////////
 // Experimental with scenegraph implementation
+/////////////////////////////////////////////////////////////////////////////////////
+
 
 struct TransformationState
 {
@@ -91,16 +100,16 @@ public:
 
     void addChild(Node *node)
     {
-        m_childrens.push_back(node);
+        m_children.push_back(node);
     }
 
     void removeChild(Node *node)
     {
-        for(unsigned int i = 0; i < m_childrens.size(); ++i)
+        for(unsigned int i = 0; i < m_children.size(); ++i)
         {
-            if(node == m_childrens[i])
+            if(node == m_children[i])
             {
-                m_childrens.erase(m_childrens.begin() + i);
+                m_children.erase(m_children.begin() + i);
             }
         }
     }
@@ -132,7 +141,7 @@ protected:
     /// True for geometry nodes, false for non-geometry.
     bool m_isGeometry;
 
-    std::vector<Node*> m_childrens;
+    std::vector<Node*> m_children;
 };
 
 class Transformation : public Node
@@ -192,11 +201,58 @@ private:
     glm::mat4x4 m_matrix;
 };
 
-class SceneGraph
+
+namespace renderer {
+
+const int ATTR_POSITION = 0;
+const int ATTR_NORMAL = 1;
+const int ATTR_TEXCOORDS = 2;
+
+class Box
 {
-public:
-    SceneGraph() {}
+    Box()
+    {
+        glGenVertexArrays(1, &m_vao);
+        glGenBuffers(1, &m_vbo);
+
+        glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(CubeVertices), CubeVertices, GL_STATIC_DRAW);
+
+        glBindVertexArray(m_vao);
+        glVertexAttribPointer(ATTR_POSITION, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(ATTR_POSITION);
+
+        glVertexAttribPointer(ATTR_NORMAL, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+        glEnableVertexAttribArray(ATTR_NORMAL);
+
+        glVertexAttribPointer(ATTR_TEXCOORDS, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+        glEnableVertexAttribArray(ATTR_TEXCOORDS);
+    }
+
+    ~Box()
+    {
+        glDeleteVertexArrays(1, &m_vao);
+        glDeleteBuffers(1, &m_vbo);
+    }
+
+    void render()
+    {
+        glBindVertexArray(m_vao);
+        glDrawArrays(GL_TRIANGLES, 0, sizeof(CubeIndices));
+    }
+
+private:
+
+    unsigned int m_vao;
+    unsigned int m_vbo;
 };
+
+}
+//class SceneGraph
+//{
+//public:
+//    SceneGraph() {}
+//};
 
 enum CameraDirection {
     FORWARD_DIRECTIOM = 0,
