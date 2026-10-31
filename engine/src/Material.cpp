@@ -79,9 +79,9 @@ std::filesystem::path textureSettingsPath(const std::filesystem::path& image)
     return p;
 }
 
-TextureSettings readTextureSettings(const std::filesystem::path& image)
+TextureSettings readTextureSettings(const std::filesystem::path& image, const TextureSettings& defaults)
 {
-    TextureSettings s;
+    TextureSettings s = defaults;
     std::ifstream in(textureSettingsPath(image));
     std::string line;
     while (std::getline(in, line)) {
@@ -118,7 +118,7 @@ TextureSettings readTextureSettings(const std::filesystem::path& image)
     return s;
 }
 
-std::shared_ptr<TextureAsset> loadTextureAsset(const std::filesystem::path& image, std::string* error)
+std::shared_ptr<TextureAsset> loadTextureAsset(const std::filesystem::path& image, std::string* error, bool color)
 {
     static std::map<std::filesystem::path, std::weak_ptr<TextureAsset>> cache;
     const std::filesystem::path key = normalized(image);
@@ -144,7 +144,9 @@ std::shared_ptr<TextureAsset> loadTextureAsset(const std::filesystem::path& imag
     asset->source.assign(pixels, pixels + static_cast<std::size_t>(w) * static_cast<std::size_t>(h) * 4);
     stbi_image_free(pixels);
 
-    asset->settings = readTextureSettings(key);
+    TextureSettings defaults;
+    defaults.srgb = color;
+    asset->settings = readTextureSettings(key, defaults);
     asset->texture = std::make_shared<Texture>();
     applyTextureSettings(*asset);
     cache[key] = asset;
@@ -231,7 +233,8 @@ bool parseMaterial(Material& m, const std::filesystem::path& file, std::string* 
     Material result;
     result.sourcePath = normalized(file);
     result.name = file.stem().string();
-    std::string line, texture;
+    std::array<std::string, kMapCount> maps;
+    std::string line;
     int lineNo = 0;
     while (std::getline(in, line)) {
         ++lineNo;
@@ -242,34 +245,44 @@ bool parseMaterial(Material& m, const std::filesystem::path& file, std::string* 
         bool ok = true;
         if (k == "version") {
             int v = 0;
-            ok = static_cast<bool>(ls >> v) && v == 1;
+            ok = static_cast<bool>(ls >> v) && v >= 1 && v <= 2;
         } else if (k == "name") {
             ok = static_cast<bool>(ls >> std::quoted(result.name));
         } else if (k == "color") {
             ok = static_cast<bool>(ls >> result.color.r >> result.color.g >> result.color.b);
-        } else if (k == "texture") {
-            ok = static_cast<bool>(ls >> std::quoted(texture));
+        } else if (k == "texture") { // version 1 name of the albedo map
+            ok = static_cast<bool>(ls >> std::quoted(maps[0]));
         } else if (k == "tiling") {
             ok = static_cast<bool>(ls >> result.tiling.x >> result.tiling.y);
-        } else if (k == "specular") {
-            ok = static_cast<bool>(ls >> result.specular);
-        } else if (k == "shininess") {
-            ok = static_cast<bool>(ls >> result.shininess);
+        } else if (k == "roughness") {
+            ok = static_cast<bool>(ls >> result.roughness);
+        } else if (k == "metallic") {
+            ok = static_cast<bool>(ls >> result.metallic);
+        } else if (k == "normal_strength") {
+            ok = static_cast<bool>(ls >> result.normalStrength);
         } else if (k == "emissive") {
             ok = static_cast<bool>(ls >> result.emissive.r >> result.emissive.g >> result.emissive.b);
         } else if (k == "world_uv") {
             ok = static_cast<bool>(ls >> result.worldUv);
-        } // unknown keys are ignored so newer files still load
+        } else {
+            for (int i = 0; i < kMapCount; ++i)
+                if (k == mapKey(static_cast<MapKind>(i)))
+                    ok = static_cast<bool>(ls >> std::quoted(maps[static_cast<std::size_t>(i)]));
+            // other unknown keys (e.g. version 1 specular/shininess) are ignored
+        }
         if (!ok) {
             setError(error, file.string() + ":" + std::to_string(lineNo) + ": invalid line: " + line);
             return false;
         }
     }
-    if (!texture.empty()) {
+    for (int i = 0; i < kMapCount; ++i) {
+        const std::string& texture = maps[static_cast<std::size_t>(i)];
+        if (texture.empty())
+            continue;
         std::filesystem::path p = fromUtf8(texture);
         if (p.is_relative())
             p = result.sourcePath.parent_path() / p;
-        if (!setMaterialTexture(result, p, error))
+        if (!setMaterialMap(result, static_cast<MapKind>(i), p, error))
             return false;
     }
     m = std::move(result);
@@ -309,16 +322,21 @@ bool saveMaterial(const Material& m, const std::filesystem::path& file, std::str
         return false;
     }
     out << std::setprecision(6);
-    out << "# FPS engine material\nversion 1\n";
+    out << "# FPS engine material (physically based: metal/roughness)\nversion 2\n";
     out << "name " << std::quoted(m.name) << '\n';
     out << "color " << m.color.r << ' ' << m.color.g << ' ' << m.color.b << '\n';
-    if (!m.texturePath.empty())
-        out << "texture " << std::quoted(toUtf8(relativeTo(m.texturePath, normalized(file).parent_path()))) << '\n';
-    out << "tiling " << m.tiling.x << ' ' << m.tiling.y << '\n';
-    out << "specular " << m.specular << '\n';
-    out << "shininess " << m.shininess << '\n';
+    out << "roughness " << m.roughness << '\n';
+    out << "metallic " << m.metallic << '\n';
+    out << "normal_strength " << m.normalStrength << '\n';
     out << "emissive " << m.emissive.r << ' ' << m.emissive.g << ' ' << m.emissive.b << '\n';
+    out << "tiling " << m.tiling.x << ' ' << m.tiling.y << '\n';
     out << "world_uv " << m.worldUv << '\n';
+    const std::filesystem::path dir = normalized(file).parent_path();
+    for (int i = 0; i < kMapCount; ++i) {
+        const std::filesystem::path& p = m.mapPaths[static_cast<std::size_t>(i)];
+        if (!p.empty())
+            out << mapKey(static_cast<MapKind>(i)) << ' ' << std::quoted(toUtf8(relativeTo(p, dir))) << '\n';
+    }
     if (!out) {
         setError(error, "Write failed: " + file.string());
         return false;
@@ -326,18 +344,50 @@ bool saveMaterial(const Material& m, const std::filesystem::path& file, std::str
     return true;
 }
 
-bool setMaterialTexture(Material& material, const std::filesystem::path& image, std::string* error)
+const char* mapKey(MapKind kind)
 {
+    switch (kind) {
+    case MapKind::Albedo: return "albedo_map";
+    case MapKind::Normal: return "normal_map";
+    case MapKind::Roughness: return "roughness_map";
+    case MapKind::Metallic: return "metallic_map";
+    case MapKind::Occlusion: return "occlusion_map";
+    case MapKind::Emissive: return "emissive_map";
+    default: return "";
+    }
+}
+
+const char* mapLabel(MapKind kind)
+{
+    switch (kind) {
+    case MapKind::Albedo: return "Albedo (color)";
+    case MapKind::Normal: return "Normal map";
+    case MapKind::Roughness: return "Roughness map";
+    case MapKind::Metallic: return "Metallic map";
+    case MapKind::Occlusion: return "Ambient occlusion";
+    case MapKind::Emissive: return "Emissive map";
+    default: return "";
+    }
+}
+
+bool mapIsColor(MapKind kind)
+{
+    return kind == MapKind::Albedo || kind == MapKind::Emissive;
+}
+
+bool setMaterialMap(Material& material, MapKind kind, const std::filesystem::path& image, std::string* error)
+{
+    const auto i = static_cast<std::size_t>(kind);
     if (image.empty()) {
-        material.texturePath.clear();
-        material.texture.reset();
+        material.mapPaths[i].clear();
+        material.maps[i].reset();
         return true;
     }
-    auto asset = loadTextureAsset(image, error);
+    auto asset = loadTextureAsset(image, error, mapIsColor(kind));
     if (!asset)
         return false;
-    material.texturePath = asset->imagePath;
-    material.texture = std::move(asset);
+    material.mapPaths[i] = asset->imagePath;
+    material.maps[i] = std::move(asset);
     return true;
 }
 

@@ -1,10 +1,11 @@
 # FPS engine material
-version 1
+version 2
 name "Prototype grey"
 color 1 1 1
-texture "../textures/prototype_grid.png"
+albedo_map "../textures/prototype_grid.png"
 tiling 0.25 0.25
-specular 0.15
-shininess 32
+roughness 0.6
+metallic 0
+normal_strength 1
 emissive 0 0 0
 world_uv 0

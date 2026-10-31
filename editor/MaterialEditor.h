@@ -71,12 +71,13 @@ private:
     QWidget* form_;
     QLineEdit* nameEdit_;
     QPushButton* colorButton_;
-    QLineEdit* textureEdit_;
-    QPushButton* editTextureButton_;
+    QLineEdit* mapEdits_[engine::kMapCount] = {};
+    QPushButton* mapEditButtons_[engine::kMapCount] = {};
     QDoubleSpinBox* tilingX_;
     QDoubleSpinBox* tilingY_;
-    QDoubleSpinBox* specular_;
-    QDoubleSpinBox* shininess_;
+    QDoubleSpinBox* roughness_;
+    QDoubleSpinBox* metallic_;
+    QDoubleSpinBox* normalStrength_;
     QPushButton* emissiveButton_;
     QCheckBox* worldUv_;
     QLabel* pathLabel_;

@@ -167,21 +167,59 @@ MaterialEditor::MaterialEditor(QWidget* parent)
     auto* form = new QFormLayout(form_);
     nameEdit_ = new QLineEdit(form_);
     colorButton_ = new QPushButton(form_);
-    auto* textureRow = new QWidget(form_);
-    auto* textureLayout = new QHBoxLayout(textureRow);
-    textureLayout->setContentsMargins(0, 0, 0, 0);
-    textureEdit_ = new QLineEdit(textureRow);
-    textureEdit_->setReadOnly(true);
-    textureEdit_->setPlaceholderText(tr("no texture"));
-    auto* browseTexture = new QPushButton(tr("..."), textureRow);
-    auto* clearTexture = new QPushButton(tr("x"), textureRow);
-    editTextureButton_ = new QPushButton(tr("Edit"), textureRow);
-    browseTexture->setFixedWidth(32);
-    clearTexture->setFixedWidth(32);
-    textureLayout->addWidget(textureEdit_, 1);
-    textureLayout->addWidget(browseTexture);
-    textureLayout->addWidget(clearTexture);
-    textureLayout->addWidget(editTextureButton_);
+    // One row per texture slot: file name, browse, clear, open in the texture editor.
+    std::vector<QWidget*> mapRows;
+    for (int i = 0; i < engine::kMapCount; ++i) {
+        const auto kind = static_cast<engine::MapKind>(i);
+        auto* row = new QWidget(form_);
+        auto* rowLayout = new QHBoxLayout(row);
+        rowLayout->setContentsMargins(0, 0, 0, 0);
+        auto* edit = new QLineEdit(row);
+        edit->setReadOnly(true);
+        edit->setPlaceholderText(tr("none"));
+        auto* browse = new QPushButton(tr("..."), row);
+        auto* clear = new QPushButton(tr("x"), row);
+        auto* editButton = new QPushButton(tr("Edit"), row);
+        browse->setFixedWidth(32);
+        clear->setFixedWidth(32);
+        rowLayout->addWidget(edit, 1);
+        rowLayout->addWidget(browse);
+        rowLayout->addWidget(clear);
+        rowLayout->addWidget(editButton);
+        mapEdits_[i] = edit;
+        mapEditButtons_[i] = editButton;
+        mapRows.push_back(row);
+        connect(browse, &QPushButton::clicked, this, [this, kind] {
+            if (!material_)
+                return;
+            const auto& current = material_->mapPath(kind);
+            const QString start = current.empty() ? assetPath("textures") : fromPath(current);
+            const QString path = QFileDialog::getOpenFileName(this, tr(engine::mapLabel(kind)), start,
+                                                              tr("Images (*.png *.jpg *.jpeg)"));
+            if (path.isEmpty())
+                return;
+            std::string error;
+            if (!engine::setMaterialMap(*material_, kind, toPath(path), &error)) {
+                QMessageBox::warning(this, tr("Texture"), QString::fromStdString(error));
+                return;
+            }
+            modified_.insert(currentPath());
+            refreshForm();
+            emit materialChanged();
+        });
+        connect(clear, &QPushButton::clicked, this, [this, kind] {
+            if (!material_ || material_->mapPath(kind).empty())
+                return;
+            engine::setMaterialMap(*material_, kind, {});
+            modified_.insert(currentPath());
+            refreshForm();
+            emit materialChanged();
+        });
+        connect(editButton, &QPushButton::clicked, this, [this, kind] {
+            if (material_ && !material_->mapPath(kind).empty())
+                emit editTexture(fromPath(material_->mapPath(kind)));
+        });
+    }
     auto makeSpin = [this](double min, double max, double step, int decimals) {
         auto* s = new QDoubleSpinBox(form_);
         s->setRange(min, max);
@@ -200,8 +238,9 @@ MaterialEditor::MaterialEditor(QWidget* parent)
     tilingY_->setPrefix("V ");
     tilingLayout->addWidget(tilingX_);
     tilingLayout->addWidget(tilingY_);
-    specular_ = makeSpin(0.0, 2.0, 0.05, 2);
-    shininess_ = makeSpin(1.0, 512.0, 4.0, 0);
+    roughness_ = makeSpin(0.0, 1.0, 0.05, 2);
+    metallic_ = makeSpin(0.0, 1.0, 0.05, 2);
+    normalStrength_ = makeSpin(0.0, 4.0, 0.1, 2);
     emissiveButton_ = new QPushButton(form_);
     worldUv_ = new QCheckBox(tr("Project texture in world space (ignores model UVs)"), form_);
     pathLabel_ = new QLabel(form_);
@@ -215,17 +254,20 @@ MaterialEditor::MaterialEditor(QWidget* parent)
 
     form->addRow(tr("Name"), nameEdit_);
     form->addRow(tr("Color"), colorButton_);
-    form->addRow(tr("Texture"), textureRow);
+    form->addRow(tr("Roughness"), roughness_);
+    form->addRow(tr("Metallic"), metallic_);
+    for (int i = 0; i < engine::kMapCount; ++i)
+        form->addRow(tr(engine::mapLabel(static_cast<engine::MapKind>(i))), mapRows[static_cast<std::size_t>(i)]);
+    form->addRow(tr("Normal strength"), normalStrength_);
     form->addRow(tr("Tiling"), tilingRow);
-    form->addRow(tr("Specular"), specular_);
-    form->addRow(tr("Shininess"), shininess_);
     form->addRow(tr("Emissive"), emissiveButton_);
     form->addRow(QString(), worldUv_);
     form->addRow(saveRow);
     form->addRow(pathLabel_);
     tilingX_->setToolTip(tr("Repeats per UV unit; with world mapping (boxes) per metre: 0.25 = one image every 4 m"));
-    specular_->setToolTip(tr("Strength of the light highlight (0 = matte)"));
-    shininess_->setToolTip(tr("Highlight size: low = broad, high = small and sharp"));
+    roughness_->setToolTip(tr("0 = mirror-like, 1 = completely matte (multiplies the roughness map)"));
+    metallic_->setToolTip(tr("0 = paint, stone, wood...; 1 = bare metal (multiplies the metallic map)"));
+    normalStrength_->setToolTip(tr("How strongly the normal map bends the light (OpenGL / +Y green convention)"));
     emissiveButton_->setToolTip(tr("Glow added without light (black = none)"));
 
     preview_ = new MaterialPreview(this);
@@ -273,34 +315,6 @@ MaterialEditor::MaterialEditor(QWidget* parent)
     };
     connect(colorButton_, &QPushButton::clicked, this, [=] { pickColor(&engine::Material::color, tr("Color")); });
     connect(emissiveButton_, &QPushButton::clicked, this, [=] { pickColor(&engine::Material::emissive, tr("Emissive")); });
-    connect(browseTexture, &QPushButton::clicked, this, [this] {
-        if (!material_)
-            return;
-        const QString start = material_->texturePath.empty() ? assetPath("textures") : fromPath(material_->texturePath);
-        const QString path = QFileDialog::getOpenFileName(this, tr("Texture"), start, tr("Images (*.png *.jpg *.jpeg)"));
-        if (path.isEmpty())
-            return;
-        std::string error;
-        if (!engine::setMaterialTexture(*material_, toPath(path), &error)) {
-            QMessageBox::warning(this, tr("Texture"), QString::fromStdString(error));
-            return;
-        }
-        modified_.insert(currentPath());
-        refreshForm();
-        emit materialChanged();
-    });
-    connect(clearTexture, &QPushButton::clicked, this, [this] {
-        if (!material_ || material_->texturePath.empty())
-            return;
-        engine::setMaterialTexture(*material_, {});
-        modified_.insert(currentPath());
-        refreshForm();
-        emit materialChanged();
-    });
-    connect(editTextureButton_, &QPushButton::clicked, this, [this] {
-        if (material_ && !material_->texturePath.empty())
-            emit editTexture(fromPath(material_->texturePath));
-    });
     connect(saveButton, &QPushButton::clicked, this, &MaterialEditor::saveCurrent);
     connect(revertButton, &QPushButton::clicked, this, &MaterialEditor::revertCurrent);
 
@@ -366,13 +380,17 @@ void MaterialEditor::refreshForm()
         nameEdit_->setText(QString::fromStdString(m.name));
         colorButton_->setStyleSheet(colorStyle(m.color));
         emissiveButton_->setStyleSheet(colorStyle(m.emissive));
-        textureEdit_->setText(m.texturePath.empty() ? QString() : fromPath(m.texturePath.filename()));
-        textureEdit_->setToolTip(fromPath(m.texturePath));
-        editTextureButton_->setEnabled(!m.texturePath.empty());
+        for (int i = 0; i < engine::kMapCount; ++i) {
+            const auto& p = m.mapPaths[static_cast<std::size_t>(i)];
+            mapEdits_[i]->setText(p.empty() ? QString() : fromPath(p.filename()));
+            mapEdits_[i]->setToolTip(fromPath(p));
+            mapEditButtons_[i]->setEnabled(!p.empty());
+        }
         tilingX_->setValue(m.tiling.x);
         tilingY_->setValue(m.tiling.y);
-        specular_->setValue(m.specular);
-        shininess_->setValue(m.shininess);
+        roughness_->setValue(m.roughness);
+        metallic_->setValue(m.metallic);
+        normalStrength_->setValue(m.normalStrength);
         worldUv_->setChecked(m.worldUv);
         pathLabel_->setText(QDir::toNativeSeparators(currentPath()) + (modified_.contains(currentPath()) ? tr("  (unsaved)") : QString()));
     }
@@ -391,8 +409,9 @@ void MaterialEditor::edited()
     engine::Material& m = *material_;
     m.name = nameEdit_->text().toStdString();
     m.tiling = {static_cast<float>(tilingX_->value()), static_cast<float>(tilingY_->value())};
-    m.specular = static_cast<float>(specular_->value());
-    m.shininess = static_cast<float>(shininess_->value());
+    m.roughness = static_cast<float>(roughness_->value());
+    m.metallic = static_cast<float>(metallic_->value());
+    m.normalStrength = static_cast<float>(normalStrength_->value());
     m.worldUv = worldUv_->isChecked();
     modified_.insert(currentPath());
     refreshForm();
@@ -452,6 +471,7 @@ void MaterialEditor::newMaterial()
     engine::Material m;
     m.name = QFileInfo(path).completeBaseName().toStdString();
     m.tiling = {0.5f, 0.5f};
+    m.roughness = 0.7f;
     std::string error;
     if (!engine::saveMaterial(m, toPath(path), &error)) {
         QMessageBox::warning(this, tr("New material"), QString::fromStdString(error));

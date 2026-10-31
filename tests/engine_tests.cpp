@@ -529,14 +529,14 @@ void testMaterialsAndTextures()
 {
     std::string err;
     auto m = engine::loadMaterial(ENGINE_TEST_ASSETS "/materials/bricks.material", &err);
-    check(m && m->texture && m->texture->texture && m->texture->width == 512, "load bricks material with texture: " + err);
+    check(m && m->map(engine::MapKind::Albedo) && m->map(engine::MapKind::Albedo)->width == 512, "load bricks material with texture: " + err);
     if (!m)
         return;
     check(engine::loadMaterial(ENGINE_TEST_ASSETS "/materials/bricks.material") == m, "materials are shared");
     check(std::abs(m->tiling.x - 0.5f) < 1e-6f, "tiling read");
 
     // Texture adjustments rebuild the pixels and give the GPU a new id.
-    engine::TextureAsset& tex = *m->texture;
+    engine::TextureAsset& tex = *m->map(engine::MapKind::Albedo);
     const std::uint64_t before = tex.texture->id;
     const std::uint8_t r0 = tex.texture->rgba[0];
     tex.settings.brightness = 0.3f;
@@ -549,11 +549,13 @@ void testMaterialsAndTextures()
     // Material file round trip (texture path stays relative to the material).
     engine::Material copy = *m;
     copy.name = "Copy";
-    copy.specular = 0.7f;
+    copy.roughness = 0.35f;
+    copy.metallic = 1.0f;
     copy.emissive = {0.1f, 0.2f, 0.3f};
     check(engine::saveMaterial(copy, "copy.material", &err), "save material: " + err);
     auto loaded = engine::loadMaterial("copy.material", &err);
-    check(loaded && loaded->name == "Copy" && std::abs(loaded->specular - 0.7f) < 1e-6f && loaded->texture == m->texture,
+    check(loaded && loaded->name == "Copy" && std::abs(loaded->roughness - 0.35f) < 1e-6f && loaded->metallic == 1.0f
+              && loaded->map(engine::MapKind::Albedo) == m->map(engine::MapKind::Albedo),
           "material round trip shares the texture: " + err);
 
     // Level with box materials and a model slot override.

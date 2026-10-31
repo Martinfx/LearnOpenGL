@@ -54,6 +54,15 @@ struct MeshPart {
     std::vector<glm::vec3> normals;
     std::vector<glm::vec2> texcoords;   // empty when the material has no texture
     std::shared_ptr<const Texture> texture; // base color texture, may be null
+    // glTF metal/roughness material (textures may be null).
+    std::shared_ptr<const Texture> normalTexture;
+    std::shared_ptr<const Texture> metalRoughTexture; // G = roughness, B = metallic
+    std::shared_ptr<const Texture> occlusionTexture;  // R
+    std::shared_ptr<const Texture> emissiveTexture;
+    float metallic = 0.0f;
+    float roughness = 0.8f;
+    float normalScale = 1.0f;
+    glm::vec3 emissive{0.0f};        // sRGB
     std::vector<std::uint32_t> indices; // triangles
     glm::vec3 color{0.8f};           // sRGB
     std::string materialName;        // glTF material name, used for material overrides

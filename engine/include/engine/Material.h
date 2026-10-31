@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include <cstdint>
 #include <filesystem>
 #include <glm/vec2.hpp>
@@ -38,33 +39,47 @@ struct TextureAsset {
 };
 
 // Cached per path: every material using the image shares one asset. Null on error.
-std::shared_ptr<TextureAsset> loadTextureAsset(const std::filesystem::path& image, std::string* error = nullptr);
+// Images without a settings file default to sRGB when `color` is true (albedo) and linear otherwise (normal maps...).
+std::shared_ptr<TextureAsset> loadTextureAsset(const std::filesystem::path& image, std::string* error = nullptr,
+                                               bool color = true);
 void applyTextureSettings(TextureAsset& asset);
 bool saveTextureSettings(const TextureAsset& asset, std::string* error = nullptr);
 std::filesystem::path textureSettingsPath(const std::filesystem::path& image);
-// Reads "<image>.texture"; defaults when the file does not exist.
-TextureSettings readTextureSettings(const std::filesystem::path& image);
+// Reads "<image>.texture"; `defaults` when the file does not exist.
+TextureSettings readTextureSettings(const std::filesystem::path& image, const TextureSettings& defaults = {});
 
-// Surface look, stored as a text .material file and edited in the material editor.
+// Texture slots of a material. Roughness, metallic and occlusion read the red channel.
+enum class MapKind { Albedo, Normal, Roughness, Metallic, Occlusion, Emissive, Count };
+constexpr int kMapCount = static_cast<int>(MapKind::Count);
+const char* mapKey(MapKind kind);   // key in .material files, e.g. "normal_map"
+const char* mapLabel(MapKind kind); // for the editor, e.g. "Normal map"
+bool mapIsColor(MapKind kind);      // albedo/emissive are sRGB, the rest are data
+
+// Surface look (physically based, metal/roughness), stored as a text .material
+// file and edited in the material editor.
 struct Material {
     std::string name = "Material";
     std::filesystem::path sourcePath;          // absolute .material path
-    glm::vec3 color{1.0f};                     // sRGB, multiplies the texture
-    std::filesystem::path texturePath;         // absolute, empty = none
-    std::shared_ptr<TextureAsset> texture;     // runtime, loaded from texturePath
+    glm::vec3 color{1.0f};                     // sRGB, multiplies the albedo map
+    float roughness = 0.7f;                    // 0 = mirror, 1 = matte; multiplies the roughness map
+    float metallic = 0.0f;                     // 0 = dielectric, 1 = metal; multiplies the metallic map
+    float normalStrength = 1.0f;               // bumpiness of the normal map
+    glm::vec3 emissive{0.0f};                  // glow added regardless of light (sRGB), multiplies the emissive map
     glm::vec2 tiling{1.0f};                    // texture repeats per UV unit (per metre with world UVs)
-    float specular = 0.25f;                    // highlight strength 0..1
-    float shininess = 48.0f;                   // highlight sharpness
-    glm::vec3 emissive{0.0f};                  // glow added regardless of light (sRGB)
-    bool worldUv = false;                      // project texture in world space (boxes always do)
+    bool worldUv = false;                      // project textures in world space (boxes always do)
+    std::array<std::filesystem::path, kMapCount> mapPaths;       // absolute, empty = none
+    std::array<std::shared_ptr<TextureAsset>, kMapCount> maps;   // runtime, loaded from mapPaths
+
+    const std::shared_ptr<TextureAsset>& map(MapKind kind) const { return maps[static_cast<std::size_t>(kind)]; }
+    const std::filesystem::path& mapPath(MapKind kind) const { return mapPaths[static_cast<std::size_t>(kind)]; }
 };
 
 // Cached per path; the editor changes the returned material in place and the
 // renderer picks the change up on the next frame. Null on error.
 std::shared_ptr<Material> loadMaterial(const std::filesystem::path& file, std::string* error = nullptr);
 bool saveMaterial(const Material& material, const std::filesystem::path& file, std::string* error = nullptr);
-// Sets texturePath and loads the texture (empty path clears it).
-bool setMaterialTexture(Material& material, const std::filesystem::path& image, std::string* error = nullptr);
+// Sets one texture slot and loads the image (empty path clears it).
+bool setMaterialMap(Material& material, MapKind kind, const std::filesystem::path& image, std::string* error = nullptr);
 // Re-reads a material file into the cached object (e.g. "Revert" in the editor).
 bool reloadMaterial(Material& material, std::string* error = nullptr);
 

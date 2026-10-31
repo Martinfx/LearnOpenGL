@@ -34,11 +34,12 @@ std::atomic<std::uint64_t> nextPartId{1};
 
 // Decodes the base color image of a material (external file or embedded in the .glb).
 std::shared_ptr<const Texture> loadImage(const cgltf_image* image, const std::filesystem::path& gltfDir,
-                                         std::map<const cgltf_image*, std::shared_ptr<const Texture>>& cache)
+                                         std::map<std::pair<const cgltf_image*, bool>, std::shared_ptr<const Texture>>& cache,
+                                         bool srgb = true)
 {
     if (!image)
         return nullptr;
-    if (auto it = cache.find(image); it != cache.end())
+    if (auto it = cache.find({image, srgb}); it != cache.end())
         return it->second;
 
     int w = 0, h = 0, comp = 0;
@@ -69,11 +70,12 @@ std::shared_ptr<const Texture> loadImage(const cgltf_image* image, const std::fi
         tex->id = nextPartId++;
         tex->width = w;
         tex->height = h;
+        tex->srgb = srgb;
         tex->rgba.assign(pixels, pixels + static_cast<std::size_t>(w) * static_cast<std::size_t>(h) * 4);
         stbi_image_free(pixels);
         result = std::move(tex);
     }
-    cache[image] = result;
+    cache[{image, srgb}] = result;
     return result;
 }
 
@@ -107,7 +109,7 @@ const cgltf_accessor* findAttribute(const cgltf_primitive& prim, cgltf_attribute
 
 struct LoadContext {
     std::filesystem::path dir;
-    std::map<const cgltf_image*, std::shared_ptr<const Texture>> images;
+    std::map<std::pair<const cgltf_image*, bool>, std::shared_ptr<const Texture>> images;
 };
 
 bool loadPrimitive(const cgltf_primitive& prim, const glm::mat4& world, MeshPart& part, LoadContext& ctx)
@@ -164,19 +166,33 @@ bool loadPrimitive(const cgltf_primitive& prim, const glm::mat4& world, MeshPart
 
     if (prim.material && prim.material->name)
         part.materialName = prim.material->name;
-    if (prim.material && prim.material->has_pbr_metallic_roughness) {
-        const cgltf_pbr_metallic_roughness& pbr = prim.material->pbr_metallic_roughness;
-        const float* c = pbr.base_color_factor; // linear
-        part.color = {linearToSrgb(c[0]), linearToSrgb(c[1]), linearToSrgb(c[2])};
-        const cgltf_accessor* uv = findAttribute(prim, cgltf_attribute_type_texcoord);
-        if (pbr.base_color_texture.texture && uv) {
-            part.texture = loadImage(pbr.base_color_texture.texture->image, ctx.dir, ctx.images);
-            if (part.texture) {
-                part.texcoords.resize(uv->count);
-                for (cgltf_size i = 0; i < uv->count; ++i)
-                    cgltf_accessor_read_float(uv, i, &part.texcoords[i].x, 2);
-            }
+    const cgltf_accessor* uv = findAttribute(prim, cgltf_attribute_type_texcoord);
+    auto textureOf = [&](const cgltf_texture_view& view, bool srgb) -> std::shared_ptr<const Texture> {
+        if (!view.texture || !uv)
+            return nullptr;
+        return loadImage(view.texture->image, ctx.dir, ctx.images, srgb);
+    };
+    if (const cgltf_material* mat = prim.material) {
+        if (mat->has_pbr_metallic_roughness) {
+            const cgltf_pbr_metallic_roughness& pbr = mat->pbr_metallic_roughness;
+            const float* c = pbr.base_color_factor; // linear
+            part.color = {linearToSrgb(c[0]), linearToSrgb(c[1]), linearToSrgb(c[2])};
+            part.texture = textureOf(pbr.base_color_texture, true);
+            part.metalRoughTexture = textureOf(pbr.metallic_roughness_texture, false);
+            part.metallic = pbr.metallic_factor;
+            part.roughness = pbr.roughness_factor;
         }
+        part.normalTexture = textureOf(mat->normal_texture, false);
+        part.normalScale = mat->normal_texture.texture ? mat->normal_texture.scale : 1.0f;
+        part.occlusionTexture = textureOf(mat->occlusion_texture, false);
+        part.emissiveTexture = textureOf(mat->emissive_texture, true);
+        const float* e = mat->emissive_factor;
+        part.emissive = {linearToSrgb(e[0]), linearToSrgb(e[1]), linearToSrgb(e[2])};
+    }
+    if (uv && (part.texture || part.normalTexture || part.metalRoughTexture || part.occlusionTexture || part.emissiveTexture)) {
+        part.texcoords.resize(uv->count);
+        for (cgltf_size i = 0; i < uv->count; ++i)
+            cgltf_accessor_read_float(uv, i, &part.texcoords[i].x, 2);
     }
     part.id = nextPartId++;
     return !part.indices.empty();

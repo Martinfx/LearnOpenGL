@@ -39,33 +39,82 @@ void main() {
 }
 )";
 
-// Blinn-Phong with one directional light, a sky/ground ambient term and a
-// world-space 1 m grid so the player can judge distance and speed.
+// Physically based shading (metal/roughness, GGX) with one sun, a sky/ground
+// ambient term, normal maps (screen-space tangent frame, so no vertex tangents
+// are needed and world-projected textures work too), ACES tone mapping and fog.
+// Plain surfaces without a material get a 1 m grid to judge distance and speed.
 const char* kFragmentShader = R"(#version 450 core
 in vec3 vWorldPos;
 in vec3 vNormal;
 in vec2 vUV;
-uniform sampler2D uTexture;
-uniform bool uHasTexture;
-uniform bool uEmissive;
+layout(binding = 0) uniform sampler2D uAlbedoMap;
+layout(binding = 1) uniform sampler2D uNormalMap;
+layout(binding = 2) uniform sampler2D uRoughnessMap;
+layout(binding = 3) uniform sampler2D uMetallicMap;
+layout(binding = 4) uniform sampler2D uOcclusionMap;
+layout(binding = 5) uniform sampler2D uEmissiveMap;
+uniform bool uHasTexture;      // albedo
+uniform bool uHasNormalMap;
+uniform bool uHasRoughnessMap;
+uniform bool uHasMetallicMap;
+uniform bool uHasOcclusionMap;
+uniform bool uHasEmissiveMap;
+uniform int uRoughnessChannel; // 0 = R (separate map), 1 = G (glTF metal/rough)
+uniform int uMetallicChannel;  // 0 = R, 2 = B (glTF)
+uniform float uNormalStrength;
+uniform float uRoughness;
+uniform float uMetallic;
+uniform bool uEmissive;        // unlit, full color (effects)
 uniform float uFogDensity;
-uniform vec3 uColor;
+uniform vec3 uColor;           // sRGB
 uniform vec3 uSunDir;
 uniform vec3 uCamera;
 uniform float uHighlight;
 uniform float uFlash;
 uniform vec2 uTiling;
 uniform bool uWorldUv;     // project the texture in world space (1 repeat per metre * tiling)
-uniform bool uGrid;        // 1 m grid lines on plain surfaces without a material
-uniform float uSpecular;
-uniform float uShininess;
+uniform bool uGrid;
 uniform vec3 uEmissiveColor; // sRGB
 out vec4 fragColor;
+
+const vec3 kSunColor = vec3(1.0, 0.96, 0.88) * 3.0;
+const vec3 kSky = vec3(0.32, 0.38, 0.48);
+const vec3 kGround = vec3(0.20, 0.18, 0.16);
+const float PI = 3.14159265;
 
 float gridLines(vec3 p, vec3 n) {
     vec2 uv = abs(n.y) > 0.5 ? p.xz : (abs(n.x) > 0.5 ? p.zy : p.xy);
     vec2 g = abs(fract(uv - 0.5) - 0.5) / fwidth(uv);
     return 1.0 - min(min(g.x, g.y), 1.0);
+}
+
+// Tangent frame from screen-space derivatives (Schueler, "Normal mapping without precomputed tangents").
+vec3 perturbNormal(vec3 n, vec3 p, vec2 uv, vec3 mapNormal) {
+    vec3 dp1 = dFdx(p), dp2 = dFdy(p);
+    vec2 duv1 = dFdx(uv), duv2 = dFdy(uv);
+    vec3 dp2perp = cross(dp2, n), dp1perp = cross(n, dp1);
+    vec3 t = dp2perp * duv1.x + dp1perp * duv2.x;
+    vec3 b = dp2perp * duv1.y + dp1perp * duv2.y;
+    float invmax = inversesqrt(max(dot(t, t), dot(b, b)));
+    if (isinf(invmax) || isnan(invmax))
+        return n;
+    mat3 tbn = mat3(t * invmax, b * invmax, n);
+    return normalize(tbn * mapNormal);
+}
+
+float distributionGGX(float nh, float a) {
+    float a2 = a * a;
+    float d = nh * nh * (a2 - 1.0) + 1.0;
+    return a2 / (PI * d * d);
+}
+
+float geometrySmith(float nv, float nl, float rough) {
+    float k = (rough + 1.0) * (rough + 1.0) / 8.0;
+    return nv / (nv * (1.0 - k) + k) * nl / (nl * (1.0 - k) + k);
+}
+
+vec3 aces(vec3 x) {
+    return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0);
 }
 
 void main() {
@@ -74,33 +123,65 @@ void main() {
         return;
     }
     vec3 n = normalize(vNormal);
-    vec3 l = normalize(-uSunDir);
-    vec3 v = normalize(uCamera - vWorldPos);
-    vec3 h = normalize(l + v);
-
-    vec3 albedo = pow(uColor, vec3(2.2)); // colors are authored in sRGB
+    if (!gl_FrontFacing)
+        n = -n; // two-sided foliage and thin parts
     vec2 uv = vUV;
     if (uWorldUv) {
         vec3 an = abs(n);
         uv = an.y > 0.5 ? vWorldPos.xz : (an.x > 0.5 ? vec2(vWorldPos.z, -vWorldPos.y) : vec2(vWorldPos.x, -vWorldPos.y));
     }
     uv *= uTiling;
-    vec3 base = albedo;
-    if (uHasTexture)
-        base *= texture(uTexture, uv).rgb; // sRGB textures are sampled as linear
-    else if (uGrid)
-        base *= 1.0 - 0.18 * gridLines(vWorldPos, n);
-    float diffuse = max(dot(n, l), 0.0);
-    float specular = pow(max(dot(n, h), 0.0), max(uShininess, 1.0)) * uSpecular * step(0.0, diffuse);
-    vec3 ambient = mix(vec3(0.20, 0.18, 0.16), vec3(0.32, 0.38, 0.48), n.y * 0.5 + 0.5);
 
-    vec3 color = base * (ambient + diffuse * vec3(1.0, 0.96, 0.88)) + specular + pow(uEmissiveColor, vec3(2.2));
+    vec3 albedo = pow(uColor, vec3(2.2)); // colors are authored in sRGB
+    if (uHasTexture)
+        albedo *= texture(uAlbedoMap, uv).rgb; // sRGB textures are sampled as linear
+    else if (uGrid)
+        albedo *= 1.0 - 0.18 * gridLines(vWorldPos, n);
+    if (uHasNormalMap) {
+        vec3 m = texture(uNormalMap, uv).xyz * 2.0 - 1.0;
+        m.xy *= uNormalStrength;
+        n = perturbNormal(n, vWorldPos, uv, normalize(m));
+    }
+    float rough = uRoughness;
+    if (uHasRoughnessMap)
+        rough *= texture(uRoughnessMap, uv)[uRoughnessChannel];
+    rough = clamp(rough, 0.04, 1.0);
+    float metal = uMetallic;
+    if (uHasMetallicMap)
+        metal *= texture(uMetallicMap, uv)[uMetallicChannel];
+    float ao = uHasOcclusionMap ? texture(uOcclusionMap, uv).r : 1.0;
+
+    vec3 v = normalize(uCamera - vWorldPos);
+    vec3 l = normalize(-uSunDir);
+    vec3 h = normalize(l + v);
+    float nl = max(dot(n, l), 0.0);
+    float nv = max(dot(n, v), 1e-4);
+    float nh = max(dot(n, h), 0.0);
+    vec3 f0 = mix(vec3(0.04), albedo, metal);
+    vec3 fresnel = f0 + (1.0 - f0) * pow(1.0 - max(dot(h, v), 0.0), 5.0);
+    vec3 specular = distributionGGX(nh, rough * rough) * geometrySmith(nv, nl, rough) * fresnel / (4.0 * nv * max(nl, 1e-4));
+    vec3 diffuse = (1.0 - fresnel) * (1.0 - metal) * albedo / PI;
+    vec3 color = (diffuse + specular) * kSunColor * nl;
+
+    // Ambient: sky above, ground below; a rough reflection of the same for the specular part.
+    vec3 ambientDiffuse = mix(kGround, kSky, n.y * 0.5 + 0.5);
+    vec3 r = reflect(-v, n);
+    vec3 ambientSpecular = mix(kGround, kSky * 1.4, smoothstep(-0.2, 0.4, r.y));
+    vec3 fAmbient = f0 + (max(vec3(1.0 - rough), f0) - f0) * pow(1.0 - nv, 5.0);
+    color += ((1.0 - fAmbient) * (1.0 - metal) * albedo * ambientDiffuse
+              + fAmbient * ambientSpecular * (1.0 - rough * 0.7)) * ao;
+
+    vec3 emissive = pow(uEmissiveColor, vec3(2.2));
+    if (uHasEmissiveMap)
+        emissive *= texture(uEmissiveMap, uv).rgb;
+    color += emissive;
+
     color = mix(color, vec3(1.0, 0.75, 0.2), uHighlight * 0.35);
     color = mix(color, vec3(1.0), uFlash); // hit feedback
 
     // Distance fog toward the sky color.
     float fog = 1.0 - exp(-length(uCamera - vWorldPos) * uFogDensity);
-    color = mix(color, vec3(0.55, 0.66, 0.80), fog);
+    color = mix(aces(color * 1.1), pow(vec3(0.55, 0.66, 0.80), vec3(2.2)), fog);
     fragColor = vec4(pow(color, vec3(1.0 / 2.2)), 1.0);
 }
 )";
@@ -234,14 +315,19 @@ bool Renderer::init(GlLoader loader, std::string* error)
     locTiling_ = glGetUniformLocation(program_, "uTiling");
     locWorldUv_ = glGetUniformLocation(program_, "uWorldUv");
     locGrid_ = glGetUniformLocation(program_, "uGrid");
-    locSpecular_ = glGetUniformLocation(program_, "uSpecular");
-    locShininess_ = glGetUniformLocation(program_, "uShininess");
+    locRoughness_ = glGetUniformLocation(program_, "uRoughness");
+    locMetallic_ = glGetUniformLocation(program_, "uMetallic");
+    locNormalStrength_ = glGetUniformLocation(program_, "uNormalStrength");
+    locRoughnessChannel_ = glGetUniformLocation(program_, "uRoughnessChannel");
+    locMetallicChannel_ = glGetUniformLocation(program_, "uMetallicChannel");
+    {
+        const char* names[6] = {"uHasTexture", "uHasNormalMap", "uHasRoughnessMap", "uHasMetallicMap", "uHasOcclusionMap", "uHasEmissiveMap"};
+        for (int i = 0; i < 6; ++i)
+            locHasMap_[i] = glGetUniformLocation(program_, names[i]);
+    }
     locEmissiveColor_ = glGetUniformLocation(program_, "uEmissiveColor");
     glCreateBuffers(1, &jointBuffer_);
     glNamedBufferData(jointBuffer_, kMaxJoints * sizeof(glm::mat4), nullptr, GL_DYNAMIC_DRAW);
-    glUseProgram(program_);
-    glUniform1i(glGetUniformLocation(program_, "uTexture"), 0);
-    glUseProgram(0);
 
     const std::vector<Vertex> cube = unitCube();
     vertexCount_ = static_cast<int>(cube.size());
@@ -352,42 +438,64 @@ void Renderer::drawModel(const Model& model, const glm::mat4& transform, float h
         }
         glUniform1i(locSkinned_, skinned ? 1 : 0);
         glUniformMatrix4fv(locModel_, 1, GL_FALSE, glm::value_ptr(partTransform));
-        applySurface(model.materialFor(part), part.texture ? glm::vec3(1.0f) : part.color, part.texture.get(), false);
+        applySurface(model.materialFor(part), &part, part.color, false);
         glBindVertexArray(mesh.vao);
         glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, nullptr);
     }
-    applySurface(nullptr, glm::vec3(1.0f), nullptr, false);
+    applySurface(nullptr, nullptr, glm::vec3(1.0f), false);
     glUniform1i(locSkinned_, 0);
 }
 
-void Renderer::applySurface(const Material* material, glm::vec3 color, const Texture* tex, bool worldUv)
+void Renderer::applySurface(const Material* material, const MeshPart* part, glm::vec3 color, bool worldUv)
 {
+    // Texture units: 0 albedo, 1 normal, 2 roughness, 3 metallic, 4 occlusion, 5 emissive.
+    const Texture* maps[6] = {};
     glm::vec2 tiling(1.0f);
-    float specular = 0.25f, shininess = 48.0f;
+    float roughness = 0.8f, metallic = 0.0f, normalStrength = 1.0f;
     glm::vec3 emissive(0.0f);
-    bool grid = tex == nullptr;
+    int roughnessChannel = 0, metallicChannel = 0;
+    bool grid = true;
     if (material) {
         color = material->color;
-        tex = material->texture ? material->texture->texture.get() : nullptr;
+        for (int i = 0; i < kMapCount; ++i)
+            if (const auto& asset = material->maps[static_cast<std::size_t>(i)])
+                maps[i] = asset->texture.get();
         tiling = material->tiling;
-        specular = material->specular;
-        shininess = material->shininess;
+        roughness = material->roughness;
+        metallic = material->metallic;
+        normalStrength = material->normalStrength;
         emissive = material->emissive;
         worldUv = worldUv || material->worldUv;
         grid = false;
+    } else if (part) {
+        maps[0] = part->texture.get();
+        maps[1] = part->normalTexture.get();
+        maps[2] = maps[3] = part->metalRoughTexture.get();
+        maps[4] = part->occlusionTexture.get();
+        maps[5] = part->emissiveTexture.get();
+        roughnessChannel = 1; // glTF packs roughness in G and metallic in B
+        metallicChannel = 2;
+        roughness = part->roughness;
+        metallic = part->metallic;
+        normalStrength = part->normalScale;
+        emissive = part->emissive;
+        grid = maps[0] == nullptr;
     }
     glUniform3fv(locColor_, 1, glm::value_ptr(color));
     glUniform2fv(locTiling_, 1, glm::value_ptr(tiling));
-    glUniform1f(locSpecular_, specular);
-    glUniform1f(locShininess_, shininess);
+    glUniform1f(locRoughness_, roughness);
+    glUniform1f(locMetallic_, metallic);
+    glUniform1f(locNormalStrength_, normalStrength);
+    glUniform1i(locRoughnessChannel_, roughnessChannel);
+    glUniform1i(locMetallicChannel_, metallicChannel);
     glUniform3fv(locEmissiveColor_, 1, glm::value_ptr(emissive));
     glUniform1i(locWorldUv_, worldUv ? 1 : 0);
     glUniform1i(locGrid_, grid ? 1 : 0);
-    if (tex && !tex->rgba.empty()) {
-        glBindTextureUnit(0, texture(*tex));
-        glUniform1i(locHasTexture_, 1);
-    } else {
-        glUniform1i(locHasTexture_, 0);
+    for (int i = 0; i < 6; ++i) {
+        const bool has = maps[i] && !maps[i]->rgba.empty();
+        if (has)
+            glBindTextureUnit(static_cast<unsigned>(i), texture(*maps[i]));
+        glUniform1i(locHasMap_[i], has ? 1 : 0);
     }
 }
 
@@ -395,7 +503,7 @@ void Renderer::drawCube(const glm::mat4& transform, glm::vec3 color, float highl
 {
     glBindVertexArray(vao_);
     glUniformMatrix4fv(locModel_, 1, GL_FALSE, glm::value_ptr(transform));
-    applySurface(nullptr, color, nullptr, false);
+    applySurface(nullptr, nullptr, color, false);
     glUniform1f(locHighlight_, highlight);
     glUniform1i(locEmissive_, emissive ? 1 : 0);
     glDrawArrays(GL_TRIANGLES, 0, vertexCount_);
@@ -480,7 +588,7 @@ void Renderer::render(const Scene& scene, const RenderView& view)
             model = glm::rotate(model, -glm::radians(yawDegrees), glm::vec3(0.0f, 1.0f, 0.0f));
         model = glm::scale(model, size);
         glUniformMatrix4fv(locModel_, 1, GL_FALSE, glm::value_ptr(model));
-        applySurface(material, color, nullptr, true); // boxes have no UVs: world-space mapping
+        applySurface(material, nullptr, color, true); // boxes have no UVs: world-space mapping
         glUniform1f(locHighlight_, highlight);
         glBindVertexArray(vao_);
         glDrawArrays(GL_TRIANGLES, 0, vertexCount_);

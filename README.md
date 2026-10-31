@@ -77,9 +77,11 @@ uloží i otevřené skripty. Po uložení se obnoví parametry skriptu v Proper
 
 ## Materiály a textury
 
-Materiál je textový soubor `.material` (barva, textura, opakování, odlesk, ostrost odlesku, svit,
-promítání ve světových souřadnicích). Editor: menu Assets > Material editor (Ctrl+M): seznam materiálů,
-všechna nastavení a živý náhled na kouli a kostce. Změny se hned projeví i ve 3D pohledu.
+Renderer je fyzikálně založený (PBR, metal/roughness jako glTF a Blender Principled BSDF): albedo,
+normal mapa (OpenGL konvence, zelená nahoru), roughness, metallic, ambient occlusion a emissive mapa.
+glTF modely tyto mapy načítají samy. Materiál enginu je textový soubor `.material` (barva, roughness,
+metallic, síla normal mapy, svit, mapy, opakování, promítání ve světových souřadnicích). Editor: menu Assets > Material editor (Ctrl+M): seznam materiálů,
+všechna nastavení a mapy a živý náhled na kouli a kostce. Změny se hned projeví i ve 3D pohledu.
 Box dostane materiál v Properties > Material; u glTF modelu jde v tabulce materiálových slotů každý
 materiál z Blenderu nahradit materiálem enginu (dvojklik).
 
@@ -132,6 +134,6 @@ Model je zároveň statická kolize (Jolt MeshShape), takže po něm jde chodit.
 
 Hotovo: hráč (Jolt CharacterVirtual), glTF modely s texturami, entity s Lua skripty, AI nepřátel,
 zbraně se střelbou a zdravím nepřátel, animované postavy (skeletal animace, GPU skinning), script editor,
-materiály a textury s editory, editor pro všechny parametry.
-Další: PBR (normal/roughness mapy), nové modely a textury, nůž/samopal/pistole, hierarchie scény, animation editor,
+PBR materiály a textury s editory, editor pro všechny parametry.
+Další: nové modely a textury, nůž/samopal/pistole, hierarchie scény, animation editor,
 zvuk (OpenAL), environment editor.

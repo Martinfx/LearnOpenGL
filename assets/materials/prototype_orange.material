@@ -1,10 +1,11 @@
 # FPS engine material
-version 1
+version 2
 name "Prototype orange"
 color 0.95 0.55 0.25
-texture "../textures/prototype_grid.png"
+albedo_map "../textures/prototype_grid.png"
 tiling 1 1
-specular 0.2
-shininess 32
+roughness 0.6
+metallic 0
+normal_strength 1
 emissive 0 0 0
 world_uv 0
