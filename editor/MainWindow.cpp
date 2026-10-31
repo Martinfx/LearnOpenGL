@@ -391,6 +391,23 @@ void MainWindow::buildMenus()
     options->addAction(focus);
     options->addAction(drop);
     options->addSeparator();
+    QAction* gridAction = options->addAction(tr("Metre grid (1 m / 10 m)"));
+    gridAction->setCheckable(true);
+    gridAction->setShortcut(QKeySequence(Qt::Key_G));
+    gridAction->setChecked(QSettings().value("view/grid", true).toBool());
+    viewport_->setShowGrid(gridAction->isChecked());
+    connect(gridAction, &QAction::toggled, this, [this](bool on) {
+        QSettings().setValue("view/grid", on);
+        viewport_->setShowGrid(on);
+    });
+    QAction* reference = options->addAction(tr("Reference human 1.8 m at player start"));
+    reference->setCheckable(true);
+    reference->setChecked(QSettings().value("view/reference", false).toBool());
+    viewport_->setShowReference(reference->isChecked());
+    connect(reference, &QAction::toggled, this, [this](bool on) {
+        QSettings().setValue("view/reference", on);
+        viewport_->setShowReference(on);
+    });
     QAction* orthoWire = options->addAction(tr("Wireframe in orthographic views"));
     orthoWire->setCheckable(true);
     orthoWire->setChecked(QSettings().value("view/orthoWireframe", true).toBool());
@@ -634,6 +651,77 @@ void MainWindow::buildDocks()
     materialSlots_->setMinimumHeight(110);
     materialSlots_->setToolTip(tr("Double-click: choose a .material for this slot. Delete: back to the glTF material."));
     renderingForm->addRow(materialSlots_);
+
+    // Distance LOD of glTF models: simpler file drawn beyond the distance.
+    lodRow_ = new QWidget(boxPanel_);
+    auto* lodLayout = new QHBoxLayout(lodRow_);
+    lodLayout->setContentsMargins(0, 0, 0, 0);
+    lodEdit_ = new QLineEdit(lodRow_);
+    lodEdit_->setReadOnly(true);
+    lodEdit_->setPlaceholderText(tr("no LOD"));
+    auto* browseLod = new QPushButton(tr("..."), lodRow_);
+    auto* clearLod = new QPushButton(tr("x"), lodRow_);
+    browseLod->setFixedWidth(32);
+    clearLod->setFixedWidth(32);
+    lodLayout->addWidget(lodEdit_, 1);
+    lodLayout->addWidget(browseLod);
+    lodLayout->addWidget(clearLod);
+    lodDistanceSpin_ = new QDoubleSpinBox(boxPanel_);
+    lodDistanceSpin_->setRange(5.0, 5000.0);
+    lodDistanceSpin_->setSingleStep(10.0);
+    lodDistanceSpin_->setSuffix(QStringLiteral(" m"));
+    lodDistanceSpin_->setKeyboardTracking(false);
+    lodDistanceSpin_->setToolTip(tr("Camera distance to the model's center where the LOD replaces it"));
+    renderingForm->addRow(tr("LOD model"), lodRow_);
+    renderingForm->addRow(tr("LOD distance"), lodDistanceSpin_);
+    connect(lodDistanceSpin_, &QDoubleSpinBox::valueChanged, this, [this](double v) {
+        if (auto* m = selectedModel(); m && m->lodDistance != static_cast<float>(v)) {
+            m->lodDistance = static_cast<float>(v);
+            markDirty();
+        }
+    });
+    connect(clearLod, &QPushButton::clicked, this, [this] {
+        if (auto* m = selectedModel(); m && !m->lodPath.empty()) {
+            m->lodPath.clear();
+            m->lod.reset();
+            refreshProperties();
+            markDirty();
+        }
+    });
+    connect(browseLod, &QPushButton::clicked, this, [this] {
+        auto* m = selectedModel();
+        if (!m)
+            return;
+        const QString start = QString::fromStdU16String(m->sourcePath.parent_path().u16string());
+        const QString path = QFileDialog::getOpenFileName(this, tr("LOD model"), start, tr("glTF (*.glb *.gltf)"));
+        if (path.isEmpty())
+            return;
+        // Loaded on a worker thread, attached to the model that was selected.
+        const std::string name = m->name;
+        notify(tr("Loading %1...").arg(QFileInfo(path).fileName()));
+        QPointer<MainWindow> self(this);
+        engine::JobSystem::global().run([self, path, name] {
+            auto lod = std::make_shared<engine::Model>();
+            std::string error;
+            const bool ok = engine::loadModelFile(*lod, std::filesystem::path(path.toStdU16String()), &error);
+            QMetaObject::invokeMethod(qApp, [self, path, name, lod, ok, error] {
+                if (!self)
+                    return;
+                if (!ok) {
+                    QMessageBox::warning(self, tr("LOD model"), QString::fromStdString(error));
+                    return;
+                }
+                const int object = engine::findObject(self->scene_, name);
+                if (object < 0 || !self->scene_.isModel(object))
+                    return;
+                engine::Model& target = self->scene_.model(object);
+                target.lodPath = std::filesystem::path(path.toStdU16String());
+                target.lod = lod;
+                self->refreshProperties();
+                self->markDirty();
+            });
+        });
+    });
     connect(materialSlots_, &QTableWidget::cellDoubleClicked, this, [this](int row, int) {
         auto* m = selectedModel();
         if (!m || row < 0)
@@ -1157,6 +1245,12 @@ void MainWindow::refreshProperties()
         nameEdit_->clear();
         colorButton_->setStyleSheet(QString());
     }
+    lodRow_->setEnabled(m != nullptr);
+    lodDistanceSpin_->setEnabled(m != nullptr && !m->lodPath.empty());
+    lodEdit_->setText(m && !m->lodPath.empty() ? QString::fromStdU16String(m->lodPath.filename().u16string()) : QString());
+    lodDistanceSpin_->blockSignals(true);
+    lodDistanceSpin_->setValue(m ? m->lodDistance : 80.0);
+    lodDistanceSpin_->blockSignals(false);
     nameEdit_->setEnabled(b || m || e);
     detailsIcon_->setPixmap(editorIcon(b ? "cube" : m ? "model" : e ? "person" : "select").pixmap(18, 18));
     updateDetailsVisibility();
@@ -1314,7 +1408,17 @@ bool MainWindow::placeModel(const QString& path, glm::vec3 point)
     engine::JobSystem::global().run([self, path, point] {
         auto model = std::make_shared<engine::Model>();
         std::string error;
-        const bool ok = engine::loadModelFile(*model, std::filesystem::path(path.toStdU16String()), &error);
+        const std::filesystem::path file(path.toStdU16String());
+        const bool ok = engine::loadModelFile(*model, file, &error);
+        // A "foo_lod1.glb" next to the file becomes the model's LOD automatically.
+        if (ok)
+            if (const auto lodFile = engine::findLodFile(file); !lodFile.empty()) {
+                auto lod = std::make_shared<engine::Model>();
+                if (engine::loadModelFile(*lod, lodFile)) {
+                    model->lodPath = lodFile;
+                    model->lod = lod;
+                }
+            }
         QMetaObject::invokeMethod(qApp, [self, path, point, model, ok, error] {
             if (!self)
                 return;

@@ -110,6 +110,8 @@ Z Blenderu: armatura + akce, export glTF 2.0 s volbou Animation (každá akce = 
 - **Řádek režimů:** Select, Place a Model (Shift+1..3) přepínají levý panel. Vedle jsou Focus, To floor, Duplicate a Delete.
 - **Levý panel Model:** nástroje sítě, Modify Texture a Active Material. Funkční jsou Delete, Duplicate, Align, Scale, Shift, Rotate, Fit, Justify a číselné pole posunu, měřítka a rotace textury boxu (ukládá se jako řádek `  uv` v levelu). Apply Material dá aktivní materiál na výběr. Extrude, Inset, Bevel a další nástroje sítě čekají na editovatelné meshe.
 - **Lišta viewportu:** menu voleb, pohled (perspektiva, top, front, side, čtyři pohledy), režim Lit / Unlit / Lighting only / Wireframe (Alt+1..4), nástroje Q W E R, přichytávání posunu, úhlu a měřítka (každé jde vypnout) a rychlost kamery. Ortho pohledy jsou v Lit režimu drátové (vypíná se v menu voleb).
+- **Mřížka a měřítko:** metrová mřížka (1 m, každých 10 m výraznější, osy X červeně a Z modře) se přepíná klávesou G. V menu voleb viewportu je i referenční člověk 1,8 m u startu hráče. Oko hráče je ve výšce 1,7 m (`assets/SCALE.md`).
+- **LOD:** model v Details má v sekci Rendering položky LOD model a LOD distance. Při vložení `foo.glb` se `foo_lod1.glb` ze stejné složky připojí sám. V levelu je to řádek `  lod "cesta" vzdálenost`.
 - **Plovoucí Transform:** Location, Rotation a Scale/Size výběru. S **Delta Mode** se zadaná hodnota přičte (měřítko vynásobí) a pole se vynuluje.
 - **Outliner:** hledání, sloupce Item Label a Type, Add menu a počet objektů.
 - **Details:** jméno výběru, Add (materiál, skript, model postavy), hledání a kategorie General, Transform, Rendering, Character, Script, Level a All. Řádky, které pro výběr neplatí, jsou skryté.

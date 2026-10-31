@@ -162,6 +162,9 @@ private:
     };
     std::vector<DetailSection> detailSections_;
     QWidget* texturePanel_ = nullptr;
+    QWidget* lodRow_ = nullptr;
+    QLineEdit* lodEdit_ = nullptr;
+    QDoubleSpinBox* lodDistanceSpin_ = nullptr;
     QDoubleSpinBox* uvSpins_[5] = {};   // scale U, V, shift U, V, rotation
     QComboBox* activeMaterial_ = nullptr;
     QLabel* selectionInfo_ = nullptr;   // Select mode page

@@ -723,6 +723,9 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         }
         drawModel(*draw, model.transform(), selected ? 1.0f : 0.0f);
     }
+    for (const auto& [extra, transform] : view.extraModels)
+        if (extra)
+            drawModel(*extra, transform, 0.0f);
     if (!depthOnly)
         for (const OverlayBox& b : view.worldBoxes)
             drawCube(glm::scale(glm::translate(glm::mat4(1.0f), b.center), b.size), b.color, 0.0f, b.emissive);

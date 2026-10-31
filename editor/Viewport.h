@@ -31,6 +31,10 @@ public:
     const engine::FpsCamera& camera() const { return camera_; }
     void setShading(engine::Shading shading) { shading_ = shading; update(); }
     engine::Shading shading() const { return shading_; }
+    void setShowGrid(bool on) { showGrid_ = on; update(); }
+    bool showGrid() const { return showGrid_; }
+    void setShowReference(bool on); // 1.8 m human next to the player start
+    bool showReference() const { return showReference_; }
     void setOrthoWireframe(bool on) { orthoWireframe_ = on; update(); }
     bool orthoWireframe() const { return orthoWireframe_; }
     void setCameraSpeed(float metersPerSecond) { flySpeed_ = metersPerSecond; }
@@ -141,6 +145,10 @@ private:
     bool quad_ = false;
     engine::Shading shading_ = engine::Shading::Lit;
     bool orthoWireframe_ = true;
+    bool showGrid_ = true;
+    bool showReference_ = false;
+    bool referenceLoading_ = false;
+    std::shared_ptr<engine::Model> reference_;
     glm::vec3 orthoCenter_{0.0f, 0.0f, 0.0f};
     float orthoSize_ = 14.0f;                              // half height of the orthographic views, m
     mutable ViewMode paneMode_ = ViewMode::Perspective;    // pane being drawn or under the mouse

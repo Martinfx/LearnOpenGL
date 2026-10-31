@@ -15,6 +15,11 @@
 #include <QMouseEvent>
 #include <QOpenGLContext>
 #include <QPainter>
+#include <QApplication>
+#include <QPointer>
+#include <engine/JobSystem.h>
+#include "AssetPaths.h"
+#include <glm/gtc/matrix_transform.hpp>
 #include <QOpenGLFunctions>
 #include <QWheelEvent>
 
@@ -117,6 +122,29 @@ bool Viewport::reloadShaders(const QString& directory, QString* error)
     return ok;
 }
 
+void Viewport::setShowReference(bool on)
+{
+    showReference_ = on;
+    if (on && !reference_ && !referenceLoading_) {
+        // Loaded on a worker thread; the view shows it once it is ready.
+        referenceLoading_ = true;
+        QPointer<Viewport> self(this);
+        const std::filesystem::path path(assetPath("models/characters/humans/stalker.glb").toStdU16String());
+        engine::JobSystem::global().run([self, path] {
+            auto model = std::make_shared<engine::Model>();
+            if (!engine::loadModelFile(*model, path))
+                model.reset();
+            QMetaObject::invokeMethod(qApp, [self, model] {
+                if (!self)
+                    return;
+                self->reference_ = model;
+                self->update();
+            });
+        });
+    }
+    update();
+}
+
 void Viewport::paintGL()
 {
     if (!ready_)
@@ -144,6 +172,13 @@ void Viewport::paintGL()
                            : shading_;
         view.selectedObject = selected_;
         view.drawPlayerStart = true;
+        view.grid = showGrid_;
+        view.gridAxis = pane.mode == ViewMode::Front ? 2 : (pane.mode == ViewMode::Side ? 0 : 1);
+        view.gridFade = pane.mode == ViewMode::Perspective ? 150.0f : orthoSize_ * 8.0f;
+        // Reference human (1.8 m) beside the player start, to judge the scale of assets.
+        if (showReference_ && reference_)
+            view.extraModels.emplace_back(reference_.get(),
+                                          glm::translate(glm::mat4(1.0f), scene_->playerStart + glm::vec3(1.0f, 0.0f, 0.0f)));
         view.gizmoBoxes = gizmoBoxes();
         renderer_.render(*scene_, view);
     }

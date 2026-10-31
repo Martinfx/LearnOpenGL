@@ -158,12 +158,17 @@ void testLevelWithModel()
     engine::Scene s;
     std::string err;
     check(engine::loadScene(s, ENGINE_TEST_ASSETS "/levels/test.level", &err), "load test.level: " + err);
-    check(s.models.size() == 1, "test level references one glTF model");
+    check(s.models.size() > 40 && engine::findObject(s, "Ramp") >= 0, "test level references the ramp and the zone street");
+    const int panel = engine::findObject(s, "Panel block");
+    check(panel >= 0 && s.model(panel).lod && s.model(panel).lodDistance == 90.0f, "panel block has its LOD loaded");
+    const std::size_t modelCount = s.models.size();
     check(engine::saveScene(s, "with_model.level", &err), "save: " + err);
     engine::Scene t;
     // Saved next to the test binary: the model path must be rewritten relative to it.
     check(engine::loadScene(t, "with_model.level", &err), "reload: " + err);
-    check(t.models.size() == 1 && !t.models[0].parts.empty(), "model path survives save + load");
+    check(t.models.size() == modelCount && !t.models[0].parts.empty(), "model path survives save + load");
+    const int panelAgain = engine::findObject(t, "Panel block");
+    check(panelAgain >= 0 && t.model(panelAgain).lod && !t.model(panelAgain).lodPath.empty(), "LOD survives save + load");
 }
 
 void testRaycast()
@@ -450,7 +455,7 @@ void testHierarchyAndDependencies()
     std::string err;
     engine::Scene s;
     check(engine::loadScene(s, ENGINE_TEST_ASSETS "/levels/test.level", &err), "load level: " + err);
-    check(s.groups.size() == 4 && engine::nodeParent(s, "Crate B") == "Crate A", "test level has a hierarchy");
+    check(s.groups.size() == 9 && engine::nodeParent(s, "Crate B") == "Crate A", "test level has a hierarchy");
     // Start from a flat scene.
     s.groups.clear();
     for (int i = 0; i < s.objectCount(); ++i)
