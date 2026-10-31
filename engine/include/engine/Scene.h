@@ -235,6 +235,10 @@ struct PlayerSettings {
     float maxSlopeDegrees = 45.0f;
     float killY = -50.0f;       // respawn when falling below this
     float maxHealth = 100.0f;
+    // Sounds (absolute paths of .sound or audio files, empty = silent).
+    std::filesystem::path footstepSound; // one play per stride while walking
+    std::filesystem::path landSound;     // landing after a fall
+    std::filesystem::path hurtSound;     // taking damage
 };
 
 // Look of the level: sun, sky, fog, ambient light and post-processing.

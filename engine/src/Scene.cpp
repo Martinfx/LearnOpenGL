@@ -182,6 +182,17 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
     out << "player " << pl.walkSpeed << ' ' << pl.sprintSpeed << ' ' << pl.jumpSpeed << ' ' << pl.gravity << ' '
         << pl.airControl << ' ' << pl.height << ' ' << pl.eyeHeight << ' ' << pl.stepHeight << ' '
         << pl.maxSlopeDegrees << ' ' << pl.maxHealth << '\n';
+    {
+        auto rel = [&](const std::filesystem::path& p) {
+            if (p.empty())
+                return std::string();
+            const std::filesystem::path r = std::filesystem::absolute(p).lexically_relative(levelDir);
+            return pathToUtf8(r.empty() ? std::filesystem::absolute(p) : r);
+        };
+        if (!pl.footstepSound.empty() || !pl.landSound.empty() || !pl.hurtSound.empty())
+            out << "player_sounds " << std::quoted(rel(pl.footstepSound)) << ' ' << std::quoted(rel(pl.landSound)) << ' '
+                << std::quoted(rel(pl.hurtSound)) << '\n';
+    }
     for (const std::filesystem::path& w : scene.loadout) {
         const std::filesystem::path rel = std::filesystem::absolute(w).lexically_relative(levelDir);
         out << "weapon " << std::quoted(pathToUtf8(rel.empty() ? std::filesystem::absolute(w) : rel)) << '\n';
@@ -534,6 +545,18 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
             PlayerSettings& pl = result.player;
             ok = static_cast<bool>(ls >> pl.walkSpeed >> pl.sprintSpeed >> pl.jumpSpeed >> pl.gravity >> pl.airControl
                                       >> pl.height >> pl.eyeHeight >> pl.stepHeight >> pl.maxSlopeDegrees >> pl.maxHealth);
+        } else if (key == "player_sounds") {
+            std::string paths[3];
+            ok = static_cast<bool>(ls >> std::quoted(paths[0]) >> std::quoted(paths[1]) >> std::quoted(paths[2]));
+            std::filesystem::path* slots[] = {&result.player.footstepSound, &result.player.landSound, &result.player.hurtSound};
+            for (int i = 0; ok && i < 3; ++i) {
+                if (paths[i].empty())
+                    continue;
+                std::filesystem::path p = pathFromUtf8(paths[i]);
+                if (p.is_relative())
+                    p = std::filesystem::absolute(file).parent_path() / p;
+                *slots[i] = p.lexically_normal();
+            }
         } else if (key == "prop") {
             std::string k, v;
             ok = static_cast<bool>(ls >> std::quoted(k) >> std::quoted(v)) && !result.entities.empty();

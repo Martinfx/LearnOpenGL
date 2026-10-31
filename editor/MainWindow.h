@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include <engine/Renderer.h>
 #include <engine/Scene.h>
 
@@ -15,6 +16,8 @@ class QTabWidget;
 class ScriptEditor;
 class MaterialEditor;
 class TextureEditor;
+class SoundPicker;
+class SoundEditor;
 class QDoubleSpinBox;
 class QCheckBox;
 class QLabel;
@@ -119,6 +122,8 @@ private:
     void saveCurrent();
     MaterialEditor* openMaterialEditor(const QString& material = QString());
     TextureEditor* openTexture(const QString& image);
+    SoundEditor* openSoundEditor(const QString& path);
+    void newSound(const QString& folder);
     void browseBoxMaterial();
     void refreshMaterialSlots();
 
@@ -227,6 +232,11 @@ private:
     QWidget* scriptRow_ = nullptr;
     QTableWidget* scriptParams_ = nullptr;
     QWidget* characterRow_ = nullptr;
+    SoundPicker* entitySound_ = nullptr;      // entity type "sound": what plays
+    QCheckBox* soundZoneCheck_ = nullptr;     // ambient zone filling the entity box
+    QDoubleSpinBox* soundFadeSpin_ = nullptr; // zone fade-out distance
+    QDoubleSpinBox* soundVolumeSpin_ = nullptr;
+    std::array<SoundPicker*, 3> playerSounds_{}; // footsteps, landing, hurt
     QLineEdit* characterEdit_ = nullptr;
     QDoubleSpinBox* modelScaleSpin_ = nullptr;
     QDoubleSpinBox* modelYawSpin_ = nullptr;

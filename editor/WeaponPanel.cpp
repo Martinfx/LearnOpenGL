@@ -1,6 +1,7 @@
 #include "WeaponPanel.h"
 #include "Vec3Editor.h"
 #include "AssetPaths.h"
+#include "SoundEditor.h"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -142,6 +143,13 @@ WeaponPanel::WeaponPanel(engine::Scene* scene, QWidget* parent) : QWidget(parent
         form->addRow(tr(clipLabels[i]), clips_[static_cast<std::size_t>(i)]);
         connect(clips_[static_cast<std::size_t>(i)], &QComboBox::currentTextChanged, this, &WeaponPanel::edited);
     }
+    form->addRow(new QLabel(tr("<b>Sounds</b>"), form_));
+    const char* soundLabels[] = {"Fire / swing", "Reload", "Draw", "Impact (world)", "Hit (character)"};
+    for (std::size_t i = 0; i < sounds_.size(); ++i) {
+        sounds_[i] = new SoundPicker(form_);
+        form->addRow(tr(soundLabels[i]), sounds_[i]);
+        connect(sounds_[i], &SoundPicker::pathChanged, this, &WeaponPanel::edited);
+    }
     firearmRows_[0] = pellets_;
     firearmRows_[1] = magazine_;
     firearmRows_[2] = reload_;
@@ -235,6 +243,11 @@ void WeaponPanel::showCurrent()
     type_->setCurrentIndex(w->melee() ? 1 : 0);
     name_->setText(QString::fromStdString(w->name));
     model_->setText(w->modelPath.empty() ? QString() : toQString(w->modelPath.filename()));
+    {
+        const std::filesystem::path* sounds[] = {&w->soundFire, &w->soundReload, &w->soundDraw, &w->soundImpact, &w->soundHit};
+        for (std::size_t i = 0; i < sounds_.size(); ++i)
+            sounds_[i]->setPath(toQString(*sounds[i]));
+    }
     model_->setToolTip(toQString(w->modelPath));
     damage_->setValue(w->damage);
     interval_->setValue(w->fireInterval);
@@ -310,6 +323,11 @@ void WeaponPanel::edited()
     if (!w || updating_)
         return;
     w->name = name_->text().toStdString();
+    {
+        std::filesystem::path* sounds[] = {&w->soundFire, &w->soundReload, &w->soundDraw, &w->soundImpact, &w->soundHit};
+        for (std::size_t i = 0; i < sounds_.size(); ++i)
+            *sounds[i] = toPath(sounds_[i]->path());
+    }
     w->damage = static_cast<float>(damage_->value());
     w->fireInterval = static_cast<float>(interval_->value());
     w->automatic = automatic_->isChecked();

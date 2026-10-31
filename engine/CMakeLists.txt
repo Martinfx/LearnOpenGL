@@ -1,7 +1,9 @@
 include(cmake_embed_shaders.cmake)
 add_library(engine STATIC
     src/Animation.cpp
+    src/Audio.cpp
     src/Camera.cpp
+    src/CpuFeatures.cpp
     src/FixedStepClock.cpp
     src/Geometry.cpp
     src/Gizmo.cpp
@@ -24,7 +26,7 @@ add_library(engine STATIC
 )
 target_include_directories(engine PUBLIC include)
 find_package(Threads REQUIRED)
-target_link_libraries(engine PUBLIC glm::glm Threads::Threads PRIVATE glad Jolt::Jolt lua_static sol2::sol2 cgltf_headers stb_headers)
+target_link_libraries(engine PUBLIC glm::glm Threads::Threads PRIVATE glad Jolt::Jolt lua_static sol2::sol2 cgltf_headers stb_headers miniaudio)
 target_compile_definitions(engine PRIVATE SOL_ALL_SAFETIES_ON=1)
 if(WIN32)
     target_link_libraries(engine PRIVATE psapi) # process memory for the editor memory panel

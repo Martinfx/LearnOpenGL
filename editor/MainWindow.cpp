@@ -16,6 +16,7 @@
 #include "WeaponPanel.h"
 #include "EnvironmentPanel.h"
 #include "ShaderEditor.h"
+#include "SoundEditor.h"
 #include "EditorUi.h"
 #include "ViewportPanel.h"
 
@@ -73,6 +74,7 @@
 #include <QToolButton>
 #include <algorithm>
 #include <array>
+#include <QSignalBlocker>
 #ifdef Q_OS_WIN
 #include <windows.h>
 #include <tlhelp32.h>
@@ -174,6 +176,7 @@ void MainWindow::buildMenus()
     QAction* import = edit->addAction(tr("&Import glTF model..."), QKeySequence(Qt::CTRL | Qt::Key_I), this, &MainWindow::importModel);
     QAction* enemy = edit->addAction(tr("Add &enemy"), QKeySequence(Qt::CTRL | Qt::Key_E), this, [this] { addEntity("enemy"); });
     edit->addAction(tr("Add empty en&tity"), this, [this] { addEntity("empty"); });
+    edit->addAction(tr("Add &sound source"), this, [this] { addEntity("sound"); });
     QAction* dup = edit->addAction(tr("&Duplicate"), QKeySequence(Qt::CTRL | Qt::Key_D), this, &MainWindow::duplicateBox);
     QAction* del = edit->addAction(tr("De&lete"), QKeySequence::Delete, this, &MainWindow::deleteBox);
 
@@ -586,6 +589,7 @@ void MainWindow::buildDocks()
     QFormLayout* renderingForm = makeSection(tr("Rendering"), "Rendering");
     QFormLayout* characterForm = makeSection(tr("Character"), "Character");
     QFormLayout* scriptForm = makeSection(tr("Script"), "Script");
+    QFormLayout* soundForm = makeSection(tr("Sound"), "Sound");
     nameEdit_ = new QLineEdit(boxPanel_);
     kindLabel_ = new QLabel(boxPanel_);
     generalForm->addRow(tr("Type"), kindLabel_);
@@ -953,6 +957,55 @@ void MainWindow::buildDocks()
         markDirty();
     });
 
+    // Sound source (entity type "sound"): a looping 3D sound at the entity, or an
+    // ambient zone that fills the entity's box and fades out around it.
+    entitySound_ = new SoundPicker(boxPanel_);
+    soundZoneCheck_ = new QCheckBox(tr("Ambient zone (fills the box)"), boxPanel_);
+    soundZoneCheck_->setToolTip(tr("Off: a 3D sound at the entity. On: heard everywhere inside the box, fading out around it."));
+    soundFadeSpin_ = new QDoubleSpinBox(boxPanel_);
+    soundFadeSpin_->setRange(0.0, 500.0);
+    soundFadeSpin_->setSingleStep(1.0);
+    soundFadeSpin_->setSuffix(tr(" m"));
+    soundFadeSpin_->setToolTip(tr("Distance outside the zone over which it fades out"));
+    soundVolumeSpin_ = new QDoubleSpinBox(boxPanel_);
+    soundVolumeSpin_->setRange(0.0, 4.0);
+    soundVolumeSpin_->setSingleStep(0.05);
+    for (QDoubleSpinBox* s : {soundFadeSpin_, soundVolumeSpin_})
+        s->setKeyboardTracking(false);
+    soundForm->addRow(tr("Sound"), entitySound_);
+    soundForm->addRow(QString(), soundZoneCheck_);
+    soundForm->addRow(tr("Zone fade"), soundFadeSpin_);
+    soundForm->addRow(tr("Volume"), soundVolumeSpin_);
+    auto setSoundProp = [this](const std::string& key, const std::string& value) {
+        auto* e = selectedEntity();
+        if (!e || e->type != "sound")
+            return;
+        auto it = e->properties.find(key);
+        if (value.empty() ? it == e->properties.end() : (it != e->properties.end() && it->second == value))
+            return;
+        if (value.empty())
+            e->properties.erase(key);
+        else
+            e->properties[key] = value;
+        markDirty();
+    };
+    connect(entitySound_, &SoundPicker::pathChanged, this, [this, setSoundProp](const QString& path) {
+        // Stored relative to the assets folder so the game finds it next to its exe.
+        QString rel = path.isEmpty() ? QString() : QDir(assetRoot()).relativeFilePath(path);
+        setSoundProp("sound", rel.toStdString());
+    });
+    connect(soundZoneCheck_, &QCheckBox::toggled, this, [this, setSoundProp](bool on) {
+        setSoundProp("zone", on ? "1" : "");
+        soundFadeSpin_->setEnabled(on);
+        updateDetailsVisibility();
+    });
+    connect(soundFadeSpin_, &QDoubleSpinBox::valueChanged, this, [setSoundProp](double v) {
+        setSoundProp("fade", QString::number(v, 'g', 4).toStdString());
+    });
+    connect(soundVolumeSpin_, &QDoubleSpinBox::valueChanged, this, [setSoundProp](double v) {
+        setSoundProp("volume", v == 1.0 ? std::string() : QString::number(v, 'g', 4).toStdString());
+    });
+
     // Tunables the script declares in `properties`; values are saved per entity.
     scriptParams_ = new QTableWidget(0, 2, boxPanel_);
     scriptParams_->setHorizontalHeaderLabels({tr("Script parameter"), tr("Value")});
@@ -1199,6 +1252,18 @@ void MainWindow::buildDocks()
         });
         playerSpins_.emplace_back(spin, member);
     }
+    // Player sounds: footsteps (per stride), landing after a fall, getting hurt.
+    const char* playerSoundLabels[] = {"Footsteps", "Landing", "Hurt"};
+    for (std::size_t i = 0; i < playerSounds_.size(); ++i) {
+        auto* picker = new SoundPicker(levelPanel);
+        levelForm->addRow(tr(playerSoundLabels[i]), picker);
+        playerSounds_[i] = picker;
+        connect(picker, &SoundPicker::pathChanged, this, [this, i](const QString& path) {
+            std::filesystem::path* slot[] = {&scene_.player.footstepSound, &scene_.player.landSound, &scene_.player.hurtSound};
+            *slot[i] = std::filesystem::path(path.toStdU16String());
+            markDirty();
+        });
+    }
     connect(playerStartEdit_, &Vec3Editor::valueEdited, this, [this](glm::vec3 v) {
         scene_.playerStart = v;
         markDirty();
@@ -1294,13 +1359,15 @@ void MainWindow::buildDocks()
         openAsset(path, static_cast<int>(type));
     });
     connect(assets_, &AssetBrowser::saveAllRequested, this, &MainWindow::saveAll);
-    connect(assets_, &AssetBrowser::newAssetRequested, this, [this](const QString& kind, const QString&) {
+    connect(assets_, &AssetBrowser::newAssetRequested, this, [this](const QString& kind, const QString& folder) {
         if (kind == "material")
             openMaterialEditor();
         else if (kind == "script")
             newScript();
         else if (kind == "level")
             newLevel();
+        else if (kind == "sound")
+            newSound(folder);
     });
     assetsDock_ = new QDockWidget(tr("Content Browser"), this);
     auto* assetsDock = assetsDock_;
@@ -1618,6 +1685,24 @@ void MainWindow::refreshProperties()
     shadowsCheck_->setChecked(m ? m->castShadows : true);
     shadowsCheck_->blockSignals(false);
     nameEdit_->setEnabled(b || m || e);
+    {
+        const bool sound = e && e->type == "sound";
+        auto prop = [&](const char* key, const char* fallback) {
+            if (!sound)
+                return QString::fromLatin1(fallback);
+            const auto it = e->properties.find(key);
+            return it == e->properties.end() ? QString::fromLatin1(fallback) : QString::fromStdString(it->second);
+        };
+        const QString soundRel = prop("sound", "");
+        entitySound_->setPath(soundRel.isEmpty() ? QString() : QDir(assetRoot()).absoluteFilePath(soundRel));
+        for (QWidget* w : std::initializer_list<QWidget*>{entitySound_, soundZoneCheck_, soundVolumeSpin_})
+            w->setEnabled(sound);
+        const QSignalBlocker b1(soundZoneCheck_), b2(soundFadeSpin_), b3(soundVolumeSpin_);
+        soundZoneCheck_->setChecked(prop("zone", "0") == "1");
+        soundFadeSpin_->setEnabled(sound && soundZoneCheck_->isChecked());
+        soundFadeSpin_->setValue(prop("fade", "10").toDouble());
+        soundVolumeSpin_->setValue(prop("volume", "1").toDouble());
+    }
     detailsIcon_->setPixmap(editorIcon(b ? "cube" : m ? "model" : e ? "person" : "select").pixmap(18, 18));
     updateDetailsVisibility();
     refreshTransformBox();
@@ -1697,6 +1782,9 @@ void MainWindow::refreshLevelProperties()
         spin->setValue(scene_.player.*member);
         spin->blockSignals(false);
     }
+    const std::filesystem::path* sounds[] = {&scene_.player.footstepSound, &scene_.player.landSound, &scene_.player.hurtSound};
+    for (std::size_t i = 0; i < playerSounds_.size(); ++i)
+        playerSounds_[i]->setPath(QString::fromStdU16String(sounds[i]->u16string()));
     refreshTerrainPanel();
 }
 
@@ -1863,6 +1951,8 @@ void MainWindow::openAsset(const QString& path, int type)
     case AssetType::Material: openMaterialEditor(path); break;
     case AssetType::Texture: openTexture(path); break;
     case AssetType::Script: openScript(path); break;
+    case AssetType::Sound: openSoundEditor(path); break;
+    case AssetType::Audio: previewSound(path); break;
     case AssetType::Level:
         if (confirmDiscard())
             openFile(path);
@@ -1877,7 +1967,13 @@ void MainWindow::addEntity(const QString& type)
     const glm::vec3 p = cam.position + cam.flatForward() * 6.0f;
     engine::Entity e;
     e.type = type.toStdString();
-    e.name = engine::uniqueNodeName(scene_, (type == "enemy" ? "Enemy " : "Entity ") + std::to_string(scene_.entities.size() + 1));
+    e.name = engine::uniqueNodeName(scene_, (type == "enemy" ? "Enemy " : type == "sound" ? "Sound " : "Entity ") +
+                                                std::to_string(scene_.entities.size() + 1));
+    if (type == "sound") {
+        e.size = {1.0f, 1.0f, 1.0f};
+        e.color = {0.25f, 0.55f, 0.95f};
+        e.properties["sound"] = "sounds/ambient/geiger.sound";
+    }
     e.position = {std::round(p.x * 2.0f) * 0.5f, 0.0f, std::round(p.z * 2.0f) * 0.5f};
     if (type == "enemy") {
         e.color = {0.55f, 0.5f, 0.5f};
@@ -2524,6 +2620,51 @@ TextureEditor* MainWindow::openTexture(const QString& image)
     return te;
 }
 
+void MainWindow::newSound(const QString& folder)
+{
+    const QString path = QFileDialog::getSaveFileName(this, tr("New sound"), QDir(folder).filePath("new.sound"), tr("Sounds (*.sound)"));
+    if (path.isEmpty())
+        return;
+    // Start from the audio files picked next (a sound without variations stays silent).
+    const QStringList files = QFileDialog::getOpenFileNames(this, tr("Variations of the new sound"), QFileInfo(path).absolutePath(),
+                                                            tr("Audio files (*.wav *.ogg *.mp3 *.flac)"));
+    engine::SoundDef def;
+    for (const QString& f : files)
+        def.files.push_back(std::filesystem::path(QFileInfo(f).absoluteFilePath().toStdU16String()));
+    std::string error;
+    if (!engine::saveSoundFile(def, std::filesystem::path(path.toStdU16String()), &error)) {
+        QMessageBox::warning(this, tr("Sound"), QString::fromStdString(error));
+        return;
+    }
+    assets_->rescan();
+    openSoundEditor(path);
+}
+
+SoundEditor* MainWindow::openSoundEditor(const QString& path)
+{
+    const QString absolute = QFileInfo(path).absoluteFilePath();
+    for (int i = 1; i < tabs_->count(); ++i)
+        if (auto* se = qobject_cast<SoundEditor*>(tabs_->widget(i)); se && se->path() == absolute) {
+            tabs_->setCurrentIndex(i);
+            return se;
+        }
+    auto* se = new SoundEditor(tabs_);
+    QString error;
+    if (!se->load(absolute, &error)) {
+        delete se;
+        QMessageBox::warning(this, tr("Sound"), error);
+        return nullptr;
+    }
+    const int index = tabs_->addTab(se, se->title());
+    tabs_->setTabToolTip(index, absolute);
+    tabs_->setCurrentIndex(index);
+    connect(se, &SoundEditor::modificationChanged, this, [this, se] {
+        if (const int i = tabs_->indexOf(se); i >= 0)
+            tabs_->setTabText(i, se->title());
+    });
+    return se;
+}
+
 void MainWindow::saveCurrent()
 {
     QString error;
@@ -2534,6 +2675,8 @@ void MainWindow::saveCurrent()
         ok = te->save(&error);
     else if (auto* me = qobject_cast<MaterialEditor*>(tabs_->currentWidget()))
         ok = me->saveModified(&error);
+    else if (auto* sd = qobject_cast<SoundEditor*>(tabs_->currentWidget()))
+        ok = sd->save(&error);
     else {
         save();
         return;
@@ -3030,8 +3173,9 @@ void MainWindow::buildModePanel()
         auto* box = toolButton("cube", tr("Box"), page);
         auto* enemy = toolButton("person", tr("Enemy (random human)"), page);
         auto* entity = toolButton("select", tr("Empty entity"), page);
+        auto* sound = toolButton("sound", tr("Sound source / ambient zone"), page);
         auto* model = toolButton("model", tr("glTF model..."), page);
-        for (QPushButton* b : {box, enemy, entity, model})
+        for (QPushButton* b : {box, enemy, entity, sound, model})
             layout->addWidget(b);
         auto* hint = new QLabel(tr("Or drag a model from the Content Browser into the view: it lands where you drop it."), page);
         hint->setObjectName("dim");
@@ -3041,6 +3185,7 @@ void MainWindow::buildModePanel()
         connect(box, &QPushButton::clicked, this, &MainWindow::addBox);
         connect(enemy, &QPushButton::clicked, this, [this] { addEntity("enemy"); });
         connect(entity, &QPushButton::clicked, this, [this] { addEntity("empty"); });
+        connect(sound, &QPushButton::clicked, this, [this] { addEntity("sound"); });
         connect(model, &QPushButton::clicked, this, &MainWindow::importModel);
         modePages_->addWidget(page);
     }

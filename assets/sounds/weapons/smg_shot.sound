@@ -1,0 +1,13 @@
+# Sound: variations (one is picked at random per play) and playback settings
+file "smg_shot_1.wav"
+file "smg_shot_2.wav"
+file "smg_shot_3.wav"
+volume 0.9
+pitch 0.96 1.05
+distance 4 250
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group sfx
+max_instances 6

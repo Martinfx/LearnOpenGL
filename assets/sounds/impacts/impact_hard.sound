@@ -1,0 +1,13 @@
+# Sound: variations (one is picked at random per play) and playback settings
+file "impact_hard_1.wav"
+file "impact_hard_2.wav"
+file "impact_hard_3.wav"
+volume 0.55
+pitch 0.85 1.15
+distance 1 50
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group sfx
+max_instances 12

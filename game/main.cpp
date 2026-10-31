@@ -1,6 +1,7 @@
 // Game runtime: GLFW window, fixed 60 Hz simulation, first-person player.
 // Usage: fps_game [level-file]
 #include <engine/Camera.h>
+#include <engine/CpuFeatures.h>
 #include <engine/FixedStepClock.h>
 #include <engine/Input.h>
 #include <engine/Physics.h>
@@ -182,6 +183,12 @@ GLFWwindow* createWindow()
 
 int main(int argc, char** argv)
 {
+    if (std::string missing; !engine::checkCpuFeatures(&missing)) {
+        std::fprintf(stderr, "This build needs CPU features this processor lacks: %s.\n"
+                             "Rebuild on this machine (a clean build dir with the bundled Jolt, ENGINE_USE_SYSTEM_JOLT=OFF).\n",
+                     missing.c_str());
+        return 1;
+    }
     glfwSetErrorCallback([](int code, const char* message) { std::fprintf(stderr, "GLFW %d: %s\n", code, message); });
     if (!glfwInit())
         return 1;

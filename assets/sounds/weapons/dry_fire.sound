@@ -1,0 +1,11 @@
+# Sound: variations (one is picked at random per play) and playback settings
+file "dry_fire.wav"
+volume 0.5
+pitch 0.97 1.03
+distance 1 8
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group sfx
+max_instances 2

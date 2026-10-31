@@ -122,6 +122,17 @@ bool saveWeaponFile(const WeaponSettings& w, const std::filesystem::path& file, 
         << "aim_fov " << w.aimFov << '\n'
         << "aim_time " << w.aimTime << '\n'
         << "aim_spread " << w.aimSpread << '\n';
+    auto relative = [&](const std::filesystem::path& p) {
+        if (p.empty())
+            return std::string();
+        const auto rel = std::filesystem::absolute(p).lexically_relative(std::filesystem::absolute(file).parent_path());
+        return pathToUtf8(rel.empty() ? std::filesystem::absolute(p) : rel);
+    };
+    out << "sound_fire " << std::quoted(relative(w.soundFire)) << '\n'
+        << "sound_reload " << std::quoted(relative(w.soundReload)) << '\n'
+        << "sound_draw " << std::quoted(relative(w.soundDraw)) << '\n'
+        << "sound_impact " << std::quoted(relative(w.soundImpact)) << '\n'
+        << "sound_hit " << std::quoted(relative(w.soundHit)) << '\n';
     return static_cast<bool>(out);
 }
 
@@ -183,6 +194,19 @@ bool loadWeaponFile(WeaponSettings& weapon, const std::filesystem::path& file, s
         else if (key == "aim_fov") ok = static_cast<bool>(ls >> w.aimFov);
         else if (key == "aim_time") ok = static_cast<bool>(ls >> w.aimTime);
         else if (key == "aim_spread") ok = static_cast<bool>(ls >> w.aimSpread);
+        else if (key.rfind("sound_", 0) == 0) {
+            std::filesystem::path* target = key == "sound_fire" ? &w.soundFire : key == "sound_reload" ? &w.soundReload
+                                          : key == "sound_draw" ? &w.soundDraw : key == "sound_impact" ? &w.soundImpact
+                                          : key == "sound_hit" ? &w.soundHit : nullptr;
+            std::string m;
+            ok = static_cast<bool>(ls >> std::quoted(m));
+            if (ok && target && !m.empty()) {
+                std::filesystem::path p = pathFromUtf8(m);
+                if (p.is_relative())
+                    p = std::filesystem::absolute(file).parent_path() / p;
+                *target = p.lexically_normal();
+            }
+        }
         else if (key == "muzzle") ok = static_cast<bool>(ls >> w.muzzle.x >> w.muzzle.y >> w.muzzle.z);
         // Unknown keys are ignored so newer files still load.
         if (!ok) {

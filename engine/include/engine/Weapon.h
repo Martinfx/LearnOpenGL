@@ -42,6 +42,12 @@ struct WeaponSettings {
     float aimFov = 0.0f;          // vertical camera FOV while aiming (degrees)
     float aimTime = 0.2f;         // s to raise the weapon to the eye
     float aimSpread = 0.35f;      // spread multiplier while aiming
+    // Sounds (.sound or audio files, absolute paths; empty = silent). Melee: `soundFire` is the swing.
+    std::filesystem::path soundFire;
+    std::filesystem::path soundReload;
+    std::filesystem::path soundDraw;
+    std::filesystem::path soundImpact;  // bullet or blade hitting level geometry
+    std::filesystem::path soundHit;     // hitting a character
 
     bool melee() const { return type == Type::Melee; }
 };

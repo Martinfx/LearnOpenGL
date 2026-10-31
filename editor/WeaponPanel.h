@@ -15,6 +15,7 @@ class QLineEdit;
 class QListWidget;
 class QSpinBox;
 class Vec3Editor;
+class SoundPicker;
 
 // Player loadout of the level + editor for the selected .weapon file.
 class WeaponPanel : public QWidget {
@@ -68,6 +69,7 @@ private:
     QDoubleSpinBox* viewScale_ = nullptr;
     Vec3Editor* viewRotation_ = nullptr;
     Vec3Editor* muzzle_ = nullptr;
+    std::array<SoundPicker*, 5> sounds_{}; // fire, reload, draw, impact, hit
     std::array<QComboBox*, 6> clips_{};  // idle, fire, reload, draw, reload empty, walk
     QLabel* clipInfo_ = nullptr;
     std::array<QWidget*, 12> firearmRows_{}; // rows hidden for melee weapons

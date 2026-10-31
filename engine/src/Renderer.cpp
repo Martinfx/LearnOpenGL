@@ -2564,13 +2564,20 @@ bool Renderer::occluded(const Aabb& box) const
         mx = glm::max(mx, glm::vec2(ndc));
         nearest = std::min(nearest, ndc.z * 0.5f + 0.5f);
     }
-    if (nearest <= 0.0f)
+    // NaN/inf (degenerate matrices while a viewport resizes to 0) never reach the
+    // float->int conversions below, which are undefined for out-of-range values.
+    if (!(nearest > 0.0f) || !std::isfinite(mn.x + mn.y + mx.x + mx.y))
         return false;
     const int w = occ_.width, h = occ_.height;
-    const int x0 = std::max(0, static_cast<int>(std::floor((mn.x * 0.5f + 0.5f) * w)));
-    const int x1 = std::min(w - 1, static_cast<int>(std::floor((mx.x * 0.5f + 0.5f) * w)));
-    const int y0 = std::max(0, static_cast<int>(std::floor((mn.y * 0.5f + 0.5f) * h)));
-    const int y1 = std::min(h - 1, static_cast<int>(std::floor((mx.y * 0.5f + 0.5f) * h)));
+    if (w <= 0 || h <= 0 || occ_.depth.size() < static_cast<std::size_t>(w) * static_cast<std::size_t>(h))
+        return false;
+    auto pixel = [](float ndc, int size) {
+        return static_cast<int>(std::floor(std::clamp(ndc * 0.5f + 0.5f, -1.0f, 2.0f) * static_cast<float>(size)));
+    };
+    const int x0 = std::max(0, pixel(mn.x, w));
+    const int x1 = std::min(w - 1, pixel(mx.x, w));
+    const int y0 = std::max(0, pixel(mn.y, h));
+    const int y1 = std::min(h - 1, pixel(mx.y, h));
     if (x0 > x1 || y0 > y1)
         return false; // outside that view: the frustum test decides
     if ((x1 - x0 + 1) * (y1 - y0 + 1) > 2048)

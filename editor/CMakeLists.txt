@@ -23,6 +23,8 @@ add_executable(fps_editor
     Vec3Editor.h
     Viewport.cpp
     WeaponPanel.cpp
+    SoundEditor.cpp
+    SoundEditor.h
     WeaponPanel.h
     Viewport.h
     ViewportPanel.cpp

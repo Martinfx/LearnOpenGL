@@ -42,7 +42,7 @@ if(ENGINE_BUILD_GAME)
 endif()
 
 # --- Jolt Physics (collision + character controller) -------------------------
-if(ENGINE_USE_SYSTEM_DEPS)
+if(ENGINE_USE_SYSTEM_DEPS AND ENGINE_USE_SYSTEM_JOLT)
     find_package(Jolt CONFIG QUIET)
 endif()
 if(TARGET Jolt::Jolt)
@@ -105,6 +105,18 @@ add_library(cgltf_headers INTERFACE)
 target_include_directories(cgltf_headers SYSTEM INTERFACE ${ENGINE_3RDPARTY}/cgltf)
 add_library(stb_headers INTERFACE)
 target_include_directories(stb_headers SYSTEM INTERFACE ${ENGINE_3RDPARTY}/stb)
+
+# miniaudio (+ stb_vorbis for .ogg): one implementation unit, built without the
+# project's warning flags. Backends: WASAPI (Windows), PulseAudio/ALSA/JACK
+# (Linux, loaded at runtime), OSS/sndio (FreeBSD).
+add_library(miniaudio STATIC ${CMAKE_CURRENT_LIST_DIR}/miniaudio_impl.c)
+target_include_directories(miniaudio SYSTEM PUBLIC ${ENGINE_3RDPARTY}/miniaudio ${ENGINE_3RDPARTY}/stb)
+set_target_properties(miniaudio PROPERTIES POSITION_INDEPENDENT_CODE ON)
+find_package(Threads REQUIRED)
+target_link_libraries(miniaudio PUBLIC Threads::Threads ${CMAKE_DL_LIBS})
+if(UNIX)
+    target_link_libraries(miniaudio PUBLIC m)
+endif()
 
 # --- Qt 6 (editor) -- always a system/installer package ----------------------
 if(ENGINE_BUILD_EDITOR)

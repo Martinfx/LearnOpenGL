@@ -1,3 +1,6 @@
+#include <engine/CpuFeatures.h>
+#include <cstdio>
+#include <string>
 #include "AssetPaths.h"
 #include "EditorUi.h"
 #include "MainWindow.h"
@@ -9,6 +12,12 @@
 
 int main(int argc, char** argv)
 {
+    if (std::string missing; !engine::checkCpuFeatures(&missing)) {
+        std::fprintf(stderr, "This build needs CPU features this processor lacks: %s.\n"
+                             "Rebuild on this machine (a clean build dir with the bundled Jolt, ENGINE_USE_SYSTEM_JOLT=OFF).\n",
+                     missing.c_str());
+        return 1;
+    }
     // Must be set before QApplication so every GL widget gets a 4.5+ core context.
     QSurfaceFormat format;
     format.setRenderableType(QSurfaceFormat::OpenGL);

@@ -1,0 +1,12 @@
+# Sound: variations (one is picked at random per play) and playback settings
+file "impact_flesh_1.wav"
+file "impact_flesh_2.wav"
+volume 0.8
+pitch 0.9 1.1
+distance 1 30
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group sfx
+max_instances 6

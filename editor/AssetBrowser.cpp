@@ -64,6 +64,8 @@ const char* typeName(AssetType t)
     case AssetType::Script: return "Script";
     case AssetType::Weapon: return "Weapon";
     case AssetType::Level: return "Level";
+    case AssetType::Sound: return "Sound";
+    case AssetType::Audio: return "Audio";
     case AssetType::Other: break;
     }
     return "File";
@@ -85,6 +87,10 @@ AssetType assetTypeOf(const QString& path)
         return AssetType::Weapon;
     if (ext == "level")
         return AssetType::Level;
+    if (ext == "sound")
+        return AssetType::Sound;
+    if (ext == "wav" || ext == "ogg" || ext == "mp3" || ext == "flac")
+        return AssetType::Audio;
     return AssetType::Other;
 }
 
@@ -246,7 +252,7 @@ AssetBrowser::AssetBrowser(QWidget* parent) : QWidget(parent)
     category_ = new QComboBox(this);
     category_->addItem(tr("All types"), -1);
     for (AssetType t : {AssetType::Model, AssetType::Material, AssetType::Texture, AssetType::Script, AssetType::Weapon,
-                        AssetType::Level})
+                        AssetType::Level, AssetType::Sound, AssetType::Audio})
         category_->addItem(tr(typeName(t)) + "s", static_cast<int>(t));
     category_->setCurrentIndex(0);
     search_ = new QLineEdit(this);
@@ -282,6 +288,7 @@ AssetBrowser::AssetBrowser(QWidget* parent) : QWidget(parent)
     addMenu->addSeparator();
     addMenu->addAction(tr("New material"), this, [this] { emit newAssetRequested(QStringLiteral("material"), currentFolderPath()); });
     addMenu->addAction(tr("New Lua script"), this, [this] { emit newAssetRequested(QStringLiteral("script"), currentFolderPath()); });
+    addMenu->addAction(tr("New sound"), this, [this] { emit newAssetRequested(QStringLiteral("sound"), currentFolderPath()); });
     addMenu->addAction(tr("New level"), this, [this] { emit newAssetRequested(QStringLiteral("level"), currentFolderPath()); });
     addButton->setMenu(addMenu);
     auto* importButton = new QToolButton(this);
@@ -432,7 +439,8 @@ QIcon AssetBrowser::placeholderIcon(AssetType type) const
 {
     QPixmap pix(kThumbSize, kThumbSize);
     const QColor colors[] = {QColor(70, 120, 80), QColor(120, 90, 50), QColor(70, 90, 130), QColor(110, 70, 110),
-                             QColor(130, 60, 60), QColor(60, 110, 120), QColor(90, 90, 90)};
+                             QColor(130, 60, 60), QColor(60, 110, 120), QColor(45, 95, 150), QColor(40, 75, 115),
+                             QColor(90, 90, 90)};
     pix.fill(colors[static_cast<int>(type)]);
     QPainter p(&pix);
     p.setPen(Qt::white);
@@ -651,7 +659,7 @@ void AssetBrowser::importFiles()
 {
     const QStringList files = QFileDialog::getOpenFileNames(
         this, tr("Import into %1").arg(folder_.isEmpty() ? tr("assets") : folder_), QString(),
-        tr("Assets (*.glb *.gltf *.bin *.png *.jpg *.jpeg *.material *.lua *.weapon *.level);;All files (*)"));
+        tr("Assets (*.glb *.gltf *.bin *.png *.jpg *.jpeg *.material *.lua *.weapon *.level *.sound *.wav *.ogg *.mp3 *.flac);;All files (*)"));
     if (files.isEmpty())
         return;
     QStringList failed;

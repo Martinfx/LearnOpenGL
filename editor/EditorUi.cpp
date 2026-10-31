@@ -176,6 +176,11 @@ void drawIcon(QPainter& p, const QString& n, QColor c)
         line(8, 10, 8, 14.5);
         line(1.5, 14.5, 3, 12);
         line(14.5, 14.5, 13, 12);
+    } else if (n == "sound") {
+        const QPointF speaker[] = {{2, 6}, {5, 6}, {9, 2.5}, {9, 13.5}, {5, 10}, {2, 10}};
+        p.drawPolygon(speaker, 6);
+        p.drawArc(QRectF(8, 5, 5, 6), -60 * 16, 120 * 16);
+        p.drawArc(QRectF(8, 2.5, 7.5, 11), -60 * 16, 120 * 16);
     } else if (n == "settings") {
         p.drawEllipse(QPointF(8, 8), 2.2, 2.2);
         p.drawEllipse(QPointF(8, 8), 5, 5);

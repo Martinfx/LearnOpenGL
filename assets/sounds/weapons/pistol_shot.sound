@@ -1,0 +1,13 @@
+# Sound: variations (one is picked at random per play) and playback settings
+file "pistol_shot_1.wav"
+file "pistol_shot_2.wav"
+file "pistol_shot_3.wav"
+volume 0.85
+pitch 0.95 1.05
+distance 3 200
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group sfx
+max_instances 6

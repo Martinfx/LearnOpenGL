@@ -1,0 +1,11 @@
+# Sound: variations (one is picked at random per play) and playback settings
+file "wind_loop.ogg"
+volume 0.45
+pitch 1 1
+distance 1 60
+rolloff 1
+loop 1
+stream 1
+spatial 0
+group ambient
+max_instances 2

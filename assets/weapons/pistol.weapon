@@ -27,3 +27,8 @@ aim_rotation 0 0 0
 aim_fov 65
 aim_time 0.15
 aim_spread 0.4
+sound_fire "../sounds/weapons/pistol_shot.sound"
+sound_reload "../sounds/weapons/reload.sound"
+sound_draw "../sounds/weapons/draw.sound"
+sound_impact "../sounds/impacts/impact_hard.sound"
+sound_hit "../sounds/impacts/impact_flesh.sound"
