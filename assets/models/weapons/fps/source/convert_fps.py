@@ -9,19 +9,28 @@ sc=bpy.context.scene; sc.render.fps=24
 for o in list(bpy.data.objects):
     if o.type=='MESH' and any(o.name.startswith(d) for d in cfg.get('drop',[])): bpy.data.objects.remove(o)
 arm=[o for o in bpy.data.objects if o.type=='ARMATURE'][0]
+# repair meshes whose vertex data is in different units than the skin's bind pose
+for name,k in cfg.get('fix_mesh',{}).items():
+    me=bpy.data.objects[name].data
+    me.transform(Matrix.Scale(k,4))
+    if k<0: me.flip_normals()
 idle=[a for a in bpy.data.actions if a.name.endswith(cfg['clips']['idle'])][0]
 arm.animation_data.action=idle
 try: arm.animation_data.action_slot=idle.slots[0]
 except: pass
 sc.frame_set(0)
+for o in list(bpy.data.objects):
+    if o.type=='CAMERA': bpy.data.objects.remove(o)
 M=arm.matrix_world@arm.pose.bones[cfg['cam']].matrix
 eye=M.translation.copy()
 # real-world scale from weapon length
 ms=[o for o in bpy.data.objects if o.type=='MESH']
 dg=bpy.context.evaluated_depsgraph_get()
-w=[o for o in ms if o.name==cfg['weapon_mesh']][0].evaluated_get(dg); me=w.to_mesh()
-pts=[w.matrix_world@v.co for v in me.vertices]
-L=max(max(p[i] for p in pts)-min(p[i] for p in pts) for i in range(3)); s=cfg['weapon_length']/L
+if 'scale' in cfg: s=cfg['scale']
+else:
+    w=[o for o in ms if o.name==cfg['weapon_mesh']][0].evaluated_get(dg); me=w.to_mesh()
+    pts=[w.matrix_world@v.co for v in me.vertices]
+    L=max(max(p[i] for p in pts)-min(p[i] for p in pts) for i in range(3)); s=cfg['weapon_length']/L
 print('scale',s,'eye',eye)
 # model looks along Blender -Y; glTF -Z == Blender +Y  -> rotate 180 deg about Z
 T=Matrix.Scale(s,4)@Matrix.Rotation(math.pi,4,'Z')@Matrix.Translation(-eye)
