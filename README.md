@@ -23,7 +23,7 @@ Qt 6 se nestahuje, musí být nainstalované.
 
 **FreeBSD**
 ```sh
-pkg install cmake ninja glfw glm qt6-base
+pkg install git cmake ninja glfw glm qt6-base
 ```
 
 **Linux (Debian/Ubuntu)**
