@@ -22,6 +22,8 @@ recordings with placeholders.
 | `weapons/casing_concrete_*`, `casing_metal_*`, `casing_dirt_*` (built by `source/build_casings.py`: hit grains pitched up to casing size and laid out as a bouncing case) | [Coin Drop](https://opengameart.org/content/coin-drop) | Vinrax | CC0 |
 | `weapons/casing_*` (extra clinks; the metal-floor answer) | [Metal Impact Sounds](https://opengameart.org/content/metal-impact-sounds) | BMacZero | CC0 |
 | `weapons/casing_dirt_*` (soil contact) | [Fantozzi's Footsteps (Grass/Sand & Stone)](https://opengameart.org/content/fantozzis-footsteps-grasssand-stone) | Fantozzi (posted by qubodup) | CC0 |
+| `weapons/ricochet_*`, `ricochet_metal_*` (built by `source/build_ricochets.py`: real metal pings, whine = the ring of struck metal bent down in pitch like a receding bullet) | [27 Metal Audio Samples](https://opengameart.org/content/27-metal-audio-samples-sfx) | blacklodgegames | CC0 |
+| `weapons/ricochet_*` (pings) | [Metal Impact Sounds](https://opengameart.org/content/metal-impact-sounds) | BMacZero | CC0 |
 | `impacts/impact_concrete_*`, `impact_metal_4..5` | [75 CC0 breaking / falling / hit sfx](https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx) | rubberduck | CC0 |
 | `impacts/impact_concrete_2`, `impact_flesh_*` | [Impact](https://opengameart.org/content/impact) | qubodup | CC0 |
 | `impacts/impact_metal_1..3` | [Metal Impact Sounds](https://opengameart.org/content/metal-impact-sounds) | BMacZero | CC0 |

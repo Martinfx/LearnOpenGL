@@ -1,0 +1,15 @@
+# Sound: variations (one is picked at random per play) and playback settings
+file "ricochet_metal_1.wav"
+file "ricochet_metal_2.wav"
+file "ricochet_metal_3.wav"
+file "ricochet_metal_4.wav"
+file "ricochet_metal_5.wav"
+volume 0.9
+pitch 0.9 1.1
+distance 3 80
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group sfx
+max_instances 8

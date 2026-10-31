@@ -1,0 +1,16 @@
+# Sound: variations (one is picked at random per play) and playback settings
+file "ricochet_1.wav"
+file "ricochet_2.wav"
+file "ricochet_3.wav"
+file "ricochet_4.wav"
+file "ricochet_5.wav"
+file "ricochet_6.wav"
+volume 0.9
+pitch 0.9 1.1
+distance 3 80
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group sfx
+max_instances 8
