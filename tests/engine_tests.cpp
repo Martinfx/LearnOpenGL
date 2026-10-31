@@ -455,7 +455,7 @@ void testHierarchyAndDependencies()
     std::string err;
     engine::Scene s;
     check(engine::loadScene(s, ENGINE_TEST_ASSETS "/levels/test.level", &err), "load level: " + err);
-    check(s.groups.size() == 9 && engine::nodeParent(s, "Crate B") == "Crate A", "test level has a hierarchy");
+    check(s.groups.size() == 10 && engine::nodeParent(s, "Crate B") == "Crate A", "test level has a hierarchy");
     // Start from a flat scene.
     s.groups.clear();
     for (int i = 0; i < s.objectCount(); ++i)

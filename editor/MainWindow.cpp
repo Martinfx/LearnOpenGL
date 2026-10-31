@@ -310,6 +310,7 @@ void MainWindow::buildMenus()
     addMenu_->addAction(add);
     addMenu_->addAction(enemy);
     addMenu_->addAction(tr("Empty entity"), this, [this] { addEntity("empty"); });
+    addMenu_->addAction(tr("Map marker (point on the in-game map)"), this, [this] { addEntity("map_marker"); });
     addMenu_->addSeparator();
     addMenu_->addAction(import);
     auto* addButton = new QToolButton(main);
@@ -938,6 +939,49 @@ void MainWindow::buildDocks()
     levelForm->addRow(QString(), fromCamera);
     levelForm->addRow(tr("Sun direction"), sunEdit_);
 
+    // In-game map: own picture, or the level rendered from above when it loads.
+    levelForm->addRow(new QLabel(tr("<b>Map</b>"), levelPanel));
+    auto* mapImageRow = new QWidget(levelPanel);
+    auto* mapImageLayout = new QHBoxLayout(mapImageRow);
+    mapImageLayout->setContentsMargins(0, 0, 0, 0);
+    mapImageEdit_ = new QLineEdit(mapImageRow);
+    mapImageEdit_->setReadOnly(true);
+    mapImageEdit_->setPlaceholderText(tr("rendered from above"));
+    auto* browseMap = new QPushButton(tr("..."), mapImageRow);
+    auto* clearMap = new QPushButton(tr("x"), mapImageRow);
+    browseMap->setFixedWidth(32);
+    clearMap->setFixedWidth(32);
+    mapImageLayout->addWidget(mapImageEdit_, 1);
+    mapImageLayout->addWidget(browseMap);
+    mapImageLayout->addWidget(clearMap);
+    mapBoundsEdit_ = new Vec3Editor(-100000.0, 100000.0, 10.0, levelPanel);
+    mapBoundsEdit_->setToolTip(tr("X and Z of the map's top-left (north-west) corner and its size in metres; size 0 = whole level"));
+    levelForm->addRow(tr("Map image"), mapImageRow);
+    levelForm->addRow(tr("Map X, Z, size"), mapBoundsEdit_);
+    auto* mapHint = new QLabel(tr("Points on the map: Add > Map marker (the name is the label)."), levelPanel);
+    mapHint->setObjectName("dim");
+    mapHint->setWordWrap(true);
+    levelForm->addRow(mapHint);
+    connect(browseMap, &QPushButton::clicked, this, [this] {
+        const QString path = QFileDialog::getOpenFileName(this, tr("Map image (north up)"), assetPath("textures"),
+                                                          tr("Images (*.png *.jpg *.jpeg)"));
+        if (path.isEmpty())
+            return;
+        scene_.map.image = std::filesystem::path(path.toStdU16String());
+        refreshLevelProperties();
+        markDirty();
+    });
+    connect(clearMap, &QPushButton::clicked, this, [this] {
+        scene_.map.image.clear();
+        refreshLevelProperties();
+        markDirty();
+    });
+    connect(mapBoundsEdit_, &Vec3Editor::valueEdited, this, [this](glm::vec3 v) {
+        scene_.map.min = {v.x, v.y};
+        scene_.map.size = std::max(0.0f, v.z);
+        markDirty();
+    });
+
     // Loading screen the game shows while this level loads.
     levelForm->addRow(new QLabel(tr("<b>Loading screen</b>"), levelPanel));
     auto* loadingImageRow = new QWidget(levelPanel);
@@ -1370,6 +1414,8 @@ void MainWindow::refreshLevelProperties()
 {
     playerStartEdit_->setValue(scene_.playerStart);
     sunEdit_->setValue(scene_.sunDirection);
+    mapImageEdit_->setText(QString::fromStdU16String(scene_.map.image.filename().u16string()));
+    mapBoundsEdit_->setValue(glm::vec3(scene_.map.min.x, scene_.map.min.y, scene_.map.size));
     loadingImageEdit_->setText(QString::fromStdU16String(scene_.loading.image.filename().u16string()));
     loadingImageEdit_->setToolTip(QString::fromStdU16String(scene_.loading.image.u16string()));
     loadingTitleEdit_->setText(QString::fromStdString(scene_.loading.title));

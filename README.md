@@ -119,6 +119,13 @@ Z Blenderu: armatura + akce, export glTF 2.0 s volbou Animation (každá akce = 
 - **Editor:** při startu se ukáže úvodní obrazovka s progressbarem, dokud se nenačte první level. Při otevírání levelu je progress nad 3D pohledem a ve stavovém řádku.
 - **Písmo:** DejaVu Sans v `assets/fonts` (licence v `LICENSE-DejaVu.txt`), vykreslené přes stb_truetype.
 
+## Mapa (PDA)
+
+- **Minimapa** vpravo nahoře se otáčí s hráčem (poloměr 60 m), ukazuje značky a souřadnice.
+- **Klávesa M** otevře celou mapu (PDA), sever nahoře, mřížka po 50 m, šipka hráče a popisky značek.
+- **Značky:** v editoru Add > Map marker; jméno entity je popisek. Ve hře jsou neviditelné.
+- **Obrázek mapy:** Details > Level > Map (Image, Bounds X/Z/size v metrech). Bez obrázku hra při načtení vyrenderuje level shora. V levelu řádky `map_image` a `map_bounds minX minZ size`.
+
 ## Rozložení editoru
 
 - **Hlavní lišta:** Save, Undo/Redo, Add (box, nepřítel, entita, glTF), Play / Pause (F6) / Stop (Shift+F5) a kvalita viewportu. Hra běží jako podproces editoru a její výstup jde do Output Logu.

@@ -240,6 +240,25 @@ void Ui2D::image(unsigned texture, glm::vec2 pos, glm::vec2 size, glm::vec4 tint
     quad(pos, pos + size, {uv.x, uv.y}, {uv.z, uv.w}, tint, 1.0f);
 }
 
+void Ui2D::imageQuad(unsigned texture, const glm::vec2 corners[4], const glm::vec2 uvs[4], glm::vec4 tint)
+{
+    if (!texture)
+        return;
+    if (texture != boundTexture_) {
+        flush();
+        glBindTextureUnit(0, texture);
+        boundTexture_ = texture;
+    }
+    const Vertex v[4] = {{corners[0], uvs[0], tint, 1.0f}, {corners[1], uvs[1], tint, 1.0f}, {corners[2], uvs[2], tint, 1.0f},
+                         {corners[3], uvs[3], tint, 1.0f}};
+    vertices_.insert(vertices_.end(), {v[0], v[1], v[2], v[0], v[2], v[3]});
+}
+
+void Ui2D::triangle(glm::vec2 a, glm::vec2 b, glm::vec2 c, glm::vec4 color)
+{
+    vertices_.insert(vertices_.end(), {Vertex{a, {0, 0}, color, 0.0f}, Vertex{b, {0, 0}, color, 0.0f}, Vertex{c, {0, 0}, color, 0.0f}});
+}
+
 void Ui2D::text(const std::string& utf8, glm::vec2 pos, float size, glm::vec4 color, bool bold)
 {
     const Font* font = fonts_[bold ? 1 : 0].get();

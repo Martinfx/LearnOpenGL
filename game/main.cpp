@@ -8,6 +8,8 @@
 #include <engine/Renderer.h>
 #include <engine/Scene.h>
 #include <engine/Ui2D.h>
+
+#include "MapHud.h"
 #include <engine/Scripting.h>
 #include <engine/Weapon.h>
 
@@ -219,9 +221,10 @@ int main(int argc, char** argv)
     // screen shows the progress; then meshes and textures go to the GPU.
     engine::Scene scene;
     engine::PhysicsWorld physics;
+    engine::Ui2D ui; // loading screen, then the map
+    MapHud map;
     {
         const std::filesystem::path assetDir = std::filesystem::path(argv[0]).parent_path() / "assets";
-        engine::Ui2D ui;
         if (!ui.init(assetDir / "fonts/DejaVuSans.ttf", assetDir / "fonts/DejaVuSans-Bold.ttf", &error))
             std::fprintf(stderr, "Loading screen: %s\n", error.c_str());
         const engine::LoadingScreen look = engine::readLoadingScreen(levelPath);
@@ -306,6 +309,8 @@ int main(int argc, char** argv)
             uploaded = renderer.preload(scene, cursor, 12.0);
             drawLoading(0.85f + 0.15f * uploaded, "textures to the GPU");
         }
+        drawLoading(1.0f, "map");
+        map.init(renderer, scene);
         std::printf("Level loaded in %.1f s\n", glfwGetTime() - loadStart);
         if (background)
             engine::Ui2D::deleteImage(background);
@@ -358,6 +363,7 @@ int main(int argc, char** argv)
     int fpsFrames = 0;
     long frame = 0;
     bool escHeld = false;
+    bool mapOpen = false, mapHeld = false;
 
     while (!glfwWindowShouldClose(window) && (frameLimit < 0 || frame < frameLimit)) {
         const double now = glfwGetTime();
@@ -372,6 +378,10 @@ int main(int argc, char** argv)
             mouse.first = true;
         }
         escHeld = esc;
+        const bool mKey = glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS;
+        if (mKey && !mapHeld)
+            mapOpen = !mapOpen;
+        mapHeld = mKey;
         if (!captured && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
             captured = true;
             setCaptured(window, captured);
@@ -508,6 +518,13 @@ int main(int argc, char** argv)
             }
             renderer.renderOverlay(view, overlay);
             renderer.present();
+            // HUD: minimap in the corner, or the full map (M).
+            ui.begin(width, height);
+            if (mapOpen)
+                map.drawFullMap(ui, width, height, player.feet(), camera.flatForward());
+            else
+                map.drawMinimap(ui, width, height, player.feet(), camera.flatForward());
+            ui.end();
         }
         glfwSwapBuffers(window);
 

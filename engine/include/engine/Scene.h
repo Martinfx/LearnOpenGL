@@ -207,6 +207,15 @@ struct LoadingScreen {
     std::string hint;             // line under the progress bar
 };
 
+// In-game map (minimap and the full map on M). Without an image the game
+// renders the level from above when it loads. Points of interest are entities
+// of type "map_marker" (their name is the label).
+struct MapSettings {
+    std::filesystem::path image; // absolute, empty = rendered from the level; top of the image = -Z (north)
+    glm::vec2 min{0.0f};         // world X, Z of the image's top-left corner
+    float size = 0.0f;           // metres covered (square); 0 = around everything in the level
+};
+
 // Progress of loadScene(), readable from another thread (the loading screen).
 struct LoadProgress {
     std::atomic<int> done{0};
@@ -239,6 +248,7 @@ struct Scene {
     glm::vec3 sunDirection{-0.4f, -1.0f, -0.3f};
     Environment environment;
     LoadingScreen loading;
+    MapSettings map;
 
     // Objects are addressed by one index: boxes first, then models, then entities.
     int objectCount() const { return static_cast<int>(boxes.size() + models.size() + entities.size()); }
@@ -261,6 +271,8 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
 // Model files are parsed in parallel on the job system; `progress` (optional) counts them.
 bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* error = nullptr,
                LoadProgress* progress = nullptr);
+// Square area of the map: the level's settings, or everything in the level plus a margin.
+void mapArea(const Scene& scene, glm::vec2& min, float& size);
 // Only the loading screen settings of a level (fast: no models are read).
 LoadingScreen readLoadingScreen(const std::filesystem::path& file);
 

@@ -733,6 +733,8 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
     glBindVertexArray(vao_);
     for (std::size_t i = 0; i < scene.entities.size(); ++i) {
         const Entity& e = scene.entities[i];
+        if (!view.editorHelpers && e.type == "map_marker")
+            continue; // only a point on the map in the game
         const float highlight = static_cast<int>(scene.boxes.size() + scene.models.size() + i) == view.selectedObject ? 1.0f : 0.0f;
         // Generous box: animations reach outside the rest pose.
         const float reach = std::max({e.size.x, e.size.y, e.size.z}) * 1.5f;
@@ -1236,6 +1238,53 @@ void Renderer::keepAlive(const Model& model)
             if (auto t = textures_.find(part.texture->id); t != textures_.end())
                 t->second.used = true;
     }
+}
+
+unsigned Renderer::renderTopDown(const Scene& scene, glm::vec2 minXZ, float size, int pixels)
+{
+    unsigned tex = 0, fbo = 0, depth = 0;
+    glCreateTextures(GL_TEXTURE_2D, 1, &tex);
+    const int levels = 1 + static_cast<int>(std::floor(std::log2(pixels)));
+    glTextureStorage2D(tex, levels, GL_RGBA8, pixels, pixels);
+    glTextureParameteri(tex, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTextureParameteri(tex, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTextureParameteri(tex, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    glTextureParameteri(tex, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+    const float border[4] = {0.05f, 0.05f, 0.045f, 1.0f};
+    glTextureParameterfv(tex, GL_TEXTURE_BORDER_COLOR, border);
+    glCreateRenderbuffers(1, &depth);
+    glNamedRenderbufferStorage(depth, GL_DEPTH24_STENCIL8, pixels, pixels);
+    glCreateFramebuffers(1, &fbo);
+    glNamedFramebufferTexture(fbo, GL_COLOR_ATTACHMENT0, tex, 0);
+    glNamedFramebufferRenderbuffer(fbo, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depth);
+    GLint previous = 0;
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &previous);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+    const glm::vec3 center(minXZ.x + size * 0.5f, 0.0f, minXZ.y + size * 0.5f);
+    RenderView view;
+    view.viewportWidth = view.viewportHeight = pixels;
+    view.cameraPosition = center + glm::vec3(0.0f, 1500.0f, 0.0f);
+    view.view = glm::lookAt(view.cameraPosition, center, glm::vec3(0.0f, 0.0f, -1.0f));
+    const float h = size * 0.5f;
+    view.projection = glm::ortho(-h, h, -h, h, 1.0f, 3000.0f);
+    view.fog = false;
+    const RenderQuality saved = quality_;
+    quality_.ssao = true;
+    quality_.fxaa = true;
+    render(scene, view);
+    quality_ = saved;
+    glGenerateTextureMipmap(tex);
+    glBindFramebuffer(GL_FRAMEBUFFER, static_cast<unsigned>(previous));
+    glDeleteFramebuffers(1, &fbo);
+    glDeleteRenderbuffers(1, &depth);
+    return tex;
+}
+
+void Renderer::deleteTexture(unsigned texture)
+{
+    if (texture)
+        glDeleteTextures(1, &texture);
 }
 
 float Renderer::preload(const Scene& scene, std::size_t& cursor, double budgetMs)

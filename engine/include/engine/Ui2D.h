@@ -31,6 +31,9 @@ public:
     // Image stretched over the rectangle; `uv` = (u0, v0, u1, v1).
     void image(unsigned texture, glm::vec2 pos, glm::vec2 size, glm::vec4 tint = glm::vec4(1.0f),
                glm::vec4 uv = glm::vec4(0, 0, 1, 1));
+    // Any four-cornered image (corners and uvs in order: top-left, top-right, bottom-right, bottom-left).
+    void imageQuad(unsigned texture, const glm::vec2 corners[4], const glm::vec2 uvs[4], glm::vec4 tint = glm::vec4(1.0f));
+    void triangle(glm::vec2 a, glm::vec2 b, glm::vec2 c, glm::vec4 color);
     // Text with its top-left corner at `pos`; `size` is the line height in pixels.
     void text(const std::string& utf8, glm::vec2 pos, float size, glm::vec4 color, bool bold = false);
     float textWidth(const std::string& utf8, float size, bool bold = false) const;

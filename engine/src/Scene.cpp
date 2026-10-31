@@ -101,6 +101,10 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
         f1("vignette", e.vignette);
         f1("grain", e.grain);
     }
+    if (!scene.map.image.empty())
+        out << "map_image " << std::quoted(relative(scene.map.image)) << '\n';
+    if (scene.map.size > 0.0f)
+        out << "map_bounds " << scene.map.min.x << ' ' << scene.map.min.y << ' ' << scene.map.size << '\n';
     if (!scene.loading.image.empty())
         out << "loading_image " << std::quoted(relative(scene.loading.image)) << '\n';
     if (!scene.loading.title.empty())
@@ -305,6 +309,13 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
             ok = static_cast<bool>(ls >> std::quoted(g.name) >> std::quoted(g.parent));
             if (ok)
                 result.groups.push_back(std::move(g));
+        } else if (key == "map_image") {
+            std::string value;
+            ok = static_cast<bool>(ls >> std::quoted(value));
+            std::filesystem::path p = pathFromUtf8(value);
+            result.map.image = p.is_relative() ? (std::filesystem::absolute(file).parent_path() / p).lexically_normal() : p;
+        } else if (key == "map_bounds") {
+            ok = static_cast<bool>(ls >> result.map.min.x >> result.map.min.y >> result.map.size);
         } else if (key == "loading_image" || key == "loading_title" || key == "loading_hint") {
             std::string value;
             ok = static_cast<bool>(ls >> std::quoted(value));
@@ -601,6 +612,27 @@ int pickObject(const Scene& scene, glm::vec3 origin, glm::vec3 dir)
         }
     }
     return best;
+}
+
+void mapArea(const Scene& scene, glm::vec2& min, float& size)
+{
+    if (scene.map.size > 0.0f) {
+        min = scene.map.min;
+        size = scene.map.size;
+        return;
+    }
+    glm::vec2 lo(1e30f), hi(-1e30f);
+    for (int i = 0; i < scene.objectCount(); ++i) {
+        const Aabb b = scene.objectBounds(i);
+        lo = glm::min(lo, glm::vec2(b.min.x, b.min.z));
+        hi = glm::max(hi, glm::vec2(b.max.x, b.max.z));
+    }
+    if (lo.x > hi.x) {
+        lo = glm::vec2(-50.0f);
+        hi = glm::vec2(50.0f);
+    }
+    size = std::max(hi.x - lo.x, hi.y - lo.y) * 1.08f + 10.0f;
+    min = (lo + hi) * 0.5f - glm::vec2(size * 0.5f);
 }
 
 std::filesystem::path findLodFile(const std::filesystem::path& file)

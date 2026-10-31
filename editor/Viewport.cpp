@@ -172,6 +172,7 @@ void Viewport::paintGL()
                            : shading_;
         view.selectedObject = selected_;
         view.drawPlayerStart = true;
+        view.editorHelpers = true;
         view.grid = showGrid_;
         view.gridAxis = pane.mode == ViewMode::Front ? 2 : (pane.mode == ViewMode::Side ? 0 : 1);
         view.gridFade = pane.mode == ViewMode::Perspective ? 150.0f : orthoSize_ * 8.0f;

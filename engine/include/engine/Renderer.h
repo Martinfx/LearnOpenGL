@@ -42,6 +42,7 @@ struct RenderView {
     std::vector<std::pair<const Model*, glm::mat4>> extraModels;
     int selectedObject = -1;  // editor highlight (Scene object index), -1 = none
     bool drawPlayerStart = false;
+    bool editorHelpers = false; // editor: draw helper entities (map markers) the game hides
     float time = 0.0f;        // seconds, animates clouds and film grain
     // The game draws the first-person layer before post-processing: it sets this,
     // calls renderOverlay() and then present().
@@ -97,6 +98,13 @@ public:
     // Call once per loading-screen frame; works for about `budgetMs` and returns
     // the fraction done (1 = finished). `cursor` starts at 0.
     float preload(const Scene& scene, std::size_t& cursor, double budgetMs);
+
+    // Renders the level from straight above (orthographic, no fog) into a new
+    // texture of `pixels` x `pixels` covering [minXZ, minXZ + size] in X and Z.
+    // Row 0 (bottom of the GL texture) is +Z, the top row is -Z (north up).
+    // The caller owns the texture (deleteTexture()).
+    unsigned renderTopDown(const Scene& scene, glm::vec2 minXZ, float size, int pixels);
+    static void deleteTexture(unsigned texture);
 
     void setQuality(const RenderQuality& quality) { quality_ = quality; }
     const RenderQuality& quality() const { return quality_; }
