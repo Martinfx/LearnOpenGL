@@ -166,6 +166,16 @@ void drawIcon(QPainter& p, const QString& n, QColor c)
         line(8, 9.5, 8, 11.5);
         arrowHead({8, 12.5}, {8, 9});
         line(1.5, 14, 14.5, 14);
+    } else if (n == "landscape") {
+        const QPointF hills[] = {{1.5, 13}, {5.5, 6}, {8, 9.5}, {10.5, 4}, {14.5, 13}};
+        p.drawPolyline(hills, 5);
+        line(1.5, 14, 14.5, 14);
+    } else if (n == "foliage") {
+        const QPointF tree[] = {{8, 1.5}, {12.5, 10}, {3.5, 10}};
+        p.drawPolygon(tree, 3);
+        line(8, 10, 8, 14.5);
+        line(1.5, 14.5, 3, 12);
+        line(14.5, 14.5, 13, 12);
     } else if (n == "settings") {
         p.drawEllipse(QPointF(8, 8), 2.2, 2.2);
         p.drawEllipse(QPointF(8, 8), 5, 5);

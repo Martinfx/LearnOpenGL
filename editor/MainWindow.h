@@ -42,6 +42,8 @@ class QStackedWidget;
 class QMenu;
 class QAction;
 class QFormLayout;
+struct TerrainUi;
+namespace engine { struct Terrain; }
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -63,7 +65,16 @@ private:
     void buildDocks();
     void buildStatusBar();
     void buildModePanel();          // left panel: Select / Place / Model modes
-    void setEditorMode(int mode);   // 0 select, 1 place, 2 model
+    void setEditorMode(int mode);   // 0 select, 1 place, 2 model, 3 landscape, 4 foliage
+    // Landscape / Foliage modes (TerrainTools.cpp).
+    void buildTerrainPages();
+    void refreshTerrainPanel();
+    void updateTerrainBrush();
+    void addFoliageType(const QString& path);
+    engine::Terrain* editTerrain(); // copy on write, for undo
+    void terrainStroke(glm::vec3 point, Qt::KeyboardModifiers modifiers, bool first);
+    void terrainStrokeFinished();
+    TerrainUi* terrainUi_ = nullptr;
 
 public:
     void notify(const QString& message, int timeoutMs = 0); // status line + output log

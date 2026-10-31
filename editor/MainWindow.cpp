@@ -386,8 +386,9 @@ void MainWindow::buildMenus()
     modes->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
     modes->setMovable(false);
     auto* modeGroup = new QActionGroup(this);
-    const std::pair<const char*, const char*> modeList[] = {{"Select", "select"}, {"Place", "add"}, {"Model", "cube"}};
-    for (int i = 0; i < 3; ++i) {
+    const std::pair<const char*, const char*> modeList[] = {
+        {"Select", "select"}, {"Place", "add"}, {"Model", "cube"}, {"Landscape", "landscape"}, {"Foliage", "foliage"}};
+    for (int i = 0; i < 5; ++i) {
         QAction* a = modes->addAction(editorIcon(modeList[i].second), tr(modeList[i].first));
         a->setCheckable(true);
         a->setChecked(i == 2);
@@ -1605,6 +1606,7 @@ void MainWindow::refreshLevelProperties()
         spin->setValue(scene_.player.*member);
         spin->blockSignals(false);
     }
+    refreshTerrainPanel();
 }
 
 void MainWindow::markDirty()
@@ -2879,10 +2881,13 @@ void MainWindow::setEditorMode(int mode)
     modePages_->setCurrentIndex(mode);
     if (mode >= 0 && mode < static_cast<int>(modeActions_.size()))
         modeActions_[static_cast<std::size_t>(mode)]->setChecked(true);
-    modesDock_->setWindowTitle(QStringList{tr("Select"), tr("Place"), tr("Model")}.value(mode));
+    modesDock_->setWindowTitle(QStringList{tr("Select"), tr("Place"), tr("Model"), tr("Landscape"), tr("Foliage")}.value(mode));
     modesDock_->show();
     if (mode == 2)
         refreshMaterialList();
+    if (mode == 3 || mode == 4)
+        refreshTerrainPanel();
+    updateTerrainBrush();
 }
 
 void MainWindow::buildModePanel()
@@ -3121,6 +3126,8 @@ void MainWindow::buildModePanel()
         scroll->setFrameShape(QFrame::NoFrame);
         modePages_->addWidget(scroll);
     }
+
+    buildTerrainPages();
 
     modesDock_ = new QDockWidget(tr("Model"), this);
     modesDock_->setObjectName("modes");

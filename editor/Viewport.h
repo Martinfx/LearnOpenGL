@@ -45,6 +45,10 @@ public:
     int instancedObjects() const { return renderer_.lastInstanced(); }
     const engine::Renderer::FrameStats& frameStats() const { return renderer_.frameStats(); }
     void setQuality(const engine::RenderQuality& quality);
+    // Terrain brush (Landscape and Foliage modes): a ring follows the cursor on the
+    // terrain; holding the left button sends brushStroke() about 30 times a second.
+    void setBrush(bool on, float radius, glm::vec3 color);
+    bool brushActive() const { return brush_; }
     const engine::RenderQuality& quality() const { return quality_; }
     // Recompiles the shaders from `directory` (over the built-in ones); false + compiler log on error.
     bool reloadShaders(const QString& directory, QString* error);
@@ -62,6 +66,8 @@ signals:
     void toolChanged(Tool tool);
     void cameraSpeedChanged(float metersPerSecond);
     void rendererFailed(const QString& error);
+    void brushStroke(glm::vec3 point, Qt::KeyboardModifiers modifiers, bool first);
+    void brushFinished();
     void renderWarning(const QString& message); // OpenGL error while drawing (reported once per error code)
 
 protected:
@@ -151,6 +157,12 @@ private:
     bool orthoWireframe_ = true;
     bool showGrid_ = true;
     bool showReference_ = false;
+    bool brush_ = false, brushHover_ = false, painting_ = false;
+    float brushRadius_ = 5.0f;
+    glm::vec3 brushColor_{0.3f, 0.8f, 1.0f};
+    glm::vec3 brushPoint_{0.0f};
+    QTimer brushTimer_;
+    bool brushHit(QPointF pos, glm::vec3& point) const;
     int settleFrames_ = 0;      // extra repaints so cached shadow cascades catch up
     bool settling_ = false;
     bool referenceLoading_ = false;

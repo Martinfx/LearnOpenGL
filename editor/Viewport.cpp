@@ -62,6 +62,10 @@ Viewport::Viewport(engine::Scene* scene, QWidget* parent)
         update();
     });
     animTimer_.start(33);
+    connect(&brushTimer_, &QTimer::timeout, this, [this] {
+        if (painting_ && brushHover_)
+            emit brushStroke(brushPoint_, QGuiApplication::keyboardModifiers(), false);
+    });
 }
 
 Viewport::~Viewport()
@@ -181,6 +185,18 @@ void Viewport::paintGL()
             view.extraModels.emplace_back(reference_.get(),
                                           glm::translate(glm::mat4(1.0f), scene_->playerStart + glm::vec3(1.0f, 0.0f, 0.0f)));
         view.gizmoBoxes = gizmoBoxes();
+        if (brush_ && brushHover_ && scene_->terrain) {
+            // Brush ring: small markers on the ground around the cursor.
+            const int n = 48;
+            const float s = std::clamp(brushRadius_ * 0.03f, 0.06f, 0.6f);
+            for (int k = 0; k < n; ++k) {
+                const float a = 6.2831853f * static_cast<float>(k) / static_cast<float>(n);
+                glm::vec3 p = brushPoint_ + glm::vec3(std::cos(a), 0.0f, std::sin(a)) * brushRadius_;
+                p.y = scene_->terrain->heightAt(p.x, p.z) + s * 0.5f;
+                view.worldBoxes.push_back({p, glm::vec3(s), brushColor_, true});
+            }
+            view.worldBoxes.push_back({brushPoint_ + glm::vec3(0.0f, s, 0.0f), glm::vec3(s * 1.5f), brushColor_, true});
+        }
         renderer_.render(*scene_, view);
     }
     // Report driver errors instead of silently showing a broken view.
@@ -308,6 +324,15 @@ void Viewport::mousePressEvent(QMouseEvent* e)
     } else if (e->button() == Qt::MiddleButton) {
         panning_ = true;
         setCursor(Qt::ClosedHandCursor);
+    } else if (e->button() == Qt::LeftButton && brush_) {
+        glm::vec3 p;
+        brushHover_ = brushHit(e->position(), p);
+        if (brushHover_) {
+            brushPoint_ = p;
+            painting_ = true;
+            emit brushStroke(p, e->modifiers(), true);
+            brushTimer_.start(33);
+        }
     } else if (e->button() == Qt::LeftButton) {
         glm::vec3 origin, dir;
         rayAt(e->position(), origin, dir);
@@ -374,6 +399,16 @@ void Viewport::mouseMoveEvent(QMouseEvent* e)
         update();
         return;
     }
+    if (!flying_ && brush_) {
+        glm::vec3 p;
+        const bool hover = brushHit(e->position(), p);
+        if (hover || hover != brushHover_) {
+            brushHover_ = hover;
+            brushPoint_ = hover ? p : brushPoint_;
+            update();
+        }
+        return;
+    }
     if (!flying_) {
         if (tool_ != Tool::Select && selected_ >= 0) {
             const int axis = handleAt(e->position());
@@ -402,6 +437,10 @@ void Viewport::mouseReleaseEvent(QMouseEvent* e)
     } else if (e->button() == Qt::MiddleButton) {
         panning_ = false;
         unsetCursor();
+    } else if (e->button() == Qt::LeftButton && painting_) {
+        painting_ = false;
+        brushTimer_.stop();
+        emit brushFinished();
     } else if (e->button() == Qt::LeftButton && drag_.active) {
         drag_.active = false;
         emit dragFinished(selected_);
@@ -739,4 +778,31 @@ void Viewport::dragTo(QPointF pos)
         }
     }
     update();
+}
+
+void Viewport::setBrush(bool on, float radius, glm::vec3 color)
+{
+    brush_ = on;
+    brushRadius_ = radius;
+    brushColor_ = color;
+    setMouseTracking(on || hasMouseTracking());
+    if (!on && painting_) {
+        painting_ = false;
+        brushTimer_.stop();
+        emit brushFinished();
+    }
+    update();
+}
+
+bool Viewport::brushHit(QPointF pos, glm::vec3& point) const
+{
+    if (!scene_->terrain || !scene_->terrain->valid())
+        return false;
+    glm::vec3 origin, dir;
+    rayAt(pos, origin, dir);
+    float t = 0.0f;
+    if (!scene_->terrain->raycast(origin, dir, 5000.0f, t))
+        return false;
+    point = origin + dir * t;
+    return true;
 }

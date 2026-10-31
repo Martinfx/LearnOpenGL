@@ -4,6 +4,7 @@ add_executable(fps_editor
     main.cpp
     AssetPaths.h
     MainWindow.cpp
+    TerrainTools.cpp
     HierarchyPanel.cpp
     AssetBrowser.cpp
     EditorHistory.cpp
