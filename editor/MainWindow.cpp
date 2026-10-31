@@ -28,6 +28,7 @@
 #include <QComboBox>
 #include <QPointer>
 #include <engine/JobSystem.h>
+#include <engine/Log.h>
 #include <QUndoStack>
 #include <QCloseEvent>
 #include <QColorDialog>
@@ -1585,6 +1586,20 @@ void MainWindow::buildDocks()
     logDock_->setWidget(logHost);
     addDockWidget(Qt::BottomDockWidgetArea, logDock_);
     tabifyDockWidget(assetsDock, logDock_);
+    // Engine log (audio, physics, scripts, loading...) shows here too, from any thread.
+    for (const engine::LogLine& line : engine::recentLog(200))
+        appendLog(QString::fromStdString(line.category + ": " + line.text), line.level >= engine::LogLevel::Error ? 2 : line.level == engine::LogLevel::Warning ? 1 : 0);
+    {
+        QPointer<MainWindow> self(this);
+        logListener_ = engine::addLogListener([self](const engine::LogLine& line) {
+            const QString text = QString::fromStdString(line.category.empty() ? line.text : line.category + ": " + line.text);
+            const int level = line.level >= engine::LogLevel::Error ? 2 : line.level == engine::LogLevel::Warning ? 1 : 0;
+            QMetaObject::invokeMethod(qApp, [self, text, level] {
+                if (self)
+                    self->appendLog(text, level);
+            });
+        });
+    }
 
     // Memory: GPU (renderer) and CPU (level assets, whole process), refreshed while visible.
     auto* memoryLabel = new QLabel(this);
@@ -2624,6 +2639,7 @@ void MainWindow::closeEvent(QCloseEvent* e)
 
 MainWindow::~MainWindow()
 {
+    engine::removeLogListener(logListener_);
     shutdownGame();
 }
 

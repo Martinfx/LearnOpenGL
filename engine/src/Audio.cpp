@@ -1,3 +1,4 @@
+#include "engine/Log.h"
 #include "engine/Audio.h"
 
 #include "engine/JobSystem.h"
@@ -412,7 +413,7 @@ struct AudioSystem::Impl {
                 }
                 clip->state = Decoded;
             } else {
-                std::fprintf(stderr, "Audio: %s\n", error.c_str());
+                LOG_WARN("audio", "%s\n", error.c_str());
                 clip->state = Failed;
             }
         });
@@ -621,7 +622,7 @@ struct AudioSystem::Impl {
                         [&](const wchar_t* p) { return ma_decoder_init_file_w(p, &config, &st.decoder); });
                 }
                 if (r != MA_SUCCESS) {
-                    std::fprintf(stderr, "Audio: cannot stream %s (%s)\n", v.file.string().c_str(), ma_result_description(r));
+                    LOG_WARN("audio", "cannot stream %s (%s)\n", v.file.string().c_str(), ma_result_description(r));
                     st.ended = true;
                     v.started = true; // freed by update() as a stopped voice
                     continue;
@@ -754,7 +755,7 @@ bool AudioSystem::init(const Options& options, std::string* error)
     if (!options.noDevice) {
         m.device = alcOpenDevice(nullptr);
         if (!m.device)
-            std::fprintf(stderr, "Audio: no output device, running silent\n");
+            LOG_WARN("audio", "no output device, running silent\n");
     }
     m.hasDevice = m.device != nullptr;
     if (!m.device) {

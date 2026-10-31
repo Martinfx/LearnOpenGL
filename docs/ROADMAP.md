@@ -106,7 +106,7 @@ Hotovo, když: zóna (`zone.level`) běží na střední kartě nad 60 FPS na Hi
 
 Infrastruktura z auditu 1b. Každá další funkce na ní staví, později by se dodělávala do hotového kódu.
 
-- [ ] **Logování** (0,5 týdne): úrovně a kategorie, soubor v `logs/`, kruhový buffer, výstup do Output logu editoru, herní konzole a Lua `game.log`.
+- [x] **Logování** (0,5 týdne): úrovně a kategorie, soubor v `logs/`, kruhový buffer, výstup do Output logu editoru, herní konzole a Lua `game.log`. *Hotovo 2026-10-31: `engine/Log.h` (`LOG_INFO/WARN/ERROR`, `FPS_ENGINE_LOG=debug`), soubory `game.log`/`editor.log` v uživatelské složce s rotací 5 běhů, ring 2000 řádků, posluchači (Output Log editoru, Qt zprávy), Lua `game.log`/`print`; herní konzole přijde s cvars.*
 - [ ] **Asserty a crash handler** (1 týden): `ENGINE_CHECK/ENSURE/VERIFY`; při pádu stack trace (Windows minidump, Linux/FreeBSD `backtrace` + `sigaltstack`), posledních 500 řádků logu, verze buildu, GPU/driver, level; editor nabídne obnovu.
 - [ ] **Cvars a konzole ve hře** (1 týden): registr s typem, popisem a příznaky, konzole `~` ve hře, `+cvar hodnota` z příkazové řádky, přístup z Lua, presety kvality jako sady cvars; editorová konzole na stejném registru.
 - [ ] **Konfigurace a uživatelské složky** (0,5 týdne): `%APPDATA%` / XDG pro nastavení, uložené hry, logy a cache; výchozí → uživatelské → CLI.

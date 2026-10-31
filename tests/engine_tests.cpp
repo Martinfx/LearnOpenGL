@@ -1,4 +1,5 @@
 // Headless tests for the engine core (no OpenGL needed).
+#include <engine/Log.h>
 #include <engine/Audio.h>
 #include <engine/NavMesh.h>
 #include <engine/Surfaces.h>
@@ -1041,6 +1042,32 @@ void testSharedMeshes()
     check(shared > 0, "level instances of one file share meshes");
 }
 
+void testLog()
+{
+    namespace fs = std::filesystem;
+    const fs::path dir = fs::temp_directory_path() / "engine_log_test";
+    fs::remove_all(dir);
+    engine::setLogConsole(false);
+    int heard = 0;
+    const int id = engine::addLogListener([&](const engine::LogLine& l) { heard += l.category == "test"; });
+    check(engine::openLogFile("unit", dir), "log file opens");
+    LOG_INFO("test", "hello %d", 42);
+    LOG_DEBUG("test", "hidden at the default level");
+    LOG_ERROR("test", "boom\n");
+    engine::removeLogListener(id);
+    LOG_INFO("test", "after the listener is gone");
+    const auto lines = engine::recentLog(3);
+    check(lines.size() == 3 && lines[0].text == "hello 42" && lines[1].text == "boom" && lines[1].level == engine::LogLevel::Error,
+          "log ring keeps the last lines, trailing newline dropped");
+    check(heard == 2, "log listener hears its lines, debug is filtered");
+    engine::openLogFile("unit", dir); // second run: the first file is kept as unit.1.log
+    engine::closeLogFile();
+    std::ifstream first(dir / "unit.1.log");
+    std::string all((std::istreambuf_iterator<char>(first)), std::istreambuf_iterator<char>());
+    check(all.find("hello 42") != std::string::npos && all.find("boom") != std::string::npos, "previous log rotated to unit.1.log");
+    engine::setLogConsole(true);
+}
+
 void testSurfaces()
 {
     check(engine::guessSurface("Rusty_Metal_02") == "metal", "guess metal");
@@ -1301,6 +1328,7 @@ int main()
     testMaterialsAndTextures();
     testAudio();
     testNavMesh();
+    testLog();
     testSurfaces();
     std::printf(failures ? "%d test(s) failed\n" : "all tests passed\n", failures);
     return failures ? 1 : 0;

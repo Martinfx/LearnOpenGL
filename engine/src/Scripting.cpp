@@ -1,3 +1,4 @@
+#include "engine/Log.h"
 #include "engine/Scripting.h"
 #include "engine/CharacterBody.h"
 #include "engine/NavMesh.h"
@@ -147,7 +148,10 @@ struct ScriptSystem::Impl {
         : scene(s), physics(p), player(pl), log(std::move(l))
     {
         if (!log)
-            log = [](const std::string& m) { std::printf("%s\n", m.c_str()); };
+            log = [](const std::string& m) {
+                // "[script] name: error" lines are script errors, the rest is game.log / print.
+                logMessage(m.rfind("[script]", 0) == 0 ? LogLevel::Error : LogLevel::Info, "script", m);
+            };
     }
 
     void report(const ScriptEntity& se, const std::string& what)

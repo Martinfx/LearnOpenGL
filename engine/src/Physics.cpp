@@ -1,3 +1,4 @@
+#include "engine/Log.h"
 #include "engine/Physics.h"
 
 #include <glm/gtc/matrix_transform.hpp>
@@ -106,7 +107,7 @@ void PhysicsWorld::Impl::addStatic(const JPH::ShapeSettings& settings, glm::vec3
 {
     JPH::ShapeSettings::ShapeResult result = settings.Create();
     if (result.HasError()) {
-        std::fprintf(stderr, "Physics: skipping '%s': %s\n", name.c_str(), result.GetError().c_str());
+        LOG_WARN("physics", "skipping '%s': %s\n", name.c_str(), result.GetError().c_str());
         return;
     }
     JPH::BodyCreationSettings body(result.Get(), toJolt(position), JPH::Quat(rotation.x, rotation.y, rotation.z, rotation.w),
@@ -168,7 +169,7 @@ void PhysicsWorld::setLevel(const Scene& scene)
                     triangles.push_back(JPH::IndexedTriangle(part.indices[i], part.indices[i + 1], part.indices[i + 2], 0));
                 JPH::ShapeSettings::ShapeResult result = JPH::MeshShapeSettings(std::move(vertices), std::move(triangles)).Create();
                 if (result.HasError()) {
-                    std::fprintf(stderr, "Physics: skipping '%s': %s\n", name.c_str(), result.GetError().c_str());
+                    LOG_WARN("physics", "skipping '%s': %s\n", name.c_str(), result.GetError().c_str());
                     continue;
                 }
                 shape = result.Get();
@@ -196,7 +197,7 @@ void PhysicsWorld::setLevel(const Scene& scene)
                                                static_cast<JPH::uint32>(t.resolution));
         JPH::ShapeSettings::ShapeResult result = settings.Create();
         if (result.HasError())
-            std::fprintf(stderr, "Physics: terrain: %s\n", result.GetError().c_str());
+            LOG_WARN("physics", "terrain: %s\n", result.GetError().c_str());
         else
         {
             impl_->addStatic(result.Get(), glm::vec3(0.0f), "Terrain", glm::quat(1.0f, 0.0f, 0.0f, 0.0f));

@@ -25,6 +25,8 @@ add_library(engine STATIC
     src/JobSystem.cpp
     src/SceneGraph.cpp
     src/Surfaces.cpp
+    src/Log.cpp
+    src/Paths.cpp
     src/Ui2D.cpp
     ${ENGINE_EMBEDDED_SHADERS}
 )

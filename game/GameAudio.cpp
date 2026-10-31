@@ -1,3 +1,4 @@
+#include <engine/Log.h>
 #include "GameAudio.h"
 
 #include <cmath>
@@ -12,12 +13,12 @@ void GameAudio::init(const std::filesystem::path& assetDir)
     assetDir_ = assetDir;
     std::string error;
     if (!audio_.init(&error))
-        std::fprintf(stderr, "%s\n", error.c_str());
+        LOG_WARN("audio", "%s", error.c_str());
     else
-        std::printf("Audio: OpenAL, %s, HRTF %s, sounds from %s\n", audio_.deviceName().c_str(), audio_.hrtf() ? "on" : "off",
+        LOG_INFO("audio", "OpenAL, %s, HRTF %s, sounds from %s\n", audio_.deviceName().c_str(), audio_.hrtf() ? "on" : "off",
                     (assetDir / "sounds").string().c_str());
     if (!engine::loadSurfaces(surfaces_, assetDir / "surfaces.cfg", &error))
-        std::fprintf(stderr, "Audio: %s (footsteps and impacts use the defaults)\n", error.c_str());
+        LOG_WARN("audio", "%s (footsteps and impacts use the defaults)\n", error.c_str());
     for (const engine::SurfaceType& t : surfaces_.types) {
         preload(t.footstep);
         preload(t.impact);
@@ -33,7 +34,7 @@ std::shared_ptr<const engine::SoundDef> GameAudio::get(const std::filesystem::pa
     std::string error;
     auto def = audio_.loadSound(sound, &error);
     if (!def)
-        std::fprintf(stderr, "Audio: %s\n", error.c_str());
+        LOG_WARN("audio", "%s\n", error.c_str());
     cache_.emplace(sound, def); // also caches failures: reported once
     return def;
 }

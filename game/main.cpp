@@ -1,5 +1,6 @@
 // Game runtime: GLFW window, fixed 60 Hz simulation, first-person player.
 // Usage: fps_game [level-file]
+#include <engine/Log.h>
 #include <engine/Camera.h>
 #include <engine/CpuFeatures.h>
 #include <engine/FixedStepClock.h>
@@ -57,7 +58,7 @@ void printModelCredits(const std::vector<std::filesystem::path>&, const std::vec
         const std::string name = model.filename().string();
         for (std::string line; std::getline(in, line);)
             if (line.find(name) != std::string::npos && printed.insert(line).second)
-                std::printf("Credits: %s\n", line.c_str());
+                LOG_INFO("credits", "%s\n", line.c_str());
         std::fflush(stdout);
     }
 }
@@ -74,7 +75,7 @@ std::vector<engine::Weapon> loadLoadout(const engine::Scene& scene, const std::f
         engine::WeaponSettings settings;
         std::string error;
         if (!engine::loadWeaponFile(settings, file, &error)) {
-            std::fprintf(stderr, "Weapon: %s\n", error.c_str());
+            LOG_WARN("weapon", "%s\n", error.c_str());
             continue;
         }
         engine::Weapon weapon(settings);
@@ -90,7 +91,7 @@ std::vector<engine::Weapon> loadLoadout(const engine::Scene& scene, const std::f
                 weapon.viewModel = baked;
                 models.emplace_back(settings.modelPath, baked);
             } else {
-                std::fprintf(stderr, "Weapon model: %s\n", error.c_str());
+                LOG_WARN("weapon", "%s\n", error.c_str());
             }
         }
         weapons.push_back(std::move(weapon));
@@ -208,13 +209,15 @@ int main(int argc, char** argv)
                      missing.c_str());
         return 1;
     }
-    glfwSetErrorCallback([](int code, const char* message) { std::fprintf(stderr, "GLFW %d: %s\n", code, message); });
+    engine::openLogFile("game");
+    LOG_INFO("game", "Log file: %s", engine::logFilePath().string().c_str());
+    glfwSetErrorCallback([](int code, const char* message) { LOG_WARN("glfw", "%d: %s", code, message); });
     if (!glfwInit())
         return 1;
 
     GLFWwindow* window = createWindow();
     if (!window) {
-        std::fprintf(stderr, "Could not create an OpenGL 4.5+ window\n");
+        LOG_ERROR("render", "Could not create an OpenGL 4.5+ window");
         glfwTerminate();
         return 1;
     }
@@ -224,7 +227,7 @@ int main(int argc, char** argv)
     engine::Renderer renderer;
     std::string error;
     if (!renderer.init(reinterpret_cast<engine::GlLoader>(glfwGetProcAddress), &error)) {
-        std::fprintf(stderr, "%s\n", error.c_str());
+        LOG_ERROR("render", "%s", error.c_str());
         glfwTerminate();
         return 1;
     }
@@ -235,7 +238,7 @@ int main(int argc, char** argv)
         q.occlusionCulling = !std::getenv("FPS_ENGINE_NO_OCCLUSION");
         renderer.setQuality(q);
     }
-    std::printf("%s\n", renderer.glInfo().c_str());
+    LOG_INFO("render", "%s", renderer.glInfo().c_str());
 
     // Command line: [level] [--shaders DIR] (shaders edited in the editor replace the built-in ones).
     std::filesystem::path levelPath = std::filesystem::path(argv[0]).parent_path() / "assets/levels/test.level";
@@ -243,7 +246,7 @@ int main(int argc, char** argv)
         const std::string arg = argv[i];
         if (arg == "--shaders" && i + 1 < argc) {
             if (!renderer.reloadShaders(argv[++i], &error))
-                std::fprintf(stderr, "Shaders: %s\n", error.c_str());
+                LOG_WARN("shaders", "%s\n", error.c_str());
         } else {
             levelPath = arg;
         }
@@ -259,7 +262,7 @@ int main(int argc, char** argv)
     {
         const std::filesystem::path assetDir = std::filesystem::path(argv[0]).parent_path() / "assets";
         if (!ui.init(assetDir / "fonts/DejaVuSans.ttf", assetDir / "fonts/DejaVuSans-Bold.ttf", &error))
-            std::fprintf(stderr, "Loading screen: %s\n", error.c_str());
+            LOG_WARN("ui", "Loading screen: %s", error.c_str());
         const engine::LoadingScreen look = engine::readLoadingScreen(levelPath);
         int imageW = 0, imageH = 0;
         const unsigned background = look.image.empty() ? 0u : engine::Ui2D::loadImage(look.image, &imageW, &imageH);
@@ -336,7 +339,7 @@ int main(int argc, char** argv)
             drawLoading(0.85f * progress.fraction(), progress.step());
         loader.join();
         if (!loaded)
-            std::fprintf(stderr, "%s, using the built-in level\n", loadError.c_str());
+            LOG_ERROR("level", "%s, using the built-in level", loadError.c_str());
         std::size_t cursor = 0;
         for (float uploaded = 0.0f; uploaded < 1.0f;) {
             uploaded = renderer.preload(scene, cursor, 12.0, scene.playerStart); // full textures near the start
@@ -344,9 +347,9 @@ int main(int argc, char** argv)
         }
         drawLoading(1.0f, "map");
         map.init(renderer, scene);
-        std::printf("Level loaded in %.1f s\n", glfwGetTime() - loadStart);
+        LOG_INFO("level", "%s loaded in %.1f s", levelPath.filename().string().c_str(), glfwGetTime() - loadStart);
 #ifndef NDEBUG
-        std::printf("Warning: debug build (no optimisation), expect a much lower frame rate. Build with -DCMAKE_BUILD_TYPE=Release.\n");
+        LOG_INFO("warning", "debug build (no optimisation), expect a much lower frame rate. Build with -DCMAKE_BUILD_TYPE=Release.");
 #endif
         if (background)
             engine::Ui2D::deleteImage(background);
@@ -371,10 +374,10 @@ int main(int argc, char** argv)
         navBuilder = std::thread([&] {
             std::string navError;
             if (navmesh.build(scene, scene.nav, &navError, nullptr, &navCancel))
-                std::printf("Navmesh: %d tiles, %d polygons in %.1f s\n", navmesh.tileCount(), navmesh.polygonCount(),
+                LOG_INFO("navmesh", "%d tiles, %d polygons in %.1f s\n", navmesh.tileCount(), navmesh.polygonCount(),
                             navmesh.buildSeconds());
             else
-                std::fprintf(stderr, "%s\n", navError.c_str());
+                LOG_WARN("navmesh", "%s", navError.c_str());
             std::fflush(stdout);
         });
 
@@ -405,7 +408,7 @@ int main(int argc, char** argv)
     effects.startLevel(scene);
     bool wasReloading = false;
     if (const int errors = scripts.start())
-        std::fprintf(stderr, "%d script error(s), see above\n", errors);
+        LOG_ERROR("script", "%d script error(s), see above", errors);
     engine::FixedStepClock clock;
     engine::InputState input;
 
@@ -608,7 +611,7 @@ int main(int argc, char** argv)
             }
             physics.step(dt);
             if (scripts.playerHealth() <= 0.0f) {
-                std::printf("You died. Respawning.\n");
+                LOG_INFO("game", "You died. Respawning.");
                 player.respawn();
                 scripts.setPlayerHealth(scene.player.maxHealth);
             }
@@ -703,13 +706,13 @@ int main(int argc, char** argv)
             // FPS_ENGINE_STATS=1 prints frame statistics (profiling, comparing optimizations).
             if (std::getenv("FPS_ENGINE_STATS")) {
                 const engine::Renderer::FrameStats& st = renderer.frameStats();
-                std::printf("stats: %.1f FPS, %.2f ms | %d draws, %lld tris, %d instanced, %d culled, %d occluded, %d uploads | CPU %.2f ms, GPU %.2f ms |",
-                            fpsFrames / fpsTimer, 1000.0 * fpsTimer / fpsFrames, st.drawCalls, st.triangles, st.instanced, st.culled, st.occluded, st.uploads,
-                            st.cpuTotalMs, st.gpuTotalMs);
-                for (int p = 0; p < engine::Renderer::PassCount; ++p)
-                    std::printf(" %s %.2f/%.2f", engine::Renderer::passName(p), st.cpuMs[p], st.gpuMs[p]);
-                std::printf("\n");
-                std::fflush(stdout);
+                char line[512];
+                int n = std::snprintf(line, sizeof line, "%.1f FPS, %.2f ms | %d draws, %lld tris, %d instanced, %d culled, %d occluded, %d uploads | CPU %.2f ms, GPU %.2f ms |",
+                                      fpsFrames / fpsTimer, 1000.0 * fpsTimer / fpsFrames, st.drawCalls, st.triangles, st.instanced, st.culled, st.occluded, st.uploads,
+                                      st.cpuTotalMs, st.gpuTotalMs);
+                for (int p = 0; p < engine::Renderer::PassCount && n > 0 && n < static_cast<int>(sizeof line); ++p)
+                    n += std::snprintf(line + n, sizeof line - static_cast<std::size_t>(n), " %s %.2f/%.2f", engine::Renderer::passName(p), st.cpuMs[p], st.gpuMs[p]);
+                LOG_INFO("stats", "%s", line);
             }
             glfwSetWindowTitle(window, title);
             fpsTimer = 0.0;

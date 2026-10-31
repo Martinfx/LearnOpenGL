@@ -272,6 +272,7 @@ private:
     std::shared_ptr<engine::NavMesh> navMesh_; // last finished build
     engine::DebugGeometry navDebug_;
     bool navStale_ = true;
+    int logListener_ = 0; // engine log -> Output Log
     Vec3Editor* positionEdit_ = nullptr;
     Vec3Editor* sizeEdit_ = nullptr;
     Vec3Editor* rotationEdit_ = nullptr;   // glTF models

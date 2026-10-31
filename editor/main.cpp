@@ -1,4 +1,5 @@
 #include <engine/CpuFeatures.h>
+#include <engine/Log.h>
 #include <cstdio>
 #include <string>
 #include "AssetPaths.h"
@@ -28,6 +29,15 @@ int main(int argc, char** argv)
     QSurfaceFormat::setDefaultFormat(format);
 
     QApplication app(argc, argv);
+    engine::openLogFile("editor");
+    LOG_INFO("editor", "Log file: %s", engine::logFilePath().string().c_str());
+    // Qt's own warnings (shader compiles, missing files) go to the engine log as well.
+    qInstallMessageHandler([](QtMsgType type, const QMessageLogContext&, const QString& message) {
+        const engine::LogLevel level = type == QtDebugMsg || type == QtInfoMsg ? engine::LogLevel::Debug
+                                       : type == QtWarningMsg                  ? engine::LogLevel::Warning
+                                                                               : engine::LogLevel::Error;
+        engine::logMessage(level, "qt", message.toStdString());
+    });
     QApplication::setApplicationName("FPS Engine Editor");
     QApplication::setOrganizationName("FpsEngine");
 

@@ -1,6 +1,8 @@
+#include <engine/Log.h>
 #include "GameEffects.h"
 #include "GameAudio.h"
 
+#include <engine/Log.h>
 #include <engine/Material.h>
 #include <engine/Physics.h>
 
@@ -45,7 +47,7 @@ std::shared_ptr<const engine::ParticleEffect> GameEffects::effect(const std::fil
     std::string error;
     auto fx = engine::loadParticleEffect(file, &error);
     if (!fx)
-        std::fprintf(stderr, "Effects: %s\n", error.c_str());
+        LOG_WARN("effects", "%s\n", error.c_str());
     effects_[file] = fx; // failures are reported once
     return fx;
 }
@@ -59,7 +61,7 @@ std::shared_ptr<const engine::Model> GameEffects::model(const std::filesystem::p
     auto m = std::make_shared<engine::Model>();
     std::string error;
     if (!engine::loadModelFile(*m, file, &error)) {
-        std::fprintf(stderr, "Effects: %s\n", error.c_str());
+        LOG_WARN("effects", "%s\n", error.c_str());
         m.reset();
     }
     models_[file] = m;
