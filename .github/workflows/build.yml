@@ -9,10 +9,14 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
-      - run: sudo apt-get update && sudo apt-get install -y ninja-build libglfw3-dev libglm-dev qt6-base-dev libgl-dev
+        with:
+          lfs: true # the level smoke tests load the real models and textures
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build libglfw3-dev libglm-dev qt6-base-dev libgl-dev xvfb libgl1-mesa-dri
       - run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
       - run: cmake --build build
-      - run: ctest --test-dir build --output-on-failure
+      - run: ctest --test-dir build --output-on-failure -LE smoke
+      # Every level for 120 frames under xvfb + llvmpipe: fails on crashes, asserts and logged errors.
+      - run: ctest --test-dir build --output-on-failure -L smoke
 
   windows:
     runs-on: windows-2022

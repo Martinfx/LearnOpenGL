@@ -11,6 +11,8 @@
 
 #include <QApplication>
 #include <QSurfaceFormat>
+
+#include <cstdlib>
 #include <QTimer>
 
 int main(int argc, char** argv)
@@ -28,6 +30,8 @@ int main(int argc, char** argv)
     format.setProfile(QSurfaceFormat::CoreProfile);
     format.setDepthBufferSize(24);
     format.setSamples(4);
+    if (const char* dbg = std::getenv("FPS_ENGINE_GL_DEBUG"); dbg && *dbg && *dbg != '0')
+        format.setOption(QSurfaceFormat::DebugContext); // synchronous driver messages in the log ("gl")
     QSurfaceFormat::setDefaultFormat(format);
 
     QApplication app(argc, argv);

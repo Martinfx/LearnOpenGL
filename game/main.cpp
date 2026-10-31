@@ -2,6 +2,7 @@
 // Usage: fps_game [level-file]
 #include <engine/Log.h>
 #include <engine/CVars.h>
+#include <engine/DebugDraw.h>
 #include <engine/Paths.h>
 #include <engine/Crash.h>
 #include <engine/Assert.h>
@@ -135,6 +136,7 @@ void readInput(GLFWwindow* window, engine::InputState& input)
     input.set(Action::MoveRight, glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS);
     input.set(Action::Jump, glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS);
     input.set(Action::Sprint, glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS);
+    input.set(Action::Crouch, glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS);
     input.set(Action::Fire, glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS);
     input.set(Action::Reload, glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS);
     input.set(Action::Aim, glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS);
@@ -202,6 +204,9 @@ GLFWwindow* createWindow()
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
         glfwWindowHint(GLFW_SAMPLES, 4);
+        // FPS_ENGINE_GL_DEBUG=1: debug context, driver messages arrive synchronously (engine log, category "gl").
+        if (const char* dbg = std::getenv("FPS_ENGINE_GL_DEBUG"); dbg && *dbg && *dbg != '0')
+            glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
         if (GLFWwindow* w = glfwCreateWindow(1280, 720, "FPS Engine", nullptr, nullptr))
             return w;
     }
@@ -485,6 +490,66 @@ int main(int argc, char** argv)
     const engine::CVar& cvFov = *cvars.find("fov");
     const engine::CVar& cvFpsMax = *cvars.find("fps_max");
     const engine::CVar& cvShowFps = *cvars.find("cl_showfps");
+
+    // Cheats and debugging (need `cheats 1`): god, noclip, freecam, timescale, give, teleport; debug drawing.
+    {
+        using engine::CVarType;
+        cvars.add("god", CVarType::Bool, "0", "No damage", engine::CVarCheat);
+        cvars.add("noclip", CVarType::Bool, "0", "Fly through walls (look to steer, Space up, Ctrl down)", engine::CVarCheat)
+            .onChange = [&player](const engine::CVar& v) { player.noclip = v.boolean(); };
+        cvars.add("freecam", CVarType::Bool, "0", "Detach the camera from the player and fly it", engine::CVarCheat);
+        cvars.add("timescale", CVarType::Float, "1", "Game speed (0.1 slow motion .. 4)", engine::CVarCheat, 0.05, 4.0);
+        cvars.add("r_debugdraw", CVarType::Bool, "1", "Show debug lines, boxes and texts from code and scripts", engine::CVarDev);
+        cvars.add("ai_debug", CVarType::Bool, "0", "Draw enemy states, paths and sight lines", engine::CVarDev);
+        cvars.addCommand("give", "give health|ammo|all", [&](const std::vector<std::string>& a) {
+            const std::string what = a.empty() ? "all" : a[0];
+            if (what == "health" || what == "all")
+                scripts.setPlayerHealth(scene.player.maxHealth);
+            if (what == "ammo" || what == "all")
+                for (engine::Weapon& w : weapons)
+                    w.refill();
+            if (what != "health" && what != "ammo" && what != "all")
+                return engine::ConsoleResult{false, "usage: give health|ammo|all"};
+            return engine::ConsoleResult{true, "gave " + what};
+        }, engine::CVarCheat);
+        cvars.addCommand("teleport", "teleport X Y Z (feet), or teleport NAME (an entity or object), or teleport (to where you look)",
+                         [&](const std::vector<std::string>& a) {
+            glm::vec3 target;
+            if (a.size() >= 3) {
+                try {
+                    target = {std::stof(a[0]), std::stof(a[1]), std::stof(a[2])};
+                } catch (...) {
+                    return engine::ConsoleResult{false, "usage: teleport X Y Z"};
+                }
+            } else if (a.size() == 1) {
+                bool found = false;
+                for (const engine::Entity& e : scene.entities)
+                    if (e.name == a[0]) {
+                        target = e.position + glm::vec3(1.0f, 0.0f, 0.0f);
+                        found = true;
+                        break;
+                    }
+                if (!found)
+                    return engine::ConsoleResult{false, "no entity named " + a[0]};
+            } else {
+                const auto hit = physics.raycast(camera.position, camera.forward(), 500.0f);
+                if (!hit)
+                    return engine::ConsoleResult{false, "nothing in sight"};
+                target = hit->point + hit->normal * 0.3f;
+            }
+            player.teleport(target);
+            char buf[96];
+            std::snprintf(buf, sizeof buf, "teleported to %.1f %.1f %.1f", target.x, target.y, target.z);
+            return engine::ConsoleResult{true, buf};
+        }, engine::CVarCheat);
+    }
+    const engine::CVar& cvGod = *cvars.find("god");
+    const engine::CVar& cvFreecam = *cvars.find("freecam");
+    const engine::CVar& cvTimescale = *cvars.find("timescale");
+    const engine::CVar& cvDebugDraw = *cvars.find("r_debugdraw");
+    const engine::CVar& cvAiDebug = *cvars.find("ai_debug");
+    glm::vec3 freecamPosition{0.0f};
+    bool freecamActive = false;
     GameConsole console;
 
     Mouse mouse;
@@ -535,9 +600,19 @@ int main(int argc, char** argv)
         volatile int* nowhere = nullptr;
         *nowhere = 1;
     }
-    if (const char* line = std::getenv("FPS_ENGINE_CONSOLE")) { // run a console line and leave the console open (test hook)
+    if (const char* line = std::getenv("FPS_ENGINE_CONSOLE")) { // console lines separated by ";" (test hook)
         console.toggle();
-        console.submitLine(line);
+        std::string all = line, part; // several lines separated by ';'
+        for (std::size_t start = 0; start <= all.size();) {
+            const std::size_t end = all.find(';', start);
+            part = all.substr(start, end == std::string::npos ? std::string::npos : end - start);
+            console.submitLine(part);
+            if (end == std::string::npos)
+                break;
+            start = end + 1;
+        }
+        if (const char* keep = std::getenv("FPS_ENGINE_CONSOLE_OPEN"); !keep || *keep == '0')
+            console.toggle(); // closed again unless the screenshot should show it
     }
     if (const char* slot = std::getenv("FPS_ENGINE_SLOT")) { // weapon slot 1..9 to start with (test hook)
         const long n = std::strtol(slot, nullptr, 10);
@@ -621,9 +696,29 @@ int main(int argc, char** argv)
             boltHeld = g;
         }
 
-        const int steps = clock.advance(frameTime);
+        // Free camera: the player stands still, WASD flies the camera.
+        if (cvFreecam.boolean() != freecamActive) {
+            freecamActive = cvFreecam.boolean();
+            freecamPosition = camera.position;
+        }
+        if (freecamActive) {
+            glm::vec3 fly(0.0f);
+            if (input.isDown(engine::Action::MoveForward)) fly += camera.forward();
+            if (input.isDown(engine::Action::MoveBack)) fly -= camera.forward();
+            if (input.isDown(engine::Action::MoveRight)) fly += camera.right();
+            if (input.isDown(engine::Action::MoveLeft)) fly -= camera.right();
+            if (input.isDown(engine::Action::Jump)) fly.y += 1.0f;
+            if (input.isDown(engine::Action::Crouch)) fly.y -= 1.0f;
+            if (glm::dot(fly, fly) > 0.0f)
+                freecamPosition += glm::normalize(fly) * static_cast<float>(frameTime) * (input.isDown(engine::Action::Sprint) ? 25.0f : 6.0f);
+            input = {};
+        }
+        const double simTime = frameTime * cvTimescale.number(); // timescale cheat (1 = normal)
+        const int steps = clock.advance(simTime);
         for (int i = 0; i < steps; ++i) {
             const float dt = static_cast<float>(clock.step());
+            // Debug shapes age per simulation step: "this frame" shapes from scripts stay until the next step redraws them.
+            engine::DebugDraw::global().tick(dt);
             player.fixedUpdate(input, camera, dt);
 
             // Lower the current weapon, swap, raise the new one (0.15 s each way).
@@ -721,9 +816,13 @@ int main(int argc, char** argv)
 
             const float healthBefore = scripts.playerHealth();
             scripts.fixedUpdate(dt);
+            if (cvGod.boolean() && scripts.playerHealth() < healthBefore)
+                scripts.setPlayerHealth(healthBefore);
             if (scripts.playerHealth() < healthBefore)
                 audio.play2D(scene.player.hurtSound);
             anomalies.fixedUpdate(dt, scene, physics, player, scripts); // forces act on the next movement step
+            if (cvGod.boolean() && scripts.playerHealth() < healthBefore) // god: anomalies do not hurt either
+                scripts.setPlayerHealth(healthBefore);
             {
                 std::string ground;
                 if (player.grounded())
@@ -740,11 +839,11 @@ int main(int argc, char** argv)
             }
         }
 
-        camera.position = player.interpolatedEye(static_cast<float>(clock.alpha()));
-        engine::updateAnimations(scene, static_cast<float>(frameTime)); // per frame for smooth motion
+        camera.position = freecamActive ? freecamPosition : player.interpolatedEye(static_cast<float>(clock.alpha()));
+        engine::updateAnimations(scene, static_cast<float>(simTime)); // per frame for smooth motion
         audio.update(static_cast<float>(frameTime), scene, camera.position, camera.forward());
-        effects.update(static_cast<float>(frameTime), scene, physics, camera.position, audio);
-        anomalies.update(static_cast<float>(frameTime), physics, camera.position);
+        effects.update(static_cast<float>(simTime), scene, physics, camera.position, audio);
+        anomalies.update(static_cast<float>(simTime), physics, camera.position);
 
         int width = 0, height = 0;
         glfwGetFramebufferSize(window, &width, &height);
@@ -768,6 +867,14 @@ int main(int argc, char** argv)
             engine::OverlayPass effectsOverlay; // muzzle flashes, drawn with the weapon below
             effects.fill(view, view.view, effectsOverlay);
             anomalies.fill(view, view.view);
+            // Debug lines from code and scripts (DebugDraw), with their texts drawn in the HUD below.
+            engine::DebugGeometry debugLines;
+            std::vector<engine::DebugDraw::Text> debugTexts;
+            if (cvDebugDraw.boolean()) {
+                engine::DebugDraw::global().collect(debugLines, &debugTexts);
+                if (!debugLines.lines.empty())
+                    view.debug.push_back(&debugLines);
+            }
             renderer.render(scene, view);
 
             // First-person layer: weapon, muzzle flash and crosshair.
@@ -810,6 +917,20 @@ int main(int argc, char** argv)
                 char fps[32];
                 std::snprintf(fps, sizeof fps, "%.0f FPS", frameTime > 0.0 ? 1.0 / frameTime : 0.0);
                 ui.text(fps, {10.0f, 8.0f}, 18.0f, {0.95f, 0.9f, 0.6f, 1.0f}, true);
+            }
+            if (!debugTexts.empty()) {
+                const glm::mat4 viewProj = view.projection * view.view;
+                for (const engine::DebugDraw::Text& t : debugTexts) {
+                    const glm::vec4 clip = viewProj * glm::vec4(t.position, 1.0f);
+                    if (clip.w <= 0.1f || glm::distance(t.position, camera.position) > 80.0f)
+                        continue;
+                    const glm::vec2 ndc = glm::vec2(clip) / clip.w;
+                    if (std::abs(ndc.x) > 1.1f || std::abs(ndc.y) > 1.1f)
+                        continue;
+                    const glm::vec2 px((ndc.x * 0.5f + 0.5f) * width, (0.5f - ndc.y * 0.5f) * height);
+                    const float size = 15.0f;
+                    ui.text(t.text, px - glm::vec2(ui.textWidth(t.text, size) * 0.5f, size), size, t.color, true);
+                }
             }
             console.draw(ui, width, height, now);
             ui.end();
@@ -874,5 +995,13 @@ int main(int argc, char** argv)
     glfwDestroyWindow(window);
     glfwTerminate();
     engine::markCleanExit();
+    // Smoke tests (FPS_ENGINE_FRAMES) fail when anything logged an error: missing assets, shader or GL errors, script errors.
+    if (frameLimit > 0) {
+        const std::size_t errors = engine::logCount(engine::LogLevel::Error) + engine::logCount(engine::LogLevel::Fatal);
+        const std::size_t warnings = engine::logCount(engine::LogLevel::Warning);
+        std::printf("smoke: %ld frames, %zu errors, %zu warnings\n", frame, errors, warnings);
+        if (errors > 0)
+            return 1;
+    }
     return 0;
 }

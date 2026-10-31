@@ -44,6 +44,15 @@ CVarRegistry& CVarRegistry::global()
     static CVarRegistry registry = [] {
         CVarRegistry r;
         r.add("cheats", CVarType::Bool, "0", "Allows cheat variables and commands (god, noclip, give...)", CVarNone);
+        // Switching cheats off puts every cheat variable back to its default.
+        r.find("cheats")->onChange = [](const CVar& c) {
+            if (c.boolean())
+                return;
+            CVarRegistry& reg = CVarRegistry::global();
+            for (const CVar* v : reg.list())
+                if ((v->flags & CVarCheat) && v->value != v->defaultValue)
+                    reg.set(v->name, v->defaultValue, nullptr, true);
+        };
         r.addCommand("help", "Lists commands and variables: help [prefix]", [](const std::vector<std::string>& a) {
             CVarRegistry& reg = CVarRegistry::global();
             const std::string prefix = a.empty() ? std::string() : a[0];

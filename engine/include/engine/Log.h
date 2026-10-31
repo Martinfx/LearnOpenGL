@@ -32,6 +32,7 @@ LogLevel logLevel();
 void setLogConsole(bool on);          // echo to stdout/stderr (default on)
 
 void logMessage(LogLevel level, const char* category, const std::string& text);
+std::size_t logCount(LogLevel level); // messages logged at this level since start
 #if defined(__GNUC__) || defined(__clang__)
 __attribute__((format(printf, 3, 4)))
 #endif

@@ -1,7 +1,7 @@
 #version 450 core
-uniform vec4 uDebugColor; // linear rgb, alpha
+in vec4 vColor; // linear rgb, alpha
 out vec4 fragColor;
 
 void main() {
-    fragColor = uDebugColor;
+    fragColor = vColor;
 }

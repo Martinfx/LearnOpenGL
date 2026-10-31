@@ -75,3 +75,9 @@ methods `:length()`, `:normalized()`, `:flat()` (y = 0), `:dot(other)`.
 | `game.raycast(origin, dir, max)` | `hit, point, distance` |
 | `game.find(name)` | Entity or `nil` |
 | `game.log(text)`, `print(...)` | Prints to the game console |
+| `game.cvar(name)` | Console variable as text (`"1"`, `"0.5"`), nil if unknown |
+| `game.set_cvar(name, value)` | Sets a console variable; false if unknown, out of range or a locked cheat |
+| `game.debug_line(a, b, [color], [seconds])` | Debug line (also `debug_arrow`); color is a `vec3` 0..1, seconds 0 = this frame |
+| `game.debug_box(center, half, [color], [seconds])` | Debug box (axis aligned, half size) |
+| `game.debug_sphere(center, radius, [color], [seconds])` | Debug sphere (three circles) |
+| `game.debug_text(position, text, [color], [seconds])` | Text floating at a world position |

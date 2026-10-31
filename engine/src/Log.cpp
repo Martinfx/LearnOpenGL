@@ -130,8 +130,20 @@ void setLogLevel(LogLevel minimum) { state().minimum = static_cast<int>(minimum)
 LogLevel logLevel() { return static_cast<LogLevel>(state().minimum.load()); }
 void setLogConsole(bool on) { state().console = on; }
 
+namespace {
+std::atomic<std::size_t> g_levelCounts[8];
+}
+
+std::size_t logCount(LogLevel level)
+{
+    const int i = static_cast<int>(level);
+    return i >= 0 && i < 8 ? g_levelCounts[i].load() : 0;
+}
+
 void logMessage(LogLevel level, const char* category, const std::string& text)
 {
+    if (const int i = static_cast<int>(level); i >= 0 && i < 8)
+        ++g_levelCounts[i]; // counted even when filtered out (smoke tests check for errors)
     LogState& s = state();
     if (static_cast<int>(level) < s.minimum.load())
         return;

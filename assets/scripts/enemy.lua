@@ -190,6 +190,21 @@ function on_update(self, dt)
 
     animate(self)
 
+    -- ai_debug 1 (console): state, health and the view cone above every enemy.
+    if game.cvar("ai_debug") == "1" then
+        local eye = self:eye()
+        local seen = sees_player(self)
+        game.debug_text(eye + vec3(0, 0.45, 0), string.format("%s  %s  %d hp", self.name, state, math.floor(self.health)),
+                        seen and vec3(1, 0.3, 0.2) or vec3(0.85, 0.85, 0.85))
+        local f = self:forward()
+        local half = math.rad(props.view_angle * 0.5)
+        for _, a in ipairs({-half, half}) do
+            local d = vec3(f.x * math.cos(a) - f.z * math.sin(a), 0, f.x * math.sin(a) + f.z * math.cos(a))
+            game.debug_line(eye, eye + d * props.view_range, vec3(0.9, 0.8, 0.2))
+        end
+        if seen then game.debug_line(eye, game.player_eye(), vec3(1, 0.2, 0.1)) end
+    end
+
     -- Color shows the state while developing: calm grey, alerted orange, attacking red.
     if hurt_flash > 0 then self.color = vec3(1, 1, 1)
     elseif state == "attack" then self.color = vec3(0.9, 0.15, 0.1)

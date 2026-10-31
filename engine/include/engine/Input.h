@@ -17,6 +17,7 @@ enum class Action : std::size_t {
     Fire,
     Reload,
     Aim, // right mouse: aim down the sights
+    Crouch, // left Ctrl (noclip: down; crouching itself comes with M4 movement)
     Count
 };
 

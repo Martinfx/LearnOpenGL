@@ -99,6 +99,7 @@ public:
     glm::vec3 spreadDirection(glm::vec3 aim);
 
     int ammo() const { return ammo_; }
+    void refill() { ammo_ = settings.melee() ? 0 : settings.magazineSize; } // cheat `give ammo`
     bool reloadingFromEmpty() const { return reloadFromEmpty_; } // the current / last reload started on an empty magazine   // melee weapons always report 0
     float swing() const;                 // melee: 0..1 through the current swing, 0 when idle
 

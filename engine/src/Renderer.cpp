@@ -2,14 +2,21 @@
 
 #include <glad/gl.h>
 #include "engine/JobSystem.h"
+#include "engine/Log.h"
+#include "engine/Paths.h"
 #include <chrono>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/packing.hpp>
+#include <glm/packing.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <cstdlib>
 #include <fstream>
+#include <mutex>
+#include <unordered_map>
 #include <functional>
 #include <sstream>
 #include <vector>
@@ -182,8 +189,118 @@ unsigned compileStage(GLenum type, const std::string& source, const std::string&
     return shader;
 }
 
+// ---- GL debugging: driver messages to the log, object labels, program binary cache ----
+
+void GLAD_API_PTR glDebugToLog(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei, const GLchar* message, const void*)
+{
+    // The same message again and again (every frame) is logged a few times, then muted.
+    static std::mutex mutex;
+    static std::unordered_map<GLuint, int> seen;
+    {
+        std::lock_guard lock(mutex);
+        const int n = ++seen[id];
+        if (n > 5)
+            return;
+        if (n == 5) {
+            LOG_WARN("gl", "message %u repeats, muted from now on", id);
+            return;
+        }
+    }
+    LogLevel level = LogLevel::Debug;
+    if (type == GL_DEBUG_TYPE_ERROR || severity == GL_DEBUG_SEVERITY_HIGH)
+        level = LogLevel::Error;
+    else if (severity == GL_DEBUG_SEVERITY_MEDIUM || type == GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR)
+        level = LogLevel::Warning;
+    else if (type == GL_DEBUG_TYPE_PERFORMANCE || type == GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR)
+        level = LogLevel::Info;
+    const char* kind = type == GL_DEBUG_TYPE_ERROR ? "error"
+                     : type == GL_DEBUG_TYPE_PERFORMANCE ? "performance"
+                     : type == GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR ? "undefined behaviour"
+                     : type == GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR ? "deprecated"
+                     : type == GL_DEBUG_TYPE_PORTABILITY ? "portability" : "other";
+    const char* from = source == GL_DEBUG_SOURCE_SHADER_COMPILER ? "shader compiler"
+                     : source == GL_DEBUG_SOURCE_WINDOW_SYSTEM ? "window system"
+                     : source == GL_DEBUG_SOURCE_APPLICATION ? "application" : "driver";
+    logf(level, "gl", "%s (%s, id %u): %s", kind, from, id, message);
+}
+
+// Names GL objects for RenderDoc / Nsight / apitrace captures.
+void label(GLenum kind, unsigned object, const std::string& name)
+{
+    if (object)
+        glObjectLabel(kind, object, static_cast<GLsizei>(name.size()), name.c_str());
+}
+
+bool g_programCacheEnabled = true;
+
+std::filesystem::path programCacheFile(const std::string& vert, const std::string& frag)
+{
+    // Key: final sources plus the driver identity (a new driver gets fresh binaries).
+    std::uint64_t h = 1469598103934665603ull; // FNV-1a, stable across runs and standard libraries
+    auto mix = [&h](const std::string& text) {
+        for (unsigned char c : text)
+            h = (h ^ c) * 1099511628211ull;
+        h = (h ^ 0xff) * 1099511628211ull;
+    };
+    mix(vert);
+    mix(frag);
+    for (GLenum e : {GL_VENDOR, GL_RENDERER, GL_VERSION})
+        if (const GLubyte* str = glGetString(e))
+            mix(reinterpret_cast<const char*>(str));
+    char name[32];
+    std::snprintf(name, sizeof name, "%016llx.bin", static_cast<unsigned long long>(h));
+    return userDirectory("cache") / "shaders" / name;
+}
+
+unsigned loadCachedProgram(const std::filesystem::path& file)
+{
+    std::ifstream in(file, std::ios::binary);
+    if (!in)
+        return 0;
+    std::uint32_t format = 0;
+    if (!in.read(reinterpret_cast<char*>(&format), sizeof format))
+        return 0;
+    const std::vector<char> data((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    if (data.empty())
+        return 0;
+    const unsigned program = glCreateProgram();
+    glProgramBinary(program, format, data.data(), static_cast<GLsizei>(data.size()));
+    GLint linked = 0;
+    glGetProgramiv(program, GL_LINK_STATUS, &linked);
+    if (!linked) { // a driver update can refuse old binaries: compile again
+        glDeleteProgram(program);
+        std::error_code ec;
+        std::filesystem::remove(file, ec);
+        return 0;
+    }
+    return program;
+}
+
+void storeCachedProgram(unsigned program, const std::filesystem::path& file)
+{
+    GLint length = 0;
+    glGetProgramiv(program, GL_PROGRAM_BINARY_LENGTH, &length);
+    if (length <= 0)
+        return;
+    std::vector<char> data(static_cast<std::size_t>(length));
+    GLenum format = 0;
+    glGetProgramBinary(program, length, nullptr, &format, data.data());
+    std::error_code ec;
+    std::filesystem::create_directories(file.parent_path(), ec);
+    const std::filesystem::path temp = file.string() + ".tmp";
+    {
+        std::ofstream out(temp, std::ios::binary);
+        const auto f = static_cast<std::uint32_t>(format);
+        out.write(reinterpret_cast<const char*>(&f), sizeof f);
+        out.write(data.data(), static_cast<std::streamsize>(data.size()));
+        if (!out)
+            return;
+    }
+    std::filesystem::rename(temp, file, ec); // whole files only, even if two programs start at once
+}
+
 unsigned linkProgram(const std::map<std::string, std::string>& files, const std::string& vertName,
-                     const std::string& fragName, std::string* error)
+                     const std::string& fragName, std::string* error, bool* fromCache = nullptr)
 {
     const auto vs = files.find(vertName), fs = files.find(fragName);
     if (vs == files.end() || fs == files.end()) {
@@ -191,13 +308,26 @@ unsigned linkProgram(const std::map<std::string, std::string>& files, const std:
             *error = "Missing shader " + (vs == files.end() ? vertName : fragName);
         return 0;
     }
-    const unsigned v = compileStage(GL_VERTEX_SHADER, withIncludes(vs->second, files), vertName, error);
-    const unsigned f = v ? compileStage(GL_FRAGMENT_SHADER, withIncludes(fs->second, files), fragName, error) : 0;
+    const std::string vertSource = withIncludes(vs->second, files), fragSource = withIncludes(fs->second, files);
+    std::filesystem::path cacheFile;
+    if (g_programCacheEnabled) {
+        cacheFile = programCacheFile(vertSource, fragSource);
+        if (const unsigned cached = loadCachedProgram(cacheFile)) {
+            if (fromCache)
+                *fromCache = true;
+            label(GL_PROGRAM, cached, vertName + " + " + fragName);
+            return cached;
+        }
+    }
+    const unsigned v = compileStage(GL_VERTEX_SHADER, vertSource, vertName, error);
+    const unsigned f = v ? compileStage(GL_FRAGMENT_SHADER, fragSource, fragName, error) : 0;
     if (!v || !f) {
         glDeleteShader(v);
         return 0;
     }
     const unsigned program = glCreateProgram();
+    if (g_programCacheEnabled)
+        glProgramParameteri(program, GL_PROGRAM_BINARY_RETRIEVABLE_HINT, GL_TRUE);
     glAttachShader(program, v);
     glAttachShader(program, f);
     glLinkProgram(program);
@@ -213,6 +343,9 @@ unsigned linkProgram(const std::map<std::string, std::string>& files, const std:
         glDeleteProgram(program);
         return 0;
     }
+    label(GL_PROGRAM, program, vertName + " + " + fragName);
+    if (g_programCacheEnabled)
+        storeCachedProgram(program, cacheFile);
     return program;
 }
 
@@ -320,14 +453,20 @@ bool Renderer::buildPrograms(const std::map<std::string, std::string>& src, Prog
                              {&p.grid, "fullscreen.vert", "grid.frag"}, {&p.hiz, "fullscreen.vert", "hiz.frag"},
                              {&p.sprite, "sprite.vert", "sprite.frag"},
                              {&p.debug, "debug.vert", "debug.frag"}};
+    const auto start = std::chrono::steady_clock::now();
+    int cached = 0;
     for (const Entry& e : entries) {
-        e.program->id = linkProgram(src, e.vert, e.frag, error);
+        bool hit = false;
+        e.program->id = linkProgram(src, e.vert, e.frag, error, &hit);
+        cached += hit ? 1 : 0;
         e.program->locations.clear();
         if (!e.program->id) {
             destroyPrograms(p);
             return false;
         }
     }
+    LOG_INFO("render", "%zu shader programs in %.0f ms (%d from the binary cache)", std::size(entries),
+             std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count(), cached);
     return true;
 }
 
@@ -418,6 +557,26 @@ bool Renderer::init(GlLoader loader, std::string* error)
         textureCookConfig().compress = false;
     glInfo_ = std::string(reinterpret_cast<const char*>(glGetString(GL_RENDERER))) + " / OpenGL "
             + reinterpret_cast<const char*>(glGetString(GL_VERSION));
+    // Driver messages (errors, undefined behaviour, performance warnings) go to the log, category "gl".
+    // With a debug context (FPS_ENGINE_GL_DEBUG=1) they arrive synchronously, so a breakpoint in
+    // glDebugToLog stops at the offending call.
+    {
+        GLint flags = 0;
+        glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
+        glEnable(GL_DEBUG_OUTPUT);
+        if (flags & GL_CONTEXT_FLAG_DEBUG_BIT)
+            glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+        glDebugMessageCallback(glDebugToLog, nullptr);
+        glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_NOTIFICATION, 0, nullptr, GL_FALSE);
+        if (flags & GL_CONTEXT_FLAG_DEBUG_BIT)
+            LOG_INFO("render", "OpenGL debug context: driver messages are synchronous");
+    }
+    {
+        GLint formats = 0;
+        glGetIntegerv(GL_NUM_PROGRAM_BINARY_FORMATS, &formats);
+        const char* off = std::getenv("FPS_ENGINE_NO_SHADER_CACHE");
+        g_programCacheEnabled = formats > 0 && !(off && *off && *off != '0');
+    }
     if (!buildPrograms(embeddedShaders(), programs_, error))
         return false;
 
@@ -571,12 +730,22 @@ void Renderer::ensureTargets(int width, int height)
     ssaoBlurFbo_ = makeFbo(ssaoBlurTex_);
     ldrTex_ = makeTexture2D(GL_RGBA8, width, height, GL_LINEAR);
     ldrFbo_ = makeFbo(ldrTex_);
+    label(GL_TEXTURE, hdrColor_, "HDR colour");
+    label(GL_TEXTURE, depthTex_, "Scene depth");
+    label(GL_FRAMEBUFFER, hdrFbo_, "HDR");
+    label(GL_TEXTURE, ssaoTex_, "SSAO");
+    label(GL_TEXTURE, ssaoBlurTex_, "SSAO blurred");
+    label(GL_FRAMEBUFFER, ssaoFbo_, "SSAO");
+    label(GL_FRAMEBUFFER, ssaoBlurFbo_, "SSAO blur");
+    label(GL_TEXTURE, ldrTex_, "LDR colour");
+    label(GL_FRAMEBUFFER, ldrFbo_, "LDR");
     glm::ivec2 size(width, height);
     for (int i = 0; i < kBloomLevels; ++i) {
         size = glm::max(size / 2, glm::ivec2(1));
         const unsigned t = makeTexture2D(GL_R11F_G11F_B10F, size.x, size.y, GL_LINEAR);
         bloomTex_.push_back(t);
         bloomFbo_.push_back(makeFbo(t));
+        label(GL_TEXTURE, t, "Bloom " + std::to_string(i));
         bloomSize_.push_back(size);
     }
 }
@@ -1755,8 +1924,10 @@ void Renderer::drawDebug(const std::vector<const DebugGeometry*>& items, const g
             continue;
         for (const glm::vec3& v : d->triangles)
             all.emplace_back(v, 1.0f);
-        for (const glm::vec3& v : d->lines)
-            all.emplace_back(v, 1.0f);
+        // w: the vertex colour packed as RGBA8 bits when the geometry has per-line colours.
+        const bool perVertex = d->lineColors.size() == d->lines.size();
+        for (std::size_t i = 0; i < d->lines.size(); ++i)
+            all.emplace_back(d->lines[i], perVertex ? glm::uintBitsToFloat(glm::packUnorm4x8(d->lineColors[i])) : 1.0f);
     }
     glNamedBufferSubData(debugBuffer_, 0, static_cast<GLsizeiptr>(all.size() * sizeof(glm::vec4)), all.data());
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, debugBuffer_);
@@ -1793,7 +1964,9 @@ void Renderer::drawDebug(const std::vector<const DebugGeometry*>& items, const g
         const auto lines = static_cast<GLsizei>(d->lines.size());
         if (lines > 0) {
             glUniform4fv(p.loc("uDebugColor"), 1, glm::value_ptr(d->lineColor));
+            glUniform1i(p.loc("uDebugVertexColor"), d->lineColors.size() == d->lines.size() ? 1 : 0);
             glDrawArrays(GL_LINES, first, lines);
+            glUniform1i(p.loc("uDebugVertexColor"), 0);
             ++drawCalls_;
             first += lines;
         }
@@ -1965,6 +2138,7 @@ void Renderer::beginPass(int pass)
         endPass();
     activePass_ = pass;
     passStart_ = std::chrono::steady_clock::now();
+    glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, static_cast<GLuint>(pass), -1, passName(pass)); // named in RenderDoc
     unsigned& q = queries_[queryFrame_][pass];
     if (!q)
         glCreateQueries(GL_TIME_ELAPSED, 1, &q);
@@ -1977,6 +2151,7 @@ void Renderer::endPass()
     if (activePass_ < 0)
         return;
     glEndQuery(GL_TIME_ELAPSED);
+    glPopDebugGroup();
     building_.cpuMs[activePass_] += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - passStart_).count();
     activePass_ = -1;
 }

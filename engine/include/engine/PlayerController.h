@@ -18,6 +18,7 @@ public:
     // Creates the character in the world; also the respawn point.
     void spawn(PhysicsWorld& world, glm::vec3 feet);
     void respawn();
+    bool noclip = false;                           // cheat: fly through walls (look direction, Jump up, Crouch down)
     void fixedUpdate(const InputState& input, const FpsCamera& camera, float dt);
 
     glm::vec3 feet() const { return feet_; }

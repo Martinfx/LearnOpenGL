@@ -35,6 +35,7 @@ struct OverlayBox {
 struct DebugGeometry {
     std::vector<glm::vec3> triangles; // 3 vertices each
     std::vector<glm::vec3> lines;     // 2 vertices each
+    std::vector<glm::vec4> lineColors; // optional: one per line vertex (else lineColor)
     glm::vec4 fill{0.2f, 0.9f, 0.4f, 0.25f};
     glm::vec4 edges{0.2f, 1.0f, 0.5f, 0.7f}; // triangle outlines, a = 0: none
     glm::vec4 lineColor{1.0f, 0.8f, 0.2f, 1.0f};

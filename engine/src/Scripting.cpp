@@ -1,6 +1,7 @@
 #include "engine/Log.h"
 #include "engine/Scripting.h"
 #include "engine/CVars.h"
+#include "engine/DebugDraw.h"
 #include "engine/CharacterBody.h"
 #include "engine/NavMesh.h"
 #include "engine/Physics.h"
@@ -62,6 +63,15 @@ struct ScriptEntity {
     bool moveTo(glm::vec3 target, float speed)
     {
         const glm::vec3 pos = e().position;
+        if (const CVar* dbg = CVarRegistry::global().find("ai_debug"); dbg && dbg->boolean() && corner < path.size()) {
+            glm::vec3 from = pos + glm::vec3(0.0f, 0.1f, 0.0f);
+            for (std::size_t i = corner; i < path.size(); ++i) { // the navmesh path being followed
+                const glm::vec3 to = path[i] + glm::vec3(0.0f, 0.1f, 0.0f);
+                DebugDraw::global().line(from, to, {0.2f, 0.9f, 1.0f, 1.0f});
+                from = to;
+            }
+            DebugDraw::global().cross(target, 0.4f, {0.2f, 0.9f, 1.0f, 1.0f});
+        }
         auto flatDist = [](glm::vec3 a, glm::vec3 b) { return glm::length(glm::vec2(a.x - b.x, a.z - b.z)); };
         if (flatDist(pos, target) < 0.3f) {
             desiredVelocity = glm::vec3(0.0f);
@@ -317,6 +327,23 @@ void ScriptSystem::Impl::bindApi()
     });
     game.set_function("log", [this](const std::string& msg) { log("[lua] " + msg); });
     // Console variables: game.cvar("fov") returns the value as text (nil if unknown); set_cvar respects cheat / read-only flags.
+    // Debug drawing (shown while r_debugdraw is 1): colour vec3 (0..1), seconds 0 = this frame.
+    auto rgba = [](const sol::optional<glm::vec3>& c, glm::vec3 fallback) { return glm::vec4(c.value_or(fallback), 1.0f); };
+    game.set_function("debug_line", [rgba](const glm::vec3& a, const glm::vec3& b, sol::optional<glm::vec3> color, sol::optional<float> seconds) {
+        DebugDraw::global().line(a, b, rgba(color, {1, 1, 0}), seconds.value_or(0.0f));
+    });
+    game.set_function("debug_arrow", [rgba](const glm::vec3& a, const glm::vec3& b, sol::optional<glm::vec3> color, sol::optional<float> seconds) {
+        DebugDraw::global().arrow(a, b, rgba(color, {1, 1, 0}), seconds.value_or(0.0f));
+    });
+    game.set_function("debug_box", [rgba](const glm::vec3& center, const glm::vec3& half, sol::optional<glm::vec3> color, sol::optional<float> seconds) {
+        DebugDraw::global().box(center, half, rgba(color, {0, 1, 1}), seconds.value_or(0.0f));
+    });
+    game.set_function("debug_sphere", [rgba](const glm::vec3& center, float radius, sol::optional<glm::vec3> color, sol::optional<float> seconds) {
+        DebugDraw::global().sphere(center, radius, rgba(color, {1, 0.4f, 0.2f}), seconds.value_or(0.0f));
+    });
+    game.set_function("debug_text", [rgba](const glm::vec3& at, const std::string& text, sol::optional<glm::vec3> color, sol::optional<float> seconds) {
+        DebugDraw::global().text(at, text, rgba(color, {1, 1, 1}), seconds.value_or(0.0f));
+    });
     game.set_function("cvar", [](const std::string& name) -> sol::optional<std::string> {
         if (const CVar* v = CVarRegistry::global().find(name))
             return v->value;

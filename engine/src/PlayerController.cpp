@@ -44,6 +44,24 @@ void PlayerController::fixedUpdate(const InputState& input, const FpsCamera& cam
         return;
     previousFeet_ = feet_;
 
+    if (noclip) {
+        glm::vec3 fly(0.0f);
+        if (input.isDown(Action::MoveForward)) fly += camera.forward();
+        if (input.isDown(Action::MoveBack))    fly -= camera.forward();
+        if (input.isDown(Action::MoveRight))   fly += camera.right();
+        if (input.isDown(Action::MoveLeft))    fly -= camera.right();
+        if (input.isDown(Action::Jump))        fly.y += 1.0f;
+        if (input.isDown(Action::Crouch))      fly.y -= 1.0f;
+        if (glm::dot(fly, fly) > 0.0f)
+            fly = glm::normalize(fly);
+        const float speed = (input.isDown(Action::Sprint) ? 4.0f : 2.0f) * settings.walkSpeed;
+        feet_ += fly * speed * dt;
+        body_.teleport(feet_);
+        knock_ = drift_ = glm::vec3(0.0f); // anomalies do not push a noclipping player
+        launch_ = slow_ = 0.0f;
+        return;
+    }
+
     glm::vec3 wish(0.0f);
     if (input.isDown(Action::MoveForward)) wish += camera.flatForward();
     if (input.isDown(Action::MoveBack))    wish -= camera.flatForward();
