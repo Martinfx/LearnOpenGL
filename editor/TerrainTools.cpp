@@ -23,6 +23,8 @@
 #include <QGridLayout>
 #include <QGuiApplication>
 #include <QHBoxLayout>
+#include <QInputDialog>
+#include <QLineEdit>
 #include <QLabel>
 #include <QListWidget>
 #include <QPointer>
@@ -86,6 +88,8 @@ struct TerrainUi : QObject {
     QCheckBox* collision = nullptr;
     QCheckBox* align = nullptr;
     QCheckBox* shadows = nullptr;
+    QDoubleSpinBox* farDensity = nullptr;
+    QLineEdit* lods = nullptr;
     QDoubleSpinBox* foliageRadius = nullptr;
     QRadioButton* erase = nullptr;
     QLabel* foliageInfo = nullptr;
@@ -342,6 +346,58 @@ void MainWindow::buildTerrainPages()
         props->addRow(ui.collision);
         props->addRow(ui.align);
         props->addRow(ui.shadows);
+        ui.farDensity = spin(ui.typeProps, 0.0, 1.0, 0.05, 1.0, 2);
+        ui.farDensity->setToolTip(tr("Share left at the cull distance (thins out from 30 % of it); 1 = no thinning"));
+        props->addRow(tr("Far density"), ui.farDensity);
+        auto* lodRow = new QHBoxLayout;
+        ui.lods = new QLineEdit(ui.typeProps);
+        ui.lods->setReadOnly(true);
+        ui.lods->setPlaceholderText(tr("no LOD"));
+        auto* addLod = new QPushButton(tr("+"), ui.typeProps);
+        auto* clearLod = new QPushButton(tr("x"), ui.typeProps);
+        addLod->setFixedWidth(32);
+        clearLod->setFixedWidth(32);
+        addLod->setToolTip(tr("Add a simpler model used beyond a distance"));
+        lodRow->addWidget(ui.lods, 1);
+        lodRow->addWidget(addLod);
+        lodRow->addWidget(clearLod);
+        props->addRow(tr("LODs"), lodRow);
+        connect(clearLod, &QPushButton::clicked, this, [this] {
+            const int row = terrainUi_->types->currentRow();
+            if (!scene_.terrain || row < 0 || scene_.terrain->foliageTypes[static_cast<std::size_t>(row)].lods.empty())
+                return;
+            engine::Terrain* t = editTerrain();
+            t->foliageTypes[static_cast<std::size_t>(row)].lods.clear();
+            t->foliageVersion = engine::newResourceId();
+            markDirty();
+            refreshTerrainPanel();
+        });
+        connect(addLod, &QPushButton::clicked, this, [this] {
+            const int row = terrainUi_->types->currentRow();
+            if (!scene_.terrain || row < 0)
+                return;
+            const engine::FoliageType& ft = scene_.terrain->foliageTypes[static_cast<std::size_t>(row)];
+            const QString path = QFileDialog::getOpenFileName(this, tr("Foliage LOD model"), toQ(ft.modelPath.parent_path()),
+                                                              tr("glTF models (*.glb *.gltf)"));
+            if (path.isEmpty())
+                return;
+            const float last = ft.lods.empty() ? 0.0f : ft.lods.back().distance;
+            bool ok = false;
+            const double distance = QInputDialog::getDouble(this, tr("Foliage LOD"), tr("Used beyond (m):"),
+                                                            last > 0.0f ? last * 2.0 : 15.0, last + 0.5, 10000.0, 1, &ok);
+            if (!ok)
+                return;
+            engine::FoliageType::Lod lod;
+            lod.modelPath = fromQ(path).lexically_normal();
+            lod.distance = static_cast<float>(distance);
+            engine::Terrain* t = editTerrain();
+            auto& lods = t->foliageTypes[static_cast<std::size_t>(row)].lods;
+            lods.push_back(lod);
+            std::sort(lods.begin(), lods.end(), [](const auto& a, const auto& b) { return a.distance < b.distance; });
+            markDirty();
+            refreshTerrainPanel();
+            loadFoliageModel(lod.modelPath);
+        });
         typeLayout->addWidget(ui.typeProps);
         ui.foliageInfo = new QLabel(ui.foliageEdit);
         ui.foliageInfo->setObjectName("dim");
@@ -369,6 +425,7 @@ void MainWindow::buildTerrainPages()
         connect(ui.collision, &QCheckBox::toggled, this, [editType](bool on) { editType([on](auto& ft) { ft.collision = on; }); });
         connect(ui.align, &QCheckBox::toggled, this, [editType](bool on) { editType([on](auto& ft) { ft.alignToSlope = on; }); });
         connect(ui.shadows, &QCheckBox::toggled, this, [editType](bool on) { editType([on](auto& ft) { ft.castShadows = on; }); });
+        connect(ui.farDensity, &QDoubleSpinBox::valueChanged, this, [editType](double x) { editType([x](auto& ft) { ft.farDensity = static_cast<float>(x); }); });
         connect(ui.types, &QListWidget::currentRowChanged, this, [this] {
             if (!terrainUi_->refreshing)
                 refreshTerrainPanel();
@@ -433,9 +490,13 @@ void MainWindow::addFoliageType(const QString& path)
     markDirty();
     refreshTerrainPanel();
     terrainUi_->types->setCurrentRow(static_cast<int>(t->foliageTypes.size()) - 1);
-    // The model loads on a worker; painting starts once it is there.
+    loadFoliageModel(ft.modelPath); // painting starts once it is there
+}
+
+void MainWindow::loadFoliageModel(const std::filesystem::path& file)
+{
+    // Loads on a worker; attached to every foliage type (and LOD) that uses the file.
     QPointer<MainWindow> self(this);
-    const std::filesystem::path file = ft.modelPath;
     engine::JobSystem::global().run([self, file] {
         auto model = std::make_shared<engine::Model>();
         std::string error;
@@ -448,13 +509,17 @@ void MainWindow::addFoliageType(const QString& path)
                 self->notify(tr("Foliage model: %1").arg(QString::fromStdString(error)), 6000);
                 return;
             }
-            // Runtime data only: every terrain copy (undo steps) with this type gets the mesh.
-            if (self->scene_.terrain)
-                for (engine::FoliageType& type : self->scene_.terrain->foliageTypes)
+            // Runtime data only: every terrain copy (undo steps) with this file gets the mesh.
+            if (self->scene_.terrain) {
+                for (engine::FoliageType& type : self->scene_.terrain->foliageTypes) {
                     if (type.modelPath == file && !type.model)
                         type.model = model;
-            if (self->scene_.terrain)
+                    for (engine::FoliageType::Lod& lod : type.lods)
+                        if (lod.modelPath == file && !lod.model)
+                            lod.model = model;
+                }
                 self->scene_.terrain->foliageVersion = engine::newResourceId();
+            }
             self->refreshTerrainPanel();
             self->viewport_->update();
         });
@@ -533,6 +598,14 @@ void MainWindow::refreshTerrainPanel()
             ui.collision->setChecked(ft.collision);
             ui.align->setChecked(ft.alignToSlope);
             ui.shadows->setChecked(ft.castShadows);
+            ui.farDensity->setValue(ft.farDensity);
+            QStringList lods;
+            for (const engine::FoliageType::Lod& lod : ft.lods)
+                lods << QString("%1 @ %2 m%3")
+                            .arg(QFileInfo(toQ(lod.modelPath)).completeBaseName())
+                            .arg(static_cast<double>(lod.distance))
+                            .arg(lod.model ? QString() : tr(" (loading)"));
+            ui.lods->setText(lods.join(", "));
         }
         ui.foliageInfo->setText(count == 0 ? tr("Select a tree, bush or grass model in the Content Browser and press Add model.")
                                            : tr("%1 instances in total.").arg(t->foliage.size()));

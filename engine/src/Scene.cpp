@@ -121,9 +121,13 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
                 out << "terrain_layer " << i << ' ' << std::quoted(l.materialPath.empty() ? std::string() : relative(l.materialPath))
                     << ' ' << l.tiling << '\n';
         }
-        for (const FoliageType& f : scene.terrain->foliageTypes)
+        for (const FoliageType& f : scene.terrain->foliageTypes) {
             out << "foliage_type " << std::quoted(f.modelPath.empty() ? std::string() : relative(f.modelPath)) << ' ' << f.density << ' ' << f.minScale << ' '
-                << f.maxScale << ' ' << f.cullDistance << ' ' << f.collision << ' ' << f.alignToSlope << ' ' << f.castShadows << '\n';
+                << f.maxScale << ' ' << f.cullDistance << ' ' << f.collision << ' ' << f.alignToSlope << ' ' << f.castShadows << ' '
+                << f.farDensity << '\n';
+            for (const FoliageType::Lod& lod : f.lods)
+                out << "foliage_lod " << std::quoted(relative(lod.modelPath)) << ' ' << lod.distance << '\n';
+        }
     }
     if (!scene.loading.image.empty())
         out << "loading_image " << std::quoted(relative(scene.loading.image)) << '\n';
@@ -258,7 +262,7 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                 ls >> std::quoted(name) >> std::quoted(path);
             else if (key == "lod")
                 ls >> std::quoted(path);
-            else if (key == "foliage_type")
+            else if (key == "foliage_type" || key == "foliage_lod")
                 ls >> std::quoted(path);
             if (path.empty())
                 continue;
@@ -387,6 +391,9 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                 bool shadows = true; // optional (newer files)
                 if (ls >> shadows)
                     ft.castShadows = shadows;
+                float farDensity = 1.0f;
+                if (ls >> farDensity)
+                    ft.farDensity = std::clamp(farDensity, 0.0f, 1.0f);
                 std::filesystem::path p = pathFromUtf8(path);
                 if (p.is_relative())
                     p = std::filesystem::absolute(file).parent_path() / p;
@@ -397,6 +404,21 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                         ft.model = std::move(model);
                 }
                 result.terrain->foliageTypes.push_back(std::move(ft));
+            }
+        } else if (key == "foliage_lod") {
+            // LOD level of the foliage type on the line above.
+            std::string path;
+            FoliageType::Lod lod;
+            ok = result.terrain && !result.terrain->foliageTypes.empty() && static_cast<bool>(ls >> std::quoted(path) >> lod.distance);
+            if (ok) {
+                std::filesystem::path p = pathFromUtf8(path);
+                if (p.is_relative())
+                    p = std::filesystem::absolute(file).parent_path() / p;
+                lod.modelPath = p.lexically_normal();
+                auto model = std::make_shared<Model>();
+                if (loadCached(*model, lod.modelPath, nullptr))
+                    lod.model = std::move(model);
+                result.terrain->foliageTypes.back().lods.push_back(std::move(lod));
             }
         } else if (key == "map_bounds") {
             ok = static_cast<bool>(ls >> result.map.min.x >> result.map.min.y >> result.map.size);

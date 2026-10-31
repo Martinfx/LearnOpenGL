@@ -34,6 +34,16 @@ struct FoliageType {
     bool collision = false;             // trees: on; grass and weeds: off
     bool alignToSlope = false;          // tilt with the ground (grass) or stay upright (trees)
     bool castShadows = true;            // grass: off (much cheaper shadow maps)
+    // Simpler models by distance (level lines `foliage_lod "file" distance` after the type).
+    struct Lod {
+        std::filesystem::path modelPath;
+        std::shared_ptr<const Model> model;
+        float distance = 30.0f;
+    };
+    std::vector<Lod> lods;
+    // Fraction left at the cull distance (thinning from 30 % of it on; 1 = no thinning).
+    // Low ground cover without collision also thins by the quality preset (detailDensityFar).
+    float farDensity = 1.0f;
 };
 
 struct FoliageInstance {

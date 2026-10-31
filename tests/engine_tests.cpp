@@ -989,6 +989,25 @@ void testTerrain()
         auto h = world.raycast({top.x, 30.0f, top.z}, {0, -1, 0}, 60.0f);
         check(h && h->point.y > 1.5f, "terrain: foliage with collision");
     }
+    // Foliage LOD levels and thinning survive save + load.
+    {
+        auto lodded = std::make_shared<engine::Terrain>(*t);
+        engine::FoliageType::Lod lod;
+        lod.modelPath = std::filesystem::absolute(ENGINE_TEST_ASSETS "/models/ramp.gltf").lexically_normal();
+        lod.distance = 12.5f;
+        lodded->foliageTypes[0].modelPath = lod.modelPath;
+        lodded->foliageTypes[0].lods = {lod};
+        lodded->foliageTypes[0].farDensity = 0.4f;
+        engine::Scene ls;
+        ls.terrain = lodded;
+        check(engine::saveScene(ls, "terrain_lod.level", &err), "terrain lod: save " + err);
+        engine::Scene back;
+        check(engine::loadScene(back, "terrain_lod.level", &err) && back.terrain && back.terrain->foliageTypes.size() == 1 &&
+                  back.terrain->foliageTypes[0].lods.size() == 1 && back.terrain->foliageTypes[0].lods[0].model &&
+                  back.terrain->foliageTypes[0].lods[0].distance == 12.5f &&
+                  std::abs(back.terrain->foliageTypes[0].farDensity - 0.4f) < 1e-4f,
+              "terrain: foliage LOD and far density round trip " + err);
+    }
 }
 
 void testSharedMeshes()

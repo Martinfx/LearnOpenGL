@@ -1347,31 +1347,64 @@ void Renderer::addFoliage(const Terrain& t, const RenderView& view)
         if (!type.model || type.model->parts.empty())
             continue;
         drawDistance_ = 1e30f;
-        keepAlive(*type.model);
+        keepAliveOnce(*type.model);
+        for (const FoliageType::Lod& lod : type.lods)
+            if (lod.model)
+                keepAliveOnce(*lod.model);
         if (shadowCascade_ >= 0 && !type.castShadows)
             continue;
-        if (shadowMinCaster_ > 0.0f) { // far shadow cascade: grass and small plants cast nothing there
-            const Aabb& lb = type.model->localBounds;
-            const float diagonal = glm::length(lb.max - lb.min);
-            if (diagonal > 0.0f && diagonal * type.maxScale < shadowMinCaster_)
-                continue;
-        }
-        const std::uint64_t key = reinterpret_cast<std::uintptr_t>(&type.model->parts[0]);
+        const Aabb& lb = type.model->localBounds;
+        const float diagonal = glm::length(lb.max - lb.min) * type.maxScale;
+        if (shadowMinCaster_ > 0.0f && diagonal > 0.0f && diagonal < shadowMinCaster_)
+            continue; // far shadow cascade: grass and small plants cast nothing there
+        // Low ground cover (as for detail models): shadows only up close, in the first cascade.
+        const bool detail = !type.collision && (lb.max.y - lb.min.y) * type.maxScale < 2.0f;
+        const float shadowReach = detail && shadowCascade_ >= 0 ? (shadowCascade_ == 0 ? quality_.detailShadowDistance : 0.0f) : 1e30f;
+        if (shadowReach <= 0.0f)
+            continue;
+        // LOD levels: the model, then each lod beyond its distance (lodScale applies).
+        const Model* levels[8] = {type.model.get()};
+        float from[8] = {0.0f};
+        int levelCount = 1;
+        for (const FoliageType::Lod& lod : type.lods)
+            if (lod.model && !lod.model->parts.empty() && levelCount < 8) {
+                levels[levelCount] = lod.model.get();
+                from[levelCount++] = lod.distance * quality_.lodScale;
+            }
+        const float farDensity = detail ? std::min(type.farDensity, quality_.detailDensityFar) : type.farDensity;
         for (const FoliageCell& cell : c.types[ti]) {
             const float cellDistance = distanceTo(view.cameraPosition, cell.bounds);
-            if ((type.cullDistance > 0.0f && cellDistance > type.cullDistance) || !visible(cell.bounds)) {
+            if ((type.cullDistance > 0.0f && cellDistance > type.cullDistance) || cellDistance > shadowReach ||
+                !visible(cell.bounds) || occluded(cell.bounds)) {
                 culled_ += static_cast<int>(cell.instances.size());
                 continue;
             }
-            auto [it, added] = batchIndex_.emplace(key, batches_.size());
-            if (added)
-                batches_.push_back({type.model.get(), {}, cellDistance});
-            InstanceBatch& batch = batches_[it->second];
-            batch.distance = std::min(batch.distance, cellDistance);
             for (std::uint32_t i : cell.instances) {
-                if (type.cullDistance > 0.0f &&
-                    glm::distance(view.cameraPosition, t.foliage[i].position) > type.cullDistance + 2.0f)
+                const float d = glm::distance(view.cameraPosition, t.foliage[i].position);
+                if ((type.cullDistance > 0.0f && d > type.cullDistance + 2.0f) || d > shadowReach)
                     continue;
+                if (farDensity < 1.0f && type.cullDistance > 0.0f) {
+                    // Thinning toward the cull distance, stable per instance.
+                    std::uint32_t r = i * 2654435761u;
+                    r ^= r >> 15;
+                    r *= 2246822519u;
+                    r ^= r >> 13;
+                    const float keep = 1.0f - (1.0f - farDensity) * glm::smoothstep(0.3f, 1.0f, d / type.cullDistance);
+                    if (static_cast<float>(r & 0xffffff) / 16777216.0f > keep)
+                        continue;
+                }
+                int level = 0;
+                while (level + 1 < levelCount && d > from[level + 1])
+                    ++level;
+                if (shadowCascade_ >= 0 && level == 0 && levelCount > 1)
+                    level = 1; // shadows: the simpler copy
+                const Model* draw = levels[level];
+                const std::uint64_t key = reinterpret_cast<std::uintptr_t>(&draw->parts[0]);
+                auto [it, added] = batchIndex_.emplace(key, batches_.size());
+                if (added)
+                    batches_.push_back({draw, {}, cellDistance});
+                InstanceBatch& batch = batches_[it->second];
+                batch.distance = std::min(batch.distance, cellDistance);
                 batch.transforms.push_back(c.transforms[i]);
             }
         }

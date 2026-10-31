@@ -5,6 +5,7 @@
 #include "EditorHistory.h"
 
 #include <QMainWindow>
+#include <filesystem>
 #include <functional>
 #include <utility>
 #include <vector>
@@ -71,6 +72,7 @@ private:
     void refreshTerrainPanel();
     void updateTerrainBrush();
     void addFoliageType(const QString& path);
+    void loadFoliageModel(const std::filesystem::path& file);
     engine::Terrain* editTerrain(); // copy on write, for undo
     void terrainStroke(glm::vec3 point, Qt::KeyboardModifiers modifiers, bool first);
     void terrainStrokeFinished();
