@@ -61,13 +61,15 @@ def group(name, parent=''):
 
 
 def model(name, path, x, y, z, parent, yaw=0.0, scale=1.0, lod=None, lod_dist=60, rx=0.0, rz=0.0, collision=True,
-          cull=0, shadows=True):
+          cull=0, shadows=True, more_lods=()):
     L.append(f'model "{uname(name)}" "{path}" {x:.2f} {y:.2f} {z:.2f}')
     L.append(f'  parent "{parent}"')
     if yaw or scale != 1.0 or rx or rz:
         L.append(f'  transform {rx:.1f} {yaw:.1f} {rz:.1f} {scale:g}')
     if lod:
         L.append(f'  lod "{lod}" {lod_dist}')
+        for f, d in more_lods:                  # further LOD levels, increasing distance
+            L.append(f'  lod "{f}" {d:g}')
     if not collision:
         L.append('  collision 0')
     if cull:
@@ -81,16 +83,16 @@ def gen(name, file, x, z, parent, yaw=0.0, lod_dist=60, has_lod=True, dy=0.0, **
           lod_dist=lod_dist, **kw)
 
 
-# far LODs thinned to a quarter of the blades (assets/models/zone/source/thin_glb.py)
-FAR_LOD = {'grass_patch_tall': '../models/zone/skrunda/veg/grass_patch_far.glb',
-           'weed_patch': '../models/zone/skrunda/veg/weed_patch_far.glb'}
+# LOD2 thinned to a quarter of the blades (assets/models/zone/source/thin_glb.py): file, distance
+FAR_LOD = {'grass_patch_tall': ('../models/zone/skrunda/veg/grass_patch_far.glb', 18),
+           'weed_patch': ('../models/zone/skrunda/veg/weed_patch_far.glb', 16)}
 
 
 def veg(name, file, x, z, parent, lod_dist=25, cull=60, collision=False, yaw=None, scale=1.0, dy=-0.03, shadows=False):
     """Vegetation: no collision; only trees and bushes cast shadows (ground cover is too small to matter)."""
     model(name, V + file + '.glb', x, h(x, z) + dy, z, parent, rng.uniform(0, 360) if yaw is None else yaw, scale=scale,
-          lod=FAR_LOD.get(file, V + file + '_lod1.glb'), lod_dist=lod_dist, collision=collision, cull=cull,
-          shadows=shadows)
+          lod=V + file + '_lod1.glb', lod_dist=lod_dist, collision=collision, cull=cull, shadows=shadows,
+          more_lods=[FAR_LOD[file]] if file in FAR_LOD else ())
 
 
 def prop(name, folder, x, y, z, parent, yaw=0.0, **kw):
@@ -433,9 +435,9 @@ while z < site.Z0 + site.SIZE - 1:
         if free(jx, jz, 0.6):
             bd = float(T.field('bdist', jx, jz))
             if bd < 5.0 and rng.random() < (0.3 if inside else 0.55):
-                veg('Weeds', 'weed_patch' if rng.random() < 0.6 else 'nettle_tall_a', jx, jz, 'Weeds', lod_dist=12, cull=45)
+                veg('Weeds', 'weed_patch' if rng.random() < 0.6 else 'nettle_tall_a', jx, jz, 'Weeds', lod_dist=8, cull=45)
             elif rng.random() < (0.88 if inside else 0.55):
-                veg('Tall grass', 'grass_patch_tall', jx, jz, 'Grass', lod_dist=14, cull=50,
+                veg('Tall grass', 'grass_patch_tall', jx, jz, 'Grass', lod_dist=8, cull=50,
                     scale=rng.uniform(0.85, 1.15))
             elif inside and rng.random() < 0.5:
                 veg('Grass tuft', rng.choice(['grass_tall_a', 'grass_tall_b']), jx, jz, 'Grass', lod_dist=12, cull=40,

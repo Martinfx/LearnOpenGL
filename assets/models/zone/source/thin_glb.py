@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Far-distance LOD for vegetation clumps (CC0): keeps a random fraction of the connected pieces
-(blades, leaves) of every primitive and drops the rest. Materials, textures and vertices are kept,
+(blades, leaves) of every primitive and drops the rest (--keep-big: the largest pieces such as a trunk always stay). Materials, textures and vertices are kept,
 only the index lists shrink, so the look stays the same, just sparser.
 
-    python3 -I thin_glb.py in.glb out.glb keep_fraction [seed]
+    python3 -I thin_glb.py in.glb out.glb keep_fraction [seed] [--keep-big]
 """
 import json
 import struct
@@ -55,7 +55,7 @@ def components(tri, pos):
     return np.array([find(weld[t[0]]) for t in tri])
 
 
-def thin(src, dst, keep, seed=1):
+def thin(src, dst, keep, seed=1, keep_big=False):
     j, binb = read_glb(src)
     rng = np.random.default_rng(seed)
     before = after = 0
@@ -66,6 +66,10 @@ def thin(src, dst, keep, seed=1):
             comp = components(idx, pos)
             ids = np.unique(comp)
             kept = set(rng.choice(ids, max(1, int(round(len(ids) * keep))), replace=False).tolist())
+            sizes = {c: n for c, n in zip(*np.unique(comp, return_counts=True))}
+            big = max(sizes.values())
+            if keep_big:
+                kept |= {c for c, n in sizes.items() if n >= 0.25 * big and n > 8}     # trunk and big branches stay
             new = idx[np.array([c in kept for c in comp])].reshape(-1)
             before += len(idx)
             after += len(new) // 3
@@ -90,4 +94,5 @@ def thin(src, dst, keep, seed=1):
 
 
 if __name__ == '__main__':
-    thin(sys.argv[1], sys.argv[2], float(sys.argv[3]), int(sys.argv[4]) if len(sys.argv) > 4 else 1)
+    a = [x for x in sys.argv[1:] if x != '--keep-big']
+    thin(a[0], a[1], float(a[2]), int(a[3]) if len(a) > 3 else 1, '--keep-big' in sys.argv)
