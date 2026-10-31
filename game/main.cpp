@@ -436,6 +436,13 @@ int main(int argc, char** argv)
         if (std::sscanf(pos, "%f %f %f", &p.x, &p.y, &p.z) == 3)
             player.spawn(physics, p);
     }
+    if (const char* slot = std::getenv("FPS_ENGINE_SLOT")) { // weapon slot 1..9 to start with (test hook)
+        const long n = std::strtol(slot, nullptr, 10);
+        if (n >= 1 && static_cast<std::size_t>(n) <= weapons.size()) {
+            current = next = static_cast<std::size_t>(n - 1);
+            weapons[current].drawn();
+        }
+    }
     if (const char* look = std::getenv("FPS_ENGINE_LOOK")) // "yaw pitch" in degrees
         std::sscanf(look, "%f %f", &camera.yawDegrees, &camera.pitchDegrees);
 
