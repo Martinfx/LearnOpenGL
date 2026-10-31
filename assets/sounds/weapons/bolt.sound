@@ -1,8 +1,8 @@
 # Sound: variations (one is picked at random per play) and playback settings
 file "bolt.wav"
-volume 0.7
+volume 0.75
 pitch 0.97 1.03
-distance 1 20
+distance 1 25
 rolloff 1
 loop 0
 stream 0

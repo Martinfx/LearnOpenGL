@@ -3,6 +3,8 @@ file "rifle_shot_1.wav"
 file "rifle_shot_2.wav"
 file "rifle_shot_3.wav"
 file "rifle_shot_4.wav"
+file "rifle_shot_5.wav"
+file "rifle_shot_6.wav"
 volume 1
 pitch 0.97 1.03
 distance 4 300

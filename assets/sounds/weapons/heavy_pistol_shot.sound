@@ -1,6 +1,8 @@
 # Sound: variations (one is picked at random per play) and playback settings
 file "heavy_pistol_shot_1.wav"
 file "heavy_pistol_shot_2.wav"
+file "heavy_pistol_shot_3.wav"
+file "heavy_pistol_shot_4.wav"
 volume 1
 pitch 0.97 1.03
 distance 4 250

@@ -4,6 +4,9 @@ Real recordings, downloaded and cut by [`source/build_sounds.py`](source/build_s
 One-shot effects are **mono** 16-bit 48 kHz WAV, because OpenAL only spatialises mono buffers. Ambience loops are
 stereo Ogg Vorbis (`stream 1`, `spatial 0`) with a crossfaded seamless loop point.
 
+Levels: gunshots are soft-clipped to a dense body (about -18 LUFS over the first 0.4 s, true peak <= 0 dBTP); ambience
+beds sit 10 to 20 dB below that (wind about -30 LUFS, drones about -38 LUFS with rumble under 70 Hz removed).
+
 `.sound` files group the variations of one effect with its playback settings (volume, random pitch, 3D distance range,
 loop, stream, mixer group); edit them in the editor's sound editor.
 
@@ -15,11 +18,7 @@ recordings with placeholders.
 
 | Our files | Source | Author | License |
 |---|---|---|---|
-| `weapons/rifle_shot_*` (AK-47), `rifle_shot_far_*`, `pistol_shot_*` (Bersa .380, Walther PPQ 9 mm), `smg_shot_*` (Carl Gustav M45 9 mm), `heavy_pistol_shot_*` (M1911 .45), `sniper_shot_*` (Mosin-Nagant) | [The Free Firearm Sound Library](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney ([freefirearmsfx.com](http://freefirearmsfx.com), posted by bart) | CC0 |
-| `weapons/reload.wav` (assault rifle), `reload_smg.wav` | [Gun reload sounds](https://opengameart.org/content/gun-reload-sounds) | SpringySpringo | CC0 |
-| `weapons/reload_pistol.wav` | [Handgun Reload Sound Effect](https://opengameart.org/content/handgun-reload-sound-effect) | zer0_sol | CC0 |
-| `weapons/mag_in.wav`, `mag_out.wav` | [Gun Reload Sound Effects](https://opengameart.org/content/gun-reload-sound-effects) | BMacZero | CC0 |
-| `weapons/draw.wav`, `dry_fire.wav`, `bolt.wav` | [equipment clicks III](https://opengameart.org/content/equipment-clicks-iii) | LFA | CC0 |
+| `weapons/rifle_shot_*` (AK-47), `smg_shot_*` (Carl Gustav M45 9 mm), `pistol_shot_*` (Bersa .380, Walther PPQ 9 mm), `heavy_pistol_shot_*` (M1911 .45), `sniper_shot_*` (Mosin-Nagant): raw 192 kHz *behind the shooter* master tracks; `reload*`, `mag_in/out`, `bolt*`, `dry_fire*`, `draw`: real handling recordings of the same guns (mag out/in, slide, bolt) assembled into sequences; `rifle_shot_far_*`: prepared mid-distance track | [The Free Firearm Sound Effects Library](https://archive.org/details/the-free-firearm-sound-effects-library-by-still-north-media) ([OpenGameArt](https://opengameart.org/content/the-free-firearm-sound-library)) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney (Still North Media) | CC0 |
 | `impacts/impact_concrete_*`, `impact_metal_4..5` | [75 CC0 breaking / falling / hit sfx](https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx) | rubberduck | CC0 |
 | `impacts/impact_concrete_2`, `impact_flesh_*` | [Impact](https://opengameart.org/content/impact) | qubodup | CC0 |
 | `impacts/impact_metal_1..3` | [Metal Impact Sounds](https://opengameart.org/content/metal-impact-sounds) | BMacZero | CC0 |

@@ -65,11 +65,12 @@ def norm(x,db=-1.0):
 def write(rel,x):
     p=os.path.join(OUT,rel); os.makedirs(os.path.dirname(p),exist_ok=True)
     sf.write(p,np.clip(x,-1,1),SR,subtype='PCM_16'); print('wrote',rel,round(len(x)/SR,2),'s')
-def write_loop(rel,x,length,xf=3.0,start=5.0,db=-3.0):
+def write_loop(rel,x,length,xf=3.0,start=5.0,db=-3.0,lufs=-30.0):
     total=len(x)/SR; start=min(start,max(0,total*0.05)); length=min(length,total-start-xf-0.05)
     a=int(start*SR); L=int(length*SR); n=int(xf*SR); y=x[a:a+L+n].copy()
     w=np.linspace(0,1,n)[:,None]; head=y[:n]*w+y[L:L+n]*(1-w)   # tail fades into head -> seamless
     y=np.concatenate([head,y[n:L]]); y=norm(y,db)
+    rms=np.sqrt((y**2).mean()); y=y*min(1.0,10**((lufs+3)/20)/max(rms,1e-9))  # ~LUFS target for a broadband bed
     p=os.path.join(OUT,rel); tmp=p+'.tmp.wav'; sf.write(tmp,y,SR,subtype='PCM_16')
     subprocess.run(['ffmpeg','-v','error','-y','-i',tmp,'-c:a','libvorbis','-q:a','4',p],check=True); os.remove(tmp)
     print('wrote',rel,round(length,1),'s loop')
@@ -85,41 +86,71 @@ def shots(src,name,count,dur,hp=40,picks=None,db=-0.5,thr=0.5,gap=1.5):
     for i,t in enumerate(ts,1):
         write(f'weapons/{name}_{i}.wav',norm(cut(x,t,dur,fade=0.6),db)); out.append(f'{name}_{i}.wav')
     return out
-# ---------------- weapons (The Free Firearm Sound Library, CC0)
-FL='Prepared SFX Library/'
-ak=shots(find('firearms','AK-47/C_28P.wav'),'rifle_shot',4,1.8)
+# ---------------- weapons: raw 192 kHz master tracks of The Free Firearm Sound Library (CC0), archive.org
+RAWZIP='https://archive.org/download/the-free-firearm-sound-effects-library-by-still-north-media/Raw%20Master%20Tracks.zip'
+RAW={'AK-47':'C_39 C_42 C_7 C_10 C_11 C_12 C_13','Bersa':'F_44 F_45 F_23','Walther PPQ':'X_38 X_40 X_4 X_5 X_21 X_18',
+     'Carl Gustav M45:Swedish K':'G_26 G_32 G_8 G_9 G_10 G_3','1911':'A_35 A_36','Mosin Nagant':'M_20 M_22 M_14 M_10'}
+def raw(i):
+    d=os.path.join(CACHE,'raw'); os.makedirs(d,exist_ok=True); p=os.path.join(d,i+'.wav')
+    if not os.path.exists(p):
+        from remotezip import RemoteZip
+        folder=[k for k,v in RAW.items() if i in v.split()][0]
+        for attempt in range(8):
+            try:
+                with RemoteZip(RAWZIP,headers={'User-Agent':'Mozilla/5.0'}) as z: open(p,'wb').write(z.read(f'Master Tracks/{folder}/{i}.wav')); break
+            except Exception: import time; time.sleep(min(16,2**attempt))
+    return p
+# first-person shot chain: mid of the behind-the-shooter stereo pair, weight + body, transient kept, limited
+FP='highpass=f=35,equalizer=f=110:t=q:w=1:g=4,equalizer=f=3500:t=q:w=1.5:g=2,acompressor=threshold=-26dB:ratio=4:attack=6:release=180:makeup=6,alimiter=limit=0.89:attack=1:release=60'
+def fp_shots(ids,name,dur,start=1,per=5,drive=5.0):
+    out=[]; n=start
+    for i in ids:
+        x=load(raw(i),1,FP)
+        for t in onsets(x,0.5,1.5)[:per]:
+            y=norm(cut(x,t,dur,pre=0.002,fade=0.75),0.0); y=np.tanh(drive*y)/np.tanh(drive)  # soft-clip: dense, loud body like a real shot at the ear
+            write(f'weapons/{name}_{n}.wav',norm(y,-2.0)); out.append(f'{name}_{n}.wav'); n+=1
+    return out
+ak=fp_shots(['C_39','C_42'],'rifle_shot',1.3,per=3,drive=6)
+pist=fp_shots(['F_44','F_45','X_38'],'pistol_shot',0.95,per=2,drive=5)
+smg=fp_shots(['G_26','G_32'],'smg_shot',0.75,per=3,drive=5)
+heavy=fp_shots(['A_35','A_36'],'heavy_pistol_shot',1.1,per=2,drive=6)
+sniper=fp_shots(['M_20','M_22'],'sniper_shot',2.0,per=2,drive=6)
 akfar=shots(find('firearms','AK-47/C_31P.wav'),'rifle_shot_far',2,2.2,hp=80,db=-3)
-pist=shots(find('firearms','Bersa/F_47P.wav'),'pistol_shot',2,1.4)
-pist+= [f.replace('pistol_shot_','pistol_shot_') for f in []]
-x=load(find('firearms','Walther PPQ/X_39P.wav'),1,'highpass=f=40'); ts=onsets(x,0.5,1.5)
-for i,t in enumerate(ts[:2],3): write(f'weapons/pistol_shot_{i}.wav',norm(cut(x,t,1.4,fade=0.6),-0.5)); pist.append(f'pistol_shot_{i}.wav')
-smg=shots(find('firearms','Carl Gustav M45/G_31P.wav'),'smg_shot',3,1.1)
-heavy=shots(find('firearms','1911/A_42P.wav'),'heavy_pistol_shot',2,1.6)
-sniper=shots(find('firearms','Mosin Nagant/M_21P.wav'),'sniper_shot',4,2.6)
 sound('weapons/rifle_shot.sound',ak,1,(0.97,1.03),(4,300),maxi=8)
 sound('weapons/rifle_shot_far.sound',akfar,0.8,(0.95,1.05),(60,900),maxi=6)
 sound('weapons/pistol_shot.sound',pist,0.9,(0.97,1.03),(3,200))
 sound('weapons/smg_shot.sound',smg,0.95,(0.97,1.03),(3,220),maxi=10)
 sound('weapons/heavy_pistol_shot.sound',heavy,1,(0.97,1.03),(4,250))
 sound('weapons/sniper_shot.sound',sniper,1,(0.98,1.02),(6,600))
-# reloads / handling (CC0)
-write('weapons/reload.wav',norm(trim(load(find('arreload','assaultriflereload1_0.wav'))),-2))
-write('weapons/reload_pistol.wav',norm(trim(load(find('hgreload','reload.wav'))),-2))
-write('weapons/reload_smg.wav',norm(trim(load(find('gunreload','gunreload1.wav'))),-2))
-write('weapons/mag_in.wav',norm(trim(load(find('clipload1','clipload1.wav'))),-3))
-write('weapons/mag_out.wav',norm(trim(load(find('clipload2','clipload2.wav'))),-3))
-cl=load(find('clicks','equipment_clicks3.wav')); ts=onsets(cl,0.3,0.4)
-write('weapons/dry_fire.wav',norm(cut(cl,ts[0],0.18,fade=0.5),-4))
-write('weapons/draw.wav',norm(cut(cl,ts[3],0.55,fade=0.4),-3))
-write('weapons/bolt.wav',norm(cut(cl,ts[5],0.5,fade=0.4),-3))
-sound('weapons/reload.sound',['reload.wav'],0.8,(1,1),(1,30),maxi=2)
-sound('weapons/reload_pistol.sound',['reload_pistol.wav'],0.8,(1,1),(1,30),maxi=2)
-sound('weapons/reload_smg.sound',['reload_smg.wav'],0.8,(1,1),(1,30),maxi=2)
-sound('weapons/mag_in.sound',['mag_in.wav'],0.7,(0.95,1.05),(1,20),maxi=2)
-sound('weapons/mag_out.sound',['mag_out.wav'],0.7,(0.95,1.05),(1,20),maxi=2)
-sound('weapons/bolt.sound',['bolt.wav'],0.7,(0.97,1.03),(1,20),maxi=2)
-sound('weapons/dry_fire.sound',['dry_fire.wav'],0.6,(0.95,1.05),(1,15),maxi=2)
-sound('weapons/draw.sound',['draw.wav'],0.6,(0.95,1.05),(1,15),maxi=2)
+# handling: real recordings of the same guns, cut and assembled into reload sequences
+HD='highpass=f=60,acompressor=threshold=-24dB:ratio=3:attack=3:release=120:makeup=4'
+def part(i,t=None,dur=0.6,k=0):
+    x=load(raw(i),1,HD); ts=onsets(x,0.3,0.25); t=ts[k] if t is None else t
+    return norm(cut(x,t,dur,pre=0.01,fade=0.5),-3)
+def seq(parts):  # [(sound, start_time_s)]
+    n=max(int(t*SR)+len(x) for x,t in parts); y=np.zeros(n,np.float32)
+    for x,t in parts: a=int(t*SR); y[a:a+len(x)]+=x
+    return norm(y,-2)
+ak_out,ak_in,ak_pull,ak_rel=part('C_11',dur=0.5),part('C_10',dur=0.5),part('C_12',dur=0.6),part('C_13',dur=0.5)
+write('weapons/mag_out.wav',ak_out); write('weapons/mag_in.wav',ak_in); write('weapons/bolt.wav',seq([(ak_pull,0),(ak_rel,0.45)]))
+write('weapons/reload.wav',seq([(ak_out,0.1),(ak_in,1.0)]))
+write('weapons/reload_empty.wav',seq([(ak_out,0.1),(ak_in,1.0),(ak_pull,1.7),(ak_rel,2.15)]))
+p_out,p_in=part('X_5',dur=0.5),part('X_4',dur=0.5)
+p_rack=part('X_21',dur=0.5); p_rel=part('X_21',dur=0.5,k=1)
+write('weapons/reload_pistol.wav',seq([(p_out,0.05),(p_in,0.75)]))
+write('weapons/reload_pistol_empty.wav',seq([(p_out,0.05),(p_in,0.75),(p_rack,1.35),(p_rel,1.6)]))
+s_out,s_in,s_bolt=part('G_9',dur=0.5),part('G_8',dur=0.5),part('G_10',dur=1.2)
+write('weapons/reload_smg.wav',seq([(s_out,0.05),(s_in,0.9)]))
+write('weapons/reload_smg_empty.wav',seq([(s_out,0.05),(s_in,0.9),(s_bolt,1.5)]))
+write('weapons/bolt_sniper.wav',norm(cut(load(raw('M_14'),1,HD),onsets(load(raw('M_14'),1,HD),0.3,0.25)[0],1.4,pre=0.01,fade=0.3),-3))
+write('weapons/dry_fire.wav',part('C_7',dur=0.25))
+write('weapons/dry_fire_pistol.wav',part('X_18',dur=0.25))
+write('weapons/draw.wav',seq([(part('G_3',dur=0.3),0.0),(part('C_13',dur=0.4)*0.5,0.12)]))
+for n,f,v in [('reload',['reload.wav'],0.85),('reload_empty',['reload_empty.wav'],0.85),('reload_pistol',['reload_pistol.wav'],0.85),
+              ('reload_pistol_empty',['reload_pistol_empty.wav'],0.85),('reload_smg',['reload_smg.wav'],0.85),('reload_smg_empty',['reload_smg_empty.wav'],0.85),
+              ('mag_in',['mag_in.wav'],0.7),('mag_out',['mag_out.wav'],0.7),('bolt',['bolt.wav'],0.75),('bolt_sniper',['bolt_sniper.wav'],0.75),
+              ('dry_fire',['dry_fire.wav'],0.6),('dry_fire_pistol',['dry_fire_pistol.wav'],0.6),('draw',['draw.wav'],0.6)]:
+    sound(f'weapons/{n}.sound',f,v,(0.97,1.03),(1,25),maxi=2)
 # ---------------- bullet impacts (CC0)
 def imp(name,srcs,dur=0.45,db=-2,af='highpass=f=120'):
     out=[]
@@ -168,13 +199,13 @@ for i,n in enumerate(('die1.wav','die2.wav'),1):
     write(f'player/death_{i}.wav',norm(trim(load(find('baradari',n))),-2)); death.append(f'death_{i}.wav')
 sound('player/death.sound',death,0.9,(0.97,1.03),(1,40),maxi=2)
 # ---------------- ambience (stereo loops)
-write_loop('ambient/wind_loop.ogg',load(find('windy','windy_ambiance.ogg'),2),60,start=10)
-write_loop('ambient/wind_storm_loop.ogg',load(find('storm','storm_arwen_2022.flac'),2),60,start=20)
-write_loop('ambient/zone_drone_loop.ogg',load(find('drone60','drone60.wav'),2,'lowpass=f=2500'),60)
-write_loop('ambient/zone_drone_2_loop.ogg',load(find('drone70','drone70.wav'),2,'lowpass=f=2500'),60)
-write_loop('ambient/zone_drone_3_loop.ogg',load(find('drone53','drone53.wav'),2,'lowpass=f=3000'),60)
-write_loop('ambient/birds_loop.ogg',load(find('birds','park_ambience_birds.wav'),2),60,start=30,db=-6)
-write_loop('ambient/rain_loop.ogg',load(find('rain','amb_rain_loop_1.wav'),2),60,start=5)
+write_loop('ambient/wind_loop.ogg',load(find('windy','windy_ambiance.ogg'),2,'highpass=f=80'),60,start=10,lufs=-32)
+write_loop('ambient/wind_storm_loop.ogg',load(find('storm','storm_arwen_2022.flac'),2,'highpass=f=60'),60,start=20,lufs=-28)
+write_loop('ambient/zone_drone_loop.ogg',load(find('drone60','drone60.wav'),2,'highpass=f=70,lowpass=f=2500'),60,lufs=-38)
+write_loop('ambient/zone_drone_2_loop.ogg',load(find('drone70','drone70.wav'),2,'highpass=f=70,lowpass=f=2500'),60,lufs=-38)
+write_loop('ambient/zone_drone_3_loop.ogg',load(find('drone53','drone53.wav'),2,'highpass=f=70,lowpass=f=3000'),60,lufs=-38)
+write_loop('ambient/birds_loop.ogg',load(find('birds','park_ambience_birds.wav'),2,'highpass=f=150'),60,start=30,lufs=-37)
+write_loop('ambient/rain_loop.ogg',load(find('rain','amb_rain_loop_1.wav'),2),60,start=5,lufs=-33)
 def amb(name,vol):
     sound(f'ambient/{name}.sound',[f'{name}_loop.ogg'],vol,(1,1),(1,60),loop=1,stream=1,spatial=0,group='ambient',maxi=2)
-amb('wind',0.45); amb('wind_storm',0.5); amb('zone_drone',0.35); amb('zone_drone_2',0.35); amb('zone_drone_3',0.35); amb('birds',0.3); amb('rain',0.4)
+amb('wind',1.0); amb('wind_storm',1.0); amb('zone_drone',0.8); amb('zone_drone_2',0.8); amb('zone_drone_3',0.8); amb('birds',0.8); amb('rain',0.9)

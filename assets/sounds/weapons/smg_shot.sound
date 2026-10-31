@@ -2,6 +2,9 @@
 file "smg_shot_1.wav"
 file "smg_shot_2.wav"
 file "smg_shot_3.wav"
+file "smg_shot_4.wav"
+file "smg_shot_5.wav"
+file "smg_shot_6.wav"
 volume 0.95
 pitch 0.97 1.03
 distance 3 220

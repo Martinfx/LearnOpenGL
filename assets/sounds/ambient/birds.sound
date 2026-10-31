@@ -1,6 +1,6 @@
 # Sound: variations (one is picked at random per play) and playback settings
 file "birds_loop.ogg"
-volume 0.3
+volume 0.8
 pitch 1 1
 distance 1 60
 rolloff 1
