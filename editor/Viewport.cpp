@@ -8,6 +8,7 @@
 #include <QDragEnterEvent>
 #include <QGuiApplication>
 #include <QDropEvent>
+#include <QDir>
 #include <QMimeData>
 #include <QUrl>
 
@@ -49,6 +50,14 @@ Viewport::Viewport(engine::Scene* scene, QWidget* parent)
     camera_.fovDegrees = 70.0f;
     camera_.sensitivity = 0.2f;
     connect(&timer_, &QTimer::timeout, this, &Viewport::tick);
+    // Repaint ~30 times a second while the level has something animated (effects, rain).
+    connect(&particleTimer_, &QTimer::timeout, this, [this] {
+        if (isVisible() && (!liveEffects_.empty() || scene_->environment.rain > 0.0f ||
+                            std::any_of(scene_->entities.begin(), scene_->entities.end(), [](const engine::Entity& e) { return e.type == "particle"; })))
+            update();
+    });
+    particleTimer_.start(33);
+    particleClock_.start();
 
     // Animated characters keep moving in the editor so clips can be previewed.
     animClock_.start();
@@ -149,6 +158,52 @@ void Viewport::setShowReference(bool on)
     update();
 }
 
+void Viewport::syncParticles(float dt)
+{
+    // Match the running effects to the level's "particle" entities (added, moved, removed, effect changed).
+    std::vector<LiveEffect> next;
+    for (const engine::Entity& e : scene_->entities) {
+        if (e.type != "particle")
+            continue;
+        const auto it = e.properties.find("effect");
+        if (it == e.properties.end() || it->second.empty())
+            continue;
+        const std::filesystem::path file =
+            std::filesystem::path(QDir(assetRoot()).absoluteFilePath(QString::fromStdString(it->second)).toStdU16String()).lexically_normal();
+        const glm::mat3 yaw(glm::rotate(glm::mat4(1.0f), glm::radians(-e.yawDegrees), glm::vec3(0.0f, 1.0f, 0.0f)));
+        auto live = std::find_if(liveEffects_.begin(), liveEffects_.end(),
+                                 [&](const LiveEffect& l) { return l.entity == e.name && l.file == file; });
+        // A finished one-shot effect (an impact) starts again, so it can be seen while placing it.
+        if (live != liveEffects_.end() && particles_.alive(live->handle)) {
+            particles_.setTransform(live->handle, e.position, yaw);
+            next.push_back(*live);
+            live->handle = 0; // kept
+        } else {
+            auto fx = engine::loadParticleEffect(file);
+            next.push_back({e.name, file, fx ? particles_.spawn(fx, e.position, yaw) : 0});
+        }
+    }
+    for (const LiveEffect& l : liveEffects_)
+        if (l.handle)
+            particles_.kill(l.handle);
+    liveEffects_ = std::move(next);
+    // Rain around the camera, as much as Environment > Weather > Rain says.
+    if (scene_->environment.rain > 0.0f) {
+        if (!particles_.alive(rain_)) {
+            const std::filesystem::path file = scene_->environment.rainEffect.empty()
+                                                   ? std::filesystem::path(assetPath("particles/rain.particle").toStdU16String())
+                                                   : scene_->environment.rainEffect;
+            rain_ = particles_.spawn(engine::loadParticleEffect(file), camera_.position);
+        }
+        particles_.setTransform(rain_, camera_.position + glm::vec3(0.0f, 9.0f, 0.0f));
+        particles_.setRateScale(rain_, scene_->environment.rain);
+    } else if (rain_) {
+        particles_.kill(rain_);
+        rain_ = 0;
+    }
+    particles_.update(dt);
+}
+
 void Viewport::paintGL()
 {
     if (!ready_)
@@ -156,6 +211,12 @@ void Viewport::paintGL()
     const qreal dpr = devicePixelRatioF();
     while (context()->functions()->glGetError() != GL_NO_ERROR) {
     } // errors left by Qt's own drawing are not ours
+    {
+        const qint64 now = particleClock_.elapsed();
+        const float dt = std::clamp(static_cast<float>(now - particleLast_) / 1000.0f, 0.0f, 0.1f);
+        particleLast_ = now;
+        syncParticles(dt);
+    }
     const std::vector<Pane> list = panes();
     for (const Pane& pane : list) {
         paneMode_ = pane.mode;
@@ -197,6 +258,8 @@ void Viewport::paintGL()
             }
             view.worldBoxes.push_back({brushPoint_ + glm::vec3(0.0f, s, 0.0f), glm::vec3(s * 1.5f), brushColor_, true});
         }
+        if (pane.mode == ViewMode::Perspective && shading_ != engine::Shading::Wireframe)
+            particles_.appendSprites(view.cameraPosition, glm::mat3(glm::inverse(view.view)), view.sprites);
         renderer_.render(*scene_, view);
     }
     // Report driver errors instead of silently showing a broken view.

@@ -176,6 +176,10 @@ void drawIcon(QPainter& p, const QString& n, QColor c)
         line(8, 10, 8, 14.5);
         line(1.5, 14.5, 3, 12);
         line(14.5, 14.5, 13, 12);
+    } else if (n == "particles") {
+        for (const QPointF c : {QPointF(4, 11), QPointF(8, 6), QPointF(12, 10), QPointF(6, 3), QPointF(11, 3.5)})
+            p.drawEllipse(c, 1.6, 1.6);
+        p.drawEllipse(QPointF(8, 12.5), 2.4, 2.4);
     } else if (n == "sound") {
         const QPointF speaker[] = {{2, 6}, {5, 6}, {9, 2.5}, {9, 13.5}, {5, 10}, {2, 10}};
         p.drawPolygon(speaker, 6);

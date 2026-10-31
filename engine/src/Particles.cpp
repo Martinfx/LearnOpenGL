@@ -428,6 +428,8 @@ void ParticleSystem::update(float dt)
     auto simulate = [dt](Impl::Instance& inst) {
         inst.time += dt;
         const ParticleEffect& fx = *inst.effect;
+        if (inst.emitters.size() != fx.emitters.size())
+            inst.emitters.resize(fx.emitters.size()); // the editor added or removed an emitter
         for (std::size_t k = 0; k < fx.emitters.size() && k < inst.emitters.size(); ++k) {
             const ParticleEmitter& e = fx.emitters[k];
             EmitterState& st = inst.emitters[k];
@@ -492,7 +494,7 @@ void ParticleSystem::update(float dt)
     // Finished effects: stopped (or out of emission time) and no particles left.
     std::erase_if(list, [](const Impl::Instance& inst) {
         const ParticleEffect& fx = *inst.effect;
-        for (std::size_t k = 0; k < fx.emitters.size(); ++k) {
+        for (std::size_t k = 0; k < fx.emitters.size() && k < inst.emitters.size(); ++k) {
             const ParticleEmitter& e = fx.emitters[k];
             if (!inst.emitters[k].particles.empty())
                 return false;
@@ -510,7 +512,7 @@ void ParticleSystem::appendSprites(glm::vec3 eye, const glm::mat3& camera, std::
     const glm::vec3 up = glm::normalize(camera[1]);
     for (const Impl::Instance& inst : impl_->instances) {
         const ParticleEffect& fx = *inst.effect;
-        for (std::size_t k = 0; k < fx.emitters.size(); ++k) {
+        for (std::size_t k = 0; k < fx.emitters.size() && k < inst.emitters.size(); ++k) {
             const ParticleEmitter& e = fx.emitters[k];
             const EmitterState& st = inst.emitters[k];
             if (st.particles.empty())

@@ -1,5 +1,6 @@
 #pragma once
 #include <engine/Camera.h>
+#include <engine/Particles.h>
 #include <engine/Renderer.h>
 #include <engine/Scene.h>
 
@@ -92,6 +93,20 @@ public:
     glm::vec3 pointAt(QPointF pos, int* object = nullptr) const;
 
 private:
+    // Particle effects of the level ("particle" entities, rain) play live in the view.
+    void syncParticles(float dt);
+    engine::ParticleSystem particles_;
+    struct LiveEffect {
+        std::string entity;
+        std::filesystem::path file;
+        engine::ParticleSystem::Handle handle = 0;
+    };
+    std::vector<LiveEffect> liveEffects_;
+    engine::ParticleSystem::Handle rain_ = 0;
+    QTimer particleTimer_;
+    QElapsedTimer particleClock_;
+    qint64 particleLast_ = 0;
+
     struct Handle {
         engine::Aabb pick;   // generous pick volume
         int axis;            // 0 x, 1 y, 2 z, 3 free / uniform

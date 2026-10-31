@@ -56,6 +56,7 @@ public:
     ~MainWindow() override;
 
     bool openFile(const QString& path);   // loads in the background
+    void openAssetFile(const QString& path); // in its editor (sound, particle effect, material...)
 signals:
     void levelOpened();
     void loadingProgress(int percent, const QString& step); // while a level loads
@@ -126,6 +127,8 @@ private:
     TextureEditor* openTexture(const QString& image);
     SoundEditor* openSoundEditor(const QString& path);
     void openSurfacesEditor();
+    void openParticleEditor(const QString& path);
+    void newParticleEffect(const QString& folder);
     void newSound(const QString& folder);
     void browseBoxMaterial();
     void refreshMaterialSlots();
@@ -235,7 +238,9 @@ private:
     QWidget* scriptRow_ = nullptr;
     QTableWidget* scriptParams_ = nullptr;
     QWidget* characterRow_ = nullptr;
-    SoundPicker* entitySound_ = nullptr;      // entity type "sound": what plays
+    SoundPicker* entitySound_ = nullptr;
+    QFormLayout* effectForm_ = nullptr;          // entity type "particle"
+    QLineEdit* entityEffect_ = nullptr;          // its .particle (relative to the assets)      // entity type "sound": what plays
     QCheckBox* soundZoneCheck_ = nullptr;     // ambient zone filling the entity box
     QDoubleSpinBox* soundFadeSpin_ = nullptr; // zone fade-out distance
     QDoubleSpinBox* soundVolumeSpin_ = nullptr;

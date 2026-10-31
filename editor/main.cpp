@@ -44,9 +44,15 @@ int main(int argc, char** argv)
     window.show();
     splash.raise();
     QString level;
-    if (argc > 1)
-        level = QString::fromLocal8Bit(argv[1]);
-    else if (QFileInfo::exists(assetPath("levels/test.level")))
+    QStringList assetsToOpen; // other files on the command line open in their editors (e.g. a .particle)
+    for (int i = 1; i < argc; ++i) {
+        const QString arg = QString::fromLocal8Bit(argv[i]);
+        if (arg.endsWith(".level") && level.isEmpty())
+            level = arg;
+        else
+            assetsToOpen << QFileInfo(arg).absoluteFilePath();
+    }
+    if (level.isEmpty() && QFileInfo::exists(assetPath("levels/test.level")))
         level = assetPath("levels/test.level");
     if (level.isEmpty()) {
         splash.finish(&window);
@@ -64,5 +70,10 @@ int main(int argc, char** argv)
                          Qt::SingleShotConnection);
         window.openFile(level);
     }
+    if (!assetsToOpen.isEmpty())
+        QObject::connect(&window, &MainWindow::loadingFinished, &window, [&window, assetsToOpen] {
+            for (const QString& f : assetsToOpen)
+                window.openAssetFile(f);
+        }, Qt::SingleShotConnection);
     return app.exec();
 }

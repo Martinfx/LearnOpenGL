@@ -18,6 +18,7 @@
 #include "ShaderEditor.h"
 #include "SoundEditor.h"
 #include "SurfacesEditor.h"
+#include "ParticleEditor.h"
 #include "EditorUi.h"
 #include "ViewportPanel.h"
 
@@ -178,6 +179,7 @@ void MainWindow::buildMenus()
     QAction* enemy = edit->addAction(tr("Add &enemy"), QKeySequence(Qt::CTRL | Qt::Key_E), this, [this] { addEntity("enemy"); });
     edit->addAction(tr("Add empty en&tity"), this, [this] { addEntity("empty"); });
     edit->addAction(tr("Add &sound source"), this, [this] { addEntity("sound"); });
+    edit->addAction(tr("Add &particle effect"), this, [this] { addEntity("particle"); });
     QAction* dup = edit->addAction(tr("&Duplicate"), QKeySequence(Qt::CTRL | Qt::Key_D), this, &MainWindow::duplicateBox);
     QAction* del = edit->addAction(tr("De&lete"), QKeySequence::Delete, this, &MainWindow::deleteBox);
 
@@ -214,6 +216,13 @@ void MainWindow::buildMenus()
     QMenu* assets = menuBar()->addMenu(tr("&Assets"));
     assets->addAction(tr("&Material editor"), QKeySequence(Qt::CTRL | Qt::Key_M), this, [this] { openMaterialEditor(); });
     assets->addAction(tr("S&urfaces (footsteps, impacts)"), this, [this] { openSurfacesEditor(); });
+    assets->addAction(tr("&Particle effect..."), this, [this] {
+        const QString path = QFileDialog::getOpenFileName(this, tr("Open particle effect"), assetPath("particles"),
+                                                          tr("Particle effects (*.particle)"));
+        if (!path.isEmpty())
+            openParticleEditor(path);
+    });
+    assets->addAction(tr("&New particle effect..."), this, [this] { newParticleEffect(QString()); });
     assets->addAction(tr("Edit &texture..."), this, [this] {
         const QString path = QFileDialog::getOpenFileName(this, tr("Edit texture"), assetPath("textures"),
                                                           tr("Images (*.png *.jpg *.jpeg)"));
@@ -592,6 +601,7 @@ void MainWindow::buildDocks()
     QFormLayout* characterForm = makeSection(tr("Character"), "Character");
     QFormLayout* scriptForm = makeSection(tr("Script"), "Script");
     QFormLayout* soundForm = makeSection(tr("Sound"), "Sound");
+    effectForm_ = makeSection(tr("Particle effect"), "Rendering");
     nameEdit_ = new QLineEdit(boxPanel_);
     kindLabel_ = new QLabel(boxPanel_);
     generalForm->addRow(tr("Type"), kindLabel_);
@@ -1008,6 +1018,38 @@ void MainWindow::buildDocks()
         setSoundProp("volume", v == 1.0 ? std::string() : QString::number(v, 'g', 4).toStdString());
     });
 
+    // Particle effect (entity type "particle"): a .particle playing at the entity.
+    entityEffect_ = new QLineEdit(boxPanel_);
+    entityEffect_->setReadOnly(true);
+    {
+        auto* browse = new QPushButton(tr("..."), boxPanel_);
+        browse->setMaximumWidth(32);
+        auto* edit = new QPushButton(tr("Edit"), boxPanel_);
+        auto* row = new QWidget(boxPanel_);
+        auto* rowLayout = new QHBoxLayout(row);
+        rowLayout->setContentsMargins(0, 0, 0, 0);
+        rowLayout->addWidget(entityEffect_, 1);
+        rowLayout->addWidget(browse);
+        rowLayout->addWidget(edit);
+        effectForm_->addRow(tr("Effect"), row);
+        connect(browse, &QPushButton::clicked, this, [this] {
+            auto* e = selectedEntity();
+            if (!e || e->type != "particle")
+                return;
+            const QString path = QFileDialog::getOpenFileName(this, tr("Particle effect"), assetPath("particles"),
+                                                              tr("Particle effects (*.particle)"));
+            if (path.isEmpty())
+                return;
+            e->properties["effect"] = QDir(assetRoot()).relativeFilePath(path).toStdString();
+            entityEffect_->setText(QString::fromStdString(e->properties["effect"]));
+            markDirty();
+        });
+        connect(edit, &QPushButton::clicked, this, [this] {
+            if (!entityEffect_->text().isEmpty())
+                openParticleEditor(QDir(assetRoot()).absoluteFilePath(entityEffect_->text()));
+        });
+    }
+
     // Tunables the script declares in `properties`; values are saved per entity.
     scriptParams_ = new QTableWidget(0, 2, boxPanel_);
     scriptParams_->setHorizontalHeaderLabels({tr("Script parameter"), tr("Value")});
@@ -1370,6 +1412,8 @@ void MainWindow::buildDocks()
             newLevel();
         else if (kind == "sound")
             newSound(folder);
+        else if (kind == "particle")
+            newParticleEffect(folder);
     });
     assetsDock_ = new QDockWidget(tr("Content Browser"), this);
     auto* assetsDock = assetsDock_;
@@ -1705,6 +1749,15 @@ void MainWindow::refreshProperties()
         soundFadeSpin_->setValue(prop("fade", "10").toDouble());
         soundVolumeSpin_->setValue(prop("volume", "1").toDouble());
     }
+    {
+        const bool particle = e && e->type == "particle";
+        QString effect;
+        if (particle)
+            if (const auto it = e->properties.find("effect"); it != e->properties.end())
+                effect = QString::fromStdString(it->second);
+        entityEffect_->setText(effect);
+        entityEffect_->setEnabled(particle);
+    }
     detailsIcon_->setPixmap(editorIcon(b ? "cube" : m ? "model" : e ? "person" : "select").pixmap(18, 18));
     updateDetailsVisibility();
     refreshTransformBox();
@@ -1941,6 +1994,11 @@ bool MainWindow::assignMaterial(const QString& path, int object)
     return true;
 }
 
+void MainWindow::openAssetFile(const QString& path)
+{
+    openAsset(path, static_cast<int>(assetTypeOf(path)));
+}
+
 void MainWindow::openAsset(const QString& path, int type)
 {
     switch (static_cast<AssetType>(type)) {
@@ -1955,6 +2013,7 @@ void MainWindow::openAsset(const QString& path, int type)
     case AssetType::Script: openScript(path); break;
     case AssetType::Sound: openSoundEditor(path); break;
     case AssetType::Audio: previewSound(path); break;
+    case AssetType::Particle: openParticleEditor(path); break;
     case AssetType::Level:
         if (confirmDiscard())
             openFile(path);
@@ -1969,12 +2028,17 @@ void MainWindow::addEntity(const QString& type)
     const glm::vec3 p = cam.position + cam.flatForward() * 6.0f;
     engine::Entity e;
     e.type = type.toStdString();
-    e.name = engine::uniqueNodeName(scene_, (type == "enemy" ? "Enemy " : type == "sound" ? "Sound " : "Entity ") +
+    e.name = engine::uniqueNodeName(scene_, (type == "enemy" ? "Enemy " : type == "sound" ? "Sound " : type == "particle" ? "Effect " : "Entity ") +
                                                 std::to_string(scene_.entities.size() + 1));
     if (type == "sound") {
         e.size = {1.0f, 1.0f, 1.0f};
         e.color = {0.25f, 0.55f, 0.95f};
         e.properties["sound"] = "sounds/ambient/geiger.sound";
+    }
+    if (type == "particle") {
+        e.size = {0.4f, 0.4f, 0.4f};
+        e.color = {0.95f, 0.55f, 0.2f};
+        e.properties["effect"] = "particles/fire.particle";
     }
     e.position = {std::round(p.x * 2.0f) * 0.5f, 0.0f, std::round(p.z * 2.0f) * 0.5f};
     if (type == "enemy") {
@@ -2670,6 +2734,69 @@ void MainWindow::newSound(const QString& folder)
     openSoundEditor(path);
 }
 
+void MainWindow::openParticleEditor(const QString& path)
+{
+    const QString absolute = QFileInfo(path).absoluteFilePath();
+    for (int i = 1; i < tabs_->count(); ++i)
+        if (auto* pe = qobject_cast<ParticleEditor*>(tabs_->widget(i)); pe && pe->path() == absolute) {
+            tabs_->setCurrentIndex(i);
+            return;
+        }
+    auto* pe = new ParticleEditor(tabs_);
+    QString error;
+    if (!pe->load(absolute, &error)) {
+        delete pe;
+        QMessageBox::warning(this, tr("Particles"), error);
+        return;
+    }
+    const int index = tabs_->addTab(pe, pe->title());
+    tabs_->setTabToolTip(index, absolute);
+    tabs_->setCurrentIndex(index);
+    connect(pe, &ParticleEditor::modificationChanged, this, [this, pe] {
+        if (const int i = tabs_->indexOf(pe); i >= 0)
+            tabs_->setTabText(i, pe->title());
+    });
+}
+
+void MainWindow::newParticleEffect(const QString& folder)
+{
+    const QString start = folder.isEmpty() ? assetPath("particles") : folder;
+    QString path = QFileDialog::getSaveFileName(this, tr("New particle effect"), QDir(start).filePath("effect.particle"),
+                                                tr("Particle effects (*.particle)"));
+    if (path.isEmpty())
+        return;
+    if (!path.endsWith(".particle"))
+        path += ".particle";
+    engine::ParticleEffect fx;
+    engine::ParticleEmitter smoke;
+    smoke.name = "Smoke";
+    smoke.rate = 8.0f;
+    smoke.lifeMin = 2.0f;
+    smoke.lifeMax = 3.5f;
+    smoke.speedMin = 0.4f;
+    smoke.speedMax = 0.9f;
+    smoke.gravity = -0.02f;
+    smoke.sizeMin = 0.3f;
+    smoke.sizeMax = 0.5f;
+    smoke.sizeCurve = {{0.0f, glm::vec4(0.6f)}, {1.0f, glm::vec4(2.5f)}};
+    smoke.colorCurve = {{0.0f, glm::vec4(1, 1, 1, 0)}, {0.15f, glm::vec4(1, 1, 1, 0.5f)}, {1.0f, glm::vec4(1, 1, 1, 0)}};
+    smoke.color = glm::vec3(0.5f);
+    smoke.rotationMax = 360.0f;
+    smoke.spinMin = -30.0f;
+    smoke.spinMax = 30.0f;
+    const QString tex = assetPath("textures/particles/smoke_8x8.png");
+    smoke.texture = std::filesystem::path(tex.toStdU16String());
+    smoke.columns = smoke.rows = 8;
+    fx.emitters.push_back(smoke);
+    std::string error;
+    if (!engine::saveParticleFile(fx, std::filesystem::path(path.toStdU16String()), &error)) {
+        QMessageBox::warning(this, tr("Particles"), QString::fromStdString(error));
+        return;
+    }
+    assets_->rescan();
+    openParticleEditor(path);
+}
+
 void MainWindow::openSurfacesEditor()
 {
     for (int i = 1; i < tabs_->count(); ++i)
@@ -2732,6 +2859,8 @@ void MainWindow::saveCurrent()
         ok = sd->save(&error);
     else if (auto* su = qobject_cast<SurfacesEditor*>(tabs_->currentWidget()))
         ok = su->save(&error);
+    else if (auto* pe = qobject_cast<ParticleEditor*>(tabs_->currentWidget()))
+        ok = pe->save(&error);
     else {
         save();
         return;
@@ -3076,6 +3205,8 @@ void MainWindow::updateDetailsVisibility()
             relevant = e != nullptr;
         else if (d.category == "Sound")
             relevant = e != nullptr && e->type == "sound";
+        if (d.form == effectForm_)
+            relevant = e != nullptr && e->type == "particle";
         bool shown = relevant && (category == "All" || category == d.category);
         // Search: rows whose label contains every word (a matching section title shows all rows).
         const bool titleMatch = std::all_of(words.begin(), words.end(), [&](const QString& w) { return d.section->title().toLower().contains(w); });
@@ -3231,8 +3362,9 @@ void MainWindow::buildModePanel()
         auto* enemy = toolButton("person", tr("Enemy (random human)"), page);
         auto* entity = toolButton("select", tr("Empty entity"), page);
         auto* sound = toolButton("sound", tr("Sound source / ambient zone"), page);
+        auto* particles = toolButton("particles", tr("Particle effect (fire, smoke, dust)"), page);
         auto* model = toolButton("model", tr("glTF model..."), page);
-        for (QPushButton* b : {box, enemy, entity, sound, model})
+        for (QPushButton* b : {box, enemy, entity, sound, particles, model})
             layout->addWidget(b);
         auto* hint = new QLabel(tr("Or drag a model from the Content Browser into the view: it lands where you drop it."), page);
         hint->setObjectName("dim");
@@ -3243,6 +3375,7 @@ void MainWindow::buildModePanel()
         connect(enemy, &QPushButton::clicked, this, [this] { addEntity("enemy"); });
         connect(entity, &QPushButton::clicked, this, [this] { addEntity("empty"); });
         connect(sound, &QPushButton::clicked, this, [this] { addEntity("sound"); });
+        connect(particles, &QPushButton::clicked, this, [this] { addEntity("particle"); });
         connect(model, &QPushButton::clicked, this, &MainWindow::importModel);
         modePages_->addWidget(page);
     }

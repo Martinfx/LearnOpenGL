@@ -66,6 +66,7 @@ const char* typeName(AssetType t)
     case AssetType::Level: return "Level";
     case AssetType::Sound: return "Sound";
     case AssetType::Audio: return "Audio";
+    case AssetType::Particle: return "Particle effect";
     case AssetType::Other: break;
     }
     return "File";
@@ -91,6 +92,8 @@ AssetType assetTypeOf(const QString& path)
         return AssetType::Sound;
     if (ext == "wav" || ext == "ogg" || ext == "mp3" || ext == "flac")
         return AssetType::Audio;
+    if (ext == "particle")
+        return AssetType::Particle;
     return AssetType::Other;
 }
 
@@ -252,7 +255,7 @@ AssetBrowser::AssetBrowser(QWidget* parent) : QWidget(parent)
     category_ = new QComboBox(this);
     category_->addItem(tr("All types"), -1);
     for (AssetType t : {AssetType::Model, AssetType::Material, AssetType::Texture, AssetType::Script, AssetType::Weapon,
-                        AssetType::Level, AssetType::Sound, AssetType::Audio})
+                        AssetType::Level, AssetType::Sound, AssetType::Audio, AssetType::Particle})
         category_->addItem(tr(typeName(t)) + "s", static_cast<int>(t));
     category_->setCurrentIndex(0);
     search_ = new QLineEdit(this);
@@ -289,6 +292,7 @@ AssetBrowser::AssetBrowser(QWidget* parent) : QWidget(parent)
     addMenu->addAction(tr("New material"), this, [this] { emit newAssetRequested(QStringLiteral("material"), currentFolderPath()); });
     addMenu->addAction(tr("New Lua script"), this, [this] { emit newAssetRequested(QStringLiteral("script"), currentFolderPath()); });
     addMenu->addAction(tr("New sound"), this, [this] { emit newAssetRequested(QStringLiteral("sound"), currentFolderPath()); });
+    addMenu->addAction(tr("New particle effect"), this, [this] { emit newAssetRequested(QStringLiteral("particle"), currentFolderPath()); });
     addMenu->addAction(tr("New level"), this, [this] { emit newAssetRequested(QStringLiteral("level"), currentFolderPath()); });
     addButton->setMenu(addMenu);
     auto* importButton = new QToolButton(this);

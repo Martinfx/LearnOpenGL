@@ -25,6 +25,7 @@ add_executable(fps_editor
     WeaponPanel.cpp
     SoundEditor.cpp
     SurfacesEditor.cpp
+    ParticleEditor.cpp
     SoundEditor.h
     WeaponPanel.h
     Viewport.h
