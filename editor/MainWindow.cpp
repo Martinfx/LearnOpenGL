@@ -23,12 +23,15 @@
 #include "ViewportPanel.h"
 
 #include <QAction>
+#include <fstream>
 #include <QApplication>
 #include <QActionGroup>
 #include <QComboBox>
 #include <QPointer>
 #include <engine/JobSystem.h>
 #include <engine/Log.h>
+#include <engine/Crash.h>
+#include <engine/Paths.h>
 #include <QUndoStack>
 #include <QCloseEvent>
 #include <QColorDialog>
@@ -1591,6 +1594,9 @@ void MainWindow::buildDocks()
         appendLog(QString::fromStdString(line.category + ": " + line.text), line.level >= engine::LogLevel::Error ? 2 : line.level == engine::LogLevel::Warning ? 1 : 0);
     {
         QPointer<MainWindow> self(this);
+        auto* autosaveTimer = new QTimer(this);
+        connect(autosaveTimer, &QTimer::timeout, this, &MainWindow::autosave);
+        autosaveTimer->start(90 * 1000);
         logListener_ = engine::addLogListener([self](const engine::LogLine& line) {
             const QString text = QString::fromStdString(line.category.empty() ? line.text : line.category + ": " + line.text);
             const int level = line.level >= engine::LogLevel::Error ? 2 : line.level == engine::LogLevel::Warning ? 1 : 0;
@@ -2564,6 +2570,7 @@ bool MainWindow::saveTo(const QString& path)
     }
     currentFile_ = path;
     dirty_ = false;
+    clearAutosave();
     updateTitle();
     notify(tr("Saved %1").arg(path), 4000);
     return true;
@@ -2635,6 +2642,78 @@ void MainWindow::closeEvent(QCloseEvent* e)
     } else {
         e->ignore();
     }
+}
+
+namespace {
+std::filesystem::path autosaveLevel() { return engine::userDirectory("recovery") / "autosave.level"; }
+std::filesystem::path autosaveInfo() { return engine::userDirectory("recovery") / "autosave.txt"; }
+} // namespace
+
+void MainWindow::autosave()
+{
+    if (!dirty_ || autosaving_)
+        return;
+    autosaving_ = true;
+    // Saved from a copy on a worker: the editor never waits for the disk.
+    auto copy = std::make_shared<engine::Scene>(scene_);
+    const std::string original = currentFile_.toStdString();
+    QPointer<MainWindow> self(this);
+    engine::JobSystem::global().run([self, copy, original] {
+        std::string error;
+        const bool ok = engine::saveScene(*copy, autosaveLevel(), &error);
+        if (ok)
+            std::ofstream(autosaveInfo()) << original << '\n';
+        QMetaObject::invokeMethod(qApp, [self, ok, error] {
+            if (!self)
+                return;
+            self->autosaving_ = false;
+            if (ok)
+                LOG_DEBUG("editor", "Autosaved for crash recovery");
+            else
+                LOG_WARN("editor", "Autosave failed: %s", error.c_str());
+        });
+    });
+}
+
+void MainWindow::clearAutosave()
+{
+    std::error_code ec;
+    std::filesystem::remove(autosaveLevel(), ec);
+    std::filesystem::remove(autosaveInfo(), ec);
+}
+
+void MainWindow::offerRecovery()
+{
+    if (!engine::previousRunCrashed("editor"))
+        return;
+    const std::filesystem::path report = engine::latestCrashReport();
+    if (!report.empty())
+        appendLog(tr("The editor crashed last time. Report: %1").arg(QString::fromStdU16String(report.u16string())), 1);
+    std::error_code ec;
+    if (!std::filesystem::exists(autosaveLevel(), ec))
+        return;
+    std::string original;
+    std::getline(std::ifstream(autosaveInfo()), original);
+    const QString name = original.empty() ? tr("an unsaved level") : QFileInfo(QString::fromStdString(original)).fileName();
+    const auto when = QFileInfo(QString::fromStdU16String(autosaveLevel().u16string())).lastModified();
+    const auto answer = QMessageBox::question(
+        this, tr("Recover level"),
+        tr("The editor did not close properly last time.\n\nRestore the unsaved changes of %1 from %2?")
+            .arg(name, QLocale().toString(when, QLocale::ShortFormat)),
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+    if (answer != QMessageBox::Yes) {
+        clearAutosave();
+        return;
+    }
+    const QString target = QString::fromStdString(original);
+    connect(this, &MainWindow::levelOpened, this, [this, target] {
+        // The recovered level belongs to its original file; it is unsaved until Save.
+        currentFile_ = target;
+        dirty_ = true;
+        updateTitle();
+        notify(tr("Recovered unsaved changes of %1").arg(QFileInfo(target).fileName()), 6000);
+    }, Qt::SingleShotConnection);
+    openFile(QString::fromStdU16String(autosaveLevel().u16string()));
 }
 
 MainWindow::~MainWindow()

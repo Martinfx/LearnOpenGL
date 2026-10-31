@@ -1,5 +1,6 @@
 #include <engine/CpuFeatures.h>
 #include <engine/Log.h>
+#include <engine/Crash.h>
 #include <cstdio>
 #include <string>
 #include "AssetPaths.h"
@@ -10,6 +11,7 @@
 
 #include <QApplication>
 #include <QSurfaceFormat>
+#include <QTimer>
 
 int main(int argc, char** argv)
 {
@@ -30,7 +32,8 @@ int main(int argc, char** argv)
 
     QApplication app(argc, argv);
     engine::openLogFile("editor");
-    LOG_INFO("editor", "Log file: %s", engine::logFilePath().string().c_str());
+    engine::installCrashHandler("editor");
+    LOG_INFO("editor", "Version %s, log file: %s", engine::engineVersion(), engine::logFilePath().string().c_str());
     // Qt's own warnings (shader compiles, missing files) go to the engine log as well.
     qInstallMessageHandler([](QtMsgType type, const QMessageLogContext&, const QString& message) {
         const engine::LogLevel level = type == QtDebugMsg || type == QtInfoMsg ? engine::LogLevel::Debug
@@ -85,5 +88,12 @@ int main(int argc, char** argv)
             for (const QString& f : assetsToOpen)
                 window.openAssetFile(f);
         }, Qt::SingleShotConnection);
-    return app.exec();
+    // After a crash, offer the autosaved level once the start-up level is open.
+    QObject::connect(&window, &MainWindow::loadingFinished, &window, [&window] { window.offerRecovery(); },
+                     Qt::SingleShotConnection);
+    if (level.isEmpty())
+        QTimer::singleShot(0, &window, [&window] { window.offerRecovery(); });
+    const int code = app.exec();
+    engine::markCleanExit();
+    return code;
 }

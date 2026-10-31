@@ -1,5 +1,6 @@
 // Headless tests for the engine core (no OpenGL needed).
 #include <engine/Log.h>
+#include <engine/Assert.h>
 #include <engine/Audio.h>
 #include <engine/NavMesh.h>
 #include <engine/Surfaces.h>
@@ -1068,6 +1069,20 @@ void testLog()
     engine::setLogConsole(true);
 }
 
+void testEnsure()
+{
+    engine::setLogConsole(false);
+    int evaluated = 0;
+    auto f = [&](int v) { return ENGINE_VERIFY(++evaluated && v > 0); };
+    check(f(1) && !f(0) && !f(-1) && evaluated == 3, "ENGINE_VERIFY evaluates and returns the condition");
+    const auto lines = engine::recentLog(5);
+    int reports = 0;
+    for (const auto& l : lines)
+        reports += l.text.find("ensure failed") != std::string::npos;
+    check(reports == 1, "a failed ENSURE is logged once per call site");
+    engine::setLogConsole(true);
+}
+
 void testSurfaces()
 {
     check(engine::guessSurface("Rusty_Metal_02") == "metal", "guess metal");
@@ -1329,6 +1344,7 @@ int main()
     testAudio();
     testNavMesh();
     testLog();
+    testEnsure();
     testSurfaces();
     std::printf(failures ? "%d test(s) failed\n" : "all tests passed\n", failures);
     return failures ? 1 : 0;

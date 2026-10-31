@@ -1,6 +1,8 @@
 // Game runtime: GLFW window, fixed 60 Hz simulation, first-person player.
 // Usage: fps_game [level-file]
 #include <engine/Log.h>
+#include <engine/Crash.h>
+#include <engine/Assert.h>
 #include <engine/Camera.h>
 #include <engine/CpuFeatures.h>
 #include <engine/FixedStepClock.h>
@@ -210,7 +212,8 @@ int main(int argc, char** argv)
         return 1;
     }
     engine::openLogFile("game");
-    LOG_INFO("game", "Log file: %s", engine::logFilePath().string().c_str());
+    engine::installCrashHandler("game");
+    LOG_INFO("game", "Version %s, log file: %s", engine::engineVersion(), engine::logFilePath().string().c_str());
     glfwSetErrorCallback([](int code, const char* message) { LOG_WARN("glfw", "%d: %s", code, message); });
     if (!glfwInit())
         return 1;
@@ -239,6 +242,7 @@ int main(int argc, char** argv)
         renderer.setQuality(q);
     }
     LOG_INFO("render", "%s", renderer.glInfo().c_str());
+    engine::setCrashContext("gpu", renderer.glInfo());
 
     // Command line: [level] [--shaders DIR] (shaders edited in the editor replace the built-in ones).
     std::filesystem::path levelPath = std::filesystem::path(argv[0]).parent_path() / "assets/levels/test.level";
@@ -255,6 +259,7 @@ int main(int argc, char** argv)
     // Level: command line argument, else the bundled sample, else built-in default.
     // It loads on a background thread (models in parallel) while the loading
     // screen shows the progress; then meshes and textures go to the GPU.
+    engine::setCrashContext("level", levelPath.string());
     engine::Scene scene;
     engine::PhysicsWorld physics;
     engine::Ui2D ui; // loading screen, then the map
@@ -438,6 +443,12 @@ int main(int argc, char** argv)
         glm::vec3 p(0.0f);
         if (std::sscanf(pos, "%f %f %f", &p.x, &p.y, &p.z) == 3)
             player.spawn(physics, p);
+    }
+    if (const char* crash = std::getenv("FPS_ENGINE_CRASH")) { // test hook: "segv" or "check" checks the crash report
+        if (std::string(crash) == "check")
+            ENGINE_CHECK(false, "FPS_ENGINE_CRASH test");
+        volatile int* nowhere = nullptr;
+        *nowhere = 1;
     }
     if (const char* slot = std::getenv("FPS_ENGINE_SLOT")) { // weapon slot 1..9 to start with (test hook)
         const long n = std::strtol(slot, nullptr, 10);
@@ -728,5 +739,6 @@ int main(int argc, char** argv)
     renderer.shutdown();
     glfwDestroyWindow(window);
     glfwTerminate();
+    engine::markCleanExit();
     return 0;
 }

@@ -15,3 +15,8 @@ add_custom_target(fps_game_assets ALL
     COMMAND ${CMAKE_COMMAND} -E ${ENGINE_COPY_DIR} ${PROJECT_SOURCE_DIR}/assets ${CMAKE_BINARY_DIR}/bin/assets
     COMMENT "Copying changed assets")
 add_dependencies(fps_game_assets fps_game)
+
+# Function names in crash report stacks (backtrace_symbols needs exported symbols).
+if(NOT WIN32)
+    set_target_properties(fps_game PROPERTIES ENABLE_EXPORTS ON)
+endif()

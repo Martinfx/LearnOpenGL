@@ -47,3 +47,8 @@ set_target_properties(fps_editor PROPERTIES
 if(TARGET fps_game)
     add_dependencies(fps_editor fps_game) # the editor's Play button launches it
 endif()
+
+# Function names in crash report stacks (backtrace_symbols needs exported symbols).
+if(NOT WIN32)
+    set_target_properties(fps_editor PROPERTIES ENABLE_EXPORTS ON)
+endif()

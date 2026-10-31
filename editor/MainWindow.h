@@ -59,6 +59,8 @@ public:
 
     bool openFile(const QString& path);   // loads in the background
     void openAssetFile(const QString& path); // in its editor (sound, particle effect, material...)
+    // After a crash: offers to reopen the level autosaved before it (call once the window is up).
+    void offerRecovery();
 signals:
     void levelOpened();
     void loadingProgress(int percent, const QString& step); // while a level loads
@@ -273,6 +275,10 @@ private:
     engine::DebugGeometry navDebug_;
     bool navStale_ = true;
     int logListener_ = 0; // engine log -> Output Log
+    // Crash recovery: the edited level is saved to the user folder every 90 s while unsaved.
+    void autosave();
+    void clearAutosave();
+    bool autosaving_ = false;
     Vec3Editor* positionEdit_ = nullptr;
     Vec3Editor* sizeEdit_ = nullptr;
     Vec3Editor* rotationEdit_ = nullptr;   // glTF models
