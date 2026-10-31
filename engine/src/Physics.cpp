@@ -1,6 +1,7 @@
 #include "engine/Physics.h"
 
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include "PhysicsImpl.h"
 
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
@@ -81,14 +82,14 @@ void PhysicsWorld::Impl::clearStatic()
     staticBodies.clear();
 }
 
-void PhysicsWorld::Impl::addStatic(const JPH::ShapeSettings& settings, glm::vec3 position, const std::string& name)
+void PhysicsWorld::Impl::addStatic(const JPH::ShapeSettings& settings, glm::vec3 position, const std::string& name, glm::quat rotation)
 {
     JPH::ShapeSettings::ShapeResult result = settings.Create();
     if (result.HasError()) {
         std::fprintf(stderr, "Physics: skipping '%s': %s\n", name.c_str(), result.GetError().c_str());
         return;
     }
-    JPH::BodyCreationSettings body(result.Get(), toJolt(position), JPH::Quat::sIdentity(),
+    JPH::BodyCreationSettings body(result.Get(), toJolt(position), JPH::Quat(rotation.x, rotation.y, rotation.z, rotation.w),
                                    JPH::EMotionType::Static, Layers::Static);
     const JPH::BodyID id = system.GetBodyInterface().CreateAndAddBody(body, JPH::EActivation::DontActivate);
     if (!id.IsInvalid())
@@ -104,7 +105,8 @@ void PhysicsWorld::setLevel(const Scene& scene)
     for (const Box& b : scene.boxes) {
         const glm::vec3 half = glm::max(b.size * 0.5f, glm::vec3(0.005f));
         const float convexRadius = std::min(JPH::cDefaultConvexRadius, std::min({half.x, half.y, half.z}) * 0.5f);
-        impl_->addStatic(JPH::BoxShapeSettings(toJolt(half), convexRadius), b.position, b.name);
+        impl_->addStatic(JPH::BoxShapeSettings(toJolt(half), convexRadius), b.position, b.name,
+                         glm::quat_cast(glm::mat3(glm::scale(b.transform(), 1.0f / glm::max(b.size, glm::vec3(1e-6f))))));
     }
     for (const Model& m : scene.models) {
         for (const MeshPart& part : m.parts) {

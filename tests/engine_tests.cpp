@@ -751,6 +751,27 @@ void testMaterialsAndTextures()
 
 } // namespace
 
+void testRotatedBox()
+{
+    engine::Scene s;
+    engine::Box plank("Plank", {0, 1, 0}, {4, 0.2f, 0.4f}, {1, 1, 1});
+    plank.rotation = {0, 90, 0}; // now runs along Z
+    s.boxes.push_back(plank);
+    const engine::Aabb b = s.boxes[0].bounds();
+    check(std::abs(b.max.z - 2.0f) < 1e-4f && std::abs(b.max.x - 0.2f) < 1e-4f, "rotated box bounds follow the rotation");
+    check(engine::pickObject(s, {0, 5, 1.8f}, {0, -1, 0}) == 0, "ray picks the rotated box along its new axis");
+    check(engine::pickObject(s, {1.8f, 5, 0}, {0, -1, 0}) == -1, "and misses where it used to be");
+    engine::PhysicsWorld world;
+    world.setLevel(s);
+    check(world.raycast({0, 5, 1.8f}, {0, -1, 0}, 10.0f).has_value(), "physics uses the rotated box");
+    check(!world.raycast({1.8f, 5, 0}, {0, -1, 0}, 10.0f).has_value(), "physics box is not axis-aligned any more");
+    std::string err;
+    check(engine::saveScene(s, "rotated.level", &err), "save rotated box: " + err);
+    engine::Scene loaded;
+    check(engine::loadScene(loaded, "rotated.level", &err) && loaded.boxes.size() == 1 && loaded.boxes[0].rotation.y == 90.0f,
+          "box rotation is saved: " + err);
+}
+
 void testRotateGizmo()
 {
     const glm::vec3 c(2, 1, -3);
@@ -799,6 +820,7 @@ int main()
     testHierarchyAndDependencies();
     testJobSystem();
     testRotateGizmo();
+    testRotatedBox();
     testScriptPropertiesFromEditor();
     testPick();
     testAnimatedCharacter();

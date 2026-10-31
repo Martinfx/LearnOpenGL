@@ -25,11 +25,14 @@ struct Box {
     std::string parent;             // name of the parent object or group in the hierarchy, empty = root
     glm::vec3 position{0.0f};       // center
     glm::vec3 size{1.0f};
+    glm::vec3 rotation{0.0f};       // degrees around X, Y, Z (applied Y, X, Z like models)
     glm::vec3 color{0.7f, 0.7f, 0.7f}; // sRGB, used when there is no material
     std::filesystem::path materialPath;  // absolute .material, empty = plain color
     std::shared_ptr<Material> material;  // runtime, loaded from materialPath
 
-    Aabb bounds() const { return Aabb::fromCenterSize(position, size); }
+    bool rotated() const { return rotation != glm::vec3(0.0f); }
+    glm::mat4 transform() const; // unit cube centered at the origin -> world
+    Aabb bounds() const;         // world-space, encloses the rotated box
 };
 
 // Decoded RGBA8 image (sRGB), shared by all parts that use it.

@@ -110,6 +110,8 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
             << b.size.x << ' ' << b.size.y << ' ' << b.size.z << ' '
             << b.color.r << ' ' << b.color.g << ' ' << b.color.b << '\n';
         writeParent(b.parent);
+        if (b.rotated())
+            out << "  rotation " << b.rotation.x << ' ' << b.rotation.y << ' ' << b.rotation.z << '\n';
         if (!b.materialPath.empty())
             out << "  material " << std::quoted(relative(b.materialPath)) << '\n';
     }
@@ -223,6 +225,13 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                     result.models.back().parent = parent;
                 else
                     result.entities.back().parent = parent;
+            }
+        } else if (key == "rotation") {
+            // Rotation of the box on the line above.
+            ok = lastObject == LastObject::Box;
+            if (ok) {
+                glm::vec3& r = result.boxes.back().rotation;
+                ok = static_cast<bool>(ls >> r.x >> r.y >> r.z);
             }
         } else if (key == "player_start") {
             ok = static_cast<bool>(ls >> result.playerStart.x >> result.playerStart.y >> result.playerStart.z);
@@ -355,6 +364,29 @@ glm::mat4 Model::transform() const
     return glm::scale(m, glm::vec3(scale));
 }
 
+glm::mat4 Box::transform() const
+{
+    glm::mat4 m = glm::translate(glm::mat4(1.0f), position);
+    m = glm::rotate(m, glm::radians(rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
+    m = glm::rotate(m, glm::radians(rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
+    m = glm::rotate(m, glm::radians(rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+    return glm::scale(m, size);
+}
+
+Aabb Box::bounds() const
+{
+    if (!rotated())
+        return Aabb::fromCenterSize(position, size);
+    const glm::mat4 m = transform();
+    Aabb box{glm::vec3(1e30f), glm::vec3(-1e30f)};
+    for (int i = 0; i < 8; ++i) {
+        const glm::vec3 p = glm::vec3(m * glm::vec4((i & 1) ? 0.5f : -0.5f, (i & 2) ? 0.5f : -0.5f, (i & 4) ? 0.5f : -0.5f, 1.0f));
+        box.min = glm::min(box.min, p);
+        box.max = glm::max(box.max, p);
+    }
+    return box;
+}
+
 Aabb Model::bounds() const
 {
     if (rotation == glm::vec3(0.0f) && scale == 1.0f)
@@ -416,8 +448,18 @@ int pickObject(const Scene& scene, glm::vec3 origin, glm::vec3 dir)
     float bestT = 0.0f;
     // Entities first: they are small and usually stand inside larger geometry.
     for (int i = scene.objectCount() - 1; i >= 0; --i) {
-        const Aabb bounds = scene.objectBounds(i);
-        if (auto t = rayAabb(origin, dir, bounds); t && (best < 0 || *t < bestT - 1e-4f)) {
+        std::optional<float> t;
+        if (scene.isBox(i) && scene.boxes[static_cast<std::size_t>(i)].rotated()) {
+            // Ray in the box's own space against the unit cube; distances stay in world units.
+            const glm::mat4 inv = glm::inverse(scene.boxes[static_cast<std::size_t>(i)].transform());
+            const glm::vec3 o = glm::vec3(inv * glm::vec4(origin, 1.0f));
+            const glm::vec3 d = glm::vec3(inv * glm::vec4(dir, 0.0f));
+            if (auto local = rayAabb(o, d, Aabb{glm::vec3(-0.5f), glm::vec3(0.5f)}))
+                t = *local; // d is not normalized, so *local is the parameter along the world ray
+        } else {
+            t = rayAabb(origin, dir, scene.objectBounds(i));
+        }
+        if (t && (best < 0 || *t < bestT - 1e-4f)) {
             best = i;
             bestT = *t;
         }

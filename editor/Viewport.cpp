@@ -14,6 +14,7 @@
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QOpenGLContext>
+#include <QPainter>
 #include <QOpenGLFunctions>
 #include <QWheelEvent>
 
@@ -21,6 +22,7 @@
 #include <optional>
 #include <cmath>
 #include <glm/geometric.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <glm/mat4x4.hpp>
 
 namespace {
@@ -120,24 +122,105 @@ void Viewport::paintGL()
     if (!ready_)
         return;
     const qreal dpr = devicePixelRatioF();
-    engine::RenderView view;
-    view.viewportWidth = std::max(1, static_cast<int>(width() * dpr));
-    view.viewportHeight = std::max(1, static_cast<int>(height() * dpr));
-    view.view = camera_.view();
-    view.projection = camera_.projection(static_cast<float>(view.viewportWidth) / static_cast<float>(view.viewportHeight));
-    view.cameraPosition = camera_.position;
-    view.selectedObject = selected_;
-    view.drawPlayerStart = true;
-    view.gizmoBoxes = gizmoBoxes();
     while (context()->functions()->glGetError() != GL_NO_ERROR) {
     } // errors left by Qt's own drawing are not ours
-    renderer_.render(*scene_, view);
+    const std::vector<Pane> list = panes();
+    for (const Pane& pane : list) {
+        paneMode_ = pane.mode;
+        paneRect_ = pane.rect;
+        engine::RenderView view;
+        view.viewportWidth = std::max(1, static_cast<int>(pane.rect.width() * dpr));
+        view.viewportHeight = std::max(1, static_cast<int>(pane.rect.height() * dpr));
+        view.viewportX = static_cast<int>(pane.rect.x() * dpr);
+        view.viewportY = static_cast<int>((height() - pane.rect.bottom()) * dpr); // GL origin is bottom left
+        const float aspect = static_cast<float>(view.viewportWidth) / static_cast<float>(view.viewportHeight);
+        view.view = paneView(pane.mode);
+        view.projection = paneProjection(pane.mode, aspect);
+        view.cameraPosition = paneEye(pane.mode);
+        view.fog = pane.mode == ViewMode::Perspective;
+        view.selectedObject = selected_;
+        view.drawPlayerStart = true;
+        view.gizmoBoxes = gizmoBoxes();
+        renderer_.render(*scene_, view);
+    }
     // Report driver errors instead of silently showing a broken view.
     if (const GLenum error = context()->functions()->glGetError(); error != GL_NO_ERROR && error != lastGlError_) {
         lastGlError_ = error;
         emit renderWarning(tr("OpenGL error 0x%1 while drawing the viewport (tool %2, object %3)")
                                .arg(error, 0, 16).arg(static_cast<int>(tool_)).arg(selected_));
     }
+    // Pane names and borders.
+    QPainter painter(this);
+    const char* names[4] = {"Perspective", "Top", "Front", "Side"};
+    for (const Pane& pane : list) {
+        painter.setPen(QColor(230, 232, 236));
+        painter.drawText(pane.rect.adjusted(8, 6, 0, 0), Qt::AlignLeft | Qt::AlignTop, tr(names[static_cast<int>(pane.mode)]));
+        if (list.size() > 1) {
+            painter.setPen(QPen(QColor(30, 31, 34), 2));
+            painter.drawRect(pane.rect);
+        }
+    }
+}
+
+std::vector<Viewport::Pane> Viewport::panes() const
+{
+    const QRectF all(0, 0, width(), height());
+    if (!quad_)
+        return {{mode_, all}};
+    const qreal w = width() * 0.5, h = height() * 0.5;
+    return {{ViewMode::Top, QRectF(0, 0, w, h)},
+            {ViewMode::Perspective, QRectF(w, 0, width() - w, h)},
+            {ViewMode::Front, QRectF(0, h, w, height() - h)},
+            {ViewMode::Side, QRectF(w, h, width() - w, height() - h)}};
+}
+
+void Viewport::selectPane(QPointF pos) const
+{
+    for (const Pane& pane : panes())
+        if (pane.rect.contains(pos) || !quad_) {
+            paneMode_ = pane.mode;
+            paneRect_ = pane.rect;
+            return;
+        }
+}
+
+glm::vec3 Viewport::paneEye(ViewMode mode) const
+{
+    switch (mode) {
+    case ViewMode::Top: return orthoCenter_ + glm::vec3(0.0f, 200.0f, 0.0f);
+    case ViewMode::Front: return orthoCenter_ + glm::vec3(0.0f, 0.0f, 200.0f);
+    case ViewMode::Side: return orthoCenter_ + glm::vec3(200.0f, 0.0f, 0.0f);
+    default: return camera_.position;
+    }
+}
+
+glm::mat4 Viewport::paneView(ViewMode mode) const
+{
+    if (mode == ViewMode::Perspective)
+        return camera_.view();
+    const glm::vec3 up = mode == ViewMode::Top ? glm::vec3(0.0f, 0.0f, -1.0f) : glm::vec3(0.0f, 1.0f, 0.0f);
+    return glm::lookAt(paneEye(mode), orthoCenter_, up);
+}
+
+glm::mat4 Viewport::paneProjection(ViewMode mode, float aspect) const
+{
+    if (mode == ViewMode::Perspective)
+        return camera_.projection(aspect);
+    const float h = orthoSize_, w = orthoSize_ * aspect;
+    return glm::ortho(-w, w, -h, h, 1.0f, 450.0f);
+}
+
+void Viewport::setViewMode(ViewMode mode)
+{
+    mode_ = mode;
+    quad_ = false;
+    update();
+}
+
+void Viewport::setQuadView(bool on)
+{
+    quad_ = on;
+    update();
 }
 
 void Viewport::setSelected(int index)
@@ -154,6 +237,8 @@ void Viewport::focusSelected()
     const glm::vec3 center = (bounds.min + bounds.max) * 0.5f;
     const float distance = std::max(3.0f, glm::length(bounds.max - bounds.min) * 1.2f);
     camera_.position = center - camera_.forward() * distance;
+    orthoCenter_ = center;
+    orthoSize_ = std::max(2.0f, glm::length(bounds.max - bounds.min) * 0.8f);
     update();
 }
 
@@ -161,7 +246,12 @@ void Viewport::mousePressEvent(QMouseEvent* e)
 {
     setFocus();
     lastMouse_ = e->position();
-    if (e->button() == Qt::RightButton) {
+    selectPane(e->position());
+    const bool ortho = paneMode_ != ViewMode::Perspective;
+    if (e->button() == Qt::RightButton && ortho) {
+        panning_ = true; // orthographic views pan instead of flying
+        setCursor(Qt::ClosedHandCursor);
+    } else if (e->button() == Qt::RightButton) {
         flying_ = true;
         setCursor(Qt::BlankCursor);
         clock_.start();
@@ -218,6 +308,15 @@ void Viewport::mouseMoveEvent(QMouseEvent* e)
         dragTo(e->position());
         return;
     }
+    if (panning_ && paneMode_ != ViewMode::Perspective) {
+        // Orthographic pan: the grabbed point stays under the cursor.
+        const float perPixel = 2.0f * orthoSize_ / static_cast<float>(std::max(1.0, paneRect_.height()));
+        const glm::mat4 v = paneView(paneMode_);
+        const glm::vec3 right(v[0][0], v[1][0], v[2][0]), up(v[0][1], v[1][1], v[2][1]);
+        orthoCenter_ += (-right * static_cast<float>(delta.x()) + up * static_cast<float>(delta.y())) * perPixel;
+        update();
+        return;
+    }
     if (panning_) {
         // Middle mouse: pan in the view plane, faster further away.
         const float k = 0.01f * std::max(1.0f, glm::length(camera_.position - gizmoCenter()) * 0.15f);
@@ -243,7 +342,10 @@ void Viewport::mouseMoveEvent(QMouseEvent* e)
 
 void Viewport::mouseReleaseEvent(QMouseEvent* e)
 {
-    if (e->button() == Qt::RightButton) {
+    if (e->button() == Qt::RightButton && panning_) {
+        panning_ = false;
+        unsetCursor();
+    } else if (e->button() == Qt::RightButton) {
         flying_ = false;
         unsetCursor();
         timer_.stop();
@@ -291,6 +393,20 @@ void Viewport::wheelEvent(QWheelEvent* e)
 {
     // While flying the wheel changes speed, otherwise it dollies the camera.
     const float notches = static_cast<float>(e->angleDelta().y()) / 120.0f;
+    selectPane(e->position());
+    if (paneMode_ != ViewMode::Perspective) {
+        // Zoom toward the cursor.
+        glm::vec3 before, dir;
+        rayAt(e->position(), before, dir);
+        orthoSize_ = std::clamp(orthoSize_ * std::pow(0.85f, notches), 0.5f, 400.0f);
+        glm::vec3 after;
+        rayAt(e->position(), after, dir);
+        glm::vec3 shift = before - after;
+        shift -= dir * glm::dot(shift, dir);
+        orthoCenter_ += shift;
+        update();
+        return;
+    }
     if (flying_) {
         flySpeed_ = std::clamp(flySpeed_ * std::pow(1.2f, notches), 1.0f, 200.0f);
     } else {
@@ -324,10 +440,15 @@ void Viewport::tick()
 
 void Viewport::rayAt(QPointF pos, glm::vec3& origin, glm::vec3& dir) const
 {
-    // Unproject the position into a world-space ray.
-    const float x = static_cast<float>(2.0 * pos.x() / width() - 1.0);
-    const float y = static_cast<float>(1.0 - 2.0 * pos.y() / height());
-    const glm::mat4 inv = glm::inverse(camera_.projection(static_cast<float>(width()) / static_cast<float>(height())) * camera_.view());
+    // Unproject the position into a world-space ray, in the pane under the cursor
+    // (the pane stays fixed while dragging or panning).
+    if (!drag_.active && !panning_)
+        selectPane(pos);
+    const QRectF r = paneRect_.isEmpty() ? QRectF(0, 0, width(), height()) : paneRect_;
+    const float x = static_cast<float>(2.0 * (pos.x() - r.x()) / r.width() - 1.0);
+    const float y = static_cast<float>(1.0 - 2.0 * (pos.y() - r.y()) / r.height());
+    const float aspect = static_cast<float>(r.width() / std::max(1.0, r.height()));
+    const glm::mat4 inv = glm::inverse(paneProjection(paneMode_, aspect) * paneView(paneMode_));
     const glm::vec4 nearPt = inv * glm::vec4(x, y, -1.0f, 1.0f);
     const glm::vec4 farPt = inv * glm::vec4(x, y, 1.0f, 1.0f);
     origin = glm::vec3(nearPt) / nearPt.w;
@@ -400,6 +521,8 @@ glm::vec3 Viewport::gizmoCenter() const
 float Viewport::gizmoSize() const
 {
     // Constant size on screen.
+    if (paneMode_ != ViewMode::Perspective)
+        return orthoSize_ * 0.2f;
     return std::max(0.2f, glm::length(camera_.position - gizmoCenter()) * 0.14f);
 }
 

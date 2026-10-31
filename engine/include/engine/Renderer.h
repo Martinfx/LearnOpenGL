@@ -29,6 +29,8 @@ struct RenderView {
     glm::vec3 cameraPosition{0.0f};
     int viewportWidth = 1;
     int viewportHeight = 1;
+    int viewportX = 0, viewportY = 0; // lower-left corner in the target framebuffer (split views)
+    bool fog = true;                  // off for the editor's orthographic views
     int selectedObject = -1;  // editor highlight (Scene object index), -1 = none
     bool drawPlayerStart = false;
     float time = 0.0f;        // seconds, animates clouds and film grain
@@ -127,7 +129,9 @@ private:
     void updateEnvironment(const Scene& scene, const RenderView& view);
     void updateEnvironmentMap(const Scene& scene);
     void renderShadows(const Scene& scene, const RenderView& view);
-    void drawGeometry(const Scene& scene, const RenderView& view, bool depthOnly);
+    // Draws what intersects the frustum of `cull` (view-projection); skipNear keeps
+    // shadow casters between the light and the cascade.
+    void drawGeometry(const Scene& scene, const RenderView& view, bool depthOnly, const glm::mat4& cull, bool skipNear = false);
     void renderSsao();
     void renderBloom();
 
@@ -137,6 +141,7 @@ private:
     void applySurface(const Material* material, const MeshPart* part, glm::vec3 color, bool worldUv);
     void drawCube(const glm::mat4& transform, glm::vec3 color, float highlight, bool emissive);
     void releaseUnused();
+    void keepAlive(const Model& model);
 
     std::unordered_map<std::uint64_t, GpuTexture> textures_;
     std::unordered_map<std::uint64_t, GpuMesh> meshes_; // keyed by MeshPart::id
@@ -169,9 +174,17 @@ private:
     const Environment* env_ = nullptr;  // of the scene being rendered
     float time_ = 0.0f;
     int targetFbo_ = 0;                 // framebuffer to present into
+    int targetX_ = 0, targetY_ = 0;     // where in it
     bool pendingPresent_ = false;
     glm::mat4 view_{1.0f}, projection_{1.0f};
     std::string glInfo_;
+    std::array<glm::vec4, 6> frustum_{}; // planes of the pass being drawn
+    bool frustumSkipNear_ = false;
+    bool visible(const Aabb& box) const;
+    int culled_ = 0;
+
+public:
+    int lastCulled() const { return culled_; } // objects skipped by frustum culling in the last render()
 };
 
 } // namespace engine

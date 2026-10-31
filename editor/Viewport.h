@@ -17,6 +17,12 @@ public:
     ~Viewport() override;
 
     enum class Tool { Select, Move, Rotate, Scale };
+    // Perspective camera or orthographic views from the top, front (+Z) and side (+X).
+    enum class ViewMode { Perspective, Top, Front, Side };
+    void setViewMode(ViewMode mode); // single view
+    void setQuadView(bool on);       // top, perspective, front and side at once
+    ViewMode viewMode() const { return mode_; }
+    bool quadView() const { return quad_; }
     void setTool(Tool tool);
     Tool tool() const { return tool_; }
     void setSnap(float grid, float angleDegrees, float scaleStep); // 0 = off
@@ -75,6 +81,15 @@ private:
     std::vector<Handle> gizmoHandles() const;
     int handleAt(QPointF pos, float* distance = nullptr) const; // gizmo axis under the cursor, -1 = none
     void dragTo(QPointF pos);
+    struct Pane {
+        ViewMode mode;
+        QRectF rect; // widget coordinates
+    };
+    std::vector<Pane> panes() const;
+    void selectPane(QPointF pos) const;                 // makes the pane under `pos` current
+    glm::mat4 paneView(ViewMode mode) const;
+    glm::mat4 paneProjection(ViewMode mode, float aspect) const;
+    glm::vec3 paneEye(ViewMode mode) const;
     void cleanup();
 
     engine::Scene* scene_;
@@ -114,4 +129,10 @@ private:
     } drag_;
     bool panning_ = false;
     int hoverAxis_ = -1; // gizmo handle under the cursor (highlighted)
+    ViewMode mode_ = ViewMode::Perspective;
+    bool quad_ = false;
+    glm::vec3 orthoCenter_{0.0f, 0.0f, 0.0f};
+    float orthoSize_ = 14.0f;                              // half height of the orthographic views, m
+    mutable ViewMode paneMode_ = ViewMode::Perspective;    // pane being drawn or under the mouse
+    mutable QRectF paneRect_;
 };

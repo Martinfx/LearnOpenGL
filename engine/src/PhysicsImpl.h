@@ -1,5 +1,6 @@
 #pragma once
 // Private header: Jolt setup shared by Physics.cpp and PlayerController.cpp.
+#include <glm/gtc/quaternion.hpp>
 #include "engine/Physics.h"
 
 #include <Jolt/Jolt.h>
@@ -52,7 +53,8 @@ struct PhysicsWorld::Impl {
     Impl();
     ~Impl();
     void clearStatic();
-    void addStatic(const JPH::ShapeSettings& settings, glm::vec3 position, const std::string& name);
+    void addStatic(const JPH::ShapeSettings& settings, glm::vec3 position, const std::string& name,
+                   glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
 
     BroadPhaseLayersImpl broadPhaseLayers;
     ObjectVsBroadPhaseFilter objectVsBroadPhase;

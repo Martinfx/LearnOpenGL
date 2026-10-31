@@ -11,10 +11,10 @@ magazine 8
 reload_time 2.21
 spread 0.8
 range 120
-view_offset 0.06 -0.03 0
+view_offset 0 0 0
 view_scale 1
 view_rotation 0 0 0
-muzzle 0.04 -0.01 -0.61
+muzzle 0.08 -0.05 -0.5
 anim_idle "idle"
 anim_fire "fire"
 anim_reload "reload"
@@ -22,7 +22,7 @@ anim_draw ""
 anim_reload_empty "reload_empty"
 reload_empty_time 2.96
 anim_walk "walk"
-aim_offset -0.027 -0.031 0
+aim_offset -0.079 0.038 0
 aim_rotation 0 0 0
 aim_fov 65
 aim_time 0.15

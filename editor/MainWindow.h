@@ -108,7 +108,6 @@ private:
     QTabWidget* tabs_ = nullptr;
     MaterialEditor* materialEditor_ = nullptr;
     class ShaderEditor* shaderEditor_ = nullptr;
-    float boxTurn_ = 0.0f;        // rotate drag on a box: degrees not yet applied as a quarter turn
     bool customShaders_ = false; // the viewport runs shaders from shaderRoot()
     QWidget* materialRow_ = nullptr;
     QLineEdit* materialEdit_ = nullptr;

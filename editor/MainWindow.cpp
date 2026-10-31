@@ -184,6 +184,26 @@ void MainWindow::buildMenus()
     QMenu* game = menuBar()->addMenu(tr("&Game"));
     QAction* play = game->addAction(tr("&Play level"), QKeySequence(Qt::Key_F5), this, &MainWindow::playLevel);
 
+    // View: perspective or orthographic top / front / side, or all four at once.
+    QMenu* viewMenu = menuBar()->addMenu(tr("&View"));
+    auto* viewGroup = new QActionGroup(this);
+    const std::pair<QString, int> views[] = {{tr("&Perspective"), 0}, {tr("&Top"), 1}, {tr("&Front"), 2}, {tr("&Side"), 3}, {tr("&4 views"), 4}};
+    for (const auto& [label, index] : views) {
+        QAction* a = viewMenu->addAction(label);
+        a->setCheckable(true);
+        a->setChecked(index == 0);
+        a->setShortcut(QKeySequence(Qt::CTRL | static_cast<Qt::Key>(Qt::Key_1 + index)));
+        viewGroup->addAction(a);
+        connect(a, &QAction::triggered, this, [this, index] {
+            if (index == 4)
+                viewport_->setQuadView(true);
+            else
+                viewport_->setViewMode(static_cast<Viewport::ViewMode>(index));
+        });
+    }
+    viewMenu->addSeparator();
+    viewMenu->addAction(tr("Orthographic views: right or middle drag pans, wheel zooms"))->setEnabled(false);
+
     // Render: quality of this machine's viewport (saved in the editor settings) and shaders.
     QMenu* render = menuBar()->addMenu(tr("&Render"));
     auto* qualityGroup = new QActionGroup(this);
@@ -318,13 +338,10 @@ void MainWindow::buildMenus()
         } else if (scene_.isEntity(object)) {
             scene_.entity(object).yawDegrees -= degrees.y;
         } else if (scene_.isBox(object)) {
-            // Boxes are axis-aligned: each full quarter turn of the drag swaps width and depth.
-            boxTurn_ += degrees.y;
-            while (std::abs(boxTurn_) >= 90.0f) {
-                boxTurn_ -= std::copysign(90.0f, boxTurn_);
-                std::swap(scene_.boxes[static_cast<std::size_t>(object)].size.x,
-                          scene_.boxes[static_cast<std::size_t>(object)].size.z);
-            }
+            glm::vec3& r = scene_.boxes[static_cast<std::size_t>(object)].rotation;
+            r += degrees;
+            for (int i = 0; i < 3; ++i)
+                r[i] = std::fmod(r[i], 360.0f);
         }
         refreshProperties();
         dirty_ = true;
@@ -344,7 +361,6 @@ void MainWindow::buildMenus()
         dirty_ = true;
     });
     connect(viewport_, &Viewport::dragFinished, this, [this](int) {
-        boxTurn_ = 0.0f;
         dependencies_->showObject(selected_);
         markDirty();
     });
@@ -459,6 +475,9 @@ void MainWindow::buildDocks()
     connect(rotationEdit_, &Vec3Editor::valueEdited, this, [this](glm::vec3 v) {
         if (auto* m = selectedModel()) {
             m->rotation = v;
+            markDirty();
+        } else if (auto* b = selectedBox()) {
+            b->rotation = v;
             markDirty();
         }
     });
@@ -885,7 +904,7 @@ void MainWindow::refreshProperties()
     const engine::Entity* e = selectedEntity();
     boxPanel_->setEnabled(b || m || e);
     sizeEdit_->setEnabled(b || e);
-    rotationEdit_->setEnabled(m != nullptr);
+    rotationEdit_->setEnabled(m != nullptr || b != nullptr);
     scaleSpin_->setEnabled(m != nullptr);
     materialRow_->setEnabled(b != nullptr);
     materialEdit_->setText(b && !b->materialPath.empty() ? QString::fromStdU16String(b->materialPath.stem().u16string()) : QString());
@@ -910,6 +929,7 @@ void MainWindow::refreshProperties()
         nameEdit_->setText(QString::fromStdString(b->name));
         positionEdit_->setValue(b->position);
         sizeEdit_->setValue(b->size);
+        rotationEdit_->setValue(b->rotation);
         colorButton_->setStyleSheet(colorStyle(b->color));
     } else if (m) {
         kindLabel_->setText(tr("glTF model: %1").arg(QString::fromStdU16String(m->sourcePath.filename().u16string())));

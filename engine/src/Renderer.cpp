@@ -527,7 +527,7 @@ void Renderer::updateEnvironment(const Scene& scene, const RenderView& view)
     b.skyZenith = glm::vec4(linear(e.skyZenith), e.cloudCover);
     b.skyHorizon = glm::vec4(linear(e.skyHorizon), time_);
     b.groundColor = glm::vec4(linear(e.groundColor), e.ambientIntensity);
-    b.fogColor = glm::vec4(linear(e.fogColor), e.fogDensity);
+    b.fogColor = glm::vec4(linear(e.fogColor), view.fog ? e.fogDensity : 0.0f);
     b.fogParams = glm::vec4(e.fogHeight, e.fogHeightFalloff, e.fogSunScatter, e.ssaoIntensity);
     b.cameraPos = glm::vec4(view.cameraPosition, quality_.ssao ? 1.0f : 0.0f);
     b.view = view.view;
@@ -641,8 +641,27 @@ void Renderer::updateEnvironmentMap(const Scene& scene)
     glNamedBufferSubData(envBuffer_, 0, sizeof(captureBlock), &captureBlock);
 }
 
-void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool depthOnly)
+bool Renderer::visible(const Aabb& box) const
 {
+    for (int i = 0; i < 6; ++i) {
+        if (frustumSkipNear_ && i == 4)
+            continue;
+        const glm::vec4& p = frustum_[static_cast<std::size_t>(i)];
+        // Corner of the box furthest along the plane normal.
+        const glm::vec3 corner(p.x >= 0.0f ? box.max.x : box.min.x, p.y >= 0.0f ? box.max.y : box.min.y,
+                               p.z >= 0.0f ? box.max.z : box.min.z);
+        if (glm::dot(glm::vec3(p), corner) + p.w < 0.0f)
+            return false;
+    }
+    return true;
+}
+
+void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool depthOnly, const glm::mat4& cull, bool skipNear)
+{
+    // Frustum planes (Gribb/Hartmann): left, right, bottom, top, near, far.
+    const glm::mat4 t = glm::transpose(cull);
+    frustum_ = {t[3] + t[0], t[3] - t[0], t[3] + t[1], t[3] - t[1], t[3] + t[2], t[3] - t[2]};
+    frustumSkipNear_ = skipNear;
     depthOnly_ = depthOnly;
     glUniform1i(loc_.emissive, 0);
     glUniform1i(loc_.skinned, 0);
@@ -662,10 +681,27 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
     };
     for (std::size_t i = 0; i < scene.boxes.size(); ++i) {
         const Box& b = scene.boxes[i];
+        if (!visible(b.bounds())) {
+            ++culled_;
+            continue;
+        }
+        if (b.rotated()) {
+            glUniformMatrix4fv(loc_.model, 1, GL_FALSE, glm::value_ptr(b.transform()));
+            applySurface(b.material.get(), nullptr, b.color, true);
+            glUniform1f(loc_.highlight, static_cast<int>(i) == view.selectedObject ? 1.0f : 0.0f);
+            glBindVertexArray(vao_);
+            glDrawArrays(GL_TRIANGLES, 0, vertexCount_);
+            continue;
+        }
         drawBox(b.position, b.size, b.color, static_cast<int>(i) == view.selectedObject ? 1.0f : 0.0f, 0.0f, b.material.get());
     }
     for (std::size_t i = 0; i < scene.models.size(); ++i) {
         const Model& model = scene.models[i];
+        if (!visible(model.bounds())) {
+            keepAlive(model); // stays uploaded while out of view
+            ++culled_;
+            continue;
+        }
         const bool selected = static_cast<int>(scene.boxes.size() + i) == view.selectedObject;
         drawModel(model, model.transform(), selected ? 1.0f : 0.0f);
     }
@@ -676,6 +712,14 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
     for (std::size_t i = 0; i < scene.entities.size(); ++i) {
         const Entity& e = scene.entities[i];
         const float highlight = static_cast<int>(scene.boxes.size() + scene.models.size() + i) == view.selectedObject ? 1.0f : 0.0f;
+        // Generous box: animations reach outside the rest pose.
+        const float reach = std::max({e.size.x, e.size.y, e.size.z}) * 1.5f;
+        if (!visible(Aabb::fromCenterSize(e.position + glm::vec3(0.0f, e.size.y * 0.5f, 0.0f), glm::vec3(reach)))) {
+            if (e.model)
+                keepAlive(*e.model);
+            ++culled_;
+            continue;
+        }
         if (e.model) {
             // Animated character; stays as a corpse after death.
             glUniform1f(loc_.flash, std::min(1.0f, e.flash * 8.0f));
@@ -724,7 +768,7 @@ void Renderer::renderShadows(const Scene& scene, const RenderView& view)
         glUniformMatrix4fv(loc_.viewProj, 1, GL_FALSE, glm::value_ptr(b.shadowMatrices[i]));
         RenderView shadowView = view;
         shadowView.drawPlayerStart = false;
-        drawGeometry(scene, shadowView, true);
+        drawGeometry(scene, shadowView, true, b.shadowMatrices[i], true);
     }
     glDisable(GL_POLYGON_OFFSET_FILL);
     glEnable(GL_CULL_FACE);
@@ -752,9 +796,12 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     // Free GPU data nothing drew since the previous render() (removed models).
     releaseUnused();
     texturesUploaded_ = 0;
+    culled_ = 0;
     GLint target = 0;
     glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &target);
     targetFbo_ = target;
+    targetX_ = view.viewportX;
+    targetY_ = view.viewportY;
     env_ = &scene.environment;
     time_ = view.time;
     view_ = view.view;
@@ -779,7 +826,7 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     useMeshProgram(programs_.depth);
     glUniformMatrix4fv(loc_.viewProj, 1, GL_FALSE, glm::value_ptr(viewProj));
     glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-    drawGeometry(scene, view, true);
+    drawGeometry(scene, view, true, viewProj);
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
     if (quality_.ssao)
@@ -799,7 +846,7 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     glBindTextureUnit(7, quality_.ssao ? ssaoBlurTex_ : whiteTex_);
     glBindTextureUnit(8, envMap_);
     glBindTextureUnit(9, brdfLut_);
-    drawGeometry(scene, view, false);
+    drawGeometry(scene, view, false, viewProj);
 
     // Sky where nothing was drawn.
     glDepthMask(GL_FALSE);
@@ -890,7 +937,10 @@ void Renderer::present()
     const Environment& e = env_ ? *env_ : defaults;
     glBindVertexArray(emptyVao_);
     glBindFramebuffer(GL_FRAMEBUFFER, quality_.fxaa ? ldrFbo_ : static_cast<unsigned>(targetFbo_));
-    glViewport(0, 0, width_, height_);
+    if (quality_.fxaa)
+        glViewport(0, 0, width_, height_);
+    else
+        glViewport(targetX_, targetY_, width_, height_);
     const Program& post = programs_.post;
     glUseProgram(post.id);
     glUniform1f(post.loc("uExposure"), e.exposure);
@@ -906,6 +956,7 @@ void Renderer::present()
     glDrawArrays(GL_TRIANGLES, 0, 3);
     if (quality_.fxaa) {
         glBindFramebuffer(GL_FRAMEBUFFER, static_cast<unsigned>(targetFbo_));
+        glViewport(targetX_, targetY_, width_, height_);
         glUseProgram(programs_.fxaa.id);
         glBindTextureUnit(0, ldrTex_);
         glDrawArrays(GL_TRIANGLES, 0, 3);
@@ -1076,6 +1127,23 @@ void Renderer::drawCube(const glm::mat4& transform, glm::vec3 color, float highl
     glUniform1i(loc_.emissive, emissive ? 1 : 0);
     glDrawArrays(GL_TRIANGLES, 0, vertexCount_);
     glUniform1i(loc_.emissive, 0);
+}
+
+void Renderer::keepAlive(const Model& model)
+{
+    // Culled models keep their GPU meshes and textures (no re-upload when they come back into view).
+    for (const MeshPart& part : model.parts) {
+        if (auto it = meshes_.find(part.id); it != meshes_.end())
+            it->second.used = true;
+        if (const Material* m = model.materialFor(part))
+            for (const auto& asset : m->maps)
+                if (asset && asset->texture)
+                    if (auto t = textures_.find(asset->texture->id); t != textures_.end())
+                        t->second.used = true;
+        if (part.texture)
+            if (auto t = textures_.find(part.texture->id); t != textures_.end())
+                t->second.used = true;
+    }
 }
 
 void Renderer::releaseUnused()
