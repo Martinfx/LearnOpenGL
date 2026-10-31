@@ -1996,6 +1996,10 @@ bool MainWindow::assignMaterial(const QString& path, int object)
 
 void MainWindow::openAssetFile(const QString& path)
 {
+    if (QFileInfo(path).fileName() == "surfaces.cfg") {
+        openSurfacesEditor();
+        return;
+    }
     openAsset(path, static_cast<int>(assetTypeOf(path)));
 }
 
@@ -2018,7 +2022,12 @@ void MainWindow::openAsset(const QString& path, int type)
         if (confirmDiscard())
             openFile(path);
         break;
-    default: notify(path, 5000); break;
+    default:
+        if (QFileInfo(path).fileName() == "surfaces.cfg")
+            openSurfacesEditor();
+        else
+            notify(path, 5000);
+        break;
     }
 }
 
@@ -2818,6 +2827,7 @@ void MainWindow::openSurfacesEditor()
         if (const int i = tabs_->indexOf(se); i >= 0)
             tabs_->setTabText(i, se->title());
     });
+    connect(se, &SurfacesEditor::openAsset, this, &MainWindow::openAssetFile);
 }
 
 SoundEditor* MainWindow::openSoundEditor(const QString& path)

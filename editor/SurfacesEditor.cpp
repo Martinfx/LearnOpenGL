@@ -2,6 +2,10 @@
 #include "SoundEditor.h"
 
 #include <QComboBox>
+#include <QDir>
+#include <QFileDialog>
+#include <QSpinBox>
+#include <QToolButton>
 #include <QDoubleSpinBox>
 #include <QFileInfo>
 #include <QHBoxLayout>
@@ -14,9 +18,12 @@
 #include <QTableWidget>
 #include <QVBoxLayout>
 
+#include <array>
+
 namespace {
 
-enum Column { Name, Step, StepVolume, Impact, DecalSize, Columns };
+enum Column { Name, Step, StepVolume, Impact, Effect, Casing, DecalRow, DecalSize, Columns };
+constexpr int OriginalRole = Qt::UserRole + 1; // index into SurfacesEditor::originals_
 
 std::filesystem::path toPath(const QString& s)
 {
@@ -41,19 +48,83 @@ QDoubleSpinBox* spin(double min, double max, double step, double value, QWidget*
 
 } // namespace
 
+// A .particle file in a table cell: name, browse, clear and "open in the Particle editor".
+class EffectPicker : public QWidget {
+public:
+    EffectPicker(SurfacesEditor* owner, const QString& path, QWidget* parent) : QWidget(parent), path_(path)
+    {
+        auto* row = new QHBoxLayout(this);
+        row->setContentsMargins(0, 0, 0, 0);
+        row->setSpacing(2);
+        edit_ = new QLineEdit(this);
+        edit_->setReadOnly(true);
+        edit_->setPlaceholderText(tr("none"));
+        row->addWidget(edit_, 1);
+        auto* browse = new QToolButton(this);
+        browse->setText("...");
+        browse->setToolTip(tr("Choose a particle effect"));
+        auto* open = new QToolButton(this);
+        open->setText(tr("Edit"));
+        open->setToolTip(tr("Open in the Particle editor"));
+        auto* clear = new QToolButton(this);
+        clear->setText("x");
+        clear->setToolTip(tr("No effect"));
+        row->addWidget(browse);
+        row->addWidget(open);
+        row->addWidget(clear);
+        update();
+        connect(browse, &QToolButton::clicked, this, [this, owner] {
+            QString dir = path_.isEmpty() ? QFileInfo(owner->path()).absolutePath() + "/particles" : QFileInfo(path_).absolutePath();
+            const QString f = QFileDialog::getOpenFileName(this, tr("Particle effect"), dir, tr("Particle effects (*.particle)"));
+            if (f.isEmpty())
+                return;
+            path_ = QFileInfo(f).absoluteFilePath();
+            update();
+            owner->markEdited();
+        });
+        connect(clear, &QToolButton::clicked, this, [this, owner] {
+            path_.clear();
+            update();
+            owner->markEdited();
+        });
+        connect(open, &QToolButton::clicked, this, [this, owner] {
+            if (!path_.isEmpty())
+                emit owner->openAsset(path_);
+        });
+    }
+    QString path() const { return path_; }
+
+private:
+    void update()
+    {
+        edit_->setText(path_.isEmpty() ? QString() : QFileInfo(path_).completeBaseName());
+        edit_->setToolTip(path_);
+    }
+    QString path_;
+    QLineEdit* edit_ = nullptr;
+};
+
 SurfacesEditor::SurfacesEditor(QWidget* parent) : QWidget(parent)
 {
     auto* layout = new QVBoxLayout(this);
-    auto* info = new QLabel(tr("What each surface sounds like when walked on or shot. Materials choose their surface in the "
-                               "Material editor (Auto guesses it from the name: \"rusty_metal\" is metal)."),
+    auto* info = new QLabel(tr("What each surface sounds and looks like when walked on or shot: footsteps, bullet impact "
+                               "sound and particles, the sound of spent cases landing on it and its bullet hole. Materials "
+                               "choose their surface in the Material editor (Auto guesses it from the name: \"rusty_metal\" "
+                               "is metal)."),
                             this);
     info->setWordWrap(true);
     layout->addWidget(info);
 
     table_ = new QTableWidget(0, Columns, this);
-    table_->setHorizontalHeaderLabels({tr("Surface"), tr("Footstep"), tr("Step volume"), tr("Bullet impact"), tr("Bullet hole (m)")});
-    table_->horizontalHeader()->setSectionResizeMode(Step, QHeaderView::Stretch);
-    table_->horizontalHeader()->setSectionResizeMode(Impact, QHeaderView::Stretch);
+    table_->setHorizontalHeaderLabels({tr("Surface"), tr("Footstep"), tr("Step volume"), tr("Impact sound"),
+                                       tr("Impact particles"), tr("Case landing"), tr("Hole style"), tr("Hole size (m)")});
+    // Pickers need room for a file name; the table scrolls sideways when the tab is narrow.
+    table_->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
+    table_->horizontalHeader()->setStretchLastSection(false);
+    table_->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+    const int widths[Columns] = {90, 240, 90, 240, 220, 240, 100, 100};
+    for (int c = 0; c < Columns; ++c)
+        table_->setColumnWidth(c, widths[c]);
     table_->verticalHeader()->hide();
     table_->setSelectionBehavior(QAbstractItemView::SelectRows);
     table_->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -120,7 +191,10 @@ void SurfacesEditor::addRow(const engine::SurfaceType& type)
     updating_ = true;
     const int r = table_->rowCount();
     table_->insertRow(r);
-    table_->setItem(r, Name, new QTableWidgetItem(QString::fromStdString(type.name)));
+    auto* nameItem = new QTableWidgetItem(QString::fromStdString(type.name));
+    nameItem->setData(OriginalRole, static_cast<int>(originals_.size()));
+    originals_.push_back(type); // keeps fields without a column (decal atlas and grid)
+    table_->setItem(r, Name, nameItem);
     auto* step = new SoundPicker(table_);
     step->setPath(toQString(type.footstep));
     connect(step, &SoundPicker::pathChanged, this, &SurfacesEditor::edited);
@@ -132,6 +206,20 @@ void SurfacesEditor::addRow(const engine::SurfaceType& type)
     impact->setPath(toQString(type.impact));
     connect(impact, &SoundPicker::pathChanged, this, &SurfacesEditor::edited);
     table_->setCellWidget(r, Impact, impact);
+    auto* effect = new EffectPicker(this, toQString(type.effect), table_);
+    table_->setCellWidget(r, Effect, effect);
+    auto* casing = new SoundPicker(table_);
+    casing->setPath(toQString(type.casing));
+    connect(casing, &SoundPicker::pathChanged, this, &SurfacesEditor::edited);
+    table_->setCellWidget(r, Casing, casing);
+    auto* holeRow = new QComboBox(table_);
+    holeRow->addItem(tr("Any"), -1);
+    for (int i = 0; i < std::max(1, type.decalRows); ++i)
+        holeRow->addItem(i < 4 ? std::array{tr("Concrete"), tr("Metal"), tr("Wood"), tr("Soft")}[i] : tr("Row %1").arg(i + 1), i);
+    holeRow->setCurrentIndex(std::max(0, holeRow->findData(type.decalRow)));
+    holeRow->setToolTip(tr("Which row of the bullet hole atlas this surface uses"));
+    connect(holeRow, &QComboBox::activated, this, &SurfacesEditor::edited);
+    table_->setCellWidget(r, DecalRow, holeRow);
     auto* decal = spin(0, 1, 0.01, type.decalSize, table_);
     decal->setToolTip(tr("Diameter of the bullet hole, 0 = none (water, flesh)"));
     connect(decal, &QDoubleSpinBox::valueChanged, this, &SurfacesEditor::edited);
@@ -158,6 +246,13 @@ engine::SurfaceTable SurfacesEditor::collect() const
     t.fallback = fallback_->currentText().toStdString();
     for (int r = 0; r < table_->rowCount(); ++r) {
         engine::SurfaceType s;
+        if (auto* item = table_->item(r, Name)) {
+            const int original = item->data(OriginalRole).toInt();
+            if (item->data(OriginalRole).isValid() && original >= 0 && original < static_cast<int>(originals_.size()))
+                s = originals_[original];
+        }
+        if (s.decal.empty() && !path_.isEmpty()) // new rows get the shared bullet hole atlas
+            s.decal = toPath(QFileInfo(path_).absolutePath() + "/textures/decals/bullet_holes_albedo.png");
         if (auto* item = table_->item(r, Name))
             s.name = item->text().trimmed().replace(' ', '_').toStdString();
         if (s.name.empty())
@@ -168,6 +263,12 @@ engine::SurfaceTable SurfacesEditor::collect() const
             s.impact = toPath(p->path());
         if (auto* v = qobject_cast<QDoubleSpinBox*>(table_->cellWidget(r, StepVolume)))
             s.stepVolume = static_cast<float>(v->value());
+        if (auto* p = dynamic_cast<EffectPicker*>(table_->cellWidget(r, Effect)))
+            s.effect = toPath(p->path());
+        if (auto* p = qobject_cast<SoundPicker*>(table_->cellWidget(r, Casing)))
+            s.casing = toPath(p->path());
+        if (auto* c = qobject_cast<QComboBox*>(table_->cellWidget(r, DecalRow)))
+            s.decalRow = c->currentData().toInt();
         if (auto* v = qobject_cast<QDoubleSpinBox*>(table_->cellWidget(r, DecalSize)))
             s.decalSize = static_cast<float>(v->value());
         t.types.push_back(std::move(s));
@@ -195,6 +296,7 @@ bool SurfacesEditor::load(const QString& path, QString* error)
     }
     updating_ = true;
     table_->setRowCount(0);
+    originals_.clear();
     for (const engine::SurfaceType& s : t.types)
         addRow(s);
     refreshDefault();
