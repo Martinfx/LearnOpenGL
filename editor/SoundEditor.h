@@ -10,6 +10,10 @@ class QLabel;
 class QLineEdit;
 class QListWidget;
 class QSpinBox;
+class QTimer;
+class WaveformView;
+class AttenuationGraph;
+class SpatialPad;
 
 // The editor's audio output, for previews (opened on first use, never blocks:
 // files decode on miniaudio's job thread).
@@ -38,6 +42,10 @@ private:
 
 // Editor tab for a .sound file: variations, volume, random pitch, 3D range,
 // loop / stream, mixer group. Preview plays one variation like the game would.
+// The right side shows the selected variation's waveform (decoded on the job
+// system), the distance attenuation curve (drag its min / max lines) and a
+// top-down 3D pad: drag the sound around the listener while it plays, or let
+// it orbit, with a reverb preset to hear it in a room.
 class SoundEditor : public QWidget {
     Q_OBJECT
 public:
@@ -55,6 +63,8 @@ private:
     void showSound();
     void edited();
     void play();
+    void showWaveform();
+    void updateSourcePosition();
 
     QString path_;
     engine::SoundDef sound_;
@@ -75,4 +85,12 @@ private:
     QComboBox* group_ = nullptr;
     QSpinBox* maxInstances_ = nullptr;
     QLabel* info_ = nullptr;
+    QLabel* waveInfo_ = nullptr;
+    WaveformView* waveform_ = nullptr;
+    AttenuationGraph* attenuation_ = nullptr;
+    SpatialPad* pad_ = nullptr;
+    QCheckBox* orbit_ = nullptr;
+    QComboBox* reverb_ = nullptr;
+    QTimer* orbitTimer_ = nullptr;
+    unsigned waveRequest_ = 0; // newest decode wins
 };

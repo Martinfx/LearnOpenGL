@@ -1205,6 +1205,45 @@ void testAudio()
     for (int i = 0; i < 20; ++i)
         audio.play2D(*shot);
     check(audio.activeVoices() == shot->maxInstances, "max_instances caps the voices of one sound");
+    audio.stopAll();
+    audio.update(0.1f);
+
+    // A stereo file played in 3D is mixed to mono and positioned (OpenAL leaves stereo buffers un-positioned).
+    {
+        const fs::path wav = fs::temp_directory_path() / "fps_engine_stereo.wav";
+        const std::uint32_t rate = 48000, frames = rate / 2;
+        std::vector<std::int16_t> pcm(frames * 2);
+        for (std::uint32_t i = 0; i < frames; ++i)
+            pcm[2 * i] = pcm[2 * i + 1] = static_cast<std::int16_t>(12000 * std::sin(i * 2.0 * 3.14159265 * 440.0 / rate));
+        std::FILE* f = std::fopen(wav.string().c_str(), "wb");
+        auto u32 = [&](std::uint32_t v) { std::fwrite(&v, 4, 1, f); };
+        auto u16 = [&](std::uint16_t v) { std::fwrite(&v, 2, 1, f); };
+        const std::uint32_t bytes = frames * 4;
+        std::fwrite("RIFF", 1, 4, f); u32(36 + bytes); std::fwrite("WAVEfmt ", 1, 8, f);
+        u32(16); u16(1); u16(2); u32(rate); u32(rate * 4); u16(4); u16(16);
+        std::fwrite("data", 1, 4, f); u32(bytes); std::fwrite(pcm.data(), 2, pcm.size(), f);
+        std::fclose(f);
+        engine::SoundDef stereo;
+        stereo.files = {wav};
+        audio.preload(stereo);
+        std::this_thread::sleep_for(std::chrono::milliseconds(300));
+        const auto handle = audio.play(stereo, {4, 0, 0}); // to the right of the listener
+        std::vector<float> buf(4800 * 2);
+        float left = 0.0f, right = 0.0f;
+        for (int i = 0; i < 400 && right == 0.0f; ++i) {
+            audio.render(buf.data(), 4800);
+            for (std::size_t k = 0; k < buf.size(); k += 2) {
+                left = std::max(left, std::abs(buf[k]));
+                right = std::max(right, std::abs(buf[k + 1]));
+            }
+            if (right == 0.0f)
+                std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        }
+        audio.stop(handle);
+        std::printf("stereo file at +X: left %.3f right %.3f\n", left, right);
+        check(right > 0.05f && right > left * 1.5f, "a stereo file played in 3D is positioned (louder on its side)");
+        fs::remove(wav);
+    }
     audio.shutdown();
 }
 

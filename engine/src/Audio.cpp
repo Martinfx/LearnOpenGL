@@ -353,6 +353,7 @@ struct AudioSystem::Impl {
         bool stopAfterFade = false;
         bool started = false;
         bool loop = false;
+        bool mono = false;         // positioned: OpenAL only places mono buffers in 3D
         std::shared_ptr<Clip> clip;
         std::unique_ptr<Stream> stream;
         std::filesystem::path file;
@@ -389,16 +390,26 @@ struct AudioSystem::Impl {
 
     // ---- clips
 
-    std::shared_ptr<Clip> clipFor(const std::filesystem::path& file)
+    // `mono` mixes stereo files down: OpenAL plays stereo buffers un-positioned,
+    // so 3D sounds get their own mono copy (2D uses of the file keep stereo).
+    std::shared_ptr<Clip> clipFor(const std::filesystem::path& file, bool mono)
     {
-        const std::string key = file.string();
+        const std::string key = file.string() + (mono ? "|mono" : "");
         if (auto it = clips.find(key); it != clips.end())
             return it->second;
         auto clip = std::make_shared<Clip>();
         clips.emplace(key, clip);
-        JobSystem::global().run([clip, file] {
+        JobSystem::global().run([clip, file, mono] {
             std::string error;
             if (decodeAudioFile(file, clip->data, &error)) {
+                AudioClipData& d = clip->data;
+                if (mono && d.channels == 2) {
+                    const std::size_t frames = d.frames();
+                    for (std::size_t i = 0; i < frames; ++i)
+                        d.samples[i] = static_cast<std::int16_t>((int(d.samples[2 * i]) + int(d.samples[2 * i + 1])) / 2);
+                    d.samples.resize(frames);
+                    d.channels = 1;
+                }
                 clip->state = Decoded;
             } else {
                 std::fprintf(stderr, "Audio: %s\n", error.c_str());
@@ -519,7 +530,8 @@ struct AudioSystem::Impl {
                                 ? std::uniform_real_distribution<float>(def.pitchMin, def.pitchMax)(rng)
                                 : def.pitchMin;
         alSourcef(s, AL_PITCH, std::max(0.05f, pitch));
-        if (position && def.spatial) {
+        voice->mono = position && def.spatial;
+        if (voice->mono) {
             alSourcei(s, AL_SOURCE_RELATIVE, AL_FALSE);
             alSource3f(s, AL_POSITION, position->x, position->y, position->z);
             alSourcef(s, AL_REFERENCE_DISTANCE, def.minDistance);
@@ -537,7 +549,7 @@ struct AudioSystem::Impl {
             alGenBuffers(static_cast<ALsizei>(voice->stream->buffers.size()), voice->stream->buffers.data());
             // The audio thread opens the file and starts it.
         } else {
-            voice->clip = clipFor(file);
+            voice->clip = clipFor(file, voice->mono);
             alSourcei(s, AL_LOOPING, def.loop ? AL_TRUE : AL_FALSE);
             startIfReady(*voice);
         }
@@ -597,7 +609,7 @@ struct AudioSystem::Impl {
                 continue;
             Stream& st = *v.stream;
             if (!st.open) {
-                ma_decoder_config config = ma_decoder_config_init(ma_format_s16, 0, 0);
+                ma_decoder_config config = ma_decoder_config_init(ma_format_s16, v.mono ? 1 : 0, 0);
                 ma_result r = withPath(
                     v.file, [&](const char* p) { return ma_decoder_init_file(p, &config, &st.decoder); },
                     [&](const wchar_t* p) { return ma_decoder_init_file_w(p, &config, &st.decoder); });
@@ -852,7 +864,7 @@ void AudioSystem::preload(const SoundDef& sound)
     if (!impl_->initialized || sound.stream)
         return;
     for (const auto& f : sound.files)
-        impl_->clipFor(f);
+        impl_->clipFor(f, sound.spatial);
 }
 
 AudioSystem::Handle AudioSystem::play(const SoundDef& sound, glm::vec3 position, float volume)
