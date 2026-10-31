@@ -65,6 +65,23 @@ Funkce výše jsou pokryté; chyběla hlavně „neviditelná“ infrastruktura:
 | Lokalizace a přístupnost | fonty s češtinou | Tabulky řetězců (cs, en, plurály), titulky, FOV, velikost textu | P2 | M5 |
 | Výroba | CI na 3 OS | Verze z gitu, symboly ke každému vydání, VFS + `mods/`, licence 3rdparty, demo/benchmark | P2 | M4 / M5 |
 
+## 1c. Atmosféra zóny (2026-10-31)
+
+Atmosféra S.T.A.L.K.E.R.u nevzniká z jedné technologie, ale ze souhry: tmavé noci s baterkou,
+počasí a mlha, tlumené barvy, prázdné pláně, vrstvený zvuk a NPC, která žijí i bez hráče.
+Rozbor technik je v [`ENGINE_RESEARCH.md`, sekce 6](ENGINE_RESEARCH.md#6-atmosféra-zóny-z-čeho-vzniká-a-jak-ji-postavit);
+konkrétní položky jsou označené **[atm]** v milnících níže.
+
+| Pilíř | Co máme | Co chybí | Milník |
+| --- | --- | --- | --- |
+| Tmavé noci a baterka | pevná expozice, slunce, IBL z procedurální oblohy | Auto-expozice s dolním limitem, měsíc a hvězdy, ztlumení sky light v interiérech, baterka (reflektor se stínem a cookie), baterky NPC | M1 / M2 / M3 |
+| Počasí a denní doba | presety Environment, déšť a vítr (zvuk + částice) | Klíčové snímky po hodinách a přechody počasí, stíny mraků, okluze deště, mokré povrchy a louže, blesky a hrom se zpožděním, globální vítr | M2 |
+| Mlha a světlo v prostoru | výšková mlha se sun scatter | Volumetrická mlha (froxely), paprsky slunce, kužele baterek, barva oparu z oblohy | M3 |
+| Barvy | saturace, kontrast, tint, viněta, zrno | 3D LUT po presetech s prolínáním, lift/gamma/gain, kontrola palety albeda | M1 / M2 |
+| Zvuk | OpenAL, HRTF, EFX, ambientní zóny, déšť/vítr | Náhodné 3D jednorázové zvuky podle denní doby a oblasti, zvukové oblasti s prolnutím, reverb zóny, okluze, ducking před událostí, detektor/radiace | M1 / M4 |
+| Život v zóně | Lua AI, navmesh | Online/offline NPC, graf zóny, tábory s rolemi a rozvrhem, offline střety se zvukem a následky, fauna | M4 |
+| Anomálie, ohně, detaily | částice, flipbooky ohně a kouře, decaly | Průchod distorze (anomálie, teplo nad ohněm), táborák jako prefab, rozptyl odpadků a suti štětcem | M1 / M3 / M4 |
+
 ## 2. Milníky
 
 Pořadí je dané závislostmi: bez měření a komprese nemá smysl stavět větší svět, bez zvuku,
@@ -125,7 +142,11 @@ Jedna lokace zóny od menu po smrt/uložení, se zvukem a chytřejšími nepřá
 - [x] **OpenAL Soft** (2026-10-31): přehrávání přepsáno na OpenAL Soft 1.24.3 (`3rdparty/openal-soft`, LGPL, sdílená knihovna, přednost má systémový balík), HRTF, EFX reverb presety, loopback zařízení pro testy a stroje bez zvukovky; miniaudio zůstává jen jako dekodér WAV/OGG/MP3/FLAC.
 - [x] **Sound editor 2** (2026-10-31): průběh vlny, graf útlumu v dB s tažitelnými min/max, 3D náhled (zdroj kolem posluchače, orbit, dozvuk); stereo soubory se ve 3D mixují do mona. Kroky, dopady a nábojnice podle povrchu (`surfaces.cfg`), déšť a vítr v Environment.
 - [ ] Audio dál: hlasitosti skupin v menu hry, ducking, reverb zóny, okluze zvuku geometrií.
+- [ ] **[atm] Vrstvený ambient** (1 týden): zvukové oblasti v editoru (sada vrstev, prolnutí na hranici), náhodné jednorázové 3D zvuky 50–400 m od hráče (psi, vrány, vzdálená střelba, plech) s pravděpodobností podle denní doby a oblasti, venku/uvnitř, ducking ambientu před událostí; editor sad ve Sound editoru.
 - [ ] **Lokální světla** (1,5 týdne): bodová a reflektorová světla, clustered forward, stíny pro pár nejbližších; světla jako objekty v editoru s gizmem dosahu; blikající zářivky.
+- [ ] **[atm] Baterka** (0,5 týdne, po lokálních světlech): reflektor se stínovou mapou a cookie texturou, mírné zpoždění za kamerou, klávesa, volitelně baterie; nastavení v editoru (Player); NPC v noci svítí baterkami.
+- [ ] **[atm] Táborák a ohně** (0,5 týdne): prefab s blikajícím bodovým světlem (šum), stínem, ohněm/kouřem/jiskrami a praskáním; sedací body pro NPC, volitelně 3D hudba (kytara).
+- [ ] **[atm] Expozice a grading** (1 týden): auto-expozice z histogramu s rychlostí adaptace a min/max EV (noc musí zůstat tmavá), 3D LUT na konci post-processu (export neutrální LUT, úprava v Kritě/GIMPu, prolínání podle presetu), lift/gamma/gain a vyvážení bílé v doku Environment.
 - [x] **Navigace** (2 týdny, zbývají krycí body; zobrazení a nastavení v editoru hotové: Details > Level > Navigation, View > Navigation mesh `P`): Recast/Detour do `3rdparty/`, stavba navmeshe na pozadí z kolizí levelu, zobrazení a nastavení v editoru, `self:move_to()` v Lua, krycí body.
 - [ ] **UI hry** (1,5 týdne): hlavní menu, pauza, nastavení (grafika, myš, klávesy, hlasitost), HUD (zdraví, munice), credits s CC-BY autory, obrazovka smrti.
 - [ ] **Uložení hry** (1 týden): serializace stavu entit, hráče a skriptů (Lua tabulka `save`), quick save/load. Po entitách s GUID jako rozdíl proti levelu, atomický zápis (dočasný soubor + `rename`), kontrolní součet, verze obsahu, sloty, autosave.
@@ -147,7 +168,11 @@ Hotovo, když: hra se spustí do menu, jde projít lokaci, nepřátelé obcháze
 - [ ] **Streamování světa** (3 týdny): rozdělení levelu na buňky (např. 128 × 128 m), načítání a uvolňování podle vzdálenosti na pracovních vláknech, HLOD/impostory budov, editor zobrazí buňky a umí je zamknout/načíst; rozpočet paměti.
 - [ ] **Voda** (1 týden): řeka a louže (odrazy SSR nebo probe, průhlednost, mlha pod hladinou).
 - [ ] **Střídání dne a noci** (1,5 týdne, přání martina 2026-10-31): slunce a měsíc po skutečné dráze podle zeměpisné šířky a data, nastavitelná délka dne; obloha s atmosférickým rozptylem (východ a západ slunce), noční obloha s hvězdami a měsícem; stíny, ambient, mlha a expozice podle času. Vše v Environment, v editoru posuvník času a přehrávání, v Lua `game.set_time`.
+  **[atm]** Navíc: typ počasí jako klíčové snímky po hodinách (barvy oblohy, slunce, mlhy, ambient, oblačnost, LUT) s interpolací; noc opravdu tmavá (noční světlo ~1/1000 dne, namodralé, min EV auto-expozice); IBL přepočítávané po stěnách cubemapy; stíny mraků (posouvaná šumová textura).
 - [ ] **Počasí** (1 týden): déšť (hotový základ), mlha a bouřka jako přechody mezi presety Environment, blesky; editor časové osy dne.
+- [ ] **[atm] Déšť a bouřka** (1,5 týdne): mapa okluze deště shora (neprší pod střechou, tlumený zvuk uvnitř), cákance, mokré povrchy (tmavší albedo, nižší roughness, louže z masky, kroužky) s vysycháním; blesky (záblesk světla a oblohy, blesk v dálce), hrom se zpožděním podle vzdálenosti (343 m/s), zesílení větru.
+- [ ] **[atm] Globální vítr**: jeden vektor pro vegetaci, částice, látky a zvuk, nastavení v Environment.
+- [ ] **[atm] Paleta assetů**: kontrola rozsahu albeda (cca 30–240 sRGB) a sytosti v asset validaci editoru.
 
 - [ ] **Rozpočty paměti** (1 týden): limity po kategoriích (textury, meshe, audio, fyzika, Lua) s varováním v doku Memory, snímkový alokátor, pooly pro částice a decaly.
 - [ ] **Asset registry a hot reload** (2 týdny): závislosti assetů podle GUID, přejmenování bez rozbití odkazů, validace (měřítko, chybějící textury) v editoru i CI, sledování souborů a reload textur, modelů, zvuků, `.weapon`, `.particle` a Lua za běhu.
@@ -160,6 +185,9 @@ Hotovo, když: zóna 1 × 1 km jde projít bez načítací obrazovky a paměť d
 - [ ] **Animace** (3 týdny): stavový automat s přechody, blend space 1D/2D, vrstvy s maskou kostí, IK nohou na terénu a levé ruky na zbrani, události v klipech; **Animation editor** (časová osa, náhled, přechody jako graf).
 - [ ] **Ragdolly** (1 týden): Jolt ragdoll ze skeletonu, přechod ze smrti; nastavení kloubů v editoru.
 - [ ] **Osvětlení** (2 týdny): reflection probes s ručním umístěním a bake v editoru, irradiance probe grid pro interiéry, volumetrická mlha a světelné kužele.
+- [ ] **[atm] Volumetrická mlha** (1,5 týdne): froxel mřížka ve compute shaderu, rozptyl ze slunce se CSM stíny a z lokálních světel (kužele baterek), časové vyhlazení, paprsky slunce; barva oparu z oblohy podle směru. Nastavení v Environment a presetech kvality.
+- [ ] **[atm] Tmavé interiéry** (0,5 týdne, s probes): objemy „interiér“ ztlumí světlo oblohy a změní ambient, reverb a déšť; baterka pak v budovách dává smysl.
+- [ ] **[atm] Distorze vzduchu** (0,5 týdne): průchod, do kterého částice a meshe zapisují posun UV, post-process posune obraz s maskou hloubky; tetelení nad ohněm, anomálie, výfuky.
 - [ ] **Obraz** (1 týden): TAA (místo FXAA na High), motion blur volitelně, kvalitnější SSAO (GTAO), SSR.
 - [ ] **Profiler a testy obrazu** (1 týden): Tracy (`3rdparty/`) s časovou osou vláken a GPU zónami; golden image testy rendereru v CI s tolerancí.
 - [ ] **Materiály** (1–2 týdny): instance materiálu, vertex paint a blend vrstev, detail mapy; **VFX editor** pro částice z M1.
@@ -168,9 +196,14 @@ Hotovo, když: zóna 1 × 1 km jde projít bez načítací obrazovky a paměť d
 
 - [ ] Frakce a vztahy (stalkeři, bandité, vojáci), skupiny NPC, neutrální NPC v táboře.
 - [ ] Simulace mimo dohled hráče (zjednodušená A-life: skupiny se přesouvají mezi body zájmu na mapě, i když nejsou načtené).
+  **[atm]** Konkrétně: NPC online do ~150 m (s hysterezí), dál offline záznamy; graf zóny přes nenačtené buňky; tábory nabízejí role (hlídka, spánek, oheň, obchod) s rozvrhem den/noc; offline střety vyhodnocené statisticky s následky (těla, loot) a slyšitelnou střelbou ze správného směru; uložení s GUID. Editor: body zájmu a role v levelu, ladicí pohled na simulaci na mapě.
+- [ ] **[atm] Fauna**: smečky psů s doupaty, vrány, které vyletí při přiblížení (jednoduché boidy).
+- [ ] **[atm] Radiace a detektor**: praskání jako Poissonův proces podle dávky, pípání detektoru podle vzdálenosti anomálie.
+- [ ] **[atm] Anomální bouře** (vlastní design): událost řízená počasím s varováním (zvuk, obloha, ducking), nutnost úkrytu.
 - [ ] Úkoly a dialogy: data v souborech, editor dialogů jako strom, PDA s úkoly (navazuje na mapu).
 - [ ] Obchod, peníze, opotřebení zbraní a zbroje, váha inventáře.
-- [ ] Anomálie a artefakty (vlastní design): trigger + VFX + zvuk + poškození, detektor.
+- [ ] Anomálie a artefakty (vlastní design): trigger + VFX + zvuk + poškození, detektor. **[atm]** Distorze z M3, hučení, reakce na hozený předmět.
+- [ ] **[atm] Detaily zóny**: rozptyl odpadků, suti a malých meshů štětcem (Foliage režim), decaly nápisů a skvrn, rádia s filtrovaným zvukem, prach v kuželech světla.
 - [ ] Debugger Lua (breakpointy, proměnné) a hot reload skriptů za běhu.
 - [ ] Datové třídy s dědičností (`base ak74` v `.weapon`, NPC, předměty, frakce), editor ukáže zděděné hodnoty.
 - [ ] Demo záznam vstupů a semínek náhody, přehrání jako benchmark trasy zónou (průměr a 1 % low FPS) a pro reprodukci chyb.
@@ -210,6 +243,6 @@ Hotovo, když: zóna 1 × 1 km jde projít bez načítací obrazovky a paměť d
 
 1. Dokončit M0 (zbývá indirect draw, impostory, SoA data, graf úloh).
 2. M0.5 Základy v pořadí: logování → asserty a crash handler → GUID entit → cvars a konzole → konfigurace → smoke test v CI → debug kreslení → GL ladění.
-3. Mezitím rychlé opravy z hraní (ruce stejné u všech zbraní). Potom zbytek M1: UI hry a credits → stavy hry → okno a ovládání → uložení hry → lokální světla → fyzika v levelu → propojení entit → audio dál.
-4. Střídání dne a noci hned po M1 (začátek M2/M3).
+3. Mezitím rychlé opravy z hraní (ruce stejné u všech zbraní). Potom zbytek M1: UI hry a credits → stavy hry → okno a ovládání → uložení hry → lokální světla → **baterka, táborák, expozice a LUT** → fyzika v levelu → propojení entit → audio dál a vrstvený ambient.
+4. Střídání dne a noci hned po M1 (začátek M2/M3), s ním déšť a bouřka, pak volumetrická mlha a tmavé interiéry (M3) a A-Life (M4).
 5. Souběžně s M1 může běžet obsah (assety, level zóny) v ostatních vláknech.
