@@ -5,6 +5,7 @@
 #include <engine/PlayerController.h>
 #include <engine/Scene.h>
 #include <engine/Scripting.h>
+#include <engine/SceneGraph.h>
 #include <engine/Weapon.h>
 
 #include <fstream>
@@ -413,6 +414,69 @@ void testKnifeAndGuns()
           "melee type, view rotation and clips round-trip");
 }
 
+void testHierarchyAndDependencies()
+{
+    std::string err;
+    engine::Scene s;
+    check(engine::loadScene(s, ENGINE_TEST_ASSETS "/levels/test.level", &err), "load level: " + err);
+    check(s.groups.size() == 4 && engine::nodeParent(s, "Crate B") == "Crate A", "test level has a hierarchy");
+    // Start from a flat scene.
+    s.groups.clear();
+    for (int i = 0; i < s.objectCount(); ++i)
+        engine::reparentChildren(s, engine::objectParent(s, i), "");
+    s.groups.push_back({"Arena", ""});
+    s.groups.push_back({"Enemies", "Arena"});
+    check(engine::setNodeParent(s, "Guard A", "Enemies"), "guard goes into the Enemies group");
+    check(engine::setNodeParent(s, "Crate B", "Crate A"), "crate B becomes a child of crate A");
+    check(!engine::setNodeParent(s, "Arena", "Enemies"), "a group cannot move into its own child");
+    check(!engine::setNodeParent(s, "Crate A", "Nope"), "unknown parents are refused");
+    const auto under = engine::descendantObjects(s, "Arena");
+    check(under.size() == 1 && engine::objectName(s, under[0]) == "Guard A", "descendants of a group");
+
+    // Moving a parent moves the subtree (as the editor does).
+    const int crateA = engine::findObject(s, "Crate A");
+    const int crateB = engine::findObject(s, "Crate B");
+    const glm::vec3 before = engine::objectPosition(s, crateB);
+    for (int child : engine::descendantObjects(s, "Crate A"))
+        engine::translateObject(s, child, {1, 0, 0});
+    engine::translateObject(s, crateA, {1, 0, 0});
+    check(engine::objectPosition(s, crateB) == before + glm::vec3(1, 0, 0), "child follows its parent");
+
+    check(engine::renameNode(s, "Crate A", "Big crate") && engine::nodeParent(s, "Crate B") == "Big crate",
+          "renaming keeps children attached");
+    check(!engine::renameNode(s, "Big crate", "Floor"), "names stay unique");
+    check(engine::uniqueNodeName(s, "Floor") == "Floor 2", "unique name for duplicates");
+
+    check(engine::saveScene(s, "hierarchy.level", &err), "save: " + err);
+    engine::Scene copy;
+    check(engine::loadScene(copy, "hierarchy.level", &err), "reload: " + err);
+    check(copy.groups.size() == 2 && engine::nodeParent(copy, "Guard A") == "Enemies" &&
+              engine::nodeParent(copy, "Crate B") == "Big crate" && engine::nodeParent(copy, "Enemies") == "Arena",
+          "hierarchy round-trips through the level file");
+
+    engine::removeGroup(copy, "Enemies");
+    check(engine::nodeParent(copy, "Guard A") == "Arena", "removing a group moves its children up");
+
+    // Dependencies and where-used.
+    const int floor = engine::findObject(copy, "Floor");
+    const auto deps = engine::objectDependencies(copy, floor);
+    bool material = false, texture = false;
+    for (const auto& d : deps) {
+        material |= d.kind == engine::AssetKind::Material && d.path.filename() == "concrete.material";
+        texture |= d.kind == engine::AssetKind::Texture && d.depth == 1;
+    }
+    check(material && texture, "floor uses the concrete material and its textures");
+    const int guard = engine::findObject(copy, "Guard A");
+    bool script = false, character = false;
+    for (const auto& d : engine::objectDependencies(copy, guard)) {
+        script |= d.kind == engine::AssetKind::Script;
+        character |= d.kind == engine::AssetKind::Character;
+    }
+    check(script && character, "guard uses a script and a character model");
+    const auto users = engine::objectsUsing(copy, ENGINE_TEST_ASSETS "/scripts/enemy.lua");
+    check(users.size() == 2, "both guards use enemy.lua (" + std::to_string(users.size()) + ")");
+}
+
 void testSemiAutomatic()
 {
     engine::WeaponSettings s;
@@ -643,6 +707,7 @@ int main()
     testWeaponFilesAndLoadout();
     testSemiAutomatic();
     testKnifeAndGuns();
+    testHierarchyAndDependencies();
     testScriptPropertiesFromEditor();
     testPick();
     testAnimatedCharacter();

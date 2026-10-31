@@ -15,6 +15,8 @@ class QLabel;
 class QTableWidget;
 class QLineEdit;
 class QListWidget;
+class HierarchyTree;
+class DependencyPanel;
 class QPushButton;
 class QWidget;
 class Vec3Editor;
@@ -89,7 +91,8 @@ private:
     QLineEdit* materialEdit_ = nullptr;
     QTableWidget* materialSlots_ = nullptr;
     WeaponPanel* weapons_ = nullptr;
-    QListWidget* outliner_ = nullptr;
+    HierarchyTree* outliner_ = nullptr;
+    DependencyPanel* dependencies_ = nullptr;
     QWidget* boxPanel_ = nullptr;
     QLineEdit* nameEdit_ = nullptr;
     QLabel* kindLabel_ = nullptr;

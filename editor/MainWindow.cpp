@@ -1,4 +1,7 @@
 #include "MainWindow.h"
+#include "HierarchyPanel.h"
+
+#include <engine/SceneGraph.h>
 #include "AssetPaths.h"
 #include "MaterialEditor.h"
 #include "ScriptEditor.h"
@@ -158,16 +161,40 @@ void MainWindow::buildMenus()
 
 void MainWindow::buildDocks()
 {
-    // Outliner: list of boxes in the level.
-    outliner_ = new QListWidget(this);
-    connect(outliner_, &QListWidget::currentRowChanged, this, [this](int row) {
-        if (row != selected_)
-            select(row);
+    // Hierarchy: groups and objects as a tree (drag and drop to re-parent).
+    outliner_ = new HierarchyTree(&scene_, this);
+    connect(outliner_, &HierarchyTree::objectSelected, this, [this](int object) {
+        if (object != selected_)
+            select(object);
     });
-    auto* outlinerDock = new QDockWidget(tr("Outliner"), this);
+    connect(outliner_, &HierarchyTree::hierarchyChanged, this, [this] {
+        dependencies_->showObject(selected_);
+        markDirty();
+    });
+    connect(outliner_, &HierarchyTree::renamed, this, [this] { refreshProperties(); });
+    auto* outlinerDock = new QDockWidget(tr("Hierarchy"), this);
     outlinerDock->setObjectName("outliner");
     outlinerDock->setWidget(outliner_);
     addDockWidget(Qt::LeftDockWidgetArea, outlinerDock);
+
+    // What the selected object uses and what else uses the same files.
+    dependencies_ = new DependencyPanel(&scene_, this);
+    connect(dependencies_, &DependencyPanel::objectActivated, this, [this](int object) { select(object); });
+    connect(dependencies_, &DependencyPanel::assetActivated, this, [this](const QString& path, int kind) {
+        switch (static_cast<engine::AssetKind>(kind)) {
+        case engine::AssetKind::Material: openMaterialEditor(path); break;
+        case engine::AssetKind::Texture: openTexture(path); break;
+        case engine::AssetKind::Script: openScript(path); break;
+        default:
+            statusBar()->showMessage(path, 5000);
+            break;
+        }
+    });
+    auto* depsDock = new QDockWidget(tr("Relations"), this);
+    depsDock->setObjectName("relations");
+    depsDock->setWidget(dependencies_);
+    addDockWidget(Qt::LeftDockWidgetArea, depsDock);
+    splitDockWidget(outlinerDock, depsDock, Qt::Vertical);
 
     // Properties of the selected box.
     boxPanel_ = new QWidget(this);
@@ -395,17 +422,29 @@ void MainWindow::buildDocks()
     });
 
     connect(nameEdit_, &QLineEdit::editingFinished, this, [this] {
-        std::string* name = selectedBox()      ? &selectedBox()->name
-                          : selectedModel()  ? &selectedModel()->name
-                          : selectedEntity() ? &selectedEntity()->name
-                                             : nullptr;
-        if (name && *name != nameEdit_->text().toStdString()) {
-            *name = nameEdit_->text().toStdString();
-            refreshOutliner();
-            markDirty();
+        if (selected_ < 0)
+            return;
+        const std::string oldName = engine::objectName(scene_, selected_);
+        const std::string newName = nameEdit_->text().trimmed().toStdString();
+        if (newName == oldName)
+            return;
+        // Names are unique so children can refer to their parent; renaming updates the children.
+        if (!engine::renameNode(scene_, oldName, newName)) {
+            QMessageBox::warning(this, tr("Rename"), tr("The name \"%1\" is empty or already used.")
+                                                         .arg(QString::fromStdString(newName)));
+            nameEdit_->setText(QString::fromStdString(oldName));
+            return;
         }
+        refreshOutliner();
+        markDirty();
     });
     connect(positionEdit_, &Vec3Editor::valueEdited, this, [this](glm::vec3 v) {
+        // Children move with their parent.
+        if (selected_ >= 0) {
+            const glm::vec3 delta = v - engine::objectPosition(scene_, selected_);
+            for (int child : engine::descendantObjects(scene_, engine::objectName(scene_, selected_)))
+                engine::translateObject(scene_, child, delta);
+        }
         if (auto* b = selectedBox())
             b->position = v;
         else if (auto* m = selectedModel())
@@ -554,25 +593,17 @@ engine::Entity* MainWindow::selectedEntity()
 void MainWindow::select(int index)
 {
     selected_ = (index >= 0 && index < scene_.objectCount()) ? index : -1;
-    outliner_->blockSignals(true);
-    outliner_->setCurrentRow(selected_);
-    outliner_->blockSignals(false);
+    outliner_->selectObject(selected_);
+    dependencies_->showObject(selected_);
     viewport_->setSelected(selected_);
     refreshProperties();
 }
 
 void MainWindow::refreshOutliner()
 {
-    outliner_->blockSignals(true);
-    outliner_->clear();
-    for (const engine::Box& b : scene_.boxes)
-        outliner_->addItem(QString::fromStdString(b.name));
-    for (const engine::Model& m : scene_.models)
-        outliner_->addItem(QString::fromStdString(m.name) + tr("  [glTF]"));
-    for (const engine::Entity& e : scene_.entities)
-        outliner_->addItem(QString::fromStdString(e.name) + QString("  [%1]").arg(QString::fromStdString(e.type)));
-    outliner_->setCurrentRow(selected_);
-    outliner_->blockSignals(false);
+    outliner_->rebuild();
+    outliner_->selectObject(selected_);
+    dependencies_->showObject(selected_);
 }
 
 void MainWindow::refreshProperties()
@@ -713,7 +744,7 @@ void MainWindow::addBox()
     glm::vec3 p = cam.position + cam.forward() * 6.0f;
     p = glm::vec3(std::round(p.x * 2.0f), std::round(p.y * 2.0f), std::round(p.z * 2.0f)) * 0.5f;
     engine::Box box;
-    box.name = "Box " + std::to_string(scene_.boxes.size() + 1);
+    box.name = engine::uniqueNodeName(scene_, "Box " + std::to_string(scene_.boxes.size() + 1));
     box.position = p;
     scene_.boxes.push_back(box);
     refreshOutliner();
@@ -733,7 +764,7 @@ void MainWindow::importModel()
         QMessageBox::warning(this, tr("Import glTF"), QString::fromStdString(error));
         return;
     }
-    model.name = QFileInfo(path).completeBaseName().toStdString();
+    model.name = engine::uniqueNodeName(scene_, QFileInfo(path).completeBaseName().toStdString());
     // Place it on the ground in front of the camera.
     const auto& cam = viewport_->camera();
     const glm::vec3 p = cam.position + cam.flatForward() * 8.0f;
@@ -750,7 +781,7 @@ void MainWindow::addEntity(const QString& type)
     const glm::vec3 p = cam.position + cam.flatForward() * 6.0f;
     engine::Entity e;
     e.type = type.toStdString();
-    e.name = (type == "enemy" ? "Enemy " : "Entity ") + std::to_string(scene_.entities.size() + 1);
+    e.name = engine::uniqueNodeName(scene_, (type == "enemy" ? "Enemy " : "Entity ") + std::to_string(scene_.entities.size() + 1));
     e.position = {std::round(p.x * 2.0f) * 0.5f, 0.0f, std::round(p.z * 2.0f) * 0.5f};
     if (type == "enemy") {
         e.color = {0.55f, 0.5f, 0.5f};
@@ -857,21 +888,21 @@ void MainWindow::duplicateBox()
 {
     if (const engine::Box* b = selectedBox()) {
         engine::Box copy = *b;
-        copy.name += " copy";
+        copy.name = engine::uniqueNodeName(scene_, copy.name);
         copy.position.x += copy.size.x;
         scene_.boxes.push_back(copy);
         refreshOutliner();
         select(static_cast<int>(scene_.boxes.size()) - 1);
     } else if (const engine::Model* m = selectedModel()) {
         engine::Model copy = *m; // shares mesh ids, so the GPU data is shared too
-        copy.name += " copy";
+        copy.name = engine::uniqueNodeName(scene_, copy.name);
         copy.position.x += copy.localBounds.max.x - copy.localBounds.min.x + 1.0f;
         scene_.models.push_back(std::move(copy));
         refreshOutliner();
         select(scene_.firstEntity() - 1);
     } else if (const engine::Entity* en = selectedEntity()) {
         engine::Entity copy = *en;
-        copy.name += " copy";
+        copy.name = engine::uniqueNodeName(scene_, copy.name);
         copy.position.x += 1.0f;
         scene_.entities.push_back(std::move(copy));
         refreshOutliner();
@@ -884,6 +915,9 @@ void MainWindow::duplicateBox()
 
 void MainWindow::deleteBox()
 {
+    // Children of the deleted object move up to its parent.
+    if (selected_ >= 0)
+        engine::reparentChildren(scene_, engine::objectName(scene_, selected_), engine::objectParent(scene_, selected_));
     if (selectedBox())
         scene_.boxes.erase(scene_.boxes.begin() + selected_);
     else if (selectedModel())

@@ -22,6 +22,7 @@ struct Box {
         : name(std::move(n)), position(p), size(s), color(c) {}
 
     std::string name = "Box";
+    std::string parent;             // name of the parent object or group in the hierarchy, empty = root
     glm::vec3 position{0.0f};       // center
     glm::vec3 size{1.0f};
     glm::vec3 color{0.7f, 0.7f, 0.7f}; // sRGB, used when there is no material
@@ -75,6 +76,7 @@ struct MeshPart {
 // Static level geometry imported from glTF (Blender: File > Export > glTF 2.0).
 struct Model {
     std::string name = "Model";
+    std::string parent;               // hierarchy parent (object or group name), empty = root
     std::filesystem::path sourcePath; // absolute path of the .gltf/.glb
     glm::vec3 position{0.0f};
     std::vector<MeshPart> parts;
@@ -97,6 +99,7 @@ struct Model {
 // Gameplay object (enemy, pickup, trigger...). Behaviour comes from its Lua script.
 struct Entity {
     std::string name = "Entity";
+    std::string parent;                  // hierarchy parent (object or group name), empty = root
     std::string type = "empty";          // gameplay role, readable from scripts
     glm::vec3 position{0.0f};            // base (feet) position
     float yawDegrees = 0.0f;             // facing, 0 = +X, 90 = +Z
@@ -144,7 +147,14 @@ struct PlayerSettings {
     float maxHealth = 100.0f;
 };
 
+// Folder in the scene hierarchy (no geometry), e.g. "Building A" or "Enemies".
+struct Group {
+    std::string name = "Group";
+    std::string parent;                  // empty = root
+};
+
 struct Scene {
+    std::vector<Group> groups;
     std::vector<Box> boxes;
     std::vector<Model> models;
     std::vector<Entity> entities;

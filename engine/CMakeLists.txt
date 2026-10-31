@@ -12,6 +12,7 @@ add_library(engine STATIC
     src/PlayerController.cpp
     src/Renderer.cpp
     src/Scene.cpp
+    src/SceneGraph.cpp
 )
 target_include_directories(engine PUBLIC include)
 target_link_libraries(engine PUBLIC glm::glm PRIVATE glad Jolt::Jolt lua_static sol2::sol2 cgltf_headers stb_headers)

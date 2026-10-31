@@ -61,7 +61,7 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
         return false;
     }
     out << std::setprecision(6);
-    out << "# FPS engine level\nversion 4\n";
+    out << "# FPS engine level\nversion 5\n";
     out << "player_start " << scene.playerStart.x << ' ' << scene.playerStart.y << ' ' << scene.playerStart.z << '\n';
     out << "sun " << scene.sunDirection.x << ' ' << scene.sunDirection.y << ' ' << scene.sunDirection.z << '\n';
     const std::filesystem::path levelDir = std::filesystem::absolute(file).parent_path();
@@ -69,11 +69,18 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
         const std::filesystem::path rel = std::filesystem::absolute(p).lexically_relative(levelDir);
         return pathToUtf8(rel.empty() ? std::filesystem::absolute(p) : rel);
     };
+    for (const Group& g : scene.groups)
+        out << "group " << std::quoted(g.name) << ' ' << std::quoted(g.parent) << '\n';
+    auto writeParent = [&out](const std::string& parent) {
+        if (!parent.empty())
+            out << "  parent " << std::quoted(parent) << '\n';
+    };
     for (const Box& b : scene.boxes) {
         out << "box " << std::quoted(b.name) << ' '
             << b.position.x << ' ' << b.position.y << ' ' << b.position.z << ' '
             << b.size.x << ' ' << b.size.y << ' ' << b.size.z << ' '
             << b.color.r << ' ' << b.color.g << ' ' << b.color.b << '\n';
+        writeParent(b.parent);
         if (!b.materialPath.empty())
             out << "  material " << std::quoted(relative(b.materialPath)) << '\n';
     }
@@ -83,6 +90,7 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
             rel = std::filesystem::absolute(m.sourcePath); // e.g. another drive on Windows
         out << "model " << std::quoted(m.name) << ' ' << std::quoted(pathToUtf8(rel)) << ' '
             << m.position.x << ' ' << m.position.y << ' ' << m.position.z << '\n';
+        writeParent(m.parent);
         for (const auto& [slot, path] : m.materialOverrides)
             out << "  material_slot " << std::quoted(slot) << ' ' << std::quoted(relative(path)) << '\n';
     }
@@ -104,6 +112,7 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
             << e.position.x << ' ' << e.position.y << ' ' << e.position.z << ' ' << e.yawDegrees << ' '
             << e.size.x << ' ' << e.size.y << ' ' << e.size.z << ' '
             << e.color.r << ' ' << e.color.g << ' ' << e.color.b << ' ' << std::quoted(script) << '\n';
+        writeParent(e.parent);
         if (!e.modelPath.empty()) {
             const std::filesystem::path rel = std::filesystem::absolute(e.modelPath).lexically_relative(levelDir);
             out << "  character " << std::quoted(pathToUtf8(rel.empty() ? std::filesystem::absolute(e.modelPath) : rel))
@@ -129,6 +138,7 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
     Scene result;
     std::string line;
     int lineNo = 0;
+    enum class LastObject { None, Box, Model, Entity } lastObject = LastObject::None;
     while (std::getline(in, line)) {
         ++lineNo;
         std::istringstream ls(line);
@@ -138,7 +148,24 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
         bool ok = true;
         if (key == "version") {
             int v = 0;
-            ok = static_cast<bool>(ls >> v) && v >= 1 && v <= 4;
+            ok = static_cast<bool>(ls >> v) && v >= 1 && v <= 5;
+        } else if (key == "group") {
+            Group g;
+            ok = static_cast<bool>(ls >> std::quoted(g.name) >> std::quoted(g.parent));
+            if (ok)
+                result.groups.push_back(std::move(g));
+        } else if (key == "parent") {
+            // Hierarchy parent of the object on the line above.
+            std::string parent;
+            ok = static_cast<bool>(ls >> std::quoted(parent)) && lastObject != LastObject::None;
+            if (ok) {
+                if (lastObject == LastObject::Box)
+                    result.boxes.back().parent = parent;
+                else if (lastObject == LastObject::Model)
+                    result.models.back().parent = parent;
+                else
+                    result.entities.back().parent = parent;
+            }
         } else if (key == "player_start") {
             ok = static_cast<bool>(ls >> result.playerStart.x >> result.playerStart.y >> result.playerStart.z);
         } else if (key == "sun") {
@@ -149,8 +176,10 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                                       >> b.position.x >> b.position.y >> b.position.z
                                       >> b.size.x >> b.size.y >> b.size.z
                                       >> b.color.r >> b.color.g >> b.color.b);
-            if (ok)
+            if (ok) {
                 result.boxes.push_back(std::move(b));
+                lastObject = LastObject::Box;
+            }
         } else if (key == "model") {
             Model m;
             std::string path;
@@ -166,6 +195,7 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                     return false;
                 }
                 result.models.push_back(std::move(m));
+                lastObject = LastObject::Model;
             }
         } else if (key == "player") {
             PlayerSettings& pl = result.player;
@@ -244,6 +274,7 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                     e.scriptPath = p.lexically_normal();
                 }
                 result.entities.push_back(std::move(e));
+                lastObject = LastObject::Entity;
             }
         } else {
             ok = false;

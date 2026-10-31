@@ -119,6 +119,16 @@ Všechno, co hra používá, se mění v editoru a ukládá do souborů úrovně
 | Pohyb a zdraví hráče, start, slunce | Properties > Level | `.level` |
 | Výzbroj hráče a parametry zbraní | Záložka Weapons | `.level` + `weapons/*.weapon` |
 
+## Hierarchie a vazby
+
+- **Hierarchy** (vlevo): skupiny a objekty jako strom. Přetažením na jiný objekt se z něj stane potomek,
+  přetažením mezi položky sourozenec, do prázdna kořen. F2 přejmenuje, pravé tlačítko vytvoří nebo zruší skupinu.
+  Posunutí rodiče posune i potomky. Jména jsou unikátní, protože potomek odkazuje na rodiče jménem.
+- **Relations** (pod ní): u vybraného objektu rodič a potomci, soubory, které používá (model, skript, postava,
+  materiály a jejich textury), a které další objekty používají stejný soubor. Dvojklik otevře materiál,
+  texturu nebo skript v editoru, případně vybere objekt.
+- V `.level` (verze 5) jsou řádky `group "jméno" "rodič"` a pod objektem `  parent "jméno"`.
+
 ## Zbraně
 
 Každá zbraň je soubor `.weapon` (typ střelná / chladná, model, poškození, kadence, automatická/poloautomatická,
