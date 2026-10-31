@@ -110,11 +110,53 @@ def fp_shots(ids,name,dur,start=1,per=5,drive=5.0):
             y=norm(cut(x,t,dur,pre=0.002,fade=0.75),0.0); y=np.tanh(drive*y)/np.tanh(drive)  # soft-clip: dense, loud body like a real shot at the ear
             write(f'weapons/{name}_{n}.wav',norm(y,-2.0)); out.append(f'{name}_{n}.wav'); n+=1
     return out
-ak=fp_shots(['C_39','C_42'],'rifle_shot',1.3,per=3,drive=6)
-pist=fp_shots(['F_44','F_45','X_38'],'pistol_shot',0.95,per=2,drive=5)
-smg=fp_shots(['G_26','G_32'],'smg_shot',0.75,per=3,drive=5)
-heavy=fp_shots(['A_35','A_36'],'heavy_pistol_shot',1.1,per=2,drive=6)
-sniper=fp_shots(['M_20','M_22'],'sniper_shot',2.0,per=2,drive=6)
+# Each weapon gets its own character (variation files keep their names):
+# Levels are set by EBU R128 momentary-max loudness (rifle -17, pistol -20, smg -19,
+# heavy -18, sniper -15.5 LUFS) so the pistol sits 3 dB under the rifle.
+#   rifle  : deep heavy blast + a delayed mid-distance layer for the room/field echo, ~1.4 s
+#   pistol : short, dry, snappy, low end cut, ~0.7 s, mixed 3 dB under the rifle
+#   smg    : tight mid-heavy pop, ~0.45 s tail so 900 rpm does not smear
+#   heavy  : .45 thump, ~1.0 s ; sniper : big boom + long mid-distance tail, ~2.6 s
+def mloud(x):
+    """EBU R128 momentary loudness maximum (K-weighted, 400 ms window), in LUFS."""
+    from scipy.signal import lfilter
+    b1=[1.53512485958697,-2.69169618940638,1.19839281085285]; a1=[1,-1.69065929318241,0.73248077421585]
+    b2=[1.0,-2.0,1.0]; a2=[1,-1.99004745483398,0.99007225036621]
+    k=lfilter(b2,a2,lfilter(b1,a1,x)); w=int(0.4*SR)
+    c=np.concatenate([[0],np.cumsum(k*k)]); ms=(c[w:]-c[:-w])/w if len(k)>w else [np.mean(k*k)]
+    return -0.691+10*np.log10(max(1e-12,np.max(ms)))
+def to_loud(y,target,ceil=0.76):
+    """Gain a one-shot to a momentary-max loudness target, soft-limiting peaks under `ceil`."""
+    for _ in range(4):
+        y=y*10**((target-mloud(y))/20)
+        if np.abs(y).max()>ceil: y=ceil*np.tanh(y/ceil)
+    return y
+def layer_src(path,af):
+    x=load(path,1,af); return x,onsets(x,0.5,1.5)
+def weapon(ids,name,dur,chain,drive,loud,per,tail=None,tail_gain=0.0,tail_delay=0.035,fade=0.75,hold=None):
+    out=[]; n=1; tl=layer_src(*tail) if tail else None
+    for i in ids:
+        x=load(raw(i),1,chain)
+        for t in onsets(x,0.5,1.5)[:per]:
+            y=norm(cut(x,t,dur,pre=0.002,fade=fade),0.0)
+            if tl:
+                tx,tts=tl; tt=tts[(n-1)%len(tts)]; ly=norm(cut(tx,tt,dur,pre=0.0,fade=0.8),0.0)*tail_gain
+                d=int(tail_delay*SR); y[d:]+=ly[:len(y)-d]
+            if hold:  # tighten: fast decay after `hold` seconds
+                h=int(hold*SR); env=np.ones(len(y)); env[h:]=np.exp(-np.arange(len(y)-h)/(0.06*SR)); y=y*env
+            y=np.tanh(drive*y/np.abs(y).max())/np.tanh(drive)
+            write(f'weapons/{name}_{n}.wav',to_loud(y,loud)); out.append(f'{name}_{n}.wav'); n+=1
+    return out
+RIFLE='highpass=f=30,equalizer=f=80:t=q:w=0.8:g=6,equalizer=f=220:t=q:w=1:g=2,equalizer=f=4000:t=q:w=1.5:g=-2,acompressor=threshold=-28dB:ratio=4:attack=8:release=250:makeup=6'
+PISTOL='highpass=f=260,equalizer=f=1800:t=q:w=1:g=3,equalizer=f=5000:t=q:w=1:g=4,acompressor=threshold=-22dB:ratio=3:attack=2:release=80:makeup=3'
+SMG='highpass=f=160,equalizer=f=700:t=q:w=1:g=5,equalizer=f=1500:t=q:w=1:g=2,equalizer=f=6000:t=q:w=1:g=-3,acompressor=threshold=-24dB:ratio=4:attack=3:release=60:makeup=4'
+HEAVY='highpass=f=45,equalizer=f=110:t=q:w=1:g=5,equalizer=f=2500:t=q:w=1:g=2,acompressor=threshold=-26dB:ratio=4:attack=6:release=180:makeup=5'
+SNIPER='highpass=f=25,equalizer=f=70:t=q:w=0.8:g=7,equalizer=f=180:t=q:w=1:g=3,acompressor=threshold=-30dB:ratio=4:attack=10:release=400:makeup=7'
+ak=weapon(['C_39','C_42'],'rifle_shot',1.45,RIFLE,4.0,-17.0,3,tail=(find('firearms','AK-47/C_31P.wav'),'highpass=f=60,lowpass=f=5000'),tail_gain=0.55,tail_delay=0.04)
+pist=weapon(['X_38','F_44','F_45'],'pistol_shot',0.7,PISTOL,3.0,-20.0,2,fade=0.85,hold=0.09)
+smg=weapon(['G_26','G_32'],'smg_shot',0.45,SMG,4.0,-19.0,3,fade=0.9,hold=0.06)
+heavy=weapon(['A_35','A_36'],'heavy_pistol_shot',1.0,HEAVY,4.0,-18.0,2,fade=0.8)
+sniper=weapon(['M_20','M_22'],'sniper_shot',2.6,SNIPER,4.0,-15.5,2,tail=(find('firearms','Mosin Nagant/M_26P.wav'),'highpass=f=40,lowpass=f=4000'),tail_gain=0.7,tail_delay=0.06)
 akfar=shots(find('firearms','AK-47/C_31P.wav'),'rifle_shot_far',2,2.2,hp=80,db=-3)
 sound('weapons/rifle_shot.sound',ak,1,(0.97,1.03),(4,300),maxi=8)
 sound('weapons/rifle_shot_far.sound',akfar,0.8,(0.95,1.05),(60,900),maxi=6)
