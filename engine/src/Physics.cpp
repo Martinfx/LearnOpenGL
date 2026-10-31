@@ -9,6 +9,7 @@
 #include <Jolt/Physics/Collision/RayCast.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/Shape/MeshShape.h>
+#include <Jolt/Physics/Collision/Shape/ScaledShape.h>
 #include <Jolt/Core/Factory.h>
 #include <Jolt/RegisterTypes.h>
 
@@ -16,6 +17,7 @@
 #include <cstdio>
 #include <mutex>
 #include <thread>
+#include <unordered_map>
 
 namespace engine {
 
@@ -96,6 +98,18 @@ void PhysicsWorld::Impl::addStatic(const JPH::ShapeSettings& settings, glm::vec3
         staticBodies.push_back(id);
 }
 
+void PhysicsWorld::Impl::addStatic(const JPH::ShapeRefC& shape, glm::vec3 position, const std::string& name, glm::quat rotation)
+{
+    if (!shape)
+        return;
+    (void)name;
+    JPH::BodyCreationSettings body(shape, toJolt(position), JPH::Quat(rotation.x, rotation.y, rotation.z, rotation.w),
+                                   JPH::EMotionType::Static, Layers::Static);
+    const JPH::BodyID id = system.GetBodyInterface().CreateAndAddBody(body, JPH::EActivation::DontActivate);
+    if (!id.IsInvalid())
+        staticBodies.push_back(id);
+}
+
 PhysicsWorld::PhysicsWorld() : impl_(std::make_unique<Impl>()) {}
 PhysicsWorld::~PhysicsWorld() = default;
 
@@ -108,21 +122,37 @@ void PhysicsWorld::setLevel(const Scene& scene)
         impl_->addStatic(JPH::BoxShapeSettings(toJolt(half), convexRadius), b.position, b.name,
                          glm::quat_cast(glm::mat3(glm::scale(b.transform(), 1.0f / glm::max(b.size, glm::vec3(1e-6f))))));
     }
+    // One Jolt mesh per mesh part, shared by every copy of the model (rotation and
+    // scale go on the body / a scaled-shape wrapper instead of into the vertices).
+    std::unordered_map<std::uint64_t, JPH::ShapeRefC> meshes;
     for (const Model& m : scene.models) {
+        if (!m.collision)
+            continue;
+        const glm::mat3 rotScale(m.transform());
+        const float scale = m.scale != 0.0f ? m.scale : 1.0f;
+        const glm::quat rotation = glm::normalize(glm::quat_cast(rotScale / scale));
         for (const MeshPart& part : m.parts) {
-            JPH::VertexList vertices;
-            vertices.reserve(part.positions.size());
-            // Rotation and scale are baked into the vertices; the body sits at the model position.
-            const glm::mat3 rotScale(m.transform());
-            for (const glm::vec3& p0 : part.positions) {
-                const glm::vec3 p = rotScale * p0;
-                vertices.push_back(JPH::Float3(p.x, p.y, p.z));
+            JPH::ShapeRefC& shape = meshes[part.id];
+            if (!shape) {
+                JPH::VertexList vertices;
+                vertices.reserve(part.positions.size());
+                for (const glm::vec3& p : part.positions)
+                    vertices.push_back(JPH::Float3(p.x, p.y, p.z));
+                JPH::IndexedTriangleList triangles;
+                triangles.reserve(part.indices.size() / 3);
+                for (std::size_t i = 0; i + 2 < part.indices.size(); i += 3)
+                    triangles.push_back(JPH::IndexedTriangle(part.indices[i], part.indices[i + 1], part.indices[i + 2], 0));
+                JPH::ShapeSettings::ShapeResult result = JPH::MeshShapeSettings(std::move(vertices), std::move(triangles)).Create();
+                if (result.HasError()) {
+                    std::fprintf(stderr, "Physics: skipping '%s': %s\n", m.name.c_str(), result.GetError().c_str());
+                    continue;
+                }
+                shape = result.Get();
             }
-            JPH::IndexedTriangleList triangles;
-            triangles.reserve(part.indices.size() / 3);
-            for (std::size_t i = 0; i + 2 < part.indices.size(); i += 3)
-                triangles.push_back(JPH::IndexedTriangle(part.indices[i], part.indices[i + 1], part.indices[i + 2], 0));
-            impl_->addStatic(JPH::MeshShapeSettings(std::move(vertices), std::move(triangles)), m.position, m.name);
+            if (scale == 1.0f)
+                impl_->addStatic(shape, m.position, m.name, rotation);
+            else
+                impl_->addStatic(JPH::ScaledShapeSettings(shape, JPH::Vec3::sReplicate(scale)), m.position, m.name, rotation);
         }
     }
     impl_->system.OptimizeBroadPhase();

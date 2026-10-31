@@ -184,6 +184,43 @@ void testRaycast()
     check(!world.raycast({0, 5, 0}, {0, 1, 0}, 100.0f), "raycast upward hits nothing");
 }
 
+void testModelCollisionFlags()
+{
+    // Copies share one Jolt mesh; rotation and scale come from the body.
+    std::string err;
+    engine::Scene s;
+    engine::Model ramp;
+    check(engine::loadModelFile(ramp, ENGINE_TEST_ASSETS "/models/ramp.gltf", &err), "load ramp: " + err);
+    ramp.position = {0, 0, 0};
+    s.models.push_back(ramp);
+    ramp.position = {20, 0, 0};
+    ramp.rotation = {0, 90, 0};
+    ramp.scale = 2.0f;
+    s.models.push_back(ramp);
+    engine::PhysicsWorld world;
+    world.setLevel(s);
+    bool ok = true;
+    for (const engine::Model& m : s.models) {
+        const engine::Aabb b = m.bounds();
+        const glm::vec3 c = (b.min + b.max) * 0.5f;
+        auto hit = world.raycast({c.x, b.max.y + 5.0f, c.z}, {0, -1, 0}, 50.0f);
+        const float y = b.max.y + 5.0f - (hit ? hit->distance : 0.0f);
+        ok = ok && hit && y >= b.min.y - 1e-3f && y <= b.max.y + 1e-3f;
+    }
+    check(ok, "rotated and scaled model copies collide where they are drawn");
+    s.models[1].collision = false;
+    s.models[1].cullDistance = 120.0f;
+    world.setLevel(s);
+    const engine::Aabb b = s.models[1].bounds();
+    check(!world.raycast({(b.min.x + b.max.x) * 0.5f, b.max.y + 5.0f, (b.min.z + b.max.z) * 0.5f}, {0, -1, 0}, 50.0f),
+          "collision 0: rays pass through");
+    check(engine::saveScene(s, "flags.level", &err), "save flags level: " + err);
+    engine::Scene again;
+    check(engine::loadScene(again, "flags.level", &err) && again.models.size() == 2 && !again.models[1].collision &&
+              again.models[1].cullDistance == 120.0f && again.models[0].collision && again.models[0].cullDistance == 0.0f,
+          "collision and cull_distance round trip: " + err);
+}
+
 engine::Entity enemyAt(glm::vec3 pos, float yaw)
 {
     engine::Entity e;
@@ -895,6 +932,7 @@ int main()
     testGltfRamp();
     testLevelWithModel();
     testRaycast();
+    testModelCollisionFlags();
     testScriptApi();
     testScriptErrorIsReported();
     testEnemyChasesAndAttacks();

@@ -220,6 +220,9 @@ výšková mlha se září ke slunci, bloom, ACES, barevné ladění (saturace, 
 - **Průhlednost:** glTF `alphaMode` MASK (listí, ploty, mříže: díry i ve stínech), BLEND (sklo, kreslí se
   po neprůhledné scéně odzadu dopředu) a `doubleSided`. Totéž pro vlastní materiály v Material editoru
   (Alpha, Alpha cutoff, Opacity, Double-sided; řádky `alpha_mode`, `alpha_cutoff`, `opacity`, `double_sided`).
+- **Cull distance a kolize:** model v Details > Rendering má *Cull distance* (dál od kamery se nekreslí,
+  0 = vždy) a *Physics: Collision* (vypnout pro trávu, listí, drobnou suť). V levelu řádky
+  `  cull_distance 60` a `  collision 0` pod řádkem `model`. Kopie jednoho modelu sdílí i kolizní mesh.
 - **Sdílené meshe:** kopie jednoho modelu (např. 18 dílů plotu) sdílí vrcholy v RAM i v historii undo.
 - Testovací level: načtení 21,0 s → 2,3 s (s teplou cache), paměť hry 4,4 GB → 0,54 GB (llvmpipe, kde je
   i „VRAM“ v RAM).

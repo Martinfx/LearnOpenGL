@@ -55,6 +55,8 @@ struct PhysicsWorld::Impl {
     void clearStatic();
     void addStatic(const JPH::ShapeSettings& settings, glm::vec3 position, const std::string& name,
                    glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
+    void addStatic(const JPH::ShapeRefC& shape, glm::vec3 position, const std::string& name,
+                   glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
 
     BroadPhaseLayersImpl broadPhaseLayers;
     ObjectVsBroadPhaseFilter objectVsBroadPhase;

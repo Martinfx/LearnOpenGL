@@ -1,6 +1,7 @@
 #include "MainWindow.h"
 
 #include <engine/Memory.h>
+#include <QCheckBox>
 #include <engine/TextureCook.h>
 #include "HierarchyPanel.h"
 #include "AssetBrowser.h"
@@ -696,6 +697,29 @@ void MainWindow::buildDocks()
     lodDistanceSpin_->setToolTip(tr("Camera distance to the model's center where the LOD replaces it"));
     renderingForm->addRow(tr("LOD model"), lodRow_);
     renderingForm->addRow(tr("LOD distance"), lodDistanceSpin_);
+    cullDistanceSpin_ = new QDoubleSpinBox(boxPanel_);
+    cullDistanceSpin_->setRange(0.0, 10000.0);
+    cullDistanceSpin_->setSingleStep(10.0);
+    cullDistanceSpin_->setSuffix(QStringLiteral(" m"));
+    cullDistanceSpin_->setSpecialValueText(tr("always drawn"));
+    cullDistanceSpin_->setKeyboardTracking(false);
+    cullDistanceSpin_->setToolTip(tr("Not drawn farther than this from the camera (small props, grass, debris); 0 = always"));
+    renderingForm->addRow(tr("Cull distance"), cullDistanceSpin_);
+    collisionCheck_ = new QCheckBox(tr("Collision (blocks the player and bullets)"), boxPanel_);
+    collisionCheck_->setToolTip(tr("Off for grass, leaves and small debris: cheaper physics, walk and shoot through"));
+    renderingForm->addRow(tr("Physics"), collisionCheck_);
+    connect(cullDistanceSpin_, &QDoubleSpinBox::valueChanged, this, [this](double v) {
+        if (auto* m = selectedModel(); m && m->cullDistance != static_cast<float>(v)) {
+            m->cullDistance = static_cast<float>(v);
+            markDirty();
+        }
+    });
+    connect(collisionCheck_, &QCheckBox::toggled, this, [this](bool on) {
+        if (auto* m = selectedModel(); m && m->collision != on) {
+            m->collision = on;
+            markDirty();
+        }
+    });
     connect(lodDistanceSpin_, &QDoubleSpinBox::valueChanged, this, [this](double v) {
         if (auto* m = selectedModel(); m && m->lodDistance != static_cast<float>(v)) {
             m->lodDistance = static_cast<float>(v);
@@ -1412,6 +1436,14 @@ void MainWindow::refreshProperties()
     lodDistanceSpin_->blockSignals(true);
     lodDistanceSpin_->setValue(m ? m->lodDistance : 80.0);
     lodDistanceSpin_->blockSignals(false);
+    cullDistanceSpin_->setEnabled(m != nullptr);
+    collisionCheck_->setEnabled(m != nullptr);
+    cullDistanceSpin_->blockSignals(true);
+    cullDistanceSpin_->setValue(m ? m->cullDistance : 0.0);
+    cullDistanceSpin_->blockSignals(false);
+    collisionCheck_->blockSignals(true);
+    collisionCheck_->setChecked(m ? m->collision : true);
+    collisionCheck_->blockSignals(false);
     nameEdit_->setEnabled(b || m || e);
     detailsIcon_->setPixmap(editorIcon(b ? "cube" : m ? "model" : e ? "person" : "select").pixmap(18, 18));
     updateDetailsVisibility();

@@ -64,7 +64,7 @@ Podrobně ve výkonové roadmapě vlákna "Vytvořit 3D FPS engine"; tady jen sh
 - [x] Uvolnění CPU kopií po nahrání, streamování textur podle vzdálenosti, deduplikace meshů (testovací level: načtení 21,0 s → 2,3 s, paměť 4,4 GB → 0,54 GB)
 - [x] Panel paměti (VRAM/RAM) v editoru (dok Memory)
 - [ ] Panel snímku v editoru; CPU zóny + GPU timer queries
-- [ ] Příznak bez kolize a cull distance u modelů
+- [x] Příznak bez kolize a cull distance u modelů (+ jeden Jolt mesh sdílený všemi kopiemi modelu)
 - [ ] GPU instancing + `glMultiDrawElementsIndirect`, setřídění podle materiálu
 - [ ] Occlusion culling (Hi-Z z depth pre-passu), cache stínů vzdálených kaskád
 - [ ] Snímek jako graf úloh v JobSystemu (animace, culling, skripty paralelně), pak render vlákno

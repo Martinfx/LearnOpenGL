@@ -15,6 +15,7 @@ class ScriptEditor;
 class MaterialEditor;
 class TextureEditor;
 class QDoubleSpinBox;
+class QCheckBox;
 class QLabel;
 class QTableWidget;
 class QLineEdit;
@@ -180,6 +181,8 @@ private:
     QLineEdit* loadingHintEdit_ = nullptr;
     QLineEdit* lodEdit_ = nullptr;
     QDoubleSpinBox* lodDistanceSpin_ = nullptr;
+    QDoubleSpinBox* cullDistanceSpin_ = nullptr;
+    QCheckBox* collisionCheck_ = nullptr;
     QDoubleSpinBox* uvSpins_[5] = {};   // scale U, V, shift U, V, rotation
     QComboBox* activeMaterial_ = nullptr;
     QLabel* selectionInfo_ = nullptr;   // Select mode page

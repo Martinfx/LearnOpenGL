@@ -166,6 +166,10 @@ struct Model {
     std::shared_ptr<const Model> lod;
     std::filesystem::path lodPath;    // absolute, empty = no LOD
     float lodDistance = 80.0f;        // metres from the camera to the model's center
+    // Performance: not drawn beyond cullDistance metres from the camera (0 = always),
+    // and no physics body when collision is off (grass, small debris, leaves: walk and shoot through).
+    float cullDistance = 0.0f;
+    bool collision = true;
 
     glm::mat4 transform() const;      // model space -> world
     Aabb bounds() const;              // world-space bounds of the rotated, scaled model

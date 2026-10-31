@@ -773,7 +773,8 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
     for (std::size_t i = 0; i < scene.models.size(); ++i) {
         const Model& model = scene.models[i];
         drawDistance_ = distanceTo(view.cameraPosition, model.bounds());
-        if (!visible(model.bounds())) {
+        const bool tooFar = model.cullDistance > 0.0f && drawDistance_ > model.cullDistance;
+        if (tooFar || !visible(model.bounds())) {
             keepAlive(model); // stays uploaded while out of view
             if (model.lod)
                 keepAlive(*model.lod);

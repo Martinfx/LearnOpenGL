@@ -144,6 +144,10 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
             out << "  material_slot " << std::quoted(slot) << ' ' << std::quoted(relative(path)) << '\n';
         if (!m.lodPath.empty())
             out << "  lod " << std::quoted(relative(m.lodPath)) << ' ' << m.lodDistance << '\n';
+        if (m.cullDistance > 0.0f)
+            out << "  cull_distance " << m.cullDistance << '\n';
+        if (!m.collision)
+            out << "  collision 0\n";
     }
     const PlayerSettings& pl = scene.player;
     out << "player " << pl.walkSpeed << ' ' << pl.sprintSpeed << ' ' << pl.jumpSpeed << ' ' << pl.gravity << ' '
@@ -327,6 +331,10 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
             } else {
                 result.loading.hint = value;
             }
+        } else if (key == "cull_distance") {
+            ok = lastObject == LastObject::Model && static_cast<bool>(ls >> result.models.back().cullDistance);
+        } else if (key == "collision") {
+            ok = lastObject == LastObject::Model && static_cast<bool>(ls >> result.models.back().collision);
         } else if (key == "lod") {
             // Distance LOD of the model on the line above.
             std::string path;
