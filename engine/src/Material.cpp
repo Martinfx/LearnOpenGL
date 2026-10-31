@@ -391,6 +391,8 @@ bool parseMaterial(Material& m, const std::filesystem::path& file, std::string* 
             ok = static_cast<bool>(ls >> result.opacity);
         } else if (k == "double_sided") {
             ok = static_cast<bool>(ls >> result.doubleSided);
+        } else if (k == "surface") {
+            ok = static_cast<bool>(ls >> result.surface);
         } else {
             for (int i = 0; i < kMapCount; ++i)
                 if (k == mapKey(static_cast<MapKind>(i)))
@@ -463,6 +465,8 @@ bool saveMaterial(const Material& m, const std::filesystem::path& file, std::str
     out << "alpha_cutoff " << m.alphaCutoff << '\n';
     out << "opacity " << m.opacity << '\n';
     out << "double_sided " << m.doubleSided << '\n';
+    if (!m.surface.empty())
+        out << "surface " << m.surface << '\n';
     const std::filesystem::path dir = normalized(file).parent_path();
     for (int i = 0; i < kMapCount; ++i) {
         const std::filesystem::path& p = m.mapPaths[static_cast<std::size_t>(i)];

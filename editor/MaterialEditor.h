@@ -88,6 +88,7 @@ private:
     QDoubleSpinBox* alphaCutoff_;
     QDoubleSpinBox* opacity_;
     QCheckBox* doubleSided_;
+    QComboBox* surface_;
     QLabel* pathLabel_;
     MaterialPreview* preview_;
     bool loading_ = false;

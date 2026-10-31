@@ -1,4 +1,5 @@
 #include "EnvironmentPanel.h"
+#include "SoundEditor.h"
 #include "Vec3Editor.h"
 
 #include <QColorDialog>
@@ -164,6 +165,25 @@ EnvironmentPanel::EnvironmentPanel(engine::Scene* scene, QWidget* parent)
     addColor(form, tr("Tint"), &E::tint);
     addFloat(form, tr("Vignette"), &E::vignette, 0, 1, 0.02, 2);
     addFloat(form, tr("Film grain"), &E::grain, 0, 0.3, 0.005, 3);
+    section(tr("Weather"));
+    addFloat(form, tr("Rain"), &E::rain, 0, 1, 0.05, 2, tr("0 dry, 1 downpour: rain sound volume"));
+    addFloat(form, tr("Wind"), &E::wind, 0, 1, 0.05, 2, tr("0 calm, 1 storm: gusting wind sound volume"));
+    rainSound_ = new SoundPicker(this);
+    rainSound_->setToolTip(tr("Rain loop; empty = sounds/ambient/rain.sound"));
+    form->addRow(tr("Rain sound"), rainSound_);
+    windSound_ = new SoundPicker(this);
+    windSound_->setToolTip(tr("Wind loop; empty = sounds/ambient/wind_storm.sound"));
+    form->addRow(tr("Wind sound"), windSound_);
+    auto soundEdited = [this](std::filesystem::path engine::Environment::*member, const QString& path) {
+        if (updating_)
+            return;
+        scene_->environment.*member = std::filesystem::path(path.toStdU16String());
+        changed();
+    };
+    connect(rainSound_, &SoundPicker::pathChanged, this,
+            [soundEdited](const QString& p) { soundEdited(&engine::Environment::rainSound, p); });
+    connect(windSound_, &SoundPicker::pathChanged, this,
+            [soundEdited](const QString& p) { soundEdited(&engine::Environment::windSound, p); });
     layout->addStretch(1);
     refresh();
 }
@@ -213,6 +233,8 @@ void EnvironmentPanel::refresh()
     for (const ColorField& c : colors_)
         paintButton(c.button, scene_->environment.*(c.member));
     sun_->setValue(scene_->sunDirection);
+    rainSound_->setPath(QString::fromStdU16String(scene_->environment.rainSound.u16string()));
+    windSound_->setPath(QString::fromStdU16String(scene_->environment.windSound.u16string()));
     updating_ = false;
 }
 
@@ -221,7 +243,10 @@ void EnvironmentPanel::applyPreset(int index)
     const std::vector<Preset> list = presets();
     if (index < 0 || index >= static_cast<int>(list.size()))
         return;
-    scene_->environment = list[static_cast<std::size_t>(index)].env;
+    engine::Environment env = list[static_cast<std::size_t>(index)].env;
+    env.rainSound = scene_->environment.rainSound; // presets change the look, not the level's sounds
+    env.windSound = scene_->environment.windSound;
+    scene_->environment = env;
     scene_->sunDirection = list[static_cast<std::size_t>(index)].sun;
     refresh();
     changed();

@@ -378,7 +378,7 @@ int main(int argc, char** argv)
     int kills = 0;
     for (const engine::Weapon& w : weapons)
         for (const auto* s : {&w.settings.soundFire, &w.settings.soundReload, &w.settings.soundDraw, &w.settings.soundImpact,
-                              &w.settings.soundHit})
+                              &w.settings.soundHit, &w.settings.soundReloadEmpty, &w.settings.soundDryFire})
             audio.preload(*s);
     for (const auto* s : {&scene.player.footstepSound, &scene.player.landSound, &scene.player.hurtSound})
         audio.preload(*s);
@@ -486,8 +486,17 @@ int main(int argc, char** argv)
             weapon.aim(dt, ready && input.isDown(engine::Action::Aim));
             if (shots > 0)
                 audio.play(weapon.settings.soundFire, player.eye() + camera.forward() * 0.5f);
-            if (weapon.reloading() && !wasReloading)
-                audio.play(weapon.settings.soundReload, player.eye());
+            if (weapon.reloading() && !wasReloading) {
+                if (weapon.reloadingFromEmpty()) {
+                    if (input.isDown(engine::Action::Fire))
+                        audio.play(weapon.settings.soundDryFire, player.eye());
+                    audio.play(weapon.settings.soundReloadEmpty.empty() ? weapon.settings.soundReload
+                                                                        : weapon.settings.soundReloadEmpty,
+                               player.eye());
+                } else {
+                    audio.play(weapon.settings.soundReload, player.eye());
+                }
+            }
             wasReloading = weapon.reloading();
             const glm::vec3 moveVel = player.velocity();
             weapon.animate(dt, player.grounded() ? std::sqrt(moveVel.x * moveVel.x + moveVel.z * moveVel.z) : 0.0f);
@@ -503,7 +512,12 @@ int main(int argc, char** argv)
                 if (!hit.hit)
                     continue;
                 impacts.push_back({hit.point, 0.0f, hit.entity >= 0});
-                audio.play(hit.entity >= 0 ? weapon.settings.soundHit : weapon.settings.soundImpact, hit.point);
+                if (hit.entity >= 0)
+                    audio.play(weapon.settings.soundHit, hit.point);
+                else if (weapon.settings.melee())
+                    audio.play(weapon.settings.soundImpact, hit.point);
+                else // concrete, metal, wood, dirt... (assets/surfaces.cfg)
+                    audio.impact(hit.point, hit.surface, weapon.settings.soundImpact);
                 if (hit.entity >= 0) {
                     const bool wasAlive = scene.entities[static_cast<std::size_t>(hit.entity)].alive;
                     scripts.damageEntity(hit.entity, weapon.settings.damage);
@@ -519,7 +533,13 @@ int main(int argc, char** argv)
             scripts.fixedUpdate(dt);
             if (scripts.playerHealth() < healthBefore)
                 audio.play2D(scene.player.hurtSound);
-            audio.walk(scene.player, player.feet(), player.velocity(), player.grounded(), dt);
+            {
+                std::string ground;
+                if (player.grounded())
+                    if (auto under = physics.raycast(player.feet() + glm::vec3(0.0f, 0.3f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f), 1.0f))
+                        ground = under->surface;
+                audio.walk(scene.player, player.feet(), player.velocity(), player.grounded(), dt, ground);
+            }
             physics.step(dt);
             if (scripts.playerHealth() <= 0.0f) {
                 std::printf("You died. Respawning.\n");

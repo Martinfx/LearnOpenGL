@@ -280,6 +280,12 @@ struct Environment {
     glm::vec3 tint{1.0f};                       // multiplied after tone mapping
     float vignette = 0.25f;
     float grain = 0.02f;
+    // Weather (0..1): drives the rain and wind sound loops (and rain particles).
+    float rain = 0.0f;
+    float wind = 0.0f;
+    // Weather loops (absolute .sound), empty = sounds/ambient/rain.sound and wind_storm.sound.
+    std::filesystem::path rainSound;
+    std::filesystem::path windSound;
 };
 
 // Folder in the scene hierarchy (no geometry), e.g. "Building A" or "Enemies".

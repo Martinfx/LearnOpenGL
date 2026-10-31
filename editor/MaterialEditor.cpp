@@ -1,5 +1,6 @@
 #include "MaterialEditor.h"
 #include "AssetPaths.h"
+#include <engine/Surfaces.h>
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -252,6 +253,11 @@ MaterialEditor::MaterialEditor(QWidget* parent)
     opacity_ = makeSpin(0.0, 1.0, 0.05, 2);
     opacity_->setToolTip(tr("Multiplies the alpha of the color map (Blend: 0 = invisible, 1 = as the map)"));
     doubleSided_ = new QCheckBox(tr("Double-sided (draw back faces: leaves, thin fences, cloth)"), form_);
+    surface_ = new QComboBox(form_);
+    surface_->setToolTip(tr("What the surface is made of: footstep and bullet impact sounds, bullet holes (Tools > Surfaces)"));
+    surface_->addItem(tr("Auto"), QString());
+    for (const std::string& s : engine::standardSurfaceNames())
+        surface_->addItem(QString::fromStdString(s), QString::fromStdString(s));
     pathLabel_ = new QLabel(form_);
     pathLabel_->setWordWrap(true);
     pathLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
@@ -275,6 +281,7 @@ MaterialEditor::MaterialEditor(QWidget* parent)
     form->addRow(tr("Alpha cutoff"), alphaCutoff_);
     form->addRow(tr("Opacity"), opacity_);
     form->addRow(QString(), doubleSided_);
+    form->addRow(tr("Surface"), surface_);
     form->addRow(saveRow);
     form->addRow(pathLabel_);
     tilingX_->setToolTip(tr("Repeats per UV unit; with world mapping (boxes) per metre: 0.25 = one image every 4 m"));
@@ -315,6 +322,7 @@ MaterialEditor::MaterialEditor(QWidget* parent)
     connect(nameEdit_, &QLineEdit::editingFinished, this, &MaterialEditor::edited);
     connect(worldUv_, &QCheckBox::toggled, this, &MaterialEditor::edited);
     connect(doubleSided_, &QCheckBox::toggled, this, &MaterialEditor::edited);
+    connect(surface_, &QComboBox::activated, this, &MaterialEditor::edited);
     connect(alphaMode_, &QComboBox::currentIndexChanged, this, &MaterialEditor::edited);
     auto pickColor = [this](glm::vec3 engine::Material::*member, const QString& title) {
         if (!material_)
@@ -412,6 +420,18 @@ void MaterialEditor::refreshForm()
         alphaCutoff_->setEnabled(m.alphaMode == engine::AlphaMode::Mask);
         opacity_->setValue(m.opacity);
         doubleSided_->setChecked(m.doubleSided);
+        {
+            engine::Material guess = m;
+            guess.surface.clear();
+            const std::string g = engine::surfaceOf(&guess);
+            surface_->setItemText(0, g.empty() ? tr("Auto (default)") : tr("Auto (%1)").arg(QString::fromStdString(g)));
+            int index = surface_->findData(QString::fromStdString(m.surface));
+            if (index < 0) {
+                surface_->addItem(QString::fromStdString(m.surface), QString::fromStdString(m.surface));
+                index = surface_->count() - 1;
+            }
+            surface_->setCurrentIndex(index);
+        }
         pathLabel_->setText(QDir::toNativeSeparators(currentPath()) + (modified_.contains(currentPath()) ? tr("  (unsaved)") : QString()));
     }
     loading_ = false;
@@ -437,6 +457,7 @@ void MaterialEditor::edited()
     m.alphaCutoff = static_cast<float>(alphaCutoff_->value());
     m.opacity = static_cast<float>(opacity_->value());
     m.doubleSided = doubleSided_->isChecked();
+    m.surface = surface_->currentData().toString().toStdString();
     modified_.insert(currentPath());
     refreshForm();
     emit materialChanged();

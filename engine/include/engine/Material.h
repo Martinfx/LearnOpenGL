@@ -89,6 +89,7 @@ struct Material {
     float alphaCutoff = 0.5f;                  // Mask: alpha below this is cut away
     float opacity = 1.0f;                      // multiplies the albedo map's alpha
     bool doubleSided = false;                  // draw back faces too (leaves, thin fences, cloth)
+    std::string surface;                       // footsteps / impacts / bullet holes (engine/Surfaces.h), empty = guessed
     std::array<std::filesystem::path, kMapCount> mapPaths;       // absolute, empty = none
     std::array<std::shared_ptr<TextureAsset>, kMapCount> maps;   // runtime, loaded from mapPaths
 

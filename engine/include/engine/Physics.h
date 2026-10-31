@@ -3,12 +3,15 @@
 #include <glm/vec3.hpp>
 #include <memory>
 #include <optional>
+#include <string>
 
 namespace engine {
 
 struct RayHit {
     glm::vec3 point{0.0f};
+    glm::vec3 normal{0.0f, 1.0f, 0.0f};
     float distance = 0.0f;
+    std::string surface; // what was hit is made of (engine/Surfaces.h), empty = unknown
 };
 
 // Jolt Physics world. Jolt types stay inside Physics.cpp, so the game and

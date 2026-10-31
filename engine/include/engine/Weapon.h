@@ -48,6 +48,8 @@ struct WeaponSettings {
     std::filesystem::path soundDraw;
     std::filesystem::path soundImpact;  // bullet or blade hitting level geometry
     std::filesystem::path soundHit;     // hitting a character
+    std::filesystem::path soundReloadEmpty; // reload from an empty magazine (mag out, in, bolt/slide); empty = soundReload
+    std::filesystem::path soundDryFire;     // trigger pulled on an empty magazine
 
     bool melee() const { return type == Type::Melee; }
 };
@@ -60,6 +62,8 @@ struct ShotHit {
     glm::vec3 point{0.0f};
     float distance = 0.0f;
     int entity = -1;             // index into Scene::entities, -1 = level geometry / nothing
+    glm::vec3 normal{0.0f, 1.0f, 0.0f};
+    std::string surface;         // engine/Surfaces.h; "flesh" for characters, empty = unknown
 };
 
 // Closest hit along a ray: level geometry (Jolt) or a living entity.
@@ -87,7 +91,8 @@ public:
     // Direction of the next bullet with random spread around `aim`.
     glm::vec3 spreadDirection(glm::vec3 aim);
 
-    int ammo() const { return ammo_; }   // melee weapons always report 0
+    int ammo() const { return ammo_; }
+    bool reloadingFromEmpty() const { return reloadFromEmpty_; } // the current / last reload started on an empty magazine   // melee weapons always report 0
     float swing() const;                 // melee: 0..1 through the current swing, 0 when idle
 
     // Plays the view model clips for what happened since the last call
@@ -113,6 +118,7 @@ private:
     float reloadDuration_ = 1.0f;
     float aim_ = 0.0f;
     bool reloadEmpty_ = false;
+    bool reloadFromEmpty_ = false;
     float recoil_ = 0.0f;
     float flashTimer_ = 0.0f;
     float swingTimer_ = 0.0f;

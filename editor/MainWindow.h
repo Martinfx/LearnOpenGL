@@ -125,6 +125,7 @@ private:
     MaterialEditor* openMaterialEditor(const QString& material = QString());
     TextureEditor* openTexture(const QString& image);
     SoundEditor* openSoundEditor(const QString& path);
+    void openSurfacesEditor();
     void newSound(const QString& folder);
     void browseBoxMaterial();
     void refreshMaterialSlots();

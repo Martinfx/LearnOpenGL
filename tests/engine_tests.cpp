@@ -1,6 +1,7 @@
 // Headless tests for the engine core (no OpenGL needed).
 #include <engine/Audio.h>
 #include <engine/NavMesh.h>
+#include <engine/Surfaces.h>
 #include <atomic>
 #include <chrono>
 #include <thread>
@@ -1040,6 +1041,51 @@ void testSharedMeshes()
     check(shared > 0, "level instances of one file share meshes");
 }
 
+void testSurfaces()
+{
+    check(engine::guessSurface("Rusty_Metal_02") == "metal", "guess metal");
+    check(engine::guessSurface("old_planks") == "wood", "guess wood");
+    check(engine::guessSurface("forest_ground") == "dirt", "guess dirt");
+    check(engine::guessSurface("xyz").empty(), "no guess");
+    engine::Material m;
+    m.name = "Wall";
+    check(engine::surfaceOf(&m) == "concrete", "material guessed by name");
+    m.surface = "wood";
+    check(engine::surfaceOf(&m) == "wood", "material's own surface wins");
+
+    const auto dir = std::filesystem::temp_directory_path() / "engine_surfaces";
+    std::filesystem::create_directories(dir);
+    engine::SurfaceTable t;
+    t.fallback = "concrete";
+    engine::SurfaceType c;
+    c.name = "concrete";
+    c.footstep = dir / "sounds" / "step.sound";
+    engine::SurfaceType w;
+    w.name = "wood";
+    w.impact = dir / "impact wood.sound";
+    w.decalSize = 0.2f;
+    t.types = {c, w};
+    std::string error;
+    check(engine::saveSurfaces(t, dir / "surfaces.cfg", &error), "save surfaces " + error);
+    engine::SurfaceTable back;
+    check(engine::loadSurfaces(back, dir / "surfaces.cfg", &error), "load surfaces " + error);
+    check(back.types.size() == 2 && back.types[0].footstep == c.footstep && back.types[1].impact == w.impact &&
+              std::abs(back.types[1].decalSize - 0.2f) < 1e-5f,
+          "surfaces round trip");
+    check(back.find("glass") && back.find("glass")->name == "concrete", "unknown surface falls back");
+
+    // The physics ray reports the surface of what it hit, and its normal.
+    engine::Scene scene = flatFloor();
+    scene.boxes.push_back({"Metal wall", {0, 1, -3}, {4, 2, 0.2f}, {1, 1, 1}});
+    engine::PhysicsWorld physics;
+    physics.setLevel(scene);
+    auto floor = physics.raycast({0, 1, 0}, {0, -1, 0}, 5);
+    check(floor && floor->surface == "concrete" && floor->normal.y > 0.9f, "floor surface");
+    auto wall = physics.raycast({0, 1, 0}, {0, 0, -1}, 10);
+    check(wall && wall->surface == "metal" && wall->normal.z > 0.9f, "wall surface: " + (wall ? wall->surface : std::string("miss")));
+    std::filesystem::remove_all(dir);
+}
+
 void testNavMesh()
 {
     // A 40 x 40 m floor with a wall across the middle that has a gap at one end:
@@ -1203,6 +1249,7 @@ int main()
     testMaterialsAndTextures();
     testAudio();
     testNavMesh();
+    testSurfaces();
     std::printf(failures ? "%d test(s) failed\n" : "all tests passed\n", failures);
     return failures ? 1 : 0;
 }

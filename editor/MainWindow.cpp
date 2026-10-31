@@ -17,6 +17,7 @@
 #include "EnvironmentPanel.h"
 #include "ShaderEditor.h"
 #include "SoundEditor.h"
+#include "SurfacesEditor.h"
 #include "EditorUi.h"
 #include "ViewportPanel.h"
 
@@ -212,6 +213,7 @@ void MainWindow::buildMenus()
 
     QMenu* assets = menuBar()->addMenu(tr("&Assets"));
     assets->addAction(tr("&Material editor"), QKeySequence(Qt::CTRL | Qt::Key_M), this, [this] { openMaterialEditor(); });
+    assets->addAction(tr("S&urfaces (footsteps, impacts)"), this, [this] { openSurfacesEditor(); });
     assets->addAction(tr("Edit &texture..."), this, [this] {
         const QString path = QFileDialog::getOpenFileName(this, tr("Edit texture"), assetPath("textures"),
                                                           tr("Images (*.png *.jpg *.jpeg)"));
@@ -2668,6 +2670,29 @@ void MainWindow::newSound(const QString& folder)
     openSoundEditor(path);
 }
 
+void MainWindow::openSurfacesEditor()
+{
+    for (int i = 1; i < tabs_->count(); ++i)
+        if (qobject_cast<SurfacesEditor*>(tabs_->widget(i))) {
+            tabs_->setCurrentIndex(i);
+            return;
+        }
+    auto* se = new SurfacesEditor(tabs_);
+    QString error;
+    if (!se->load(assetPath("surfaces.cfg"), &error)) {
+        delete se;
+        QMessageBox::warning(this, tr("Surfaces"), error);
+        return;
+    }
+    const int index = tabs_->addTab(se, se->title());
+    tabs_->setTabToolTip(index, se->path());
+    tabs_->setCurrentIndex(index);
+    connect(se, &SurfacesEditor::modificationChanged, this, [this, se] {
+        if (const int i = tabs_->indexOf(se); i >= 0)
+            tabs_->setTabText(i, se->title());
+    });
+}
+
 SoundEditor* MainWindow::openSoundEditor(const QString& path)
 {
     const QString absolute = QFileInfo(path).absoluteFilePath();
@@ -2705,6 +2730,8 @@ void MainWindow::saveCurrent()
         ok = me->saveModified(&error);
     else if (auto* sd = qobject_cast<SoundEditor*>(tabs_->currentWidget()))
         ok = sd->save(&error);
+    else if (auto* su = qobject_cast<SurfacesEditor*>(tabs_->currentWidget()))
+        ok = su->save(&error);
     else {
         save();
         return;

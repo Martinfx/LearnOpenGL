@@ -28,7 +28,9 @@ aim_fov 60
 aim_time 0.18
 aim_spread 0.35
 sound_fire "../sounds/weapons/smg_shot.sound"
-sound_reload "../sounds/weapons/reload.sound"
+sound_reload "../sounds/weapons/reload_smg.sound"
 sound_draw "../sounds/weapons/draw.sound"
 sound_impact "../sounds/impacts/impact_hard.sound"
 sound_hit "../sounds/impacts/impact_flesh.sound"
+sound_reload_empty "../sounds/weapons/reload_smg_empty.sound"
+sound_dry_fire "../sounds/weapons/dry_fire.sound"

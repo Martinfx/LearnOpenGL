@@ -1,5 +1,7 @@
 #include "GameAudio.h"
 
+#include <cmath>
+
 #include <glm/geometric.hpp>
 
 #include <algorithm>
@@ -14,6 +16,12 @@ void GameAudio::init(const std::filesystem::path& assetDir)
     else
         std::printf("Audio: OpenAL, %s, HRTF %s, sounds from %s\n", audio_.deviceName().c_str(), audio_.hrtf() ? "on" : "off",
                     (assetDir / "sounds").string().c_str());
+    if (!engine::loadSurfaces(surfaces_, assetDir / "surfaces.cfg", &error))
+        std::fprintf(stderr, "Audio: %s (footsteps and impacts use the defaults)\n", error.c_str());
+    for (const engine::SurfaceType& t : surfaces_.types) {
+        preload(t.footstep);
+        preload(t.impact);
+    }
 }
 
 std::shared_ptr<const engine::SoundDef> GameAudio::get(const std::filesystem::path& sound)
@@ -67,6 +75,21 @@ void GameAudio::startLevel(const engine::Scene& scene)
     for (const Source& s : sources_)
         audio_.stop(s.handle);
     sources_.clear();
+    audio_.stop(rain_);
+    audio_.stop(wind_);
+    rain_ = wind_ = 0;
+    // Weather loops run all the time; update() sets their volume from the environment.
+    const engine::Environment& env = scene.environment;
+    auto weather = [&](const std::filesystem::path& custom, const char* standard) -> engine::AudioSystem::Handle {
+        auto def = get(custom.empty() ? (assetDir_ / standard).lexically_normal() : custom);
+        if (!def)
+            return 0;
+        const engine::AudioSystem::Handle h = audio_.play2D(*def, 1.0f);
+        audio_.setVolume(h, 0.0f);
+        return h;
+    };
+    rain_ = weather(env.rainSound, "sounds/ambient/rain.sound");
+    wind_ = weather(env.windSound, "sounds/ambient/wind_storm.sound");
     for (std::size_t i = 0; i < scene.entities.size(); ++i) {
         const engine::Entity& e = scene.entities[i];
         // Sounds scripts will play (e.g. enemy.lua sound_shot) decode now, so the first play is not clipped.
@@ -118,10 +141,30 @@ void GameAudio::update(float dt, const engine::Scene& scene, glm::vec3 eye, glm:
         else
             audio_.setPosition(s.handle, (box.min + box.max) * 0.5f); // scripts may move it
     }
+    // Weather: louder than linear at low intensity so a drizzle is still heard.
+    audio_.setVolume(rain_, std::sqrt(std::clamp(scene.environment.rain, 0.0f, 1.0f)), 0.5f);
+    audio_.setVolume(wind_, std::sqrt(std::clamp(scene.environment.wind, 0.0f, 1.0f)), 0.5f);
     audio_.update(dt);
 }
 
-void GameAudio::walk(const engine::PlayerSettings& player, glm::vec3 feet, glm::vec3 velocity, bool grounded, float dt)
+void GameAudio::step(const engine::PlayerSettings& player, glm::vec3 feet, float volume, const std::string& surface)
+{
+    if (const engine::SurfaceType* t = surface.empty() ? nullptr : surfaces_.find(surface); t && !t->footstep.empty())
+        play(t->footstep, feet, volume * t->stepVolume);
+    else
+        play(player.footstepSound, feet, volume);
+}
+
+void GameAudio::impact(glm::vec3 point, const std::string& surface, const std::filesystem::path& fallback)
+{
+    if (const engine::SurfaceType* t = surface.empty() ? nullptr : surfaces_.find(surface); t && !t->impact.empty())
+        play(t->impact, point);
+    else
+        play(fallback, point);
+}
+
+void GameAudio::walk(const engine::PlayerSettings& player, glm::vec3 feet, glm::vec3 velocity, bool grounded, float dt,
+                     const std::string& surface)
 {
     const float speed = glm::length(glm::vec3(velocity.x, 0.0f, velocity.z));
     if (grounded && !wasGrounded_) {
@@ -129,7 +172,7 @@ void GameAudio::walk(const engine::PlayerSettings& player, glm::vec3 feet, glm::
         if (fallSpeed_ > 6.0f)
             play(player.landSound, feet, std::clamp(fallSpeed_ / 12.0f, 0.4f, 1.0f));
         else if (fallSpeed_ > 2.0f)
-            play(player.footstepSound, feet, 0.8f);
+            step(player, feet, 0.8f, surface);
         stride_ = 0.0f;
     }
     if (!grounded)
@@ -146,6 +189,6 @@ void GameAudio::walk(const engine::PlayerSettings& player, glm::vec3 feet, glm::
     stride_ += speed * dt;
     if (stride_ >= strideLength) {
         stride_ -= strideLength;
-        play(player.footstepSound, feet, std::clamp(0.55f + speed * 0.06f, 0.5f, 1.0f));
+        step(player, feet, std::clamp(0.55f + speed * 0.06f, 0.5f, 1.0f), surface);
     }
 }

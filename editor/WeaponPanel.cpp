@@ -144,7 +144,8 @@ WeaponPanel::WeaponPanel(engine::Scene* scene, QWidget* parent) : QWidget(parent
         connect(clips_[static_cast<std::size_t>(i)], &QComboBox::currentTextChanged, this, &WeaponPanel::edited);
     }
     form->addRow(new QLabel(tr("<b>Sounds</b>"), form_));
-    const char* soundLabels[] = {"Fire / swing", "Reload", "Draw", "Impact (world)", "Hit (character)"};
+    const char* soundLabels[] = {"Fire / swing", "Reload", "Draw", "Impact (world)", "Hit (character)",
+                                 "Reload (empty mag)", "Dry fire"};
     for (std::size_t i = 0; i < sounds_.size(); ++i) {
         sounds_[i] = new SoundPicker(form_);
         form->addRow(tr(soundLabels[i]), sounds_[i]);
@@ -244,7 +245,7 @@ void WeaponPanel::showCurrent()
     name_->setText(QString::fromStdString(w->name));
     model_->setText(w->modelPath.empty() ? QString() : toQString(w->modelPath.filename()));
     {
-        const std::filesystem::path* sounds[] = {&w->soundFire, &w->soundReload, &w->soundDraw, &w->soundImpact, &w->soundHit};
+        const std::filesystem::path* sounds[] = {&w->soundFire, &w->soundReload, &w->soundDraw, &w->soundImpact, &w->soundHit, &w->soundReloadEmpty, &w->soundDryFire};
         for (std::size_t i = 0; i < sounds_.size(); ++i)
             sounds_[i]->setPath(toQString(*sounds[i]));
     }
@@ -324,7 +325,7 @@ void WeaponPanel::edited()
         return;
     w->name = name_->text().toStdString();
     {
-        std::filesystem::path* sounds[] = {&w->soundFire, &w->soundReload, &w->soundDraw, &w->soundImpact, &w->soundHit};
+        std::filesystem::path* sounds[] = {&w->soundFire, &w->soundReload, &w->soundDraw, &w->soundImpact, &w->soundHit, &w->soundReloadEmpty, &w->soundDryFire};
         for (std::size_t i = 0; i < sounds_.size(); ++i)
             *sounds[i] = toPath(sounds_[i]->path());
     }

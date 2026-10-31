@@ -100,6 +100,11 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
         v3("tint", e.tint);
         f1("vignette", e.vignette);
         f1("grain", e.grain);
+        f1("rain", e.rain);
+        f1("wind", e.wind);
+        if (!e.rainSound.empty() || !e.windSound.empty())
+            out << "weather_sounds " << std::quoted(e.rainSound.empty() ? std::string() : relative(e.rainSound)) << ' '
+                << std::quoted(e.windSound.empty() ? std::string() : relative(e.windSound)) << '\n';
     }
     if (!scene.map.image.empty())
         out << "map_image " << std::quoted(relative(scene.map.image)) << '\n';
@@ -348,7 +353,7 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                 {"fog_sun_scatter", &e.fogSunScatter}, {"exposure", &e.exposure}, {"bloom_intensity", &e.bloomIntensity},
                 {"bloom_threshold", &e.bloomThreshold}, {"ssao_radius", &e.ssaoRadius}, {"ssao_intensity", &e.ssaoIntensity},
                 {"shadow_distance", &e.shadowDistance}, {"saturation", &e.saturation}, {"contrast", &e.contrast},
-                {"vignette", &e.vignette}, {"grain", &e.grain}};
+                {"vignette", &e.vignette}, {"grain", &e.grain}, {"rain", &e.rain}, {"wind", &e.wind}};
             if (ok) {
                 if (auto it = vectors.find(name); it != vectors.end())
                     ok = static_cast<bool>(ls >> it->second->x >> it->second->y >> it->second->z);
@@ -556,6 +561,18 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
             ok = static_cast<bool>(ls >> enabled >> n.cellSize >> n.cellHeight >> n.agentRadius >> n.agentHeight >> n.agentClimb >>
                                    n.maxSlope >> n.tileSize >> n.minRegion);
             n.enabled = enabled != 0;
+        } else if (key == "weather_sounds") {
+            std::string paths[2];
+            ok = static_cast<bool>(ls >> std::quoted(paths[0]) >> std::quoted(paths[1]));
+            std::filesystem::path* slots[] = {&result.environment.rainSound, &result.environment.windSound};
+            for (int i = 0; ok && i < 2; ++i) {
+                if (paths[i].empty())
+                    continue;
+                std::filesystem::path p = pathFromUtf8(paths[i]);
+                if (p.is_relative())
+                    p = std::filesystem::absolute(file).parent_path() / p;
+                *slots[i] = p.lexically_normal();
+            }
         } else if (key == "player_sounds") {
             std::string paths[3];
             ok = static_cast<bool>(ls >> std::quoted(paths[0]) >> std::quoted(paths[1]) >> std::quoted(paths[2]));

@@ -8,6 +8,7 @@
 class QComboBox;
 class QDoubleSpinBox;
 class QPushButton;
+class SoundPicker;
 class Vec3Editor;
 
 // Level atmosphere: sun, sky, fog and post-processing (Scene::environment).
@@ -40,6 +41,8 @@ private:
     std::vector<FloatField> floats_;
     std::vector<ColorField> colors_;
     Vec3Editor* sun_ = nullptr;
+    SoundPicker* rainSound_ = nullptr;
+    SoundPicker* windSound_ = nullptr;
     QComboBox* preset_ = nullptr;
     bool updating_ = false;
 };

@@ -19,6 +19,8 @@ ShotHit traceShot(const Scene& scene, const PhysicsWorld& physics, glm::vec3 ori
         best.hit = true;
         best.point = hit->point;
         best.distance = hit->distance;
+        best.normal = hit->normal;
+        best.surface = hit->surface;
     }
     // Characters are not rigid bodies, so test entity bounds separately.
     for (std::size_t i = 0; i < scene.entities.size(); ++i) {
@@ -30,6 +32,8 @@ ShotHit traceShot(const Scene& scene, const PhysicsWorld& physics, glm::vec3 ori
             best.distance = *t;
             best.point = origin + dir * *t;
             best.entity = static_cast<int>(i);
+            best.normal = -dir;
+            best.surface = "flesh";
         }
     }
     return best;
@@ -132,7 +136,9 @@ bool saveWeaponFile(const WeaponSettings& w, const std::filesystem::path& file, 
         << "sound_reload " << std::quoted(relative(w.soundReload)) << '\n'
         << "sound_draw " << std::quoted(relative(w.soundDraw)) << '\n'
         << "sound_impact " << std::quoted(relative(w.soundImpact)) << '\n'
-        << "sound_hit " << std::quoted(relative(w.soundHit)) << '\n';
+        << "sound_hit " << std::quoted(relative(w.soundHit)) << '\n'
+        << "sound_reload_empty " << std::quoted(relative(w.soundReloadEmpty)) << '\n'
+        << "sound_dry_fire " << std::quoted(relative(w.soundDryFire)) << '\n';
     return static_cast<bool>(out);
 }
 
@@ -197,7 +203,9 @@ bool loadWeaponFile(WeaponSettings& weapon, const std::filesystem::path& file, s
         else if (key.rfind("sound_", 0) == 0) {
             std::filesystem::path* target = key == "sound_fire" ? &w.soundFire : key == "sound_reload" ? &w.soundReload
                                           : key == "sound_draw" ? &w.soundDraw : key == "sound_impact" ? &w.soundImpact
-                                          : key == "sound_hit" ? &w.soundHit : nullptr;
+                                          : key == "sound_hit" ? &w.soundHit
+                                          : key == "sound_reload_empty" ? &w.soundReloadEmpty
+                                          : key == "sound_dry_fire" ? &w.soundDryFire : nullptr;
             std::string m;
             ok = static_cast<bool>(ls >> std::quoted(m));
             if (ok && target && !m.empty()) {
@@ -252,6 +260,7 @@ int Weapon::update(float dt, bool triggerHeld, bool reloadPressed)
     }
     if ((reloadPressed && ammo_ < settings.magazineSize) || (triggerHeld && ammo_ == 0)) {
         triggerWasHeld_ = triggerHeld;
+        reloadFromEmpty_ = ammo_ == 0;
         reloadEmpty_ = ammo_ == 0 && !settings.animReloadEmpty.empty();
         reloadDuration_ = reloadEmpty_ && settings.reloadEmptyTime > 0.0f ? settings.reloadEmptyTime : settings.reloadTime;
         reloadDuration_ = std::max(reloadDuration_, 0.01f);

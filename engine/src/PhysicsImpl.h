@@ -54,9 +54,10 @@ struct PhysicsWorld::Impl {
     ~Impl();
     void clearStatic();
     void addStatic(const JPH::ShapeSettings& settings, glm::vec3 position, const std::string& name,
-                   glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
+                   glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f), const std::string& surface = {});
     void addStatic(const JPH::ShapeRefC& shape, glm::vec3 position, const std::string& name,
-                   glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
+                   glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f), const std::string& surface = {});
+    JPH::uint64 surfaceId(const std::string& surface); // body user data: index + 1 into `surfaces`, 0 = none
 
     BroadPhaseLayersImpl broadPhaseLayers;
     ObjectVsBroadPhaseFilter objectVsBroadPhase;
@@ -65,6 +66,9 @@ struct PhysicsWorld::Impl {
     std::unique_ptr<JPH::JobSystemThreadPool> jobs;
     JPH::PhysicsSystem system;
     std::vector<JPH::BodyID> staticBodies;
+    std::vector<std::string> surfaces;
+    std::shared_ptr<const Terrain> terrain; // surface of the ground under a hit
+    JPH::BodyID terrainBody;
 };
 
 } // namespace engine
