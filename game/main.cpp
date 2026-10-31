@@ -549,11 +549,16 @@ int main(int argc, char** argv)
                           fpsFrames / fpsTimer, 1000.0 * fpsTimer / fpsFrames,
                           player.feet().x, player.feet().y, player.feet().z, player.grounded() ? "" : " (air)");
             // FPS_ENGINE_STATS=1 prints frame statistics (profiling, comparing optimizations).
-            if (std::getenv("FPS_ENGINE_STATS"))
-                std::printf("stats: %.1f FPS, %.2f ms, %d model draw calls, %d instanced, %d culled\n", fpsFrames / fpsTimer,
-                            1000.0 * fpsTimer / fpsFrames, renderer.lastDrawCalls(), renderer.lastInstanced(), renderer.lastCulled());
-            if (std::getenv("FPS_ENGINE_STATS"))
+            if (std::getenv("FPS_ENGINE_STATS")) {
+                const engine::Renderer::FrameStats& st = renderer.frameStats();
+                std::printf("stats: %.1f FPS, %.2f ms | %d draws, %lld tris, %d instanced, %d culled | CPU %.2f ms, GPU %.2f ms |",
+                            fpsFrames / fpsTimer, 1000.0 * fpsTimer / fpsFrames, st.drawCalls, st.triangles, st.instanced, st.culled,
+                            st.cpuTotalMs, st.gpuTotalMs);
+                for (int p = 0; p < engine::Renderer::PassCount; ++p)
+                    std::printf(" %s %.2f/%.2f", engine::Renderer::passName(p), st.cpuMs[p], st.gpuMs[p]);
+                std::printf("\n");
                 std::fflush(stdout);
+            }
             glfwSetWindowTitle(window, title);
             fpsTimer = 0.0;
             fpsFrames = 0;

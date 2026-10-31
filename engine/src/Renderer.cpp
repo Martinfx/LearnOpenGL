@@ -476,6 +476,12 @@ void Renderer::shutdown()
     if (terrain_.splat)
         glDeleteTextures(1, &terrain_.splat);
     terrain_ = GpuTerrain{};
+    for (auto& frame : queries_)
+        for (unsigned& q : frame)
+            if (q) {
+                glDeleteQueries(1, &q);
+                q = 0;
+            }
     foliageCache_ = FoliageCache{};
     if (instanceBuffer_)
         glDeleteBuffers(1, &instanceBuffer_);
@@ -940,8 +946,14 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     // Free GPU data nothing drew since the previous render() (removed models).
     lastDrawCalls_ = drawCalls_;
     lastInstanced_ = instanced_;
+    building_.drawCalls = drawCalls_;
+    building_.instanced = instanced_;
+    building_.culled = culled_;
+    building_.triangles = triangles_;
+    collectQueries(); // finishes building_ into stats_ and starts the next frame
     drawCalls_ = 0;
     instanced_ = 0;
+    triangles_ = 0;
     updateStreaming(); // before releaseUnused(): uses last frame's distances
     releaseUnused();
     texturesUploaded_ = 0;
@@ -960,7 +972,9 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, jointBuffer_);
     updateEnvironment(scene, view);
     updateEnvironmentMap(scene);
+    beginPass(PassShadows);
     renderShadows(scene, view);
+    endPass();
 
     // Depth pre-pass: SSAO needs depth, and the main pass then shades each pixel once.
     glBindFramebuffer(GL_FRAMEBUFFER, hdrFbo_);
@@ -975,11 +989,16 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     useMeshProgram(programs_.depth);
     glUniformMatrix4fv(loc_.viewProj, 1, GL_FALSE, glm::value_ptr(viewProj));
     glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+    beginPass(PassDepth);
     drawGeometry(scene, view, true, viewProj);
+    endPass();
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
-    if (quality_.ssao)
+    if (quality_.ssao) {
+        beginPass(PassSsao);
         renderSsao();
+        endPass();
+    }
 
     // Main pass.
     glBindFramebuffer(GL_FRAMEBUFFER, hdrFbo_);
@@ -1008,6 +1027,7 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     }
     transparent_.clear();
     collectTransparent_ = !wireframe; // wireframe draws glass edges like everything else
+    beginPass(PassOpaque);
     drawGeometry(scene, view, false, viewProj);
     collectTransparent_ = false;
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -1024,13 +1044,16 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     }
     glDepthMask(GL_TRUE);
     glDepthFunc(GL_LESS);
+    endPass(); // opaque + sky
     if (!transparent_.empty()) {
+        beginPass(PassTransparent);
         useMeshProgram(programs_.mesh);
         glUniformMatrix4fv(loc_.viewProj, 1, GL_FALSE, glm::value_ptr(viewProj));
         glUniformMatrix3fv(loc_.envRotation, 1, GL_FALSE, glm::value_ptr(glm::mat3(1.0f)));
         glUniform1i(loc_.shading, static_cast<int>(view.shading));
         drawTransparent(view);
         glUniform1i(loc_.shading, 0);
+        endPass();
     }
 
     if (view.grid) {
@@ -1181,6 +1204,7 @@ void Renderer::drawTerrain(const Terrain& t, const RenderView& view)
     glBindVertexArray(terrain_.vao);
     glDrawElements(GL_TRIANGLES, terrain_.indexCount, GL_UNSIGNED_INT, nullptr);
     ++drawCalls_;
+    triangles_ += terrain_.indexCount / 3;
     if (!depthOnly_)
         glUniform1i(programs_.mesh.loc("uTerrain"), 0);
 }
@@ -1332,6 +1356,7 @@ void Renderer::drawModelInstanced(const Model& model, int base, int count)
             glDisable(GL_CULL_FACE);
         glDrawElementsInstanced(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, nullptr, count);
         ++drawCalls_;
+        triangles_ += static_cast<long long>(mesh.indexCount / 3) * count;
         if (twoSided)
             glEnable(GL_CULL_FACE);
     }
@@ -1386,6 +1411,7 @@ void Renderer::drawTransparent(const RenderView& view)
 void Renderer::renderOverlay(const RenderView& view, const OverlayPass& pass)
 {
     // First-person layer: own depth range and projection, so the weapon never clips into walls.
+    beginPass(PassOverlay);
     glBindFramebuffer(GL_FRAMEBUFFER, hdrFbo_);
     glViewport(0, 0, width_, height_);
     glEnable(GL_DEPTH_TEST);
@@ -1411,6 +1437,7 @@ void Renderer::renderOverlay(const RenderView& view, const OverlayPass& pass)
         drawCube(glm::scale(glm::translate(glm::mat4(1.0f), b.center), b.size), b.color, 0.0f, b.emissive);
     glUniform1i(loc_.overlay, 0);
     glBindVertexArray(0);
+    endPass();
 }
 
 void Renderer::renderBloom()
@@ -1445,6 +1472,7 @@ void Renderer::present()
         return;
     pendingPresent_ = false;
     resetGlState();
+    beginPass(PassPost);
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
     if (quality_.bloom)
@@ -1484,6 +1512,79 @@ void Renderer::present()
     glEnable(GL_DEPTH_TEST);
     glBindVertexArray(0);
     glUseProgram(0);
+    endPass();
+}
+
+const char* Renderer::passName(int pass)
+{
+    static const char* names[PassCount] = {"Shadows", "Depth pre-pass", "SSAO", "Opaque + sky", "Transparent", "Post (bloom, tone, FXAA)",
+                                           "First person"};
+    return pass >= 0 && pass < PassCount ? names[pass] : "?";
+}
+
+void Renderer::beginPass(int pass)
+{
+    if (activePass_ >= 0)
+        endPass();
+    activePass_ = pass;
+    passStart_ = std::chrono::steady_clock::now();
+    unsigned& q = queries_[queryFrame_][pass];
+    if (!q)
+        glCreateQueries(GL_TIME_ELAPSED, 1, &q);
+    glBeginQuery(GL_TIME_ELAPSED, q);
+    queryIssued_[queryFrame_][pass] = true;
+}
+
+void Renderer::endPass()
+{
+    if (activePass_ < 0)
+        return;
+    glEndQuery(GL_TIME_ELAPSED);
+    building_.cpuMs[activePass_] += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - passStart_).count();
+    activePass_ = -1;
+}
+
+void Renderer::collectQueries()
+{
+    // GPU times of the oldest frame in the ring (its queries are done by now, normally).
+    const int oldest = (queryFrame_ + 1) % kQueryFrames;
+    bool valid = true, any = false;
+    double gpu[PassCount] = {};
+    for (int p = 0; p < PassCount; ++p) {
+        if (!queryIssued_[oldest][p])
+            continue;
+        any = true;
+        GLint available = 0;
+        glGetQueryObjectiv(queries_[oldest][p], GL_QUERY_RESULT_AVAILABLE, &available);
+        if (!available) {
+            valid = false;
+            continue;
+        }
+        GLuint64 ns = 0;
+        glGetQueryObjectui64v(queries_[oldest][p], GL_QUERY_RESULT, &ns);
+        gpu[p] = static_cast<double>(ns) / 1.0e6;
+        queryIssued_[oldest][p] = false;
+    }
+    // CPU numbers are from the frame that just ended; GPU numbers a few frames older.
+    stats_.drawCalls = building_.drawCalls;
+    stats_.instanced = building_.instanced;
+    stats_.culled = building_.culled;
+    stats_.triangles = building_.triangles;
+    stats_.cpuTotalMs = 0.0;
+    for (int p = 0; p < PassCount; ++p) {
+        stats_.cpuMs[p] = building_.cpuMs[p];
+        stats_.cpuTotalMs += building_.cpuMs[p];
+    }
+    if (any && valid) {
+        stats_.gpuTotalMs = 0.0;
+        for (int p = 0; p < PassCount; ++p) {
+            stats_.gpuMs[p] = gpu[p];
+            stats_.gpuTotalMs += gpu[p];
+        }
+        stats_.gpuValid = true;
+    }
+    building_ = FrameStats{};
+    queryFrame_ = (queryFrame_ + 1) % kQueryFrames;
 }
 
 const Renderer::GpuMesh& Renderer::upload(const MeshPart& part)
@@ -1798,6 +1899,7 @@ void Renderer::drawModel(const Model& model, const glm::mat4& transform, float h
             glDisable(GL_CULL_FACE);
         glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, nullptr);
         ++drawCalls_;
+        triangles_ += mesh.indexCount / 3;
         if (twoSided)
             glEnable(GL_CULL_FACE);
     }

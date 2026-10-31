@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <filesystem>
 #include "engine/TextureCook.h"
+#include <chrono>
 #include <future>
 #include <map>
 #include <string>
@@ -127,6 +128,20 @@ public:
     };
     MemoryStats memoryStats() const;
 
+    // Frame profile: CPU time to record each pass and GPU time to execute it
+    // (timer queries, a couple of frames behind), plus what was drawn.
+    enum Pass { PassShadows, PassDepth, PassSsao, PassOpaque, PassTransparent, PassPost, PassOverlay, PassCount };
+    static const char* passName(int pass);
+    struct FrameStats {
+        double cpuMs[PassCount] = {};
+        double gpuMs[PassCount] = {};
+        double cpuTotalMs = 0.0, gpuTotalMs = 0.0;
+        int drawCalls = 0, instanced = 0, culled = 0;
+        long long triangles = 0;
+        bool gpuValid = false;   // timer queries available on this driver
+    };
+    const FrameStats& frameStats() const { return stats_; }
+
     // Texture size / streaming changes apply to loaded textures too (streamed from the cook cache).
     void setQuality(const RenderQuality& quality);
     const RenderQuality& quality() const { return quality_; }
@@ -238,6 +253,18 @@ private:
     unsigned instanceBuffer_ = 0;
     std::size_t instanceCapacity_ = 0;
     int drawCalls_ = 0, lastDrawCalls_ = 0, instanced_ = 0, lastInstanced_ = 0;
+    long long triangles_ = 0;
+    // Profiler: timer queries per pass, in a ring of frames.
+    static constexpr int kQueryFrames = 4;
+    unsigned queries_[kQueryFrames][PassCount] = {};
+    bool queryIssued_[kQueryFrames][PassCount] = {};
+    int queryFrame_ = 0;
+    int activePass_ = -1;
+    std::chrono::steady_clock::time_point passStart_;
+    FrameStats stats_, building_;
+    void beginPass(int pass);
+    void endPass();
+    void collectQueries();
     void flushInstances();
     // Terrain mesh and splat map on the GPU, rebuilt when the terrain's versions change.
     struct GpuTerrain {
