@@ -7,5 +7,5 @@ rolloff 1
 loop 1
 stream 1
 spatial 0
-group music
-max_instances 1
+group ambient
+max_instances 2

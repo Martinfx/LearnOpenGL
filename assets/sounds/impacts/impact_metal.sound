@@ -1,0 +1,16 @@
+# Sound: variations (one is picked at random per play) and playback settings
+file "impact_metal_1.wav"
+file "impact_metal_2.wav"
+file "impact_metal_3.wav"
+file "impact_metal_4.wav"
+file "impact_metal_5.wav"
+file "impact_metal_6.wav"
+volume 0.65
+pitch 0.9 1.1
+distance 2 70
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group sfx
+max_instances 8

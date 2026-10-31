@@ -1,0 +1,12 @@
+# Sound: variations (one is picked at random per play) and playback settings
+file "death_1.wav"
+file "death_2.wav"
+volume 0.9
+pitch 0.97 1.03
+distance 1 40
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group sfx
+max_instances 2

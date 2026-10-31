@@ -3,8 +3,10 @@ file "step_gravel_1.wav"
 file "step_gravel_2.wav"
 file "step_gravel_3.wav"
 file "step_gravel_4.wav"
+file "step_gravel_5.wav"
+file "step_gravel_6.wav"
 volume 0.35
-pitch 0.9 1.1
+pitch 0.92 1.08
 distance 1 25
 rolloff 1
 loop 0

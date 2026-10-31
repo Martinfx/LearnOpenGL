@@ -3,7 +3,7 @@ file "impact_flesh_1.wav"
 file "impact_flesh_2.wav"
 volume 0.8
 pitch 0.9 1.1
-distance 1 30
+distance 2 40
 rolloff 1
 loop 0
 stream 0

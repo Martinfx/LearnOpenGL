@@ -1,0 +1,14 @@
+# Sound: variations (one is picked at random per play) and playback settings
+file "sniper_shot_1.wav"
+file "sniper_shot_2.wav"
+file "sniper_shot_3.wav"
+file "sniper_shot_4.wav"
+volume 1
+pitch 0.98 1.02
+distance 6 600
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group sfx
+max_instances 6

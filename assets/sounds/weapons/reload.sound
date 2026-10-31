@@ -1,8 +1,8 @@
 # Sound: variations (one is picked at random per play) and playback settings
 file "reload.wav"
-volume 0.6
-pitch 0.98 1.02
-distance 1 15
+volume 0.8
+pitch 1 1
+distance 1 30
 rolloff 1
 loop 0
 stream 0

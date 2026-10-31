@@ -1,0 +1,11 @@
+# Sound: variations (one is picked at random per play) and playback settings
+file "mag_out.wav"
+volume 0.7
+pitch 0.95 1.05
+distance 1 20
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group sfx
+max_instances 2

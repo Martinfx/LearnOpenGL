@@ -1,0 +1,11 @@
+# Sound: variations (one is picked at random per play) and playback settings
+file "reload_smg.wav"
+volume 0.8
+pitch 1 1
+distance 1 30
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group sfx
+max_instances 2

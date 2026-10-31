@@ -1,0 +1,14 @@
+# Sound: variations (one is picked at random per play) and playback settings
+file "impact_concrete_1.wav"
+file "impact_concrete_2.wav"
+file "impact_concrete_3.wav"
+file "impact_concrete_4.wav"
+volume 0.7
+pitch 0.9 1.1
+distance 2 60
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group sfx
+max_instances 8

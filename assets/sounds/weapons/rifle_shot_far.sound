@@ -1,0 +1,12 @@
+# Sound: variations (one is picked at random per play) and playback settings
+file "rifle_shot_far_1.wav"
+file "rifle_shot_far_2.wav"
+volume 0.8
+pitch 0.95 1.05
+distance 60 900
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group sfx
+max_instances 6

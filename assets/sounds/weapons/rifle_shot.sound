@@ -2,12 +2,13 @@
 file "rifle_shot_1.wav"
 file "rifle_shot_2.wav"
 file "rifle_shot_3.wav"
+file "rifle_shot_4.wav"
 volume 1
-pitch 0.96 1.04
+pitch 0.97 1.03
 distance 4 300
 rolloff 1
 loop 0
 stream 0
 spatial 1
 group sfx
-max_instances 6
+max_instances 8

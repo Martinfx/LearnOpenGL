@@ -1,0 +1,13 @@
+# Sound: variations (one is picked at random per play) and playback settings
+file "impact_dirt_1.wav"
+file "impact_dirt_2.wav"
+file "impact_dirt_3.wav"
+volume 0.6
+pitch 0.9 1.1
+distance 2 40
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group sfx
+max_instances 8

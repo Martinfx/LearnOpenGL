@@ -1,7 +1,7 @@
 # Sound: variations (one is picked at random per play) and playback settings
 file "land.wav"
 volume 0.5
-pitch 0.95 1.05
+pitch 0.9 1.1
 distance 1 25
 rolloff 1
 loop 0

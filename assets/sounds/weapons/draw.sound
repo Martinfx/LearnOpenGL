@@ -1,8 +1,8 @@
 # Sound: variations (one is picked at random per play) and playback settings
 file "draw.wav"
-volume 0.5
+volume 0.6
 pitch 0.95 1.05
-distance 1 10
+distance 1 15
 rolloff 1
 loop 0
 stream 0
