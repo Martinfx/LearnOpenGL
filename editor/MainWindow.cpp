@@ -10,6 +10,8 @@
 #include "Vec3Editor.h"
 #include "Viewport.h"
 #include "WeaponPanel.h"
+#include "EnvironmentPanel.h"
+#include "ShaderEditor.h"
 
 #include <QAction>
 #include <QApplication>
@@ -42,12 +44,15 @@
 #include <QPushButton>
 #include <QStandardPaths>
 #include <QStatusBar>
+#include <QSettings>
 #include <QShortcut>
 #include <QTabBar>
 #include <QTabWidget>
 #include <QTextStream>
 #include <QToolBar>
 #include <QVBoxLayout>
+#include <array>
+#include <memory>
 
 #include <cmath>
 #include <filesystem>
@@ -173,6 +178,56 @@ void MainWindow::buildMenus()
 
     QMenu* game = menuBar()->addMenu(tr("&Game"));
     QAction* play = game->addAction(tr("&Play level"), QKeySequence(Qt::Key_F5), this, &MainWindow::playLevel);
+
+    // Render: quality of this machine's viewport (saved in the editor settings) and shaders.
+    QMenu* render = menuBar()->addMenu(tr("&Render"));
+    auto* qualityGroup = new QActionGroup(this);
+    const char* qualityNames[4] = {"Low", "Medium", "High", "Ultra"};
+    QSettings settings;
+    const int qualityLevel = settings.value("render/quality", 2).toInt();
+    engine::RenderQuality quality = engine::RenderQuality::preset(qualityLevel);
+    quality.ssao = settings.value("render/ssao", quality.ssao).toBool();
+    quality.bloom = settings.value("render/bloom", quality.bloom).toBool();
+    quality.fxaa = settings.value("render/fxaa", quality.fxaa).toBool();
+    QMenu* qualityMenu = render->addMenu(tr("&Quality"));
+    auto toggles = std::make_shared<std::array<QAction*, 3>>(); // SSAO, bloom, FXAA
+    for (int i = 0; i < 4; ++i) {
+        QAction* a = qualityMenu->addAction(tr(qualityNames[i]));
+        a->setCheckable(true);
+        a->setChecked(i == qualityLevel);
+        qualityGroup->addAction(a);
+        connect(a, &QAction::triggered, this, [this, i, toggles] {
+            QSettings().setValue("render/quality", i);
+            const engine::RenderQuality q = engine::RenderQuality::preset(i);
+            for (QAction* t : *toggles)
+                t->blockSignals(true);
+            (*toggles)[0]->setChecked(q.ssao);
+            (*toggles)[1]->setChecked(q.bloom);
+            (*toggles)[2]->setChecked(q.fxaa);
+            for (QAction* t : *toggles)
+                t->blockSignals(false);
+            setRenderQuality(q);
+        });
+    }
+    const char* toggleNames[3] = {"Ambient occlusion (SSAO)", "Bloom", "Anti-aliasing (FXAA)"};
+    const char* toggleKeys[3] = {"render/ssao", "render/bloom", "render/fxaa"};
+    bool engine::RenderQuality::*toggleMembers[3] = {&engine::RenderQuality::ssao, &engine::RenderQuality::bloom,
+                                                     &engine::RenderQuality::fxaa};
+    for (int i = 0; i < 3; ++i) {
+        (*toggles)[static_cast<std::size_t>(i)] = render->addAction(tr(toggleNames[i]));
+        (*toggles)[static_cast<std::size_t>(i)]->setCheckable(true);
+        (*toggles)[static_cast<std::size_t>(i)]->setChecked(quality.*toggleMembers[i]);
+        connect((*toggles)[static_cast<std::size_t>(i)], &QAction::toggled, this, [this, i, toggleKeys, toggleMembers](bool on) {
+            QSettings().setValue(toggleKeys[i], on);
+            engine::RenderQuality q = viewport_->quality();
+            q.*toggleMembers[i] = on;
+            setRenderQuality(q);
+        });
+    }
+    render->addSeparator();
+    render->addAction(tr("&Shader editor"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_H), this, &MainWindow::openShaderEditor);
+    render->addAction(tr("&Reload shaders from disk"), QKeySequence(Qt::CTRL | Qt::Key_F5), this, &MainWindow::applyShaders);
+    viewport_->setQuality(quality);
 
     QToolBar* tools = addToolBar(tr("Tools"));
     tools->setObjectName("tools");
@@ -707,6 +762,7 @@ void MainWindow::buildDocks()
     connect(sunEdit_, &Vec3Editor::valueEdited, this, [this](glm::vec3 v) {
         if (glm::length(v) > 0.001f) {
             scene_.sunDirection = v;
+            environment_->refresh();
             markDirty();
         }
     });
@@ -756,11 +812,26 @@ void MainWindow::buildDocks()
     weaponsScroll->setWidgetResizable(true);
     weaponsDock->setWidget(weaponsScroll);
     addDockWidget(Qt::RightDockWidgetArea, weaponsDock);
+
+    // Environment: sun, sky, fog and image settings of the level.
+    environment_ = new EnvironmentPanel(&scene_, this);
+    connect(environment_, &EnvironmentPanel::edited, this, [this] {
+        sunEdit_->setValue(scene_.sunDirection);
+        markDirty();
+    });
+    auto* environmentDock = new QDockWidget(tr("Environment"), this);
+    environmentDock->setObjectName("environment");
+    auto* environmentScroll = new QScrollArea(environmentDock);
+    environmentScroll->setWidget(environment_);
+    environmentScroll->setWidgetResizable(true);
+    environmentDock->setWidget(environmentScroll);
+    addDockWidget(Qt::RightDockWidgetArea, environmentDock);
     // Scythe-like layout: outliner top right, details (properties, relations, weapons) below it,
     // content browser at the bottom, tools on the left.
     splitDockWidget(outlinerDock, propsDock, Qt::Vertical);
     tabifyDockWidget(propsDock, depsDock);
     tabifyDockWidget(propsDock, weaponsDock);
+    tabifyDockWidget(propsDock, environmentDock);
     propsDock->raise();
     propsDock->setWindowTitle(tr("Details"));
     resizeDocks({outlinerDock, propsDock}, {300, 500}, Qt::Vertical);
@@ -951,6 +1022,7 @@ void MainWindow::applySnapshot(const SceneSnapshot& snapshot)
     scene_ = meshStore_.restore(snapshot);
     lastState_ = std::make_shared<SceneSnapshot>(snapshot);
     weapons_->refresh();
+    environment_->refresh();
     selected_ = -1;
     refreshOutliner();
     refreshLevelProperties();
@@ -1262,6 +1334,7 @@ void MainWindow::newLevel()
     dirty_ = false;
     selected_ = -1;
     weapons_->refresh();
+    environment_->refresh();
     refreshOutliner();
     refreshLevelProperties();
     select(-1);
@@ -1306,6 +1379,7 @@ void MainWindow::applyLoadedLevel(const QString& path, engine::Scene loaded)
 {
     scene_ = std::move(loaded);
     weapons_->refresh();
+    environment_->refresh();
     currentFile_ = path;
     dirty_ = false;
     selected_ = -1;
@@ -1377,7 +1451,10 @@ void MainWindow::playLevel()
 #else
     const QString exe = QDir(QCoreApplication::applicationDirPath()).filePath("fps_game");
 #endif
-    if (!QFileInfo::exists(exe) || !QProcess::startDetached(exe, {snapshot})) {
+    QStringList args{snapshot};
+    if (customShaders_)
+        args << "--shaders" << shaderRoot(); // the game runs the shaders edited here
+    if (!QFileInfo::exists(exe) || !QProcess::startDetached(exe, args)) {
         QMessageBox::warning(this, tr("Play"), tr("Could not start %1").arg(exe));
     }
 }
@@ -1427,6 +1504,42 @@ ScriptEditor* MainWindow::openScript(const QString& path)
     return se;
 }
 
+void MainWindow::setRenderQuality(const engine::RenderQuality& quality)
+{
+    viewport_->setQuality(quality);
+}
+
+void MainWindow::openShaderEditor()
+{
+    if (shaderEditor_) {
+        tabs_->setCurrentWidget(shaderEditor_);
+        return;
+    }
+    shaderEditor_ = new ShaderEditor(shaderRoot(), tabs_);
+    const int index = tabs_->addTab(shaderEditor_, tr("Shaders"));
+    tabs_->setTabToolTip(index, shaderRoot());
+    tabs_->setCurrentIndex(index);
+    connect(shaderEditor_, &ShaderEditor::applyRequested, this, &MainWindow::applyShaders);
+    connect(shaderEditor_, &ShaderEditor::modificationChanged, this, [this](bool modified) {
+        if (const int i = tabs_->indexOf(shaderEditor_); i >= 0)
+            tabs_->setTabText(i, modified ? tr("Shaders *") : tr("Shaders"));
+    });
+}
+
+void MainWindow::applyShaders()
+{
+    // Recompile from disk; the viewport keeps the old shaders if this fails.
+    QString error;
+    const bool ok = viewport_->reloadShaders(shaderRoot(), &error);
+    customShaders_ = customShaders_ || ok;
+    if (shaderEditor_)
+        shaderEditor_->showResult(ok, error);
+    if (ok)
+        statusBar()->showMessage(tr("Shaders reloaded from %1").arg(shaderRoot()), 4000);
+    else if (!shaderEditor_)
+        QMessageBox::warning(this, tr("Shaders"), error);
+}
+
 void MainWindow::openScriptDialog()
 {
     const QString start = assetPath("scripts");
@@ -1463,6 +1576,27 @@ bool MainWindow::closeScriptTab(int index)
     auto* se = qobject_cast<ScriptEditor*>(w);
     auto* te = qobject_cast<TextureEditor*>(w);
     auto* me = qobject_cast<MaterialEditor*>(w);
+    if (auto* sh = qobject_cast<ShaderEditor*>(w)) {
+        if (sh->isModified()) {
+            tabs_->setCurrentIndex(index);
+            const auto answer = QMessageBox::question(this, tr("Unsaved changes"), tr("Save and apply the changed shaders?"),
+                                                      QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
+            if (answer == QMessageBox::Cancel)
+                return false;
+            QString error;
+            if (answer == QMessageBox::Save) {
+                if (!sh->saveAll(&error)) {
+                    QMessageBox::warning(this, tr("Save"), error);
+                    return false;
+                }
+                applyShaders();
+            }
+        }
+        tabs_->removeTab(index);
+        shaderEditor_ = nullptr;
+        w->deleteLater();
+        return true;
+    }
     if (!se && !te && !me)
         return false; // the 3D view stays
     const bool modified = se ? se->isModified() : te ? te->isModified() : me->hasUnsaved();
@@ -1525,6 +1659,8 @@ bool MainWindow::confirmCloseScripts()
             modified = te->isModified();
         else if (auto* me = qobject_cast<MaterialEditor*>(w))
             modified = me->hasUnsaved();
+        else if (auto* sh = qobject_cast<ShaderEditor*>(w))
+            modified = sh->isModified();
         if (modified && !closeScriptTab(i))
             return false;
     }

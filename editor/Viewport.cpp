@@ -1,5 +1,7 @@
 #include "Viewport.h"
 
+#include <filesystem>
+
 #include <engine/Geometry.h>
 
 #include <QDragEnterEvent>
@@ -72,6 +74,11 @@ void Viewport::initializeGL()
     connect(context(), &QOpenGLContext::aboutToBeDestroyed, this, &Viewport::cleanup, Qt::UniqueConnection);
     std::string error;
     ready_ = renderer_.init(qtGetProc, &error);
+    if (ready_) {
+        renderer_.setQuality(quality_);
+        if (!shaderDirectory_.isEmpty())
+            renderer_.reloadShaders(std::filesystem::path(shaderDirectory_.toStdU16String()));
+    }
     if (ready_)
         emit rendererReady(QString::fromStdString(renderer_.glInfo()));
     else
@@ -79,6 +86,31 @@ void Viewport::initializeGL()
 }
 
 void Viewport::resizeGL(int, int) {}
+
+void Viewport::setQuality(const engine::RenderQuality& quality)
+{
+    quality_ = quality;
+    renderer_.setQuality(quality);
+    update();
+}
+
+bool Viewport::reloadShaders(const QString& directory, QString* error)
+{
+    if (!ready_) {
+        shaderDirectory_ = directory;
+        return true;
+    }
+    makeCurrent();
+    std::string log;
+    const bool ok = renderer_.reloadShaders(std::filesystem::path(directory.toStdU16String()), &log);
+    doneCurrent();
+    if (ok)
+        shaderDirectory_ = directory;
+    else if (error)
+        *error = QString::fromStdString(log);
+    update();
+    return ok;
+}
 
 void Viewport::paintGL()
 {

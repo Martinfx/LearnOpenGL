@@ -20,3 +20,15 @@ inline QString assetPath(const QString& relative)
 {
     return QDir(assetRoot()).filePath(relative);
 }
+
+// Shaders the editor edits: engine/shaders in a development build (embedded into
+// the engine on the next build), otherwise shaders/ next to the assets. Files there
+// replace the built-in ones of the same name.
+inline QString shaderRoot()
+{
+#ifdef FPS_SOURCE_SHADERS
+    if (QFileInfo(QStringLiteral(FPS_SOURCE_SHADERS)).isDir())
+        return QStringLiteral(FPS_SOURCE_SHADERS);
+#endif
+    return QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral("shaders"));
+}

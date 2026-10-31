@@ -107,9 +107,12 @@ glm::vec3 linear(glm::vec3 srgb)
 
 std::string withIncludes(const std::string& source, const std::map<std::string, std::string>& files)
 {
-    // Minimal #include "file" support for shared GLSL code.
+    // #include "file" for shared GLSL code. #line directives keep compiler messages
+    // pointing at the right file: source string 0 is the shader itself, 1.. its
+    // includes in order, with their own line numbers.
     std::string out;
     std::size_t pos = 0;
+    int includeIndex = 0;
     while (true) {
         const std::size_t inc = source.find("#include \"", pos);
         if (inc == std::string::npos) {
@@ -121,11 +124,14 @@ std::string withIncludes(const std::string& source, const std::map<std::string, 
         const std::size_t nameEnd = source.find('"', nameStart);
         const std::string name = source.substr(nameStart, nameEnd - nameStart);
         const auto it = files.find(name);
+        const int line = 1 + static_cast<int>(std::count(source.begin(), source.begin() + static_cast<std::ptrdiff_t>(inc), '\n'));
+        out += "#line 1 " + std::to_string(++includeIndex) + "\n";
         out += it != files.end() ? it->second : "#error missing include " + name + "\n";
-        out += "\n";
+        out += "\n#line " + std::to_string(line + 1) + " 0\n";
         pos = source.find('\n', nameEnd);
         if (pos == std::string::npos)
             return out;
+        ++pos;
     }
 }
 

@@ -1,4 +1,5 @@
 #pragma once
+#include <engine/Renderer.h>
 #include <engine/Scene.h>
 
 #include "EditorHistory.h"
@@ -26,6 +27,7 @@ class QWidget;
 class Vec3Editor;
 class Viewport;
 class WeaponPanel;
+class EnvironmentPanel;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -57,6 +59,9 @@ private:
     ScriptEditor* openScript(const QString& path);
     void newScript();
     void openScriptDialog();
+    void openShaderEditor();
+    void applyShaders();
+    void setRenderQuality(const engine::RenderQuality& quality);
     bool closeScriptTab(int index);
     bool saveAllScripts();
     bool confirmCloseScripts();
@@ -102,10 +107,13 @@ private:
     Viewport* viewport_ = nullptr;
     QTabWidget* tabs_ = nullptr;
     MaterialEditor* materialEditor_ = nullptr;
+    class ShaderEditor* shaderEditor_ = nullptr;
+    bool customShaders_ = false; // the viewport runs shaders from shaderRoot()
     QWidget* materialRow_ = nullptr;
     QLineEdit* materialEdit_ = nullptr;
     QTableWidget* materialSlots_ = nullptr;
     WeaponPanel* weapons_ = nullptr;
+    EnvironmentPanel* environment_ = nullptr;
     HierarchyTree* outliner_ = nullptr;
     DependencyPanel* dependencies_ = nullptr;
     AssetBrowser* assets_ = nullptr;

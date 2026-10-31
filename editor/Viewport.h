@@ -23,6 +23,10 @@ public:
     void setSelected(int index);
     void focusSelected();
     const engine::FpsCamera& camera() const { return camera_; }
+    void setQuality(const engine::RenderQuality& quality);
+    const engine::RenderQuality& quality() const { return quality_; }
+    // Recompiles the shaders from `directory` (over the built-in ones); false + compiler log on error.
+    bool reloadShaders(const QString& directory, QString* error);
 
 signals:
     void boxPicked(int index);
@@ -73,6 +77,8 @@ private:
 
     engine::Scene* scene_;
     engine::Renderer renderer_;
+    engine::RenderQuality quality_;
+    QString shaderDirectory_; // custom shaders applied, re-applied when the GL context is recreated
     engine::FpsCamera camera_;
     bool ready_ = false;
     int selected_ = -1;

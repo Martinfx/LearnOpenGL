@@ -190,10 +190,20 @@ int main(int argc, char** argv)
     }
     std::printf("%s\n", renderer.glInfo().c_str());
 
+    // Command line: [level] [--shaders DIR] (shaders edited in the editor replace the built-in ones).
+    std::filesystem::path levelPath = std::filesystem::path(argv[0]).parent_path() / "assets/levels/test.level";
+    for (int i = 1; i < argc; ++i) {
+        const std::string arg = argv[i];
+        if (arg == "--shaders" && i + 1 < argc) {
+            if (!renderer.reloadShaders(argv[++i], &error))
+                std::fprintf(stderr, "Shaders: %s\n", error.c_str());
+        } else {
+            levelPath = arg;
+        }
+    }
+
     // Level: command line argument, else the bundled sample, else built-in default.
     engine::Scene scene;
-    std::filesystem::path levelPath = argc > 1 ? std::filesystem::path(argv[1])
-                                               : std::filesystem::path(argv[0]).parent_path() / "assets/levels/test.level";
     if (!engine::loadScene(scene, levelPath, &error)) {
         std::fprintf(stderr, "%s, using the built-in level\n", error.c_str());
         scene = engine::makeDefaultScene();

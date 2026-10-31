@@ -133,16 +133,33 @@ Všechno, co hra používá, se mění v editoru a ukládá do souborů úrovně
 
 Každá zbraň je soubor `.weapon` (typ střelná / chladná, model, poškození, kadence, automatická/poloautomatická,
 broky, zásobník, přebíjení, rozptyl, dostřel, poloha, natočení a měřítko v ruce, poloha záblesku). Výzbroj
-testovací úrovně: 1 nůž, 2 pistole, 3 samopal, 4 Repeater, 5 Scatter Blaster (brokovnice).
+testovací úrovně: 1 AK-74M, 2 pistole, 3 nůž, 4 samopal, 5 Repeater, 6 Scatter Blaster (brokovnice).
 
 - **Nůž** (`type melee`): bez nábojů a přebíjení, `fire_interval` je doba seku, `spread` šířka oblouku
   a `range` dosah (1,8 m). Sek trefí nejbližšího nepřítele v oblouku i vedle zdi.
 - **Animované ruce**: když je model zbraně glTF s kostrou (ruce + zbraň), vyberou se v editoru klipy
   `anim_idle`, `anim_fire`, `anim_reload` a `anim_draw`. Přebíjení a sek se natáhnou na nastavený čas.
   Bez klipů se zbraň hýbe procedurálně (houpání při chůzi, zpětný ráz, přebití, sek).
+  Volitelně `anim_reload_empty` + `reload_empty_time` (přebití z prázdného zásobníku s natažením závěru)
+  a `anim_walk` (smyčka při chůzi).
 
-Nůž, pistole a samopal mají ruce v pohledu z první osoby (`assets/models/weapons/fps/`, CC0, viz README a
+AK-74M má profesionální ruce a animace od Cranshe (CC-BY 4.0, kredit v `assets/models/weapons/fps/CREDITS.md`,
+hra ho vypisuje při startu). Nůž, pistole a samopal mají ruce v pohledu z první osoby (`assets/models/weapons/fps/`, CC0, viz README a
 CREDITS tamtéž) s klipy idle, výstřel/sek, přebití a tasení. Repeater a Scatter Blaster jsou z Kenney Blaster Kit (CC0).
+
+## Render
+
+Jeden renderer pro hru, viewport editoru, náhledy materiálů i miniatury: HDR, kaskádové stíny od slunce,
+depth pre-pass, SSAO, PBR (GGX) s osvětlením z procedurální oblohy (IBL: předfiltrovaná cubemapa + BRDF LUT),
+výšková mlha se září ke slunci, bloom, ACES, barevné ladění (saturace, kontrast, tón), viněta, zrno a FXAA.
+
+- **Prostředí** (dok *Environment*): slunce, obloha, oblačnost, mlha, expozice, bloom, AO, vzdálenost stínů
+  a barevné ladění. Ukládá se do levelu (řádky `env klíč hodnoty`). Presety: jasný den, zatažená Zóna
+  (post-apo), soumrak, toxický opar, noc.
+- **Menu Render**: kvalita (nízká/střední/vysoká/ultra) a přepínače SSAO, bloom, FXAA; ukládá se do nastavení editoru.
+- **Shadery** jsou soubory v `engine/shaders/` (zabudované při buildu). *Render → Shader editor* je otevře
+  se zvýrazněním GLSL; *Apply* (Ctrl+S) je uloží a hned přeloží. Chyba se označí na řádku a běží dál
+  předchozí shadery. *Play level* předá upravené shadery hře (`fps_game level --shaders DIR`).
 
 ## Modely z Blenderu
 
