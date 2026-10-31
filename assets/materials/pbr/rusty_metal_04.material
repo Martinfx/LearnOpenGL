@@ -1,0 +1,15 @@
+# FPS engine material (physically based: metal/roughness)
+version 2
+name "Rusty Metal 04"
+color 1 1 1
+roughness 1
+metallic 1
+normal_strength 1
+emissive 0 0 0
+tiling 0.5 0.5
+world_uv 1
+albedo_map "../../textures/pbr/rusty_metal_04/albedo.jpg"
+normal_map "../../textures/pbr/rusty_metal_04/normal.jpg"
+roughness_map "../../textures/pbr/rusty_metal_04/roughness.jpg"
+metallic_map "../../textures/pbr/rusty_metal_04/metallic.jpg"
+occlusion_map "../../textures/pbr/rusty_metal_04/ao.jpg"

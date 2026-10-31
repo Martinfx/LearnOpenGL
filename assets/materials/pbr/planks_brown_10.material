@@ -1,0 +1,14 @@
+# FPS engine material (physically based: metal/roughness)
+version 2
+name "Planks Brown 10"
+color 1 1 1
+roughness 1
+metallic 0
+normal_strength 1
+emissive 0 0 0
+tiling 1.0 1.0
+world_uv 1
+albedo_map "../../textures/pbr/planks_brown_10/albedo.jpg"
+normal_map "../../textures/pbr/planks_brown_10/normal.jpg"
+roughness_map "../../textures/pbr/planks_brown_10/roughness.jpg"
+occlusion_map "../../textures/pbr/planks_brown_10/ao.jpg"

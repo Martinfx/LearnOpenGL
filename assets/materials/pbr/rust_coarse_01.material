@@ -1,0 +1,14 @@
+# FPS engine material (physically based: metal/roughness)
+version 2
+name "Rust Coarse 01"
+color 1 1 1
+roughness 1
+metallic 0
+normal_strength 1
+emissive 0 0 0
+tiling 0.4545 0.4545
+world_uv 1
+albedo_map "../../textures/pbr/rust_coarse_01/albedo.jpg"
+normal_map "../../textures/pbr/rust_coarse_01/normal.jpg"
+roughness_map "../../textures/pbr/rust_coarse_01/roughness.jpg"
+occlusion_map "../../textures/pbr/rust_coarse_01/ao.jpg"

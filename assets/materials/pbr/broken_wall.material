@@ -1,0 +1,14 @@
+# FPS engine material (physically based: metal/roughness)
+version 2
+name "Broken Wall"
+color 1 1 1
+roughness 1
+metallic 0
+normal_strength 1
+emissive 0 0 0
+tiling 0.3333 0.3333
+world_uv 1
+albedo_map "../../textures/pbr/broken_wall/albedo.jpg"
+normal_map "../../textures/pbr/broken_wall/normal.jpg"
+roughness_map "../../textures/pbr/broken_wall/roughness.jpg"
+occlusion_map "../../textures/pbr/broken_wall/ao.jpg"

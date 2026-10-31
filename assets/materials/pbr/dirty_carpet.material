@@ -1,0 +1,14 @@
+# FPS engine material (physically based: metal/roughness)
+version 2
+name "Dirty Carpet"
+color 1 1 1
+roughness 1
+metallic 0
+normal_strength 1
+emissive 0 0 0
+tiling 1.6667 1.6667
+world_uv 1
+albedo_map "../../textures/pbr/dirty_carpet/albedo.jpg"
+normal_map "../../textures/pbr/dirty_carpet/normal.jpg"
+roughness_map "../../textures/pbr/dirty_carpet/roughness.jpg"
+occlusion_map "../../textures/pbr/dirty_carpet/ao.jpg"

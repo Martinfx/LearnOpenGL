@@ -1,0 +1,14 @@
+# FPS engine material (physically based: metal/roughness)
+version 2
+name "Wood Floor"
+color 1 1 1
+roughness 1
+metallic 0
+normal_strength 1
+emissive 0 0 0
+tiling 0.5882 0.5882
+world_uv 1
+albedo_map "../../textures/pbr/wood_floor/albedo.jpg"
+normal_map "../../textures/pbr/wood_floor/normal.jpg"
+roughness_map "../../textures/pbr/wood_floor/roughness.jpg"
+occlusion_map "../../textures/pbr/wood_floor/ao.jpg"
