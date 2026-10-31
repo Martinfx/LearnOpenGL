@@ -30,6 +30,16 @@ struct OverlayBox {
     bool emissive = false;
 };
 
+// Flat-colored helper geometry (editor navmesh, AI paths), blended over the scene
+// and hidden by what stands in front of it.
+struct DebugGeometry {
+    std::vector<glm::vec3> triangles; // 3 vertices each
+    std::vector<glm::vec3> lines;     // 2 vertices each
+    glm::vec4 fill{0.2f, 0.9f, 0.4f, 0.25f};
+    glm::vec4 edges{0.2f, 1.0f, 0.5f, 0.7f}; // triangle outlines, a = 0: none
+    glm::vec4 lineColor{1.0f, 0.8f, 0.2f, 1.0f};
+};
+
 // How the main pass shades the scene (editor view modes).
 enum class Shading { Lit, Unlit, LightingOnly, Wireframe };
 
@@ -56,6 +66,7 @@ struct RenderView {
     bool deferPresent = false;
     std::vector<OverlayBox> worldBoxes; // e.g. bullet impacts
     std::vector<SpriteBatch> sprites;   // particles and decals (ParticleSystem::appendSprites, decal pools)
+    std::vector<const DebugGeometry*> debug; // editor helpers (navmesh), not owned
     std::vector<OverlayBox> gizmoBoxes; // editor handles, drawn on top of everything (world space)
 };
 
@@ -207,7 +218,7 @@ private:
         int loc(const char* name) const;
     };
     struct Programs {
-        Program mesh, depth, sky, envCapture, prefilter, brdf, ssao, blur, bloomDown, bloomUp, post, fxaa, copy, grid, hiz, sprite;
+        Program mesh, depth, sky, envCapture, prefilter, brdf, ssao, blur, bloomDown, bloomUp, post, fxaa, copy, grid, hiz, sprite, debug;
     };
     // Uniform locations of the program that draws geometry right now.
     struct MeshLocations {
@@ -370,12 +381,15 @@ private:
     void drawModelInstanced(const Model& model, int base, int count);
     bool collectTransparent_ = false;   // main pass: Blend parts go to transparent_
     void drawTransparent(const RenderView& view);
+    void drawDebug(const std::vector<const DebugGeometry*>& items, const glm::mat4& viewProj);
     void drawSprites(const std::vector<SpriteBatch>& batches, const glm::mat4& viewProj, Shading shading, bool overlay);
     bool s3tc_ = true, s3tcSrgb_ = true;
     unsigned vao_ = 0, vbo_ = 0, emptyVao_ = 0;
     int vertexCount_ = 0;
     unsigned spriteBuffer_ = 0;          // shader storage with sprite instances (binding 3)
     std::size_t spriteCapacity_ = 0;
+    unsigned debugBuffer_ = 0;           // shader storage with debug vertices (binding 4)
+    std::size_t debugCapacity_ = 0;
     unsigned jointBuffer_ = 0;          // uniform block with skinning matrices (binding 0)
     unsigned envBuffer_ = 0;            // Environment uniform block (binding 1)
     std::vector<glm::mat4> pose_;       // scratch: node matrices of the model being drawn

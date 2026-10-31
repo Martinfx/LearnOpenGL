@@ -246,6 +246,8 @@ void Viewport::paintGL()
             view.extraModels.emplace_back(reference_.get(),
                                           glm::translate(glm::mat4(1.0f), scene_->playerStart + glm::vec3(1.0f, 0.0f, 0.0f)));
         view.gizmoBoxes = gizmoBoxes();
+        if (debug_)
+            view.debug.push_back(debug_);
         if (brush_ && brushHover_ && scene_->terrain) {
             // Brush ring: small markers on the ground around the cursor.
             const int n = 48;

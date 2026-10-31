@@ -33,6 +33,8 @@ public:
     void setShading(engine::Shading shading) { shading_ = shading; update(); }
     engine::Shading shading() const { return shading_; }
     void setShowGrid(bool on) { showGrid_ = on; update(); }
+    // Helper geometry drawn over the level (navmesh), not owned; null = none.
+    void setDebugGeometry(const engine::DebugGeometry* geometry) { debug_ = geometry; update(); }
     bool showGrid() const { return showGrid_; }
     void setShowReference(bool on); // 1.8 m human next to the player start
     bool showReference() const { return showReference_; }
@@ -171,6 +173,7 @@ private:
     engine::Shading shading_ = engine::Shading::Lit;
     bool orthoWireframe_ = true;
     bool showGrid_ = true;
+    const engine::DebugGeometry* debug_ = nullptr;
     bool showReference_ = false;
     bool brush_ = false, brushHover_ = false, painting_ = false;
     float brushRadius_ = 5.0f;

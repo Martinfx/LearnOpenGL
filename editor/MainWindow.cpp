@@ -436,6 +436,17 @@ void MainWindow::buildMenus()
     options->addAction(focus);
     options->addAction(drop);
     options->addSeparator();
+    navShowAction_ = options->addAction(tr("Navigation mesh (where AI can walk)"));
+    navShowAction_->setCheckable(true);
+    navShowAction_->setShortcut(QKeySequence(Qt::Key_P));
+    connect(navShowAction_, &QAction::toggled, this, [this](bool on) {
+        QSettings().setValue("view/navmesh", on);
+        if (on && (navStale_ || !navMesh_))
+            buildNavMesh();
+        viewport_->setDebugGeometry(on ? &navDebug_ : nullptr);
+    });
+    if (QSettings().value("view/navmesh", false).toBool())
+        QTimer::singleShot(0, navShowAction_, [this] { navShowAction_->setChecked(true); });
     QAction* gridAction = options->addAction(tr("Metre grid (1 m / 10 m)"));
     gridAction->setCheckable(true);
     gridAction->setShortcut(QKeySequence(Qt::Key_G));
@@ -1308,6 +1319,96 @@ void MainWindow::buildDocks()
             markDirty();
         });
     }
+    // Navigation: where AI characters can walk (Recast). Built on worker threads.
+    levelForm->addRow(new QLabel(tr("<b>Navigation</b>"), levelPanel));
+    navEnabled_ = new QCheckBox(tr("Build a navigation mesh for AI"), levelPanel);
+    levelForm->addRow(QString(), navEnabled_);
+    connect(navEnabled_, &QCheckBox::toggled, this, [this](bool on) {
+        if (scene_.nav.enabled != on) {
+            scene_.nav.enabled = on;
+            markDirty();
+            setNavOutOfDate();
+        }
+    });
+    struct NavField {
+        const char* label;
+        float engine::NavSettings::*member;
+        double min, max, step;
+        const char* suffix;
+        const char* tip;
+    };
+    const NavField navFields[] = {
+        {"Agent radius", &engine::NavSettings::agentRadius, 0.05, 5, 0.05, " m", "Characters keep this far from walls"},
+        {"Agent height", &engine::NavSettings::agentHeight, 0.3, 5, 0.05, " m", "Headroom a character needs"},
+        {"Step height", &engine::NavSettings::agentClimb, 0, 2, 0.05, " m", "Higher ledges block the way"},
+        {"Max slope", &engine::NavSettings::maxSlope, 0, 89, 1, " °", "Steeper ground is not walkable"},
+        {"Cell size", &engine::NavSettings::cellSize, 0.05, 2, 0.05, " m", "Smaller = more precise around props, slower to build"},
+        {"Cell height", &engine::NavSettings::cellHeight, 0.02, 1, 0.02, " m", "Vertical precision"},
+        {"Tile size", &engine::NavSettings::tileSize, 4, 256, 4, " m", "Tiles build in parallel"},
+        {"Min island", &engine::NavSettings::minRegion, 0, 500, 1, " m²", "Smaller walkable islands (roofs, tables) are dropped"},
+    };
+    for (const NavField& f : navFields) {
+        auto* spin = new QDoubleSpinBox(levelPanel);
+        spin->setRange(f.min, f.max);
+        spin->setSingleStep(f.step);
+        spin->setDecimals(2);
+        spin->setSuffix(QString::fromUtf8(f.suffix));
+        spin->setKeyboardTracking(false);
+        spin->setToolTip(tr(f.tip));
+        levelForm->addRow(tr(f.label), spin);
+        const auto member = f.member;
+        connect(spin, &QDoubleSpinBox::valueChanged, this, [this, member](double v) {
+            if (scene_.nav.*member != static_cast<float>(v)) {
+                scene_.nav.*member = static_cast<float>(v);
+                markDirty();
+                setNavOutOfDate();
+                if (navShowAction_ && navShowAction_->isChecked())
+                    navAutoBuild_->start(); // rebuild shortly after the last change
+            }
+        });
+        navSpins_.emplace_back(spin, member);
+    }
+    {
+        auto* navRow = new QHBoxLayout();
+        navBuild_ = new QPushButton(tr("Build navmesh"), levelPanel);
+        navBuild_->setToolTip(tr("Builds from the level's collision (boxes, models, terrain) and shows it in the viewport"));
+        auto* navShow = new QCheckBox(tr("Show"), levelPanel);
+        navRow->addWidget(navBuild_);
+        navRow->addWidget(navShow);
+        navRow->addStretch(1);
+        levelForm->addRow(QString(), navRow);
+        navStatus_ = new QLabel(tr("Not built"), levelPanel);
+        navStatus_->setObjectName("dim");
+        navStatus_->setWordWrap(true);
+        levelForm->addRow(QString(), navStatus_);
+        connect(navBuild_, &QPushButton::clicked, this, [this] {
+            if (navShowAction_ && !navShowAction_->isChecked())
+                navShowAction_->setChecked(true);
+            buildNavMesh();
+        });
+        // The checkbox mirrors View > Navigation mesh (created later in the menus).
+        QTimer::singleShot(0, this, [this, navShow] {
+            if (!navShowAction_)
+                return;
+            navShow->setChecked(navShowAction_->isChecked());
+            connect(navShow, &QCheckBox::toggled, navShowAction_, &QAction::setChecked);
+            connect(navShowAction_, &QAction::toggled, navShow, [navShow](bool on) {
+                QSignalBlocker block(navShow);
+                navShow->setChecked(on);
+            });
+        });
+    }
+    navAutoBuild_ = new QTimer(this);
+    navAutoBuild_->setSingleShot(true);
+    navAutoBuild_->setInterval(700);
+    connect(navAutoBuild_, &QTimer::timeout, this, &MainWindow::buildNavMesh);
+    navPoll_ = new QTimer(this);
+    navPoll_->setInterval(100);
+    connect(navPoll_, &QTimer::timeout, this, [this] {
+        if (navJob_ && !navJob_->done)
+            navStatus_->setText(tr("Building... %1 %").arg(int(navJob_->progress * 100.0f)));
+    });
+
     connect(playerStartEdit_, &Vec3Editor::valueEdited, this, [this](glm::vec3 v) {
         scene_.playerStart = v;
         markDirty();
@@ -1840,11 +1941,78 @@ void MainWindow::refreshLevelProperties()
     const std::filesystem::path* sounds[] = {&scene_.player.footstepSound, &scene_.player.landSound, &scene_.player.hurtSound};
     for (std::size_t i = 0; i < playerSounds_.size(); ++i)
         playerSounds_[i]->setPath(QString::fromStdU16String(sounds[i]->u16string()));
+    {
+        QSignalBlocker block(navEnabled_);
+        navEnabled_->setChecked(scene_.nav.enabled);
+    }
+    for (auto& [spin, member] : navSpins_) {
+        QSignalBlocker block(spin);
+        spin->setValue(scene_.nav.*member);
+    }
+    // Another level or an undo step: the shown navmesh no longer matches.
+    setNavOutOfDate();
+    if (navShowAction_ && navShowAction_->isChecked())
+        navAutoBuild_->start();
     refreshTerrainPanel();
+}
+
+void MainWindow::setNavOutOfDate()
+{
+    if (navStale_)
+        return;
+    navStale_ = true;
+    if (navStatus_ && navMesh_ && !(navJob_ && !navJob_->done))
+        navStatus_->setText(navStatus_->text() + tr(" (out of date)"));
+}
+
+void MainWindow::buildNavMesh()
+{
+    if (navJob_)
+        navJob_->cancel = true; // the newest build wins
+    if (!scene_.nav.enabled) {
+        navMesh_.reset();
+        navDebug_.triangles.clear();
+        navStatus_->setText(tr("Off for this level"));
+        viewport_->update();
+        return;
+    }
+    auto job = std::make_shared<NavJob>();
+    navJob_ = job;
+    navStale_ = false;
+    navStatus_->setText(tr("Building..."));
+    navPoll_->start();
+    // The build reads a copy: the level can be edited meanwhile (models and terrain are shared, read-only).
+    auto scene = std::make_shared<engine::Scene>(scene_);
+    QPointer<MainWindow> self(this);
+    engine::JobSystem::global().run([self, job, scene] {
+        auto mesh = std::make_shared<engine::NavMesh>();
+        std::string error;
+        const bool ok = mesh->build(*scene, scene->nav, &error, &job->progress, &job->cancel);
+        std::vector<glm::vec3> triangles = ok ? mesh->debugTriangles() : std::vector<glm::vec3>{};
+        job->done = true;
+        QMetaObject::invokeMethod(qApp, [self, job, mesh, ok, error, triangles = std::move(triangles)]() mutable {
+            if (!self || self->navJob_ != job || job->cancel)
+                return;
+            self->navPoll_->stop();
+            if (!ok) {
+                self->navStatus_->setText(tr("Build failed: %1").arg(QString::fromStdString(error)));
+                return;
+            }
+            self->navMesh_ = mesh;
+            self->navDebug_.triangles = std::move(triangles);
+            self->navStatus_->setText(tr("%1 tiles, %2 polygons, built in %3 s")
+                                          .arg(mesh->tileCount())
+                                          .arg(mesh->polygonCount())
+                                          .arg(mesh->buildSeconds(), 0, 'f', 1) +
+                                      (self->navStale_ ? tr(" (out of date)") : QString()));
+            self->viewport_->update();
+        });
+    });
 }
 
 void MainWindow::markDirty()
 {
+    setNavOutOfDate();
     if (!restoring_ && history_) {
         auto after = std::make_shared<SceneSnapshot>(meshStore_.capture(scene_, selected_));
         if (lastState_)

@@ -88,7 +88,7 @@ Jedna lokace zóny od menu po smrt/uložení, se zvukem a chytřejšími nepřá
 - [x] **Sound editor 2** (2026-10-31): průběh vlny, graf útlumu v dB s tažitelnými min/max, 3D náhled (zdroj kolem posluchače, orbit, dozvuk); stereo soubory se ve 3D mixují do mona. Kroky, dopady a nábojnice podle povrchu (`surfaces.cfg`), déšť a vítr v Environment.
 - [ ] Audio dál: hlasitosti skupin v menu hry, ducking, reverb zóny, okluze zvuku geometrií.
 - [ ] **Lokální světla** (1,5 týdne): bodová a reflektorová světla, clustered forward, stíny pro pár nejbližších; světla jako objekty v editoru s gizmem dosahu; blikající zářivky.
-- [x] **Navigace** (2 týdny, zbývá zobrazení/nastavení v editoru a krycí body): Recast/Detour do `3rdparty/`, stavba navmeshe na pozadí z kolizí levelu, zobrazení a nastavení v editoru, `self:move_to()` v Lua, krycí body.
+- [x] **Navigace** (2 týdny, zbývají krycí body; zobrazení a nastavení v editoru hotové: Details > Level > Navigation, View > Navigation mesh `P`): Recast/Detour do `3rdparty/`, stavba navmeshe na pozadí z kolizí levelu, zobrazení a nastavení v editoru, `self:move_to()` v Lua, krycí body.
 - [ ] **UI hry** (1,5 týdne): hlavní menu, pauza, nastavení (grafika, myš, klávesy, hlasitost), HUD (zdraví, munice), credits s CC-BY autory, obrazovka smrti.
 - [ ] **Uložení hry** (1 týden): serializace stavu entit, hráče a skriptů (Lua tabulka `save`), quick save/load.
 - [ ] **Předměty a inventář, základ** (1 týden): pickupy (munice, lékárnička), jednoduchý inventář zbraní.

@@ -318,7 +318,8 @@ bool Renderer::buildPrograms(const std::map<std::string, std::string>& src, Prog
                              {&p.bloomUp, "fullscreen.vert", "bloom_up.frag"}, {&p.post, "fullscreen.vert", "post.frag"},
                              {&p.fxaa, "fullscreen.vert", "fxaa.frag"},   {&p.copy, "fullscreen.vert", "copy.frag"},
                              {&p.grid, "fullscreen.vert", "grid.frag"}, {&p.hiz, "fullscreen.vert", "hiz.frag"},
-                             {&p.sprite, "sprite.vert", "sprite.frag"}};
+                             {&p.sprite, "sprite.vert", "sprite.frag"},
+                             {&p.debug, "debug.vert", "debug.frag"}};
     for (const Entry& e : entries) {
         e.program->id = linkProgram(src, e.vert, e.frag, error);
         e.program->locations.clear();
@@ -333,7 +334,7 @@ bool Renderer::buildPrograms(const std::map<std::string, std::string>& src, Prog
 void Renderer::destroyPrograms(Programs& p)
 {
     for (Program* program : {&p.mesh, &p.depth, &p.sky, &p.envCapture, &p.prefilter, &p.brdf, &p.ssao, &p.blur, &p.bloomDown,
-                             &p.bloomUp, &p.post, &p.fxaa, &p.copy, &p.grid, &p.hiz, &p.sprite}) {
+                             &p.bloomUp, &p.post, &p.fxaa, &p.copy, &p.grid, &p.hiz, &p.sprite, &p.debug}) {
         if (program->id)
             glDeleteProgram(program->id);
         program->id = 0;
@@ -512,6 +513,10 @@ void Renderer::shutdown()
     if (spriteBuffer_)
         glDeleteBuffers(1, &spriteBuffer_);
     spriteBuffer_ = 0;
+    if (debugBuffer_)
+        glDeleteBuffers(1, &debugBuffer_);
+    debugBuffer_ = 0;
+    debugCapacity_ = 0;
     spriteCapacity_ = 0;
     for (unsigned* b : {&vbo_, &jointBuffer_, &envBuffer_})
         if (*b) {
@@ -1154,6 +1159,12 @@ void Renderer::render(const Scene& scene, const RenderView& view)
         endPass();
     }
 
+    if (!view.debug.empty()) {
+        beginPass(PassTransparent);
+        drawDebug(view.debug, viewProj);
+        endPass();
+    }
+
     if (view.grid) {
         // Editor grid, blended over the scene and hidden by what stands above it.
         glEnable(GL_BLEND);
@@ -1705,6 +1716,80 @@ void Renderer::drawSprites(const std::vector<SpriteBatch>& batches, const glm::m
         ++drawCalls_;
     }
     ignoreUploadBudget_ = budget;
+    glDisable(GL_BLEND);
+    glDepthMask(GL_TRUE);
+    glDepthFunc(GL_LESS);
+    glEnable(GL_CULL_FACE);
+    glBindVertexArray(0);
+}
+
+void Renderer::drawDebug(const std::vector<const DebugGeometry*>& items, const glm::mat4& viewProj)
+{
+    std::size_t total = 0;
+    for (const DebugGeometry* d : items)
+        if (d)
+            total += d->triangles.size() + d->lines.size();
+    if (total == 0)
+        return;
+    if (!debugBuffer_ || total > debugCapacity_) {
+        if (debugBuffer_)
+            glDeleteBuffers(1, &debugBuffer_);
+        debugCapacity_ = std::max<std::size_t>(total * 3 / 2, 4096);
+        glCreateBuffers(1, &debugBuffer_);
+        glNamedBufferData(debugBuffer_, static_cast<GLsizeiptr>(debugCapacity_ * sizeof(glm::vec4)), nullptr, GL_DYNAMIC_DRAW);
+    }
+    std::vector<glm::vec4> all;
+    all.reserve(total);
+    for (const DebugGeometry* d : items) {
+        if (!d)
+            continue;
+        for (const glm::vec3& v : d->triangles)
+            all.emplace_back(v, 1.0f);
+        for (const glm::vec3& v : d->lines)
+            all.emplace_back(v, 1.0f);
+    }
+    glNamedBufferSubData(debugBuffer_, 0, static_cast<GLsizeiptr>(all.size() * sizeof(glm::vec4)), all.data());
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, debugBuffer_);
+    const Program& p = programs_.debug;
+    glUseProgram(p.id);
+    glUniformMatrix4fv(p.loc("uDebugViewProj"), 1, GL_FALSE, glm::value_ptr(viewProj));
+    glBindVertexArray(emptyVao_);
+    glEnable(GL_BLEND);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
+    glDepthMask(GL_FALSE);
+    glDisable(GL_CULL_FACE);
+    glEnable(GL_POLYGON_OFFSET_FILL);
+    glEnable(GL_POLYGON_OFFSET_LINE);
+    glPolygonOffset(-1.0f, -4.0f); // in front of the surface it lies on
+    GLint first = 0;
+    for (const DebugGeometry* d : items) {
+        if (!d)
+            continue;
+        const auto tris = static_cast<GLsizei>(d->triangles.size());
+        if (tris > 0) {
+            glUniform4fv(p.loc("uDebugColor"), 1, glm::value_ptr(d->fill));
+            glDrawArrays(GL_TRIANGLES, first, tris);
+            if (d->edges.a > 0.0f) {
+                glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+                glUniform4fv(p.loc("uDebugColor"), 1, glm::value_ptr(d->edges));
+                glDrawArrays(GL_TRIANGLES, first, tris);
+                glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+            }
+            drawCalls_ += 2;
+            first += tris;
+        }
+        const auto lines = static_cast<GLsizei>(d->lines.size());
+        if (lines > 0) {
+            glUniform4fv(p.loc("uDebugColor"), 1, glm::value_ptr(d->lineColor));
+            glDrawArrays(GL_LINES, first, lines);
+            ++drawCalls_;
+            first += lines;
+        }
+    }
+    glDisable(GL_POLYGON_OFFSET_FILL);
+    glDisable(GL_POLYGON_OFFSET_LINE);
     glDisable(GL_BLEND);
     glDepthMask(GL_TRUE);
     glDepthFunc(GL_LESS);

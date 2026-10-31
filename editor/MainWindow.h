@@ -1,5 +1,7 @@
 #pragma once
 #include <array>
+#include <atomic>
+#include <memory>
 #include <engine/Renderer.h>
 #include <engine/Scene.h>
 
@@ -251,6 +253,25 @@ private:
     QComboBox* animationCombo_ = nullptr;
     std::vector<engine::ScriptProperty> scriptProps_;
     std::vector<std::pair<QDoubleSpinBox*, float engine::PlayerSettings::*>> playerSpins_;
+    // Navigation (Level details): settings, build on the job system, viewport overlay.
+    void buildNavMesh();
+    void setNavOutOfDate();
+    std::vector<std::pair<QDoubleSpinBox*, float engine::NavSettings::*>> navSpins_;
+    class QCheckBox* navEnabled_ = nullptr;
+    class QLabel* navStatus_ = nullptr;
+    class QPushButton* navBuild_ = nullptr;
+    class QTimer* navPoll_ = nullptr;
+    class QTimer* navAutoBuild_ = nullptr;
+    QAction* navShowAction_ = nullptr;
+    struct NavJob {
+        std::atomic<float> progress{0.0f};
+        std::atomic<bool> cancel{false};
+        std::atomic<bool> done{false};
+    };
+    std::shared_ptr<NavJob> navJob_;
+    std::shared_ptr<engine::NavMesh> navMesh_; // last finished build
+    engine::DebugGeometry navDebug_;
+    bool navStale_ = true;
     Vec3Editor* positionEdit_ = nullptr;
     Vec3Editor* sizeEdit_ = nullptr;
     Vec3Editor* rotationEdit_ = nullptr;   // glTF models
