@@ -29,6 +29,7 @@ struct RenderView {
     int selectedObject = -1;  // editor highlight (Scene object index), -1 = none
     bool drawPlayerStart = false;
     std::vector<OverlayBox> worldBoxes; // e.g. bullet impacts
+    std::vector<OverlayBox> gizmoBoxes; // editor handles, drawn on top of everything (world space)
 };
 
 // First-person layer drawn on top of the world (weapon, muzzle flash, crosshair).

@@ -13,6 +13,8 @@
 
 #include <QAction>
 #include <QApplication>
+#include <QActionGroup>
+#include <QComboBox>
 #include <QPointer>
 #include <engine/JobSystem.h>
 #include <QUndoStack>
@@ -181,6 +183,135 @@ void MainWindow::buildMenus()
     tools->addAction(del);
     tools->addSeparator();
     tools->addAction(play);
+
+    // Snapping (Shift while dragging = off).
+    tools->addSeparator();
+    auto* gridCombo = new QComboBox(tools);
+    for (double g : {0.0, 0.125, 0.25, 0.5, 1.0, 2.0, 4.0})
+        gridCombo->addItem(g == 0.0 ? tr("Grid off") : tr("Grid %1 m").arg(g), g);
+    gridCombo->setCurrentIndex(2);
+    auto* angleCombo = new QComboBox(tools);
+    for (double a : {0.0, 5.0, 15.0, 45.0, 90.0})
+        angleCombo->addItem(a == 0.0 ? tr("Angle off") : tr("Angle %1°").arg(a), a);
+    angleCombo->setCurrentIndex(2);
+    auto* scaleCombo = new QComboBox(tools);
+    for (double sc : {0.0, 0.05, 0.1, 0.25, 0.5})
+        scaleCombo->addItem(sc == 0.0 ? tr("Scale off") : tr("Scale %1").arg(sc), sc);
+    scaleCombo->setCurrentIndex(2);
+    for (QComboBox* c : {gridCombo, angleCombo, scaleCombo}) {
+        c->setToolTip(tr("Snapping while dragging the gizmo (hold Shift to move freely)"));
+        tools->addWidget(c);
+    }
+    auto applySnap = [this, gridCombo, angleCombo, scaleCombo] {
+        viewport_->setSnap(static_cast<float>(gridCombo->currentData().toDouble()),
+                           static_cast<float>(angleCombo->currentData().toDouble()),
+                           static_cast<float>(scaleCombo->currentData().toDouble()));
+    };
+    for (QComboBox* c : {gridCombo, angleCombo, scaleCombo})
+        connect(c, &QComboBox::currentIndexChanged, this, applySnap);
+    applySnap();
+
+    // Left tool strip: select / move / rotate / scale (Q W E R).
+    QToolBar* modes = new QToolBar(tr("Transform tools"), this);
+    modes->setObjectName("modes");
+    modes->setOrientation(Qt::Vertical);
+    addToolBar(Qt::LeftToolBarArea, modes);
+    auto* group = new QActionGroup(this);
+    const std::pair<QString, Viewport::Tool> toolList[] = {{tr("Select\n(Q)"), Viewport::Tool::Select},
+                                                           {tr("Move\n(W)"), Viewport::Tool::Move},
+                                                           {tr("Rotate\n(E)"), Viewport::Tool::Rotate},
+                                                           {tr("Scale\n(R)"), Viewport::Tool::Scale}};
+    std::vector<QAction*> toolActions;
+    for (const auto& [label, tool] : toolList) {
+        QAction* a = modes->addAction(label);
+        a->setCheckable(true);
+        a->setChecked(tool == viewport_->tool());
+        group->addAction(a);
+        const Viewport::Tool t = tool;
+        connect(a, &QAction::triggered, this, [this, t] { viewport_->setTool(t); });
+        toolActions.push_back(a);
+    }
+    connect(viewport_, &Viewport::toolChanged, this, [toolActions](Viewport::Tool t) {
+        toolActions[static_cast<std::size_t>(t)]->setChecked(true);
+    });
+    modes->addSeparator();
+    modes->addAction(add);
+    modes->addAction(enemy);
+    QAction* focus = modes->addAction(tr("Focus\n(F)"));
+    connect(focus, &QAction::triggered, this, [this] { viewport_->focusSelected(); });
+    QAction* drop = modes->addAction(tr("To floor\n(End)"));
+    drop->setShortcut(QKeySequence(Qt::Key_End));
+    connect(drop, &QAction::triggered, this, &MainWindow::dropToFloor);
+
+    // Gizmo edits: children follow, history records the whole drag as one step.
+    connect(viewport_, &Viewport::moveRequested, this, [this](int object, glm::vec3 delta) {
+        for (int child : engine::descendantObjects(scene_, engine::objectName(scene_, object)))
+            engine::translateObject(scene_, child, delta);
+        engine::translateObject(scene_, object, delta);
+        refreshProperties();
+        dirty_ = true;
+    });
+    connect(viewport_, &Viewport::rotateRequested, this, [this](int object, glm::vec3 degrees) {
+        if (scene_.isModel(object)) {
+            scene_.model(object).rotation += degrees;
+            scene_.model(object).rotation.y = std::fmod(scene_.model(object).rotation.y, 360.0f);
+        } else if (scene_.isEntity(object)) {
+            scene_.entity(object).yawDegrees -= degrees.y;
+        } else if (scene_.isBox(object)) {
+            // Boxes are axis-aligned: quarter turns swap width and depth.
+            const int quarters = static_cast<int>(std::round(degrees.y / 90.0f));
+            if (quarters % 2 != 0)
+                std::swap(scene_.boxes[static_cast<std::size_t>(object)].size.x,
+                          scene_.boxes[static_cast<std::size_t>(object)].size.z);
+        }
+        refreshProperties();
+        dirty_ = true;
+    });
+    connect(viewport_, &Viewport::scaleRequested, this, [this](int object, glm::vec3 f) {
+        if (scene_.isModel(object)) {
+            const float uniform = f.x != 1.0f ? f.x : (f.y != 1.0f ? f.y : f.z);
+            scene_.model(object).scale = std::max(0.01f, scene_.model(object).scale * uniform);
+        } else if (scene_.isBox(object)) {
+            auto& b = scene_.boxes[static_cast<std::size_t>(object)];
+            b.size = glm::max(b.size * f, glm::vec3(0.01f));
+        } else if (scene_.isEntity(object)) {
+            auto& e = scene_.entity(object);
+            e.size = glm::max(e.size * f, glm::vec3(0.05f));
+        }
+        refreshProperties();
+        dirty_ = true;
+    });
+    connect(viewport_, &Viewport::dragFinished, this, [this](int) {
+        dependencies_->showObject(selected_);
+        markDirty();
+    });
+}
+
+void MainWindow::dropToFloor()
+{
+    // Puts the selection on whatever is below it (or y = 0).
+    if (selected_ < 0)
+        return;
+    const engine::Aabb b = scene_.objectBounds(selected_);
+    const glm::vec3 origin((b.min.x + b.max.x) * 0.5f, b.min.y - 0.001f, (b.min.z + b.max.z) * 0.5f);
+    float floorY = 0.0f;
+    float best = 1e30f;
+    for (int i = 0; i < scene_.objectCount(); ++i) {
+        if (i == selected_)
+            continue;
+        const engine::Aabb o = scene_.objectBounds(i);
+        if (origin.x >= o.min.x && origin.x <= o.max.x && origin.z >= o.min.z && origin.z <= o.max.z && o.max.y <= origin.y + 0.002f &&
+            origin.y - o.max.y < best) {
+            best = origin.y - o.max.y;
+            floorY = o.max.y;
+        }
+    }
+    const glm::vec3 delta(0.0f, floorY - b.min.y, 0.0f);
+    for (int child : engine::descendantObjects(scene_, engine::objectName(scene_, selected_)))
+        engine::translateObject(scene_, child, delta);
+    engine::translateObject(scene_, selected_, delta);
+    refreshProperties();
+    markDirty();
 }
 
 void MainWindow::buildDocks()
@@ -199,7 +330,7 @@ void MainWindow::buildDocks()
     auto* outlinerDock = new QDockWidget(tr("Hierarchy"), this);
     outlinerDock->setObjectName("outliner");
     outlinerDock->setWidget(outliner_);
-    addDockWidget(Qt::LeftDockWidgetArea, outlinerDock);
+    addDockWidget(Qt::RightDockWidgetArea, outlinerDock);
 
     // What the selected object uses and what else uses the same files.
     dependencies_ = new DependencyPanel(&scene_, this);
@@ -217,8 +348,7 @@ void MainWindow::buildDocks()
     auto* depsDock = new QDockWidget(tr("Relations"), this);
     depsDock->setObjectName("relations");
     depsDock->setWidget(dependencies_);
-    addDockWidget(Qt::LeftDockWidgetArea, depsDock);
-    splitDockWidget(outlinerDock, depsDock, Qt::Vertical);
+    addDockWidget(Qt::RightDockWidgetArea, depsDock);
 
     // Properties of the selected box.
     boxPanel_ = new QWidget(this);
@@ -626,8 +756,16 @@ void MainWindow::buildDocks()
     weaponsScroll->setWidgetResizable(true);
     weaponsDock->setWidget(weaponsScroll);
     addDockWidget(Qt::RightDockWidgetArea, weaponsDock);
+    // Scythe-like layout: outliner top right, details (properties, relations, weapons) below it,
+    // content browser at the bottom, tools on the left.
+    splitDockWidget(outlinerDock, propsDock, Qt::Vertical);
+    tabifyDockWidget(propsDock, depsDock);
     tabifyDockWidget(propsDock, weaponsDock);
     propsDock->raise();
+    propsDock->setWindowTitle(tr("Details"));
+    resizeDocks({outlinerDock, propsDock}, {300, 500}, Qt::Vertical);
+    resizeDocks({outlinerDock}, {380}, Qt::Horizontal);
+    setCorner(Qt::BottomRightCorner, Qt::RightDockWidgetArea);
 }
 
 engine::Box* MainWindow::selectedBox()

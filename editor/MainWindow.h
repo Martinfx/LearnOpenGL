@@ -70,6 +70,7 @@ private:
     void importModel();
     bool placeModel(const QString& path, glm::vec3 point); // loads in the background, bottom of the model on `point`
     void applyLoadedLevel(const QString& path, engine::Scene loaded);
+    void dropToFloor();
     void insertModel(const QString& path, engine::Model model, glm::vec3 point);
     bool assignMaterial(const QString& material, int object);
     void openAsset(const QString& path, int type);
