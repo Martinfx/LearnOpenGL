@@ -20,3 +20,5 @@
 CC-BY 4.0 items: "This work is based on <title> by <author>, licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)". Converted to metres, textures resized, some decimated.
 
 All converted, weathered and cut into sections for this project (`source/`).
+
+`sign_gantry_18m.glb` and everything in `rail/` were generated for this project (`rail/source/railgen.py`, CC0) with Poly Haven CC0 textures from `assets/textures/pbr`. Vegetation credits are in `vegetation/CREDITS.md`.
