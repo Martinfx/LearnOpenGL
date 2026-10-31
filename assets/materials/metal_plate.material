@@ -1,0 +1,10 @@
+# FPS engine material
+version 1
+name "Metal plate"
+color 1 1 1
+texture "../textures/metal_plate.png"
+tiling 0.5 0.5
+specular 0.6
+shininess 64
+emissive 0 0 0
+world_uv 0

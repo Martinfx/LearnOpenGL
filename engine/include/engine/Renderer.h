@@ -69,6 +69,7 @@ private:
     const GpuMesh& upload(const MeshPart& part);
     unsigned texture(const Texture& tex);
     void drawModel(const Model& model, const glm::mat4& transform, float highlight, const Animator* animator = nullptr);
+    void applySurface(const Material* material, glm::vec3 color, const Texture* texture, bool worldUv);
     void drawCube(const glm::mat4& transform, glm::vec3 color, float highlight, bool emissive);
     void releaseUnused();
 
@@ -81,6 +82,7 @@ private:
     int vertexCount_ = 0;
     int locModel_ = -1, locViewProj_ = -1, locColor_ = -1, locSun_ = -1, locCamera_ = -1, locHighlight_ = -1;
     int locHasTexture_ = -1, locEmissive_ = -1, locFog_ = -1, locSkinned_ = -1, locFlash_ = -1;
+    int locTiling_ = -1, locWorldUv_ = -1, locGrid_ = -1, locSpecular_ = -1, locShininess_ = -1, locEmissiveColor_ = -1;
     unsigned jointBuffer_ = 0;          // uniform block with skinning matrices
     std::vector<glm::mat4> pose_;       // scratch: node matrices of the model being drawn
     std::vector<glm::mat4> joints_;     // scratch: skinning matrices

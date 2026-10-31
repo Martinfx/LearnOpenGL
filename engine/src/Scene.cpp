@@ -61,22 +61,30 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
         return false;
     }
     out << std::setprecision(6);
-    out << "# FPS engine level\nversion 3\n";
+    out << "# FPS engine level\nversion 4\n";
     out << "player_start " << scene.playerStart.x << ' ' << scene.playerStart.y << ' ' << scene.playerStart.z << '\n';
     out << "sun " << scene.sunDirection.x << ' ' << scene.sunDirection.y << ' ' << scene.sunDirection.z << '\n';
+    const std::filesystem::path levelDir = std::filesystem::absolute(file).parent_path();
+    auto relative = [&](const std::filesystem::path& p) {
+        const std::filesystem::path rel = std::filesystem::absolute(p).lexically_relative(levelDir);
+        return pathToUtf8(rel.empty() ? std::filesystem::absolute(p) : rel);
+    };
     for (const Box& b : scene.boxes) {
         out << "box " << std::quoted(b.name) << ' '
             << b.position.x << ' ' << b.position.y << ' ' << b.position.z << ' '
             << b.size.x << ' ' << b.size.y << ' ' << b.size.z << ' '
             << b.color.r << ' ' << b.color.g << ' ' << b.color.b << '\n';
+        if (!b.materialPath.empty())
+            out << "  material " << std::quoted(relative(b.materialPath)) << '\n';
     }
-    const std::filesystem::path levelDir = std::filesystem::absolute(file).parent_path();
     for (const Model& m : scene.models) {
         std::filesystem::path rel = std::filesystem::absolute(m.sourcePath).lexically_relative(levelDir);
         if (rel.empty())
             rel = std::filesystem::absolute(m.sourcePath); // e.g. another drive on Windows
         out << "model " << std::quoted(m.name) << ' ' << std::quoted(pathToUtf8(rel)) << ' '
             << m.position.x << ' ' << m.position.y << ' ' << m.position.z << '\n';
+        for (const auto& [slot, path] : m.materialOverrides)
+            out << "  material_slot " << std::quoted(slot) << ' ' << std::quoted(relative(path)) << '\n';
     }
     const PlayerSettings& pl = scene.player;
     out << "player " << pl.walkSpeed << ' ' << pl.sprintSpeed << ' ' << pl.jumpSpeed << ' ' << pl.gravity << ' '
@@ -130,7 +138,7 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
         bool ok = true;
         if (key == "version") {
             int v = 0;
-            ok = static_cast<bool>(ls >> v) && v >= 1 && v <= 3;
+            ok = static_cast<bool>(ls >> v) && v >= 1 && v <= 4;
         } else if (key == "player_start") {
             ok = static_cast<bool>(ls >> result.playerStart.x >> result.playerStart.y >> result.playerStart.z);
         } else if (key == "sun") {
@@ -168,6 +176,33 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
             ok = static_cast<bool>(ls >> std::quoted(k) >> std::quoted(v)) && !result.entities.empty();
             if (ok)
                 result.entities.back().properties[k] = v;
+        } else if (key == "material" || key == "material_slot") {
+            // Box material, or glTF material override of the last model.
+            std::string slot, path;
+            if (key == "material_slot")
+                ok = static_cast<bool>(ls >> std::quoted(slot)) && !result.models.empty();
+            else
+                ok = !result.boxes.empty();
+            ok = ok && static_cast<bool>(ls >> std::quoted(path));
+            if (ok) {
+                std::filesystem::path p = pathFromUtf8(path);
+                if (p.is_relative())
+                    p = std::filesystem::absolute(file).parent_path() / p;
+                p = p.lexically_normal();
+                std::string materialError;
+                auto material = loadMaterial(p, &materialError);
+                if (!material) {
+                    setError(error, file.string() + ":" + std::to_string(lineNo) + ": " + materialError);
+                    return false;
+                }
+                if (key == "material") {
+                    result.boxes.back().materialPath = p;
+                    result.boxes.back().material = std::move(material);
+                } else {
+                    result.models.back().materialOverrides[slot] = p;
+                    result.models.back().overrideMaterials[slot] = std::move(material);
+                }
+            }
         } else if (key == "character") {
             std::string path;
             ok = !result.entities.empty();

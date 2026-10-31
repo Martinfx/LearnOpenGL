@@ -75,6 +75,21 @@ kontrolu syntaxe při psaní (chybný řádek je červeně podtržený a popsan�
 Ctrl+H nahrazování, Ctrl+G skok na řádek. Ctrl+S uloží skript v aktivní záložce; Play a uložení úrovně
 uloží i otevřené skripty. Po uložení se obnoví parametry skriptu v Properties.
 
+## Materiály a textury
+
+Materiál je textový soubor `.material` (barva, textura, opakování, odlesk, ostrost odlesku, svit,
+promítání ve světových souřadnicích). Editor: menu Assets > Material editor (Ctrl+M): seznam materiálů,
+všechna nastavení a živý náhled na kouli a kostce. Změny se hned projeví i ve 3D pohledu.
+Box dostane materiál v Properties > Material; u glTF modelu jde v tabulce materiálových slotů každý
+materiál z Blenderu nahradit materiálem enginu (dvojklik).
+
+Texture editor (Assets > Edit texture, nebo Edit u textury materiálu): opakování, filtrování,
+mipmapy, sRGB, jas, kontrast, sytost, tónování, převrácení, náhled 3 × 3 pro kontrolu švů. Obrázek
+se nemění, nastavení se ukládá vedle něj jako `obrazek.png.texture`.
+
+Editor ve vývojovém buildu ukládá assety přímo do `assets/` ve zdrojovém stromu (vypnutí:
+`-DENGINE_EDITOR_SOURCE_ASSETS=OFF`), takže změny jdou rovnou do gitu a build je nepřepíše.
+
 ## Animované postavy
 
 Entita může mít animovaný glTF model (skeleton, skiny, klipy): Properties > Character model.
@@ -96,6 +111,8 @@ Všechno, co hra používá, se mění v editoru a ukládá do souborů úrovně
 | Geometrie, modely, entity, skripty | Outliner + Properties | `.level` |
 | Model postavy, měřítko, natočení, výchozí animace | Properties > Character model, Animation | `.level` |
 | Lua skripty | Záložky script editoru (Edit script, menu Script) | `scripts/*.lua` |
+| Materiály, materiály boxů a slotů modelů | Material editor (Ctrl+M), Properties > Material | `materials/*.material`, `.level` |
+| Nastavení a úpravy textur | Texture editor | `textures/*.png.texture` |
 | Parametry AI a dalších skriptů | Properties > Script parameters (deklaruje je skript v `properties`) | `.level` (po entitách) |
 | Pohyb a zdraví hráče, start, slunce | Properties > Level | `.level` |
 | Výzbroj hráče a parametry zbraní | Záložka Weapons | `.level` + `weapons/*.weapon` |
@@ -115,6 +132,6 @@ Model je zároveň statická kolize (Jolt MeshShape), takže po něm jde chodit.
 
 Hotovo: hráč (Jolt CharacterVirtual), glTF modely s texturami, entity s Lua skripty, AI nepřátel,
 zbraně se střelbou a zdravím nepřátel, animované postavy (skeletal animace, GPU skinning), script editor,
-editor pro všechny parametry.
-Další: materiály a textury, animation editor,
+materiály a textury s editory, editor pro všechny parametry.
+Další: PBR (normal/roughness mapy), nové modely a textury, nůž/samopal/pistole, hierarchie scény, animation editor,
 zvuk (OpenAL), environment editor.

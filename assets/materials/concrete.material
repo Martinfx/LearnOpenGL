@@ -1,0 +1,10 @@
+# FPS engine material
+version 1
+name "Concrete"
+color 1 1 1
+texture "../textures/concrete.png"
+tiling 0.25 0.25
+specular 0.1
+shininess 24
+emissive 0 0 0
+world_uv 0

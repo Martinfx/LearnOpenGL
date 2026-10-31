@@ -1,6 +1,7 @@
 #pragma once
 #include "engine/Animation.h"
 #include "engine/Geometry.h"
+#include "engine/Material.h"
 #include <cstdint>
 #include <filesystem>
 #include <glm/gtc/type_precision.hpp>
@@ -9,27 +10,41 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace engine {
 
 // Axis-aligned box: quick blockout geometry placed in the editor.
 struct Box {
+    Box() = default;
+    Box(std::string n, glm::vec3 p, glm::vec3 s, glm::vec3 c)
+        : name(std::move(n)), position(p), size(s), color(c) {}
+
     std::string name = "Box";
     glm::vec3 position{0.0f};       // center
     glm::vec3 size{1.0f};
-    glm::vec3 color{0.7f, 0.7f, 0.7f}; // sRGB
+    glm::vec3 color{0.7f, 0.7f, 0.7f}; // sRGB, used when there is no material
+    std::filesystem::path materialPath;  // absolute .material, empty = plain color
+    std::shared_ptr<Material> material;  // runtime, loaded from materialPath
 
     Aabb bounds() const { return Aabb::fromCenterSize(position, size); }
 };
 
 // Decoded RGBA8 image (sRGB), shared by all parts that use it.
 struct Texture {
-    std::uint64_t id = 0;            // GPU cache key
+    std::uint64_t id = 0;            // GPU cache key; a new id makes the renderer upload again
     int width = 0;
     int height = 0;
     std::vector<std::uint8_t> rgba;
+    bool srgb = true;                // sampling settings (TextureSettings)
+    bool nearest = false;
+    bool mipmaps = true;
+    int wrap = 0;                    // 0 repeat, 1 clamp, 2 mirror
 };
+
+// Unique id for GPU caches (mesh parts, textures).
+std::uint64_t newResourceId();
 
 // One glTF primitive. Static models have node transforms baked in (model space);
 // animated models keep mesh-local vertices that follow a skeleton node or skin.
@@ -41,6 +56,7 @@ struct MeshPart {
     std::shared_ptr<const Texture> texture; // base color texture, may be null
     std::vector<std::uint32_t> indices; // triangles
     glm::vec3 color{0.8f};           // sRGB
+    std::string materialName;        // glTF material name, used for material overrides
     int node = -1;                   // animated models: rigid part attached to this skeleton node
     int skin = -1;                   // animated models: skinned part (uses joints/weights)
     std::vector<glm::u16vec4> joints;   // indices into the skin's joint list
@@ -55,6 +71,16 @@ struct Model {
     std::vector<MeshPart> parts;
     Aabb localBounds;                 // animated models: bounds in the rest pose
     std::shared_ptr<const Skeleton> skeleton; // null for static models
+    // Engine materials replacing glTF materials, by glTF material name (set in the editor).
+    std::map<std::string, std::filesystem::path> materialOverrides;
+    std::map<std::string, std::shared_ptr<Material>> overrideMaterials; // runtime
+
+    const Material* materialFor(const MeshPart& part) const
+    {
+        const auto it = overrideMaterials.find(part.materialName);
+        return it == overrideMaterials.end() ? nullptr : it->second.get();
+    }
+    std::vector<std::string> materialSlots() const; // distinct glTF material names
 
     Aabb bounds() const { return {localBounds.min + position, localBounds.max + position}; }
 };

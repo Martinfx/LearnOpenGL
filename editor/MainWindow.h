@@ -8,6 +8,8 @@
 class QComboBox;
 class QTabWidget;
 class ScriptEditor;
+class MaterialEditor;
+class TextureEditor;
 class QDoubleSpinBox;
 class QLabel;
 class QTableWidget;
@@ -50,6 +52,10 @@ private:
     bool saveAllScripts();
     bool confirmCloseScripts();
     void saveCurrent();
+    MaterialEditor* openMaterialEditor(const QString& material = QString());
+    TextureEditor* openTexture(const QString& image);
+    void browseBoxMaterial();
+    void refreshMaterialSlots();
 
     void addBox();
     void importModel();
@@ -78,6 +84,10 @@ private:
 
     Viewport* viewport_ = nullptr;
     QTabWidget* tabs_ = nullptr;
+    MaterialEditor* materialEditor_ = nullptr;
+    QWidget* materialRow_ = nullptr;
+    QLineEdit* materialEdit_ = nullptr;
+    QTableWidget* materialSlots_ = nullptr;
     WeaponPanel* weapons_ = nullptr;
     QListWidget* outliner_ = nullptr;
     QWidget* boxPanel_ = nullptr;

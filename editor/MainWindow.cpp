@@ -1,5 +1,8 @@
 #include "MainWindow.h"
+#include "AssetPaths.h"
+#include "MaterialEditor.h"
 #include "ScriptEditor.h"
+#include "TextureEditor.h"
 #include "Vec3Editor.h"
 #include "Viewport.h"
 #include "WeaponPanel.h"
@@ -30,6 +33,7 @@
 #include <QPushButton>
 #include <QStandardPaths>
 #include <QStatusBar>
+#include <QShortcut>
 #include <QTabBar>
 #include <QTabWidget>
 #include <QTextStream>
@@ -129,6 +133,15 @@ void MainWindow::buildMenus()
             QDesktopServices::openUrl(QUrl::fromLocalFile(se->path()));
     });
 
+    QMenu* assets = menuBar()->addMenu(tr("&Assets"));
+    assets->addAction(tr("&Material editor"), QKeySequence(Qt::CTRL | Qt::Key_M), this, [this] { openMaterialEditor(); });
+    assets->addAction(tr("Edit &texture..."), this, [this] {
+        const QString path = QFileDialog::getOpenFileName(this, tr("Edit texture"), assetPath("textures"),
+                                                          tr("Images (*.png *.jpg *.jpeg)"));
+        if (!path.isEmpty())
+            openTexture(path);
+    });
+
     QMenu* game = menuBar()->addMenu(tr("&Game"));
     QAction* play = game->addAction(tr("&Play level"), QKeySequence(Qt::Key_F5), this, &MainWindow::playLevel);
 
@@ -191,6 +204,79 @@ void MainWindow::buildDocks()
     form->addRow(tr("Yaw"), yawSpin_);
     form->addRow(tr("Size"), sizeEdit_);
     form->addRow(tr("Color"), colorButton_);
+
+    // Box material (.material), and per-slot overrides of glTF materials for models.
+    materialRow_ = new QWidget(boxPanel_);
+    auto* materialLayout = new QHBoxLayout(materialRow_);
+    materialLayout->setContentsMargins(0, 0, 0, 0);
+    materialEdit_ = new QLineEdit(materialRow_);
+    materialEdit_->setReadOnly(true);
+    materialEdit_->setPlaceholderText(tr("plain color"));
+    auto* browseMaterial = new QPushButton(tr("..."), materialRow_);
+    auto* clearMaterial = new QPushButton(tr("x"), materialRow_);
+    auto* editMaterial = new QPushButton(tr("Edit"), materialRow_);
+    browseMaterial->setFixedWidth(32);
+    clearMaterial->setFixedWidth(32);
+    materialLayout->addWidget(materialEdit_, 1);
+    materialLayout->addWidget(browseMaterial);
+    materialLayout->addWidget(clearMaterial);
+    materialLayout->addWidget(editMaterial);
+    form->addRow(tr("Material"), materialRow_);
+    connect(browseMaterial, &QPushButton::clicked, this, &MainWindow::browseBoxMaterial);
+    connect(clearMaterial, &QPushButton::clicked, this, [this] {
+        if (auto* b = selectedBox(); b && !b->materialPath.empty()) {
+            b->materialPath.clear();
+            b->material.reset();
+            refreshProperties();
+            markDirty();
+        }
+    });
+    connect(editMaterial, &QPushButton::clicked, this, [this] {
+        if (auto* b = selectedBox(); b && !b->materialPath.empty())
+            openMaterialEditor(QString::fromStdU16String(b->materialPath.u16string()));
+        else
+            openMaterialEditor();
+    });
+    materialSlots_ = new QTableWidget(0, 2, boxPanel_);
+    materialSlots_->setHorizontalHeaderLabels({tr("glTF material"), tr("Override (double-click)")});
+    materialSlots_->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    materialSlots_->verticalHeader()->hide();
+    materialSlots_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    materialSlots_->setMinimumHeight(110);
+    materialSlots_->setToolTip(tr("Double-click: choose a .material for this slot. Delete: back to the glTF material."));
+    form->addRow(materialSlots_);
+    connect(materialSlots_, &QTableWidget::cellDoubleClicked, this, [this](int row, int) {
+        auto* m = selectedModel();
+        if (!m || row < 0)
+            return;
+        const std::string slot = materialSlots_->item(row, 0)->text().toStdString();
+        const QString path = QFileDialog::getOpenFileName(this, tr("Material for %1").arg(QString::fromStdString(slot)),
+                                                          assetPath("materials"), tr("Materials (*.material)"));
+        if (path.isEmpty())
+            return;
+        std::string error;
+        auto material = engine::loadMaterial(std::filesystem::path(path.toStdU16String()), &error);
+        if (!material) {
+            QMessageBox::warning(this, tr("Material"), QString::fromStdString(error));
+            return;
+        }
+        m->materialOverrides[slot] = material->sourcePath;
+        m->overrideMaterials[slot] = std::move(material);
+        refreshMaterialSlots();
+        markDirty();
+    });
+    auto* clearSlot = new QShortcut(QKeySequence::Delete, materialSlots_, nullptr, nullptr, Qt::WidgetShortcut);
+    connect(clearSlot, &QShortcut::activated, this, [this] {
+        auto* m = selectedModel();
+        const int row = materialSlots_->currentRow();
+        if (!m || row < 0)
+            return;
+        const std::string slot = materialSlots_->item(row, 0)->text().toStdString();
+        m->materialOverrides.erase(slot);
+        m->overrideMaterials.erase(slot);
+        refreshMaterialSlots();
+        markDirty();
+    });
     form->addRow(tr("Lua script"), scriptRow_);
 
     // Animated character model (glTF with skeleton) drawn instead of the box.
@@ -493,6 +579,10 @@ void MainWindow::refreshProperties()
     const engine::Entity* e = selectedEntity();
     boxPanel_->setEnabled(b || m || e);
     sizeEdit_->setEnabled(b || e);
+    materialRow_->setEnabled(b != nullptr);
+    materialEdit_->setText(b && !b->materialPath.empty() ? QString::fromStdU16String(b->materialPath.stem().u16string()) : QString());
+    materialEdit_->setToolTip(b ? QString::fromStdU16String(b->materialPath.u16string()) : QString());
+    refreshMaterialSlots();
     colorButton_->setEnabled(b || e);
     typeEdit_->setEnabled(e != nullptr);
     yawSpin_->setEnabled(e != nullptr);
@@ -662,11 +752,11 @@ void MainWindow::addEntity(const QString& type)
     if (type == "enemy") {
         e.color = {0.55f, 0.5f, 0.5f};
         // Default AI script shipped next to the editor (copied by the game build).
-        const QString script = QDir(QCoreApplication::applicationDirPath()).filePath("assets/scripts/enemy.lua");
+        const QString script = assetPath("scripts/enemy.lua");
         if (QFileInfo::exists(script))
             e.scriptPath = std::filesystem::path(script.toStdU16String());
         // Default animated character shipped with the engine.
-        const QString robot = QDir(QCoreApplication::applicationDirPath()).filePath("assets/models/characters/robot.glb");
+        const QString robot = assetPath("models/characters/robot.glb");
         if (QFileInfo::exists(robot)) {
             e.modelPath = std::filesystem::path(robot.toStdU16String());
             e.model = engine::loadCharacterModel(e.modelPath);
@@ -704,7 +794,7 @@ void MainWindow::browseCharacter()
     auto* e = selectedEntity();
     if (!e)
         return;
-    QString start = e->modelPath.empty() ? QDir(QCoreApplication::applicationDirPath()).filePath("assets/models/characters")
+    QString start = e->modelPath.empty() ? assetPath("models/characters")
                                          : QString::fromStdU16String(e->modelPath.u16string());
     const QString path = QFileDialog::getOpenFileName(this, tr("Character model"), start,
                                                       tr("Animated glTF (*.glb *.gltf);;All files (*)"));
@@ -906,8 +996,6 @@ void MainWindow::playLevel()
     const QString snapshot = QDir(tempDir).filePath("fps_engine_play.level");
     if (!saveAllScripts())
         return;
-    if (!saveAllScripts())
-        return;
     QString weaponError;
     if (!weapons_->saveModified(&weaponError)) {
         QMessageBox::warning(this, tr("Play"), weaponError);
@@ -975,7 +1063,7 @@ ScriptEditor* MainWindow::openScript(const QString& path)
 
 void MainWindow::openScriptDialog()
 {
-    const QString start = QDir(QCoreApplication::applicationDirPath()).filePath("assets/scripts");
+    const QString start = assetPath("scripts");
     const QString path = QFileDialog::getOpenFileName(this, tr("Open script"), start, tr("Lua scripts (*.lua);;All files (*)"));
     if (!path.isEmpty())
         openScript(path);
@@ -983,7 +1071,7 @@ void MainWindow::openScriptDialog()
 
 void MainWindow::newScript()
 {
-    const QString start = QDir(QCoreApplication::applicationDirPath()).filePath("assets/scripts/new_script.lua");
+    const QString start = assetPath("scripts/new_script.lua");
     const QString path = QFileDialog::getSaveFileName(this, tr("New script"), start, tr("Lua scripts (*.lua)"));
     if (path.isEmpty())
         return;
@@ -1005,33 +1093,55 @@ void MainWindow::newScript()
 
 bool MainWindow::closeScriptTab(int index)
 {
-    auto* se = qobject_cast<ScriptEditor*>(tabs_->widget(index));
-    if (!se)
-        return false;
-    if (se->isModified()) {
+    QWidget* w = tabs_->widget(index);
+    auto* se = qobject_cast<ScriptEditor*>(w);
+    auto* te = qobject_cast<TextureEditor*>(w);
+    auto* me = qobject_cast<MaterialEditor*>(w);
+    if (!se && !te && !me)
+        return false; // the 3D view stays
+    const bool modified = se ? se->isModified() : te ? te->isModified() : me->hasUnsaved();
+    if (modified) {
         tabs_->setCurrentIndex(index);
-        const auto answer = QMessageBox::question(this, tr("Unsaved script"), tr("Save changes to %1?").arg(se->path()),
+        const QString what = se ? se->path() : te ? te->path() + tr(" (texture settings)") : tr("the changed materials");
+        const auto answer = QMessageBox::question(this, tr("Unsaved changes"), tr("Save changes to %1?").arg(what),
                                                   QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
         if (answer == QMessageBox::Cancel)
             return false;
         QString error;
-        if (answer == QMessageBox::Save && !se->save(&error)) {
-            QMessageBox::warning(this, tr("Save script"), error);
-            return false;
+        if (answer == QMessageBox::Save) {
+            const bool ok = se ? se->save(&error) : te ? te->save(&error) : me->saveModified(&error);
+            if (!ok) {
+                QMessageBox::warning(this, tr("Save"), error);
+                return false;
+            }
         }
     }
     tabs_->removeTab(index);
-    se->deleteLater();
+    if (me)
+        materialEditor_ = nullptr;
+    w->deleteLater();
     return true;
 }
 
 bool MainWindow::saveAllScripts()
 {
+    // Scripts, texture settings and materials edited in tabs: everything the game reads.
     for (int i = 1; i < tabs_->count(); ++i) {
-        auto* se = qobject_cast<ScriptEditor*>(tabs_->widget(i));
+        QWidget* w = tabs_->widget(i);
         QString error;
-        if (se && se->isModified() && !se->save(&error)) {
-            QMessageBox::warning(this, tr("Save script"), tr("%1\n%2").arg(se->path(), error));
+        bool ok = true;
+        QString path;
+        if (auto* se = qobject_cast<ScriptEditor*>(w); se && se->isModified()) {
+            ok = se->save(&error);
+            path = se->path();
+        } else if (auto* te = qobject_cast<TextureEditor*>(w); te && te->isModified()) {
+            ok = te->save(&error);
+            path = te->path();
+        } else if (auto* me = qobject_cast<MaterialEditor*>(w); me && me->hasUnsaved()) {
+            ok = me->saveModified(&error);
+        }
+        if (!ok) {
+            QMessageBox::warning(this, tr("Save"), tr("%1\n%2").arg(path, error));
             return false;
         }
     }
@@ -1040,19 +1150,119 @@ bool MainWindow::saveAllScripts()
 
 bool MainWindow::confirmCloseScripts()
 {
-    for (int i = tabs_->count() - 1; i >= 1; --i)
-        if (auto* se = qobject_cast<ScriptEditor*>(tabs_->widget(i)); se && se->isModified() && !closeScriptTab(i))
+    for (int i = tabs_->count() - 1; i >= 1; --i) {
+        QWidget* w = tabs_->widget(i);
+        bool modified = false;
+        if (auto* se = qobject_cast<ScriptEditor*>(w))
+            modified = se->isModified();
+        else if (auto* te = qobject_cast<TextureEditor*>(w))
+            modified = te->isModified();
+        else if (auto* me = qobject_cast<MaterialEditor*>(w))
+            modified = me->hasUnsaved();
+        if (modified && !closeScriptTab(i))
             return false;
+    }
     return true;
+}
+
+MaterialEditor* MainWindow::openMaterialEditor(const QString& material)
+{
+    if (!materialEditor_) {
+        materialEditor_ = new MaterialEditor(tabs_);
+        tabs_->addTab(materialEditor_, tr("Materials"));
+        connect(materialEditor_, &MaterialEditor::materialChanged, this, [this] {
+            viewport_->update();
+            refreshProperties();
+        });
+        connect(materialEditor_, &MaterialEditor::editTexture, this, &MainWindow::openTexture);
+    }
+    if (!material.isEmpty())
+        materialEditor_->open(material);
+    tabs_->setCurrentWidget(materialEditor_);
+    return materialEditor_;
+}
+
+TextureEditor* MainWindow::openTexture(const QString& image)
+{
+    const QString absolute = QFileInfo(image).absoluteFilePath();
+    for (int i = 1; i < tabs_->count(); ++i)
+        if (auto* te = qobject_cast<TextureEditor*>(tabs_->widget(i)); te && te->path() == absolute) {
+            tabs_->setCurrentIndex(i);
+            return te;
+        }
+    auto* te = new TextureEditor(tabs_);
+    QString error;
+    if (!te->load(absolute, &error)) {
+        delete te;
+        QMessageBox::warning(this, tr("Texture"), error);
+        return nullptr;
+    }
+    const int index = tabs_->addTab(te, te->title());
+    tabs_->setTabToolTip(index, absolute);
+    tabs_->setCurrentIndex(index);
+    connect(te, &TextureEditor::textureChanged, viewport_, qOverload<>(&QWidget::update));
+    connect(te, &TextureEditor::modificationChanged, this, [this, te] {
+        if (const int i = tabs_->indexOf(te); i >= 0)
+            tabs_->setTabText(i, te->title());
+    });
+    return te;
 }
 
 void MainWindow::saveCurrent()
 {
-    if (auto* se = currentScript()) {
-        QString error;
-        if (!se->save(&error))
-            QMessageBox::warning(this, tr("Save script"), error);
+    QString error;
+    bool ok = true;
+    if (auto* se = currentScript())
+        ok = se->save(&error);
+    else if (auto* te = qobject_cast<TextureEditor*>(tabs_->currentWidget()))
+        ok = te->save(&error);
+    else if (auto* me = qobject_cast<MaterialEditor*>(tabs_->currentWidget()))
+        ok = me->saveModified(&error);
+    else {
+        save();
         return;
     }
-    save();
+    if (!ok)
+        QMessageBox::warning(this, tr("Save"), error);
+}
+
+void MainWindow::browseBoxMaterial()
+{
+    auto* b = selectedBox();
+    if (!b)
+        return;
+    const QString start = b->materialPath.empty() ? assetPath("materials") : QString::fromStdU16String(b->materialPath.u16string());
+    const QString path = QFileDialog::getOpenFileName(this, tr("Material"), start, tr("Materials (*.material)"));
+    if (path.isEmpty())
+        return;
+    std::string error;
+    auto material = engine::loadMaterial(std::filesystem::path(path.toStdU16String()), &error);
+    if (!material) {
+        QMessageBox::warning(this, tr("Material"), QString::fromStdString(error));
+        return;
+    }
+    b->materialPath = material->sourcePath;
+    b->material = std::move(material);
+    refreshProperties();
+    markDirty();
+}
+
+void MainWindow::refreshMaterialSlots()
+{
+    const engine::Model* m = selectedModel();
+    const std::vector<std::string> slotNames = m ? m->materialSlots() : std::vector<std::string>{};
+    materialSlots_->setVisible(m != nullptr);
+    materialSlots_->setRowCount(static_cast<int>(slotNames.size()));
+    for (int row = 0; row < static_cast<int>(slotNames.size()); ++row) {
+        const std::string& slot = slotNames[static_cast<std::size_t>(row)];
+        materialSlots_->setItem(row, 0, new QTableWidgetItem(QString::fromStdString(slot)));
+        const auto it = m->materialOverrides.find(slot);
+        auto* value = new QTableWidgetItem(it == m->materialOverrides.end() ? tr("(from glTF)")
+                                                                            : QString::fromStdU16String(it->second.stem().u16string()));
+        if (it == m->materialOverrides.end())
+            value->setForeground(palette().color(QPalette::Disabled, QPalette::Text));
+        else
+            value->setToolTip(QString::fromStdU16String(it->second.u16string()));
+        materialSlots_->setItem(row, 1, value);
+    }
 }

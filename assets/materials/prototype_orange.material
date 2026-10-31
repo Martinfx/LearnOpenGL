@@ -1,0 +1,10 @@
+# FPS engine material
+version 1
+name "Prototype orange"
+color 0.95 0.55 0.25
+texture "../textures/prototype_grid.png"
+tiling 1 1
+specular 0.2
+shininess 32
+emissive 0 0 0
+world_uv 0

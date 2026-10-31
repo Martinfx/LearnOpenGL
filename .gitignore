@@ -11,3 +11,5 @@ CMakeUserPresets.json
 /roundtrip.level
 /with_model.level
 /character.level
+/copy.material
+/materials.level

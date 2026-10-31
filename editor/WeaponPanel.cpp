@@ -1,5 +1,6 @@
 #include "WeaponPanel.h"
 #include "Vec3Editor.h"
+#include "AssetPaths.h"
 
 #include <QCheckBox>
 #include <QCoreApplication>
@@ -34,7 +35,7 @@ QDoubleSpinBox* spin(QWidget* parent, double min, double max, double step, int d
 
 QString defaultWeaponDir()
 {
-    return QDir(QCoreApplication::applicationDirPath()).filePath("assets/weapons");
+    return assetPath("weapons");
 }
 } // namespace
 
@@ -229,7 +230,7 @@ void WeaponPanel::createNew()
     engine::WeaponSettings w;
     w.name = QFileInfo(path).completeBaseName().toStdString();
     // Start from the bundled repeater model so the new weapon is visible right away.
-    const QString model = QDir(QCoreApplication::applicationDirPath()).filePath("assets/models/weapons/blaster-repeater.glb");
+    const QString model = assetPath("models/weapons/blaster-repeater.glb");
     if (QFileInfo::exists(model))
         w.modelPath = toPath(model);
     std::string error;

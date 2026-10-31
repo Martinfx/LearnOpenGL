@@ -1,4 +1,7 @@
+#include "AssetPaths.h"
 #include "MainWindow.h"
+
+#include <QFileInfo>
 
 #include <QApplication>
 #include <QSurfaceFormat>
@@ -23,5 +26,7 @@ int main(int argc, char** argv)
     window.show();
     if (argc > 1)
         window.openFile(QString::fromLocal8Bit(argv[1]));
+    else if (QFileInfo::exists(assetPath("levels/test.level")))
+        window.openFile(assetPath("levels/test.level"));
     return app.exec();
 }

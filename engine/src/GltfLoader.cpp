@@ -162,6 +162,8 @@ bool loadPrimitive(const cgltf_primitive& prim, const glm::mat4& world, MeshPart
             n = glm::dot(n, n) > 0.0f ? glm::normalize(n) : glm::vec3(0.0f, 1.0f, 0.0f);
     }
 
+    if (prim.material && prim.material->name)
+        part.materialName = prim.material->name;
     if (prim.material && prim.material->has_pbr_metallic_roughness) {
         const cgltf_pbr_metallic_roughness& pbr = prim.material->pbr_metallic_roughness;
         const float* c = pbr.base_color_factor; // linear
@@ -235,6 +237,20 @@ const cgltf_scene* mainScene(const cgltf_data* data)
 }
 
 } // namespace
+
+std::uint64_t newResourceId()
+{
+    return nextPartId++;
+}
+
+std::vector<std::string> Model::materialSlots() const
+{
+    std::vector<std::string> slots;
+    for (const MeshPart& part : parts)
+        if (!part.materialName.empty() && std::find(slots.begin(), slots.end(), part.materialName) == slots.end())
+            slots.push_back(part.materialName);
+    return slots;
+}
 
 bool loadModelFile(Model& model, const std::filesystem::path& file, std::string* error)
 {

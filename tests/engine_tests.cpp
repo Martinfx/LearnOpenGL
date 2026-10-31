@@ -525,6 +525,54 @@ void testScriptSyntaxCheck()
     check(!bad2.ok && bad2.line == 1, "error on line 1");
 }
 
+void testMaterialsAndTextures()
+{
+    std::string err;
+    auto m = engine::loadMaterial(ENGINE_TEST_ASSETS "/materials/bricks.material", &err);
+    check(m && m->texture && m->texture->texture && m->texture->width == 512, "load bricks material with texture: " + err);
+    if (!m)
+        return;
+    check(engine::loadMaterial(ENGINE_TEST_ASSETS "/materials/bricks.material") == m, "materials are shared");
+    check(std::abs(m->tiling.x - 0.5f) < 1e-6f, "tiling read");
+
+    // Texture adjustments rebuild the pixels and give the GPU a new id.
+    engine::TextureAsset& tex = *m->texture;
+    const std::uint64_t before = tex.texture->id;
+    const std::uint8_t r0 = tex.texture->rgba[0];
+    tex.settings.brightness = 0.3f;
+    engine::applyTextureSettings(tex);
+    check(tex.texture->id != before && tex.texture->rgba[0] > r0, "brightness brightens and re-uploads");
+    tex.settings = {};
+    engine::applyTextureSettings(tex);
+    check(tex.texture->rgba[0] == r0, "default settings restore the original pixels");
+
+    // Material file round trip (texture path stays relative to the material).
+    engine::Material copy = *m;
+    copy.name = "Copy";
+    copy.specular = 0.7f;
+    copy.emissive = {0.1f, 0.2f, 0.3f};
+    check(engine::saveMaterial(copy, "copy.material", &err), "save material: " + err);
+    auto loaded = engine::loadMaterial("copy.material", &err);
+    check(loaded && loaded->name == "Copy" && std::abs(loaded->specular - 0.7f) < 1e-6f && loaded->texture == m->texture,
+          "material round trip shares the texture: " + err);
+
+    // Level with box materials and a model slot override.
+    engine::Scene s;
+    check(engine::loadScene(s, ENGINE_TEST_ASSETS "/levels/test.level", &err), "load test level: " + err);
+    check(!s.boxes.empty() && s.boxes[0].material && s.boxes[0].material->name == "Concrete", "floor uses the concrete material");
+    engine::Model& ramp = s.models[0];
+    const auto slots = ramp.materialSlots();
+    if (!slots.empty()) {
+        ramp.materialOverrides[slots[0]] = m->sourcePath;
+        ramp.overrideMaterials[slots[0]] = m;
+    }
+    check(engine::saveScene(s, "materials.level", &err), "save level with materials: " + err);
+    engine::Scene again;
+    check(engine::loadScene(again, "materials.level", &err), "reload level with materials: " + err);
+    check(again.boxes[0].material == s.boxes[0].material, "box material survives the round trip");
+    check(slots.empty() || again.models[0].materialFor(again.models[0].parts[0]) == m.get(), "model slot override survives");
+}
+
 } // namespace
 
 int main()
@@ -553,6 +601,7 @@ int main()
     testAnimatedCharacter();
     testEnemyAnimations();
     testScriptSyntaxCheck();
+    testMaterialsAndTextures();
     std::printf(failures ? "%d test(s) failed\n" : "all tests passed\n", failures);
     return failures ? 1 : 0;
 }

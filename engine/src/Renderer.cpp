@@ -54,6 +54,12 @@ uniform vec3 uSunDir;
 uniform vec3 uCamera;
 uniform float uHighlight;
 uniform float uFlash;
+uniform vec2 uTiling;
+uniform bool uWorldUv;     // project the texture in world space (1 repeat per metre * tiling)
+uniform bool uGrid;        // 1 m grid lines on plain surfaces without a material
+uniform float uSpecular;
+uniform float uShininess;
+uniform vec3 uEmissiveColor; // sRGB
 out vec4 fragColor;
 
 float gridLines(vec3 p, vec3 n) {
@@ -73,16 +79,22 @@ void main() {
     vec3 h = normalize(l + v);
 
     vec3 albedo = pow(uColor, vec3(2.2)); // colors are authored in sRGB
-    vec3 base;
+    vec2 uv = vUV;
+    if (uWorldUv) {
+        vec3 an = abs(n);
+        uv = an.y > 0.5 ? vWorldPos.xz : (an.x > 0.5 ? vec2(vWorldPos.z, -vWorldPos.y) : vec2(vWorldPos.x, -vWorldPos.y));
+    }
+    uv *= uTiling;
+    vec3 base = albedo;
     if (uHasTexture)
-        base = albedo * texture(uTexture, vUV).rgb; // sRGB texture, sampled as linear
-    else
-        base = albedo * (1.0 - 0.18 * gridLines(vWorldPos, n));
+        base *= texture(uTexture, uv).rgb; // sRGB textures are sampled as linear
+    else if (uGrid)
+        base *= 1.0 - 0.18 * gridLines(vWorldPos, n);
     float diffuse = max(dot(n, l), 0.0);
-    float specular = pow(max(dot(n, h), 0.0), 48.0) * 0.25 * step(0.0, diffuse);
+    float specular = pow(max(dot(n, h), 0.0), max(uShininess, 1.0)) * uSpecular * step(0.0, diffuse);
     vec3 ambient = mix(vec3(0.20, 0.18, 0.16), vec3(0.32, 0.38, 0.48), n.y * 0.5 + 0.5);
 
-    vec3 color = base * (ambient + diffuse * vec3(1.0, 0.96, 0.88)) + specular;
+    vec3 color = base * (ambient + diffuse * vec3(1.0, 0.96, 0.88)) + specular + pow(uEmissiveColor, vec3(2.2));
     color = mix(color, vec3(1.0, 0.75, 0.2), uHighlight * 0.35);
     color = mix(color, vec3(1.0), uFlash); // hit feedback
 
@@ -219,6 +231,12 @@ bool Renderer::init(GlLoader loader, std::string* error)
     locFog_ = glGetUniformLocation(program_, "uFogDensity");
     locSkinned_ = glGetUniformLocation(program_, "uSkinned");
     locFlash_ = glGetUniformLocation(program_, "uFlash");
+    locTiling_ = glGetUniformLocation(program_, "uTiling");
+    locWorldUv_ = glGetUniformLocation(program_, "uWorldUv");
+    locGrid_ = glGetUniformLocation(program_, "uGrid");
+    locSpecular_ = glGetUniformLocation(program_, "uSpecular");
+    locShininess_ = glGetUniformLocation(program_, "uShininess");
+    locEmissiveColor_ = glGetUniformLocation(program_, "uEmissiveColor");
     glCreateBuffers(1, &jointBuffer_);
     glNamedBufferData(jointBuffer_, kMaxJoints * sizeof(glm::mat4), nullptr, GL_DYNAMIC_DRAW);
     glUseProgram(program_);
@@ -292,12 +310,20 @@ unsigned Renderer::texture(const Texture& tex)
     }
     GpuTexture t;
     glCreateTextures(GL_TEXTURE_2D, 1, &t.handle);
-    const int levels = 1 + static_cast<int>(std::floor(std::log2(std::max(tex.width, tex.height))));
-    glTextureStorage2D(t.handle, levels, GL_SRGB8_ALPHA8, tex.width, tex.height);
+    const int levels = tex.mipmaps ? 1 + static_cast<int>(std::floor(std::log2(std::max(tex.width, tex.height)))) : 1;
+    glTextureStorage2D(t.handle, levels, tex.srgb ? GL_SRGB8_ALPHA8 : GL_RGBA8, tex.width, tex.height);
     glTextureSubImage2D(t.handle, 0, 0, 0, tex.width, tex.height, GL_RGBA, GL_UNSIGNED_BYTE, tex.rgba.data());
-    glGenerateTextureMipmap(t.handle);
-    glTextureParameteri(t.handle, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTextureParameteri(t.handle, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    if (tex.mipmaps)
+        glGenerateTextureMipmap(t.handle);
+    const GLint minFilter = tex.nearest ? (tex.mipmaps ? GL_NEAREST_MIPMAP_LINEAR : GL_NEAREST)
+                                        : (tex.mipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
+    glTextureParameteri(t.handle, GL_TEXTURE_MIN_FILTER, minFilter);
+    glTextureParameteri(t.handle, GL_TEXTURE_MAG_FILTER, tex.nearest ? GL_NEAREST : GL_LINEAR);
+    const GLint wrap = tex.wrap == 1 ? GL_CLAMP_TO_EDGE : (tex.wrap == 2 ? GL_MIRRORED_REPEAT : GL_REPEAT);
+    glTextureParameteri(t.handle, GL_TEXTURE_WRAP_S, wrap);
+    glTextureParameteri(t.handle, GL_TEXTURE_WRAP_T, wrap);
+    if (GLAD_GL_VERSION_4_6 || GLAD_GL_EXT_texture_filter_anisotropic)
+        glTextureParameterf(t.handle, GL_TEXTURE_MAX_ANISOTROPY, 8.0f); // sharp floors at grazing angles
     t.used = true;
     textures_.emplace(tex.id, t);
     return t.handle;
@@ -326,25 +352,50 @@ void Renderer::drawModel(const Model& model, const glm::mat4& transform, float h
         }
         glUniform1i(locSkinned_, skinned ? 1 : 0);
         glUniformMatrix4fv(locModel_, 1, GL_FALSE, glm::value_ptr(partTransform));
-        glUniform3fv(locColor_, 1, glm::value_ptr(part.texture ? glm::vec3(1.0f) : part.color));
-        if (part.texture) {
-            glBindTextureUnit(0, texture(*part.texture));
-            glUniform1i(locHasTexture_, 1);
-        } else {
-            glUniform1i(locHasTexture_, 0);
-        }
+        applySurface(model.materialFor(part), part.texture ? glm::vec3(1.0f) : part.color, part.texture.get(), false);
         glBindVertexArray(mesh.vao);
         glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, nullptr);
     }
-    glUniform1i(locHasTexture_, 0);
+    applySurface(nullptr, glm::vec3(1.0f), nullptr, false);
     glUniform1i(locSkinned_, 0);
+}
+
+void Renderer::applySurface(const Material* material, glm::vec3 color, const Texture* tex, bool worldUv)
+{
+    glm::vec2 tiling(1.0f);
+    float specular = 0.25f, shininess = 48.0f;
+    glm::vec3 emissive(0.0f);
+    bool grid = tex == nullptr;
+    if (material) {
+        color = material->color;
+        tex = material->texture ? material->texture->texture.get() : nullptr;
+        tiling = material->tiling;
+        specular = material->specular;
+        shininess = material->shininess;
+        emissive = material->emissive;
+        worldUv = worldUv || material->worldUv;
+        grid = false;
+    }
+    glUniform3fv(locColor_, 1, glm::value_ptr(color));
+    glUniform2fv(locTiling_, 1, glm::value_ptr(tiling));
+    glUniform1f(locSpecular_, specular);
+    glUniform1f(locShininess_, shininess);
+    glUniform3fv(locEmissiveColor_, 1, glm::value_ptr(emissive));
+    glUniform1i(locWorldUv_, worldUv ? 1 : 0);
+    glUniform1i(locGrid_, grid ? 1 : 0);
+    if (tex && !tex->rgba.empty()) {
+        glBindTextureUnit(0, texture(*tex));
+        glUniform1i(locHasTexture_, 1);
+    } else {
+        glUniform1i(locHasTexture_, 0);
+    }
 }
 
 void Renderer::drawCube(const glm::mat4& transform, glm::vec3 color, float highlight, bool emissive)
 {
     glBindVertexArray(vao_);
     glUniformMatrix4fv(locModel_, 1, GL_FALSE, glm::value_ptr(transform));
-    glUniform3fv(locColor_, 1, glm::value_ptr(color));
+    applySurface(nullptr, color, nullptr, false);
     glUniform1f(locHighlight_, highlight);
     glUniform1i(locEmissive_, emissive ? 1 : 0);
     glDrawArrays(GL_TRIANGLES, 0, vertexCount_);
@@ -422,20 +473,22 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, jointBuffer_);
     glBindVertexArray(vao_);
 
-    auto drawBox = [&](glm::vec3 center, glm::vec3 size, glm::vec3 color, float highlight, float yawDegrees = 0.0f) {
+    auto drawBox = [&](glm::vec3 center, glm::vec3 size, glm::vec3 color, float highlight, float yawDegrees = 0.0f,
+                       const Material* material = nullptr) {
         glm::mat4 model = glm::translate(glm::mat4(1.0f), center);
         if (yawDegrees != 0.0f)
             model = glm::rotate(model, -glm::radians(yawDegrees), glm::vec3(0.0f, 1.0f, 0.0f));
         model = glm::scale(model, size);
         glUniformMatrix4fv(locModel_, 1, GL_FALSE, glm::value_ptr(model));
-        glUniform3fv(locColor_, 1, glm::value_ptr(color));
+        applySurface(material, color, nullptr, true); // boxes have no UVs: world-space mapping
         glUniform1f(locHighlight_, highlight);
+        glBindVertexArray(vao_);
         glDrawArrays(GL_TRIANGLES, 0, vertexCount_);
     };
 
     for (std::size_t i = 0; i < scene.boxes.size(); ++i) {
         const Box& b = scene.boxes[i];
-        drawBox(b.position, b.size, b.color, static_cast<int>(i) == view.selectedObject ? 1.0f : 0.0f);
+        drawBox(b.position, b.size, b.color, static_cast<int>(i) == view.selectedObject ? 1.0f : 0.0f, 0.0f, b.material.get());
     }
     for (std::size_t i = 0; i < scene.models.size(); ++i) {
         const Model& model = scene.models[i];
