@@ -7,6 +7,14 @@
 namespace engine {
 
 class PhysicsWorld;
+
+// Result of compiling a script without running it (editor syntax check).
+struct ScriptCheck {
+    bool ok = true;
+    int line = 0;            // 1-based line of the first error, 0 if unknown
+    std::string message;     // Lua's message without the "chunk:line:" prefix
+};
+ScriptCheck checkScriptSyntax(const std::string& source, const std::string& chunkName = "script");
 class PlayerController;
 
 // Runs the Lua scripts attached to scene entities (one isolated environment

@@ -66,6 +66,15 @@ kde stojí, hráče vidí v zorném úhlu (a neprojde přes zdi), pronásleduje 
 hledá ho na posledním známém místě a vrací se zpět. Parametry jsou na začátku skriptu. Chyba ve skriptu
 vypne jen danou entitu a vypíše se do konzole hry.
 
+### Script editor
+
+Skripty se píšou přímo v editoru: tlačítko **Edit script** u entity nebo menu Script (New script,
+Open script). Každý skript má vlastní záložku vedle 3D pohledu. Umí zvýraznění Lua, čísla řádků,
+kontrolu syntaxe při psaní (chybný řádek je červeně podtržený a popsaný dole), doplňování API enginu
+(Ctrl+Space, nebo samo po `game.`, `self:`…), automatické odsazení, Ctrl+/ komentář, Ctrl+F hledání,
+Ctrl+H nahrazování, Ctrl+G skok na řádek. Ctrl+S uloží skript v aktivní záložce; Play a uložení úrovně
+uloží i otevřené skripty. Po uložení se obnoví parametry skriptu v Properties.
+
 ## Animované postavy
 
 Entita může mít animovaný glTF model (skeleton, skiny, klipy): Properties > Character model.
@@ -86,6 +95,7 @@ Všechno, co hra používá, se mění v editoru a ukládá do souborů úrovně
 | --- | --- | --- |
 | Geometrie, modely, entity, skripty | Outliner + Properties | `.level` |
 | Model postavy, měřítko, natočení, výchozí animace | Properties > Character model, Animation | `.level` |
+| Lua skripty | Záložky script editoru (Edit script, menu Script) | `scripts/*.lua` |
 | Parametry AI a dalších skriptů | Properties > Script parameters (deklaruje je skript v `properties`) | `.level` (po entitách) |
 | Pohyb a zdraví hráče, start, slunce | Properties > Level | `.level` |
 | Výzbroj hráče a parametry zbraní | Záložka Weapons | `.level` + `weapons/*.weapon` |
@@ -104,7 +114,7 @@ Model je zároveň statická kolize (Jolt MeshShape), takže po něm jde chodit.
 ## Stav
 
 Hotovo: hráč (Jolt CharacterVirtual), glTF modely s texturami, entity s Lua skripty, AI nepřátel,
-zbraně se střelbou a zdravím nepřátel, animované postavy (skeletal animace, GPU skinning),
+zbraně se střelbou a zdravím nepřátel, animované postavy (skeletal animace, GPU skinning), script editor,
 editor pro všechny parametry.
-Další: knihovny ve složce `3rdparty/`, script editor, materiály a textury, animation editor,
+Další: materiály a textury, animation editor,
 zvuk (OpenAL), environment editor.

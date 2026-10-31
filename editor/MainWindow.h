@@ -6,6 +6,8 @@
 #include <vector>
 
 class QComboBox;
+class QTabWidget;
+class ScriptEditor;
 class QDoubleSpinBox;
 class QLabel;
 class QTableWidget;
@@ -39,6 +41,16 @@ private:
     bool confirmDiscard();
     void playLevel();
 
+    // Script editor tabs (next to the 3D view).
+    ScriptEditor* currentScript() const;
+    ScriptEditor* openScript(const QString& path);
+    void newScript();
+    void openScriptDialog();
+    bool closeScriptTab(int index);
+    bool saveAllScripts();
+    bool confirmCloseScripts();
+    void saveCurrent();
+
     void addBox();
     void importModel();
     void addEntity(const QString& type);
@@ -65,6 +77,7 @@ private:
     bool dirty_ = false;
 
     Viewport* viewport_ = nullptr;
+    QTabWidget* tabs_ = nullptr;
     WeaponPanel* weapons_ = nullptr;
     QListWidget* outliner_ = nullptr;
     QWidget* boxPanel_ = nullptr;

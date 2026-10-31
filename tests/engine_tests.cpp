@@ -514,6 +514,17 @@ void testEnemyAnimations()
           "character model, scale, yaw and clip are saved");
 }
 
+void testScriptSyntaxCheck()
+{
+    const engine::ScriptCheck ok = engine::checkScriptSyntax("function on_update(self, dt)\n  self:move(vec3(1,0,0), 2)\nend\n");
+    check(ok.ok, "valid script passes the syntax check");
+    const engine::ScriptCheck bad = engine::checkScriptSyntax("local x = 1\nif x then\n  print(x)\n", "bad.lua");
+    check(!bad.ok && bad.line == 4 && bad.message.find("'end' expected") != std::string::npos,
+          "missing end is reported with its line: " + std::to_string(bad.line) + " " + bad.message);
+    const engine::ScriptCheck bad2 = engine::checkScriptSyntax("x = = 2", "eq.lua");
+    check(!bad2.ok && bad2.line == 1, "error on line 1");
+}
+
 } // namespace
 
 int main()
@@ -541,6 +552,7 @@ int main()
     testPick();
     testAnimatedCharacter();
     testEnemyAnimations();
+    testScriptSyntaxCheck();
     std::printf(failures ? "%d test(s) failed\n" : "all tests passed\n", failures);
     return failures ? 1 : 0;
 }

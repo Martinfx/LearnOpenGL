@@ -384,6 +384,33 @@ bool readScriptProperties(const std::filesystem::path& script, std::vector<Scrip
     return true;
 }
 
+ScriptCheck checkScriptSyntax(const std::string& source, const std::string& chunkName)
+{
+    ScriptCheck result;
+    sol::state lua;
+    const std::string chunk = "=" + chunkName; // '=' keeps the name verbatim in messages
+    if (luaL_loadbufferx(lua.lua_state(), source.data(), source.size(), chunk.c_str(), "t") == LUA_OK)
+        return result;
+    result.ok = false;
+    std::string msg = lua_tostring(lua.lua_state(), -1) ? lua_tostring(lua.lua_state(), -1) : "syntax error";
+    // "name:12: message"
+    const std::string prefix = chunkName + ":";
+    if (msg.rfind(prefix, 0) == 0) {
+        const std::size_t colon = msg.find(':', prefix.size());
+        if (colon != std::string::npos) {
+            try {
+                result.line = std::stoi(msg.substr(prefix.size(), colon - prefix.size()));
+                msg = msg.substr(colon + 1);
+                if (!msg.empty() && msg[0] == ' ')
+                    msg.erase(0, 1);
+            } catch (...) {
+            }
+        }
+    }
+    result.message = msg;
+    return result;
+}
+
 float ScriptSystem::playerHealth() const { return impl_->playerHealth; }
 void ScriptSystem::setPlayerHealth(float health) { impl_->playerHealth = health; }
 int ScriptSystem::errorCount() const { return impl_->errors; }

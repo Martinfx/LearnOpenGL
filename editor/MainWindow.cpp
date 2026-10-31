@@ -1,4 +1,5 @@
 #include "MainWindow.h"
+#include "ScriptEditor.h"
 #include "Vec3Editor.h"
 #include "Viewport.h"
 #include "WeaponPanel.h"
@@ -29,6 +30,9 @@
 #include <QPushButton>
 #include <QStandardPaths>
 #include <QStatusBar>
+#include <QTabBar>
+#include <QTabWidget>
+#include <QTextStream>
 #include <QToolBar>
 #include <QVBoxLayout>
 
@@ -51,7 +55,15 @@ MainWindow::MainWindow()
     scene_ = engine::makeDefaultScene();
 
     viewport_ = new Viewport(&scene_, this);
-    setCentralWidget(viewport_);
+    tabs_ = new QTabWidget(this);
+    tabs_->setDocumentMode(true);
+    tabs_->setTabsClosable(true);
+    tabs_->setMovable(true);
+    tabs_->addTab(viewport_, tr("Level"));
+    tabs_->tabBar()->setTabButton(0, QTabBar::RightSide, nullptr); // the 3D view cannot be closed
+    tabs_->tabBar()->setTabButton(0, QTabBar::LeftSide, nullptr);
+    connect(tabs_, &QTabWidget::tabCloseRequested, this, [this](int index) { closeScriptTab(index); });
+    setCentralWidget(tabs_);
     connect(viewport_, &Viewport::boxPicked, this, &MainWindow::select);
     connect(viewport_, &Viewport::rendererReady, this,
             [this](const QString& info) { statusBar()->showMessage(info, 8000); });
@@ -73,7 +85,8 @@ void MainWindow::buildMenus()
     QMenu* file = menuBar()->addMenu(tr("&File"));
     file->addAction(tr("&New"), QKeySequence::New, this, &MainWindow::newLevel);
     file->addAction(tr("&Open..."), QKeySequence::Open, this, &MainWindow::openLevel);
-    file->addAction(tr("&Save"), QKeySequence::Save, this, &MainWindow::save);
+    // Ctrl+S saves what is in front: the open script, or the level.
+    file->addAction(tr("&Save"), QKeySequence::Save, this, &MainWindow::saveCurrent);
     file->addAction(tr("Save &As..."), QKeySequence::SaveAs, this, &MainWindow::saveAs);
     file->addSeparator();
     file->addAction(tr("&Quit"), QKeySequence::Quit, this, &QWidget::close);
@@ -85,6 +98,36 @@ void MainWindow::buildMenus()
     edit->addAction(tr("Add empty en&tity"), this, [this] { addEntity("empty"); });
     QAction* dup = edit->addAction(tr("&Duplicate"), QKeySequence(Qt::CTRL | Qt::Key_D), this, &MainWindow::duplicateBox);
     QAction* del = edit->addAction(tr("De&lete"), QKeySequence::Delete, this, &MainWindow::deleteBox);
+
+    QMenu* script = menuBar()->addMenu(tr("&Script"));
+    script->addAction(tr("&New script..."), this, &MainWindow::newScript);
+    script->addAction(tr("&Open script..."), this, &MainWindow::openScriptDialog);
+    script->addAction(tr("Save &all scripts"), this, [this] { saveAllScripts(); });
+    script->addSeparator();
+    script->addAction(tr("&Find"), QKeySequence::Find, this, [this] {
+        if (auto* se = currentScript())
+            se->showFind(false);
+    });
+    script->addAction(tr("&Replace"), QKeySequence(Qt::CTRL | Qt::Key_H), this, [this] {
+        if (auto* se = currentScript())
+            se->showFind(true);
+    });
+    script->addAction(tr("&Go to line..."), QKeySequence(Qt::CTRL | Qt::Key_G), this, [this] {
+        if (auto* se = currentScript())
+            se->goToLinePrompt();
+    });
+    script->addAction(tr("Toggle &comment"), QKeySequence(Qt::CTRL | Qt::Key_Slash), this, [this] {
+        if (auto* se = currentScript())
+            se->editor()->toggleComment();
+    });
+    script->addAction(tr("&Close tab"), QKeySequence(Qt::CTRL | Qt::Key_W), this, [this] {
+        if (tabs_->currentIndex() > 0)
+            closeScriptTab(tabs_->currentIndex());
+    });
+    script->addAction(tr("Open in e&xternal editor"), this, [this] {
+        if (auto* se = currentScript())
+            QDesktopServices::openUrl(QUrl::fromLocalFile(se->path()));
+    });
 
     QMenu* game = menuBar()->addMenu(tr("&Game"));
     QAction* play = game->addAction(tr("&Play level"), QKeySequence(Qt::Key_F5), this, &MainWindow::playLevel);
@@ -222,12 +265,12 @@ void MainWindow::buildDocks()
     scriptParams_->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
     scriptParams_->verticalHeader()->hide();
     scriptParams_->setMinimumHeight(200);
-    auto* editScript = new QPushButton(tr("Open script in text editor"), boxPanel_);
+    auto* editScript = new QPushButton(tr("Edit script"), boxPanel_);
     form->addRow(scriptParams_);
     form->addRow(editScript);
     connect(editScript, &QPushButton::clicked, this, [this] {
         if (auto* e = selectedEntity(); e && !e->scriptPath.empty())
-            QDesktopServices::openUrl(QUrl::fromLocalFile(QString::fromStdU16String(e->scriptPath.u16string())));
+            openScript(QString::fromStdU16String(e->scriptPath.u16string()));
     });
     connect(scriptParams_, &QTableWidget::cellChanged, this, [this](int row, int column) {
         auto* e = selectedEntity();
@@ -836,6 +879,8 @@ bool MainWindow::saveAs()
 
 bool MainWindow::saveTo(const QString& path)
 {
+    if (!saveAllScripts())
+        return false;
     QString weaponError;
     if (!weapons_->saveModified(&weaponError)) {
         QMessageBox::warning(this, tr("Save weapons"), weaponError);
@@ -859,6 +904,10 @@ void MainWindow::playLevel()
     // so a crash in gameplay code never takes the editor down.
     const QString tempDir = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
     const QString snapshot = QDir(tempDir).filePath("fps_engine_play.level");
+    if (!saveAllScripts())
+        return;
+    if (!saveAllScripts())
+        return;
     QString weaponError;
     if (!weapons_->saveModified(&weaponError)) {
         QMessageBox::warning(this, tr("Play"), weaponError);
@@ -881,8 +930,129 @@ void MainWindow::playLevel()
 
 void MainWindow::closeEvent(QCloseEvent* e)
 {
-    if (confirmDiscard())
+    if (confirmCloseScripts() && confirmDiscard())
         e->accept();
     else
         e->ignore();
+}
+
+ScriptEditor* MainWindow::currentScript() const
+{
+    return qobject_cast<ScriptEditor*>(tabs_->currentWidget());
+}
+
+ScriptEditor* MainWindow::openScript(const QString& path)
+{
+    const QString absolute = QFileInfo(path).absoluteFilePath();
+    for (int i = 1; i < tabs_->count(); ++i)
+        if (auto* se = qobject_cast<ScriptEditor*>(tabs_->widget(i)); se && se->path() == absolute) {
+            tabs_->setCurrentIndex(i);
+            return se;
+        }
+    auto* se = new ScriptEditor(tabs_);
+    QString error;
+    if (!se->load(absolute, &error)) {
+        delete se;
+        QMessageBox::warning(this, tr("Open script"), tr("%1\n%2").arg(absolute, error));
+        return nullptr;
+    }
+    const int index = tabs_->addTab(se, se->title());
+    tabs_->setTabToolTip(index, absolute);
+    tabs_->setCurrentIndex(index);
+    connect(se, &ScriptEditor::modificationChanged, this, [this, se] {
+        if (const int i = tabs_->indexOf(se); i >= 0)
+            tabs_->setTabText(i, se->title());
+    });
+    connect(se, &ScriptEditor::saved, this, [this](const QString& saved) {
+        // Parameters the script declares may have changed.
+        if (auto* e = selectedEntity(); e && QFileInfo(QString::fromStdU16String(e->scriptPath.u16string())).absoluteFilePath() == saved)
+            refreshScriptParams();
+        statusBar()->showMessage(tr("Saved %1").arg(saved), 4000);
+    });
+    se->editor()->setFocus();
+    return se;
+}
+
+void MainWindow::openScriptDialog()
+{
+    const QString start = QDir(QCoreApplication::applicationDirPath()).filePath("assets/scripts");
+    const QString path = QFileDialog::getOpenFileName(this, tr("Open script"), start, tr("Lua scripts (*.lua);;All files (*)"));
+    if (!path.isEmpty())
+        openScript(path);
+}
+
+void MainWindow::newScript()
+{
+    const QString start = QDir(QCoreApplication::applicationDirPath()).filePath("assets/scripts/new_script.lua");
+    const QString path = QFileDialog::getSaveFileName(this, tr("New script"), start, tr("Lua scripts (*.lua)"));
+    if (path.isEmpty())
+        return;
+    QFile f(path);
+    if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        QMessageBox::warning(this, tr("New script"), f.errorString());
+        return;
+    }
+    f.write(newScriptTemplate().toUtf8());
+    f.close();
+    // A selected entity without a script gets the new one right away.
+    if (auto* e = selectedEntity(); e && e->scriptPath.empty()) {
+        e->scriptPath = std::filesystem::path(path.toStdU16String());
+        refreshProperties();
+        markDirty();
+    }
+    openScript(path);
+}
+
+bool MainWindow::closeScriptTab(int index)
+{
+    auto* se = qobject_cast<ScriptEditor*>(tabs_->widget(index));
+    if (!se)
+        return false;
+    if (se->isModified()) {
+        tabs_->setCurrentIndex(index);
+        const auto answer = QMessageBox::question(this, tr("Unsaved script"), tr("Save changes to %1?").arg(se->path()),
+                                                  QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
+        if (answer == QMessageBox::Cancel)
+            return false;
+        QString error;
+        if (answer == QMessageBox::Save && !se->save(&error)) {
+            QMessageBox::warning(this, tr("Save script"), error);
+            return false;
+        }
+    }
+    tabs_->removeTab(index);
+    se->deleteLater();
+    return true;
+}
+
+bool MainWindow::saveAllScripts()
+{
+    for (int i = 1; i < tabs_->count(); ++i) {
+        auto* se = qobject_cast<ScriptEditor*>(tabs_->widget(i));
+        QString error;
+        if (se && se->isModified() && !se->save(&error)) {
+            QMessageBox::warning(this, tr("Save script"), tr("%1\n%2").arg(se->path(), error));
+            return false;
+        }
+    }
+    return true;
+}
+
+bool MainWindow::confirmCloseScripts()
+{
+    for (int i = tabs_->count() - 1; i >= 1; --i)
+        if (auto* se = qobject_cast<ScriptEditor*>(tabs_->widget(i)); se && se->isModified() && !closeScriptTab(i))
+            return false;
+    return true;
+}
+
+void MainWindow::saveCurrent()
+{
+    if (auto* se = currentScript()) {
+        QString error;
+        if (!se->save(&error))
+            QMessageBox::warning(this, tr("Save script"), error);
+        return;
+    }
+    save();
 }

@@ -4,6 +4,8 @@ add_executable(fps_editor
     main.cpp
     MainWindow.cpp
     MainWindow.h
+    ScriptEditor.cpp
+    ScriptEditor.h
     Vec3Editor.cpp
     Vec3Editor.h
     Viewport.cpp
