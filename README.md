@@ -55,6 +55,14 @@ levé tlačítko střelba, pravé tlačítko míření přes mířidla (přiblí
 levé tlačítko výběr, F zaměří výběr, Ctrl+B přidá box, Ctrl+I importuje glTF model, Ctrl+D duplikuje, Del smaže,
 **F5 spustí úroveň ve hře**.
 
+**Level Zóna** (`fps_game assets/levels/zone.level`, v editoru File > Open): dálnice E-95 ucpaná zrezlými auty
+a autobusy, železniční hřbitov s vagony a táborem stalkerů (start), město s nemocnicí a paneláky, elektrárna
+s chladicími věžemi, řeka s rozbitými mosty a mrtvé město. Do paneláků, nemocnice, strojovny, dílny, vagonů,
+autobusů a mezi nohy chladicích věží se dá vejít (kolize podle meshe, schody do všech pater). Plán:
+`assets/levels/source/zone_map.png` (`draw_zone_map.py` ho překreslí z levelu i po úpravách v editoru).
+Výchozí rozložení vytvořil `assets/levels/source/make_zone_level.py`, modely `assets/models/zone/gen/`
+generuje `assets/models/zone/source/build_zone.py`.
+
 ## Skriptování a AI (Lua)
 
 Entity (nepřátelé, pickupy, triggery…) se přidávají v editoru (Ctrl+E přidá nepřítele) a každá může mít

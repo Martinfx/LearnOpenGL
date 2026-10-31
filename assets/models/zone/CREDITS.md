@@ -22,3 +22,9 @@ CC-BY 4.0 items: "This work is based on <title> by <author>, licensed under CC-B
 All converted, weathered and cut into sections for this project (`source/`).
 
 `sign_gantry_18m.glb` and everything in `rail/` were generated for this project (`rail/source/railgen.py`, CC0) with Poly Haven CC0 textures from `assets/textures/pbr`. Vegetation credits are in `vegetation/CREDITS.md`.
+
+Everything in `gen/` (vehicles, rolling stock, enterable buildings, cooling towers, pipe bridges, bridge, river,
+skyline towers, low-poly vegetation, debris, signs) is generated for this project by `source/build_zone.py`
+(`source/zonegen/`), CC0. Its shared textures in `textures/` are 1K repacks of Poly Haven CC0 sets from
+`assets/textures/pbr` (albedo, OpenGL normal, ORM = occlusion/roughness/metallic), plus generated birch bark,
+panel facade and Cyrillic sign textures (text set in DejaVu Sans, Bitstream Vera license; place names are fictional).
