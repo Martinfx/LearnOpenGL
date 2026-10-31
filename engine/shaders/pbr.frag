@@ -101,10 +101,19 @@ float sunShadow(vec3 worldPos, vec3 n, float nl) {
     float bias = uShadowParams.x * (1.0 + float(cascade));
     float sum = 0.0;
     vec2 size = vec2(textureSize(uShadowMap, 0).xy);
-    for (int y = -1; y <= 1; ++y)
-        for (int x = -1; x <= 1; ++x)
-            sum += texture(uShadowMap, vec4(c.xy + vec2(x, y) / size, float(cascade), c.z - bias));
-    float shadow = sum / 9.0;
+    float shadow;
+    if (cascade == 0) {
+        for (int y = -1; y <= 1; ++y)
+            for (int x = -1; x <= 1; ++x)
+                sum += texture(uShadowMap, vec4(c.xy + vec2(x, y) / size, float(cascade), c.z - bias));
+        shadow = sum / 9.0;
+    } else {
+        // Far cascades: 4 bilinear PCF taps cover the same 3x3 texel area at half the cost.
+        for (int y = 0; y < 2; ++y)
+            for (int x = 0; x < 2; ++x)
+                sum += texture(uShadowMap, vec4(c.xy + (vec2(x, y) - 0.5) / size, float(cascade), c.z - bias));
+        shadow = sum * 0.25;
+    }
     // Fade out at the far end of the last cascade.
     float fade = smoothstep(uCascadeSplits[count - 1] * 0.85, uCascadeSplits[count - 1], viewDepth);
     return mix(shadow, 1.0, fade);
@@ -209,7 +218,8 @@ void main() {
     vec3 F = fresnelSchlick(max(dot(h, v), 0.0), f0);
     vec3 specular = distributionGGX(nh, rough * rough) * geometrySmith(nv, nl, rough) * F / (4.0 * nv * max(nl, 1e-4));
     vec3 diffuse = (1.0 - F) * (1.0 - metal) * albedo / PI;
-    float shadow = uOverlay ? 1.0 : sunShadow(vWorldPos, normalize(vNormal), nl);
+    // Facing away from the sun: nothing to shadow (the sun term is zero anyway).
+    float shadow = uOverlay || nl <= 0.0 ? 1.0 : sunShadow(vWorldPos, normalize(vNormal), nl);
     vec3 color = (diffuse + specular) * uSunColor.rgb * uSunDir.w * nl * shadow;
 
     // Sky light: prefiltered environment for reflections, its blurriest level for diffuse.

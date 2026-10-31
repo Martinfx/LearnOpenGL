@@ -123,7 +123,7 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
         }
         for (const FoliageType& f : scene.terrain->foliageTypes)
             out << "foliage_type " << std::quoted(f.modelPath.empty() ? std::string() : relative(f.modelPath)) << ' ' << f.density << ' ' << f.minScale << ' '
-                << f.maxScale << ' ' << f.cullDistance << ' ' << f.collision << ' ' << f.alignToSlope << '\n';
+                << f.maxScale << ' ' << f.cullDistance << ' ' << f.collision << ' ' << f.alignToSlope << ' ' << f.castShadows << '\n';
     }
     if (!scene.loading.image.empty())
         out << "loading_image " << std::quoted(relative(scene.loading.image)) << '\n';
@@ -168,6 +168,8 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
             out << "  cull_distance " << m.cullDistance << '\n';
         if (!m.collision)
             out << "  collision 0\n";
+        if (!m.castShadows)
+            out << "  cast_shadows 0\n";
     }
     const PlayerSettings& pl = scene.player;
     out << "player " << pl.walkSpeed << ' ' << pl.sprintSpeed << ' ' << pl.jumpSpeed << ' ' << pl.gravity << ' '
@@ -379,6 +381,9 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
             ok = result.terrain && static_cast<bool>(ls >> std::quoted(path) >> ft.density >> ft.minScale >> ft.maxScale >>
                                                      ft.cullDistance >> ft.collision >> ft.alignToSlope);
             if (ok) {
+                bool shadows = true; // optional (newer files)
+                if (ls >> shadows)
+                    ft.castShadows = shadows;
                 std::filesystem::path p = pathFromUtf8(path);
                 if (p.is_relative())
                     p = std::filesystem::absolute(file).parent_path() / p;
@@ -405,6 +410,8 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
             }
         } else if (key == "cull_distance") {
             ok = lastObject == LastObject::Model && static_cast<bool>(ls >> result.models.back().cullDistance);
+        } else if (key == "cast_shadows") {
+            ok = lastObject == LastObject::Model && static_cast<bool>(ls >> result.models.back().castShadows);
         } else if (key == "collision") {
             ok = lastObject == LastObject::Model && static_cast<bool>(ls >> result.models.back().collision);
         } else if (key == "lod") {

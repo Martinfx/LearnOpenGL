@@ -33,6 +33,7 @@ struct FoliageType {
     float cullDistance = 60.0f;         // not drawn farther (0 = always)
     bool collision = false;             // trees: on; grass and weeds: off
     bool alignToSlope = false;          // tilt with the ground (grass) or stay upright (trees)
+    bool castShadows = true;            // grass: off (much cheaper shadow maps)
 };
 
 struct FoliageInstance {

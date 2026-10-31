@@ -708,6 +708,15 @@ void MainWindow::buildDocks()
     collisionCheck_ = new QCheckBox(tr("Collision (blocks the player and bullets)"), boxPanel_);
     collisionCheck_->setToolTip(tr("Off for grass, leaves and small debris: cheaper physics, walk and shoot through"));
     renderingForm->addRow(tr("Physics"), collisionCheck_);
+    shadowsCheck_ = new QCheckBox(tr("Cast shadows"), boxPanel_);
+    shadowsCheck_->setToolTip(tr("Off for grass and small plants: shadow maps are the most expensive pass"));
+    renderingForm->addRow(tr("Shadows"), shadowsCheck_);
+    connect(shadowsCheck_, &QCheckBox::toggled, this, [this](bool on) {
+        if (auto* m = selectedModel(); m && m->castShadows != on) {
+            m->castShadows = on;
+            markDirty();
+        }
+    });
     connect(cullDistanceSpin_, &QDoubleSpinBox::valueChanged, this, [this](double v) {
         if (auto* m = selectedModel(); m && m->cullDistance != static_cast<float>(v)) {
             m->cullDistance = static_cast<float>(v);
@@ -1444,6 +1453,10 @@ void MainWindow::refreshProperties()
     collisionCheck_->blockSignals(true);
     collisionCheck_->setChecked(m ? m->collision : true);
     collisionCheck_->blockSignals(false);
+    shadowsCheck_->setEnabled(m != nullptr);
+    shadowsCheck_->blockSignals(true);
+    shadowsCheck_->setChecked(m ? m->castShadows : true);
+    shadowsCheck_->blockSignals(false);
     nameEdit_->setEnabled(b || m || e);
     detailsIcon_->setPixmap(editorIcon(b ? "cube" : m ? "model" : e ? "person" : "select").pixmap(18, 18));
     updateDetailsVisibility();

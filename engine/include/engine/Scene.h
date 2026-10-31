@@ -171,6 +171,7 @@ struct Model {
     // and no physics body when collision is off (grass, small debris, leaves: walk and shoot through).
     float cullDistance = 0.0f;
     bool collision = true;
+    bool castShadows = true;          // off for grass and small plants: the shadow pass is the costliest one
 
     glm::mat4 transform() const;      // model space -> world
     Aabb bounds() const;              // world-space bounds of the rotated, scaled model

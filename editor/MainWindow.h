@@ -183,6 +183,7 @@ private:
     QDoubleSpinBox* lodDistanceSpin_ = nullptr;
     QDoubleSpinBox* cullDistanceSpin_ = nullptr;
     QCheckBox* collisionCheck_ = nullptr;
+    QCheckBox* shadowsCheck_ = nullptr;
     QDoubleSpinBox* uvSpins_[5] = {};   // scale U, V, shift U, V, rotation
     QComboBox* activeMaterial_ = nullptr;
     QLabel* selectionInfo_ = nullptr;   // Select mode page

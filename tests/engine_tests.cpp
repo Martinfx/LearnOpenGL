@@ -210,6 +210,7 @@ void testModelCollisionFlags()
     check(ok, "rotated and scaled model copies collide where they are drawn");
     s.models[1].collision = false;
     s.models[1].cullDistance = 120.0f;
+    s.models[1].castShadows = false;
     world.setLevel(s);
     const engine::Aabb b = s.models[1].bounds();
     check(!world.raycast({(b.min.x + b.max.x) * 0.5f, b.max.y + 5.0f, (b.min.z + b.max.z) * 0.5f}, {0, -1, 0}, 50.0f),
@@ -217,7 +218,8 @@ void testModelCollisionFlags()
     check(engine::saveScene(s, "flags.level", &err), "save flags level: " + err);
     engine::Scene again;
     check(engine::loadScene(again, "flags.level", &err) && again.models.size() == 2 && !again.models[1].collision &&
-              again.models[1].cullDistance == 120.0f && again.models[0].collision && again.models[0].cullDistance == 0.0f,
+              again.models[1].cullDistance == 120.0f && again.models[0].collision && again.models[0].cullDistance == 0.0f &&
+              !again.models[1].castShadows && again.models[0].castShadows,
           "collision and cull_distance round trip: " + err);
 }
 

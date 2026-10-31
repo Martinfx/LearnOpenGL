@@ -824,7 +824,8 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         drawDistance_ = distanceTo(view.cameraPosition, model.bounds());
         const Aabb modelBounds = model.bounds();
         const bool tooFar = model.cullDistance > 0.0f && drawDistance_ > model.cullDistance;
-        const bool tinyCaster = shadowMinCaster_ > 0.0f && glm::length(modelBounds.max - modelBounds.min) < shadowMinCaster_;
+        const bool tinyCaster = (shadowCascade_ >= 0 && !model.castShadows) ||
+                                (shadowMinCaster_ > 0.0f && glm::length(modelBounds.max - modelBounds.min) < shadowMinCaster_);
         if (tooFar || tinyCaster || !visible(modelBounds)) {
             keepAlive(model); // stays uploaded while out of view
             if (model.lod)
@@ -1304,6 +1305,8 @@ void Renderer::addFoliage(const Terrain& t, const RenderView& view)
             continue;
         drawDistance_ = 1e30f;
         keepAlive(*type.model);
+        if (shadowCascade_ >= 0 && !type.castShadows)
+            continue;
         if (shadowMinCaster_ > 0.0f) { // far shadow cascade: grass and small plants cast nothing there
             const Aabb& lb = type.model->localBounds;
             const float diagonal = glm::length(lb.max - lb.min);
