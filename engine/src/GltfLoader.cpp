@@ -208,11 +208,17 @@ bool loadPrimitive(const cgltf_primitive& prim, const glm::mat4& world, MeshPart
             const cgltf_pbr_metallic_roughness& pbr = mat->pbr_metallic_roughness;
             const float* c = pbr.base_color_factor; // linear
             part.color = {linearToSrgb(c[0]), linearToSrgb(c[1]), linearToSrgb(c[2])};
+            part.opacity = c[3];
             part.texture = textureOf(pbr.base_color_texture, TextureUsage::Color);
             part.metalRoughTexture = textureOf(pbr.metallic_roughness_texture, TextureUsage::Data);
             part.metallic = pbr.metallic_factor;
             part.roughness = pbr.roughness_factor;
         }
+        part.alphaMode = mat->alpha_mode == cgltf_alpha_mode_mask    ? AlphaMode::Mask
+                         : mat->alpha_mode == cgltf_alpha_mode_blend ? AlphaMode::Blend
+                                                                     : AlphaMode::Opaque;
+        part.alphaCutoff = mat->alpha_cutoff;
+        part.doubleSided = mat->double_sided != 0;
         part.normalTexture = textureOf(mat->normal_texture, TextureUsage::Normal);
         part.normalScale = mat->normal_texture.texture ? mat->normal_texture.scale : 1.0f;
         part.occlusionTexture = textureOf(mat->occlusion_texture, TextureUsage::Data);

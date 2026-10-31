@@ -177,6 +177,7 @@ private:
         int tiling = -1, worldUv = -1, grid = -1, emissiveColor = -1, roughness = -1, metallic = -1;
         int normalStrength = -1, roughnessChannel = -1, metallicChannel = -1, overlay = -1, envRotation = -1;
         int overlaySun = -1, uvScale = -1, uvOffset = -1, uvRotation = -1, shading = -1;
+        int alphaMode = -1, alphaCutoff = -1, opacity = -1;
         int hasMap[6] = {-1, -1, -1, -1, -1, -1};
     };
 
@@ -214,6 +215,18 @@ private:
     bool depthOnly_ = false;
     int texturesUploaded_ = 0;          // this frame; large uploads are spread over frames
     float drawDistance_ = 0.0f;         // camera to the object being drawn (texture streaming)
+    // See-through surfaces (AlphaMode::Blend), drawn after the opaque scene back to front.
+    struct TransparentDraw {
+        const MeshPart* part = nullptr;  // or a box (unit cube with world-space mapping)
+        const Material* material = nullptr;
+        const Box* box = nullptr;
+        glm::mat4 transform{1.0f};
+        float distance = 0.0f;
+        float highlight = 0.0f;
+    };
+    std::vector<TransparentDraw> transparent_;
+    bool collectTransparent_ = false;   // main pass: Blend parts go to transparent_
+    void drawTransparent(const RenderView& view);
     bool s3tc_ = true, s3tcSrgb_ = true;
     unsigned vao_ = 0, vbo_ = 0, emptyVao_ = 0;
     int vertexCount_ = 0;

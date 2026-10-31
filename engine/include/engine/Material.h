@@ -60,6 +60,12 @@ std::filesystem::path textureSettingsPath(const std::filesystem::path& image);
 // Reads "<image>.texture"; `defaults` when the file does not exist.
 TextureSettings readTextureSettings(const std::filesystem::path& image, const TextureSettings& defaults = {});
 
+// How a surface uses the alpha of its albedo (texture alpha x opacity), as in glTF:
+// Opaque ignores it, Mask cuts holes below the cutoff (leaves, fences, grates),
+// Blend draws see-through after the opaque scene (glass), sorted back to front.
+enum class AlphaMode : std::uint8_t { Opaque, Mask, Blend };
+const char* alphaModeName(AlphaMode mode); // "opaque", "mask", "blend"
+
 // Texture slots of a material. Roughness, metallic and occlusion read the red channel.
 enum class MapKind { Albedo, Normal, Roughness, Metallic, Occlusion, Emissive, Count };
 constexpr int kMapCount = static_cast<int>(MapKind::Count);
@@ -79,6 +85,10 @@ struct Material {
     glm::vec3 emissive{0.0f};                  // glow added regardless of light (sRGB), multiplies the emissive map
     glm::vec2 tiling{1.0f};                    // texture repeats per UV unit (per metre with world UVs)
     bool worldUv = false;                      // project textures in world space (boxes always do)
+    AlphaMode alphaMode = AlphaMode::Opaque;
+    float alphaCutoff = 0.5f;                  // Mask: alpha below this is cut away
+    float opacity = 1.0f;                      // multiplies the albedo map's alpha
+    bool doubleSided = false;                  // draw back faces too (leaves, thin fences, cloth)
     std::array<std::filesystem::path, kMapCount> mapPaths;       // absolute, empty = none
     std::array<std::shared_ptr<TextureAsset>, kMapCount> maps;   // runtime, loaded from mapPaths
 

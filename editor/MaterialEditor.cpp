@@ -2,6 +2,7 @@
 #include "AssetPaths.h"
 
 #include <QCheckBox>
+#include <QComboBox>
 #include <QColorDialog>
 #include <QDir>
 #include <QDirIterator>
@@ -243,6 +244,14 @@ MaterialEditor::MaterialEditor(QWidget* parent)
     normalStrength_ = makeSpin(0.0, 4.0, 0.1, 2);
     emissiveButton_ = new QPushButton(form_);
     worldUv_ = new QCheckBox(tr("Project texture in world space (ignores model UVs)"), form_);
+    alphaMode_ = new QComboBox(form_);
+    alphaMode_->addItems({tr("Opaque"), tr("Mask (cut-out: leaves, fences, grates)"), tr("Blend (see-through: glass)")});
+    alphaMode_->setToolTip(tr("How the alpha of the color map (times Opacity) is used"));
+    alphaCutoff_ = makeSpin(0.0, 1.0, 0.05, 2);
+    alphaCutoff_->setToolTip(tr("Mask: pixels with alpha below this are cut away"));
+    opacity_ = makeSpin(0.0, 1.0, 0.05, 2);
+    opacity_->setToolTip(tr("Multiplies the alpha of the color map (Blend: 0 = invisible, 1 = as the map)"));
+    doubleSided_ = new QCheckBox(tr("Double-sided (draw back faces: leaves, thin fences, cloth)"), form_);
     pathLabel_ = new QLabel(form_);
     pathLabel_->setWordWrap(true);
     pathLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
@@ -262,6 +271,10 @@ MaterialEditor::MaterialEditor(QWidget* parent)
     form->addRow(tr("Tiling"), tilingRow);
     form->addRow(tr("Emissive"), emissiveButton_);
     form->addRow(QString(), worldUv_);
+    form->addRow(tr("Alpha"), alphaMode_);
+    form->addRow(tr("Alpha cutoff"), alphaCutoff_);
+    form->addRow(tr("Opacity"), opacity_);
+    form->addRow(QString(), doubleSided_);
     form->addRow(saveRow);
     form->addRow(pathLabel_);
     tilingX_->setToolTip(tr("Repeats per UV unit; with world mapping (boxes) per metre: 0.25 = one image every 4 m"));
@@ -301,6 +314,8 @@ MaterialEditor::MaterialEditor(QWidget* parent)
     });
     connect(nameEdit_, &QLineEdit::editingFinished, this, &MaterialEditor::edited);
     connect(worldUv_, &QCheckBox::toggled, this, &MaterialEditor::edited);
+    connect(doubleSided_, &QCheckBox::toggled, this, &MaterialEditor::edited);
+    connect(alphaMode_, &QComboBox::currentIndexChanged, this, &MaterialEditor::edited);
     auto pickColor = [this](glm::vec3 engine::Material::*member, const QString& title) {
         if (!material_)
             return;
@@ -392,6 +407,11 @@ void MaterialEditor::refreshForm()
         metallic_->setValue(m.metallic);
         normalStrength_->setValue(m.normalStrength);
         worldUv_->setChecked(m.worldUv);
+        alphaMode_->setCurrentIndex(static_cast<int>(m.alphaMode));
+        alphaCutoff_->setValue(m.alphaCutoff);
+        alphaCutoff_->setEnabled(m.alphaMode == engine::AlphaMode::Mask);
+        opacity_->setValue(m.opacity);
+        doubleSided_->setChecked(m.doubleSided);
         pathLabel_->setText(QDir::toNativeSeparators(currentPath()) + (modified_.contains(currentPath()) ? tr("  (unsaved)") : QString()));
     }
     loading_ = false;
@@ -413,6 +433,10 @@ void MaterialEditor::edited()
     m.metallic = static_cast<float>(metallic_->value());
     m.normalStrength = static_cast<float>(normalStrength_->value());
     m.worldUv = worldUv_->isChecked();
+    m.alphaMode = static_cast<engine::AlphaMode>(alphaMode_->currentIndex());
+    m.alphaCutoff = static_cast<float>(alphaCutoff_->value());
+    m.opacity = static_cast<float>(opacity_->value());
+    m.doubleSided = doubleSided_->isChecked();
     modified_.insert(currentPath());
     refreshForm();
     emit materialChanged();

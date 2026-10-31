@@ -22,6 +22,22 @@ namespace {
 constexpr GLenum kSrgbDxt1 = 0x8C4C;      // GL_COMPRESSED_SRGB_S3TC_DXT1_EXT
 constexpr GLenum kSrgbAlphaDxt5 = 0x8C4F; // GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT
 
+struct SurfaceAlpha {
+    AlphaMode mode = AlphaMode::Opaque;
+    float cutoff = 0.5f;
+    float opacity = 1.0f;
+    bool doubleSided = false;
+};
+// An engine material (override) decides; otherwise the glTF material of the part.
+SurfaceAlpha surfaceAlpha(const Material* material, const MeshPart* part)
+{
+    if (material)
+        return {material->alphaMode, material->alphaCutoff, material->opacity, material->doubleSided};
+    if (part)
+        return {part->alphaMode, part->alphaCutoff, part->opacity, part->doubleSided};
+    return {};
+}
+
 // Metres from a point to a box (0 inside): texture streaming distance.
 float distanceTo(glm::vec3 p, const Aabb& b)
 {
@@ -366,6 +382,9 @@ void Renderer::useMeshProgram(const Program& p)
     loc_.overlay = p.loc("uOverlay");
     loc_.envRotation = p.loc("uEnvRotation");
     loc_.overlaySun = p.loc("uOverlaySunDir");
+    loc_.alphaMode = p.loc("uAlphaMode");
+    loc_.alphaCutoff = p.loc("uAlphaCutoff");
+    loc_.opacity = p.loc("uOpacity");
     const char* names[6] = {"uHasTexture", "uHasNormalMap", "uHasRoughnessMap", "uHasMetallicMap", "uHasOcclusionMap", "uHasEmissiveMap"};
     for (int i = 0; i < 6; ++i)
         loc_.hasMap[i] = p.loc(names[i]);
@@ -726,6 +745,20 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
             continue;
         }
         drawDistance_ = distanceTo(view.cameraPosition, b.bounds());
+        if (b.material && b.material->alphaMode == AlphaMode::Blend) {
+            if (!depthOnly && collectTransparent_)
+                transparent_.push_back({nullptr, b.material.get(), &b, b.transform(), drawDistance_,
+                                        static_cast<int>(i) == view.selectedObject ? 1.0f : 0.0f});
+            if (depthOnly || collectTransparent_)
+                continue;
+        }
+        const bool boxTwoSided = b.material && b.material->doubleSided && glIsEnabled(GL_CULL_FACE);
+        if (boxTwoSided)
+            glDisable(GL_CULL_FACE);
+        struct RestoreCull {
+            bool on;
+            ~RestoreCull() { if (on) glEnable(GL_CULL_FACE); }
+        } restoreCull{boxTwoSided};
         if (b.rotated()) {
             glUniformMatrix4fv(loc_.model, 1, GL_FALSE, glm::value_ptr(b.transform()));
             applySurface(b.material.get(), nullptr, b.color, true);
@@ -935,7 +968,10 @@ void Renderer::render(const Scene& scene, const RenderView& view)
         glDisable(GL_CULL_FACE);
         glDisable(GL_DEPTH_TEST);
     }
+    transparent_.clear();
+    collectTransparent_ = !wireframe; // wireframe draws glass edges like everything else
     drawGeometry(scene, view, false, viewProj);
+    collectTransparent_ = false;
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
@@ -950,6 +986,14 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     }
     glDepthMask(GL_TRUE);
     glDepthFunc(GL_LESS);
+    if (!transparent_.empty()) {
+        useMeshProgram(programs_.mesh);
+        glUniformMatrix4fv(loc_.viewProj, 1, GL_FALSE, glm::value_ptr(viewProj));
+        glUniformMatrix3fv(loc_.envRotation, 1, GL_FALSE, glm::value_ptr(glm::mat3(1.0f)));
+        glUniform1i(loc_.shading, static_cast<int>(view.shading));
+        drawTransparent(view);
+        glUniform1i(loc_.shading, 0);
+    }
 
     if (view.grid) {
         // Editor grid, blended over the scene and hidden by what stands above it.
@@ -982,6 +1026,50 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     pendingPresent_ = true;
     if (!view.deferPresent)
         present();
+}
+
+void Renderer::drawTransparent(const RenderView& view)
+{
+    // Back to front, blended over the scene; they test depth but do not write it.
+    std::sort(transparent_.begin(), transparent_.end(),
+              [](const TransparentDraw& a, const TransparentDraw& b) { return a.distance > b.distance; });
+    glEnable(GL_BLEND);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE);
+    glDepthMask(GL_FALSE);
+    glDepthFunc(GL_LEQUAL);
+    glUniform1i(loc_.skinned, 0);
+    glUniform1i(loc_.emissive, 0);
+    glUniform1i(loc_.overlay, 0);
+    glUniform1f(loc_.flash, 0.0f);
+    for (const TransparentDraw& d : transparent_) {
+        drawDistance_ = d.distance;
+        glUniformMatrix4fv(loc_.model, 1, GL_FALSE, glm::value_ptr(d.transform));
+        glUniform1f(loc_.highlight, d.highlight);
+        const SurfaceAlpha alpha = surfaceAlpha(d.material, d.part);
+        // Two-sided glass: back faces first, then front faces, so both blend in order.
+        const int passes = alpha.doubleSided ? 2 : 1;
+        for (int pass = 0; pass < passes; ++pass) {
+            if (passes == 2)
+                glCullFace(pass == 0 ? GL_FRONT : GL_BACK);
+            if (d.box) {
+                applySurface(d.material, nullptr, d.box->color, true);
+                applyUv(*d.box);
+                glBindVertexArray(vao_);
+                glDrawArrays(GL_TRIANGLES, 0, vertexCount_);
+            } else {
+                const GpuMesh& mesh = upload(*d.part);
+                applySurface(d.material, d.part, d.part->color, false);
+                glBindVertexArray(mesh.vao);
+                glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, nullptr);
+            }
+        }
+        glCullFace(GL_BACK);
+    }
+    applySurface(nullptr, nullptr, glm::vec3(1.0f), false);
+    glDepthMask(GL_TRUE);
+    glDepthFunc(GL_LESS);
+    glDisable(GL_BLEND);
+    (void)view;
 }
 
 void Renderer::renderOverlay(const RenderView& view, const OverlayPass& pass)
@@ -1380,11 +1468,26 @@ void Renderer::drawModel(const Model& model, const glm::mat4& transform, float h
         } else if (skeleton && part.node >= 0) {
             partTransform = transform * pose_[static_cast<std::size_t>(part.node)];
         }
+        const Material* material = model.materialFor(part);
+        const SurfaceAlpha alpha = surfaceAlpha(material, &part);
+        if (alpha.mode == AlphaMode::Blend && !skinned) {
+            if (depthOnly_)
+                continue; // glass neither occludes nor casts shadows
+            if (collectTransparent_) {
+                transparent_.push_back({&part, material, nullptr, partTransform, drawDistance_, highlight});
+                continue;
+            }
+        }
         glUniform1i(loc_.skinned, skinned ? 1 : 0);
         glUniformMatrix4fv(loc_.model, 1, GL_FALSE, glm::value_ptr(partTransform));
-        applySurface(model.materialFor(part), &part, part.color, false);
+        applySurface(material, &part, part.color, false);
         glBindVertexArray(mesh.vao);
+        const bool twoSided = alpha.doubleSided && glIsEnabled(GL_CULL_FACE);
+        if (twoSided)
+            glDisable(GL_CULL_FACE);
         glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, nullptr);
+        if (twoSided)
+            glEnable(GL_CULL_FACE);
     }
     applySurface(nullptr, nullptr, glm::vec3(1.0f), false);
     glUniform1i(loc_.skinned, 0);
@@ -1401,8 +1504,27 @@ void Renderer::applyUv(const Box& box)
 
 void Renderer::applySurface(const Material* material, const MeshPart* part, glm::vec3 color, bool worldUv)
 {
-    if (depthOnly_)
+    const SurfaceAlpha alpha = surfaceAlpha(material, part);
+    glUniform1i(loc_.alphaMode, static_cast<int>(alpha.mode));
+    glUniform1f(loc_.alphaCutoff, alpha.cutoff);
+    glUniform1f(loc_.opacity, alpha.opacity);
+    if (depthOnly_) {
+        // Depth and shadows only need the albedo alpha of masked surfaces.
+        if (alpha.mode == AlphaMode::Mask) {
+            const Texture* albedo = nullptr;
+            if (material && material->maps[0])
+                albedo = material->maps[0]->texture.get();
+            else if (!material && part)
+                albedo = part->texture.get();
+            const unsigned handle = albedo && albedo->valid() ? texture(*albedo) : 0u;
+            if (handle)
+                glBindTextureUnit(0, handle);
+            glUniform1i(loc_.hasMap[0], handle ? 1 : 0);
+            const glm::vec2 tiling = material ? material->tiling : glm::vec2(1.0f);
+            glUniform2fv(loc_.tiling, 1, glm::value_ptr(tiling));
+        }
         return;
+    }
     // Texture units: 0 albedo, 1 normal, 2 roughness, 3 metallic, 4 occlusion, 5 emissive.
     const Texture* maps[6] = {};
     glm::vec2 tiling(1.0f);

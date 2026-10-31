@@ -736,8 +736,14 @@ void testMaterialsAndTextures()
     copy.roughness = 0.35f;
     copy.metallic = 1.0f;
     copy.emissive = {0.1f, 0.2f, 0.3f};
+    copy.alphaMode = engine::AlphaMode::Mask;
+    copy.alphaCutoff = 0.4f;
+    copy.doubleSided = true;
     check(engine::saveMaterial(copy, "copy.material", &err), "save material: " + err);
     auto loaded = engine::loadMaterial("copy.material", &err);
+    check(loaded && loaded->alphaMode == engine::AlphaMode::Mask && std::abs(loaded->alphaCutoff - 0.4f) < 1e-6f &&
+              loaded->doubleSided,
+          "material alpha mask and double-sided round trip");
     check(loaded && loaded->name == "Copy" && std::abs(loaded->roughness - 0.35f) < 1e-6f && loaded->metallic == 1.0f
               && loaded->map(engine::MapKind::Albedo) == m->map(engine::MapKind::Albedo),
           "material round trip shares the texture: " + err);
@@ -854,6 +860,11 @@ void testSharedMeshes()
     std::string err;
     engine::Model a;
     check(engine::loadModelFile(a, ENGINE_TEST_ASSETS "/models/ramp.gltf", &err), "load ramp: " + err);
+    engine::Model spruce;
+    check(engine::loadModelFile(spruce, ENGINE_TEST_ASSETS "/models/zone/vegetation/spruce_a_lod1.glb", &err), "load spruce: " + err);
+    check(std::any_of(spruce.parts.begin(), spruce.parts.end(),
+                      [](const engine::MeshPart& p) { return p.alphaMode == engine::AlphaMode::Mask && p.alphaCutoff > 0.0f; }),
+          "glTF alphaMode MASK is read");
     engine::Model b = a;
     check(b.parts.sharedWith(a.parts) && &b.parts[0] == &a.parts[0], "model copies share mesh parts");
     b.parts.push_back(engine::MeshPart{});

@@ -217,6 +217,9 @@ výšková mlha se září ke slunci, bloom, ACES, barevné ladění (saturace, 
 - **Editor:** textura má v *Texture editoru* sekci *Memory* (komprese zap./vyp., max. velikost). Render →
   *Texture size* omezí velikost všech textur. Dok **Memory** ukazuje GPU (textury, meshe, render targety)
   i CPU (meshe, pixely, celý proces). Kvalita Low/Medium omezuje textury na 1024/2048 px.
+- **Průhlednost:** glTF `alphaMode` MASK (listí, ploty, mříže: díry i ve stínech), BLEND (sklo, kreslí se
+  po neprůhledné scéně odzadu dopředu) a `doubleSided`. Totéž pro vlastní materiály v Material editoru
+  (Alpha, Alpha cutoff, Opacity, Double-sided; řádky `alpha_mode`, `alpha_cutoff`, `opacity`, `double_sided`).
 - **Sdílené meshe:** kopie jednoho modelu (např. 18 dílů plotu) sdílí vrcholy v RAM i v historii undo.
 - Testovací level: načtení 21,0 s → 2,3 s (s teplou cache), paměť hry 4,4 GB → 0,54 GB (llvmpipe, kde je
   i „VRAM“ v RAM).

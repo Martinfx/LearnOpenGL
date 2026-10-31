@@ -91,6 +91,11 @@ struct MeshPart {
     glm::vec3 emissive{0.0f};        // sRGB
     std::vector<std::uint32_t> indices; // triangles
     glm::vec3 color{0.8f};           // sRGB
+    // glTF alphaMode / alphaCutoff / baseColorFactor alpha / doubleSided.
+    AlphaMode alphaMode = AlphaMode::Opaque;
+    float alphaCutoff = 0.5f;
+    float opacity = 1.0f;
+    bool doubleSided = false;
     std::string materialName;        // glTF material name, used for material overrides
     int node = -1;                   // animated models: rigid part attached to this skeleton node
     int skin = -1;                   // animated models: skinned part (uses joints/weights)

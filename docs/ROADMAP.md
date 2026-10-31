@@ -59,7 +59,7 @@ M0 Výkon a měření ──► M1 Hratelný řez ──► M2 Otevřená zóna 
 Podrobně ve výkonové roadmapě vlákna "Vytvořit 3D FPS engine"; tady jen shrnutí, aby se nic nedělalo dvakrát.
 
 - [x] Oprava sekání (textury mimo záběr se mazaly a nahrávaly znovu)
-- [ ] Alpha mask + oboustranné materiály (listí, mříže, ploty)
+- [x] Alpha mask + oboustranné materiály (listí, mříže, ploty) + průhledné sklo (Blend, řazené odzadu)
 - [x] Komprese textur BC1/BC3/BC5 s mipmapami, disková cache, paralelně; komprese a max. velikost v Texture editoru, Render → Texture size (BC7 zatím ne)
 - [x] Uvolnění CPU kopií po nahrání, streamování textur podle vzdálenosti, deduplikace meshů (testovací level: načtení 21,0 s → 2,3 s, paměť 4,4 GB → 0,54 GB)
 - [x] Panel paměti (VRAM/RAM) v editoru (dok Memory)

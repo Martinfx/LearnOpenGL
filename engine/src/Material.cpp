@@ -299,6 +299,15 @@ void applyTextureSettings(TextureAsset& asset, bool cook)
     t.rgba = std::move(rgba); // full-size pixels for previews (the renderer may drop them after upload)
 }
 
+const char* alphaModeName(AlphaMode mode)
+{
+    switch (mode) {
+    case AlphaMode::Mask: return "mask";
+    case AlphaMode::Blend: return "blend";
+    default: return "opaque";
+    }
+}
+
 bool saveTextureSettings(const TextureAsset& asset, std::string* error)
 {
     const std::filesystem::path file = textureSettingsPath(asset.imagePath);
@@ -372,6 +381,16 @@ bool parseMaterial(Material& m, const std::filesystem::path& file, std::string* 
             ok = static_cast<bool>(ls >> result.emissive.r >> result.emissive.g >> result.emissive.b);
         } else if (k == "world_uv") {
             ok = static_cast<bool>(ls >> result.worldUv);
+        } else if (k == "alpha_mode") {
+            std::string v;
+            ok = static_cast<bool>(ls >> v);
+            result.alphaMode = v == "mask" ? AlphaMode::Mask : (v == "blend" ? AlphaMode::Blend : AlphaMode::Opaque);
+        } else if (k == "alpha_cutoff") {
+            ok = static_cast<bool>(ls >> result.alphaCutoff);
+        } else if (k == "opacity") {
+            ok = static_cast<bool>(ls >> result.opacity);
+        } else if (k == "double_sided") {
+            ok = static_cast<bool>(ls >> result.doubleSided);
         } else {
             for (int i = 0; i < kMapCount; ++i)
                 if (k == mapKey(static_cast<MapKind>(i)))
@@ -440,6 +459,10 @@ bool saveMaterial(const Material& m, const std::filesystem::path& file, std::str
     out << "emissive " << m.emissive.r << ' ' << m.emissive.g << ' ' << m.emissive.b << '\n';
     out << "tiling " << m.tiling.x << ' ' << m.tiling.y << '\n';
     out << "world_uv " << m.worldUv << '\n';
+    out << "alpha_mode " << alphaModeName(m.alphaMode) << '\n';
+    out << "alpha_cutoff " << m.alphaCutoff << '\n';
+    out << "opacity " << m.opacity << '\n';
+    out << "double_sided " << m.doubleSided << '\n';
     const std::filesystem::path dir = normalized(file).parent_path();
     for (int i = 0; i < kMapCount; ++i) {
         const std::filesystem::path& p = m.mapPaths[static_cast<std::size_t>(i)];

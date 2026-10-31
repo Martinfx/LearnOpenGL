@@ -10,6 +10,7 @@
 #include <memory>
 
 class QCheckBox;
+class QComboBox;
 class QDoubleSpinBox;
 class QLabel;
 class QLineEdit;
@@ -83,6 +84,10 @@ private:
     QDoubleSpinBox* normalStrength_;
     QPushButton* emissiveButton_;
     QCheckBox* worldUv_;
+    QComboBox* alphaMode_;
+    QDoubleSpinBox* alphaCutoff_;
+    QDoubleSpinBox* opacity_;
+    QCheckBox* doubleSided_;
     QLabel* pathLabel_;
     MaterialPreview* preview_;
     bool loading_ = false;

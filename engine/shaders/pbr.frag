@@ -29,6 +29,9 @@ uniform float uNormalStrength;
 uniform float uRoughness;
 uniform float uMetallic;
 uniform bool uEmissive;        // unlit effect (muzzle flash, gizmo)
+uniform int uAlphaMode;        // 0 opaque, 1 mask (cut below uAlphaCutoff), 2 blend
+uniform float uAlphaCutoff;
+uniform float uOpacity;        // multiplies the albedo map's alpha
 uniform vec3 uColor;           // sRGB
 uniform float uHighlight;
 uniform float uFlash;
@@ -113,8 +116,14 @@ void main() {
     uv = uv * uTiling * uUvScale + uUvOffset;
 
     vec3 albedo = pow(max(uColor, vec3(0.0)), vec3(2.2));
-    if (uHasTexture)
-        albedo *= texture(uAlbedoMap, uv).rgb;
+    float alpha = uOpacity;
+    if (uHasTexture) {
+        vec4 texel = texture(uAlbedoMap, uv);
+        albedo *= texel.rgb;
+        alpha *= texel.a;
+    }
+    if (uAlphaMode == 1 && alpha < uAlphaCutoff && uShading != 3)
+        discard; // leaves, fences, grates
     else if (uGrid)
         albedo *= 1.0 - 0.18 * gridLines(vWorldPos, n);
     if (uShading == 1) { // unlit: base color only
@@ -188,5 +197,5 @@ void main() {
         color = applyFog(color, vWorldPos);
     // A single NaN/Inf pixel would spread over the whole screen through bloom: drop it here.
     color = any(isnan(color)) || any(isinf(color)) ? vec3(0.0) : min(color, vec3(60000.0));
-    fragColor = vec4(color, 1.0);
+    fragColor = vec4(color, uAlphaMode == 2 ? clamp(alpha, 0.0, 1.0) : 1.0);
 }
