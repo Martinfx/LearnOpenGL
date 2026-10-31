@@ -238,6 +238,7 @@ private:
     void releaseUnused();
     void keepAlive(const Model& model);
     void keepAliveOnce(const Model& model); // once per shared mesh per frame
+    void keepAliveLods(const Model& model, const Model* drawn); // every LOD level except the drawn one
     std::unordered_set<const void*> keptAlive_;
     // Spatial grid of the level's models (32 m cells, bounds of their contents) so
     // culling tests a few hundred cells instead of every model in every pass.

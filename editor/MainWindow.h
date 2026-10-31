@@ -191,6 +191,7 @@ private:
     QLineEdit* loadingTitleEdit_ = nullptr;
     QLineEdit* loadingHintEdit_ = nullptr;
     QLineEdit* lodEdit_ = nullptr;
+    QLineEdit* farLodEdit_ = nullptr;
     QDoubleSpinBox* lodDistanceSpin_ = nullptr;
     QDoubleSpinBox* cullDistanceSpin_ = nullptr;
     QCheckBox* collisionCheck_ = nullptr;

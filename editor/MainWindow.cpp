@@ -38,6 +38,7 @@
 #include <QUrl>
 #include <QDoubleSpinBox>
 #include <QHBoxLayout>
+#include <QInputDialog>
 #include <QLocale>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -704,6 +705,74 @@ void MainWindow::buildDocks()
     lodDistanceSpin_->setToolTip(tr("Camera distance to the model's center where the LOD replaces it"));
     renderingForm->addRow(tr("LOD model"), lodRow_);
     renderingForm->addRow(tr("LOD distance"), lodDistanceSpin_);
+    // Farther LOD levels (each with its own distance).
+    auto* farRow = new QWidget(boxPanel_);
+    auto* farLayout = new QHBoxLayout(farRow);
+    farLayout->setContentsMargins(0, 0, 0, 0);
+    farLodEdit_ = new QLineEdit(farRow);
+    farLodEdit_->setReadOnly(true);
+    farLodEdit_->setPlaceholderText(tr("none"));
+    auto* addFar = new QPushButton(tr("+"), farRow);
+    auto* clearFar = new QPushButton(tr("x"), farRow);
+    addFar->setFixedWidth(32);
+    clearFar->setFixedWidth(32);
+    addFar->setToolTip(tr("Add a farther, simpler LOD level (needs the first LOD)"));
+    clearFar->setToolTip(tr("Remove the farther LOD levels"));
+    farLayout->addWidget(farLodEdit_, 1);
+    farLayout->addWidget(addFar);
+    farLayout->addWidget(clearFar);
+    renderingForm->addRow(tr("Far LODs"), farRow);
+    connect(clearFar, &QPushButton::clicked, this, [this] {
+        if (auto* m = selectedModel(); m && !m->farLods.empty()) {
+            m->farLods.clear();
+            refreshProperties();
+            markDirty();
+        }
+    });
+    connect(addFar, &QPushButton::clicked, this, [this] {
+        auto* m = selectedModel();
+        if (!m || !m->lod) {
+            notify(tr("Set the first LOD model first."), 4000);
+            return;
+        }
+        const QString start = QString::fromStdU16String(m->lodPath.parent_path().u16string());
+        const QString path = QFileDialog::getOpenFileName(this, tr("Far LOD model"), start, tr("glTF (*.glb *.gltf)"));
+        if (path.isEmpty())
+            return;
+        const float last = m->farLods.empty() ? m->lodDistance : m->farLods.back().distance;
+        bool ok = false;
+        const double distance = QInputDialog::getDouble(this, tr("Far LOD"), tr("Used beyond (m):"), last * 2.0, last + 1.0, 100000.0, 0, &ok);
+        if (!ok)
+            return;
+        const std::string name = m->name;
+        QPointer<MainWindow> self(this);
+        engine::JobSystem::global().run([self, path, name, distance] {
+            auto lod = std::make_shared<engine::Model>();
+            std::string error;
+            const bool loaded = engine::loadModelFile(*lod, std::filesystem::path(path.toStdU16String()), &error);
+            QMetaObject::invokeMethod(qApp, [self, path, name, lod, loaded, error, distance] {
+                if (!self)
+                    return;
+                if (!loaded) {
+                    QMessageBox::warning(self, tr("Far LOD"), QString::fromStdString(error));
+                    return;
+                }
+                const int object = engine::findObject(self->scene_, name);
+                if (object < 0 || !self->scene_.isModel(object))
+                    return;
+                engine::Model::FarLod far;
+                far.path = std::filesystem::path(path.toStdU16String());
+                far.model = lod;
+                far.distance = static_cast<float>(distance);
+                engine::Model& target = self->scene_.model(object);
+                target.farLods.push_back(std::move(far));
+                std::sort(target.farLods.begin(), target.farLods.end(),
+                          [](const auto& a, const auto& b) { return a.distance < b.distance; });
+                self->refreshProperties();
+                self->markDirty();
+            });
+        });
+    });
     cullDistanceSpin_ = new QDoubleSpinBox(boxPanel_);
     cullDistanceSpin_->setRange(0.0, 10000.0);
     cullDistanceSpin_->setSingleStep(10.0);
@@ -746,6 +815,7 @@ void MainWindow::buildDocks()
         if (auto* m = selectedModel(); m && !m->lodPath.empty()) {
             m->lodPath.clear();
             m->lod.reset();
+            m->farLods.clear();
             refreshProperties();
             markDirty();
         }
@@ -1524,6 +1594,14 @@ void MainWindow::refreshProperties()
     lodRow_->setEnabled(m != nullptr);
     lodDistanceSpin_->setEnabled(m != nullptr && !m->lodPath.empty());
     lodEdit_->setText(m && !m->lodPath.empty() ? QString::fromStdU16String(m->lodPath.filename().u16string()) : QString());
+    {
+        QStringList levels;
+        if (m)
+            for (const engine::Model::FarLod& far : m->farLods)
+                levels << QString("%1 @ %2 m").arg(QString::fromStdU16String(far.path.filename().u16string())).arg(static_cast<double>(far.distance));
+        farLodEdit_->setText(levels.join(", "));
+        farLodEdit_->setEnabled(m != nullptr);
+    }
     lodDistanceSpin_->blockSignals(true);
     lodDistanceSpin_->setValue(m ? m->lodDistance : 80.0);
     lodDistanceSpin_->blockSignals(false);

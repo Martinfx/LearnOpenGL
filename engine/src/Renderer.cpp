@@ -836,11 +836,8 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         const bool cellTiny = shadowMinCaster_ > 0.0f && cell.maxDiagonal < shadowMinCaster_;
         if (cellFar || cellTiny || !visible(cell.bounds) || occluded(cell.bounds)) {
             if (mainPass)
-                for (std::uint32_t i : cell.models) {
-                    keepAliveOnce(scene.models[i]); // stays uploaded while out of view
-                    if (scene.models[i].lod)
-                        keepAliveOnce(*scene.models[i].lod);
-                }
+                for (std::uint32_t i : cell.models)
+                    keepAliveLods(scene.models[i], nullptr); // stays uploaded while out of view
             culled_ += static_cast<int>(cell.models.size());
             continue;
         }
@@ -858,11 +855,8 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
             skip = grid.random[i] > keep || (shadowPass && (shadowCascade_ > 0 || drawDistance_ > quality_.detailShadowDistance));
         }
         if (skip || !visible(modelBounds) || occluded(modelBounds)) {
-            if (mainPass) {
-                keepAliveOnce(model);
-                if (model.lod)
-                    keepAliveOnce(*model.lod);
-            }
+            if (mainPass)
+                keepAliveLods(model, nullptr);
             ++culled_;
             continue;
         }
@@ -870,12 +864,11 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         // Distance LOD: the simpler copy beyond lodDistance (the other one stays uploaded).
         const Model* draw = &model;
         if (model.lod) {
-            const bool far = shadowCascade_ > 0 || (shadowPass && grid.detail[i]) || // shadows: the simple copy is enough
-                             glm::distance(view.cameraPosition, (modelBounds.min + modelBounds.max) * 0.5f) >
-                                 model.lodDistance * quality_.lodScale;
-            draw = far ? model.lod.get() : &model;
+            draw = &model.lodFor(glm::distance(view.cameraPosition, (modelBounds.min + modelBounds.max) * 0.5f), quality_.lodScale);
+            if (draw == &model && (shadowCascade_ > 0 || (shadowPass && grid.detail[i])))
+                draw = model.lod.get(); // shadows: the simple copy is enough
             if (mainPass)
-                keepAliveOnce(far ? model : *model.lod);
+                keepAliveLods(model, draw);
         }
         if (!quality_.instancing || selected || draw->skeleton || draw->parts.empty()) {
             drawModel(*draw, model.transform(), selected ? 1.0f : 0.0f);
@@ -2116,6 +2109,18 @@ void Renderer::keepTextureAlive(const Texture* tex)
     }
 }
 
+void Renderer::keepAliveLods(const Model& model, const Model* drawn)
+{
+    // Every level stays uploaded, so switching LOD never waits for an upload.
+    if (&model != drawn)
+        keepAliveOnce(model);
+    if (model.lod && model.lod.get() != drawn)
+        keepAliveOnce(*model.lod);
+    for (const Model::FarLod& far : model.farLods)
+        if (far.model && far.model.get() != drawn)
+            keepAliveOnce(*far.model);
+}
+
 void Renderer::keepAliveOnce(const Model& model)
 {
     // Copies share their mesh list: one walk over its parts and maps per frame is enough.
@@ -2261,6 +2266,9 @@ float Renderer::preload(const Scene& scene, std::size_t& cursor, double budgetMs
         models.emplace_back(&m, d);
         if (m.lod)
             models.emplace_back(m.lod.get(), d);
+        for (const Model::FarLod& far : m.farLods)
+            if (far.model)
+                models.emplace_back(far.model.get(), d);
     }
     for (const Entity& e : scene.entities)
         if (e.model)

@@ -172,6 +172,24 @@ void testLevelWithModel()
     check(t.models.size() == modelCount && !t.models[0].parts.empty(), "model path survives save + load");
     const int panelAgain = engine::findObject(t, "Panel block");
     check(panelAgain >= 0 && t.model(panelAgain).lod && !t.model(panelAgain).lodPath.empty(), "LOD survives save + load");
+
+    // A farther LOD level: picked by distance, saved as a second `lod` line.
+    engine::Model& m = t.model(panelAgain);
+    engine::Model::FarLod far;
+    far.path = m.lodPath;
+    far.model = m.lod;
+    far.distance = 300.0f;
+    m.farLods.push_back(far);
+    check(&m.lodFor(10.0f) == &m && &m.lodFor(100.0f) == m.lod.get() && &m.lodFor(400.0f) == m.farLods[0].model.get() &&
+              &m.lodFor(150.0f, 2.0f) == &m,
+          "LOD level by distance and lod scale");
+    check(engine::saveScene(t, "with_far_lod.level", &err), "save far LOD: " + err);
+    engine::Scene u;
+    check(engine::loadScene(u, "with_far_lod.level", &err), "reload far LOD: " + err);
+    const int panelThird = engine::findObject(u, "Panel block");
+    check(panelThird >= 0 && u.model(panelThird).farLods.size() == 1 && u.model(panelThird).farLods[0].model &&
+              u.model(panelThird).farLods[0].distance == 300.0f && u.model(panelThird).lodDistance == 90.0f,
+          "far LOD survives save + load");
 }
 
 void testRaycast()

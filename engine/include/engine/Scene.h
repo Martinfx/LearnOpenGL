@@ -167,6 +167,15 @@ struct Model {
     std::shared_ptr<const Model> lod;
     std::filesystem::path lodPath;    // absolute, empty = no LOD
     float lodDistance = 80.0f;        // metres from the camera to the model's center
+    // Further, even simpler levels (level lines: more `lod` lines, increasing distance).
+    struct FarLod {
+        std::filesystem::path path;   // absolute
+        std::shared_ptr<const Model> model;
+        float distance = 200.0f;
+    };
+    std::vector<FarLod> farLods;
+    // Level drawn at `distance` metres from the center (lodScale multiplies the distances).
+    const Model& lodFor(float distance, float lodScale = 1.0f) const;
     // Performance: not drawn beyond cullDistance metres from the camera (0 = always),
     // and no physics body when collision is off (grass, small debris, leaves: walk and shoot through).
     float cullDistance = 0.0f;

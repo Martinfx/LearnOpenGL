@@ -164,6 +164,9 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
             out << "  material_slot " << std::quoted(slot) << ' ' << std::quoted(relative(path)) << '\n';
         if (!m.lodPath.empty())
             out << "  lod " << std::quoted(relative(m.lodPath)) << ' ' << m.lodDistance << '\n';
+        if (!m.lodPath.empty())
+            for (const Model::FarLod& far : m.farLods)
+                out << "  lod " << std::quoted(relative(far.path)) << ' ' << far.distance << '\n';
         if (m.cullDistance > 0.0f)
             out << "  cull_distance " << m.cullDistance << '\n';
         if (!m.collision)
@@ -420,17 +423,26 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
             ok = lastObject == LastObject::Model && static_cast<bool>(ls >> std::quoted(path));
             if (ok) {
                 Model& m = result.models.back();
-                float distance = 80.0f;
-                if (ls >> distance)
-                    m.lodDistance = distance;
+                float distance = m.lodPath.empty() ? 80.0f : std::max(m.lodDistance, m.farLods.empty() ? 0.0f : m.farLods.back().distance) * 2.0f;
+                ls >> distance;
                 std::filesystem::path p = pathFromUtf8(path);
                 if (p.is_relative())
                     p = std::filesystem::absolute(file).parent_path() / p;
                 auto lod = std::make_shared<Model>();
                 std::string modelError;
-                m.lodPath = p.lexically_normal();
-                if (loadCached(*lod, m.lodPath, &modelError))
-                    m.lod = std::move(lod);
+                if (!m.lodPath.empty()) { // second and later `lod` lines: farther levels
+                    Model::FarLod far;
+                    far.path = p.lexically_normal();
+                    far.distance = distance;
+                    if (loadCached(*lod, far.path, &modelError))
+                        far.model = std::move(lod);
+                    m.farLods.push_back(std::move(far));
+                } else {
+                    m.lodDistance = distance;
+                    m.lodPath = p.lexically_normal();
+                    if (loadCached(*lod, m.lodPath, &modelError))
+                        m.lod = std::move(lod);
+                }
                 // A missing LOD file is not fatal: the full model is drawn at every distance.
             }
         } else if (key == "transform") {
@@ -619,6 +631,18 @@ Aabb Box::bounds() const
         box.max = glm::max(box.max, p);
     }
     return box;
+}
+
+const Model& Model::lodFor(float distance, float lodScale) const
+{
+    const Model* pick = this;
+    if (lod && distance > lodDistance * lodScale)
+        pick = lod.get();
+    if (pick != this)
+        for (const FarLod& far : farLods)
+            if (far.model && distance > far.distance * lodScale)
+                pick = far.model.get();
+    return *pick;
 }
 
 Aabb Model::bounds() const

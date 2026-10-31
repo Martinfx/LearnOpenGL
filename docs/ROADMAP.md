@@ -72,7 +72,8 @@ Podrobně ve výkonové roadmapě vlákna "Vytvořit 3D FPS engine"; tady jen sh
 - [x] Prostorová mřížka modelů (32m buňky se sjednocenými hranicemi, culling po buňkách), řídnutí trávy podle vzdálenosti, stíny detailů jen zblízka, lodScale v presetech (Skrunda-1: 7,9 → 4,4 M trojúhelníků)
 - [x] Release jako výchozí build type (build bez optimalizací je 10–50× pomalejší)
 - [x] Occlusion culling: max-depth kopie depth pre-passu (160 px), asynchronní readback přes PBO + fence, CPU test buněk a modelů; přepínač v doku Frame, `FPS_ENGINE_NO_OCCLUSION=1`
-- [ ] Víc LOD úrovní na model (`lod` víckrát), impostory pro vzdálené stromy
+- [x] Víc LOD úrovní na model (`lod` víckrát s rostoucí vzdáleností; v editoru Details > Far LODs)
+- [ ] Impostory pro vzdálené stromy
 - [ ] Data entit a modelů v souvislých polích (ECS-like: transformace, hranice a flagy v SoA), paralelní update přes JobSystem
 - [ ] Snímek jako graf úloh v JobSystemu (animace, culling, skripty paralelně), pak render vlákno
 
