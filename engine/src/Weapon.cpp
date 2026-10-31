@@ -35,6 +35,30 @@ ShotHit traceShot(const Scene& scene, const PhysicsWorld& physics, glm::vec3 ori
     return best;
 }
 
+ShotHit traceMelee(const Scene& scene, const PhysicsWorld& physics, glm::vec3 origin, glm::vec3 dir, float range,
+                   float arcDegrees)
+{
+    dir = glm::normalize(dir);
+    const glm::vec3 up(0.0f, 1.0f, 0.0f);
+    glm::vec3 side = glm::cross(dir, up);
+    side = glm::length(side) > 1e-4f ? glm::normalize(side) : glm::vec3(1.0f, 0.0f, 0.0f);
+    constexpr int kRays = 7;
+    ShotHit best;
+    for (int i = 0; i < kRays; ++i) {
+        const float t = kRays > 1 ? static_cast<float>(i) / (kRays - 1) * 2.0f - 1.0f : 0.0f;
+        const float angle = glm::radians(arcDegrees) * 0.5f * t;
+        const glm::vec3 d = glm::normalize(dir * std::cos(angle) + side * std::sin(angle));
+        const ShotHit hit = traceShot(scene, physics, origin, d, range);
+        if (!hit.hit)
+            continue;
+        const bool better = !best.hit || (hit.entity >= 0 && best.entity < 0) ||
+                            ((hit.entity >= 0) == (best.entity >= 0) && hit.distance < best.distance);
+        if (better)
+            best = hit;
+    }
+    return best;
+}
+
 Weapon::Weapon()
 {
     ammo_ = settings.magazineSize;
@@ -70,7 +94,8 @@ bool saveWeaponFile(const WeaponSettings& w, const std::filesystem::path& file, 
         const auto rel = std::filesystem::absolute(w.modelPath).lexically_relative(std::filesystem::absolute(file).parent_path());
         model = pathToUtf8(rel.empty() ? std::filesystem::absolute(w.modelPath) : rel);
     }
-    out << std::setprecision(6) << "# FPS engine weapon\nversion 1\n"
+    out << std::setprecision(6) << "# FPS engine weapon\nversion 2\n"
+        << "type " << (w.melee() ? "melee" : "firearm") << '\n'
         << "name " << std::quoted(w.name) << '\n'
         << "model " << std::quoted(model) << '\n'
         << "damage " << w.damage << '\n'
@@ -82,7 +107,13 @@ bool saveWeaponFile(const WeaponSettings& w, const std::filesystem::path& file, 
         << "spread " << w.spreadDegrees << '\n'
         << "range " << w.range << '\n'
         << "view_offset " << w.viewOffset.x << ' ' << w.viewOffset.y << ' ' << w.viewOffset.z << '\n'
-        << "view_scale " << w.viewScale << '\n';
+        << "view_scale " << w.viewScale << '\n'
+        << "view_rotation " << w.viewRotation.x << ' ' << w.viewRotation.y << ' ' << w.viewRotation.z << '\n'
+        << "muzzle " << w.muzzle.x << ' ' << w.muzzle.y << ' ' << w.muzzle.z << '\n'
+        << "anim_idle " << std::quoted(w.animIdle) << '\n'
+        << "anim_fire " << std::quoted(w.animFire) << '\n'
+        << "anim_reload " << std::quoted(w.animReload) << '\n'
+        << "anim_draw " << std::quoted(w.animDraw) << '\n';
     return static_cast<bool>(out);
 }
 
@@ -104,7 +135,12 @@ bool loadWeaponFile(WeaponSettings& weapon, const std::filesystem::path& file, s
         if (!(ls >> key) || key[0] == '#')
             continue;
         bool ok = true;
-        if (key == "version") { int v = 0; ok = static_cast<bool>(ls >> v) && v == 1; }
+        if (key == "version") { int v = 0; ok = static_cast<bool>(ls >> v) && v >= 1 && v <= 2; }
+        else if (key == "type") {
+            std::string t;
+            ok = static_cast<bool>(ls >> t) && (t == "firearm" || t == "melee");
+            w.type = t == "melee" ? WeaponSettings::Type::Melee : WeaponSettings::Type::Firearm;
+        }
         else if (key == "name") ok = static_cast<bool>(ls >> std::quoted(w.name));
         else if (key == "model") {
             std::string m;
@@ -126,6 +162,12 @@ bool loadWeaponFile(WeaponSettings& weapon, const std::filesystem::path& file, s
         else if (key == "range") ok = static_cast<bool>(ls >> w.range);
         else if (key == "view_offset") ok = static_cast<bool>(ls >> w.viewOffset.x >> w.viewOffset.y >> w.viewOffset.z);
         else if (key == "view_scale") ok = static_cast<bool>(ls >> w.viewScale);
+        else if (key == "view_rotation") ok = static_cast<bool>(ls >> w.viewRotation.x >> w.viewRotation.y >> w.viewRotation.z);
+        else if (key == "anim_idle") ok = static_cast<bool>(ls >> std::quoted(w.animIdle));
+        else if (key == "anim_fire") ok = static_cast<bool>(ls >> std::quoted(w.animFire));
+        else if (key == "anim_reload") ok = static_cast<bool>(ls >> std::quoted(w.animReload));
+        else if (key == "anim_draw") ok = static_cast<bool>(ls >> std::quoted(w.animDraw));
+        else if (key == "muzzle") ok = static_cast<bool>(ls >> w.muzzle.x >> w.muzzle.y >> w.muzzle.z);
         // Unknown keys are ignored so newer files still load.
         if (!ok) {
             if (error)
@@ -145,6 +187,20 @@ int Weapon::update(float dt, bool triggerHeld, bool reloadPressed)
     cooldown_ = std::max(0.0f, cooldown_ - dt);
     flashTimer_ = std::max(0.0f, flashTimer_ - dt);
     recoil_ = std::max(0.0f, recoil_ - dt * 8.0f);
+    swingTimer_ = std::max(0.0f, swingTimer_ - dt);
+
+    if (settings.melee()) {
+        const bool pulled = triggerHeld && (settings.automatic || !triggerWasHeld_);
+        triggerWasHeld_ = triggerHeld;
+        ammo_ = 0;
+        reloadTimer_ = 0.0f;
+        if (!pulled || cooldown_ > 0.0f)
+            return 0;
+        cooldown_ = settings.fireInterval;
+        swingTimer_ = settings.fireInterval;
+        firedEvent_ = true;
+        return 1;
+    }
 
     if (reloadTimer_ > 0.0f) {
         reloadTimer_ -= dt;
@@ -157,6 +213,7 @@ int Weapon::update(float dt, bool triggerHeld, bool reloadPressed)
     if ((reloadPressed && ammo_ < settings.magazineSize) || (triggerHeld && ammo_ == 0)) {
         triggerWasHeld_ = triggerHeld;
         reloadTimer_ = settings.reloadTime;
+        reloadEvent_ = true;
         return 0;
     }
 
@@ -170,8 +227,50 @@ int Weapon::update(float dt, bool triggerHeld, bool reloadPressed)
         ++shots;
         recoil_ = 1.0f;
         flashTimer_ = 0.05f;
+        firedEvent_ = true;
     }
     return shots;
+}
+
+void Weapon::drawn()
+{
+    drawEvent_ = true;
+}
+
+void Weapon::animate(float dt)
+{
+    const Skeleton* skel = viewModel ? viewModel->skeleton.get() : nullptr;
+    if (!skel || skel->clips.empty()) {
+        firedEvent_ = reloadEvent_ = drawEvent_ = false;
+        return;
+    }
+    auto play = [&](const std::string& name, bool loop, float stretchTo, float fade) {
+        if (name.empty())
+            return false;
+        const int clip = skel->findClip(name);
+        if (clip < 0)
+            return false;
+        const float duration = skel->clips[static_cast<std::size_t>(clip)].duration;
+        const float speed = stretchTo > 0.0f && duration > 0.0f ? duration / stretchTo : 1.0f;
+        return animator.play(*skel, name, loop, speed, fade, true);
+    };
+    if (reloadEvent_)
+        play(settings.animReload, false, settings.reloadTime, 0.1f);
+    else if (firedEvent_)
+        play(settings.animFire, false, settings.melee() ? settings.fireInterval : 0.0f, 0.03f);
+    else if (drawEvent_)
+        play(settings.animDraw, false, 0.0f, 0.0f);
+    firedEvent_ = reloadEvent_ = drawEvent_ = false;
+    if (animator.current.clip < 0 || animator.finished(*skel)) {
+        if (!play(settings.animIdle, true, 0.0f, 0.15f) && animator.current.clip < 0)
+            animator.play(*skel, skel->clips.front().name, true);
+    }
+    animator.update(*skel, dt);
+}
+
+float Weapon::swing() const
+{
+    return swingTimer_ > 0.0f ? 1.0f - swingTimer_ / settings.fireInterval : 0.0f;
 }
 
 float Weapon::reloadProgress() const

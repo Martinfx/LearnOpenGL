@@ -524,7 +524,7 @@ void Renderer::renderOverlay(const RenderView& view, const OverlayPass& pass)
     glUniform1i(locSkinned_, 0);
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, jointBuffer_);
     if (pass.model)
-        drawModel(*pass.model, pass.modelTransform, 0.0f);
+        drawModel(*pass.model, pass.modelTransform, 0.0f, pass.animator);
     for (const OverlayBox& b : pass.boxes)
         drawCube(glm::scale(glm::translate(glm::mat4(1.0f), b.center), b.size), b.color, 0.0f, b.emissive);
     (void)view;

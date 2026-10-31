@@ -37,6 +37,7 @@ struct OverlayPass {
     glm::mat4 projection{1.0f};
     glm::vec3 sunDirectionViewSpace{0.0f, -1.0f, 0.0f};
     const Model* model = nullptr;
+    const Animator* animator = nullptr; // pose of an animated view model (arms)
     glm::mat4 modelTransform{1.0f};
     std::vector<OverlayBox> boxes;
 };

@@ -98,10 +98,20 @@ glm::mat4 weaponTransform(const engine::Weapon& weapon, float time, float moveSp
     offset.z += weapon.recoil() * 0.05f;
     const float reload = weapon.reloading() ? std::sin(weapon.reloadProgress() * 3.14159265f) : 0.0f;
     offset.y -= reload * 0.12f;
+    // Melee swing: a quick slash from right to left and forward, then back.
+    const float swing = std::sin(weapon.swing() * 3.14159265f);
+    offset.x -= swing * 0.16f;
+    offset.z -= swing * 0.18f;
+    offset.y += swing * 0.03f;
 
     glm::mat4 m = glm::translate(glm::mat4(1.0f), offset);
-    m = glm::rotate(m, glm::radians(weapon.recoil() * 5.0f + reload * 20.0f), glm::vec3(1, 0, 0));
-    m = glm::rotate(m, glm::radians(180.0f), glm::vec3(0, 1, 0)); // model barrel points +Z
+    m = glm::rotate(m, glm::radians(swing * 55.0f), glm::vec3(0, 1, 0));
+    m = glm::rotate(m, glm::radians(weapon.recoil() * 5.0f + reload * 20.0f - swing * 25.0f), glm::vec3(1, 0, 0));
+    // Turn the model so it points into the screen (glTF guns usually point +Z).
+    const glm::vec3 r = weapon.settings.viewRotation;
+    m = glm::rotate(m, glm::radians(r.y), glm::vec3(0, 1, 0));
+    m = glm::rotate(m, glm::radians(r.x), glm::vec3(1, 0, 0));
+    m = glm::rotate(m, glm::radians(r.z), glm::vec3(0, 0, 1));
     return glm::scale(m, glm::vec3(weapon.settings.viewScale));
 }
 
@@ -260,8 +270,10 @@ int main(int argc, char** argv)
             // Lower the current weapon, swap, raise the new one (0.15 s each way).
             if (next != current) {
                 lowered = std::min(1.0f, lowered + dt / 0.15f);
-                if (lowered >= 1.0f)
+                if (lowered >= 1.0f) {
                     current = next;
+                    weapons[current].drawn();
+                }
             } else {
                 lowered = std::max(0.0f, lowered - dt / 0.15f);
             }
@@ -269,10 +281,16 @@ int main(int argc, char** argv)
             const bool ready = next == current && lowered <= 0.0f;
             const int shots = weapon.update(dt, ready && input.isDown(engine::Action::Fire),
                                             ready && input.isDown(engine::Action::Reload));
-            for (int s = 0; s < shots * weapon.settings.pellets; ++s) {
+            weapon.animate(dt);
+            const int rays = weapon.settings.melee() ? shots : shots * weapon.settings.pellets;
+            for (int s = 0; s < rays; ++s) {
                 const glm::vec3 eye = player.eye();
-                const engine::ShotHit hit = engine::traceShot(scene, physics, eye, weapon.spreadDirection(camera.forward()),
-                                                              weapon.settings.range);
+                const engine::ShotHit hit =
+                    weapon.settings.melee()
+                        ? engine::traceMelee(scene, physics, eye, camera.forward(), weapon.settings.range,
+                                             weapon.settings.spreadDegrees)
+                        : engine::traceShot(scene, physics, eye, weapon.spreadDirection(camera.forward()),
+                                            weapon.settings.range);
                 if (!hit.hit)
                     continue;
                 impacts.push_back({hit.point, 0.0f, hit.entity >= 0});
@@ -323,8 +341,9 @@ int main(int argc, char** argv)
             const glm::vec3 vel = player.velocity();
             const float moveSpeed = player.grounded() ? std::sqrt(vel.x * vel.x + vel.z * vel.z) : 0.0f;
             overlay.modelTransform = weaponTransform(weapon, static_cast<float>(now), moveSpeed, lowered);
-            if (weapon.flash()) {
-                const glm::vec3 muzzle = glm::vec3(overlay.modelTransform * glm::vec4(0.0f, 0.45f, 1.35f, 1.0f));
+            overlay.animator = &weapon.animator;
+            if (weapon.flash() && !weapon.settings.melee()) {
+                const glm::vec3 muzzle = glm::vec3(overlay.modelTransform * glm::vec4(weapon.settings.muzzle, 1.0f));
                 overlay.boxes.push_back({muzzle, glm::vec3(0.05f), glm::vec3(1.0f, 0.85f, 0.35f), true});
             }
             const float gap = 0.008f, len = 0.012f, thick = 0.0016f;
@@ -342,10 +361,14 @@ int main(int argc, char** argv)
         fpsTimer += frameTime;
         if (fpsTimer >= 0.5) {
             char title[256];
-            std::snprintf(title, sizeof title, "FPS Engine | HP %.0f | [%zu] %s %d/%d%s | Kills %d | %.0f FPS | %.2f ms | pos %.1f %.1f %.1f%s",
-                          scripts.playerHealth(), current + 1, weapons[current].settings.name.c_str(),
-                          weapons[current].ammo(), weapons[current].settings.magazineSize,
-                          weapons[current].reloading() ? " (reloading)" : "", kills,
+            char ammo[32];
+            if (weapons[current].settings.melee())
+                std::snprintf(ammo, sizeof ammo, "melee");
+            else
+                std::snprintf(ammo, sizeof ammo, "%d/%d%s", weapons[current].ammo(), weapons[current].settings.magazineSize,
+                              weapons[current].reloading() ? " (reloading)" : "");
+            std::snprintf(title, sizeof title, "FPS Engine | HP %.0f | [%zu] %s %s | Kills %d | %.0f FPS | %.2f ms | pos %.1f %.1f %.1f%s",
+                          scripts.playerHealth(), current + 1, weapons[current].settings.name.c_str(), ammo, kills,
                           fpsFrames / fpsTimer, 1000.0 * fpsTimer / fpsFrames,
                           player.feet().x, player.feet().y, player.feet().z, player.grounded() ? "" : " (air)");
             glfwSetWindowTitle(window, title);

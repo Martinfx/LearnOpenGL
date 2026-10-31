@@ -1,0 +1,21 @@
+# FPS engine weapon
+version 2
+type firearm
+name "SMG"
+model "../models/weapons/blaster-repeater.glb"
+damage 11
+fire_interval 0.07
+automatic 1
+pellets 1
+magazine 30
+reload_time 1.8
+spread 2.2
+range 100
+view_offset 0.16 -0.16 -0.34
+view_scale 0.13
+view_rotation 0 180 0
+muzzle 0 0.45 1.35
+anim_idle ""
+anim_fire ""
+anim_reload ""
+anim_draw ""

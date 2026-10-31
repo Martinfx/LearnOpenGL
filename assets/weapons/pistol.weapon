@@ -1,0 +1,21 @@
+# FPS engine weapon
+version 2
+type firearm
+name "Pistol"
+model "../models/weapons/blaster.glb"
+damage 24
+fire_interval 0.14
+automatic 0
+pellets 1
+magazine 12
+reload_time 1.3
+spread 0.8
+range 120
+view_offset 0.13 -0.12 -0.3
+view_scale 0.075
+view_rotation 0 180 0
+muzzle 0 0.45 1.35
+anim_idle ""
+anim_fire ""
+anim_reload ""
+anim_draw ""

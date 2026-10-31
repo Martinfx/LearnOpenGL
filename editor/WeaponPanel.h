@@ -3,9 +3,13 @@
 #include <engine/Weapon.h>
 
 #include <QWidget>
+#include <array>
 #include <map>
 
 class QCheckBox;
+class QComboBox;
+class QFormLayout;
+class QLabel;
 class QDoubleSpinBox;
 class QLineEdit;
 class QListWidget;
@@ -32,6 +36,8 @@ private:
     void createNew();
     void removeCurrent();
     void move(int delta);
+    void updateTypeRows();
+    void fillClipNames();
 
     engine::Scene* scene_;
     std::map<std::filesystem::path, engine::WeaponSettings> cache_;
@@ -40,6 +46,7 @@ private:
 
     QListWidget* list_ = nullptr;
     QWidget* form_ = nullptr;
+    QComboBox* type_ = nullptr;
     QLineEdit* name_ = nullptr;
     QLineEdit* model_ = nullptr;
     QDoubleSpinBox* damage_ = nullptr;
@@ -52,4 +59,13 @@ private:
     QDoubleSpinBox* range_ = nullptr;
     Vec3Editor* viewOffset_ = nullptr;
     QDoubleSpinBox* viewScale_ = nullptr;
+    Vec3Editor* viewRotation_ = nullptr;
+    Vec3Editor* muzzle_ = nullptr;
+    std::array<QComboBox*, 4> clips_{};  // idle, fire, reload, draw
+    QLabel* clipInfo_ = nullptr;
+    std::array<QWidget*, 5> firearmRows_{}; // rows hidden for melee weapons
+    QFormLayout* formLayout_ = nullptr;
+    QLabel* intervalLabel_ = nullptr;
+    QLabel* spreadLabel_ = nullptr;
+    QLabel* damageLabel_ = nullptr;
 };

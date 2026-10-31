@@ -2,6 +2,9 @@
 version 4
 player_start 0 0 8
 sun -0.4 -1 -0.3
+weapon "../weapons/knife.weapon"
+weapon "../weapons/pistol.weapon"
+weapon "../weapons/smg.weapon"
 weapon "../weapons/repeater.weapon"
 weapon "../weapons/blaster.weapon"
 box "Floor" 0 -0.5 0 40 1 40 0.62 0.6 0.56

@@ -121,9 +121,18 @@ Všechno, co hra používá, se mění v editoru a ukládá do souborů úrovně
 
 ## Zbraně
 
-Každá zbraň je soubor `.weapon` (model, poškození, kadence, automatická/poloautomatická, broky,
-zásobník, přebíjení, rozptyl, dostřel, poloha v ruce). Ukázkové: Repeater (automat) a Scatter Blaster
-(brokovnice). Modely jsou z Kenney Blaster Kit pod licencí CC0, viz `assets/models/weapons/CREDITS.md`.
+Každá zbraň je soubor `.weapon` (typ střelná / chladná, model, poškození, kadence, automatická/poloautomatická,
+broky, zásobník, přebíjení, rozptyl, dostřel, poloha, natočení a měřítko v ruce, poloha záblesku). Výzbroj
+testovací úrovně: 1 nůž, 2 pistole, 3 samopal, 4 Repeater, 5 Scatter Blaster (brokovnice).
+
+- **Nůž** (`type melee`): bez nábojů a přebíjení, `fire_interval` je doba seku, `spread` šířka oblouku
+  a `range` dosah (1,8 m). Sek trefí nejbližšího nepřítele v oblouku i vedle zdi.
+- **Animované ruce**: když je model zbraně glTF s kostrou (ruce + zbraň), vyberou se v editoru klipy
+  `anim_idle`, `anim_fire`, `anim_reload` a `anim_draw`. Přebíjení a sek se natáhnou na nastavený čas.
+  Bez klipů se zbraň hýbe procedurálně (houpání při chůzi, zpětný ráz, přebití, sek).
+
+Pistole a samopal zatím používají modely z Kenney Blaster Kit (CC0, `assets/models/weapons/CREDITS.md`).
+Nůž je dočasný model z `tools/make_knife.py`. Všechny se vymění za realistické modely, jakmile budou stažené.
 
 ## Modely z Blenderu
 

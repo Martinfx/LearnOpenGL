@@ -3,6 +3,7 @@
 #include "AssetPaths.h"
 
 #include <QCheckBox>
+#include <QComboBox>
 #include <QCoreApplication>
 #include <QDir>
 #include <QDoubleSpinBox>
@@ -79,22 +80,53 @@ WeaponPanel::WeaponPanel(engine::Scene* scene, QWidget* parent) : QWidget(parent
     magazine_->setRange(1, 1000);
     reload_ = spin(form_, 0, 10, 0.1, 2, tr(" s"));
     spread_ = spin(form_, 0, 45, 0.1, 2, tr(" °"));
-    range_ = spin(form_, 1, 5000, 10, 0, tr(" m"));
+    range_ = spin(form_, 0.5, 5000, 0.5, 1, tr(" m"));
     viewOffset_ = new Vec3Editor(-2.0, 2.0, 0.01, form_);
     viewScale_ = spin(form_, 0.001, 10, 0.01, 3, QString());
 
+    type_ = new QComboBox(form_);
+    type_->addItems({tr("Firearm (hitscan)"), tr("Melee (knife, no ammo)")});
+    viewRotation_ = new Vec3Editor(-360.0, 360.0, 5.0, form_);
+    viewRotation_->setToolTip(tr("Pitch, yaw, roll in degrees: turns the model so it points into the screen"));
+    muzzle_ = new Vec3Editor(-100.0, 100.0, 0.05, form_);
+    muzzle_->setToolTip(tr("Muzzle flash position in model units"));
+    clipInfo_ = new QLabel(form_);
+    clipInfo_->setWordWrap(true);
+    const char* clipLabels[4] = {"Idle clip", "Fire / swing clip", "Reload clip", "Draw clip"};
+    damageLabel_ = new QLabel(tr("Damage"), form_);
+    intervalLabel_ = new QLabel(tr("Fire interval"), form_);
+    spreadLabel_ = new QLabel(tr("Spread"), form_);
+
+    form->addRow(tr("Type"), type_);
     form->addRow(tr("Name"), name_);
     form->addRow(tr("Model (glTF)"), modelRow);
-    form->addRow(tr("Damage"), damage_);
-    form->addRow(tr("Fire interval"), interval_);
+    form->addRow(damageLabel_, damage_);
+    form->addRow(intervalLabel_, interval_);
     form->addRow(tr("Automatic"), automatic_);
     form->addRow(tr("Pellets"), pellets_);
     form->addRow(tr("Magazine"), magazine_);
     form->addRow(tr("Reload time"), reload_);
-    form->addRow(tr("Spread"), spread_);
+    form->addRow(spreadLabel_, spread_);
     form->addRow(tr("Range"), range_);
+    form->addRow(new QLabel(tr("<b>First-person view</b>"), form_));
     form->addRow(tr("View offset"), viewOffset_);
+    form->addRow(tr("View rotation"), viewRotation_);
     form->addRow(tr("View scale"), viewScale_);
+    form->addRow(tr("Muzzle"), muzzle_);
+    form->addRow(new QLabel(tr("<b>Arms / weapon animation</b>"), form_));
+    form->addRow(QString(), clipInfo_);
+    for (int i = 0; i < 4; ++i) {
+        clips_[static_cast<std::size_t>(i)] = new QComboBox(form_);
+        clips_[static_cast<std::size_t>(i)]->setEditable(true);
+        form->addRow(tr(clipLabels[i]), clips_[static_cast<std::size_t>(i)]);
+        connect(clips_[static_cast<std::size_t>(i)], &QComboBox::currentTextChanged, this, &WeaponPanel::edited);
+    }
+    firearmRows_[0] = pellets_;
+    firearmRows_[1] = magazine_;
+    firearmRows_[2] = reload_;
+    firearmRows_[3] = muzzle_;
+    firearmRows_[4] = clips_[2];
+    formLayout_ = form;
     layout->addWidget(form_);
     layout->addStretch(1);
 
@@ -115,6 +147,7 @@ WeaponPanel::WeaponPanel(engine::Scene* scene, QWidget* parent) : QWidget(parent
         w->modelPath = toPath(path);
         model_->setText(QFileInfo(path).fileName());
         edited();
+        fillClipNames();
     });
     connect(name_, &QLineEdit::editingFinished, this, &WeaponPanel::edited);
     for (QDoubleSpinBox* s : {damage_, interval_, reload_, spread_, range_, viewScale_})
@@ -123,6 +156,12 @@ WeaponPanel::WeaponPanel(engine::Scene* scene, QWidget* parent) : QWidget(parent
         connect(s, &QSpinBox::valueChanged, this, &WeaponPanel::edited);
     connect(automatic_, &QCheckBox::toggled, this, &WeaponPanel::edited);
     connect(viewOffset_, &Vec3Editor::valueEdited, this, &WeaponPanel::edited);
+    connect(viewRotation_, &Vec3Editor::valueEdited, this, &WeaponPanel::edited);
+    connect(muzzle_, &Vec3Editor::valueEdited, this, &WeaponPanel::edited);
+    connect(type_, &QComboBox::currentIndexChanged, this, [this] {
+        edited();
+        updateTypeRows();
+    });
 
     refresh();
 }
@@ -163,6 +202,7 @@ void WeaponPanel::showCurrent()
     if (!w)
         return;
     updating_ = true;
+    type_->setCurrentIndex(w->melee() ? 1 : 0);
     name_->setText(QString::fromStdString(w->name));
     model_->setText(w->modelPath.empty() ? QString() : toQString(w->modelPath.filename()));
     model_->setToolTip(toQString(w->modelPath));
@@ -176,7 +216,55 @@ void WeaponPanel::showCurrent()
     range_->setValue(w->range);
     viewOffset_->setValue(w->viewOffset);
     viewScale_->setValue(w->viewScale);
+    viewRotation_->setValue(w->viewRotation);
+    muzzle_->setValue(w->muzzle);
+    fillClipNames();
     updating_ = false;
+    updateTypeRows();
+}
+
+// Clip combos list the animations of the view model (e.g. arms holding the weapon).
+void WeaponPanel::fillClipNames()
+{
+    const engine::WeaponSettings* w = current();
+    if (!w)
+        return;
+    const bool wasUpdating = updating_;
+    updating_ = true;
+    QStringList names;
+    if (!w->modelPath.empty()) {
+        std::string error;
+        if (auto model = engine::loadCharacterModel(w->modelPath, &error); model && model->skeleton)
+            for (const auto& clip : model->skeleton->clips)
+                names << QString::fromStdString(clip.name);
+    }
+    clipInfo_->setText(names.isEmpty()
+                           ? tr("The model has no animations. Use a glTF with arms and clips to animate firing, "
+                                "reloading and drawing; otherwise the weapon is moved procedurally.")
+                           : tr("%n clip(s) in the model. Reload and swing clips are stretched to their times.", nullptr,
+                                static_cast<int>(names.size())));
+    const std::string* values[4] = {&w->animIdle, &w->animFire, &w->animReload, &w->animDraw};
+    for (std::size_t i = 0; i < 4; ++i) {
+        QComboBox* c = clips_[i];
+        c->clear();
+        c->addItem(QString());
+        c->addItems(names);
+        c->setCurrentText(QString::fromStdString(*values[i]));
+    }
+    updating_ = wasUpdating;
+}
+
+// Melee weapons have no ammo: hide the firearm-only rows and rename the shared ones.
+void WeaponPanel::updateTypeRows()
+{
+    const bool melee = type_->currentIndex() == 1;
+    for (QWidget* row : firearmRows_)
+        formLayout_->setRowVisible(row, !melee);
+    damageLabel_->setText(melee ? tr("Damage per hit") : tr("Damage"));
+    damage_->setSuffix(melee ? QString() : tr(" per pellet"));
+    intervalLabel_->setText(melee ? tr("Swing time") : tr("Fire interval"));
+    spreadLabel_->setText(melee ? tr("Swing arc") : tr("Spread"));
+    automatic_->setText(melee ? tr("Hold to keep swinging") : tr("Hold to fire"));
 }
 
 void WeaponPanel::edited()
@@ -195,6 +283,13 @@ void WeaponPanel::edited()
     w->range = static_cast<float>(range_->value());
     w->viewOffset = viewOffset_->value();
     w->viewScale = static_cast<float>(viewScale_->value());
+    w->type = type_->currentIndex() == 1 ? engine::WeaponSettings::Type::Melee : engine::WeaponSettings::Type::Firearm;
+    w->viewRotation = viewRotation_->value();
+    w->muzzle = muzzle_->value();
+    w->animIdle = clips_[0]->currentText().toStdString();
+    w->animFire = clips_[1]->currentText().toStdString();
+    w->animReload = clips_[2]->currentText().toStdString();
+    w->animDraw = clips_[3]->currentText().toStdString();
     modified_[scene_->loadout[static_cast<std::size_t>(list_->currentRow())]] = true;
     list_->currentItem()->setText(QString("%1  %2").arg(list_->currentRow() + 1).arg(name_->text()));
     emit loadoutChanged();

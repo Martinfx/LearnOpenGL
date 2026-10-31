@@ -527,7 +527,10 @@ void MainWindow::buildDocks()
     connect(weapons_, &WeaponPanel::loadoutChanged, this, &MainWindow::markDirty);
     auto* weaponsDock = new QDockWidget(tr("Weapons"), this);
     weaponsDock->setObjectName("weapons");
-    weaponsDock->setWidget(weapons_);
+    auto* weaponsScroll = new QScrollArea(weaponsDock);
+    weaponsScroll->setWidget(weapons_);
+    weaponsScroll->setWidgetResizable(true);
+    weaponsDock->setWidget(weaponsScroll);
     addDockWidget(Qt::RightDockWidgetArea, weaponsDock);
     tabifyDockWidget(propsDock, weaponsDock);
     propsDock->raise();

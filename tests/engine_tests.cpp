@@ -356,9 +356,9 @@ void testWeaponFilesAndLoadout()
     engine::Scene level;
     std::string err;
     check(engine::loadScene(level, ENGINE_TEST_ASSETS "/levels/test.level", &err), "load level: " + err);
-    check(level.loadout.size() == 2, "test level gives the player two weapons");
+    check(level.loadout.size() == 5, "test level gives the player knife, pistol, SMG, repeater and blaster");
     engine::WeaponSettings blaster;
-    check(engine::loadWeaponFile(blaster, level.loadout.at(1), &err), "load blaster.weapon: " + err);
+    check(engine::loadWeaponFile(blaster, level.loadout.at(4), &err), "load blaster.weapon: " + err);
     check(blaster.name == "Scatter Blaster" && blaster.pellets == 8 && !blaster.automatic, "blaster is a semi-auto shotgun");
     check(std::filesystem::exists(blaster.modelPath), "weapon model path resolves next to the .weapon file");
 
@@ -367,6 +367,50 @@ void testWeaponFilesAndLoadout()
     engine::WeaponSettings copy;
     check(engine::loadWeaponFile(copy, "copy.weapon", &err) && copy.damage == 11.5f, "weapon file round trip");
     check(std::filesystem::equivalent(copy.modelPath, blaster.modelPath), "model path rewritten relative to the new file");
+}
+
+void testKnifeAndGuns()
+{
+    std::string err;
+    engine::WeaponSettings knife, pistol, smg;
+    check(engine::loadWeaponFile(knife, ENGINE_TEST_ASSETS "/weapons/knife.weapon", &err), "load knife: " + err);
+    check(engine::loadWeaponFile(pistol, ENGINE_TEST_ASSETS "/weapons/pistol.weapon", &err), "load pistol: " + err);
+    check(engine::loadWeaponFile(smg, ENGINE_TEST_ASSETS "/weapons/smg.weapon", &err), "load smg: " + err);
+    check(knife.melee() && !pistol.melee() && !smg.melee(), "knife is melee, guns are firearms");
+    check(!pistol.automatic && smg.automatic, "pistol is semi-automatic, SMG automatic");
+    check(std::filesystem::exists(knife.modelPath), "knife model exists");
+
+    // Melee: swings without ammo or reloads.
+    engine::Weapon w(knife);
+    int swings = 0;
+    for (int i = 0; i < 120; ++i) // 2 s holding the trigger, swing time 0.45 s
+        swings += w.update(1.0f / 60.0f, true, i == 30);
+    check(swings == 5, "knife swings every 0.45 s while held (" + std::to_string(swings) + ")");
+    check(!w.reloading(), "knife never reloads");
+    w.update(1.0f / 60.0f, false, false);
+    check(w.swing() > 0.0f && w.swing() < 1.0f, "swing progress during a swing");
+
+    // Melee reach and arc: hits a guard slightly to the side, not one out of reach.
+    auto s = flatFloor();
+    engine::Entity e;
+    e.position = {0.5f, 0, -1.2f};
+    s.entities.push_back(e);
+    engine::PhysicsWorld world;
+    world.setLevel(s);
+    auto hit = engine::traceMelee(s, world, {0, 1.2f, 0}, {0, 0, -1}, knife.range, knife.spreadDegrees);
+    check(hit.hit && hit.entity == 0, "knife arc catches a guard off to the side");
+    s.entities[0].position = {0, 0, -4};
+    hit = engine::traceMelee(s, world, {0, 1.2f, 0}, {0, 0, -1}, knife.range, knife.spreadDegrees);
+    check(hit.entity < 0, "knife does not reach 4 m");
+
+    // New keys round-trip.
+    knife.viewRotation = {1, 2, 3};
+    knife.animReload = "Reload";
+    check(engine::saveWeaponFile(knife, "copy.weapon", &err), "save knife: " + err);
+    engine::WeaponSettings copy;
+    check(engine::loadWeaponFile(copy, "copy.weapon", &err) && copy.melee() && copy.viewRotation == glm::vec3(1, 2, 3) &&
+              copy.animReload == "Reload",
+          "melee type, view rotation and clips round-trip");
 }
 
 void testSemiAutomatic()
@@ -598,6 +642,7 @@ int main()
     testTexturedWeaponModel();
     testWeaponFilesAndLoadout();
     testSemiAutomatic();
+    testKnifeAndGuns();
     testScriptPropertiesFromEditor();
     testPick();
     testAnimatedCharacter();
