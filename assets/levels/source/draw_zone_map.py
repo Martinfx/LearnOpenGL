@@ -16,8 +16,9 @@ from PIL import Image, ImageDraw, ImageFont
 HERE = os.path.dirname(os.path.abspath(__file__))
 LEVEL = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, '..', 'zone.level')
 OUT = sys.argv[2] if len(sys.argv) > 2 else os.path.join(HERE, 'zone_map.png')
-X0, X1, Z0, Z1 = -280, 280, -480, 270     # metres shown
-S = 2.0                                   # pixels per metre
+PLAN = sys.argv[3] if len(sys.argv) > 3 else None          # optional routes/labels json
+X0, X1, Z0, Z1 = (-280, 280, -480, 270) if len(sys.argv) <= 4 else tuple(float(v) for v in sys.argv[4].split(','))
+S = 2.0 if len(sys.argv) <= 5 else float(sys.argv[5])        # pixels per metre
 W, Hh = int((X1 - X0) * S), int((Z1 - Z0) * S)
 
 COLORS = {
@@ -98,7 +99,9 @@ def main():
         corners = [(mn[0], mn[2]), (mx[0], mn[2]), (mx[0], mx[2]), (mn[0], mx[2])]
         pts = [px(x + cx * math.cos(a) + cz * math.sin(a), z - cx * math.sin(a) + cz * math.cos(a)) for cx, cz in corners]
         col = COLORS.get(o['parent'], (150, 150, 150))
-        if o['parent'] == 'Vegetation':
+        if 'postwar' in t[2]:
+            continue
+        if o['parent'] in ('Vegetation', 'Greenery'):
             r = max(1.5, (mx[0] - mn[0]) * 0.3) * S
             cx, cy = px(x, z)
             d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=col if 'grass' not in t[2] else (110, 125, 70))
@@ -116,6 +119,8 @@ def main():
             continue
         t = o['t']
         x, z = float(t[3]), float(t[5])
+        if t[2] in ('map_marker', 'objective'):
+            continue
         col = {'Soldiers': (60, 140, 230), 'Bandits': (220, 50, 40), 'Stalkers': (250, 220, 60)}.get(o['parent'], (255, 255, 255))
         cx, cy = px(x, z)
         d.ellipse([cx - 4, cy - 4, cx + 4, cy + 4], fill=col, outline=(0, 0, 0))
@@ -127,9 +132,33 @@ def main():
             d.polygon([(cx, cy - 9), (cx - 7, cy + 6), (cx + 7, cy + 6)], fill=(255, 255, 255), outline=(0, 0, 0))
     font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 22)
     small = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 16)
-    labels = [(-150, 0, 'Železniční hřbitov'), (-118, 44, 'tábor stalkerů (start)'), (-2, 214, 'kontrolní stanoviště'),
+    if PLAN:
+        plan = json.load(open(PLAN))
+        cols = {'main': (230, 40, 30), 'flank': (255, 150, 30), 'east': (250, 230, 60)}
+        for name, pts in plan['routes'].items():
+            P = [px(x, z) for x, z in pts]
+            d.line(P, fill=(0, 0, 0), width=9, joint='curve')
+            d.line(P, fill=cols.get(name, (255, 255, 255)), width=5, joint='curve')
+            ex, ey = P[-1]
+            d.ellipse([ex - 8, ey - 8, ex + 8, ey + 8], fill=cols.get(name, (255, 255, 255)), outline=(0, 0, 0))
+        font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 20)
+        for x, z, txt in plan['labels']:
+            cx, cy = px(x, z)
+            d.text((cx + 2, cy + 2), txt, font=font, fill=(0, 0, 0))
+            d.text((cx, cy), txt, font=font, fill=(255, 255, 255))
+        small = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 16)
+        for i, (c, txt) in enumerate(((cols['main'], 'hlavní cesta'), (cols['flank'], 'boční cesta (požární schodiště)'),
+                                      (cols['east'], 'vedlejší: munice ve starém městě'))):
+            d.rectangle([W - 330, Hh - 90 + i * 24, W - 300, Hh - 82 + i * 24], fill=c, outline=(0, 0, 0))
+            d.text((W - 292, Hh - 96 + i * 24), txt, font=small, fill=(255, 255, 255))
+        labels = []
+    else:
+        labels = None
+    zone_labels = [(-150, 0, 'Železniční hřbitov'), (-118, 44, 'tábor stalkerů (start)'), (-2, 214, 'kontrolní stanoviště'),
               (60, 128, 'Město: nemocnice, paneláky'), (120, -200, 'Elektrárna ГРЭС-3'), (-180, -237, 'řeka'),
               (-40, -330, 'Mrtvé město'), (-75, -70, 'Dálnice E-95'), (24, -237, 'rozbité mosty')]
+    if labels is None:
+        labels = zone_labels
     for x, z, txt in labels:
         cx, cy = px(x, z)
         d.text((cx + 2, cy + 2), txt, font=font, fill=(0, 0, 0))

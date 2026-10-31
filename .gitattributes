@@ -16,3 +16,4 @@ assets/models/zone/vegetation/source/cards/*.png filter=lfs diff=lfs merge=lfs -
 assets/models/zone/rail/*.glb filter=lfs diff=lfs merge=lfs -text
 assets/models/zone/gen/*.glb filter=lfs diff=lfs merge=lfs -text
 assets/models/zone/textures/*.jpg filter=lfs diff=lfs merge=lfs -text
+assets/models/zone/postwar/*.glb filter=lfs diff=lfs merge=lfs -text

@@ -63,6 +63,14 @@ autobusů a mezi nohy chladicích věží se dá vejít (kolize podle meshe, sch
 Výchozí rozložení vytvořil `assets/levels/source/make_zone_level.py`, modely `assets/models/zone/gen/`
 generuje `assets/models/zone/source/build_zone.py`.
 
+**Level Ulice u nemocnice** (`fps_game assets/levels/hospital_street.level`): menší ručně složená mapa
+s úkolem. Start v táboře stalkerů u vagonů, cíl je skrýš s léky v horním patře nemocnice (`objective.lua`
+ohlásí nalezení), pak návrat do tábora. Hlavní cesta vede dírou v plotu kolem havarované evakuační kolony,
+boční cesta přes garáže a dvůr po požárním schodišti. Bandité hlídají ulici (odstřelovač v paneláku),
+vchod a chodby nemocnice; na východě je staré město (scéna "Postwar City", CC-BY, viz
+`assets/models/zone/postwar/CREDITS.md`). Na mapě (M) jsou značky míst. Plán s trasami:
+`assets/levels/source/hospital_street_map.png`, rozložení `assets/levels/source/make_street_level.py`.
+
 ## Skriptování a AI (Lua)
 
 Entity (nepřátelé, pickupy, triggery…) se přidávají v editoru (Ctrl+E přidá nepřítele) a každá může mít

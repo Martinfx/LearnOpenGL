@@ -235,6 +235,6 @@ PALETTE = {
     'leaves_dark': M('leafy', 1.5, color=(0.45, 0.58, 0.32)),
     'grass': M('leafy', 1.0, color=(0.7, 0.85, 0.5)),
     'grass_dry': M('leafy', 1.0, color=(1.1, 0.95, 0.55)),
-    'water': M(None, 4.0, color=(0.03, 0.04, 0.035), rough=0.04, metal=0.0),
+    'water': M(None, 4.0, color=(0.012, 0.014, 0.012), rough=0.1, metal=0.0),
     'lamp': M(None, 1.0, color=(1.0, 0.8, 0.5), rough=0.5, metal=0.0, emissive=(1.0, 0.62, 0.3)),
 }

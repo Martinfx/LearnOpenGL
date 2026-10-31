@@ -28,3 +28,5 @@ skyline towers, low-poly vegetation, debris, signs) is generated for this projec
 (`source/zonegen/`), CC0. Its shared textures in `textures/` are 1K repacks of Poly Haven CC0 sets from
 `assets/textures/pbr` (albedo, OpenGL normal, ORM = occlusion/roughness/metallic), plus generated birch bark,
 panel facade and Cyrillic sign textures (text set in DejaVu Sans, Bitstream Vera license; place names are fictional).
+
+The old-town street in `postwar/` is based on "Postwar City - Exterior Scene" by Aurélien Martel (CC-BY 4.0); see `postwar/CREDITS.md`.
