@@ -383,6 +383,8 @@ void Renderer::useMeshProgram(const Program& p)
     loc_.envRotation = p.loc("uEnvRotation");
     loc_.overlaySun = p.loc("uOverlaySunDir");
     loc_.alphaMode = p.loc("uAlphaMode");
+    loc_.instanced = p.loc("uInstanced");
+    loc_.instanceBase = p.loc("uInstanceBase");
     loc_.alphaCutoff = p.loc("uAlphaCutoff");
     loc_.opacity = p.loc("uOpacity");
     const char* names[6] = {"uHasTexture", "uHasNormalMap", "uHasRoughnessMap", "uHasMetallicMap", "uHasOcclusionMap", "uHasEmissiveMap"};
@@ -466,6 +468,10 @@ void Renderer::shutdown()
         glDeleteBuffers(1, &m.ibo);
     }
     meshes_.clear();
+    if (instanceBuffer_)
+        glDeleteBuffers(1, &instanceBuffer_);
+    instanceBuffer_ = 0;
+    instanceCapacity_ = 0;
     for (auto& [id, t] : textures_)
         glDeleteTextures(1, &t.handle);
     textures_.clear();
@@ -790,8 +796,22 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
             draw = far ? model.lod.get() : &model;
             keepAlive(far ? model : *model.lod);
         }
-        drawModel(*draw, model.transform(), selected ? 1.0f : 0.0f);
+        if (!quality_.instancing || selected || draw->skeleton || draw->parts.empty()) {
+            drawModel(*draw, model.transform(), selected ? 1.0f : 0.0f);
+            continue;
+        }
+        // Batch with other copies: same shared mesh list and the same material overrides.
+        std::uint64_t key = reinterpret_cast<std::uintptr_t>(&draw->parts[0]);
+        for (const auto& [slot, material] : draw->overrideMaterials)
+            key = key * 1099511628211ull ^ reinterpret_cast<std::uintptr_t>(material.get());
+        auto [it, added] = batchIndex_.emplace(key, batches_.size());
+        if (added)
+            batches_.push_back({draw, {}, drawDistance_});
+        InstanceBatch& batch = batches_[it->second];
+        batch.transforms.push_back(model.transform());
+        batch.distance = std::min(batch.distance, drawDistance_);
     }
+    flushInstances();
     drawDistance_ = 0.0f; // weapon in hand, previews
     for (const auto& [extra, transform] : view.extraModels)
         if (extra)
@@ -905,6 +925,10 @@ void Renderer::render(const Scene& scene, const RenderView& view)
 {
     resetGlState();
     // Free GPU data nothing drew since the previous render() (removed models).
+    lastDrawCalls_ = drawCalls_;
+    lastInstanced_ = instanced_;
+    drawCalls_ = 0;
+    instanced_ = 0;
     updateStreaming(); // before releaseUnused(): uses last frame's distances
     releaseUnused();
     texturesUploaded_ = 0;
@@ -1027,6 +1051,81 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     pendingPresent_ = true;
     if (!view.deferPresent)
         present();
+}
+
+void Renderer::flushInstances()
+{
+    // One buffer upload for all batches of this pass, then one draw per mesh part and batch.
+    instanceData_.clear();
+    std::vector<std::pair<int, int>> ranges; // base, count per batch (count 1 = plain draw)
+    for (const InstanceBatch& b : batches_) {
+        if (b.transforms.size() < 2) {
+            ranges.emplace_back(-1, 1);
+            continue;
+        }
+        ranges.emplace_back(static_cast<int>(instanceData_.size()), static_cast<int>(b.transforms.size()));
+        instanceData_.insert(instanceData_.end(), b.transforms.begin(), b.transforms.end());
+    }
+    if (!instanceData_.empty()) {
+        const std::size_t bytes = instanceData_.size() * sizeof(glm::mat4);
+        if (!instanceBuffer_)
+            glCreateBuffers(1, &instanceBuffer_);
+        if (bytes > instanceCapacity_) {
+            instanceCapacity_ = std::max(bytes, instanceCapacity_ * 2);
+            glNamedBufferData(instanceBuffer_, static_cast<GLsizeiptr>(instanceCapacity_), nullptr, GL_STREAM_DRAW);
+        } else {
+            glInvalidateBufferData(instanceBuffer_); // orphan: earlier passes may still read it
+        }
+        glNamedBufferSubData(instanceBuffer_, 0, static_cast<GLsizeiptr>(bytes), instanceData_.data());
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, instanceBuffer_);
+    }
+    for (std::size_t i = 0; i < batches_.size(); ++i) {
+        const InstanceBatch& b = batches_[i];
+        drawDistance_ = b.distance;
+        if (ranges[i].first < 0) {
+            drawModel(*b.model, b.transforms.front(), 0.0f);
+        } else {
+            drawModelInstanced(*b.model, ranges[i].first, ranges[i].second);
+            if (collectTransparent_)
+                instanced_ += ranges[i].second;
+        }
+    }
+    batches_.clear();
+    batchIndex_.clear();
+}
+
+void Renderer::drawModelInstanced(const Model& model, int base, int count)
+{
+    glUniform1f(loc_.highlight, 0.0f);
+    glUniform1i(loc_.skinned, 0);
+    glUniform1i(loc_.instanced, 1);
+    glUniform1i(loc_.instanceBase, base);
+    for (const MeshPart& part : model.parts) {
+        const GpuMesh& mesh = upload(part);
+        const Material* material = model.materialFor(part);
+        const SurfaceAlpha alpha = surfaceAlpha(material, &part);
+        if (alpha.mode == AlphaMode::Blend) {
+            if (depthOnly_)
+                continue;
+            if (collectTransparent_) {
+                for (int i = 0; i < count; ++i)
+                    transparent_.push_back({&part, material, nullptr, instanceData_[static_cast<std::size_t>(base + i)],
+                                            drawDistance_, 0.0f});
+                continue;
+            }
+        }
+        applySurface(material, &part, part.color, false);
+        glBindVertexArray(mesh.vao);
+        const bool twoSided = alpha.doubleSided && glIsEnabled(GL_CULL_FACE);
+        if (twoSided)
+            glDisable(GL_CULL_FACE);
+        glDrawElementsInstanced(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, nullptr, count);
+        ++drawCalls_;
+        if (twoSided)
+            glEnable(GL_CULL_FACE);
+    }
+    glUniform1i(loc_.instanced, 0);
+    applySurface(nullptr, nullptr, glm::vec3(1.0f), false);
 }
 
 void Renderer::drawTransparent(const RenderView& view)
@@ -1487,6 +1586,7 @@ void Renderer::drawModel(const Model& model, const glm::mat4& transform, float h
         if (twoSided)
             glDisable(GL_CULL_FACE);
         glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, nullptr);
+        ++drawCalls_;
         if (twoSided)
             glEnable(GL_CULL_FACE);
     }

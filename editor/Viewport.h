@@ -41,6 +41,8 @@ public:
     float cameraSpeed() const { return flySpeed_; }
     int culledObjects() const { return renderer_.lastCulled(); }
     engine::Renderer::MemoryStats memoryStats() const { return renderer_.memoryStats(); }
+    int drawCalls() const { return renderer_.lastDrawCalls(); }
+    int instancedObjects() const { return renderer_.lastInstanced(); }
     void setQuality(const engine::RenderQuality& quality);
     const engine::RenderQuality& quality() const { return quality_; }
     // Recompiles the shaders from `directory` (over the built-in ones); false + compiler log on error.

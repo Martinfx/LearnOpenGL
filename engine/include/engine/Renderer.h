@@ -80,6 +80,7 @@ struct RenderQuality {
     int textureMaxSize = 0;
     float textureStreamDistance = 40.0f;
     bool releaseCpuTextures = true; // drop CPU pixels once on the GPU (re-read from the cache if needed)
+    bool instancing = true;         // copies of one model in one draw call per mesh part
 
     static RenderQuality preset(int level); // 0 low, 1 medium, 2 high, 3 ultra
 };
@@ -177,7 +178,7 @@ private:
         int tiling = -1, worldUv = -1, grid = -1, emissiveColor = -1, roughness = -1, metallic = -1;
         int normalStrength = -1, roughnessChannel = -1, metallicChannel = -1, overlay = -1, envRotation = -1;
         int overlaySun = -1, uvScale = -1, uvOffset = -1, uvRotation = -1, shading = -1;
-        int alphaMode = -1, alphaCutoff = -1, opacity = -1;
+        int alphaMode = -1, alphaCutoff = -1, opacity = -1, instanced = -1, instanceBase = -1;
         int hasMap[6] = {-1, -1, -1, -1, -1, -1};
     };
 
@@ -225,6 +226,20 @@ private:
         float highlight = 0.0f;
     };
     std::vector<TransparentDraw> transparent_;
+    // Instancing: visible copies of the same model (same shared mesh and materials).
+    struct InstanceBatch {
+        const Model* model = nullptr;
+        std::vector<glm::mat4> transforms;
+        float distance = 1e30f;
+    };
+    std::vector<InstanceBatch> batches_;
+    std::unordered_map<std::uint64_t, std::size_t> batchIndex_;
+    std::vector<glm::mat4> instanceData_;
+    unsigned instanceBuffer_ = 0;
+    std::size_t instanceCapacity_ = 0;
+    int drawCalls_ = 0, lastDrawCalls_ = 0, instanced_ = 0, lastInstanced_ = 0;
+    void flushInstances();
+    void drawModelInstanced(const Model& model, int base, int count);
     bool collectTransparent_ = false;   // main pass: Blend parts go to transparent_
     void drawTransparent(const RenderView& view);
     bool s3tc_ = true, s3tcSrgb_ = true;
@@ -266,6 +281,8 @@ private:
 
 public:
     int lastCulled() const { return culled_; } // objects skipped by frustum culling in the last render()
+    int lastDrawCalls() const { return lastDrawCalls_; } // geometry draw calls of the last render(), all passes
+    int lastInstanced() const { return lastInstanced_; } // model copies drawn through instancing (main pass)
 };
 
 } // namespace engine

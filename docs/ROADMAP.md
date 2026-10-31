@@ -65,7 +65,8 @@ Podrobně ve výkonové roadmapě vlákna "Vytvořit 3D FPS engine"; tady jen sh
 - [x] Panel paměti (VRAM/RAM) v editoru (dok Memory)
 - [ ] Panel snímku v editoru; CPU zóny + GPU timer queries
 - [x] Příznak bez kolize a cull distance u modelů (+ jeden Jolt mesh sdílený všemi kopiemi modelu)
-- [ ] GPU instancing + `glMultiDrawElementsIndirect`, setřídění podle materiálu
+- [x] GPU instancing (kopie modelu jedním draw callem; hospital_street: 3391 → 1339 draw callů)
+- [ ] `glMultiDrawElementsIndirect`, setřídění podle materiálu
 - [ ] Occlusion culling (Hi-Z z depth pre-passu), cache stínů vzdálených kaskád
 - [ ] Snímek jako graf úloh v JobSystemu (animace, culling, skripty paralelně), pak render vlákno
 

@@ -2593,12 +2593,15 @@ void MainWindow::runCommand(const QString& command)
         if (i >= 0)
             setEditorMode(i);
     } else if (name == "stat") {
-        appendLog(tr("%1 boxes, %2 models, %3 entities, %4 groups; culled last frame: %5")
+        appendLog(tr("%1 boxes, %2 models, %3 entities, %4 groups; last frame: %5 culled, %6 model draw calls "
+                     "(all passes), %7 model copies instanced")
                       .arg(scene_.boxes.size())
                       .arg(scene_.models.size())
                       .arg(scene_.entities.size())
                       .arg(scene_.groups.size())
-                      .arg(viewport_->culledObjects()),
+                      .arg(viewport_->culledObjects())
+                      .arg(viewport_->drawCalls())
+                      .arg(viewport_->instancedObjects()),
                   0);
     } else if (name == "reloadshaders") {
         applyShaders();

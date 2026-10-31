@@ -223,6 +223,9 @@ výšková mlha se září ke slunci, bloom, ACES, barevné ladění (saturace, 
 - **Cull distance a kolize:** model v Details > Rendering má *Cull distance* (dál od kamery se nekreslí,
   0 = vždy) a *Physics: Collision* (vypnout pro trávu, listí, drobnou suť). V levelu řádky
   `  cull_distance 60` a `  collision 0` pod řádkem `model`. Kopie jednoho modelu sdílí i kolizní mesh.
+- **Instancing:** viditelné kopie stejného modelu (stejné materiály) se kreslí jedním draw callem na díl
+  meshe. Vybraný objekt a animované postavy jdou zvlášť. `FPS_ENGINE_STATS=1 fps_game` vypisuje FPS,
+  draw cally a počet instancí; `FPS_ENGINE_NO_INSTANCING=1` ho vypne pro porovnání. V editoru příkaz `stat`.
 - **Sdílené meshe:** kopie jednoho modelu (např. 18 dílů plotu) sdílí vrcholy v RAM i v historii undo.
 - Testovací level: načtení 21,0 s → 2,3 s (s teplou cache), paměť hry 4,4 GB → 0,54 GB (llvmpipe, kde je
   i „VRAM“ v RAM).

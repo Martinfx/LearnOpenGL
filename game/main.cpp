@@ -202,6 +202,11 @@ int main(int argc, char** argv)
         glfwTerminate();
         return 1;
     }
+    if (std::getenv("FPS_ENGINE_NO_INSTANCING")) { // for comparing (FPS_ENGINE_STATS=1)
+        engine::RenderQuality q = renderer.quality();
+        q.instancing = false;
+        renderer.setQuality(q);
+    }
     std::printf("%s\n", renderer.glInfo().c_str());
 
     // Command line: [level] [--shaders DIR] (shaders edited in the editor replace the built-in ones).
@@ -543,6 +548,12 @@ int main(int argc, char** argv)
                           scripts.playerHealth(), current + 1, weapons[current].settings.name.c_str(), ammo, kills,
                           fpsFrames / fpsTimer, 1000.0 * fpsTimer / fpsFrames,
                           player.feet().x, player.feet().y, player.feet().z, player.grounded() ? "" : " (air)");
+            // FPS_ENGINE_STATS=1 prints frame statistics (profiling, comparing optimizations).
+            if (std::getenv("FPS_ENGINE_STATS"))
+                std::printf("stats: %.1f FPS, %.2f ms, %d model draw calls, %d instanced, %d culled\n", fpsFrames / fpsTimer,
+                            1000.0 * fpsTimer / fpsFrames, renderer.lastDrawCalls(), renderer.lastInstanced(), renderer.lastCulled());
+            if (std::getenv("FPS_ENGINE_STATS"))
+                std::fflush(stdout);
             glfwSetWindowTitle(window, title);
             fpsTimer = 0.0;
             fpsFrames = 0;
