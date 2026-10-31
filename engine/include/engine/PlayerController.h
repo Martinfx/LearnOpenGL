@@ -2,25 +2,13 @@
 #include "engine/Camera.h"
 #include "engine/CharacterBody.h"
 #include "engine/Input.h"
+#include "engine/Scene.h"
 #include <glm/vec3.hpp>
 
 namespace engine {
 
 class PhysicsWorld;
 
-struct PlayerSettings {
-    float walkSpeed = 5.0f;     // m/s
-    float sprintSpeed = 8.5f;
-    float jumpSpeed = 5.5f;
-    float gravity = 18.0f;      // m/s^2, a bit above earth for snappy jumps
-    float airControl = 0.15f;   // 0 = none, 1 = full
-    float radius = 0.3f;
-    float height = 1.8f;
-    float eyeHeight = 1.65f;
-    float stepHeight = 0.4f;    // stairs up to this height are climbed automatically
-    float maxSlopeDegrees = 45.0f;
-    float killY = -50.0f;       // respawn when falling below this
-};
 
 // First-person character on top of Jolt's CharacterVirtual (capsule).
 class PlayerController {

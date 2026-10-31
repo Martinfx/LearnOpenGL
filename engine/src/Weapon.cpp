@@ -1,0 +1,199 @@
+#include "engine/Weapon.h"
+#include "engine/Physics.h"
+
+#include <algorithm>
+#include <cmath>
+#include <fstream>
+#include <iomanip>
+#include <sstream>
+#include <glm/geometric.hpp>
+#include <glm/trigonometric.hpp>
+
+namespace engine {
+
+ShotHit traceShot(const Scene& scene, const PhysicsWorld& physics, glm::vec3 origin, glm::vec3 dir, float range)
+{
+    ShotHit best;
+    dir = glm::normalize(dir);
+    if (auto hit = physics.raycast(origin, dir, range)) {
+        best.hit = true;
+        best.point = hit->point;
+        best.distance = hit->distance;
+    }
+    // Characters are not rigid bodies, so test entity bounds separately.
+    for (std::size_t i = 0; i < scene.entities.size(); ++i) {
+        const Entity& e = scene.entities[i];
+        if (!e.alive)
+            continue;
+        if (auto t = rayAabb(origin, dir, e.bounds()); t && *t <= range && (!best.hit || *t < best.distance)) {
+            best.hit = true;
+            best.distance = *t;
+            best.point = origin + dir * *t;
+            best.entity = static_cast<int>(i);
+        }
+    }
+    return best;
+}
+
+Weapon::Weapon()
+{
+    ammo_ = settings.magazineSize;
+}
+
+Weapon::Weapon(WeaponSettings s) : settings(std::move(s))
+{
+    ammo_ = settings.magazineSize;
+}
+
+namespace {
+std::filesystem::path pathFromUtf8(const std::string& s)
+{
+    return std::filesystem::path(std::u8string(s.begin(), s.end()));
+}
+std::string pathToUtf8(const std::filesystem::path& p)
+{
+    const std::u8string u = p.generic_u8string();
+    return std::string(u.begin(), u.end());
+}
+} // namespace
+
+bool saveWeaponFile(const WeaponSettings& w, const std::filesystem::path& file, std::string* error)
+{
+    std::ofstream out(file);
+    if (!out) {
+        if (error)
+            *error = "Cannot write " + file.string();
+        return false;
+    }
+    std::string model;
+    if (!w.modelPath.empty()) {
+        const auto rel = std::filesystem::absolute(w.modelPath).lexically_relative(std::filesystem::absolute(file).parent_path());
+        model = pathToUtf8(rel.empty() ? std::filesystem::absolute(w.modelPath) : rel);
+    }
+    out << std::setprecision(6) << "# FPS engine weapon\nversion 1\n"
+        << "name " << std::quoted(w.name) << '\n'
+        << "model " << std::quoted(model) << '\n'
+        << "damage " << w.damage << '\n'
+        << "fire_interval " << w.fireInterval << '\n'
+        << "automatic " << (w.automatic ? 1 : 0) << '\n'
+        << "pellets " << w.pellets << '\n'
+        << "magazine " << w.magazineSize << '\n'
+        << "reload_time " << w.reloadTime << '\n'
+        << "spread " << w.spreadDegrees << '\n'
+        << "range " << w.range << '\n'
+        << "view_offset " << w.viewOffset.x << ' ' << w.viewOffset.y << ' ' << w.viewOffset.z << '\n'
+        << "view_scale " << w.viewScale << '\n';
+    return static_cast<bool>(out);
+}
+
+bool loadWeaponFile(WeaponSettings& weapon, const std::filesystem::path& file, std::string* error)
+{
+    std::ifstream in(file);
+    if (!in) {
+        if (error)
+            *error = "Cannot open " + file.string();
+        return false;
+    }
+    WeaponSettings w;
+    std::string line;
+    int lineNo = 0;
+    while (std::getline(in, line)) {
+        ++lineNo;
+        std::istringstream ls(line);
+        std::string key;
+        if (!(ls >> key) || key[0] == '#')
+            continue;
+        bool ok = true;
+        if (key == "version") { int v = 0; ok = static_cast<bool>(ls >> v) && v == 1; }
+        else if (key == "name") ok = static_cast<bool>(ls >> std::quoted(w.name));
+        else if (key == "model") {
+            std::string m;
+            ok = static_cast<bool>(ls >> std::quoted(m));
+            if (ok && !m.empty()) {
+                std::filesystem::path p = pathFromUtf8(m);
+                if (p.is_relative())
+                    p = std::filesystem::absolute(file).parent_path() / p;
+                w.modelPath = p.lexically_normal();
+            }
+        }
+        else if (key == "damage") ok = static_cast<bool>(ls >> w.damage);
+        else if (key == "fire_interval") ok = static_cast<bool>(ls >> w.fireInterval);
+        else if (key == "automatic") { int a = 1; ok = static_cast<bool>(ls >> a); w.automatic = a != 0; }
+        else if (key == "pellets") ok = static_cast<bool>(ls >> w.pellets);
+        else if (key == "magazine") ok = static_cast<bool>(ls >> w.magazineSize);
+        else if (key == "reload_time") ok = static_cast<bool>(ls >> w.reloadTime);
+        else if (key == "spread") ok = static_cast<bool>(ls >> w.spreadDegrees);
+        else if (key == "range") ok = static_cast<bool>(ls >> w.range);
+        else if (key == "view_offset") ok = static_cast<bool>(ls >> w.viewOffset.x >> w.viewOffset.y >> w.viewOffset.z);
+        else if (key == "view_scale") ok = static_cast<bool>(ls >> w.viewScale);
+        // Unknown keys are ignored so newer files still load.
+        if (!ok) {
+            if (error)
+                *error = file.string() + ":" + std::to_string(lineNo) + ": invalid line: " + line;
+            return false;
+        }
+    }
+    w.pellets = std::max(1, w.pellets);
+    w.magazineSize = std::max(1, w.magazineSize);
+    w.fireInterval = std::max(0.01f, w.fireInterval);
+    weapon = std::move(w);
+    return true;
+}
+
+int Weapon::update(float dt, bool triggerHeld, bool reloadPressed)
+{
+    cooldown_ = std::max(0.0f, cooldown_ - dt);
+    flashTimer_ = std::max(0.0f, flashTimer_ - dt);
+    recoil_ = std::max(0.0f, recoil_ - dt * 8.0f);
+
+    if (reloadTimer_ > 0.0f) {
+        reloadTimer_ -= dt;
+        if (reloadTimer_ <= 0.0f) {
+            reloadTimer_ = 0.0f;
+            ammo_ = settings.magazineSize;
+        }
+        return 0;
+    }
+    if ((reloadPressed && ammo_ < settings.magazineSize) || (triggerHeld && ammo_ == 0)) {
+        triggerWasHeld_ = triggerHeld;
+        reloadTimer_ = settings.reloadTime;
+        return 0;
+    }
+
+    // Semi-automatic weapons need the trigger released between shots.
+    const bool pulled = triggerHeld && (settings.automatic || !triggerWasHeld_);
+    triggerWasHeld_ = triggerHeld;
+    int shots = 0;
+    while (pulled && ammo_ > 0 && cooldown_ <= 0.0f && (settings.automatic || shots == 0)) {
+        cooldown_ += settings.fireInterval;
+        --ammo_;
+        ++shots;
+        recoil_ = 1.0f;
+        flashTimer_ = 0.05f;
+    }
+    return shots;
+}
+
+float Weapon::reloadProgress() const
+{
+    return reloading() ? 1.0f - reloadTimer_ / settings.reloadTime : 0.0f;
+}
+
+glm::vec3 Weapon::spreadDirection(glm::vec3 aim)
+{
+    auto random01 = [this] {
+        rng_ ^= rng_ << 13;
+        rng_ ^= rng_ >> 17;
+        rng_ ^= rng_ << 5;
+        return static_cast<float>(rng_ & 0xffffffu) / static_cast<float>(0xffffff);
+    };
+    aim = glm::normalize(aim);
+    const glm::vec3 helper = std::abs(aim.y) < 0.99f ? glm::vec3(0, 1, 0) : glm::vec3(1, 0, 0);
+    const glm::vec3 u = glm::normalize(glm::cross(aim, helper));
+    const glm::vec3 v = glm::cross(u, aim);
+    const float angle = glm::radians(settings.spreadDegrees) * std::sqrt(random01());
+    const float phi = 6.2831853f * random01();
+    return glm::normalize(aim + (u * std::cos(phi) + v * std::sin(phi)) * std::tan(angle));
+}
+
+} // namespace engine

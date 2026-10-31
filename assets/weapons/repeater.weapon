@@ -1,0 +1,14 @@
+# FPS engine weapon
+version 1
+name "Repeater"
+model "../models/weapons/blaster-repeater.glb"
+damage 14
+fire_interval 0.09
+automatic 1
+pellets 1
+magazine 36
+reload_time 1.6
+spread 1.2
+range 200
+view_offset 0.17 -0.17 -0.36
+view_scale 0.15

@@ -1,13 +1,19 @@
 #include "MainWindow.h"
 #include "Vec3Editor.h"
 #include "Viewport.h"
+#include "WeaponPanel.h"
 
 #include <QAction>
 #include <QApplication>
 #include <QCloseEvent>
 #include <QColorDialog>
 #include <QDir>
+#include <QDesktopServices>
 #include <QDockWidget>
+#include <QHeaderView>
+#include <QScrollArea>
+#include <QTableWidget>
+#include <QUrl>
 #include <QDoubleSpinBox>
 #include <QHBoxLayout>
 #include <QFileDialog>
@@ -143,6 +149,34 @@ void MainWindow::buildDocks()
     form->addRow(tr("Color"), colorButton_);
     form->addRow(tr("Lua script"), scriptRow_);
 
+    // Tunables the script declares in `properties`; values are saved per entity.
+    scriptParams_ = new QTableWidget(0, 2, boxPanel_);
+    scriptParams_->setHorizontalHeaderLabels({tr("Script parameter"), tr("Value")});
+    scriptParams_->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+    scriptParams_->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+    scriptParams_->verticalHeader()->hide();
+    scriptParams_->setMinimumHeight(200);
+    auto* editScript = new QPushButton(tr("Open script in text editor"), boxPanel_);
+    form->addRow(scriptParams_);
+    form->addRow(editScript);
+    connect(editScript, &QPushButton::clicked, this, [this] {
+        if (auto* e = selectedEntity(); e && !e->scriptPath.empty())
+            QDesktopServices::openUrl(QUrl::fromLocalFile(QString::fromStdU16String(e->scriptPath.u16string())));
+    });
+    connect(scriptParams_, &QTableWidget::cellChanged, this, [this](int row, int column) {
+        auto* e = selectedEntity();
+        if (!e || column != 1 || row < 0 || row >= static_cast<int>(scriptProps_.size()))
+            return;
+        const engine::ScriptProperty& prop = scriptProps_[static_cast<std::size_t>(row)];
+        const std::string value = scriptParams_->item(row, 1)->text().trimmed().toStdString();
+        if (value.empty() || value == prop.defaultValue)
+            e->properties.erase(prop.name); // back to the script default
+        else
+            e->properties[prop.name] = value;
+        markDirty();
+        refreshScriptParams();
+    });
+
     connect(typeEdit_, &QLineEdit::editingFinished, this, [this] {
         if (auto* e = selectedEntity(); e && e->type != typeEdit_->text().toStdString()) {
             e->type = typeEdit_->text().toStdString();
@@ -218,6 +252,45 @@ void MainWindow::buildDocks()
     levelForm->addRow(tr("Player start"), playerStartEdit_);
     levelForm->addRow(QString(), fromCamera);
     levelForm->addRow(tr("Sun direction"), sunEdit_);
+
+    // Player movement and health for this level.
+    struct PlayerField {
+        const char* label;
+        float engine::PlayerSettings::*member;
+        double min, max, step;
+        const char* suffix;
+    };
+    const PlayerField playerFields[] = {
+        {"Walk speed", &engine::PlayerSettings::walkSpeed, 0.1, 50, 0.5, " m/s"},
+        {"Sprint speed", &engine::PlayerSettings::sprintSpeed, 0.1, 50, 0.5, " m/s"},
+        {"Jump speed", &engine::PlayerSettings::jumpSpeed, 0, 50, 0.5, " m/s"},
+        {"Gravity", &engine::PlayerSettings::gravity, 0, 100, 1, " m/s²"},
+        {"Air control", &engine::PlayerSettings::airControl, 0, 1, 0.05, ""},
+        {"Height", &engine::PlayerSettings::height, 0.5, 4, 0.05, " m"},
+        {"Eye height", &engine::PlayerSettings::eyeHeight, 0.3, 4, 0.05, " m"},
+        {"Step height", &engine::PlayerSettings::stepHeight, 0, 2, 0.05, " m"},
+        {"Max slope", &engine::PlayerSettings::maxSlopeDegrees, 0, 89, 1, " °"},
+        {"Health", &engine::PlayerSettings::maxHealth, 1, 10000, 10, ""},
+    };
+    auto* playerTitle = new QLabel(tr("<b>Player</b>"), levelPanel);
+    levelForm->addRow(playerTitle);
+    for (const PlayerField& f : playerFields) {
+        auto* spin = new QDoubleSpinBox(levelPanel);
+        spin->setRange(f.min, f.max);
+        spin->setSingleStep(f.step);
+        spin->setDecimals(2);
+        spin->setSuffix(QString::fromUtf8(f.suffix));
+        spin->setKeyboardTracking(false);
+        levelForm->addRow(tr(f.label), spin);
+        const auto member = f.member;
+        connect(spin, &QDoubleSpinBox::valueChanged, this, [this, member](double v) {
+            if (scene_.player.*member != static_cast<float>(v)) {
+                scene_.player.*member = static_cast<float>(v);
+                markDirty();
+            }
+        });
+        playerSpins_.emplace_back(spin, member);
+    }
     connect(playerStartEdit_, &Vec3Editor::valueEdited, this, [this](glm::vec3 v) {
         scene_.playerStart = v;
         markDirty();
@@ -248,8 +321,21 @@ void MainWindow::buildDocks()
 
     auto* propsDock = new QDockWidget(tr("Properties"), this);
     propsDock->setObjectName("properties");
-    propsDock->setWidget(propsHost);
+    auto* scroll = new QScrollArea(this);
+    scroll->setWidget(propsHost);
+    scroll->setWidgetResizable(true);
+    propsDock->setWidget(scroll);
     addDockWidget(Qt::RightDockWidgetArea, propsDock);
+
+    // Weapons: the level's player loadout and the .weapon files it uses.
+    weapons_ = new WeaponPanel(&scene_, this);
+    connect(weapons_, &WeaponPanel::loadoutChanged, this, &MainWindow::markDirty);
+    auto* weaponsDock = new QDockWidget(tr("Weapons"), this);
+    weaponsDock->setObjectName("weapons");
+    weaponsDock->setWidget(weapons_);
+    addDockWidget(Qt::RightDockWidgetArea, weaponsDock);
+    tabifyDockWidget(propsDock, weaponsDock);
+    propsDock->raise();
 }
 
 engine::Box* MainWindow::selectedBox()
@@ -310,6 +396,7 @@ void MainWindow::refreshProperties()
     scriptEdit_->setText(e && !e->scriptPath.empty() ? QString::fromStdU16String(e->scriptPath.filename().u16string()) : QString());
     scriptEdit_->setToolTip(e && !e->scriptPath.empty() ? QString::fromStdU16String(e->scriptPath.u16string()) : QString());
 
+    refreshScriptParams();
     if (b) {
         kindLabel_->setText(tr("Box"));
         nameEdit_->setText(QString::fromStdString(b->name));
@@ -334,10 +421,49 @@ void MainWindow::refreshProperties()
     }
 }
 
+void MainWindow::refreshScriptParams()
+{
+    const engine::Entity* e = selectedEntity();
+    scriptProps_.clear();
+    std::string error;
+    if (e && !e->scriptPath.empty() && !engine::readScriptProperties(e->scriptPath, scriptProps_, &error))
+        statusBar()->showMessage(tr("Script error: %1").arg(QString::fromStdString(error)), 8000);
+
+    scriptParams_->blockSignals(true);
+    scriptParams_->setRowCount(static_cast<int>(scriptProps_.size()));
+    for (int row = 0; row < static_cast<int>(scriptProps_.size()); ++row) {
+        const engine::ScriptProperty& p = scriptProps_[static_cast<std::size_t>(row)];
+        auto* name = new QTableWidgetItem(QString::fromStdString(p.name));
+        name->setFlags(name->flags() & ~Qt::ItemIsEditable);
+        name->setToolTip(QString::fromStdString(p.description));
+        auto* value = new QTableWidgetItem();
+        const auto it = e->properties.find(p.name);
+        if (it != e->properties.end()) {
+            value->setText(QString::fromStdString(it->second));
+            QFont f = value->font();
+            f.setBold(true); // changed from the script default
+            value->setFont(f);
+        } else {
+            value->setText(QString::fromStdString(p.defaultValue));
+            value->setForeground(palette().color(QPalette::Disabled, QPalette::Text));
+        }
+        value->setToolTip(tr("Default: %1\n%2").arg(QString::fromStdString(p.defaultValue), QString::fromStdString(p.description)));
+        scriptParams_->setItem(row, 0, name);
+        scriptParams_->setItem(row, 1, value);
+    }
+    scriptParams_->blockSignals(false);
+    scriptParams_->setEnabled(!scriptProps_.empty());
+}
+
 void MainWindow::refreshLevelProperties()
 {
     playerStartEdit_->setValue(scene_.playerStart);
     sunEdit_->setValue(scene_.sunDirection);
+    for (auto& [spin, member] : playerSpins_) {
+        spin->blockSignals(true);
+        spin->setValue(scene_.player.*member);
+        spin->blockSignals(false);
+    }
 }
 
 void MainWindow::markDirty()
@@ -495,6 +621,7 @@ void MainWindow::newLevel()
     currentFile_.clear();
     dirty_ = false;
     selected_ = -1;
+    weapons_->refresh();
     refreshOutliner();
     refreshLevelProperties();
     select(-1);
@@ -519,6 +646,7 @@ bool MainWindow::openFile(const QString& path)
         return false;
     }
     scene_ = std::move(loaded);
+    weapons_->refresh();
     currentFile_ = path;
     dirty_ = false;
     selected_ = -1;
@@ -546,6 +674,11 @@ bool MainWindow::saveAs()
 
 bool MainWindow::saveTo(const QString& path)
 {
+    QString weaponError;
+    if (!weapons_->saveModified(&weaponError)) {
+        QMessageBox::warning(this, tr("Save weapons"), weaponError);
+        return false;
+    }
     std::string error;
     if (!engine::saveScene(scene_, std::filesystem::path(path.toStdU16String()), &error)) {
         QMessageBox::warning(this, tr("Save level"), QString::fromStdString(error));
@@ -564,6 +697,11 @@ void MainWindow::playLevel()
     // so a crash in gameplay code never takes the editor down.
     const QString tempDir = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
     const QString snapshot = QDir(tempDir).filePath("fps_engine_play.level");
+    QString weaponError;
+    if (!weapons_->saveModified(&weaponError)) {
+        QMessageBox::warning(this, tr("Play"), weaponError);
+        return;
+    }
     std::string error;
     if (!engine::saveScene(scene_, std::filesystem::path(snapshot.toStdU16String()), &error)) {
         QMessageBox::warning(this, tr("Play"), QString::fromStdString(error));

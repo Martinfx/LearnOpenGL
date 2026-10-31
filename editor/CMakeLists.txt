@@ -7,6 +7,8 @@ add_executable(fps_editor
     Vec3Editor.cpp
     Vec3Editor.h
     Viewport.cpp
+    WeaponPanel.cpp
+    WeaponPanel.h
     Viewport.h
 )
 target_link_libraries(fps_editor PRIVATE engine Qt6::Widgets Qt6::OpenGLWidgets)

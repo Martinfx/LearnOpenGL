@@ -5,6 +5,7 @@
 #include <engine/PlayerController.h>
 #include <engine/Scene.h>
 #include <engine/Scripting.h>
+#include <engine/Weapon.h>
 
 #include <fstream>
 
@@ -275,6 +276,145 @@ void testEnemyBlockedBySight()
     check(health == 100.0f, "enemy behind a wall does not notice the player");
 }
 
+void testWeaponFireRateAndReload()
+{
+    engine::Weapon w;
+    int shots = 0;
+    for (int i = 0; i < 60; ++i) // hold the trigger for 1 s
+        shots += w.update(1.0f / 60.0f, true, false);
+    check(shots >= 9 && shots <= 10, "about 9 shots per second at 0.11 s interval");
+    check(w.ammo() == w.settings.magazineSize - shots, "each shot uses one round");
+    w.update(1.0f / 60.0f, false, true);
+    check(w.reloading(), "R starts a reload");
+    for (int i = 0; i < 100; ++i)
+        w.update(1.0f / 60.0f, false, false);
+    check(!w.reloading() && w.ammo() == w.settings.magazineSize, "reload refills the magazine");
+}
+
+void testShotHitsEnemyNotWallBehind()
+{
+    auto s = flatFloor();
+    s.boxes.push_back({"Wall", {0, 2, -10}, {10, 4, 1}, {1, 1, 1}});
+    engine::Entity e;
+    e.position = {0, 0, -5};
+    s.entities.push_back(e);
+    engine::PhysicsWorld world;
+    world.setLevel(s);
+    auto hit = engine::traceShot(s, world, {0, 1.6f, 0}, {0, 0, -1}, 100.0f);
+    check(hit.hit && hit.entity == 0, "shot hits the entity in front of the wall");
+    s.entities[0].alive = false;
+    hit = engine::traceShot(s, world, {0, 1.6f, 0}, {0, 0, -1}, 100.0f);
+    check(hit.hit && hit.entity == -1 && std::abs(hit.distance - 9.5f) < 0.01f, "dead entities are ignored");
+}
+
+void testEnemyDiesAndReactsToDamage()
+{
+    auto s = flatFloor();
+    s.playerStart = {0, 0, 0};
+    s.entities.push_back(enemyAt({15, 0, 0}, 0.0f)); // facing away, out of hearing range
+    engine::PhysicsWorld world;
+    world.setLevel(s);
+    engine::PlayerController player;
+    player.spawn(world, s.playerStart);
+    std::vector<std::string> log;
+    engine::ScriptSystem scripts(s, world, player, [&](const std::string& m) { log.push_back(m); });
+    scripts.start();
+    scripts.fixedUpdate(1.0f / 60.0f);
+    scripts.damageEntity(0, 20.0f);
+    bool alerted = false;
+    for (const auto& l : log)
+        alerted = alerted || l.find("-> chase") != std::string::npos;
+    check(alerted, "a shot from behind makes the enemy chase");
+    check(s.entities[0].health == 80.0f, "damage lowers health");
+    for (int i = 0; i < 4; ++i)
+        scripts.damageEntity(0, 20.0f);
+    check(!s.entities[0].alive, "five hits kill the enemy");
+    bool died = false;
+    for (const auto& l : log)
+        died = died || l.find("destroyed") != std::string::npos;
+    check(died, "on_death runs");
+    const glm::vec3 before = s.entities[0].position;
+    for (int i = 0; i < 30; ++i)
+        scripts.fixedUpdate(1.0f / 60.0f);
+    check(s.entities[0].position == before, "dead enemies stop moving");
+}
+
+void testTexturedWeaponModel()
+{
+    engine::Model m;
+    std::string err;
+    check(engine::loadModelFile(m, ENGINE_TEST_ASSETS "/models/weapons/blaster-repeater.glb", &err), "load weapon: " + err);
+    bool textured = false;
+    for (const auto& p : m.parts)
+        textured = textured || (p.texture && p.texture->width == 512 && p.texcoords.size() == p.positions.size());
+    check(textured, "weapon has its 512x512 color texture and UVs");
+}
+
+void testWeaponFilesAndLoadout()
+{
+    engine::Scene level;
+    std::string err;
+    check(engine::loadScene(level, ENGINE_TEST_ASSETS "/levels/test.level", &err), "load level: " + err);
+    check(level.loadout.size() == 2, "test level gives the player two weapons");
+    engine::WeaponSettings blaster;
+    check(engine::loadWeaponFile(blaster, level.loadout.at(1), &err), "load blaster.weapon: " + err);
+    check(blaster.name == "Scatter Blaster" && blaster.pellets == 8 && !blaster.automatic, "blaster is a semi-auto shotgun");
+    check(std::filesystem::exists(blaster.modelPath), "weapon model path resolves next to the .weapon file");
+
+    blaster.damage = 11.5f;
+    check(engine::saveWeaponFile(blaster, "copy.weapon", &err), "save weapon: " + err);
+    engine::WeaponSettings copy;
+    check(engine::loadWeaponFile(copy, "copy.weapon", &err) && copy.damage == 11.5f, "weapon file round trip");
+    check(std::filesystem::equivalent(copy.modelPath, blaster.modelPath), "model path rewritten relative to the new file");
+}
+
+void testSemiAutomatic()
+{
+    engine::WeaponSettings s;
+    s.automatic = false;
+    s.fireInterval = 0.1f;
+    engine::Weapon w(s);
+    int held = 0;
+    for (int i = 0; i < 60; ++i)
+        held += w.update(1.0f / 60.0f, true, false);
+    check(held == 1, "holding a semi-auto trigger fires once");
+    int tapped = 0;
+    for (int i = 0; i < 60; ++i)
+        tapped += w.update(1.0f / 60.0f, (i / 10) % 2 == 0, false); // pull/release every 10 steps
+    check(tapped == 2, "each new pull fires once (the first block continues the earlier hold)");
+}
+
+void testScriptPropertiesFromEditor()
+{
+    std::vector<engine::ScriptProperty> props;
+    std::string err;
+    check(engine::readScriptProperties(ENGINE_TEST_ASSETS "/scripts/enemy.lua", props, &err), "read enemy.lua properties: " + err);
+    check(props.size() == 11 && props[0].name == "health" && props[0].defaultValue == "100", "enemy.lua declares 11 tunables, health first");
+
+    // An editor override changes the behaviour: 40 hp dies after two 20-damage hits.
+    auto s = flatFloor();
+    s.entities.push_back(enemyAt({15, 0, 0}, 0.0f));
+    s.entities[0].properties["health"] = "40";
+    engine::PhysicsWorld world;
+    world.setLevel(s);
+    engine::PlayerController player;
+    player.spawn(world, {0, 0, 0});
+    engine::ScriptSystem scripts(s, world, player, [](const std::string&) {});
+    scripts.start();
+    scripts.damageEntity(0, 20.0f);
+    check(s.entities[0].alive, "alive after the first hit");
+    scripts.damageEntity(0, 20.0f);
+    check(!s.entities[0].alive, "editor value health=40 is used by the script");
+
+    // Properties and player settings survive save + load.
+    s.player.jumpSpeed = 7.25f;
+    check(engine::saveScene(s, "props.level", &err), "save: " + err);
+    engine::Scene t;
+    check(engine::loadScene(t, "props.level", &err), "load: " + err);
+    check(t.entities.size() == 1 && t.entities[0].properties["health"] == "40", "entity properties are saved");
+    check(t.player.jumpSpeed == 7.25f, "player settings are saved");
+}
+
 void testPick()
 {
     auto s = flatFloor();
@@ -299,6 +439,13 @@ int main()
     testScriptErrorIsReported();
     testEnemyChasesAndAttacks();
     testEnemyBlockedBySight();
+    testWeaponFireRateAndReload();
+    testShotHitsEnemyNotWallBehind();
+    testEnemyDiesAndReactsToDamage();
+    testTexturedWeaponModel();
+    testWeaponFilesAndLoadout();
+    testSemiAutomatic();
+    testScriptPropertiesFromEditor();
     testPick();
     std::printf(failures ? "%d test(s) failed\n" : "all tests passed\n", failures);
     return failures ? 1 : 0;

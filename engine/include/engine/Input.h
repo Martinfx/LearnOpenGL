@@ -14,6 +14,8 @@ enum class Action : std::size_t {
     MoveRight,
     Jump,
     Sprint,
+    Fire,
+    Reload,
     Count
 };
 

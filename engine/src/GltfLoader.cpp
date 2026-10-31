@@ -3,10 +3,17 @@
 #define CGLTF_IMPLEMENTATION
 #include <cgltf.h>
 
+#define STB_IMAGE_IMPLEMENTATION
+#define STBI_ONLY_PNG
+#define STBI_ONLY_JPEG
+#include <stb_image.h>
+
 #include "engine/Scene.h"
 
 #include <algorithm>
 #include <atomic>
+#include <cstdio>
+#include <string_view>
 #include <glm/common.hpp>
 #include <utility>
 #include <cmath>
@@ -15,12 +22,58 @@
 #include <glm/mat3x3.hpp>
 #include <glm/mat4x4.hpp>
 #include <limits>
+#include <map>
 
 namespace engine {
 
 namespace {
 
 std::atomic<std::uint64_t> nextPartId{1};
+
+// Decodes the base color image of a material (external file or embedded in the .glb).
+std::shared_ptr<const Texture> loadImage(const cgltf_image* image, const std::filesystem::path& gltfDir,
+                                         std::map<const cgltf_image*, std::shared_ptr<const Texture>>& cache)
+{
+    if (!image)
+        return nullptr;
+    if (auto it = cache.find(image); it != cache.end())
+        return it->second;
+
+    int w = 0, h = 0, comp = 0;
+    stbi_uc* pixels = nullptr;
+    if (image->buffer_view && image->buffer_view->buffer->data) {
+        const auto* bytes = static_cast<const stbi_uc*>(image->buffer_view->buffer->data) + image->buffer_view->offset;
+        pixels = stbi_load_from_memory(bytes, static_cast<int>(image->buffer_view->size), &w, &h, &comp, 4);
+    } else if (image->uri && std::string_view(image->uri).substr(0, 5) != "data:") {
+        std::string uri = image->uri;
+        cgltf_decode_uri(uri.data());
+        uri.resize(std::char_traits<char>::length(uri.c_str()));
+        const std::filesystem::path file = gltfDir / std::filesystem::path(std::u8string(uri.begin(), uri.end()));
+        const std::u8string u8 = file.u8string();
+        // stbi_load takes a UTF-8 path on Windows only with STBI_WINDOWS_UTF8; read the bytes ourselves.
+        if (FILE* f = std::fopen(std::string(u8.begin(), u8.end()).c_str(), "rb")) {
+            std::vector<stbi_uc> data;
+            stbi_uc buf[65536];
+            std::size_t n;
+            while ((n = std::fread(buf, 1, sizeof buf, f)) > 0)
+                data.insert(data.end(), buf, buf + n);
+            std::fclose(f);
+            pixels = stbi_load_from_memory(data.data(), static_cast<int>(data.size()), &w, &h, &comp, 4);
+        }
+    }
+    std::shared_ptr<const Texture> result;
+    if (pixels) {
+        auto tex = std::make_shared<Texture>();
+        tex->id = nextPartId++;
+        tex->width = w;
+        tex->height = h;
+        tex->rgba.assign(pixels, pixels + static_cast<std::size_t>(w) * static_cast<std::size_t>(h) * 4);
+        stbi_image_free(pixels);
+        result = std::move(tex);
+    }
+    cache[image] = result;
+    return result;
+}
 
 const char* resultText(cgltf_result r)
 {
@@ -50,7 +103,12 @@ const cgltf_accessor* findAttribute(const cgltf_primitive& prim, cgltf_attribute
     return nullptr;
 }
 
-bool loadPrimitive(const cgltf_primitive& prim, const glm::mat4& world, MeshPart& part)
+struct LoadContext {
+    std::filesystem::path dir;
+    std::map<const cgltf_image*, std::shared_ptr<const Texture>> images;
+};
+
+bool loadPrimitive(const cgltf_primitive& prim, const glm::mat4& world, MeshPart& part, LoadContext& ctx)
 {
     if (prim.type != cgltf_primitive_type_triangles)
         return false; // lines/points are ignored
@@ -103,26 +161,36 @@ bool loadPrimitive(const cgltf_primitive& prim, const glm::mat4& world, MeshPart
     }
 
     if (prim.material && prim.material->has_pbr_metallic_roughness) {
-        const float* c = prim.material->pbr_metallic_roughness.base_color_factor; // linear
+        const cgltf_pbr_metallic_roughness& pbr = prim.material->pbr_metallic_roughness;
+        const float* c = pbr.base_color_factor; // linear
         part.color = {linearToSrgb(c[0]), linearToSrgb(c[1]), linearToSrgb(c[2])};
+        const cgltf_accessor* uv = findAttribute(prim, cgltf_attribute_type_texcoord);
+        if (pbr.base_color_texture.texture && uv) {
+            part.texture = loadImage(pbr.base_color_texture.texture->image, ctx.dir, ctx.images);
+            if (part.texture) {
+                part.texcoords.resize(uv->count);
+                for (cgltf_size i = 0; i < uv->count; ++i)
+                    cgltf_accessor_read_float(uv, i, &part.texcoords[i].x, 2);
+            }
+        }
     }
     part.id = nextPartId++;
     return !part.indices.empty();
 }
 
-void loadNode(const cgltf_node& node, Model& model)
+void loadNode(const cgltf_node& node, Model& model, LoadContext& ctx)
 {
     if (node.mesh) {
         glm::mat4 world;
         cgltf_node_transform_world(&node, glm::value_ptr(world));
         for (cgltf_size i = 0; i < node.mesh->primitives_count; ++i) {
             MeshPart part;
-            if (loadPrimitive(node.mesh->primitives[i], world, part))
+            if (loadPrimitive(node.mesh->primitives[i], world, part, ctx))
                 model.parts.push_back(std::move(part));
         }
     }
     for (cgltf_size i = 0; i < node.children_count; ++i)
-        loadNode(*node.children[i], model);
+        loadNode(*node.children[i], model, ctx);
 }
 
 } // namespace
@@ -155,14 +223,16 @@ bool loadModelFile(Model& model, const std::filesystem::path& file, std::string*
         return fail(std::string("validation: ") + resultText(r));
 
     model.parts.clear();
+    LoadContext ctx;
+    ctx.dir = file.parent_path();
     const cgltf_scene* scene = data->scene ? data->scene : (data->scenes_count ? &data->scenes[0] : nullptr);
     if (scene) {
         for (cgltf_size i = 0; i < scene->nodes_count; ++i)
-            loadNode(*scene->nodes[i], model);
+            loadNode(*scene->nodes[i], model, ctx);
     } else {
         for (cgltf_size i = 0; i < data->nodes_count; ++i)
             if (!data->nodes[i].parent)
-                loadNode(data->nodes[i], model);
+                loadNode(data->nodes[i], model, ctx);
     }
     if (model.parts.empty())
         return fail("no triangle meshes found");

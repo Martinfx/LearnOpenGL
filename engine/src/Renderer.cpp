@@ -15,14 +15,17 @@ namespace {
 const char* kVertexShader = R"(#version 450 core
 layout(location = 0) in vec3 aPosition;
 layout(location = 1) in vec3 aNormal;
+layout(location = 2) in vec2 aUV;
 uniform mat4 uModel;
 uniform mat4 uViewProj;
 out vec3 vWorldPos;
 out vec3 vNormal;
+out vec2 vUV;
 void main() {
     vec4 world = uModel * vec4(aPosition, 1.0);
     vWorldPos = world.xyz;
-    vNormal = aNormal; // boxes are only translated and scaled, normals stay axis aligned
+    vNormal = mat3(uModel) * aNormal; // rotation + scale; renormalized in the fragment shader
+    vUV = aUV;
     gl_Position = uViewProj * world;
 }
 )";
@@ -32,6 +35,11 @@ void main() {
 const char* kFragmentShader = R"(#version 450 core
 in vec3 vWorldPos;
 in vec3 vNormal;
+in vec2 vUV;
+uniform sampler2D uTexture;
+uniform bool uHasTexture;
+uniform bool uEmissive;
+uniform float uFogDensity;
 uniform vec3 uColor;
 uniform vec3 uSunDir;
 uniform vec3 uCamera;
@@ -45,13 +53,21 @@ float gridLines(vec3 p, vec3 n) {
 }
 
 void main() {
+    if (uEmissive) {
+        fragColor = vec4(uColor, 1.0);
+        return;
+    }
     vec3 n = normalize(vNormal);
     vec3 l = normalize(-uSunDir);
     vec3 v = normalize(uCamera - vWorldPos);
     vec3 h = normalize(l + v);
 
     vec3 albedo = pow(uColor, vec3(2.2)); // colors are authored in sRGB
-    vec3 base = albedo * (1.0 - 0.18 * gridLines(vWorldPos, n));
+    vec3 base;
+    if (uHasTexture)
+        base = albedo * texture(uTexture, vUV).rgb; // sRGB texture, sampled as linear
+    else
+        base = albedo * (1.0 - 0.18 * gridLines(vWorldPos, n));
     float diffuse = max(dot(n, l), 0.0);
     float specular = pow(max(dot(n, h), 0.0), 48.0) * 0.25 * step(0.0, diffuse);
     vec3 ambient = mix(vec3(0.20, 0.18, 0.16), vec3(0.32, 0.38, 0.48), n.y * 0.5 + 0.5);
@@ -60,7 +76,7 @@ void main() {
     color = mix(color, vec3(1.0, 0.75, 0.2), uHighlight * 0.35);
 
     // Distance fog toward the sky color.
-    float fog = 1.0 - exp(-length(uCamera - vWorldPos) * 0.012);
+    float fog = 1.0 - exp(-length(uCamera - vWorldPos) * uFogDensity);
     color = mix(color, vec3(0.55, 0.66, 0.80), fog);
     fragColor = vec4(pow(color, vec3(1.0 / 2.2)), 1.0);
 }
@@ -87,7 +103,20 @@ unsigned compile(GLenum type, const char* source, std::string* error)
 struct Vertex {
     glm::vec3 position;
     glm::vec3 normal;
+    glm::vec2 uv;
 };
+
+void setupVertexArray(unsigned vao, unsigned vbo)
+{
+    glVertexArrayVertexBuffer(vao, 0, vbo, 0, sizeof(Vertex));
+    for (unsigned attr = 0; attr < 3; ++attr) {
+        glEnableVertexArrayAttrib(vao, attr);
+        glVertexArrayAttribBinding(vao, attr, 0);
+    }
+    glVertexArrayAttribFormat(vao, 0, 3, GL_FLOAT, GL_FALSE, offsetof(Vertex, position));
+    glVertexArrayAttribFormat(vao, 1, 3, GL_FLOAT, GL_FALSE, offsetof(Vertex, normal));
+    glVertexArrayAttribFormat(vao, 2, 2, GL_FLOAT, GL_FALSE, offsetof(Vertex, uv));
+}
 
 std::vector<Vertex> unitCube()
 {
@@ -106,9 +135,9 @@ std::vector<Vertex> unitCube()
         const glm::vec3 e = c - u * 0.5f + w * 0.5f;
         // Pick winding so the triangle normal matches the face normal.
         if (glm::dot(glm::cross(b - a, d - a), normal) > 0.0f) {
-            v.insert(v.end(), {{a, normal}, {b, normal}, {d, normal}, {a, normal}, {d, normal}, {e, normal}});
+            v.insert(v.end(), {{a, normal, {}}, {b, normal, {}}, {d, normal, {}}, {a, normal, {}}, {d, normal, {}}, {e, normal, {}}});
         } else {
-            v.insert(v.end(), {{a, normal}, {d, normal}, {b, normal}, {a, normal}, {e, normal}, {d, normal}});
+            v.insert(v.end(), {{a, normal, {}}, {d, normal, {}}, {b, normal, {}}, {a, normal, {}}, {e, normal, {}}, {d, normal, {}}});
         }
     }
     return v;
@@ -160,19 +189,19 @@ bool Renderer::init(GlLoader loader, std::string* error)
     locSun_ = glGetUniformLocation(program_, "uSunDir");
     locCamera_ = glGetUniformLocation(program_, "uCamera");
     locHighlight_ = glGetUniformLocation(program_, "uHighlight");
+    locHasTexture_ = glGetUniformLocation(program_, "uHasTexture");
+    locEmissive_ = glGetUniformLocation(program_, "uEmissive");
+    locFog_ = glGetUniformLocation(program_, "uFogDensity");
+    glUseProgram(program_);
+    glUniform1i(glGetUniformLocation(program_, "uTexture"), 0);
+    glUseProgram(0);
 
     const std::vector<Vertex> cube = unitCube();
     vertexCount_ = static_cast<int>(cube.size());
     glCreateBuffers(1, &vbo_);
     glNamedBufferStorage(vbo_, static_cast<GLsizeiptr>(cube.size() * sizeof(Vertex)), cube.data(), 0);
     glCreateVertexArrays(1, &vao_);
-    glVertexArrayVertexBuffer(vao_, 0, vbo_, 0, sizeof(Vertex));
-    glEnableVertexArrayAttrib(vao_, 0);
-    glEnableVertexArrayAttrib(vao_, 1);
-    glVertexArrayAttribFormat(vao_, 0, 3, GL_FLOAT, GL_FALSE, offsetof(Vertex, position));
-    glVertexArrayAttribFormat(vao_, 1, 3, GL_FLOAT, GL_FALSE, offsetof(Vertex, normal));
-    glVertexArrayAttribBinding(vao_, 0, 0);
-    glVertexArrayAttribBinding(vao_, 1, 0);
+    setupVertexArray(vao_, vbo_);
     return true;
 }
 
@@ -184,6 +213,9 @@ void Renderer::shutdown()
         glDeleteBuffers(1, &m.ibo);
     }
     meshes_.clear();
+    for (auto& [id, t] : textures_)
+        glDeleteTextures(1, &t.handle);
+    textures_.clear();
     if (vao_) glDeleteVertexArrays(1, &vao_);
     if (vbo_) glDeleteBuffers(1, &vbo_);
     if (program_) glDeleteProgram(program_);
@@ -198,8 +230,9 @@ const Renderer::GpuMesh& Renderer::upload(const MeshPart& part)
         return it->second;
     }
     std::vector<Vertex> vertices(part.positions.size());
+    const bool hasUv = part.texcoords.size() == part.positions.size();
     for (std::size_t i = 0; i < vertices.size(); ++i)
-        vertices[i] = {part.positions[i], part.normals[i]};
+        vertices[i] = {part.positions[i], part.normals[i], hasUv ? part.texcoords[i] : glm::vec2(0.0f)};
 
     GpuMesh m;
     glCreateBuffers(1, &m.vbo);
@@ -207,21 +240,93 @@ const Renderer::GpuMesh& Renderer::upload(const MeshPart& part)
     glCreateBuffers(1, &m.ibo);
     glNamedBufferStorage(m.ibo, static_cast<GLsizeiptr>(part.indices.size() * sizeof(std::uint32_t)), part.indices.data(), 0);
     glCreateVertexArrays(1, &m.vao);
-    glVertexArrayVertexBuffer(m.vao, 0, m.vbo, 0, sizeof(Vertex));
+    setupVertexArray(m.vao, m.vbo);
     glVertexArrayElementBuffer(m.vao, m.ibo);
-    glEnableVertexArrayAttrib(m.vao, 0);
-    glEnableVertexArrayAttrib(m.vao, 1);
-    glVertexArrayAttribFormat(m.vao, 0, 3, GL_FLOAT, GL_FALSE, offsetof(Vertex, position));
-    glVertexArrayAttribFormat(m.vao, 1, 3, GL_FLOAT, GL_FALSE, offsetof(Vertex, normal));
-    glVertexArrayAttribBinding(m.vao, 0, 0);
-    glVertexArrayAttribBinding(m.vao, 1, 0);
     m.indexCount = static_cast<int>(part.indices.size());
     m.used = true;
     return meshes_.emplace(part.id, m).first->second;
 }
 
+unsigned Renderer::texture(const Texture& tex)
+{
+    auto it = textures_.find(tex.id);
+    if (it != textures_.end()) {
+        it->second.used = true;
+        return it->second.handle;
+    }
+    GpuTexture t;
+    glCreateTextures(GL_TEXTURE_2D, 1, &t.handle);
+    const int levels = 1 + static_cast<int>(std::floor(std::log2(std::max(tex.width, tex.height))));
+    glTextureStorage2D(t.handle, levels, GL_SRGB8_ALPHA8, tex.width, tex.height);
+    glTextureSubImage2D(t.handle, 0, 0, 0, tex.width, tex.height, GL_RGBA, GL_UNSIGNED_BYTE, tex.rgba.data());
+    glGenerateTextureMipmap(t.handle);
+    glTextureParameteri(t.handle, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTextureParameteri(t.handle, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    t.used = true;
+    textures_.emplace(tex.id, t);
+    return t.handle;
+}
+
+void Renderer::drawModel(const Model& model, const glm::mat4& transform, float highlight)
+{
+    glUniformMatrix4fv(locModel_, 1, GL_FALSE, glm::value_ptr(transform));
+    glUniform1f(locHighlight_, highlight);
+    for (const MeshPart& part : model.parts) {
+        const GpuMesh& mesh = upload(part);
+        glUniform3fv(locColor_, 1, glm::value_ptr(part.texture ? glm::vec3(1.0f) : part.color));
+        if (part.texture) {
+            glBindTextureUnit(0, texture(*part.texture));
+            glUniform1i(locHasTexture_, 1);
+        } else {
+            glUniform1i(locHasTexture_, 0);
+        }
+        glBindVertexArray(mesh.vao);
+        glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, nullptr);
+    }
+    glUniform1i(locHasTexture_, 0);
+}
+
+void Renderer::drawCube(const glm::mat4& transform, glm::vec3 color, float highlight, bool emissive)
+{
+    glBindVertexArray(vao_);
+    glUniformMatrix4fv(locModel_, 1, GL_FALSE, glm::value_ptr(transform));
+    glUniform3fv(locColor_, 1, glm::value_ptr(color));
+    glUniform1f(locHighlight_, highlight);
+    glUniform1i(locEmissive_, emissive ? 1 : 0);
+    glDrawArrays(GL_TRIANGLES, 0, vertexCount_);
+    glUniform1i(locEmissive_, 0);
+}
+
+void Renderer::renderOverlay(const RenderView& view, const OverlayPass& pass)
+{
+    // First-person layer: own depth range and projection, so the weapon never clips into walls.
+    glClear(GL_DEPTH_BUFFER_BIT);
+    glUseProgram(program_);
+    const glm::mat4 viewProj = pass.projection; // geometry is already in view space
+    glUniformMatrix4fv(locViewProj_, 1, GL_FALSE, glm::value_ptr(viewProj));
+    glUniform3fv(locSun_, 1, glm::value_ptr(glm::normalize(pass.sunDirectionViewSpace)));
+    glUniform3fv(locCamera_, 1, glm::value_ptr(glm::vec3(0.0f)));
+    glUniform1f(locFog_, 0.0f);
+    if (pass.model)
+        drawModel(*pass.model, pass.modelTransform, 0.0f);
+    for (const OverlayBox& b : pass.boxes)
+        drawCube(glm::scale(glm::translate(glm::mat4(1.0f), b.center), b.size), b.color, 0.0f, b.emissive);
+    (void)view;
+    glBindVertexArray(0);
+    glUseProgram(0);
+}
+
 void Renderer::releaseUnused()
 {
+    for (auto it = textures_.begin(); it != textures_.end();) {
+        if (!it->second.used) {
+            glDeleteTextures(1, &it->second.handle);
+            it = textures_.erase(it);
+        } else {
+            it->second.used = false;
+            ++it;
+        }
+    }
     // Meshes of models removed from the scene are freed after one frame.
     for (auto it = meshes_.begin(); it != meshes_.end();) {
         if (!it->second.used) {
@@ -238,6 +343,8 @@ void Renderer::releaseUnused()
 
 void Renderer::render(const Scene& scene, const RenderView& view)
 {
+    // Free GPU data nothing drew since the previous render() (removed models).
+    releaseUnused();
     glViewport(0, 0, view.viewportWidth, view.viewportHeight);
     glClearColor(0.55f, 0.66f, 0.80f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -250,6 +357,9 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     glUniformMatrix4fv(locViewProj_, 1, GL_FALSE, glm::value_ptr(viewProj));
     glUniform3fv(locSun_, 1, glm::value_ptr(glm::normalize(scene.sunDirection)));
     glUniform3fv(locCamera_, 1, glm::value_ptr(view.cameraPosition));
+    glUniform1f(locFog_, 0.012f);
+    glUniform1i(locHasTexture_, 0);
+    glUniform1i(locEmissive_, 0);
     glBindVertexArray(vao_);
 
     auto drawBox = [&](glm::vec3 center, glm::vec3 size, glm::vec3 color, float highlight, float yawDegrees = 0.0f) {
@@ -270,19 +380,15 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     for (std::size_t i = 0; i < scene.models.size(); ++i) {
         const Model& model = scene.models[i];
         const bool selected = static_cast<int>(scene.boxes.size() + i) == view.selectedObject;
-        const glm::mat4 transform = glm::translate(glm::mat4(1.0f), model.position);
-        glUniformMatrix4fv(locModel_, 1, GL_FALSE, glm::value_ptr(transform));
-        glUniform1f(locHighlight_, selected ? 1.0f : 0.0f);
-        for (const MeshPart& part : model.parts) {
-            const GpuMesh& mesh = upload(part);
-            glUniform3fv(locColor_, 1, glm::value_ptr(part.color));
-            glBindVertexArray(mesh.vao);
-            glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, nullptr);
-        }
+        drawModel(model, glm::translate(glm::mat4(1.0f), model.position), selected ? 1.0f : 0.0f);
     }
+    for (const OverlayBox& b : view.worldBoxes)
+        drawCube(glm::scale(glm::translate(glm::mat4(1.0f), b.center), b.size), b.color, 0.0f, b.emissive);
     glBindVertexArray(vao_);
     for (std::size_t i = 0; i < scene.entities.size(); ++i) {
         const Entity& e = scene.entities[i];
+        if (!e.alive)
+            continue;
         const float highlight = static_cast<int>(scene.boxes.size() + scene.models.size() + i) == view.selectedObject ? 1.0f : 0.0f;
         drawBox(e.position + glm::vec3(0.0f, e.size.y * 0.5f, 0.0f), e.size, e.color, highlight, e.yawDegrees);
         // A small "nose" shows which way the entity faces.
@@ -291,7 +397,6 @@ void Renderer::render(const Scene& scene, const RenderView& view)
         const glm::vec3 nose = e.position + glm::vec3(0.0f, e.size.y * 0.8f, 0.0f) + facing * (e.size.x * 0.5f + 0.1f);
         drawBox(nose, glm::vec3(0.2f, 0.12f, 0.2f), glm::vec3(0.95f, 0.9f, 0.3f), highlight, e.yawDegrees);
     }
-    releaseUnused();
     if (view.drawPlayerStart) {
         // Player-sized marker so level designers see the spawn and its scale.
         drawBox(scene.playerStart + glm::vec3(0.0f, 0.9f, 0.0f), glm::vec3(0.6f, 1.8f, 0.6f),

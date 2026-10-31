@@ -13,7 +13,7 @@ Návrh architektury a milníků: https://claude.ai/artifact/LzheekHA7ScTb93AKpf7
 | `game/` | Spustitelná hra (`fps_game`), okno a vstup přes GLFW |
 | `editor/` | Level editor (`fps_editor`) v Qt 6 Widgets, viewport používá stejný renderer jako hra |
 | `tests/` | Testy jádra bez OpenGL (CTest) |
-| `assets/` | Ukázková úroveň `levels/test.level`, model `models/ramp.gltf`, AI skript `scripts/enemy.lua` |
+| `assets/` | Ukázková úroveň, modely, zbraně (`weapons/*.weapon`), AI skript `scripts/enemy.lua` |
 
 ## Závislosti
 
@@ -47,7 +47,8 @@ Výstupy jsou v `build/bin/`.
 
 ## Ovládání
 
-**Hra** (`fps_game [soubor.level]`): WASD pohyb, myš rozhlížení, mezerník skok, Shift sprint, Esc uvolní myš.
+**Hra** (`fps_game [soubor.level]`): WASD pohyb, myš rozhlížení, mezerník skok, Shift sprint,
+levé tlačítko střelba, R přebití, 1–9 nebo kolečko výběr zbraně, Esc uvolní myš.
 
 **Editor** (`fps_editor [soubor.level]`): pravé tlačítko + WASD/QE létání (kolečko mění rychlost),
 levé tlačítko výběr, F zaměří výběr, Ctrl+B přidá box, Ctrl+I importuje glTF model, Ctrl+D duplikuje, Del smaže,
@@ -64,6 +65,23 @@ kde stojí, hráče vidí v zorném úhlu (a neprojde přes zdi), pronásleduje 
 hledá ho na posledním známém místě a vrací se zpět. Parametry jsou na začátku skriptu. Chyba ve skriptu
 vypne jen danou entitu a vypíše se do konzole hry.
 
+## Co se nastavuje v editoru
+
+Všechno, co hra používá, se mění v editoru a ukládá do souborů úrovně nebo assetů:
+
+| Co | Kde v editoru | Uloženo v |
+| --- | --- | --- |
+| Geometrie, modely, entity, skripty | Outliner + Properties | `.level` |
+| Parametry AI a dalších skriptů | Properties > Script parameters (deklaruje je skript v `properties`) | `.level` (po entitách) |
+| Pohyb a zdraví hráče, start, slunce | Properties > Level | `.level` |
+| Výzbroj hráče a parametry zbraní | Záložka Weapons | `.level` + `weapons/*.weapon` |
+
+## Zbraně
+
+Každá zbraň je soubor `.weapon` (model, poškození, kadence, automatická/poloautomatická, broky,
+zásobník, přebíjení, rozptyl, dostřel, poloha v ruce). Ukázkové: Repeater (automat) a Scatter Blaster
+(brokovnice). Modely jsou z Kenney Blaster Kit pod licencí CC0, viz `assets/models/weapons/CREDITS.md`.
+
 ## Modely z Blenderu
 
 File > Export > glTF 2.0 (`.glb` nebo `.gltf`), Y nahoru (výchozí). V editoru Ctrl+I.
@@ -71,5 +89,6 @@ Model je zároveň statická kolize (Jolt MeshShape), takže po něm jde chodit.
 
 ## Stav
 
-Hotovo: hráč (Jolt CharacterVirtual) na úrovni z boxů a glTF modelů, entity s Lua skripty, AI nepřátel.
-Další: navmesh (Recast/Detour) pro hledání cesty, zbraně a zdraví nepřátel, gizmo a undo/redo v editoru.
+Hotovo: hráč (Jolt CharacterVirtual), glTF modely s texturami, entity s Lua skripty, AI nepřátel,
+zbraně se střelbou a zdravím nepřátel, editor pro všechny parametry.
+Další: navmesh (Recast/Detour), zvuky, HUD, gizmo a undo/redo v editoru.

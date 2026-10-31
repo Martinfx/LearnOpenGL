@@ -28,6 +28,10 @@ public:
     // Calls on_update(self, dt) and moves character entities. Call once per fixed step.
     void fixedUpdate(float dt);
 
+    // Applies weapon damage: calls on_damage(self, amount); at 0 health the
+    // entity dies (on_death(self), no longer drawn or simulated).
+    void damageEntity(int entityIndex, float amount);
+
     float playerHealth() const;
     void setPlayerHealth(float health);
     int errorCount() const;

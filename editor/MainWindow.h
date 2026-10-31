@@ -2,15 +2,19 @@
 #include <engine/Scene.h>
 
 #include <QMainWindow>
+#include <utility>
+#include <vector>
 
 class QDoubleSpinBox;
 class QLabel;
+class QTableWidget;
 class QLineEdit;
 class QListWidget;
 class QPushButton;
 class QWidget;
 class Vec3Editor;
 class Viewport;
+class WeaponPanel;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -45,6 +49,7 @@ private:
     void refreshOutliner();
     void refreshProperties();
     void refreshLevelProperties();
+    void refreshScriptParams();
     void markDirty();
     void updateTitle();
     engine::Box* selectedBox();
@@ -57,6 +62,7 @@ private:
     bool dirty_ = false;
 
     Viewport* viewport_ = nullptr;
+    WeaponPanel* weapons_ = nullptr;
     QListWidget* outliner_ = nullptr;
     QWidget* boxPanel_ = nullptr;
     QLineEdit* nameEdit_ = nullptr;
@@ -65,6 +71,9 @@ private:
     QDoubleSpinBox* yawSpin_ = nullptr;
     QLineEdit* scriptEdit_ = nullptr;
     QWidget* scriptRow_ = nullptr;
+    QTableWidget* scriptParams_ = nullptr;
+    std::vector<engine::ScriptProperty> scriptProps_;
+    std::vector<std::pair<QDoubleSpinBox*, float engine::PlayerSettings::*>> playerSpins_;
     Vec3Editor* positionEdit_ = nullptr;
     Vec3Editor* sizeEdit_ = nullptr;
     QPushButton* colorButton_ = nullptr;

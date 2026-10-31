@@ -9,6 +9,22 @@ Lua 5.4 with `base`, `math`, `string`, `table` and `coroutine` libraries.
 | --- | --- |
 | `on_start(self)` | Once when the level starts |
 | `on_update(self, dt)` | Every simulation step (60 Hz, `dt` = 1/60 s) |
+| `on_damage(self, amount)` | Hit by the player's weapon (health already reduced) |
+| `on_death(self)` | Health reached 0; the entity is removed from play |
+
+## Editor parameters
+
+Declare tunables at the top of the script; the editor lists them for every
+entity using the script and saves per-entity values in the level:
+
+```lua
+properties = {
+    { "speed", 3.0, "Walk speed, m/s" },   -- name, default (number, boolean or string), description
+}
+function on_update(self, dt) self:move(self:forward(), props.speed) end
+```
+
+`props` holds the defaults overridden by the editor values.
 
 ## `vec3`
 
@@ -24,6 +40,8 @@ methods `:length()`, `:normalized()`, `:flat()` (y = 0), `:dot(other)`.
 | `yaw` | Facing in degrees (0 = +X, 90 = +Z) |
 | `color` | `vec3` 0..1 |
 | `height` | Entity height in metres |
+| `health` | Hit points (default 100), read/write |
+| `alive` | `false` after death |
 | `grounded` | Standing on the ground (characters only) |
 | `:eye()` | Eye position |
 | `:forward()` | Facing direction |

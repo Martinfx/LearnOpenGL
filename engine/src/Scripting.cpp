@@ -28,12 +28,52 @@ struct ScriptEntity {
     float jumpRequest = 0.0f;
     sol::environment env;
     sol::protected_function onUpdate;
+    sol::protected_function onDamage;
+    sol::protected_function onDeath;
     bool failed = false;
 
     Entity& e() const { return scene->entities[index]; }
 };
 
 } // namespace
+
+// Builds `props` from the script's `properties` declaration and the values set in the editor.
+void buildProps(sol::state& lua, sol::environment& env, const Entity& e)
+{
+    sol::table props = lua.create_table();
+    sol::object decl = env["properties"];
+    if (decl.is<sol::table>()) {
+        for (auto& [k, v] : decl.as<sol::table>()) {
+            if (!v.is<sol::table>())
+                continue;
+            sol::table row = v.as<sol::table>();
+            sol::object name = row[1];
+            sol::object def = row[2];
+            if (!name.is<std::string>())
+                continue;
+            const std::string key = name.as<std::string>();
+            auto it = e.properties.find(key);
+            if (it == e.properties.end()) {
+                props[key] = def;
+            } else if (def.get_type() == sol::type::number) {
+                try {
+                    props[key] = std::stod(it->second);
+                } catch (...) {
+                    props[key] = def;
+                }
+            } else if (def.get_type() == sol::type::boolean) {
+                props[key] = it->second == "true" || it->second == "1";
+            } else {
+                props[key] = it->second;
+            }
+        }
+    }
+    // Values without a declaration are passed through as strings.
+    for (const auto& [key, value] : e.properties)
+        if (props[key].get_type() == sol::type::lua_nil)
+            props[key] = value;
+    env["props"] = props;
+}
 
 struct ScriptSystem::Impl {
     Scene& scene;
@@ -99,6 +139,9 @@ void ScriptSystem::Impl::bindApi()
         "color", sol::property([](ScriptEntity& s) { return s.e().color; },
                                [](ScriptEntity& s, const glm::vec3& c) { s.e().color = c; }),
         "height", sol::property([](ScriptEntity& s) { return s.e().size.y; }),
+        "health", sol::property([](ScriptEntity& s) { return s.e().health; },
+                                [](ScriptEntity& s, float h) { s.e().health = h; }),
+        "alive", sol::property([](ScriptEntity& s) { return s.e().alive; }),
         "grounded", sol::property([](ScriptEntity& s) { return s.body && s.body->grounded(); }),
         "eye", [](ScriptEntity& s) { return s.e().position + glm::vec3(0.0f, s.e().size.y * 0.9f, 0.0f); },
         "forward", [](ScriptEntity& s) {
@@ -199,6 +242,7 @@ int ScriptSystem::start()
             se->failed = true;
             continue;
         }
+        buildProps(d.lua, se->env, e);
         if (sol::protected_function onStart = se->env["on_start"]; onStart.valid()) {
             auto r = onStart(se.get());
             if (!r.valid()) {
@@ -209,6 +253,8 @@ int ScriptSystem::start()
             }
         }
         se->onUpdate = se->env["on_update"];
+        se->onDamage = se->env["on_damage"];
+        se->onDeath = se->env["on_death"];
     }
     return d.errors;
 }
@@ -218,7 +264,7 @@ void ScriptSystem::fixedUpdate(float dt)
     Impl& d = *impl_;
     d.time += dt;
     for (auto& se : d.entities) {
-        if (se->failed || !se->onUpdate.valid())
+        if (se->failed || !se->onUpdate.valid() || !se->e().alive)
             continue;
         auto r = se->onUpdate(se.get(), dt);
         if (!r.valid()) {
@@ -228,13 +274,83 @@ void ScriptSystem::fixedUpdate(float dt)
         }
     }
     for (auto& se : d.entities) {
-        if (!se->body)
+        if (!se->body || !se->e().alive)
             continue;
         se->body->step(se->desiredVelocity, se->jumpRequest, 18.0f, 0.2f, dt);
         se->e().position = se->body->feet();
         se->desiredVelocity = glm::vec3(0.0f);
         se->jumpRequest = 0.0f;
     }
+}
+
+void ScriptSystem::damageEntity(int entityIndex, float amount)
+{
+    Impl& d = *impl_;
+    if (entityIndex < 0 || entityIndex >= static_cast<int>(d.entities.size()))
+        return;
+    ScriptEntity& se = *d.entities[static_cast<std::size_t>(entityIndex)];
+    Entity& e = se.e();
+    if (!e.alive)
+        return;
+    e.health -= amount;
+    auto call = [&](sol::protected_function& fn, const char* what, auto&&... args) {
+        if (se.failed || !fn.valid())
+            return;
+        auto r = fn(&se, std::forward<decltype(args)>(args)...);
+        if (!r.valid()) {
+            sol::error err = r;
+            d.report(se, std::string(what) + ": " + err.what());
+            se.failed = true;
+        }
+    };
+    call(se.onDamage, "on_damage", amount);
+    if (e.health <= 0.0f && e.alive) {
+        e.health = 0.0f;
+        e.alive = false;
+        call(se.onDeath, "on_death");
+        se.body.reset(); // removes the capsule from the world
+    }
+}
+
+bool readScriptProperties(const std::filesystem::path& script, std::vector<ScriptProperty>& out, std::string* error)
+{
+    out.clear();
+    sol::state lua;
+    lua.open_libraries(sol::lib::base, sol::lib::math, sol::lib::string, sol::lib::table);
+    // Stubs so top-level code that references the API still loads.
+    lua.create_named_table("game");
+    lua["vec3"] = [](sol::variadic_args) { return 0; };
+    const std::u8string u8 = script.u8string();
+    auto loaded = lua.safe_script_file(std::string(u8.begin(), u8.end()), sol::script_pass_on_error);
+    if (!loaded.valid()) {
+        if (error) {
+            sol::error err = loaded;
+            *error = err.what();
+        }
+        return false;
+    }
+    sol::object decl = lua["properties"];
+    if (!decl.is<sol::table>())
+        return true; // script has no tunables
+    sol::table t = decl.as<sol::table>();
+    for (std::size_t i = 1; i <= t.size(); ++i) {
+        sol::object rowObj = t[i];
+        if (!rowObj.is<sol::table>())
+            continue;
+        sol::table row = rowObj.as<sol::table>();
+        ScriptProperty p;
+        sol::object name = row[1];
+        sol::object def = row[2];
+        sol::object desc = row[3];
+        if (!name.is<std::string>())
+            continue;
+        p.name = name.as<std::string>();
+        p.defaultValue = lua["tostring"](def).get<std::string>();
+        if (desc.is<std::string>())
+            p.description = desc.as<std::string>();
+        out.push_back(std::move(p));
+    }
+    return true;
 }
 
 float ScriptSystem::playerHealth() const { return impl_->playerHealth; }

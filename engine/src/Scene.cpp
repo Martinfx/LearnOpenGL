@@ -76,6 +76,14 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
         out << "model " << std::quoted(m.name) << ' ' << std::quoted(pathToUtf8(rel)) << ' '
             << m.position.x << ' ' << m.position.y << ' ' << m.position.z << '\n';
     }
+    const PlayerSettings& pl = scene.player;
+    out << "player " << pl.walkSpeed << ' ' << pl.sprintSpeed << ' ' << pl.jumpSpeed << ' ' << pl.gravity << ' '
+        << pl.airControl << ' ' << pl.height << ' ' << pl.eyeHeight << ' ' << pl.stepHeight << ' '
+        << pl.maxSlopeDegrees << ' ' << pl.maxHealth << '\n';
+    for (const std::filesystem::path& w : scene.loadout) {
+        const std::filesystem::path rel = std::filesystem::absolute(w).lexically_relative(levelDir);
+        out << "weapon " << std::quoted(pathToUtf8(rel.empty() ? std::filesystem::absolute(w) : rel)) << '\n';
+    }
     for (const Entity& e : scene.entities) {
         std::string script;
         if (!e.scriptPath.empty()) {
@@ -86,6 +94,8 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
             << e.position.x << ' ' << e.position.y << ' ' << e.position.z << ' ' << e.yawDegrees << ' '
             << e.size.x << ' ' << e.size.y << ' ' << e.size.z << ' '
             << e.color.r << ' ' << e.color.g << ' ' << e.color.b << ' ' << std::quoted(script) << '\n';
+        for (const auto& [key, value] : e.properties)
+            out << "  prop " << std::quoted(key) << ' ' << std::quoted(value) << '\n';
     }
     if (!out) {
         setError(error, "Write failed: " + file.string());
@@ -141,6 +151,24 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                     return false;
                 }
                 result.models.push_back(std::move(m));
+            }
+        } else if (key == "player") {
+            PlayerSettings& pl = result.player;
+            ok = static_cast<bool>(ls >> pl.walkSpeed >> pl.sprintSpeed >> pl.jumpSpeed >> pl.gravity >> pl.airControl
+                                      >> pl.height >> pl.eyeHeight >> pl.stepHeight >> pl.maxSlopeDegrees >> pl.maxHealth);
+        } else if (key == "prop") {
+            std::string k, v;
+            ok = static_cast<bool>(ls >> std::quoted(k) >> std::quoted(v)) && !result.entities.empty();
+            if (ok)
+                result.entities.back().properties[k] = v;
+        } else if (key == "weapon") {
+            std::string path;
+            ok = static_cast<bool>(ls >> std::quoted(path));
+            if (ok) {
+                std::filesystem::path p = pathFromUtf8(path);
+                if (p.is_relative())
+                    p = std::filesystem::absolute(file).parent_path() / p;
+                result.loadout.push_back(p.lexically_normal());
             }
         } else if (key == "entity") {
             Entity e;

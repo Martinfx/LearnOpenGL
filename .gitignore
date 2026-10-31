@@ -6,3 +6,7 @@ CMakeUserPresets.json
 *.level.bak
 /api_test.lua
 /broken.lua
+/props.level
+/copy.weapon
+/roundtrip.level
+/with_model.level
