@@ -317,6 +317,9 @@ int main(int argc, char** argv)
         drawLoading(1.0f, "map");
         map.init(renderer, scene);
         std::printf("Level loaded in %.1f s\n", glfwGetTime() - loadStart);
+#ifndef NDEBUG
+        std::printf("Warning: debug build (no optimisation), expect a much lower frame rate. Build with -DCMAKE_BUILD_TYPE=Release.\n");
+#endif
         if (background)
             engine::Ui2D::deleteImage(background);
     }
@@ -551,8 +554,8 @@ int main(int argc, char** argv)
             // FPS_ENGINE_STATS=1 prints frame statistics (profiling, comparing optimizations).
             if (std::getenv("FPS_ENGINE_STATS")) {
                 const engine::Renderer::FrameStats& st = renderer.frameStats();
-                std::printf("stats: %.1f FPS, %.2f ms | %d draws, %lld tris, %d instanced, %d culled | CPU %.2f ms, GPU %.2f ms |",
-                            fpsFrames / fpsTimer, 1000.0 * fpsTimer / fpsFrames, st.drawCalls, st.triangles, st.instanced, st.culled,
+                std::printf("stats: %.1f FPS, %.2f ms | %d draws, %lld tris, %d instanced, %d culled, %d uploads | CPU %.2f ms, GPU %.2f ms |",
+                            fpsFrames / fpsTimer, 1000.0 * fpsTimer / fpsFrames, st.drawCalls, st.triangles, st.instanced, st.culled, st.uploads,
                             st.cpuTotalMs, st.gpuTotalMs);
                 for (int p = 0; p < engine::Renderer::PassCount; ++p)
                     std::printf(" %s %.2f/%.2f", engine::Renderer::passName(p), st.cpuMs[p], st.gpuMs[p]);

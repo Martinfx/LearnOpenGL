@@ -122,7 +122,12 @@ MainWindow::MainWindow()
         }
     });
     connect(viewport_, &Viewport::rendererReady, this,
-            [this](const QString& info) { notify(info, 8000); });
+            [this](const QString& info) {
+                notify(info, 8000);
+#ifndef NDEBUG
+                appendLog(tr("Debug build (no optimisation): big levels render much slower. Build with -DCMAKE_BUILD_TYPE=Release."), 1);
+#endif
+            });
     connect(viewport_, &Viewport::renderWarning, this, [this](const QString& message) {
         qWarning("%s", qPrintable(message));
         notify(message, 15000);
@@ -1400,11 +1405,12 @@ void MainWindow::buildDocks()
                         .arg(QString::fromUtf8(engine::Renderer::passName(p)), ms(f.cpuMs[p]), f.gpuValid ? ms(f.gpuMs[p]) : QStringLiteral("-"));
         html += QString("<tr><td><b>%1</b></td><td align='right'><b>%2</b></td><td align='right'><b>%3</b></td></tr></table>")
                     .arg(tr("Total"), ms(f.cpuTotalMs), f.gpuValid ? ms(f.gpuTotalMs) : QStringLiteral("-"));
-        html += tr("<p>%1 draw calls, %2 triangles, %3 objects instanced, %4 culled</p>")
+        html += tr("<p>%1 draw calls, %2 triangles, %3 objects instanced, %4 culled, %5 GPU uploads</p>")
                     .arg(f.drawCalls)
                     .arg(QLocale().toString(f.triangles))
                     .arg(f.instanced)
-                    .arg(f.culled);
+                    .arg(f.culled)
+                    .arg(f.uploads);
         if (!f.gpuValid)
             html += tr("<p>GPU timer queries are not available on this driver.</p>");
         frameLabel->setText(html);

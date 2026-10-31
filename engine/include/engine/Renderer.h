@@ -8,8 +8,11 @@
 #include <chrono>
 #include <future>
 #include <map>
+#include <unordered_map>
+#include <unordered_set>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace engine {
@@ -85,6 +88,12 @@ struct RenderQuality {
     // Shadows: the far cascades are re-rendered every 2nd / 4th frame (sooner when the
     // camera leaves their margin or the sun moves); small casters are left out of them.
     bool shadowCache = true;
+    // Detail objects: low models (under 2 m) with a cull distance and no collision (grass, weeds,
+    // debris). They thin out with distance (detailDensityFar of them are left at the
+    // cull distance) and cast shadows only within detailShadowDistance metres.
+    float detailDensityFar = 0.2f;
+    float detailShadowDistance = 15.0f;
+    float lodScale = 1.0f;          // multiplies every model's LOD distance
 
     static RenderQuality preset(int level); // 0 low, 1 medium, 2 high, 3 ultra
 };
@@ -141,6 +150,7 @@ public:
         double cpuTotalMs = 0.0, gpuTotalMs = 0.0;
         int drawCalls = 0, instanced = 0, culled = 0;
         long long triangles = 0;
+        int uploads = 0;         // meshes and textures sent to the GPU (should be ~0 when standing still)
         bool gpuValid = false;   // timer queries available on this driver
     };
     const FrameStats& frameStats() const { return stats_; }
@@ -223,6 +233,28 @@ private:
     void drawCube(const glm::mat4& transform, glm::vec3 color, float highlight, bool emissive);
     void releaseUnused();
     void keepAlive(const Model& model);
+    void keepAliveOnce(const Model& model); // once per shared mesh per frame
+    std::unordered_set<const void*> keptAlive_;
+    // Spatial grid of the level's models (32 m cells, bounds of their contents) so
+    // culling tests a few hundred cells instead of every model in every pass.
+    struct ModelCell {
+        Aabb bounds{glm::vec3(1e30f), glm::vec3(-1e30f)};
+        float maxCull = 0.0f;      // largest cull distance inside, 0 = something is never culled
+        float maxDiagonal = 0.0f;  // largest model inside
+        std::vector<std::uint32_t> models;
+    };
+    struct ModelGrid {
+        const Scene* scene = nullptr;
+        std::uint64_t hash = 0;
+        std::vector<ModelCell> cells;
+        std::vector<Aabb> bounds;         // world bounds per model
+        std::vector<float> diagonal;
+        std::vector<float> random;        // 0..1 per model (detail thinning)
+        std::vector<std::uint8_t> detail; // grass-like model
+        int rebuilds = 0;
+    };
+    ModelGrid grid_;
+    void updateModelGrid(const Scene& scene);
     void keepTextureAlive(const Texture* tex);
     void updateStreaming();
     unsigned createTexture(GpuTexture& g, const CookedTexture& cooked, int firstMipOffset);
@@ -257,6 +289,7 @@ private:
     std::size_t instanceCapacity_ = 0;
     int drawCalls_ = 0, lastDrawCalls_ = 0, instanced_ = 0, lastInstanced_ = 0;
     long long triangles_ = 0;
+    int uploads_ = 0;
     // Profiler: timer queries per pass, in a ring of frames.
     static constexpr int kQueryFrames = 4;
     unsigned queries_[kQueryFrames][PassCount] = {};

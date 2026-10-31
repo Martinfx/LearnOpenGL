@@ -269,12 +269,17 @@ RenderQuality RenderQuality::preset(int level)
     case 0:
         q.shadowResolution = 1024; q.shadowCascades = 2; q.ssao = false; q.bloom = false; q.fxaa = true;
         q.textureMaxSize = 1024; q.textureStreamDistance = 20.0f;
+        q.lodScale = 0.5f; q.detailDensityFar = 0.1f; q.detailShadowDistance = 0.0f;
         break;
     case 1:
         q.shadowResolution = 1024; q.shadowCascades = 3; q.ssao = true; q.bloom = true;
         q.textureMaxSize = 2048; q.textureStreamDistance = 30.0f;
+        q.lodScale = 0.75f; q.detailDensityFar = 0.15f; q.detailShadowDistance = 10.0f;
         break;
-    case 3: q.shadowResolution = 4096; q.shadowCascades = 3; q.textureStreamDistance = 80.0f; break;
+    case 3:
+        q.shadowResolution = 4096; q.shadowCascades = 3; q.textureStreamDistance = 80.0f;
+        q.lodScale = 1.5f; q.detailDensityFar = 0.35f; q.detailShadowDistance = 25.0f;
+        break;
     default: break; // high
     }
     return q;
@@ -819,17 +824,44 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         }
         drawBox(b.position, b.size, b.color, static_cast<int>(i) == view.selectedObject ? 1.0f : 0.0f, 0.0f, b.material.get(), &b);
     }
-    for (std::size_t i = 0; i < scene.models.size(); ++i) {
+    const bool mainPass = !depthOnly && shadowCascade_ < 0;
+    const bool shadowPass = shadowCascade_ >= 0;
+    const ModelGrid& grid = grid_;
+    for (const ModelCell& cell : grid.cells) {
+        // Whole cells first: beyond every cull distance inside, out of the frustum, or
+        // (far shadow cascades) only small casters.
+        const float cellDistance = distanceTo(view.cameraPosition, cell.bounds);
+        const bool cellFar = cell.maxCull > 0.0f && cellDistance > cell.maxCull;
+        const bool cellTiny = shadowMinCaster_ > 0.0f && cell.maxDiagonal < shadowMinCaster_;
+        if (cellFar || cellTiny || !visible(cell.bounds)) {
+            if (mainPass)
+                for (std::uint32_t i : cell.models) {
+                    keepAliveOnce(scene.models[i]); // stays uploaded while out of view
+                    if (scene.models[i].lod)
+                        keepAliveOnce(*scene.models[i].lod);
+                }
+            culled_ += static_cast<int>(cell.models.size());
+            continue;
+        }
+        for (std::uint32_t i : cell.models) {
         const Model& model = scene.models[i];
-        drawDistance_ = distanceTo(view.cameraPosition, model.bounds());
-        const Aabb modelBounds = model.bounds();
+        const Aabb& modelBounds = grid.bounds[i];
+        drawDistance_ = distanceTo(view.cameraPosition, modelBounds);
         const bool tooFar = model.cullDistance > 0.0f && drawDistance_ > model.cullDistance;
-        const bool tinyCaster = (shadowCascade_ >= 0 && !model.castShadows) ||
-                                (shadowMinCaster_ > 0.0f && glm::length(modelBounds.max - modelBounds.min) < shadowMinCaster_);
-        if (tooFar || tinyCaster || !visible(modelBounds)) {
-            keepAlive(model); // stays uploaded while out of view
-            if (model.lod)
-                keepAlive(*model.lod);
+        bool skip = tooFar || (shadowPass && !model.castShadows) ||
+                    (shadowMinCaster_ > 0.0f && grid.diagonal[i] < shadowMinCaster_);
+        if (!skip && grid.detail[i]) {
+            // Grass and weeds: fewer of them with distance, shadows only up close.
+            const float d = drawDistance_ / model.cullDistance;
+            const float keep = 1.0f - (1.0f - quality_.detailDensityFar) * glm::smoothstep(0.3f, 1.0f, d);
+            skip = grid.random[i] > keep || (shadowPass && (shadowCascade_ > 0 || drawDistance_ > quality_.detailShadowDistance));
+        }
+        if (skip || !visible(modelBounds)) {
+            if (mainPass) {
+                keepAliveOnce(model);
+                if (model.lod)
+                    keepAliveOnce(*model.lod);
+            }
             ++culled_;
             continue;
         }
@@ -837,11 +869,12 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         // Distance LOD: the simpler copy beyond lodDistance (the other one stays uploaded).
         const Model* draw = &model;
         if (model.lod) {
-            const Aabb b = model.bounds();
-            const bool far = shadowCascade_ > 0 || // far cascades: the simple copy is enough
-                             glm::distance(view.cameraPosition, (b.min + b.max) * 0.5f) > model.lodDistance;
+            const bool far = shadowCascade_ > 0 || (shadowPass && grid.detail[i]) || // shadows: the simple copy is enough
+                             glm::distance(view.cameraPosition, (modelBounds.min + modelBounds.max) * 0.5f) >
+                                 model.lodDistance * quality_.lodScale;
             draw = far ? model.lod.get() : &model;
-            keepAlive(far ? model : *model.lod);
+            if (mainPass)
+                keepAliveOnce(far ? model : *model.lod);
         }
         if (!quality_.instancing || selected || draw->skeleton || draw->parts.empty()) {
             drawModel(*draw, model.transform(), selected ? 1.0f : 0.0f);
@@ -857,6 +890,7 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         InstanceBatch& batch = batches_[it->second];
         batch.transforms.push_back(model.transform());
         batch.distance = std::min(batch.distance, drawDistance_);
+        }
     }
     if (scene.terrain && !scene.terrain->foliage.empty())
         addFoliage(*scene.terrain, view);
@@ -989,6 +1023,8 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     building_.instanced = instanced_;
     building_.culled = culled_;
     building_.triangles = triangles_;
+    building_.uploads = uploads_;
+    uploads_ = 0;
     collectQueries(); // finishes building_ into stats_ and starts the next frame
     drawCalls_ = 0;
     instanced_ = 0;
@@ -1004,6 +1040,8 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     targetY_ = view.viewportY;
     env_ = &scene.environment;
     time_ = view.time;
+    keptAlive_.clear();
+    updateModelGrid(scene);
     view_ = view.view;
     projection_ = view.projection;
     ensureTargets(std::max(1, view.viewportWidth), std::max(1, view.viewportHeight));
@@ -1663,6 +1701,7 @@ const Renderer::GpuMesh& Renderer::upload(const MeshPart& part)
     m.indexCount = static_cast<int>(part.indices.size());
     m.bytes = vertices.size() * sizeof(Vertex) + part.indices.size() * sizeof(std::uint32_t);
     m.used = true;
+    ++uploads_;
     return meshes_.emplace(part.id, m).first->second;
 }
 
@@ -1809,6 +1848,7 @@ unsigned Renderer::texture(const Texture& tex)
         tex.cooked = CookedTexture{};
     }
     const unsigned handle = g.handle;
+    ++uploads_;
     textures_.emplace(tex.id, std::move(g));
     return handle;
 }
@@ -2059,6 +2099,77 @@ void Renderer::keepTextureAlive(const Texture* tex)
     if (auto t = textures_.find(tex->id); t != textures_.end()) {
         t->second.used = true;
         t->second.nearest_m = std::min(t->second.nearest_m, drawDistance_); // streaming goes by distance, not visibility
+    }
+}
+
+void Renderer::keepAliveOnce(const Model& model)
+{
+    // Copies share their mesh list: one walk over its parts and maps per frame is enough.
+    // Material overrides differ per copy: those are walked one by one.
+    const void* key = model.parts.empty() || !model.overrideMaterials.empty() ? static_cast<const void*>(&model)
+                                                                               : static_cast<const void*>(&model.parts[0]);
+    if (keptAlive_.insert(key).second)
+        keepAlive(model);
+}
+
+void Renderer::updateModelGrid(const Scene& scene)
+{
+    // Rebuilt when models are added, removed, moved or change their culling settings.
+    std::uint64_t h = 1469598103934665603ull ^ scene.models.size();
+    auto mix = [&h](const void* p, std::size_t n) {
+        const auto* b = static_cast<const unsigned char*>(p);
+        for (std::size_t k = 0; k < n; ++k)
+            h = (h ^ b[k]) * 1099511628211ull;
+    };
+    for (const Model& m : scene.models) {
+        mix(&m.position, sizeof m.position);
+        mix(&m.rotation, sizeof m.rotation);
+        mix(&m.scale, sizeof m.scale);
+        mix(&m.cullDistance, sizeof m.cullDistance);
+        const void* parts = m.parts.empty() ? nullptr : &m.parts[0];
+        mix(&parts, sizeof parts);
+        const std::uint8_t flags = static_cast<std::uint8_t>(m.collision | (m.castShadows << 1) | (m.skeleton ? 4 : 0));
+        mix(&flags, 1);
+    }
+    if (grid_.scene == &scene && grid_.hash == h)
+        return;
+    grid_.scene = &scene;
+    grid_.hash = h;
+    ++grid_.rebuilds;
+    const std::size_t n = scene.models.size();
+    grid_.bounds.resize(n);
+    grid_.diagonal.resize(n);
+    grid_.random.resize(n);
+    grid_.detail.resize(n);
+    grid_.cells.clear();
+    constexpr float kCell = 32.0f;
+    std::unordered_map<std::uint64_t, std::size_t> index;
+    for (std::size_t i = 0; i < n; ++i) {
+        const Model& m = scene.models[i];
+        const Aabb b = m.bounds();
+        grid_.bounds[i] = b;
+        grid_.diagonal[i] = glm::length(b.max - b.min);
+        std::uint32_t r = static_cast<std::uint32_t>(i) * 2654435761u;
+        r ^= r >> 15;
+        r *= 2246822519u;
+        r ^= r >> 13;
+        grid_.random[i] = static_cast<float>(r & 0xffffff) / 16777216.0f;
+        grid_.detail[i] = m.cullDistance > 0.0f && !m.collision && !m.skeleton && b.max.y - b.min.y < 2.0f; // low: grass, weeds, debris
+        const glm::vec3 c = (b.min + b.max) * 0.5f;
+        const auto cx = static_cast<std::int32_t>(std::floor(c.x / kCell)), cz = static_cast<std::int32_t>(std::floor(c.z / kCell));
+        const std::uint64_t key = (static_cast<std::uint64_t>(static_cast<std::uint32_t>(cx)) << 32) | static_cast<std::uint32_t>(cz);
+        auto [it, added] = index.emplace(key, grid_.cells.size());
+        if (added)
+            grid_.cells.emplace_back();
+        ModelCell& cell = grid_.cells[it->second];
+        if (cell.models.empty())
+            cell.maxCull = m.cullDistance;
+        else if (cell.maxCull > 0.0f)
+            cell.maxCull = m.cullDistance > 0.0f ? std::max(cell.maxCull, m.cullDistance) : 0.0f;
+        cell.bounds.min = glm::min(cell.bounds.min, b.min);
+        cell.bounds.max = glm::max(cell.bounds.max, b.max);
+        cell.maxDiagonal = std::max(cell.maxDiagonal, grid_.diagonal[i]);
+        cell.models.push_back(static_cast<std::uint32_t>(i));
     }
 }
 

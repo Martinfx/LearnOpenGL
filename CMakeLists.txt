@@ -1,6 +1,13 @@
 cmake_minimum_required(VERSION 3.21)
 project(FpsEngine VERSION 0.1.0 LANGUAGES C CXX)
 
+# Without a build type CMake compiles with no optimisation at all: glm, Jolt and the
+# renderer's per-object loops then run 10-50x slower (a big level drops to ~1 FPS).
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    message(STATUS "No CMAKE_BUILD_TYPE given: using Release (pass -DCMAKE_BUILD_TYPE=Debug to debug)")
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Debug, Release, RelWithDebInfo or MinSizeRel" FORCE)
+endif()
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
