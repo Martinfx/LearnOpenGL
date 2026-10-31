@@ -13,6 +13,7 @@
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QOpenGLContext>
+#include <QOpenGLFunctions>
 #include <QWheelEvent>
 
 #include <algorithm>
@@ -126,7 +127,15 @@ void Viewport::paintGL()
     view.selectedObject = selected_;
     view.drawPlayerStart = true;
     view.gizmoBoxes = gizmoBoxes();
+    while (context()->functions()->glGetError() != GL_NO_ERROR) {
+    } // errors left by Qt's own drawing are not ours
     renderer_.render(*scene_, view);
+    // Report driver errors instead of silently showing a broken view.
+    if (const GLenum error = context()->functions()->glGetError(); error != GL_NO_ERROR && error != lastGlError_) {
+        lastGlError_ = error;
+        emit renderWarning(tr("OpenGL error 0x%1 while drawing the viewport (tool %2, object %3)")
+                               .arg(error, 0, 16).arg(static_cast<int>(tool_)).arg(selected_));
+    }
 }
 
 void Viewport::setSelected(int index)

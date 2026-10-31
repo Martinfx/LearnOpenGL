@@ -40,6 +40,7 @@ signals:
     void dragFinished(int object);
     void toolChanged(Tool tool);
     void rendererFailed(const QString& error);
+    void renderWarning(const QString& message); // OpenGL error while drawing (reported once per error code)
 
 protected:
     void initializeGL() override;
@@ -78,6 +79,7 @@ private:
     engine::Scene* scene_;
     engine::Renderer renderer_;
     engine::RenderQuality quality_;
+    unsigned lastGlError_ = 0;
     QString shaderDirectory_; // custom shaders applied, re-applied when the GL context is recreated
     engine::FpsCamera camera_;
     bool ready_ = false;

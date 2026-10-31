@@ -52,12 +52,12 @@ void printModelCredits(const std::vector<std::filesystem::path>&, const std::vec
     }
 }
 
-// Player's weapons from the level loadout (falls back to the bundled repeater).
+// Player's weapons from the level loadout (falls back to the AK-74M).
 std::vector<engine::Weapon> loadLoadout(const engine::Scene& scene, const std::filesystem::path& exeDir)
 {
     std::vector<std::filesystem::path> files = scene.loadout;
     if (files.empty())
-        files.push_back(exeDir / "assets/weapons/repeater.weapon");
+        files.push_back(exeDir / "assets/weapons/ak74.weapon");
     std::vector<engine::Weapon> weapons;
     std::vector<std::pair<std::filesystem::path, std::shared_ptr<const engine::Model>>> models;
     for (const auto& file : files) {

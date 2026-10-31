@@ -101,7 +101,7 @@ doladí. V poli Animation se vybírá klip, který editor přehrává jako náhl
 AI nepřítele má klipy jako parametry (`anim_idle`, `anim_walk`, `anim_run`, `anim_attack`,
 `anim_death`), v editoru se vybírají ze seznamu klipů modelu. Mrtvý nepřítel zůstane ležet.
 
-Ukázková postava je robot od Quaterniuse (CC0) se 14 animacemi, viz `assets/models/characters/CREDITS.md`.
+Nepřátelé jsou zatím lidský manekýn od Quaterniuse (CC0) se 46 animacemi (chůze, běh, míření a střelba z pistole, zásah, smrt), viz `assets/models/characters/CREDITS.md`. Skript `enemy.lua` je ozbrojený člověk: hlídkuje, pronásleduje, z dálky střílí a zblízka udeří.
 Z Blenderu: armatura + akce, export glTF 2.0 s volbou Animation (každá akce = jeden klip).
 
 ## Co se nastavuje v editoru
@@ -133,7 +133,7 @@ Všechno, co hra používá, se mění v editoru a ukládá do souborů úrovně
 
 Každá zbraň je soubor `.weapon` (typ střelná / chladná, model, poškození, kadence, automatická/poloautomatická,
 broky, zásobník, přebíjení, rozptyl, dostřel, poloha, natočení a měřítko v ruce, poloha záblesku). Výzbroj
-testovací úrovně: 1 AK-74M, 2 pistole, 3 nůž, 4 samopal, 5 Repeater, 6 Scatter Blaster (brokovnice).
+testovací úrovně: 1 AK-74M, 2 pistole, 3 nůž, 4 samopal.
 
 - **Nůž** (`type melee`): bez nábojů a přebíjení, `fire_interval` je doba seku, `spread` šířka oblouku
   a `range` dosah (1,8 m). Sek trefí nejbližšího nepřítele v oblouku i vedle zdi.
@@ -145,7 +145,7 @@ testovací úrovně: 1 AK-74M, 2 pistole, 3 nůž, 4 samopal, 5 Repeater, 6 Scat
 
 AK-74M má profesionální ruce a animace od Cranshe (CC-BY 4.0, kredit v `assets/models/weapons/fps/CREDITS.md`,
 hra ho vypisuje při startu). Nůž, pistole a samopal mají ruce v pohledu z první osoby (`assets/models/weapons/fps/`, CC0, viz README a
-CREDITS tamtéž) s klipy idle, výstřel/sek, přebití a tasení. Repeater a Scatter Blaster jsou z Kenney Blaster Kit (CC0).
+CREDITS tamtéž) s klipy idle, výstřel/sek, přebití a tasení.
 
 ## Render
 

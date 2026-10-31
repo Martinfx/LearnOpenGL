@@ -5,7 +5,10 @@ layout(binding = 0) uniform sampler2D uSource;
 uniform bool uFirst;
 uniform float uThreshold;
 out vec3 fragColor;
-vec3 tap(vec2 offset) { return texture(uSource, vUV + offset).rgb; }
+vec3 tap(vec2 offset) {
+    vec3 c = texture(uSource, vUV + offset).rgb;
+    return any(isnan(c)) || any(isinf(c)) ? vec3(0.0) : min(c, vec3(60000.0)); // never spread NaN/Inf
+}
 void main() {
     vec2 t = 1.0 / vec2(textureSize(uSource, 0));
     vec3 a = tap(t * vec2(-2, 2)), b = tap(t * vec2(0, 2)), c = tap(t * vec2(2, 2));

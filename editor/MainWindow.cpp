@@ -95,6 +95,10 @@ MainWindow::MainWindow()
     });
     connect(viewport_, &Viewport::rendererReady, this,
             [this](const QString& info) { statusBar()->showMessage(info, 8000); });
+    connect(viewport_, &Viewport::renderWarning, this, [this](const QString& message) {
+        qWarning("%s", qPrintable(message));
+        statusBar()->showMessage(message, 15000);
+    });
     connect(viewport_, &Viewport::rendererFailed, this, [this](const QString& error) {
         QMessageBox::critical(this, tr("OpenGL"), tr("Renderer could not start:\n%1").arg(error));
     });
@@ -313,11 +317,13 @@ void MainWindow::buildMenus()
         } else if (scene_.isEntity(object)) {
             scene_.entity(object).yawDegrees -= degrees.y;
         } else if (scene_.isBox(object)) {
-            // Boxes are axis-aligned: quarter turns swap width and depth.
-            const int quarters = static_cast<int>(std::round(degrees.y / 90.0f));
-            if (quarters % 2 != 0)
+            // Boxes are axis-aligned: each full quarter turn of the drag swaps width and depth.
+            boxTurn_ += degrees.y;
+            while (std::abs(boxTurn_) >= 90.0f) {
+                boxTurn_ -= std::copysign(90.0f, boxTurn_);
                 std::swap(scene_.boxes[static_cast<std::size_t>(object)].size.x,
                           scene_.boxes[static_cast<std::size_t>(object)].size.z);
+            }
         }
         refreshProperties();
         dirty_ = true;
@@ -337,6 +343,7 @@ void MainWindow::buildMenus()
         dirty_ = true;
     });
     connect(viewport_, &Viewport::dragFinished, this, [this](int) {
+        boxTurn_ = 0.0f;
         dependencies_->showObject(selected_);
         markDirty();
     });
@@ -1170,12 +1177,12 @@ void MainWindow::addEntity(const QString& type)
         if (QFileInfo::exists(script))
             e.scriptPath = std::filesystem::path(script.toStdU16String());
         // Default animated character shipped with the engine.
-        const QString robot = assetPath("models/characters/robot.glb");
-        if (QFileInfo::exists(robot)) {
-            e.modelPath = std::filesystem::path(robot.toStdU16String());
+        const QString human = assetPath("models/characters/library/ual_mannequin.glb");
+        if (QFileInfo::exists(human)) {
+            e.modelPath = std::filesystem::path(human.toStdU16String());
             e.model = engine::loadCharacterModel(e.modelPath);
             if (e.model)
-                e.animation = "Idle";
+                e.animation = "Idle_Loop";
             else
                 e.modelPath.clear();
         }

@@ -334,8 +334,8 @@ void WeaponPanel::createNew()
         path += ".weapon";
     engine::WeaponSettings w;
     w.name = QFileInfo(path).completeBaseName().toStdString();
-    // Start from the bundled repeater model so the new weapon is visible right away.
-    const QString model = assetPath("models/weapons/blaster-repeater.glb");
+    // Start from the AK-74M arms so the new weapon is visible right away.
+    const QString model = assetPath("models/weapons/fps/fp_ak74.glb");
     if (QFileInfo::exists(model))
         w.modelPath = toPath(model);
     std::string error;

@@ -26,7 +26,10 @@ float hash(vec2 p) {
 
 void main() {
     vec3 color = texture(uHdr, vUV).rgb;
-    color += texture(uBloom, vUV).rgb * uBloomIntensity;
+    vec3 bloom = texture(uBloom, vUV).rgb;
+    if (any(isnan(color)) || any(isinf(color))) color = vec3(0.0);
+    if (any(isnan(bloom)) || any(isinf(bloom))) bloom = vec3(0.0);
+    color += bloom * uBloomIntensity;
     color *= uExposure;
     color = aces(color);
     float luma = dot(color, vec3(0.2126, 0.7152, 0.0722));

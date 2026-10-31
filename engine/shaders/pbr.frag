@@ -91,7 +91,7 @@ float sunShadow(vec3 worldPos, vec3 n, float nl) {
 
 void main() {
     if (uEmissive) {
-        fragColor = vec4(pow(uColor, vec3(2.2)) * 4.0, 1.0); // bright enough to bloom
+        fragColor = vec4(pow(max(uColor, vec3(0.0)), vec3(2.2)) * 4.0, 1.0); // bright enough to bloom
         return;
     }
     vec3 n = normalize(vNormal);
@@ -104,7 +104,7 @@ void main() {
     }
     uv *= uTiling;
 
-    vec3 albedo = pow(uColor, vec3(2.2));
+    vec3 albedo = pow(max(uColor, vec3(0.0)), vec3(2.2));
     if (uHasTexture)
         albedo *= texture(uAlbedoMap, uv).rgb;
     else if (uGrid)
@@ -155,7 +155,7 @@ void main() {
     vec3 ambient = ((1.0 - Fa) * (1.0 - metal) * albedo * irradiance + prefiltered * (Fa * brdf.x + brdf.y)) * occlusion;
     color += ambient * uGroundColor.w;
 
-    vec3 emissive = pow(uEmissiveColor, vec3(2.2));
+    vec3 emissive = pow(max(uEmissiveColor, vec3(0.0)), vec3(2.2));
     if (uHasEmissiveMap)
         emissive *= texture(uEmissiveMap, uv).rgb;
     color += emissive;
@@ -164,5 +164,7 @@ void main() {
     color = mix(color, vec3(2.0), uFlash); // hit feedback
     if (!uOverlay)
         color = applyFog(color, vWorldPos);
+    // A single NaN/Inf pixel would spread over the whole screen through bloom: drop it here.
+    color = any(isnan(color)) || any(isinf(color)) ? vec3(0.0) : min(color, vec3(60000.0));
     fragColor = vec4(color, 1.0);
 }

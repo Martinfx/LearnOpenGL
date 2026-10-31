@@ -1,31 +1,38 @@
--- Enemy AI: patrol -> chase -> attack -> search -> return home.
+-- Enemy AI (armed human): patrol -> chase -> shoot -> search -> return home.
 -- Attach to an entity of type "enemy" in the editor.
 
 -- Tunables: shown in the editor (Properties > Script parameters) for every
 -- entity using this script. Read them through `props`.
 properties = {
-    { "health",          100,  "Hit points (the repeater does 14 per hit)" },
-    { "walk_speed",      2.0,  "m/s while patrolling or returning" },
-    { "run_speed",       4.2,  "m/s while chasing (player walks 5, sprints 8.5)" },
-    { "view_range",      18.0, "How far it can see the player, m" },
+    { "health",          100,  "Hit points (the AK-74M does 26 per hit)" },
+    { "walk_speed",      1.6,  "m/s while patrolling or returning" },
+    { "run_speed",       4.0,  "m/s while chasing (player walks 5, sprints 8.5)" },
+    { "view_range",      30.0, "How far it can see the player, m" },
     { "view_angle",      120,  "Field of view, degrees (full cone)" },
-    { "hear_range",      3.5,  "Notices the player behind it within this distance, m" },
-    { "attack_range",    1.6,  "Melee reach, m" },
-    { "attack_damage",   10,   "Damage per hit to the player" },
-    { "attack_cooldown", 1.0,  "Seconds between hits" },
-    { "search_time",     4.0,  "Seconds spent searching the last known position" },
+    { "hear_range",      4.0,  "Notices the player behind it within this distance, m" },
+    { "shoot_range",     20.0, "Stops and opens fire within this distance, m" },
+    { "shot_damage",     8,    "Damage of one hit to the player" },
+    { "shot_interval",   0.9,  "Seconds between shots" },
+    { "accuracy",        0.6,  "Hit chance at 10 m (falls off with distance)" },
+    { "melee_range",     1.5,  "Hits with the fist instead when this close, m" },
+    { "melee_damage",    15,   "Damage of a punch" },
+    { "search_time",     5.0,  "Seconds spent searching the last known position" },
     { "patrol_radius",   4.0,  "Wanders this far from its start position, m" },
     -- Animation clips of the character model (Properties > Character model).
-    { "anim_idle",       "Idle",    "Clip while standing" },
-    { "anim_walk",       "Walking", "Clip while patrolling, searching, returning" },
-    { "anim_run",        "Running", "Clip while chasing" },
-    { "anim_attack",     "Punch",   "Clip played on every hit" },
-    { "anim_death",      "Death",   "Clip played once when killed" },
-    { "anim_speed",      1.0,       "Playback speed multiplier for all clips" },
+    { "anim_idle",       "Idle_Loop",          "Clip while standing" },
+    { "anim_walk",       "Walk_Loop",          "Clip while patrolling, searching, returning" },
+    { "anim_run",        "Jog_Fwd_Loop",       "Clip while chasing" },
+    { "anim_aim",        "Pistol_Aim_Neutral", "Clip while aiming at the player" },
+    { "anim_shoot",      "Pistol_Shoot",       "Clip played on every shot" },
+    { "anim_attack",     "Punch_Jab",          "Clip played on every punch" },
+    { "anim_hit",        "Hit_Chest",          "Clip played when hurt" },
+    { "anim_death",      "Death01",            "Clip played once when killed" },
+    { "anim_speed",      1.0,                  "Playback speed multiplier for all clips" },
 }
 
 local state, timer, home, last_seen, patrol_target, next_attack
 local hurt_flash = 0
+local reacting = 0      -- seconds left of the hit reaction clip
 local moving = false   -- set by walk_to, picks walk/run vs. idle animation
 
 local function distance(a, b) return (b - a):flat():length() end
@@ -89,6 +96,9 @@ function on_damage(self, amount)
     hurt_flash = 0.1
     self.flash = 0.12
     last_seen = game.player_position()
+    if self.alive and self:play(props.anim_hit, { loop = false, restart = true, fade = 0.05, speed = props.anim_speed }) then
+        reacting = 0.35
+    end
     if state ~= "attack" then set_state(self, "chase") end
 end
 
@@ -100,9 +110,11 @@ end
 -- Chooses the clip for the current state; no-op for entities without a character model.
 local function animate(self)
     local speed = props.anim_speed
+    if reacting > 0 then return end
     if state == "attack" then
-        if self:animation_done() or self.animation ~= props.anim_attack then
-            self:play(props.anim_idle, { speed = speed })
+        local one_shot = self.animation == props.anim_shoot or self.animation == props.anim_attack
+        if not one_shot or self:animation_done() then
+            if not self:play(props.anim_aim, { speed = speed }) then self:play(props.anim_idle, { speed = speed }) end
         end
     elseif moving then
         self:play(state == "chase" and props.anim_run or props.anim_walk, { speed = speed })
@@ -114,6 +126,7 @@ end
 function on_update(self, dt)
     timer = timer + dt
     hurt_flash = math.max(0, hurt_flash - dt)
+    reacting = math.max(0, reacting - dt)
     moving = false
     local player = game.player_position()
 
@@ -130,19 +143,29 @@ function on_update(self, dt)
             timer = 0
         end
     elseif state == "chase" then
-        if distance(self.position, player) <= props.attack_range then
+        if distance(self.position, player) <= props.shoot_range then
             set_state(self, "attack")
+            next_attack = math.max(next_attack, game.time() + 0.5) -- time to raise the gun
         else
             walk_to(self, player, props.run_speed)
         end
     elseif state == "attack" then
         self:face(player)
-        if distance(self.position, player) > props.attack_range * 1.2 then
+        local dist = distance(self.position, player)
+        if dist > props.shoot_range * 1.2 then
             set_state(self, "chase")
-        elseif game.time() >= next_attack then
-            game.damage_player(props.attack_damage)
-            next_attack = game.time() + props.attack_cooldown
-            self:play(props.anim_attack, { loop = false, restart = true, fade = 0.1, speed = props.anim_speed })
+        elseif reacting <= 0 and game.time() >= next_attack then
+            if dist <= props.melee_range then
+                game.damage_player(props.melee_damage)
+                next_attack = game.time() + 1.0
+                self:play(props.anim_attack, { loop = false, restart = true, fade = 0.1, speed = props.anim_speed })
+            else
+                -- Hit chance falls off with distance; misses still make noise and keep the player moving.
+                local chance = math.min(0.95, math.max(0.05, props.accuracy * 10 / math.max(dist, 1)))
+                if math.random() < chance then game.damage_player(props.shot_damage) end
+                next_attack = game.time() + props.shot_interval * (0.8 + 0.4 * math.random())
+                self:play(props.anim_shoot, { loop = false, restart = true, fade = 0.05, speed = props.anim_speed })
+            end
         end
     elseif state == "search" then
         if walk_to(self, last_seen, props.walk_speed) then

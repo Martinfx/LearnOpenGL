@@ -261,6 +261,7 @@ void testEnemyChasesAndAttacks()
     auto s = flatFloor();
     s.playerStart = {0, 0, 0};
     s.entities.push_back(enemyAt({8, 0, 0}, 180.0f)); // facing the player, 8 m away
+    s.entities[0].properties["accuracy"] = "10"; // every shot hits: no random outcome in the test
     std::vector<std::string> log;
     const float health = runAi(s, 4.0f, &log);
     check(health < 100.0f, "enemy that sees the player chases and hits him");
@@ -348,11 +349,11 @@ void testTexturedWeaponModel()
 {
     engine::Model m;
     std::string err;
-    check(engine::loadModelFile(m, ENGINE_TEST_ASSETS "/models/weapons/blaster-repeater.glb", &err), "load weapon: " + err);
+    check(engine::loadModelFile(m, ENGINE_TEST_ASSETS "/models/weapons/fps/fp_ak74.glb", &err), "load weapon: " + err);
     bool textured = false;
     for (const auto& p : m.parts)
-        textured = textured || (p.texture && p.texture->width == 512 && p.texcoords.size() == p.positions.size());
-    check(textured, "weapon has its 512x512 color texture and UVs");
+        textured = textured || (p.texture && p.texture->width >= 256 && p.texcoords.size() == p.positions.size());
+    check(textured, "weapon has its color texture and UVs");
 }
 
 void testWeaponFilesAndLoadout()
@@ -360,14 +361,14 @@ void testWeaponFilesAndLoadout()
     engine::Scene level;
     std::string err;
     check(engine::loadScene(level, ENGINE_TEST_ASSETS "/levels/test.level", &err), "load level: " + err);
-    check(level.loadout.size() == 6, "test level gives the player AK-74M, pistol, knife, SMG, repeater and blaster");
+    check(level.loadout.size() == 4, "test level gives the player AK-74M, pistol, knife and SMG");
     engine::WeaponSettings ak;
     check(engine::loadWeaponFile(ak, level.loadout.at(0), &err), "load ak74.weapon: " + err);
     check(ak.name == "AK-74M" && ak.animReloadEmpty == "reload_empty" && ak.reloadEmptyTime > ak.reloadTime && ak.animWalk == "walk",
           "AK-74M is the main weapon, with an empty-magazine reload and a walk clip");
-    engine::WeaponSettings blaster;
-    check(engine::loadWeaponFile(blaster, level.loadout.at(5), &err), "load blaster.weapon: " + err);
-    check(blaster.name == "Scatter Blaster" && blaster.pellets == 8 && !blaster.automatic, "blaster is a semi-auto shotgun");
+    engine::WeaponSettings blaster; // the pistol
+    check(engine::loadWeaponFile(blaster, level.loadout.at(1), &err), "load pistol.weapon: " + err);
+    check(blaster.magazineSize == 12 && !blaster.automatic, "pistol is semi-automatic");
     check(std::filesystem::exists(blaster.modelPath), "weapon model path resolves next to the .weapon file");
 
     blaster.damage = 11.5f;
@@ -540,7 +541,7 @@ void testScriptPropertiesFromEditor()
     std::vector<engine::ScriptProperty> props;
     std::string err;
     check(engine::readScriptProperties(ENGINE_TEST_ASSETS "/scripts/enemy.lua", props, &err), "read enemy.lua properties: " + err);
-    check(props.size() == 17 && props[0].name == "health" && props[0].defaultValue == "100", "enemy.lua declares 17 tunables, health first");
+    check(props.size() == 23 && props[0].name == "health" && props[0].defaultValue == "100", "enemy.lua declares 23 tunables, health first");
 
     // An editor override changes the behaviour: 40 hp dies after two 20-damage hits.
     auto s = flatFloor();
@@ -576,19 +577,19 @@ void testPick()
 void testAnimatedCharacter()
 {
     std::string err;
-    auto model = engine::loadCharacterModel(ENGINE_TEST_ASSETS "/models/characters/robot.glb", &err);
-    check(model && model->skeleton, "load animated robot: " + err);
+    auto model = engine::loadCharacterModel(ENGINE_TEST_ASSETS "/models/characters/library/ual_mannequin.glb", &err);
+    check(model && model->skeleton, "load animated mannequin: " + err);
     if (!model)
         return;
     const engine::Skeleton& sk = *model->skeleton;
-    check(sk.clips.size() == 14 && sk.findClip("Walking") >= 0 && sk.findClip("Death") >= 0, "robot has its 14 clips");
-    check(sk.skins.size() == 2, "robot hands are skinned");
+    check(sk.clips.size() == 46 && sk.findClip("Walk_Loop") >= 0 && sk.findClip("Death01") >= 0, "mannequin has its 46 clips");
+    check(!sk.skins.empty(), "mannequin is skinned");
     check(model->localBounds.max.y - model->localBounds.min.y > 1.0f, "rest-pose bounds");
-    check(engine::loadCharacterModel(ENGINE_TEST_ASSETS "/models/characters/robot.glb") == model, "entities share one loaded model");
+    check(engine::loadCharacterModel(ENGINE_TEST_ASSETS "/models/characters/library/ual_mannequin.glb") == model, "entities share one loaded model");
 
     engine::Animator a;
     std::vector<glm::mat4> p0, p1;
-    check(a.play(sk, "Walking"), "play Walking");
+    check(a.play(sk, "Walk_Loop"), "play Walk_Loop");
     engine::evaluatePose(sk, &a, p0);
     a.update(sk, 0.3f);
     engine::evaluatePose(sk, &a, p1);
@@ -596,13 +597,13 @@ void testAnimatedCharacter()
     for (std::size_t i = 0; i < p0.size(); ++i)
         diff += glm::length(glm::vec3(p0[i][3]) - glm::vec3(p1[i][3]));
     check(diff > 0.01f, "walking moves the bones");
-    check(!a.play(sk, "NoSuchClip") && a.clipName(sk) == "Walking", "unknown clip is ignored");
+    check(!a.play(sk, "NoSuchClip") && a.clipName(sk) == "Walk_Loop", "unknown clip is ignored");
 
-    a.play(sk, "Death", false, 1.0f, 0.2f);
+    a.play(sk, "Death01", false, 1.0f, 0.2f);
     check(a.fadeDuration > 0.0f && a.previous.clip >= 0, "switching clips crossfades");
     a.update(sk, 0.5f);
     check(a.fadeDuration == 0.0f && !a.finished(sk), "fade ends, death still playing");
-    a.update(sk, 1.0f);
+    a.update(sk, 2.0f);
     check(a.finished(sk), "non-looping clip finishes and holds");
 
     engine::Entity e;
@@ -621,10 +622,10 @@ void testEnemyAnimations()
 {
     auto s = flatFloor();
     s.playerStart = {0, 0, 0};
-    engine::Entity e = enemyAt({8, 0, 0}, 180.0f);
-    e.modelPath = ENGINE_TEST_ASSETS "/models/characters/robot.glb";
+    engine::Entity e = enemyAt({26, 0, 0}, 180.0f); // beyond shoot_range: runs closer first
+    e.modelPath = ENGINE_TEST_ASSETS "/models/characters/library/ual_mannequin.glb";
     e.model = engine::loadCharacterModel(e.modelPath);
-    e.animation = "Idle";
+    e.animation = "Idle_Loop";
     s.entities.push_back(e);
     engine::PhysicsWorld world;
     world.setLevel(s);
@@ -638,16 +639,16 @@ void testEnemyAnimations()
         scripts.fixedUpdate(1.0f / 60.0f);
         engine::updateAnimations(s, 1.0f / 60.0f);
         const std::string clip = s.entities[0].animator.clipName(sk);
-        ran = ran || clip == "Running";
-        punched = punched || clip == "Punch";
+        ran = ran || clip == "Jog_Fwd_Loop";
+        punched = punched || clip == "Pistol_Shoot";
     }
-    check(ran, "chasing enemy plays Running");
-    check(punched, "attacking enemy plays Punch");
+    check(ran, "chasing enemy plays Jog_Fwd_Loop");
+    check(punched, "attacking enemy plays Pistol_Shoot");
     for (int i = 0; i < 10; ++i)
         scripts.damageEntity(0, 30.0f);
-    check(!s.entities[0].alive && s.entities[0].animator.clipName(sk) == "Death", "killed enemy plays Death");
+    check(!s.entities[0].alive && s.entities[0].animator.clipName(sk) == "Death01", "killed enemy plays Death01");
     check(s.entities[0].flash > 0.0f, "hits flash the model");
-    for (int i = 0; i < 120; ++i)
+    for (int i = 0; i < 180; ++i)
         engine::updateAnimations(s, 1.0f / 60.0f);
     check(s.entities[0].animator.finished(sk), "death animation holds its last frame");
 
