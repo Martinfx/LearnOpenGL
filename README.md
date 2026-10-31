@@ -104,6 +104,13 @@ AI nepřítele má klipy jako parametry (`anim_idle`, `anim_walk`, `anim_run`, `
 Nepřátelé jsou zatím lidský manekýn od Quaterniuse (CC0) se 46 animacemi (chůze, běh, míření a střelba z pistole, zásah, smrt), viz `assets/models/characters/CREDITS.md`. Skript `enemy.lua` je ozbrojený člověk: hlídkuje, pronásleduje, z dálky střílí a zblízka udeří.
 Z Blenderu: armatura + akce, export glTF 2.0 s volbou Animation (každá akce = jeden klip).
 
+## Načítání
+
+- **Hra:** level se načítá na pozadí. Všechny soubory modelů se čtou paralelně na pracovních vláknech a každý jen jednou. Pak se meshe a textury pošlou na GPU, takže se ve hře už nedonahrávají. Mezitím běží načítací obrazovka s obrázkem, titulkem, nápovědou, progressbarem a právě načítanou položkou. Okno po celou dobu reaguje.
+- **Nastavení obrazovky:** v editoru v Details > Level > Loading screen (Image, Title, Hint). V levelu jsou to řádky `loading_image`, `loading_title` a `loading_hint`.
+- **Editor:** při startu se ukáže úvodní obrazovka s progressbarem, dokud se nenačte první level. Při otevírání levelu je progress nad 3D pohledem a ve stavovém řádku.
+- **Písmo:** DejaVu Sans v `assets/fonts` (licence v `LICENSE-DejaVu.txt`), vykreslené přes stb_truetype.
+
 ## Rozložení editoru
 
 - **Hlavní lišta:** Save, Undo/Redo, Add (box, nepřítel, entita, glTF), Play / Pause (F6) / Stop (Shift+F5) a kvalita viewportu. Hra běží jako podproces editoru a její výstup jde do Output Logu.

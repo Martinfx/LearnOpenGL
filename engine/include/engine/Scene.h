@@ -7,7 +7,9 @@
 #include <glm/gtc/type_precision.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/vec2.hpp>
+#include <atomic>
 #include <map>
+#include <mutex>
 #include <memory>
 #include <string>
 #include <utility>
@@ -198,6 +200,34 @@ struct Group {
     std::string parent;                  // empty = root
 };
 
+// What the game shows while the level loads (edited in the editor: Level > Loading screen).
+struct LoadingScreen {
+    std::filesystem::path image;  // absolute, empty = plain dark background
+    std::string title;            // empty = level file name
+    std::string hint;             // line under the progress bar
+};
+
+// Progress of loadScene(), readable from another thread (the loading screen).
+struct LoadProgress {
+    std::atomic<int> done{0};
+    std::atomic<int> total{1};
+    void setStep(const std::string& what)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        current_ = what;
+    }
+    std::string step() const
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return current_;
+    }
+    float fraction() const { return total > 0 ? static_cast<float>(done) / static_cast<float>(total) : 0.0f; }
+
+private:
+    mutable std::mutex mutex_;
+    std::string current_;
+};
+
 struct Scene {
     std::vector<Group> groups;
     std::vector<Box> boxes;
@@ -208,6 +238,7 @@ struct Scene {
     glm::vec3 playerStart{0.0f, 0.0f, 0.0f}; // feet position
     glm::vec3 sunDirection{-0.4f, -1.0f, -0.3f};
     Environment environment;
+    LoadingScreen loading;
 
     // Objects are addressed by one index: boxes first, then models, then entities.
     int objectCount() const { return static_cast<int>(boxes.size() + models.size() + entities.size()); }
@@ -227,7 +258,11 @@ Scene makeDefaultScene();
 
 // Level files are text; model paths are stored relative to the level file.
 bool saveScene(const Scene& scene, const std::filesystem::path& file, std::string* error = nullptr);
-bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* error = nullptr);
+// Model files are parsed in parallel on the job system; `progress` (optional) counts them.
+bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* error = nullptr,
+               LoadProgress* progress = nullptr);
+// Only the loading screen settings of a level (fast: no models are read).
+LoadingScreen readLoadingScreen(const std::filesystem::path& file);
 
 // Loads every mesh of a glTF 2.0 file (.gltf or .glb) into model.parts.
 bool loadModelFile(Model& model, const std::filesystem::path& file, std::string* error = nullptr);

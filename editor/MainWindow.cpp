@@ -60,6 +60,7 @@
 #include <QGridLayout>
 #include <QMenu>
 #include <QPlainTextEdit>
+#include <QProgressBar>
 #include <QStackedWidget>
 #include <QTime>
 #include <QTimer>
@@ -937,6 +938,55 @@ void MainWindow::buildDocks()
     levelForm->addRow(QString(), fromCamera);
     levelForm->addRow(tr("Sun direction"), sunEdit_);
 
+    // Loading screen the game shows while this level loads.
+    levelForm->addRow(new QLabel(tr("<b>Loading screen</b>"), levelPanel));
+    auto* loadingImageRow = new QWidget(levelPanel);
+    auto* loadingImageLayout = new QHBoxLayout(loadingImageRow);
+    loadingImageLayout->setContentsMargins(0, 0, 0, 0);
+    loadingImageEdit_ = new QLineEdit(loadingImageRow);
+    loadingImageEdit_->setReadOnly(true);
+    loadingImageEdit_->setPlaceholderText(tr("dark background"));
+    auto* browseLoading = new QPushButton(tr("..."), loadingImageRow);
+    auto* clearLoading = new QPushButton(tr("x"), loadingImageRow);
+    browseLoading->setFixedWidth(32);
+    clearLoading->setFixedWidth(32);
+    loadingImageLayout->addWidget(loadingImageEdit_, 1);
+    loadingImageLayout->addWidget(browseLoading);
+    loadingImageLayout->addWidget(clearLoading);
+    loadingTitleEdit_ = new QLineEdit(levelPanel);
+    loadingTitleEdit_->setPlaceholderText(tr("level file name"));
+    loadingHintEdit_ = new QLineEdit(levelPanel);
+    loadingHintEdit_->setPlaceholderText(tr("e.g. a tip for the player"));
+    levelForm->addRow(tr("Image"), loadingImageRow);
+    levelForm->addRow(tr("Title"), loadingTitleEdit_);
+    levelForm->addRow(tr("Hint"), loadingHintEdit_);
+    connect(browseLoading, &QPushButton::clicked, this, [this] {
+        const QString path = QFileDialog::getOpenFileName(this, tr("Loading screen image"), assetPath("textures"),
+                                                          tr("Images (*.png *.jpg *.jpeg)"));
+        if (path.isEmpty())
+            return;
+        scene_.loading.image = std::filesystem::path(path.toStdU16String());
+        refreshLevelProperties();
+        markDirty();
+    });
+    connect(clearLoading, &QPushButton::clicked, this, [this] {
+        scene_.loading.image.clear();
+        refreshLevelProperties();
+        markDirty();
+    });
+    connect(loadingTitleEdit_, &QLineEdit::editingFinished, this, [this] {
+        if (scene_.loading.title != loadingTitleEdit_->text().toStdString()) {
+            scene_.loading.title = loadingTitleEdit_->text().toStdString();
+            markDirty();
+        }
+    });
+    connect(loadingHintEdit_, &QLineEdit::editingFinished, this, [this] {
+        if (scene_.loading.hint != loadingHintEdit_->text().toStdString()) {
+            scene_.loading.hint = loadingHintEdit_->text().toStdString();
+            markDirty();
+        }
+    });
+
     // Player movement and health for this level.
     struct PlayerField {
         const char* label;
@@ -1320,6 +1370,10 @@ void MainWindow::refreshLevelProperties()
 {
     playerStartEdit_->setValue(scene_.playerStart);
     sunEdit_->setValue(scene_.sunDirection);
+    loadingImageEdit_->setText(QString::fromStdU16String(scene_.loading.image.filename().u16string()));
+    loadingImageEdit_->setToolTip(QString::fromStdU16String(scene_.loading.image.u16string()));
+    loadingTitleEdit_->setText(QString::fromStdString(scene_.loading.title));
+    loadingHintEdit_->setText(QString::fromStdString(scene_.loading.hint));
     for (auto& [spin, member] : playerSpins_) {
         spin->blockSignals(true);
         spin->setValue(scene_.player.*member);
@@ -1699,26 +1753,94 @@ void MainWindow::openLevel()
 
 bool MainWindow::openFile(const QString& path)
 {
-    // Models, materials and textures of the level load on a worker thread.
+    // Models, materials and textures of the level load on worker threads (models
+    // in parallel); the progress shows over the 3D view, in the status bar and
+    // on the start-up splash screen.
     notify(tr("Opening %1...").arg(QFileInfo(path).fileName()));
     setEnabled(false);
+    auto progress = std::make_shared<engine::LoadProgress>();
+    showLoading(QFileInfo(path).fileName());
+    auto* poll = new QTimer(this);
+    connect(poll, &QTimer::timeout, this, [this, progress] {
+        updateLoading(progress->fraction(), QString::fromStdString(progress->step()));
+    });
+    poll->start(50);
     QPointer<MainWindow> self(this);
-    engine::JobSystem::global().run([self, path] {
+    engine::JobSystem::global().run([self, path, progress, poll] {
         auto loaded = std::make_shared<engine::Scene>();
         std::string error;
-        const bool ok = engine::loadScene(*loaded, std::filesystem::path(path.toStdU16String()), &error);
-        QMetaObject::invokeMethod(qApp, [self, path, loaded, ok, error] {
+        const bool ok = engine::loadScene(*loaded, std::filesystem::path(path.toStdU16String()), &error, progress.get());
+        QMetaObject::invokeMethod(qApp, [self, path, loaded, ok, error, poll] {
+            poll->deleteLater();
             if (!self)
                 return;
             self->setEnabled(true);
+            self->hideLoading();
             if (!ok) {
                 QMessageBox::warning(self, tr("Open level"), QString::fromStdString(error));
+                emit self->loadingFinished();
                 return;
             }
             self->applyLoadedLevel(path, std::move(*loaded));
+            emit self->loadingFinished();
         });
     });
     return true;
+}
+
+void MainWindow::showLoading(const QString& name)
+{
+    if (!loadingPanel_) {
+        loadingPanel_ = new QFrame(viewportPanel_);
+        loadingPanel_->setObjectName("floatingPanel");
+        auto* layout = new QVBoxLayout(loadingPanel_);
+        layout->setContentsMargins(18, 14, 18, 14);
+        loadingTitle_ = new QLabel(loadingPanel_);
+        loadingBar_ = new QProgressBar(loadingPanel_);
+        loadingBar_->setRange(0, 100);
+        loadingBar_->setTextVisible(true);
+        loadingStep_ = new QLabel(loadingPanel_);
+        loadingStep_->setObjectName("dim");
+        layout->addWidget(loadingTitle_);
+        layout->addWidget(loadingBar_);
+        layout->addWidget(loadingStep_);
+        loadingPanel_->setFixedWidth(420);
+        statusBar_ = new QProgressBar(statusBar());
+        statusBar_->setRange(0, 100);
+        statusBar_->setMaximumWidth(180);
+        statusBar_->setMaximumHeight(14);
+        statusBar_->setTextVisible(false);
+        statusBar()->addPermanentWidget(statusBar_);
+    }
+    loadingTitle_->setText(tr("<b>Opening %1</b>").arg(name.toHtmlEscaped()));
+    loadingBar_->setValue(0);
+    loadingStep_->clear();
+    loadingPanel_->adjustSize();
+    loadingPanel_->move((viewportPanel_->width() - loadingPanel_->width()) / 2, (viewportPanel_->height() - loadingPanel_->height()) / 2);
+    loadingPanel_->show();
+    loadingPanel_->raise();
+    statusBar_->setValue(0);
+    statusBar_->show();
+}
+
+void MainWindow::updateLoading(float fraction, const QString& step)
+{
+    const int percent = static_cast<int>(std::clamp(fraction, 0.0f, 1.0f) * 100.0f + 0.5f);
+    if (loadingBar_) {
+        loadingBar_->setValue(percent);
+        statusBar_->setValue(percent);
+        loadingStep_->setText(step.isEmpty() ? QString() : tr("Loading %1").arg(step));
+    }
+    emit loadingProgress(percent, step);
+}
+
+void MainWindow::hideLoading()
+{
+    if (loadingPanel_) {
+        loadingPanel_->hide();
+        statusBar_->hide();
+    }
+    emit loadingProgress(100, QString());
 }
 
 void MainWindow::applyLoadedLevel(const QString& path, engine::Scene loaded)

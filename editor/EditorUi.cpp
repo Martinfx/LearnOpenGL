@@ -1,6 +1,8 @@
 #include "EditorUi.h"
 
 #include <QApplication>
+#include <QLinearGradient>
+#include <algorithm>
 #include <QHash>
 #include <QPainter>
 #include <QPainterPath>
@@ -311,3 +313,58 @@ void CollapsibleSection::setExpanded(bool expanded)
 bool CollapsibleSection::expanded() const { return header_->isChecked(); }
 
 QString CollapsibleSection::title() const { return header_->text(); }
+
+// ---------------------------------------------------------------------------
+EditorSplash::EditorSplash(const QString& backgroundImage)
+{
+    QPixmap pixmap(720, 405);
+    pixmap.fill(QColor(16, 15, 14));
+    QPixmap image(backgroundImage);
+    if (!image.isNull()) {
+        QPainter p(&pixmap);
+        p.drawPixmap(pixmap.rect(), image.scaled(pixmap.size(), Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation));
+        // Darken toward the bottom where the text goes.
+        QLinearGradient shade(0, 0, 0, pixmap.height());
+        shade.setColorAt(0.0, QColor(10, 9, 8, 60));
+        shade.setColorAt(0.55, QColor(10, 9, 8, 120));
+        shade.setColorAt(1.0, QColor(10, 9, 8, 235));
+        p.fillRect(pixmap.rect(), shade);
+    }
+    setPixmap(pixmap);
+}
+
+void EditorSplash::setProgress(int percent, const QString& step)
+{
+    percent_ = std::clamp(percent, 0, 100);
+    step_ = step;
+    repaint();
+    qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+}
+
+void EditorSplash::drawContents(QPainter* p)
+{
+    const QRect r = rect();
+    const int margin = 32;
+    p->setRenderHint(QPainter::Antialiasing);
+    QFont title = p->font();
+    title.setPixelSize(34);
+    title.setBold(true);
+    p->setFont(title);
+    p->setPen(QColor(222, 212, 188));
+    p->drawText(QRect(margin, r.height() - 150, r.width() - 2 * margin, 44), Qt::AlignLeft | Qt::AlignBottom,
+                QStringLiteral("FPS Engine Editor"));
+    QFont small = p->font();
+    small.setPixelSize(13);
+    small.setBold(false);
+    p->setFont(small);
+    const QRect bar(margin, r.height() - 80, r.width() - 2 * margin, 8);
+    p->fillRect(bar.adjusted(-2, -2, 2, 2), QColor(0, 0, 0, 160));
+    p->fillRect(bar, QColor(42, 39, 34));
+    p->fillRect(QRect(bar.left(), bar.top(), bar.width() * percent_ / 100, bar.height()), QColor(199, 107, 33));
+    p->setPen(QColor(160, 154, 140));
+    p->drawText(QRect(margin, bar.bottom() + 10, r.width() - 2 * margin - 60, 20), Qt::AlignLeft | Qt::AlignTop,
+                step_.isEmpty() ? QString() : step_);
+    p->setPen(QColor(222, 212, 188));
+    p->drawText(QRect(margin, bar.bottom() + 10, r.width() - 2 * margin, 20), Qt::AlignRight | Qt::AlignTop,
+                QStringLiteral("%1 %").arg(percent_));
+}

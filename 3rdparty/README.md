@@ -15,7 +15,7 @@ copies are used only as a fallback.
 | --- | --- | --- | --- | --- |
 | `glad/` | glad loader, OpenGL 4.6 core | glad 2.0.8 (generated) | WTFPL / CC0, Khronos Apache-2.0 | https://github.com/Dav1dde/glad |
 | `cgltf/` | cgltf (glTF 2.0 parser) | 1.15 | MIT (`cgltf/LICENSE`) | https://github.com/jkuhlmann/cgltf |
-| `stb/` | stb_image | 2.30 | MIT or public domain (end of `stb_image.h`) | https://github.com/nothings/stb |
+| `stb/` | stb_image 2.30, stb_truetype 1.26 | MIT or public domain (end of each header) | https://github.com/nothings/stb |
 | `glm/` | GLM (math) | 1.0.1 | MIT / Happy Bunny (`glm/copying.txt`) | https://github.com/g-truc/glm |
 | `glfw/` | GLFW (window, input) | 3.4 | zlib (`glfw/LICENSE.md`) | https://github.com/glfw/glfw |
 | `jolt/` | Jolt Physics | 5.6.0 | MIT (`jolt/LICENSE`) | https://github.com/jrouwe/JoltPhysics |

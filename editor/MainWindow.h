@@ -50,6 +50,8 @@ public:
     bool openFile(const QString& path);   // loads in the background
 signals:
     void levelOpened();
+    void loadingProgress(int percent, const QString& step); // while a level loads
+    void loadingFinished();
 public:
 
 protected:
@@ -67,6 +69,9 @@ public:
     void appendLog(const QString& line, int level);         // 0 info, 1 warning, 2 error
     void runCommand(const QString& command);                // console (Cmd field)
 private:
+    void showLoading(const QString& name);
+    void updateLoading(float fraction, const QString& step);
+    void hideLoading();
     void pauseGame();
     void stopGame();
     void updatePlayButtons();
@@ -163,6 +168,14 @@ private:
     std::vector<DetailSection> detailSections_;
     QWidget* texturePanel_ = nullptr;
     QWidget* lodRow_ = nullptr;
+    class QFrame* loadingPanel_ = nullptr;
+    QLabel* loadingTitle_ = nullptr;
+    QLabel* loadingStep_ = nullptr;
+    class QProgressBar* loadingBar_ = nullptr;
+    class QProgressBar* statusBar_ = nullptr;
+    QLineEdit* loadingImageEdit_ = nullptr;
+    QLineEdit* loadingTitleEdit_ = nullptr;
+    QLineEdit* loadingHintEdit_ = nullptr;
     QLineEdit* lodEdit_ = nullptr;
     QDoubleSpinBox* lodDistanceSpin_ = nullptr;
     QDoubleSpinBox* uvSpins_[5] = {};   // scale U, V, shift U, V, rotation

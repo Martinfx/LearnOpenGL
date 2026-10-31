@@ -16,6 +16,7 @@ add_library(engine STATIC
     src/Scene.cpp
     src/JobSystem.cpp
     src/SceneGraph.cpp
+    src/Ui2D.cpp
     ${ENGINE_EMBEDDED_SHADERS}
 )
 target_include_directories(engine PUBLIC include)

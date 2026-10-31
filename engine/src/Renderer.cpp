@@ -1,6 +1,7 @@
 #include "engine/Renderer.h"
 
 #include <glad/gl.h>
+#include <chrono>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <algorithm>
@@ -1087,7 +1088,7 @@ unsigned Renderer::texture(const Texture& tex)
     }
     // Uploading many 2K textures at once would stall a frame: spread them out
     // (surfaces draw without the map until it is on the GPU).
-    if (quality_.textureUploadsPerFrame > 0 && ++texturesUploaded_ > quality_.textureUploadsPerFrame)
+    if (!ignoreUploadBudget_ && quality_.textureUploadsPerFrame > 0 && ++texturesUploaded_ > quality_.textureUploadsPerFrame)
         return 0;
     GpuTexture t;
     glCreateTextures(GL_TEXTURE_2D, 1, &t.handle);
@@ -1235,6 +1236,52 @@ void Renderer::keepAlive(const Model& model)
             if (auto t = textures_.find(part.texture->id); t != textures_.end())
                 t->second.used = true;
     }
+}
+
+float Renderer::preload(const Scene& scene, std::size_t& cursor, double budgetMs)
+{
+    std::vector<const Model*> models;
+    for (const Model& m : scene.models) {
+        models.push_back(&m);
+        if (m.lod)
+            models.push_back(m.lod.get());
+    }
+    for (const Entity& e : scene.entities)
+        if (e.model)
+            models.push_back(e.model.get());
+    std::vector<const Material*> materials;
+    for (const Box& b : scene.boxes)
+        if (b.material)
+            materials.push_back(b.material.get());
+    const std::size_t total = models.size() + materials.size();
+    const auto start = std::chrono::steady_clock::now();
+    ignoreUploadBudget_ = true;
+    auto upMaterial = [this](const Material* material) {
+        for (const auto& asset : material->maps)
+            if (asset && asset->texture && !asset->texture->rgba.empty())
+                texture(*asset->texture);
+    };
+    while (cursor < total) {
+        if (cursor < models.size()) {
+            const Model& model = *models[cursor];
+            for (const MeshPart& part : model.parts) {
+                upload(part);
+                if (const Material* m = model.materialFor(part))
+                    upMaterial(m);
+                for (const Texture* t : {part.texture.get(), part.normalTexture.get(), part.metalRoughTexture.get(),
+                                         part.occlusionTexture.get(), part.emissiveTexture.get()})
+                    if (t && !t->rgba.empty())
+                        texture(*t);
+            }
+        } else {
+            upMaterial(materials[cursor - models.size()]);
+        }
+        ++cursor;
+        if (std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count() > budgetMs)
+            break;
+    }
+    ignoreUploadBudget_ = false;
+    return total ? static_cast<float>(cursor) / static_cast<float>(total) : 1.0f;
 }
 
 void Renderer::releaseUnused()

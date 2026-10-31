@@ -1,6 +1,9 @@
 #include "engine/Scene.h"
 #include <cmath>
 #include <fstream>
+#include "engine/JobSystem.h"
+
+#include <algorithm>
 #include <map>
 #include <glm/gtc/matrix_transform.hpp>
 #include <iomanip>
@@ -98,6 +101,12 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
         f1("vignette", e.vignette);
         f1("grain", e.grain);
     }
+    if (!scene.loading.image.empty())
+        out << "loading_image " << std::quoted(relative(scene.loading.image)) << '\n';
+    if (!scene.loading.title.empty())
+        out << "loading_title " << std::quoted(scene.loading.title) << '\n';
+    if (!scene.loading.hint.empty())
+        out << "loading_hint " << std::quoted(scene.loading.hint) << '\n';
     for (const Group& g : scene.groups)
         out << "group " << std::quoted(g.name) << ' ' << std::quoted(g.parent) << '\n';
     auto writeParent = [&out](const std::string& parent) {
@@ -166,7 +175,30 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
     return true;
 }
 
-bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* error)
+LoadingScreen readLoadingScreen(const std::filesystem::path& file)
+{
+    LoadingScreen result;
+    std::ifstream in(file);
+    std::string line;
+    while (std::getline(in, line)) {
+        std::istringstream ls(line);
+        std::string key, value;
+        ls >> key;
+        if (key.rfind("loading_", 0) != 0 || !(ls >> std::quoted(value)))
+            continue;
+        if (key == "loading_image") {
+            std::filesystem::path p = pathFromUtf8(value);
+            result.image = p.is_relative() ? (std::filesystem::absolute(file).parent_path() / p).lexically_normal() : p;
+        } else if (key == "loading_title") {
+            result.title = value;
+        } else if (key == "loading_hint") {
+            result.hint = value;
+        }
+    }
+    return result;
+}
+
+bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* error, LoadProgress* progress)
 {
     std::ifstream in(file);
     if (!in) {
@@ -177,8 +209,52 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
     std::string line;
     int lineNo = 0;
     enum class LastObject { None, Box, Model, Entity } lastObject = LastObject::None;
-    // Files used several times (fence sections, crates) are parsed once.
+    // Files used several times (fence sections, crates) are parsed once. All
+    // model files of the level are read in parallel first (the slow part:
+    // glTF parsing and texture decoding), then the lines are applied in order.
     std::map<std::filesystem::path, Model> loaded;
+    {
+        std::vector<std::filesystem::path> files;
+        std::ifstream scan(file);
+        std::string scanLine;
+        while (std::getline(scan, scanLine)) {
+            std::istringstream ls(scanLine);
+            std::string key, name, path;
+            ls >> key;
+            if (key == "model")
+                ls >> std::quoted(name) >> std::quoted(path);
+            else if (key == "lod")
+                ls >> std::quoted(path);
+            if (path.empty())
+                continue;
+            std::filesystem::path p = pathFromUtf8(path);
+            if (p.is_relative())
+                p = std::filesystem::absolute(file).parent_path() / p;
+            p = p.lexically_normal();
+            if (std::find(files.begin(), files.end(), p) == files.end())
+                files.push_back(p);
+        }
+        std::vector<Model> models(files.size());
+        std::vector<char> ok(files.size(), 0);
+        if (progress) {
+            progress->total = static_cast<int>(files.size()) + 2; // + level lines + physics/scripts afterwards
+            progress->done = 0;
+        }
+        JobSystem::global().parallelFor(files.size(), 1, [&](std::size_t begin, std::size_t end) {
+            for (std::size_t i = begin; i < end; ++i) {
+                if (progress)
+                    progress->setStep(pathToUtf8(files[i].filename()));
+                ok[i] = loadModelFile(models[i], files[i]) ? 1 : 0;
+                if (progress)
+                    ++progress->done;
+            }
+        });
+        for (std::size_t i = 0; i < files.size(); ++i)
+            if (ok[i])
+                loaded.emplace(files[i], std::move(models[i])); // failures are reported by the line that uses them
+        if (progress)
+            progress->setStep("level");
+    }
     auto loadCached = [&loaded](Model& m, const std::filesystem::path& path, std::string* err) {
         if (const auto it = loaded.find(path); it != loaded.end()) {
             const std::string name = m.name;
@@ -229,6 +305,17 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
             ok = static_cast<bool>(ls >> std::quoted(g.name) >> std::quoted(g.parent));
             if (ok)
                 result.groups.push_back(std::move(g));
+        } else if (key == "loading_image" || key == "loading_title" || key == "loading_hint") {
+            std::string value;
+            ok = static_cast<bool>(ls >> std::quoted(value));
+            if (key == "loading_image") {
+                std::filesystem::path p = pathFromUtf8(value);
+                result.loading.image = p.is_relative() ? (std::filesystem::absolute(file).parent_path() / p).lexically_normal() : p;
+            } else if (key == "loading_title") {
+                result.loading.title = value;
+            } else {
+                result.loading.hint = value;
+            }
         } else if (key == "lod") {
             // Distance LOD of the model on the line above.
             std::string path;
@@ -398,6 +485,8 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
             return false;
         }
     }
+    if (progress)
+        ++progress->done;
     scene = std::move(result);
     return true;
 }

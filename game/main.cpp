@@ -7,6 +7,7 @@
 #include <engine/PlayerController.h>
 #include <engine/Renderer.h>
 #include <engine/Scene.h>
+#include <engine/Ui2D.h>
 #include <engine/Scripting.h>
 #include <engine/Weapon.h>
 
@@ -20,6 +21,8 @@
 #include <fstream>
 #include <set>
 #include <algorithm>
+#include <atomic>
+#include <thread>
 #include <array>
 #include <cmath>
 #include <string>
@@ -212,16 +215,104 @@ int main(int argc, char** argv)
     }
 
     // Level: command line argument, else the bundled sample, else built-in default.
+    // It loads on a background thread (models in parallel) while the loading
+    // screen shows the progress; then meshes and textures go to the GPU.
     engine::Scene scene;
-    if (!engine::loadScene(scene, levelPath, &error)) {
-        std::fprintf(stderr, "%s, using the built-in level\n", error.c_str());
-        scene = engine::makeDefaultScene();
+    engine::PhysicsWorld physics;
+    {
+        const std::filesystem::path assetDir = std::filesystem::path(argv[0]).parent_path() / "assets";
+        engine::Ui2D ui;
+        if (!ui.init(assetDir / "fonts/DejaVuSans.ttf", assetDir / "fonts/DejaVuSans-Bold.ttf", &error))
+            std::fprintf(stderr, "Loading screen: %s\n", error.c_str());
+        const engine::LoadingScreen look = engine::readLoadingScreen(levelPath);
+        int imageW = 0, imageH = 0;
+        const unsigned background = look.image.empty() ? 0u : engine::Ui2D::loadImage(look.image, &imageW, &imageH);
+        const std::string title = look.title.empty() ? levelPath.stem().string() : look.title;
+        engine::LoadProgress progress;
+        std::atomic<bool> finished{false};
+        std::string loadError;
+        bool loaded = false;
+        std::thread loader([&] {
+            loaded = engine::loadScene(scene, levelPath, &loadError, &progress);
+            if (!loaded)
+                scene = engine::makeDefaultScene();
+            progress.setStep("physics");
+            physics.setLevel(scene);
+            ++progress.done;
+            finished = true;
+        });
+        const double loadStart = glfwGetTime();
+        auto drawLoading = [&](float fraction, const std::string& step) {
+            int w = 0, h = 0;
+            glfwGetFramebufferSize(window, &w, &h);
+            const float W = static_cast<float>(w), H = static_cast<float>(h);
+            ui.begin(w, h);
+            // Background: the level's image filling the screen (cropped, never stretched), darkened toward the bottom.
+            ui.rect({0, 0}, {W, H}, {0.055f, 0.05f, 0.045f, 1.0f});
+            if (background && imageW > 0 && imageH > 0) {
+                const float screenAspect = W / H, imageAspect = static_cast<float>(imageW) / static_cast<float>(imageH);
+                glm::vec4 uv(0, 0, 1, 1);
+                if (imageAspect > screenAspect) {
+                    const float cut = (1.0f - screenAspect / imageAspect) * 0.5f;
+                    uv.x = cut;
+                    uv.z = 1.0f - cut;
+                } else {
+                    const float cut = (1.0f - imageAspect / screenAspect) * 0.5f;
+                    uv.y = cut;
+                    uv.w = 1.0f - cut;
+                }
+                // Slow push-in so the screen is not frozen.
+                const float zoom = 0.02f * static_cast<float>(std::min(glfwGetTime() - loadStart, 20.0) / 20.0);
+                uv += glm::vec4(zoom, zoom, -zoom, -zoom) * glm::vec4(uv.z - uv.x, uv.w - uv.y, uv.z - uv.x, uv.w - uv.y);
+                ui.image(background, {0, 0}, {W, H}, glm::vec4(0.85f, 0.82f, 0.76f, 1.0f), uv);
+            }
+            for (int i = 0; i < 24; ++i) { // bottom shade behind the text (bands touch, never overlap)
+                const float t = static_cast<float>(i) / 24.0f;
+                const float y0 = std::round(H * (0.55f + 0.45f * t)), y1 = std::round(H * (0.55f + 0.45f * (t + 1.0f / 24.0f)));
+                ui.rect({0, y0}, {W, y1 - y0}, {0.03f, 0.028f, 0.025f, 0.15f + 0.75f * t});
+            }
+            const float margin = std::round(W * 0.06f);
+            const float titleSize = std::round(std::clamp(H * 0.075f, 28.0f, 96.0f));
+            const float textSize = std::round(std::clamp(H * 0.026f, 14.0f, 30.0f));
+            const glm::vec4 bone(0.86f, 0.82f, 0.72f, 1.0f), dim(0.62f, 0.6f, 0.55f, 1.0f), rust(0.78f, 0.42f, 0.13f, 1.0f);
+            const float barY = H - margin - textSize * 2.2f;
+            const float barH = std::max(6.0f, std::round(H * 0.012f));
+            ui.text(title, {margin, barY - titleSize * 1.55f - textSize * 1.4f}, titleSize, bone, true);
+            if (!look.hint.empty())
+                ui.text(look.hint, {margin, barY - textSize * 1.9f}, textSize, dim);
+            // Progress bar: frame, fill and a moving highlight at its end.
+            const float barW = W - 2.0f * margin;
+            fraction = std::clamp(fraction, 0.0f, 1.0f);
+            ui.rect({margin - 2, barY - 2}, {barW + 4, barH + 4}, {0.0f, 0.0f, 0.0f, 0.6f});
+            ui.rect({margin, barY}, {barW, barH}, {0.16f, 0.15f, 0.13f, 0.9f});
+            ui.rect({margin, barY}, {barW * fraction, barH}, rust);
+            const float pulse = 0.5f + 0.5f * std::sin(static_cast<float>(glfwGetTime()) * 5.0f);
+            ui.rect({margin + barW * fraction - 3, barY}, {3, barH}, {1.0f, 0.75f, 0.4f, 0.4f + 0.6f * pulse});
+            char percent[16];
+            std::snprintf(percent, sizeof percent, "%d %%", static_cast<int>(fraction * 100.0f + 0.5f));
+            ui.text(percent, {margin + barW - ui.textWidth(percent, textSize, true), barY + barH + textSize * 0.5f}, textSize, bone, true);
+            ui.text("Loading " + step, {margin, barY + barH + textSize * 0.5f}, textSize, dim);
+            ui.end();
+            glfwSwapBuffers(window);
+            glfwPollEvents(); // the window stays responsive (moving, resizing)
+        };
+        while (!finished)
+            drawLoading(0.85f * progress.fraction(), progress.step());
+        loader.join();
+        if (!loaded)
+            std::fprintf(stderr, "%s, using the built-in level\n", loadError.c_str());
+        std::size_t cursor = 0;
+        for (float uploaded = 0.0f; uploaded < 1.0f;) {
+            uploaded = renderer.preload(scene, cursor, 12.0);
+            drawLoading(0.85f + 0.15f * uploaded, "textures to the GPU");
+        }
+        std::printf("Level loaded in %.1f s\n", glfwGetTime() - loadStart);
+        if (background)
+            engine::Ui2D::deleteImage(background);
     }
 
     engine::FpsCamera camera;
     const float hipFov = camera.fovDegrees, hipSensitivity = camera.sensitivity;
-    engine::PhysicsWorld physics;
-    physics.setLevel(scene);
     engine::PlayerController player;
     player.settings = scene.player; // movement and health come from the level (editor: Level > Player)
     player.spawn(physics, scene.playerStart);

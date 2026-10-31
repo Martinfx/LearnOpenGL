@@ -1,6 +1,7 @@
 #pragma once
 #include <QColor>
 #include <QIcon>
+#include <QSplashScreen>
 #include <QWidget>
 
 class QToolButton;
@@ -30,4 +31,19 @@ public:
 private:
     QToolButton* header_;
     QWidget* body_;
+};
+
+// Start-up screen: background image, title, progress bar and the current step.
+class EditorSplash : public QSplashScreen {
+    Q_OBJECT
+public:
+    explicit EditorSplash(const QString& backgroundImage);
+    void setProgress(int percent, const QString& step);
+
+protected:
+    void drawContents(QPainter* painter) override;
+
+private:
+    int percent_ = 0;
+    QString step_;
 };

@@ -92,6 +92,12 @@ public:
     void renderOverlay(const RenderView& view, const OverlayPass& pass); // after render(), before present()
     void present(); // post-processing into the framebuffer that was bound when render() was called
 
+    // Sends the meshes and textures of the scene to the GPU before the first frame
+    // (loading screen), so walking toward new models does not stall on uploads.
+    // Call once per loading-screen frame; works for about `budgetMs` and returns
+    // the fraction done (1 = finished). `cursor` starts at 0.
+    float preload(const Scene& scene, std::size_t& cursor, double budgetMs);
+
     void setQuality(const RenderQuality& quality) { quality_ = quality; }
     const RenderQuality& quality() const { return quality_; }
 
@@ -186,7 +192,8 @@ private:
     int targetFbo_ = 0;                 // framebuffer to present into
     int targetX_ = 0, targetY_ = 0;     // where in it
     bool pendingPresent_ = false;
-    bool wireframe_ = false;            // last render() was a wireframe view
+    bool wireframe_ = false;
+    bool ignoreUploadBudget_ = false;  // preload(): everything at once            // last render() was a wireframe view
     glm::mat4 view_{1.0f}, projection_{1.0f};
     std::string glInfo_;
     std::array<glm::vec4, 6> frustum_{}; // planes of the pass being drawn

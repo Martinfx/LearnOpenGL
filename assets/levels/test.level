@@ -25,6 +25,9 @@ env contrast 1.1
 env tint 1.02 1 0.9
 env vignette 0.35
 env grain 0.035
+loading_image "../textures/ui/loading_zone.jpg"
+loading_title "Zóna: testovací ulice"
+loading_hint "Pravé tlačítko myši míří, R přebíjí, 1 až 4 mění zbraň."
 weapon "../weapons/ak74.weapon"
 weapon "../weapons/pistol.weapon"
 weapon "../weapons/knife.weapon"
