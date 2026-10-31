@@ -1,15 +1,15 @@
 # FPS engine material (physically based: metal/roughness)
-# Skrunda-1 terrain layer: Poly Haven "sparse_grass" (CC0) tinted like the zone ground textures.
+# Skrunda-1 terrain layer: Poly Haven "grass_ground" (CC0) tinted like the zone ground textures.
 version 2
 name "Skrunda lush grass"
-color 0.95 1 0.9
+color 0.9 1.0 0.72
 roughness 1
 metallic 0
 normal_strength 1
 emissive 0 0 0
 tiling 0.5 0.5
 world_uv 1
-albedo_map "../../textures/pbr/sparse_grass/albedo.jpg"
-normal_map "../../textures/pbr/sparse_grass/normal.jpg"
-roughness_map "../../textures/pbr/sparse_grass/roughness.jpg"
-occlusion_map "../../textures/pbr/sparse_grass/ao.jpg"
+albedo_map "../../textures/pbr/grass_ground/albedo.jpg"
+normal_map "../../textures/pbr/grass_ground/normal.jpg"
+roughness_map "../../textures/pbr/grass_ground/roughness.jpg"
+occlusion_map "../../textures/pbr/grass_ground/ao.jpg"
