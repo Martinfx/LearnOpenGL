@@ -78,7 +78,8 @@ public:
     // Plays the view model clips for what happened since the last call
     // (fire, reload, draw) and advances them. Call once per frame or step.
     void animate(float dt);
-    void drawn();                        // weapon was just switched to: play the draw clip
+    void drawn();
+    bool animated() const;               // the view model has clips (arms): no procedural swing/reload motion                        // weapon was just switched to: play the draw clip
     Animator animator;                   // pose of viewModel
     bool reloading() const { return reloadTimer_ > 0.0f; }
     float reloadProgress() const; // 0..1 while reloading

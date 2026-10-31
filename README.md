@@ -141,8 +141,8 @@ testovací úrovně: 1 nůž, 2 pistole, 3 samopal, 4 Repeater, 5 Scatter Blaste
   `anim_idle`, `anim_fire`, `anim_reload` a `anim_draw`. Přebíjení a sek se natáhnou na nastavený čas.
   Bez klipů se zbraň hýbe procedurálně (houpání při chůzi, zpětný ráz, přebití, sek).
 
-Pistole a samopal zatím používají modely z Kenney Blaster Kit (CC0, `assets/models/weapons/CREDITS.md`).
-Nůž je dočasný model z `tools/make_knife.py`. Všechny se vymění za realistické modely, jakmile budou stažené.
+Nůž, pistole a samopal mají ruce v pohledu z první osoby (`assets/models/weapons/fps/`, CC0, viz README a
+CREDITS tamtéž) s klipy idle, výstřel/sek, přebití a tasení. Repeater a Scatter Blaster jsou z Kenney Blaster Kit (CC0).
 
 ## Modely z Blenderu
 

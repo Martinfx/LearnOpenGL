@@ -232,6 +232,11 @@ int Weapon::update(float dt, bool triggerHeld, bool reloadPressed)
     return shots;
 }
 
+bool Weapon::animated() const
+{
+    return viewModel && viewModel->skeleton && !viewModel->skeleton->clips.empty();
+}
+
 void Weapon::drawn()
 {
     drawEvent_ = true;

@@ -384,9 +384,9 @@ void testKnifeAndGuns()
     // Melee: swings without ammo or reloads.
     engine::Weapon w(knife);
     int swings = 0;
-    for (int i = 0; i < 120; ++i) // 2 s holding the trigger, swing time 0.45 s
+    for (int i = 0; i < 120; ++i) // 2 s holding the trigger, swing time 0.6 s
         swings += w.update(1.0f / 60.0f, true, i == 30);
-    check(swings == 5, "knife swings every 0.45 s while held (" + std::to_string(swings) + ")");
+    check(swings == 4, "knife swings every 0.6 s while held (" + std::to_string(swings) + ")");
     check(!w.reloading(), "knife never reloads");
     w.update(1.0f / 60.0f, false, false);
     check(w.swing() > 0.0f && w.swing() < 1.0f, "swing progress during a swing");

@@ -52,10 +52,13 @@ std::vector<engine::Weapon> loadLoadout(const engine::Scene& scene, const std::f
         if (cached != models.end()) {
             weapon.viewModel = cached->second;
         } else if (!settings.modelPath.empty()) {
-            auto model = std::make_shared<engine::Model>();
-            if (engine::loadModelFile(*model, settings.modelPath, &error)) {
+            // Skinned arms + weapon keep their skeleton and clips; static guns are baked.
+            if (auto model = engine::loadCharacterModel(settings.modelPath, &error); model && model->skeleton) {
                 weapon.viewModel = model;
                 models.emplace_back(settings.modelPath, model);
+            } else if (auto baked = std::make_shared<engine::Model>(); engine::loadModelFile(*baked, settings.modelPath, &error)) {
+                weapon.viewModel = baked;
+                models.emplace_back(settings.modelPath, baked);
             } else {
                 std::fprintf(stderr, "Weapon model: %s\n", error.c_str());
             }
@@ -95,11 +98,13 @@ glm::mat4 weaponTransform(const engine::Weapon& weapon, float time, float moveSp
     offset.y -= lowered * 0.35f; // weapon switch
     offset.x += std::sin(time * 9.0f) * 0.012f * bob;
     offset.y += std::abs(std::cos(time * 9.0f)) * 0.012f * bob;
-    offset.z += weapon.recoil() * 0.05f;
-    const float reload = weapon.reloading() ? std::sin(weapon.reloadProgress() * 3.14159265f) : 0.0f;
+    offset.z += weapon.recoil() * (weapon.animated() ? 0.015f : 0.05f);
+    // Animated arms play their own reload and swing clips; the rest is moved procedurally.
+    const bool animated = weapon.animated();
+    const float reload = weapon.reloading() && !animated ? std::sin(weapon.reloadProgress() * 3.14159265f) : 0.0f;
     offset.y -= reload * 0.12f;
     // Melee swing: a quick slash from right to left and forward, then back.
-    const float swing = std::sin(weapon.swing() * 3.14159265f);
+    const float swing = animated ? 0.0f : std::sin(weapon.swing() * 3.14159265f);
     offset.x -= swing * 0.16f;
     offset.z -= swing * 0.18f;
     offset.y += swing * 0.03f;

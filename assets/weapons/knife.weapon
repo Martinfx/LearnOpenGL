@@ -2,20 +2,20 @@
 version 2
 type melee
 name "Knife"
-model "../models/weapons/knife.glb"
+model "../models/weapons/fps/fp_knife.glb"
 damage 55
-fire_interval 0.45
+fire_interval 0.6
 automatic 1
 pellets 1
 magazine 1
 reload_time 0
 spread 40
 range 1.8
-view_offset 0.16 -0.15 -0.3
+view_offset 0 0 0
 view_scale 1
-view_rotation -12 185 -60
+view_rotation 0 0 0
 muzzle 0 0 0.24
-anim_idle ""
-anim_fire ""
+anim_idle "idle"
+anim_fire "slash"
 anim_reload ""
-anim_draw ""
+anim_draw "draw"
