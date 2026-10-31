@@ -276,7 +276,7 @@ std::string textureCacheKey(const std::filesystem::path& source, const std::stri
     const auto time = std::filesystem::last_write_time(source, ec).time_since_epoch().count();
     const std::u8string path = std::filesystem::absolute(source, ec).lexically_normal().generic_u8string();
     std::string key(path.begin(), path.end());
-    key += '|' + std::to_string(size) + '|' + std::to_string(time) + '|' + extra + '|' + std::to_string(static_cast<int>(o.usage)) +
+    key += '|' + std::to_string(static_cast<unsigned long long>(size)) + '|' + std::to_string(static_cast<long long>(time)) + '|' + extra + '|' + std::to_string(static_cast<int>(o.usage)) +
            (o.srgb ? "s" : "l") + (o.compress ? "c" : "u") + (o.mipmaps ? "m" : "n") + std::to_string(o.maxSize) + "|v" +
            std::to_string(kVersion);
     return key;
@@ -295,7 +295,7 @@ bool writeCookedTexture(const std::filesystem::path& file, const CookedTexture& 
     std::filesystem::create_directories(file.parent_path(), ec);
     // Write to a temporary name first: another thread or process may read the cache meanwhile.
     std::filesystem::path tmp = file;
-    tmp += ".tmp" + std::to_string(reinterpret_cast<std::uintptr_t>(&t));
+    tmp += ".tmp" + std::to_string(static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(&t)));
     FILE* f = openFile(tmp, "wb");
     if (!f)
         return false;

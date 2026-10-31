@@ -47,7 +47,7 @@ std::shared_ptr<const Texture> loadImage(const cgltf_image* image, const std::fi
 
     // Source of the pixels: the .glb itself (embedded) or an image file next to the .gltf.
     std::filesystem::path source = gltfFile;
-    std::string extra = "image" + std::to_string(image - data->images);
+    std::string extra = "image" + std::to_string(static_cast<long long>(image - data->images));
     const bool embedded = image->buffer_view && image->buffer_view->buffer->data;
     if (!embedded && image->uri && std::string_view(image->uri).substr(0, 5) != "data:") {
         std::string uri = image->uri;
