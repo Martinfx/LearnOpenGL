@@ -360,9 +360,13 @@ void testWeaponFilesAndLoadout()
     engine::Scene level;
     std::string err;
     check(engine::loadScene(level, ENGINE_TEST_ASSETS "/levels/test.level", &err), "load level: " + err);
-    check(level.loadout.size() == 5, "test level gives the player knife, pistol, SMG, repeater and blaster");
+    check(level.loadout.size() == 6, "test level gives the player AK-74M, pistol, knife, SMG, repeater and blaster");
+    engine::WeaponSettings ak;
+    check(engine::loadWeaponFile(ak, level.loadout.at(0), &err), "load ak74.weapon: " + err);
+    check(ak.name == "AK-74M" && ak.animReloadEmpty == "reload_empty" && ak.reloadEmptyTime > ak.reloadTime && ak.animWalk == "walk",
+          "AK-74M is the main weapon, with an empty-magazine reload and a walk clip");
     engine::WeaponSettings blaster;
-    check(engine::loadWeaponFile(blaster, level.loadout.at(4), &err), "load blaster.weapon: " + err);
+    check(engine::loadWeaponFile(blaster, level.loadout.at(5), &err), "load blaster.weapon: " + err);
     check(blaster.name == "Scatter Blaster" && blaster.pellets == 8 && !blaster.automatic, "blaster is a semi-auto shotgun");
     check(std::filesystem::exists(blaster.modelPath), "weapon model path resolves next to the .weapon file");
 

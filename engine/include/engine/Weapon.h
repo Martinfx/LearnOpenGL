@@ -33,6 +33,9 @@ struct WeaponSettings {
     std::string animFire;
     std::string animReload;
     std::string animDraw;
+    std::string animReloadEmpty;  // reload from an empty magazine (with chambering), optional
+    float reloadEmptyTime = 0.0f; // s, 0 = reload_time
+    std::string animWalk;         // loops while the player moves, optional
 
     bool melee() const { return type == Type::Melee; }
 };
@@ -77,7 +80,7 @@ public:
 
     // Plays the view model clips for what happened since the last call
     // (fire, reload, draw) and advances them. Call once per frame or step.
-    void animate(float dt);
+    void animate(float dt, float moveSpeed = 0.0f);
     void drawn();
     bool animated() const;               // the view model has clips (arms): no procedural swing/reload motion                        // weapon was just switched to: play the draw clip
     Animator animator;                   // pose of viewModel
@@ -91,6 +94,8 @@ private:
     bool triggerWasHeld_ = false;
     float cooldown_ = 0.0f;
     float reloadTimer_ = 0.0f;
+    float reloadDuration_ = 1.0f;
+    bool reloadEmpty_ = false;
     float recoil_ = 0.0f;
     float flashTimer_ = 0.0f;
     float swingTimer_ = 0.0f;

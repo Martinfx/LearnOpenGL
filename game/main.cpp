@@ -17,6 +17,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
+#include <set>
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -31,6 +33,24 @@ struct Mouse {
     glm::vec2 delta{0.0f};
     double scroll = 0.0;
 };
+
+// Attribution required by CC-BY assets: print the CREDITS.md rows that name the
+// view models in use (shown again in the credits screen once the menu exists).
+void printModelCredits(const std::vector<std::filesystem::path>&, const std::vector<engine::Weapon>& weapons)
+{
+    std::set<std::string> printed;
+    for (const engine::Weapon& w : weapons) {
+        const std::filesystem::path& model = w.settings.modelPath;
+        if (model.empty())
+            continue;
+        std::ifstream in(model.parent_path() / "CREDITS.md");
+        const std::string name = model.filename().string();
+        for (std::string line; std::getline(in, line);)
+            if (line.find(name) != std::string::npos && printed.insert(line).second)
+                std::printf("Credits: %s\n", line.c_str());
+        std::fflush(stdout);
+    }
+}
 
 // Player's weapons from the level loadout (falls back to the bundled repeater).
 std::vector<engine::Weapon> loadLoadout(const engine::Scene& scene, const std::filesystem::path& exeDir)
@@ -65,6 +85,7 @@ std::vector<engine::Weapon> loadLoadout(const engine::Scene& scene, const std::f
         }
         weapons.push_back(std::move(weapon));
     }
+    printModelCredits(files, weapons);
     if (weapons.empty())
         weapons.emplace_back(); // bare default so the game stays playable
     return weapons;
@@ -188,7 +209,7 @@ int main(int argc, char** argv)
     engine::ScriptSystem scripts(scene, physics, player);
     scripts.setPlayerHealth(scene.player.maxHealth);
 
-    // Weapons (models: Kenney Blaster Kit, CC0, see assets/models/weapons/CREDITS.md)
+    // Weapons (credits of the models: CREDITS.md next to each model)
     std::vector<engine::Weapon> weapons = loadLoadout(scene, std::filesystem::path(argv[0]).parent_path());
     std::size_t current = 0;
     std::size_t next = 0;     // weapon being switched to
@@ -286,7 +307,8 @@ int main(int argc, char** argv)
             const bool ready = next == current && lowered <= 0.0f;
             const int shots = weapon.update(dt, ready && input.isDown(engine::Action::Fire),
                                             ready && input.isDown(engine::Action::Reload));
-            weapon.animate(dt);
+            const glm::vec3 moveVel = player.velocity();
+            weapon.animate(dt, player.grounded() ? std::sqrt(moveVel.x * moveVel.x + moveVel.z * moveVel.z) : 0.0f);
             const int rays = weapon.settings.melee() ? shots : shots * weapon.settings.pellets;
             for (int s = 0; s < rays; ++s) {
                 const glm::vec3 eye = player.eye();

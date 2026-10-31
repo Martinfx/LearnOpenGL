@@ -25,8 +25,9 @@ env contrast 1.1
 env tint 1.02 1 0.9
 env vignette 0.35
 env grain 0.035
-weapon "../weapons/knife.weapon"
+weapon "../weapons/ak74.weapon"
 weapon "../weapons/pistol.weapon"
+weapon "../weapons/knife.weapon"
 weapon "../weapons/smg.weapon"
 weapon "../weapons/repeater.weapon"
 weapon "../weapons/blaster.weapon"

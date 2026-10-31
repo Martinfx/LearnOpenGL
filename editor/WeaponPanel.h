@@ -55,15 +55,16 @@ private:
     QSpinBox* pellets_ = nullptr;
     QSpinBox* magazine_ = nullptr;
     QDoubleSpinBox* reload_ = nullptr;
+    QDoubleSpinBox* reloadEmpty_ = nullptr;
     QDoubleSpinBox* spread_ = nullptr;
     QDoubleSpinBox* range_ = nullptr;
     Vec3Editor* viewOffset_ = nullptr;
     QDoubleSpinBox* viewScale_ = nullptr;
     Vec3Editor* viewRotation_ = nullptr;
     Vec3Editor* muzzle_ = nullptr;
-    std::array<QComboBox*, 4> clips_{};  // idle, fire, reload, draw
+    std::array<QComboBox*, 6> clips_{};  // idle, fire, reload, draw, reload empty, walk
     QLabel* clipInfo_ = nullptr;
-    std::array<QWidget*, 5> firearmRows_{}; // rows hidden for melee weapons
+    std::array<QWidget*, 7> firearmRows_{}; // rows hidden for melee weapons
     QFormLayout* formLayout_ = nullptr;
     QLabel* intervalLabel_ = nullptr;
     QLabel* spreadLabel_ = nullptr;

@@ -1,0 +1,24 @@
+# FPS engine weapon
+version 2
+type firearm
+name "AK-74M"
+model "../models/weapons/fps/fp_ak74.glb"
+damage 26
+fire_interval 0.092
+automatic 1
+pellets 1
+magazine 30
+reload_time 2.63
+spread 1.6
+range 200
+view_offset 0.06 -0.03 0
+view_scale 1
+view_rotation 0 0 0
+muzzle 0.03 -0.06 -0.68
+anim_idle "idle"
+anim_fire "fire"
+anim_reload "reload"
+anim_draw "draw"
+anim_reload_empty "reload_empty"
+reload_empty_time 3.46
+anim_walk "walk"

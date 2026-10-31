@@ -113,7 +113,10 @@ bool saveWeaponFile(const WeaponSettings& w, const std::filesystem::path& file, 
         << "anim_idle " << std::quoted(w.animIdle) << '\n'
         << "anim_fire " << std::quoted(w.animFire) << '\n'
         << "anim_reload " << std::quoted(w.animReload) << '\n'
-        << "anim_draw " << std::quoted(w.animDraw) << '\n';
+        << "anim_draw " << std::quoted(w.animDraw) << '\n'
+        << "anim_reload_empty " << std::quoted(w.animReloadEmpty) << '\n'
+        << "reload_empty_time " << w.reloadEmptyTime << '\n'
+        << "anim_walk " << std::quoted(w.animWalk) << '\n';
     return static_cast<bool>(out);
 }
 
@@ -167,6 +170,9 @@ bool loadWeaponFile(WeaponSettings& weapon, const std::filesystem::path& file, s
         else if (key == "anim_fire") ok = static_cast<bool>(ls >> std::quoted(w.animFire));
         else if (key == "anim_reload") ok = static_cast<bool>(ls >> std::quoted(w.animReload));
         else if (key == "anim_draw") ok = static_cast<bool>(ls >> std::quoted(w.animDraw));
+        else if (key == "anim_reload_empty") ok = static_cast<bool>(ls >> std::quoted(w.animReloadEmpty));
+        else if (key == "reload_empty_time") ok = static_cast<bool>(ls >> w.reloadEmptyTime);
+        else if (key == "anim_walk") ok = static_cast<bool>(ls >> std::quoted(w.animWalk));
         else if (key == "muzzle") ok = static_cast<bool>(ls >> w.muzzle.x >> w.muzzle.y >> w.muzzle.z);
         // Unknown keys are ignored so newer files still load.
         if (!ok) {
@@ -212,7 +218,10 @@ int Weapon::update(float dt, bool triggerHeld, bool reloadPressed)
     }
     if ((reloadPressed && ammo_ < settings.magazineSize) || (triggerHeld && ammo_ == 0)) {
         triggerWasHeld_ = triggerHeld;
-        reloadTimer_ = settings.reloadTime;
+        reloadEmpty_ = ammo_ == 0 && !settings.animReloadEmpty.empty();
+        reloadDuration_ = reloadEmpty_ && settings.reloadEmptyTime > 0.0f ? settings.reloadEmptyTime : settings.reloadTime;
+        reloadDuration_ = std::max(reloadDuration_, 0.01f);
+        reloadTimer_ = reloadDuration_;
         reloadEvent_ = true;
         return 0;
     }
@@ -242,7 +251,7 @@ void Weapon::drawn()
     drawEvent_ = true;
 }
 
-void Weapon::animate(float dt)
+void Weapon::animate(float dt, float moveSpeed)
 {
     const Skeleton* skel = viewModel ? viewModel->skeleton.get() : nullptr;
     if (!skel || skel->clips.empty()) {
@@ -257,17 +266,20 @@ void Weapon::animate(float dt)
             return false;
         const float duration = skel->clips[static_cast<std::size_t>(clip)].duration;
         const float speed = stretchTo > 0.0f && duration > 0.0f ? duration / stretchTo : 1.0f;
-        return animator.play(*skel, name, loop, speed, fade, true);
+        return animator.play(*skel, name, loop, speed, fade, !loop); // loops keep running
     };
     if (reloadEvent_)
-        play(settings.animReload, false, settings.reloadTime, 0.1f);
+        play(reloadEmpty_ ? settings.animReloadEmpty : settings.animReload, false, reloadDuration_, 0.1f);
     else if (firedEvent_)
         play(settings.animFire, false, settings.melee() ? settings.fireInterval : 0.0f, 0.03f);
     else if (drawEvent_)
         play(settings.animDraw, false, 0.0f, 0.0f);
     firedEvent_ = reloadEvent_ = drawEvent_ = false;
-    if (animator.current.clip < 0 || animator.finished(*skel)) {
-        if (!play(settings.animIdle, true, 0.0f, 0.15f) && animator.current.clip < 0)
+    // Idle and walk loop; a one-shot clip (fire, reload, draw) plays to its end first.
+    const bool looping = animator.current.clip >= 0 && animator.current.loop;
+    if (animator.current.clip < 0 || animator.finished(*skel) || looping) {
+        const bool walking = moveSpeed > 0.5f && !settings.animWalk.empty() && skel->findClip(settings.animWalk) >= 0;
+        if (!play(walking ? settings.animWalk : settings.animIdle, true, 0.0f, 0.25f) && animator.current.clip < 0)
             animator.play(*skel, skel->clips.front().name, true);
     }
     animator.update(*skel, dt);
@@ -280,7 +292,7 @@ float Weapon::swing() const
 
 float Weapon::reloadProgress() const
 {
-    return reloading() ? 1.0f - reloadTimer_ / settings.reloadTime : 0.0f;
+    return reloading() ? 1.0f - reloadTimer_ / reloadDuration_ : 0.0f;
 }
 
 glm::vec3 Weapon::spreadDirection(glm::vec3 aim)
