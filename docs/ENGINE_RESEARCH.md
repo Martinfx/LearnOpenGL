@@ -108,3 +108,57 @@ Promítnuto do [`ROADMAP.md`](ROADMAP.md) (sekce 1b a položky v milnících):
 
 Pořadí nejbližších kroků: logování → crash handler → GUID → cvars/konzole → smoke test v CI;
 pak pokračovat v M1 (UI hry, uložení, lokální světla, fyzika v levelu).
+
+## 6. Atmosféra zóny: z čeho vzniká a jak ji postavit
+
+S.T.A.L.K.E.R. nepůsobí z technologie, ale ze souhry světla, počasí, zvuku, prázdnoty a života
+mimo hráče. Níže je každý pilíř rozložený na techniky, které engine potřebuje, s tím, co už máme.
+Obsah a design jsou vlastní (žádné kopírování lokací, frakcí ani pojmů z původní hry).
+
+### 6.1 Světlo: opravdu tmavé noci a baterka
+
+- **Expozice s limity.** Dnes je expozice pevná (`Environment::exposure`). Profi enginy mají automatickou expozici (histogram jasu → cílová EV s pomalou adaptací oka), ale **s dolním limitem**, jinak noc „vytáhne“ na šedý den. Pro tmavé noci: min EV nastavit tak, aby bez baterky byla vidět jen silueta horizontu a obloha.
+- **Měsíc a hvězdy.** Noční slunce = slabé namodralé směrové světlo (asi 1/1000 dne) se stíny, hvězdy a měsíc v `sky.frag`, IBL z noční oblohy skoro černé.
+- **Interiéry musí být tmavé.** Největší chyba malých enginů: světlo oblohy (IBL) svítí i do budov. Řeší se objemy „interiér“, které ztlumí sky light, nebo irradiance probes (M3). Bez toho baterka v budově nic neznamená.
+- **Baterka.** Reflektor se stínovou mapou, maskou (cookie textura s nerovnoměrným kruhem a skvrnami), mírné zpoždění za kamerou (pocit ruky), kužel viditelný ve volumetrické mlze, zapínání klávesou a volitelně baterie. Baterky NPC v noci prozradí jejich polohu.
+- **Ohně a lampy** jako bodová světla s blikáním (šum, ne sinus) a stíny; jediné teplé barvy ve studené scéně.
+
+### 6.2 Počasí a denní doba
+
+- **Klíčové snímky po hodinách.** X-Ray drží pro každý typ počasí sadu stavů po hodinách (barvy oblohy, slunce, mlhy, ambient, oblačnost, déšť) a mezi nimi interpoluje. Pro nás: preset Environment = 24 (nebo 8) klíčů, editor s časovou osou dne, přechod mezi typy počasí (jasno → zataženo → bouřka) během desítek sekund. Herní čas běží rychleji než reálný (nastavitelné).
+- **Obloha a IBL průběžně.** Procedurální obloha se s časem mění; IBL přepočítávat po částech (jedna stěna cubemapy za snímek), ne celé najednou.
+- **Stíny mraků.** Posouvaná šumová textura promítnutá ze slunce na terén a budovy. Levné a mimořádně „živé“.
+- **Déšť.** Částice kolem kamery (máme `rain.particle`) + **mapa okluze deště** (hloubka z pohledu shora), aby nepršelo pod střechou ani v budovách; dopady a cákance na zemi; **mokré povrchy** (tmavší albedo, nižší roughness, louže podle masky/výšky, kroužky jako animovaná normála), postupné vysychání po dešti. Zvuk deště venku vs. tlumený uvnitř podle stejné mapy.
+- **Bouřka a blesky.** Záblesk = krátké silné směrové světlo + rozsvícená obloha (pár snímků, nepravidelně), blesk jako sprite/mesh v dálce, **hrom se zpožděním podle vzdálenosti** (343 m/s) a s dozvukem. Vítr zesílí.
+- **Vítr** jako jeden globální vektor: vlnění trávy a stromů ve vertex shaderu (M2 Vegetace), částice, plachty, zvuk.
+- **Mlha a opar.** Výšková mlha už je; doplnit barvu mlhy z oblohy podle směru (aerial perspective) a **volumetrickou mlhu**: froxel mřížka (např. 160 × 90 × 64) ve compute shaderu, rozptyl ze slunce se CSM stíny a z lokálních světel, časové vyhlazení. Dává sluneční paprsky lesem, kužele baterek a světla v mlze.
+
+### 6.3 Barvy: desaturovaná paleta a grading
+
+- **3D LUT** (32³) na konci post-processu: neutrální LUT se uloží spolu se screenshotem, upraví v Krita/GIMP/Resolve a načte zpět. Každý preset počasí má vlastní LUT a při přechodu se prolínají. Dnes máme saturaci, kontrast, tint, vinětu a zrno – LUT je nadstavba nad nimi.
+- **Lift/gamma/gain a vyvážení bílé** v Environment doku pro rychlé ladění bez LUT.
+- **Disciplína palety v assetech:** albedo v rozsahu cca 30–240 sRGB, žádné syté barvy kromě cílených akcentů (výstražné cedule, ohně, anomálie). Kontrola v asset validaci editoru. Desaturuje se gradingem, ne v texturách, aby šlo měnit náladu.
+
+### 6.4 Zvuk: polovina atmosféry
+
+- **Vrstvy ambientu.** (1) Podkladové smyčky podle prostředí a počasí (vítr podle síly, venku/uvnitř, noc/den), (2) **náhodné jednorázové zvuky v prostoru** kolem hráče: vytí psů, vrány, vzdálená střelba, skřípání plechu, praskání větví – každý s pravděpodobností podle denní doby a oblasti, umístěný 50–400 m daleko ve 3D, (3) bodové zdroje v levelu (rádia s filtrovaným zvukem, generátory, kapající voda), (4) situační hudba (kytara u ohně jako 3D zdroj v táboře, ne hudba v pozadí).
+- **Zvukové oblasti** v editoru (objem s vlastní sadou vrstev a prolnutím na hranici), **reverb zóny** (interiér, tunel, otevřená pláň) a **okluze** zdí – položky „Audio dál“ v M1.
+- **Řízené ticho.** Před událostí (anomálie, bouřka) se ambient stáhne (ducking), aby náhlý zvuk zapůsobil.
+- **Zvuky ze simulace.** Vzdálená střelba nemá být jen náhodná: když se offline skupiny NPC střetnou (6.5), hráč ji slyší ze správného směru.
+- **Detektor/radiace:** praskání jako Poissonův proces s frekvencí podle dávky; pípání detektoru anomálií podle vzdálenosti.
+
+### 6.5 Život v zóně (A-Life)
+
+- **Online/offline podle vzdálenosti.** NPC blíž než ~150 m jsou plné entity (fyzika, animace, navmesh, Lua AI); dál jen záznamy v simulaci. Přepínání s hysterezí, aby NPC neblikala.
+- **Graf zóny** (body zájmu a cesty mezi nimi, i přes nenačtené buňky) pro offline přesuny; navmesh jen online.
+- **Tábory a „práce“.** Body zájmu nabízejí role (hlídka, spánek, sezení u ohně, obchod) s rozvrhem den/noc; skupiny si vybírají cíle podle frakce a potřeb.
+- **Offline střety** se vyhodnotí statisticky (síla skupin, náhoda) a zanechají následky: mrtvá těla a loot, když tam hráč dorazí, a zvuk střelby (6.4).
+- **Fauna:** smečky psů s doupaty, vrány na stromech, které vyletí při přiblížení.
+- Vše se ukládá s GUID (M0.5) a musí přežít streamování buněk (M2).
+
+### 6.6 Anomálie, ohně a detaily
+
+- **Zkreslení vzduchu:** průchod distorze – částice/meshe zapisují posun UV do bufferu, post-process pak posune obraz scény (s maskou, aby se nezkreslovaly předměty před anomálií). Stejný průchod dá tetelení nad ohněm a výfuky.
+- **Anomálie (vlastní design):** trigger + distorze + částice + hučení + typ poškození + reakce na hozený předmět; vyhledává se detektorem.
+- **Táborák jako prefab:** blikající bodové světlo se stínem, oheň/kouř/jiskry (máme flipbooky), praskání, sedací body pro NPC, volitelně hudba.
+- **Detaily obsahu:** decaly nápisů a skvrn, rozptyl odpadků a suti štětcem (Foliage režim na malé meshe), vraky, prach v paprscích světla (částice zapnuté jen v kuželu).
