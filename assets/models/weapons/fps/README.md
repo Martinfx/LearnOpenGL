@@ -7,9 +7,10 @@ Each file is one skinned glTF (GLB): realistic arms (dirty bare hands, dark gree
 | `fp_ak74.glb` | AK-74M, professional arms + animations by Cransh (CC-BY 4.0), gloves and jacket | `idle` 1.96 s loop, `fire` 0.29 s, `reload` 2.63 s, `reload_empty` 3.46 s (with bolt pull), `reload_alt` 2.79 s, `draw` 0.63 s, `walk` 0.96 s loop, `run` 0.38 s loop |
 | `fp_pistol.glb` | Makarov PM with suppressor and red dot, Cransh (CC-BY 4.0), black gloves | `idle` 1.96 s loop, `fire` 0.29 s, `reload` 2.21 s, `reload_empty` 2.96 s, `walk` 0.96 s loop (no `draw`) |
 | `fp_smg.glb` | Compact SMG (olive), Cransh (CC-BY 4.0), leather gloves | `idle` 1.63 s loop, `fire` 0.29 s, `reload` 3.92 s, `reload_empty` 4.38 s, `draw` 0.63 s, `inspect` 7.25 s, `walk` 0.71 s loop, `run` 0.46 s loop |
-| `fp_knife.glb` | M9 combat knife | `idle` 2.0 s loop, `slash` 0.6 s, `stab` 0.5 s, `draw` 0.4 s, `holster` 0.33 s |
+| `fp_knife.glb` | Combat knife, DJMaesen (CC-BY 4.0), gloves | `idle` 1.33 s loop, `slash` 0.67 s, `slash2` 0.67 s, `stab` 0.75 s, `slash3` 0.75 s, `draw` 0.33 s |
+| `fp_heavy_pistol.glb` | Heavy .50 pistol, DJMaesen (CC-BY 4.0), bare hands, two-hand grip | `idle` 0.83 s loop, `fire` 0.42 s, `fire_last` 0.42 s (slide locks back), `reload` 2.42 s, `reload_empty` 1.75 s (from locked slide), `draw` 1.08 s, `inspect` 0.92 s |
 
-`fp_ak74.glb`, `fp_pistol.glb` and `fp_smg.glb` are professional Cransh rigs. `fp_knife.glb` is still a hand-keyed placeholder.
+`fp_ak74.glb`, `fp_pistol.glb` and `fp_smg.glb` are professional Cransh rigs. `fp_knife.glb` and `fp_heavy_pistol.glb` (DJMaesen) animate the weapon parts as separate glTF nodes (not skinned): the engine must play node TRS channels too. Heavy pistol muzzle about `0.04 -0.03 -0.50`; both use eye (6, 50, 12) in the source and scale 0.00657.
 
 `fp_pistol.glb` notes: muzzle (suppressor) about `0.04 -0.01 -0.61`, the arms mesh in the download had its vertices
 in the wrong units (x -1e4); `source/fixgltf.py` repairs that before `source/convert_fps.py` runs.
