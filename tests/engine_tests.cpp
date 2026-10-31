@@ -366,16 +366,16 @@ void testWeaponFilesAndLoadout()
     check(engine::loadWeaponFile(ak, level.loadout.at(0), &err), "load ak74.weapon: " + err);
     check(ak.name == "AK-74M" && ak.animReloadEmpty == "reload_empty" && ak.reloadEmptyTime > ak.reloadTime && ak.animWalk == "walk",
           "AK-74M is the main weapon, with an empty-magazine reload and a walk clip");
-    engine::WeaponSettings blaster; // the pistol
-    check(engine::loadWeaponFile(blaster, level.loadout.at(1), &err), "load pistol.weapon: " + err);
-    check(blaster.magazineSize == 12 && !blaster.automatic, "pistol is semi-automatic");
-    check(std::filesystem::exists(blaster.modelPath), "weapon model path resolves next to the .weapon file");
+    engine::WeaponSettings sidearm;
+    check(engine::loadWeaponFile(sidearm, level.loadout.at(1), &err), "load pistol.weapon: " + err);
+    check(sidearm.magazineSize == 8 && !sidearm.automatic, "Makarov PM is semi-automatic with 8 rounds");
+    check(std::filesystem::exists(sidearm.modelPath), "weapon model path resolves next to the .weapon file");
 
-    blaster.damage = 11.5f;
-    check(engine::saveWeaponFile(blaster, "copy.weapon", &err), "save weapon: " + err);
+    sidearm.damage = 11.5f;
+    check(engine::saveWeaponFile(sidearm, "copy.weapon", &err), "save weapon: " + err);
     engine::WeaponSettings copy;
     check(engine::loadWeaponFile(copy, "copy.weapon", &err) && copy.damage == 11.5f, "weapon file round trip");
-    check(std::filesystem::equivalent(copy.modelPath, blaster.modelPath), "model path rewritten relative to the new file");
+    check(std::filesystem::equivalent(copy.modelPath, sidearm.modelPath), "model path rewritten relative to the new file");
 }
 
 void testKnifeAndGuns()
