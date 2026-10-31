@@ -97,7 +97,9 @@ Hotovo, když: hra se spustí do menu, jde projít lokaci, nepřátelé obcháze
 ### M2 – Otevřená zóna (~8 týdnů)
 
 - [ ] **Terén** (3 týdny): heightmapa po dlaždicích, sculpt a malování až 8 vrstev materiálu v editoru, kolize v Jolt (HeightFieldShape), LOD terénu.
+  Hotovo: jedna heightmapa, režim Landscape (raise/lower/smooth/flatten, malování 4 vrstev), kolize HeightFieldShape. Zbývá: dlaždice, 8 vrstev, LOD.
 - [ ] **Vegetace** (2 týdny): štětec na stromy, keře a trávu (instancing z M0), hustota podle vrstev terénu, vítr ve vertex shaderu, cull distance a fade.
+  Hotovo: režim Foliage (štětec, typy s hustotou, měřítkem, cull distance, kolizí, náklonem, stíny), instancing po 32m buňkách, kolize stromů. Zbývá: hustota podle vrstev, vítr, fade.
 - [ ] **Streamování světa** (3 týdny): rozdělení levelu na buňky (např. 128 × 128 m), načítání a uvolňování podle vzdálenosti na pracovních vláknech, HLOD/impostory budov, editor zobrazí buňky a umí je zamknout/načíst; rozpočet paměti.
 - [ ] **Voda** (1 týden): řeka a louže (odrazy SSR nebo probe, průhlednost, mlha pod hladinou).
 - [ ] **Počasí a denní doba** (1 týden): animované slunce, déšť, mlha a bouřka jako přechody mezi presety Environment; editor časové osy dne.

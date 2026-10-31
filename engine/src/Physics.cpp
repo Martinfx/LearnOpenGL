@@ -8,6 +8,7 @@
 #include <Jolt/Physics/Collision/CastResult.h>
 #include <Jolt/Physics/Collision/RayCast.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
+#include <Jolt/Physics/Collision/Shape/HeightFieldShape.h>
 #include <Jolt/Physics/Collision/Shape/MeshShape.h>
 #include <Jolt/Physics/Collision/Shape/ScaledShape.h>
 #include <Jolt/Core/Factory.h>
@@ -125,12 +126,7 @@ void PhysicsWorld::setLevel(const Scene& scene)
     // One Jolt mesh per mesh part, shared by every copy of the model (rotation and
     // scale go on the body / a scaled-shape wrapper instead of into the vertices).
     std::unordered_map<std::uint64_t, JPH::ShapeRefC> meshes;
-    for (const Model& m : scene.models) {
-        if (!m.collision)
-            continue;
-        const glm::mat3 rotScale(m.transform());
-        const float scale = m.scale != 0.0f ? m.scale : 1.0f;
-        const glm::quat rotation = glm::normalize(glm::quat_cast(rotScale / scale));
+    auto addModelParts = [&](const Model& m, const std::string& name, glm::vec3 position, glm::quat rotation, float scale) {
         for (const MeshPart& part : m.parts) {
             JPH::ShapeRefC& shape = meshes[part.id];
             if (!shape) {
@@ -144,15 +140,45 @@ void PhysicsWorld::setLevel(const Scene& scene)
                     triangles.push_back(JPH::IndexedTriangle(part.indices[i], part.indices[i + 1], part.indices[i + 2], 0));
                 JPH::ShapeSettings::ShapeResult result = JPH::MeshShapeSettings(std::move(vertices), std::move(triangles)).Create();
                 if (result.HasError()) {
-                    std::fprintf(stderr, "Physics: skipping '%s': %s\n", m.name.c_str(), result.GetError().c_str());
+                    std::fprintf(stderr, "Physics: skipping '%s': %s\n", name.c_str(), result.GetError().c_str());
                     continue;
                 }
                 shape = result.Get();
             }
             if (scale == 1.0f)
-                impl_->addStatic(shape, m.position, m.name, rotation);
+                impl_->addStatic(shape, position, name, rotation);
             else
-                impl_->addStatic(JPH::ScaledShapeSettings(shape, JPH::Vec3::sReplicate(scale)), m.position, m.name, rotation);
+                impl_->addStatic(JPH::ScaledShapeSettings(shape, JPH::Vec3::sReplicate(scale)), position, name, rotation);
+        }
+    };
+    for (const Model& m : scene.models) {
+        if (!m.collision)
+            continue;
+        const glm::mat3 rotScale(m.transform());
+        const float scale = m.scale != 0.0f ? m.scale : 1.0f;
+        addModelParts(m, m.name, m.position, glm::normalize(glm::quat_cast(rotScale / scale)), scale);
+    }
+    // Terrain: a Jolt height field (same samples as the render mesh), plus painted
+    // foliage whose type has collision (trees), sharing one mesh per type.
+    if (scene.terrain && scene.terrain->valid()) {
+        const Terrain& t = *scene.terrain;
+        const float d = t.spacing();
+        JPH::HeightFieldShapeSettings settings(t.heights.data(), JPH::Vec3(t.origin.x, 0.0f, t.origin.y), JPH::Vec3(d, 1.0f, d),
+                                               static_cast<JPH::uint32>(t.resolution));
+        JPH::ShapeSettings::ShapeResult result = settings.Create();
+        if (result.HasError())
+            std::fprintf(stderr, "Physics: terrain: %s\n", result.GetError().c_str());
+        else
+            impl_->addStatic(result.Get(), glm::vec3(0.0f), "Terrain", glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
+        for (const FoliageInstance& f : t.foliage) {
+            if (f.type >= t.foliageTypes.size())
+                continue;
+            const FoliageType& type = t.foliageTypes[f.type];
+            if (!type.collision || !type.model)
+                continue;
+            glm::quat rotation = glm::angleAxis(f.tiltX, glm::vec3(1, 0, 0)) * glm::angleAxis(f.tiltZ, glm::vec3(0, 0, 1)) *
+                                 glm::angleAxis(glm::radians(f.yawDegrees), glm::vec3(0, 1, 0)); // as drawn
+            addModelParts(*type.model, "Foliage", f.position, glm::normalize(rotation), f.scale > 0.0f ? f.scale : 1.0f);
         }
     }
     impl_->system.OptimizeBroadPhase();

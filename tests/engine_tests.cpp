@@ -962,6 +962,33 @@ void testTerrain()
               again.terrain->layerWeight(2, 10.0f, 10.0f) > 0.9f,
           "terrain: level round trip " + err);
     check(t->eraseFoliage({-10, 0, -10}, 5.0f) == static_cast<int>(t->foliage.size() + 0) || t->foliage.empty(), "terrain: erase foliage");
+
+    // Physics: the height field collides where it is drawn; trees with collision block rays.
+    {
+        engine::PhysicsWorld world;
+        world.setLevel(s);
+        bool ok = true;
+        for (glm::vec2 p : {glm::vec2(0.0f), glm::vec2(3.5f, -2.25f), glm::vec2(20.0f, 20.0f)}) {
+            auto h = world.raycast({p.x, 30.0f, p.y}, {0, -1, 0}, 60.0f);
+            ok = ok && h && std::abs(h->point.y - t->heightAt(p.x, p.y)) < 0.05f;
+        }
+        check(ok, "terrain: height field collision");
+        engine::Model ramp;
+        check(engine::loadModelFile(ramp, ENGINE_TEST_ASSETS "/models/ramp.gltf", &err), "load ramp: " + err);
+        engine::FoliageType tree;
+        tree.model = std::make_shared<engine::Model>(ramp);
+        tree.collision = true;
+        auto withTree = std::make_shared<engine::Terrain>(*t);
+        withTree->foliageTypes = {tree};
+        withTree->foliage = {engine::FoliageInstance{{20.0f, 0.0f, 20.0f}, 0.0f, 1.0f, 0.0f, 0.0f, 0}};
+        engine::Scene forest;
+        forest.terrain = withTree;
+        world.setLevel(forest);
+        const engine::Aabb rb = ramp.localBounds;
+        const glm::vec3 top = glm::vec3(20.0f, 0.0f, 20.0f) + glm::vec3((rb.min.x + rb.max.x) * 0.5f, 0.0f, rb.min.z + 1.0f);
+        auto h = world.raycast({top.x, 30.0f, top.z}, {0, -1, 0}, 60.0f);
+        check(h && h->point.y > 1.5f, "terrain: foliage with collision");
+    }
 }
 
 void testSharedMeshes()
