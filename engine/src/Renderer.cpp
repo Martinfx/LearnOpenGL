@@ -3,6 +3,7 @@
 #include <glad/gl.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
@@ -16,15 +17,23 @@ const char* kVertexShader = R"(#version 450 core
 layout(location = 0) in vec3 aPosition;
 layout(location = 1) in vec3 aNormal;
 layout(location = 2) in vec2 aUV;
+layout(location = 3) in uvec4 aJoints;
+layout(location = 4) in vec4 aWeights;
+layout(std140, binding = 0) uniform Joints { mat4 uJoints[256]; };
+uniform bool uSkinned;
 uniform mat4 uModel;
 uniform mat4 uViewProj;
 out vec3 vWorldPos;
 out vec3 vNormal;
 out vec2 vUV;
 void main() {
-    vec4 world = uModel * vec4(aPosition, 1.0);
+    mat4 skin = mat4(1.0);
+    if (uSkinned)
+        skin = aWeights.x * uJoints[aJoints.x] + aWeights.y * uJoints[aJoints.y]
+             + aWeights.z * uJoints[aJoints.z] + aWeights.w * uJoints[aJoints.w];
+    vec4 world = uModel * skin * vec4(aPosition, 1.0);
     vWorldPos = world.xyz;
-    vNormal = mat3(uModel) * aNormal; // rotation + scale; renormalized in the fragment shader
+    vNormal = mat3(uModel) * mat3(skin) * aNormal; // rotation + scale; renormalized in the fragment shader
     vUV = aUV;
     gl_Position = uViewProj * world;
 }
@@ -44,6 +53,7 @@ uniform vec3 uColor;
 uniform vec3 uSunDir;
 uniform vec3 uCamera;
 uniform float uHighlight;
+uniform float uFlash;
 out vec4 fragColor;
 
 float gridLines(vec3 p, vec3 n) {
@@ -74,6 +84,7 @@ void main() {
 
     vec3 color = base * (ambient + diffuse * vec3(1.0, 0.96, 0.88)) + specular;
     color = mix(color, vec3(1.0, 0.75, 0.2), uHighlight * 0.35);
+    color = mix(color, vec3(1.0), uFlash); // hit feedback
 
     // Distance fog toward the sky color.
     float fog = 1.0 - exp(-length(uCamera - vWorldPos) * uFogDensity);
@@ -101,21 +112,35 @@ unsigned compile(GLenum type, const char* source, std::string* error)
 }
 
 struct Vertex {
-    glm::vec3 position;
-    glm::vec3 normal;
-    glm::vec2 uv;
+    glm::vec3 position{0.0f};
+    glm::vec3 normal{0.0f};
+    glm::vec2 uv{0.0f};
+    glm::u16vec4 joints{0};
+    glm::vec4 weights{0.0f};
 };
+
+constexpr int kMaxJoints = 256; // size of the Joints uniform block
 
 void setupVertexArray(unsigned vao, unsigned vbo)
 {
     glVertexArrayVertexBuffer(vao, 0, vbo, 0, sizeof(Vertex));
-    for (unsigned attr = 0; attr < 3; ++attr) {
+    for (unsigned attr = 0; attr < 5; ++attr) {
         glEnableVertexArrayAttrib(vao, attr);
         glVertexArrayAttribBinding(vao, attr, 0);
     }
     glVertexArrayAttribFormat(vao, 0, 3, GL_FLOAT, GL_FALSE, offsetof(Vertex, position));
     glVertexArrayAttribFormat(vao, 1, 3, GL_FLOAT, GL_FALSE, offsetof(Vertex, normal));
     glVertexArrayAttribFormat(vao, 2, 2, GL_FLOAT, GL_FALSE, offsetof(Vertex, uv));
+    glVertexArrayAttribIFormat(vao, 3, 4, GL_UNSIGNED_SHORT, offsetof(Vertex, joints));
+    glVertexArrayAttribFormat(vao, 4, 4, GL_FLOAT, GL_FALSE, offsetof(Vertex, weights));
+}
+
+Vertex vtx(glm::vec3 position, glm::vec3 normal)
+{
+    Vertex v;
+    v.position = position;
+    v.normal = normal;
+    return v;
 }
 
 std::vector<Vertex> unitCube()
@@ -135,9 +160,9 @@ std::vector<Vertex> unitCube()
         const glm::vec3 e = c - u * 0.5f + w * 0.5f;
         // Pick winding so the triangle normal matches the face normal.
         if (glm::dot(glm::cross(b - a, d - a), normal) > 0.0f) {
-            v.insert(v.end(), {{a, normal, {}}, {b, normal, {}}, {d, normal, {}}, {a, normal, {}}, {d, normal, {}}, {e, normal, {}}});
+            v.insert(v.end(), {vtx(a, normal), vtx(b, normal), vtx(d, normal), vtx(a, normal), vtx(d, normal), vtx(e, normal)});
         } else {
-            v.insert(v.end(), {{a, normal, {}}, {d, normal, {}}, {b, normal, {}}, {a, normal, {}}, {e, normal, {}}, {d, normal, {}}});
+            v.insert(v.end(), {vtx(a, normal), vtx(d, normal), vtx(b, normal), vtx(a, normal), vtx(e, normal), vtx(d, normal)});
         }
     }
     return v;
@@ -192,6 +217,10 @@ bool Renderer::init(GlLoader loader, std::string* error)
     locHasTexture_ = glGetUniformLocation(program_, "uHasTexture");
     locEmissive_ = glGetUniformLocation(program_, "uEmissive");
     locFog_ = glGetUniformLocation(program_, "uFogDensity");
+    locSkinned_ = glGetUniformLocation(program_, "uSkinned");
+    locFlash_ = glGetUniformLocation(program_, "uFlash");
+    glCreateBuffers(1, &jointBuffer_);
+    glNamedBufferData(jointBuffer_, kMaxJoints * sizeof(glm::mat4), nullptr, GL_DYNAMIC_DRAW);
     glUseProgram(program_);
     glUniform1i(glGetUniformLocation(program_, "uTexture"), 0);
     glUseProgram(0);
@@ -219,7 +248,8 @@ void Renderer::shutdown()
     if (vao_) glDeleteVertexArrays(1, &vao_);
     if (vbo_) glDeleteBuffers(1, &vbo_);
     if (program_) glDeleteProgram(program_);
-    vao_ = vbo_ = program_ = 0;
+    if (jointBuffer_) glDeleteBuffers(1, &jointBuffer_);
+    vao_ = vbo_ = program_ = jointBuffer_ = 0;
 }
 
 const Renderer::GpuMesh& Renderer::upload(const MeshPart& part)
@@ -231,8 +261,14 @@ const Renderer::GpuMesh& Renderer::upload(const MeshPart& part)
     }
     std::vector<Vertex> vertices(part.positions.size());
     const bool hasUv = part.texcoords.size() == part.positions.size();
-    for (std::size_t i = 0; i < vertices.size(); ++i)
+    const bool skinned = part.joints.size() == part.positions.size() && part.weights.size() == part.positions.size();
+    for (std::size_t i = 0; i < vertices.size(); ++i) {
         vertices[i] = {part.positions[i], part.normals[i], hasUv ? part.texcoords[i] : glm::vec2(0.0f)};
+        if (skinned) {
+            vertices[i].joints = part.joints[i];
+            vertices[i].weights = part.weights[i];
+        }
+    }
 
     GpuMesh m;
     glCreateBuffers(1, &m.vbo);
@@ -267,12 +303,29 @@ unsigned Renderer::texture(const Texture& tex)
     return t.handle;
 }
 
-void Renderer::drawModel(const Model& model, const glm::mat4& transform, float highlight)
+void Renderer::drawModel(const Model& model, const glm::mat4& transform, float highlight, const Animator* animator)
 {
-    glUniformMatrix4fv(locModel_, 1, GL_FALSE, glm::value_ptr(transform));
     glUniform1f(locHighlight_, highlight);
+    const Skeleton* skeleton = model.skeleton.get();
+    if (skeleton)
+        evaluatePose(*skeleton, animator, pose_);
+    int uploadedSkin = -1;
     for (const MeshPart& part : model.parts) {
         const GpuMesh& mesh = upload(part);
+        glm::mat4 partTransform = transform;
+        const bool skinned = skeleton && part.skin >= 0;
+        if (skinned) {
+            if (part.skin != uploadedSkin) {
+                skinMatrices(*skeleton, part.skin, pose_, joints_);
+                const std::size_t count = std::min<std::size_t>(joints_.size(), kMaxJoints);
+                glNamedBufferSubData(jointBuffer_, 0, static_cast<GLsizeiptr>(count * sizeof(glm::mat4)), joints_.data());
+                uploadedSkin = part.skin;
+            }
+        } else if (skeleton && part.node >= 0) {
+            partTransform = transform * pose_[static_cast<std::size_t>(part.node)];
+        }
+        glUniform1i(locSkinned_, skinned ? 1 : 0);
+        glUniformMatrix4fv(locModel_, 1, GL_FALSE, glm::value_ptr(partTransform));
         glUniform3fv(locColor_, 1, glm::value_ptr(part.texture ? glm::vec3(1.0f) : part.color));
         if (part.texture) {
             glBindTextureUnit(0, texture(*part.texture));
@@ -284,6 +337,7 @@ void Renderer::drawModel(const Model& model, const glm::mat4& transform, float h
         glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, nullptr);
     }
     glUniform1i(locHasTexture_, 0);
+    glUniform1i(locSkinned_, 0);
 }
 
 void Renderer::drawCube(const glm::mat4& transform, glm::vec3 color, float highlight, bool emissive)
@@ -307,6 +361,9 @@ void Renderer::renderOverlay(const RenderView& view, const OverlayPass& pass)
     glUniform3fv(locSun_, 1, glm::value_ptr(glm::normalize(pass.sunDirectionViewSpace)));
     glUniform3fv(locCamera_, 1, glm::value_ptr(glm::vec3(0.0f)));
     glUniform1f(locFog_, 0.0f);
+    glUniform1f(locFlash_, 0.0f);
+    glUniform1i(locSkinned_, 0);
+    glBindBufferBase(GL_UNIFORM_BUFFER, 0, jointBuffer_);
     if (pass.model)
         drawModel(*pass.model, pass.modelTransform, 0.0f);
     for (const OverlayBox& b : pass.boxes)
@@ -360,6 +417,9 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     glUniform1f(locFog_, 0.012f);
     glUniform1i(locHasTexture_, 0);
     glUniform1i(locEmissive_, 0);
+    glUniform1i(locSkinned_, 0);
+    glUniform1f(locFlash_, 0.0f);
+    glBindBufferBase(GL_UNIFORM_BUFFER, 0, jointBuffer_);
     glBindVertexArray(vao_);
 
     auto drawBox = [&](glm::vec3 center, glm::vec3 size, glm::vec3 color, float highlight, float yawDegrees = 0.0f) {
@@ -387,10 +447,20 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     glBindVertexArray(vao_);
     for (std::size_t i = 0; i < scene.entities.size(); ++i) {
         const Entity& e = scene.entities[i];
+        const float highlight = static_cast<int>(scene.boxes.size() + scene.models.size() + i) == view.selectedObject ? 1.0f : 0.0f;
+        if (e.model) {
+            // Animated character; stays as a corpse after death.
+            glUniform1f(locFlash_, std::min(1.0f, e.flash * 8.0f));
+            drawModel(*e.model, e.modelTransform(), highlight, &e.animator);
+            glUniform1f(locFlash_, 0.0f);
+            glBindVertexArray(vao_);
+            continue;
+        }
         if (!e.alive)
             continue;
-        const float highlight = static_cast<int>(scene.boxes.size() + scene.models.size() + i) == view.selectedObject ? 1.0f : 0.0f;
+        glUniform1f(locFlash_, std::min(1.0f, e.flash * 8.0f));
         drawBox(e.position + glm::vec3(0.0f, e.size.y * 0.5f, 0.0f), e.size, e.color, highlight, e.yawDegrees);
+        glUniform1f(locFlash_, 0.0f);
         // A small "nose" shows which way the entity faces.
         const float yaw = glm::radians(e.yawDegrees);
         const glm::vec3 facing(std::cos(yaw), 0.0f, std::sin(yaw));

@@ -1,5 +1,7 @@
 #include "engine/Scene.h"
+#include <cmath>
 #include <fstream>
+#include <glm/gtc/matrix_transform.hpp>
 #include <iomanip>
 #include <sstream>
 
@@ -59,7 +61,7 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
         return false;
     }
     out << std::setprecision(6);
-    out << "# FPS engine level\nversion 2\n";
+    out << "# FPS engine level\nversion 3\n";
     out << "player_start " << scene.playerStart.x << ' ' << scene.playerStart.y << ' ' << scene.playerStart.z << '\n';
     out << "sun " << scene.sunDirection.x << ' ' << scene.sunDirection.y << ' ' << scene.sunDirection.z << '\n';
     for (const Box& b : scene.boxes) {
@@ -94,6 +96,11 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
             << e.position.x << ' ' << e.position.y << ' ' << e.position.z << ' ' << e.yawDegrees << ' '
             << e.size.x << ' ' << e.size.y << ' ' << e.size.z << ' '
             << e.color.r << ' ' << e.color.g << ' ' << e.color.b << ' ' << std::quoted(script) << '\n';
+        if (!e.modelPath.empty()) {
+            const std::filesystem::path rel = std::filesystem::absolute(e.modelPath).lexically_relative(levelDir);
+            out << "  character " << std::quoted(pathToUtf8(rel.empty() ? std::filesystem::absolute(e.modelPath) : rel))
+                << ' ' << e.modelScale << ' ' << e.modelYaw << ' ' << std::quoted(e.animation) << '\n';
+        }
         for (const auto& [key, value] : e.properties)
             out << "  prop " << std::quoted(key) << ' ' << std::quoted(value) << '\n';
     }
@@ -123,7 +130,7 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
         bool ok = true;
         if (key == "version") {
             int v = 0;
-            ok = static_cast<bool>(ls >> v) && (v == 1 || v == 2);
+            ok = static_cast<bool>(ls >> v) && v >= 1 && v <= 3;
         } else if (key == "player_start") {
             ok = static_cast<bool>(ls >> result.playerStart.x >> result.playerStart.y >> result.playerStart.z);
         } else if (key == "sun") {
@@ -161,6 +168,23 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
             ok = static_cast<bool>(ls >> std::quoted(k) >> std::quoted(v)) && !result.entities.empty();
             if (ok)
                 result.entities.back().properties[k] = v;
+        } else if (key == "character") {
+            std::string path;
+            ok = !result.entities.empty();
+            Entity* e = ok ? &result.entities.back() : nullptr;
+            ok = ok && static_cast<bool>(ls >> std::quoted(path) >> e->modelScale >> e->modelYaw >> std::quoted(e->animation));
+            if (ok) {
+                std::filesystem::path p = pathFromUtf8(path);
+                if (p.is_relative())
+                    p = std::filesystem::absolute(file).parent_path() / p;
+                e->modelPath = p.lexically_normal();
+                std::string modelError;
+                e->model = loadCharacterModel(e->modelPath, &modelError);
+                if (!e->model) {
+                    setError(error, file.string() + ":" + std::to_string(lineNo) + ": " + modelError);
+                    return false;
+                }
+            }
         } else if (key == "weapon") {
             std::string path;
             ok = static_cast<bool>(ls >> std::quoted(path));
@@ -196,6 +220,34 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
     }
     scene = std::move(result);
     return true;
+}
+
+glm::mat4 Entity::modelTransform() const
+{
+    if (!model)
+        return glm::mat4(1.0f);
+    const Aabb& b = model->localBounds;
+    const float height = std::max(b.max.y - b.min.y, 1e-4f);
+    const float fit = size.y / height * modelScale;
+    const glm::vec3 center = (b.min + b.max) * 0.5f;
+    glm::mat4 m = glm::translate(glm::mat4(1.0f), position);
+    // Entity yaw 0 faces +X; glTF characters face +Z, hence the extra 90 degrees.
+    m = glm::rotate(m, glm::radians(90.0f - yawDegrees + modelYaw), glm::vec3(0.0f, 1.0f, 0.0f));
+    m = glm::scale(m, glm::vec3(fit));
+    return glm::translate(m, glm::vec3(-center.x, -b.min.y, -center.z));
+}
+
+void updateAnimations(Scene& scene, float dt)
+{
+    for (Entity& e : scene.entities) {
+        e.flash = std::max(0.0f, e.flash - dt);
+        if (!e.model || !e.model->skeleton)
+            continue;
+        const Skeleton& skeleton = *e.model->skeleton;
+        if (e.animator.current.clip < 0 && !e.animation.empty())
+            e.animator.play(skeleton, e.animation, true, 1.0f, 0.0f);
+        e.animator.update(skeleton, dt);
+    }
 }
 
 Aabb Scene::objectBounds(int object) const

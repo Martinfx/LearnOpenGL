@@ -7,6 +7,7 @@
 #include <QApplication>
 #include <QCloseEvent>
 #include <QColorDialog>
+#include <QComboBox>
 #include <QDir>
 #include <QDesktopServices>
 #include <QDockWidget>
@@ -148,6 +149,71 @@ void MainWindow::buildDocks()
     form->addRow(tr("Size"), sizeEdit_);
     form->addRow(tr("Color"), colorButton_);
     form->addRow(tr("Lua script"), scriptRow_);
+
+    // Animated character model (glTF with skeleton) drawn instead of the box.
+    characterRow_ = new QWidget(boxPanel_);
+    auto* characterLayout = new QHBoxLayout(characterRow_);
+    characterLayout->setContentsMargins(0, 0, 0, 0);
+    characterEdit_ = new QLineEdit(characterRow_);
+    characterEdit_->setReadOnly(true);
+    characterEdit_->setPlaceholderText(tr("box (no model)"));
+    auto* browseCharacter = new QPushButton(tr("..."), characterRow_);
+    auto* clearCharacter = new QPushButton(tr("x"), characterRow_);
+    browseCharacter->setFixedWidth(32);
+    clearCharacter->setFixedWidth(32);
+    characterLayout->addWidget(characterEdit_);
+    characterLayout->addWidget(browseCharacter);
+    characterLayout->addWidget(clearCharacter);
+    modelScaleSpin_ = new QDoubleSpinBox(boxPanel_);
+    modelScaleSpin_->setRange(0.05, 20.0);
+    modelScaleSpin_->setSingleStep(0.05);
+    modelScaleSpin_->setDecimals(2);
+    modelScaleSpin_->setPrefix(QStringLiteral("x "));
+    modelScaleSpin_->setToolTip(tr("The model is fitted to the entity height (Size Y); this multiplies it."));
+    modelScaleSpin_->setKeyboardTracking(false);
+    modelYawSpin_ = new QDoubleSpinBox(boxPanel_);
+    modelYawSpin_->setRange(-360.0, 360.0);
+    modelYawSpin_->setSingleStep(90.0);
+    modelYawSpin_->setSuffix(QStringLiteral(" °"));
+    modelYawSpin_->setToolTip(tr("Extra rotation for models that do not face +Z"));
+    modelYawSpin_->setKeyboardTracking(false);
+    animationCombo_ = new QComboBox(boxPanel_);
+    animationCombo_->setToolTip(tr("Clip shown in the editor and played when the script does not choose one"));
+    form->addRow(tr("Character model"), characterRow_);
+    form->addRow(tr("Model scale"), modelScaleSpin_);
+    form->addRow(tr("Model yaw"), modelYawSpin_);
+    form->addRow(tr("Animation"), animationCombo_);
+    connect(browseCharacter, &QPushButton::clicked, this, &MainWindow::browseCharacter);
+    connect(clearCharacter, &QPushButton::clicked, this, [this] {
+        if (auto* e = selectedEntity(); e && !e->modelPath.empty()) {
+            e->modelPath.clear();
+            e->model.reset();
+            e->animation.clear();
+            e->animator.stop();
+            refreshProperties();
+            markDirty();
+        }
+    });
+    connect(modelScaleSpin_, &QDoubleSpinBox::valueChanged, this, [this](double v) {
+        if (auto* e = selectedEntity(); e && e->modelScale != static_cast<float>(v)) {
+            e->modelScale = static_cast<float>(v);
+            markDirty();
+        }
+    });
+    connect(modelYawSpin_, &QDoubleSpinBox::valueChanged, this, [this](double v) {
+        if (auto* e = selectedEntity(); e && e->modelYaw != static_cast<float>(v)) {
+            e->modelYaw = static_cast<float>(v);
+            markDirty();
+        }
+    });
+    connect(animationCombo_, &QComboBox::currentTextChanged, this, [this](const QString& clip) {
+        auto* e = selectedEntity();
+        if (!e || !e->model || !e->model->skeleton || clip.toStdString() == e->animation)
+            return;
+        e->animation = clip.toStdString();
+        e->animator.play(*e->model->skeleton, e->animation, true, 1.0f, 0.2f, true);
+        markDirty();
+    });
 
     // Tunables the script declares in `properties`; values are saved per entity.
     scriptParams_ = new QTableWidget(0, 2, boxPanel_);
@@ -388,6 +454,7 @@ void MainWindow::refreshProperties()
     typeEdit_->setEnabled(e != nullptr);
     yawSpin_->setEnabled(e != nullptr);
     scriptRow_->setEnabled(e != nullptr);
+    refreshCharacter();
 
     yawSpin_->blockSignals(true);
     yawSpin_->setValue(e ? e->yawDegrees : 0.0);
@@ -450,6 +517,30 @@ void MainWindow::refreshScriptParams()
         value->setToolTip(tr("Default: %1\n%2").arg(QString::fromStdString(p.defaultValue), QString::fromStdString(p.description)));
         scriptParams_->setItem(row, 0, name);
         scriptParams_->setItem(row, 1, value);
+        scriptParams_->removeCellWidget(row, 1);
+        // Clip names: pick from the character's animations.
+        if (p.name.rfind("anim_", 0) == 0 && e->model && e->model->skeleton && !e->model->skeleton->clips.empty()) {
+            auto* combo = new QComboBox(scriptParams_);
+            for (const engine::Skeleton::Clip& clip : e->model->skeleton->clips)
+                combo->addItem(QString::fromStdString(clip.name));
+            if (combo->findText(value->text()) < 0)
+                combo->addItem(value->text()); // clip the model does not have: keep it visible
+            combo->setCurrentText(value->text());
+            if (value->font().bold()) {
+                QFont f = combo->font();
+                f.setBold(true);
+                combo->setFont(f);
+            }
+            combo->setToolTip(value->toolTip());
+            connect(combo, &QComboBox::textActivated, this, [this, row](const QString& text) {
+                // Deferred: cellChanged rebuilds the table, which deletes this combo.
+                QMetaObject::invokeMethod(this, [this, row, text] {
+                    if (auto* item = scriptParams_->item(row, 1); item && item->text() != text)
+                        item->setText(text); // goes through cellChanged like a typed value
+                }, Qt::QueuedConnection);
+            });
+            scriptParams_->setCellWidget(row, 1, combo);
+        }
     }
     scriptParams_->blockSignals(false);
     scriptParams_->setEnabled(!scriptProps_.empty());
@@ -531,6 +622,16 @@ void MainWindow::addEntity(const QString& type)
         const QString script = QDir(QCoreApplication::applicationDirPath()).filePath("assets/scripts/enemy.lua");
         if (QFileInfo::exists(script))
             e.scriptPath = std::filesystem::path(script.toStdU16String());
+        // Default animated character shipped with the engine.
+        const QString robot = QDir(QCoreApplication::applicationDirPath()).filePath("assets/models/characters/robot.glb");
+        if (QFileInfo::exists(robot)) {
+            e.modelPath = std::filesystem::path(robot.toStdU16String());
+            e.model = engine::loadCharacterModel(e.modelPath);
+            if (e.model)
+                e.animation = "Idle";
+            else
+                e.modelPath.clear();
+        }
     } else {
         e.size = {0.5f, 0.5f, 0.5f};
         e.color = {0.3f, 0.6f, 0.9f};
@@ -553,6 +654,67 @@ void MainWindow::browseScript()
     e->scriptPath = std::filesystem::path(path.toStdU16String());
     refreshProperties();
     markDirty();
+}
+
+void MainWindow::browseCharacter()
+{
+    auto* e = selectedEntity();
+    if (!e)
+        return;
+    QString start = e->modelPath.empty() ? QDir(QCoreApplication::applicationDirPath()).filePath("assets/models/characters")
+                                         : QString::fromStdU16String(e->modelPath.u16string());
+    const QString path = QFileDialog::getOpenFileName(this, tr("Character model"), start,
+                                                      tr("Animated glTF (*.glb *.gltf);;All files (*)"));
+    if (path.isEmpty())
+        return;
+    std::string error;
+    const std::filesystem::path file(path.toStdU16String());
+    auto model = engine::loadCharacterModel(file, &error);
+    if (!model) {
+        QMessageBox::warning(this, tr("Character model"), QString::fromStdString(error));
+        return;
+    }
+    e->modelPath = file;
+    e->model = model;
+    e->animator.stop();
+    // Start with an idle-looking clip if there is one.
+    e->animation.clear();
+    for (const char* guess : {"Idle", "idle", "Idle_Loop", "Standing"})
+        if (model->skeleton->findClip(guess) >= 0) {
+            e->animation = guess;
+            break;
+        }
+    if (e->animation.empty() && !model->skeleton->clips.empty())
+        e->animation = model->skeleton->clips.front().name;
+    refreshProperties();
+    markDirty();
+}
+
+void MainWindow::refreshCharacter()
+{
+    const engine::Entity* e = selectedEntity();
+    characterRow_->setEnabled(e != nullptr);
+    const bool hasModel = e && e->model;
+    modelScaleSpin_->setEnabled(hasModel);
+    modelYawSpin_->setEnabled(hasModel);
+    characterEdit_->setText(hasModel ? QString::fromStdU16String(e->modelPath.filename().u16string()) : QString());
+    characterEdit_->setToolTip(hasModel ? QString::fromStdU16String(e->modelPath.u16string()) : QString());
+    for (QDoubleSpinBox* spin : {modelScaleSpin_, modelYawSpin_})
+        spin->blockSignals(true);
+    modelScaleSpin_->setValue(e ? e->modelScale : 1.0);
+    modelYawSpin_->setValue(e ? e->modelYaw : 0.0);
+    for (QDoubleSpinBox* spin : {modelScaleSpin_, modelYawSpin_})
+        spin->blockSignals(false);
+
+    animationCombo_->blockSignals(true);
+    animationCombo_->clear();
+    if (hasModel && e->model->skeleton) {
+        for (const engine::Skeleton::Clip& clip : e->model->skeleton->clips)
+            animationCombo_->addItem(QString::fromStdString(clip.name));
+        animationCombo_->setCurrentText(QString::fromStdString(e->animation));
+    }
+    animationCombo_->setEnabled(animationCombo_->count() > 0);
+    animationCombo_->blockSignals(false);
 }
 
 void MainWindow::duplicateBox()

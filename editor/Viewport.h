@@ -52,4 +52,6 @@ private:
     float flySpeed_ = 10.0f;
     QTimer timer_;
     QElapsedTimer clock_;
+    QTimer animTimer_;          // plays character animations in the viewport (preview)
+    QElapsedTimer animClock_;
 };

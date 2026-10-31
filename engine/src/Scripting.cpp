@@ -167,7 +167,38 @@ void ScriptSystem::Impl::bindApi()
             if (d.x * d.x + d.z * d.z > 1e-6f)
                 s.e().yawDegrees = glm::degrees(std::atan2(d.z, d.x));
         },
-        "log", [](ScriptEntity& s, const std::string& msg) { (*s.log)("[" + s.e().name + "] " + msg); });
+        "log", [](ScriptEntity& s, const std::string& msg) { (*s.log)("[" + s.e().name + "] " + msg); },
+        // Animation (entities with a character model; see Properties > Character model in the editor).
+        "has_model", sol::property([](ScriptEntity& s) { return s.e().model && s.e().model->skeleton; }),
+        "flash", sol::property([](ScriptEntity& s) { return s.e().flash; },
+                               [](ScriptEntity& s, float f) { s.e().flash = f; }),
+        "play", [](ScriptEntity& s, const std::string& clip, sol::optional<sol::table> opts) {
+            Entity& e = s.e();
+            if (!e.model || !e.model->skeleton || clip.empty())
+                return false;
+            bool loop = true, restart = false;
+            float speed = 1.0f, fade = 0.2f;
+            if (opts) {
+                loop = opts->get_or("loop", loop);
+                restart = opts->get_or("restart", restart);
+                speed = opts->get_or("speed", speed);
+                fade = opts->get_or("fade", fade);
+            }
+            return e.animator.play(*e.model->skeleton, clip, loop, speed, fade, restart);
+        },
+        "animation", sol::property([](ScriptEntity& s) {
+            const Entity& e = s.e();
+            return e.model && e.model->skeleton ? e.animator.clipName(*e.model->skeleton) : std::string();
+        }),
+        "animation_done", [](ScriptEntity& s) {
+            const Entity& e = s.e();
+            return !e.model || !e.model->skeleton || e.animator.finished(*e.model->skeleton);
+        },
+        "animation_time", sol::property([](ScriptEntity& s) { return s.e().animator.current.time; }),
+        "has_animation", [](ScriptEntity& s, const std::string& clip) {
+            const Entity& e = s.e();
+            return e.model && e.model->skeleton && e.model->skeleton->findClip(clip) >= 0;
+        });
 
     sol::table game = lua.create_named_table("game");
     game.set_function("player_position", [this] { return player.feet(); });

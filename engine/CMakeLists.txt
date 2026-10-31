@@ -3,6 +3,7 @@ target_include_directories(glad PUBLIC third_party/glad/include)
 set_target_properties(glad PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 add_library(engine STATIC
+    src/Animation.cpp
     src/Camera.cpp
     src/FixedStepClock.cpp
     src/Geometry.cpp

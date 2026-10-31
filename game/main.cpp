@@ -297,6 +297,7 @@ int main(int argc, char** argv)
         }
 
         camera.position = player.interpolatedEye(static_cast<float>(clock.alpha()));
+        engine::updateAnimations(scene, static_cast<float>(frameTime)); // per frame for smooth motion
 
         int width = 0, height = 0;
         glfwGetFramebufferSize(window, &width, &height);

@@ -5,6 +5,7 @@
 #include <utility>
 #include <vector>
 
+class QComboBox;
 class QDoubleSpinBox;
 class QLabel;
 class QTableWidget;
@@ -42,6 +43,8 @@ private:
     void importModel();
     void addEntity(const QString& type);
     void browseScript();
+    void browseCharacter();
+    void refreshCharacter();
     void duplicateBox();
     void deleteBox();
     void select(int index);
@@ -72,6 +75,11 @@ private:
     QLineEdit* scriptEdit_ = nullptr;
     QWidget* scriptRow_ = nullptr;
     QTableWidget* scriptParams_ = nullptr;
+    QWidget* characterRow_ = nullptr;
+    QLineEdit* characterEdit_ = nullptr;
+    QDoubleSpinBox* modelScaleSpin_ = nullptr;
+    QDoubleSpinBox* modelYawSpin_ = nullptr;
+    QComboBox* animationCombo_ = nullptr;
     std::vector<engine::ScriptProperty> scriptProps_;
     std::vector<std::pair<QDoubleSpinBox*, float engine::PlayerSettings::*>> playerSpins_;
     Vec3Editor* positionEdit_ = nullptr;

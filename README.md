@@ -65,6 +65,18 @@ kde stojí, hráče vidí v zorném úhlu (a neprojde přes zdi), pronásleduje 
 hledá ho na posledním známém místě a vrací se zpět. Parametry jsou na začátku skriptu. Chyba ve skriptu
 vypne jen danou entitu a vypíše se do konzole hry.
 
+## Animované postavy
+
+Entita může mít animovaný glTF model (skeleton, skiny, klipy): Properties > Character model.
+Model se automaticky přizpůsobí výšce entity (Size Y) a postaví se na zem; Model scale a Model yaw ho
+doladí. V poli Animation se vybírá klip, který editor přehrává jako náhled a který hraje, když skript
+žádný nevybere. Skript přehrává klipy přes `self:play("Running")` (plynulé prolínání mezi klipy).
+AI nepřítele má klipy jako parametry (`anim_idle`, `anim_walk`, `anim_run`, `anim_attack`,
+`anim_death`), v editoru se vybírají ze seznamu klipů modelu. Mrtvý nepřítel zůstane ležet.
+
+Ukázková postava je robot od Quaterniuse (CC0) se 14 animacemi, viz `assets/models/characters/CREDITS.md`.
+Z Blenderu: armatura + akce, export glTF 2.0 s volbou Animation (každá akce = jeden klip).
+
 ## Co se nastavuje v editoru
 
 Všechno, co hra používá, se mění v editoru a ukládá do souborů úrovně nebo assetů:
@@ -72,6 +84,7 @@ Všechno, co hra používá, se mění v editoru a ukládá do souborů úrovně
 | Co | Kde v editoru | Uloženo v |
 | --- | --- | --- |
 | Geometrie, modely, entity, skripty | Outliner + Properties | `.level` |
+| Model postavy, měřítko, natočení, výchozí animace | Properties > Character model, Animation | `.level` |
 | Parametry AI a dalších skriptů | Properties > Script parameters (deklaruje je skript v `properties`) | `.level` (po entitách) |
 | Pohyb a zdraví hráče, start, slunce | Properties > Level | `.level` |
 | Výzbroj hráče a parametry zbraní | Záložka Weapons | `.level` + `weapons/*.weapon` |
@@ -90,5 +103,7 @@ Model je zároveň statická kolize (Jolt MeshShape), takže po něm jde chodit.
 ## Stav
 
 Hotovo: hráč (Jolt CharacterVirtual), glTF modely s texturami, entity s Lua skripty, AI nepřátel,
-zbraně se střelbou a zdravím nepřátel, editor pro všechny parametry.
-Další: navmesh (Recast/Detour), zvuky, HUD, gizmo a undo/redo v editoru.
+zbraně se střelbou a zdravím nepřátel, animované postavy (skeletal animace, GPU skinning),
+editor pro všechny parametry.
+Další: knihovny ve složce `3rdparty/`, script editor, materiály a textury, animation editor,
+zvuk (OpenAL), environment editor.

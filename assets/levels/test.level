@@ -1,5 +1,5 @@
 # FPS engine level
-version 2
+version 3
 player_start 0 0 8
 sun -0.4 -1 -0.3
 weapon "../weapons/repeater.weapon"
@@ -21,4 +21,6 @@ box "Step 6" 8 0.9 3 3 1.8 0.6 0.62 0.6 0.56
 box "Platform" 8 0.9 -1.8 6 1.8 4 0.62 0.6 0.56
 model "Ramp" "../models/ramp.gltf" -10 0 10
 entity "Guard A" "enemy" -6 0 -10 90 0.6 1.8 0.6 0.55 0.5 0.5 "../scripts/enemy.lua"
+  character "../models/characters/robot.glb" 1 0 "Idle"
 entity "Guard B" "enemy" 12 0 -12 180 0.6 1.8 0.6 0.55 0.5 0.5 "../scripts/enemy.lua"
+  character "../models/characters/robot.glb" 1 0 "Idle"

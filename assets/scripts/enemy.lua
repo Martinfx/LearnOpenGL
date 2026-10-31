@@ -15,10 +15,18 @@ properties = {
     { "attack_cooldown", 1.0,  "Seconds between hits" },
     { "search_time",     4.0,  "Seconds spent searching the last known position" },
     { "patrol_radius",   4.0,  "Wanders this far from its start position, m" },
+    -- Animation clips of the character model (Properties > Character model).
+    { "anim_idle",       "Idle",    "Clip while standing" },
+    { "anim_walk",       "Walking", "Clip while patrolling, searching, returning" },
+    { "anim_run",        "Running", "Clip while chasing" },
+    { "anim_attack",     "Punch",   "Clip played on every hit" },
+    { "anim_death",      "Death",   "Clip played once when killed" },
+    { "anim_speed",      1.0,       "Playback speed multiplier for all clips" },
 }
 
 local state, timer, home, last_seen, patrol_target, next_attack
 local hurt_flash = 0
+local moving = false   -- set by walk_to, picks walk/run vs. idle animation
 
 local function distance(a, b) return (b - a):flat():length() end
 
@@ -37,6 +45,7 @@ end
 local function walk_to(self, target, speed)
     local dir = (target - self.position):flat()
     if dir:length() < 0.2 then return true end
+    moving = true
     dir = steer(self, dir:normalized())
     self:move(dir, speed)
     self:face(self.position + dir)
@@ -78,17 +87,34 @@ end
 -- Getting shot reveals where the player is, even from behind.
 function on_damage(self, amount)
     hurt_flash = 0.1
+    self.flash = 0.12
     last_seen = game.player_position()
     if state ~= "attack" then set_state(self, "chase") end
 end
 
 function on_death(self)
     self:log("destroyed")
+    self:play(props.anim_death, { loop = false, fade = 0.1, speed = props.anim_speed })
+end
+
+-- Chooses the clip for the current state; no-op for entities without a character model.
+local function animate(self)
+    local speed = props.anim_speed
+    if state == "attack" then
+        if self:animation_done() or self.animation ~= props.anim_attack then
+            self:play(props.anim_idle, { speed = speed })
+        end
+    elseif moving then
+        self:play(state == "chase" and props.anim_run or props.anim_walk, { speed = speed })
+    else
+        self:play(props.anim_idle, { speed = speed })
+    end
 end
 
 function on_update(self, dt)
     timer = timer + dt
     hurt_flash = math.max(0, hurt_flash - dt)
+    moving = false
     local player = game.player_position()
 
     if sees_player(self) then
@@ -116,6 +142,7 @@ function on_update(self, dt)
         elseif game.time() >= next_attack then
             game.damage_player(props.attack_damage)
             next_attack = game.time() + props.attack_cooldown
+            self:play(props.anim_attack, { loop = false, restart = true, fade = 0.1, speed = props.anim_speed })
         end
     elseif state == "search" then
         if walk_to(self, last_seen, props.walk_speed) then
@@ -126,6 +153,8 @@ function on_update(self, dt)
     elseif state == "return" then
         if walk_to(self, home, props.walk_speed) then set_state(self, "patrol") end
     end
+
+    animate(self)
 
     -- Color shows the state while developing: calm grey, alerted orange, attacking red.
     if hurt_flash > 0 then self.color = vec3(1, 1, 1)

@@ -1,7 +1,10 @@
 #pragma once
+#include "engine/Animation.h"
 #include "engine/Geometry.h"
 #include <cstdint>
 #include <filesystem>
+#include <glm/gtc/type_precision.hpp>
+#include <glm/mat4x4.hpp>
 #include <glm/vec2.hpp>
 #include <map>
 #include <memory>
@@ -28,7 +31,8 @@ struct Texture {
     std::vector<std::uint8_t> rgba;
 };
 
-// One glTF primitive with node transforms baked in (model space).
+// One glTF primitive. Static models have node transforms baked in (model space);
+// animated models keep mesh-local vertices that follow a skeleton node or skin.
 struct MeshPart {
     std::uint64_t id = 0;            // unique per loaded part, used as GPU cache key
     std::vector<glm::vec3> positions;
@@ -37,6 +41,10 @@ struct MeshPart {
     std::shared_ptr<const Texture> texture; // base color texture, may be null
     std::vector<std::uint32_t> indices; // triangles
     glm::vec3 color{0.8f};           // sRGB
+    int node = -1;                   // animated models: rigid part attached to this skeleton node
+    int skin = -1;                   // animated models: skinned part (uses joints/weights)
+    std::vector<glm::u16vec4> joints;   // indices into the skin's joint list
+    std::vector<glm::vec4> weights;
 };
 
 // Static level geometry imported from glTF (Blender: File > Export > glTF 2.0).
@@ -45,7 +53,8 @@ struct Model {
     std::filesystem::path sourcePath; // absolute path of the .gltf/.glb
     glm::vec3 position{0.0f};
     std::vector<MeshPart> parts;
-    Aabb localBounds;
+    Aabb localBounds;                 // animated models: bounds in the rest pose
+    std::shared_ptr<const Skeleton> skeleton; // null for static models
 
     Aabb bounds() const { return {localBounds.min + position, localBounds.max + position}; }
 };
@@ -63,6 +72,19 @@ struct Entity {
     std::filesystem::path scriptPath;    // absolute path to a .lua file, empty = none
     // Values for the script's `properties` (set in the editor); missing keys use the script defaults.
     std::map<std::string, std::string> properties;
+
+    // Animated character model (glTF with skeleton). It is scaled to the entity's
+    // height and stands on its feet; without a model the entity is drawn as a box.
+    std::filesystem::path modelPath;     // absolute, empty = box
+    float modelScale = 1.0f;             // multiplier on top of the fit to size.y
+    float modelYaw = 0.0f;               // degrees, added when the model does not face +Z
+    std::string animation;               // clip played when no script chooses one (editor preview)
+
+    std::shared_ptr<const Model> model;  // runtime: loaded from modelPath
+    Animator animator;                   // runtime
+    float flash = 0.0f;                  // runtime: seconds of white hit flash left
+
+    glm::mat4 modelTransform() const;    // model space -> world for `model`
 
     Aabb bounds() const
     {
@@ -118,6 +140,16 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
 
 // Loads every mesh of a glTF 2.0 file (.gltf or .glb) into model.parts.
 bool loadModelFile(Model& model, const std::filesystem::path& file, std::string* error = nullptr);
+
+// Loads a glTF character with its skeleton, skins and animation clips.
+bool loadAnimatedModelFile(Model& model, const std::filesystem::path& file, std::string* error = nullptr);
+
+// Shared, cached animated model (entities using the same file share it); null on error.
+std::shared_ptr<const Model> loadCharacterModel(const std::filesystem::path& file, std::string* error = nullptr);
+
+// Advances every entity's animation by dt (seconds). Entities that no script
+// animates play their `animation` clip on a loop.
+void updateAnimations(Scene& scene, float dt);
 
 // A tunable declared by a script in its `properties` table (shown in the editor).
 struct ScriptProperty {

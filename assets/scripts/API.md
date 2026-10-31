@@ -50,6 +50,13 @@ methods `:length()`, `:normalized()`, `:flat()` (y = 0), `:dot(other)`.
 | `:jump(speed)` | Jump if grounded (characters) |
 | `:face(point)` | Turn toward a point |
 | `:log(text)` | Print with the entity name |
+| `has_model` | Entity has an animated character model (Properties > Character model) |
+| `:play(clip, opts)` | Play an animation clip; `opts` = `{ loop = true, speed = 1, fade = 0.2, restart = false }`. Calling it with the clip that already plays only updates loop/speed, so it is safe every update. Returns `false` if the model has no such clip |
+| `animation` | Name of the clip playing now |
+| `:animation_done()` | A non-looping clip reached its end (it then holds the last frame) |
+| `animation_time` | Seconds into the current clip |
+| `:has_animation(clip)` | The model has this clip |
+| `flash` | Seconds of white hit flash (e.g. `self.flash = 0.12` in `on_damage`) |
 
 ## `game`
 

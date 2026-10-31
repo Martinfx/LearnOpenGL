@@ -8,6 +8,7 @@
 #include <engine/Weapon.h>
 
 #include <fstream>
+#include <glm/geometric.hpp>
 
 #include <cmath>
 #include <cstdio>
@@ -389,7 +390,7 @@ void testScriptPropertiesFromEditor()
     std::vector<engine::ScriptProperty> props;
     std::string err;
     check(engine::readScriptProperties(ENGINE_TEST_ASSETS "/scripts/enemy.lua", props, &err), "read enemy.lua properties: " + err);
-    check(props.size() == 11 && props[0].name == "health" && props[0].defaultValue == "100", "enemy.lua declares 11 tunables, health first");
+    check(props.size() == 17 && props[0].name == "health" && props[0].defaultValue == "100", "enemy.lua declares 17 tunables, health first");
 
     // An editor override changes the behaviour: 40 hp dies after two 20-damage hits.
     auto s = flatFloor();
@@ -422,6 +423,97 @@ void testPick()
     check(engine::pickObject(s, {0, 1, 0}, {0, 0, -1}) == 1, "ray hits the box in front");
     check(engine::pickObject(s, {0, 5, 0}, {0, 1, 0}) == -1, "ray into the sky hits nothing");
 }
+void testAnimatedCharacter()
+{
+    std::string err;
+    auto model = engine::loadCharacterModel(ENGINE_TEST_ASSETS "/models/characters/robot.glb", &err);
+    check(model && model->skeleton, "load animated robot: " + err);
+    if (!model)
+        return;
+    const engine::Skeleton& sk = *model->skeleton;
+    check(sk.clips.size() == 14 && sk.findClip("Walking") >= 0 && sk.findClip("Death") >= 0, "robot has its 14 clips");
+    check(sk.skins.size() == 2, "robot hands are skinned");
+    check(model->localBounds.max.y - model->localBounds.min.y > 1.0f, "rest-pose bounds");
+    check(engine::loadCharacterModel(ENGINE_TEST_ASSETS "/models/characters/robot.glb") == model, "entities share one loaded model");
+
+    engine::Animator a;
+    std::vector<glm::mat4> p0, p1;
+    check(a.play(sk, "Walking"), "play Walking");
+    engine::evaluatePose(sk, &a, p0);
+    a.update(sk, 0.3f);
+    engine::evaluatePose(sk, &a, p1);
+    float diff = 0.0f;
+    for (std::size_t i = 0; i < p0.size(); ++i)
+        diff += glm::length(glm::vec3(p0[i][3]) - glm::vec3(p1[i][3]));
+    check(diff > 0.01f, "walking moves the bones");
+    check(!a.play(sk, "NoSuchClip") && a.clipName(sk) == "Walking", "unknown clip is ignored");
+
+    a.play(sk, "Death", false, 1.0f, 0.2f);
+    check(a.fadeDuration > 0.0f && a.previous.clip >= 0, "switching clips crossfades");
+    a.update(sk, 0.5f);
+    check(a.fadeDuration == 0.0f && !a.finished(sk), "fade ends, death still playing");
+    a.update(sk, 1.0f);
+    check(a.finished(sk), "non-looping clip finishes and holds");
+
+    engine::Entity e;
+    e.model = model;
+    e.position = {2, 0, 3};
+    e.size = {0.6f, 1.8f, 0.6f};
+    const glm::mat4 m = e.modelTransform();
+    const glm::vec3 feet(m * glm::vec4(0.5f * (model->localBounds.min.x + model->localBounds.max.x), model->localBounds.min.y,
+                                       0.5f * (model->localBounds.min.z + model->localBounds.max.z), 1.0f));
+    const glm::vec3 top(m * glm::vec4(0.5f * (model->localBounds.min.x + model->localBounds.max.x), model->localBounds.max.y,
+                                      0.5f * (model->localBounds.min.z + model->localBounds.max.z), 1.0f));
+    check(glm::length(feet - e.position) < 1e-3f && std::abs(top.y - 1.8f) < 1e-3f, "model stands on the entity and fits its height");
+}
+
+void testEnemyAnimations()
+{
+    auto s = flatFloor();
+    s.playerStart = {0, 0, 0};
+    engine::Entity e = enemyAt({8, 0, 0}, 180.0f);
+    e.modelPath = ENGINE_TEST_ASSETS "/models/characters/robot.glb";
+    e.model = engine::loadCharacterModel(e.modelPath);
+    e.animation = "Idle";
+    s.entities.push_back(e);
+    engine::PhysicsWorld world;
+    world.setLevel(s);
+    engine::PlayerController player;
+    player.spawn(world, s.playerStart);
+    engine::ScriptSystem scripts(s, world, player, [](const std::string&) {});
+    scripts.start();
+    const engine::Skeleton& sk = *s.entities[0].model->skeleton;
+    bool ran = false, punched = false;
+    for (int i = 0; i < 240; ++i) {
+        scripts.fixedUpdate(1.0f / 60.0f);
+        engine::updateAnimations(s, 1.0f / 60.0f);
+        const std::string clip = s.entities[0].animator.clipName(sk);
+        ran = ran || clip == "Running";
+        punched = punched || clip == "Punch";
+    }
+    check(ran, "chasing enemy plays Running");
+    check(punched, "attacking enemy plays Punch");
+    for (int i = 0; i < 10; ++i)
+        scripts.damageEntity(0, 30.0f);
+    check(!s.entities[0].alive && s.entities[0].animator.clipName(sk) == "Death", "killed enemy plays Death");
+    check(s.entities[0].flash > 0.0f, "hits flash the model");
+    for (int i = 0; i < 120; ++i)
+        engine::updateAnimations(s, 1.0f / 60.0f);
+    check(s.entities[0].animator.finished(sk), "death animation holds its last frame");
+
+    // Round trip of the character settings through a level file.
+    s.entities[0].modelScale = 1.25f;
+    s.entities[0].modelYaw = 15.0f;
+    s.entities[0].animation = "Wave";
+    std::string err;
+    check(engine::saveScene(s, "character.level", &err), "save level with character: " + err);
+    engine::Scene loaded;
+    check(engine::loadScene(loaded, "character.level", &err), "load level with character: " + err);
+    check(loaded.entities.size() == 1 && loaded.entities[0].model && loaded.entities[0].modelScale == 1.25f
+              && loaded.entities[0].modelYaw == 15.0f && loaded.entities[0].animation == "Wave",
+          "character model, scale, yaw and clip are saved");
+}
+
 } // namespace
 
 int main()
@@ -447,6 +539,8 @@ int main()
     testSemiAutomatic();
     testScriptPropertiesFromEditor();
     testPick();
+    testAnimatedCharacter();
+    testEnemyAnimations();
     std::printf(failures ? "%d test(s) failed\n" : "all tests passed\n", failures);
     return failures ? 1 : 0;
 }

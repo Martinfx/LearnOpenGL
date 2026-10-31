@@ -28,6 +28,19 @@ Viewport::Viewport(engine::Scene* scene, QWidget* parent)
     camera_.fovDegrees = 70.0f;
     camera_.sensitivity = 0.2f;
     connect(&timer_, &QTimer::timeout, this, &Viewport::tick);
+
+    // Animated characters keep moving in the editor so clips can be previewed.
+    animClock_.start();
+    connect(&animTimer_, &QTimer::timeout, this, [this] {
+        const float dt = std::min(0.1f, static_cast<float>(animClock_.restart()) / 1000.0f);
+        const bool animated = std::any_of(scene_->entities.begin(), scene_->entities.end(),
+                                          [](const engine::Entity& e) { return e.model && e.model->skeleton; });
+        if (!animated || !isVisible())
+            return;
+        engine::updateAnimations(*scene_, dt);
+        update();
+    });
+    animTimer_.start(33);
 }
 
 Viewport::~Viewport()

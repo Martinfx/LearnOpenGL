@@ -1,5 +1,5 @@
-// glTF 2.0 import via cgltf. Static geometry only: node transforms are baked
-// into the vertices, each primitive becomes one MeshPart.
+// glTF 2.0 import via cgltf. Static models get node transforms baked into the
+// vertices; animated models keep the node tree, skins and clips (Animation.h).
 #define CGLTF_IMPLEMENTATION
 #include <cgltf.h>
 
@@ -18,7 +18,9 @@
 #include <utility>
 #include <cmath>
 #include <glm/geometric.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/matrix_decompose.hpp>
 #include <glm/mat3x3.hpp>
 #include <glm/mat4x4.hpp>
 #include <limits>
@@ -195,6 +197,45 @@ void loadNode(const cgltf_node& node, Model& model, LoadContext& ctx)
 
 } // namespace
 
+namespace {
+
+struct GltfFile {
+    cgltf_data* data = nullptr;
+    GltfFile() = default;
+    GltfFile(const GltfFile&) = delete;
+    GltfFile& operator=(const GltfFile&) = delete;
+    ~GltfFile() { cgltf_free(data); }
+};
+
+bool openGltf(GltfFile& gltf, const std::filesystem::path& file, std::string* error)
+{
+    auto fail = [&](const std::string& message) {
+        if (error)
+            *error = file.string() + ": " + message;
+        return false;
+    };
+    cgltf_options options{};
+    const std::u8string u8 = file.u8string();
+    const std::string path(u8.begin(), u8.end()); // cgltf expects UTF-8
+    cgltf_result r = cgltf_parse_file(&options, path.c_str(), &gltf.data);
+    if (r != cgltf_result_success)
+        return fail(resultText(r));
+    r = cgltf_load_buffers(&options, gltf.data, path.c_str());
+    if (r != cgltf_result_success)
+        return fail(std::string("buffers: ") + resultText(r));
+    r = cgltf_validate(gltf.data);
+    if (r != cgltf_result_success)
+        return fail(std::string("validation: ") + resultText(r));
+    return true;
+}
+
+const cgltf_scene* mainScene(const cgltf_data* data)
+{
+    return data->scene ? data->scene : (data->scenes_count ? &data->scenes[0] : nullptr);
+}
+
+} // namespace
+
 bool loadModelFile(Model& model, const std::filesystem::path& file, std::string* error)
 {
     auto fail = [&](const std::string& message) {
@@ -203,29 +244,16 @@ bool loadModelFile(Model& model, const std::filesystem::path& file, std::string*
         return false;
     };
 
-    cgltf_options options{};
-    cgltf_data* data = nullptr;
-    const std::u8string u8 = file.u8string();
-    const std::string path(u8.begin(), u8.end()); // cgltf expects UTF-8
-    cgltf_result r = cgltf_parse_file(&options, path.c_str(), &data);
-    if (r != cgltf_result_success)
-        return fail(resultText(r));
-    struct Guard {
-        cgltf_data* d;
-        ~Guard() { cgltf_free(d); }
-    } guard{data};
-
-    r = cgltf_load_buffers(&options, data, path.c_str());
-    if (r != cgltf_result_success)
-        return fail(std::string("buffers: ") + resultText(r));
-    r = cgltf_validate(data);
-    if (r != cgltf_result_success)
-        return fail(std::string("validation: ") + resultText(r));
+    GltfFile gltf;
+    if (!openGltf(gltf, file, error))
+        return false;
+    const cgltf_data* data = gltf.data;
 
     model.parts.clear();
+    model.skeleton.reset();
     LoadContext ctx;
     ctx.dir = file.parent_path();
-    const cgltf_scene* scene = data->scene ? data->scene : (data->scenes_count ? &data->scenes[0] : nullptr);
+    const cgltf_scene* scene = mainScene(data);
     if (scene) {
         for (cgltf_size i = 0; i < scene->nodes_count; ++i)
             loadNode(*scene->nodes[i], model, ctx);
@@ -247,6 +275,225 @@ bool loadModelFile(Model& model, const std::filesystem::path& file, std::string*
     model.localBounds = {lo, hi};
     model.sourcePath = std::filesystem::absolute(file);
     return true;
+}
+
+namespace {
+
+void collectNodes(const cgltf_node* node, int parent, std::vector<const cgltf_node*>& order,
+                  std::vector<int>& parents, std::map<const cgltf_node*, int>& index)
+{
+    if (index.count(node))
+        return; // malformed file with a node shared by two parents
+    const int self = static_cast<int>(order.size());
+    index[node] = self;
+    order.push_back(node);
+    parents.push_back(parent);
+    for (cgltf_size i = 0; i < node->children_count; ++i)
+        collectNodes(node->children[i], self, order, parents, index);
+}
+
+} // namespace
+
+bool loadAnimatedModelFile(Model& model, const std::filesystem::path& file, std::string* error)
+{
+    auto fail = [&](const std::string& message) {
+        if (error)
+            *error = file.string() + ": " + message;
+        return false;
+    };
+    GltfFile gltf;
+    if (!openGltf(gltf, file, error))
+        return false;
+    const cgltf_data* data = gltf.data;
+
+    // Node tree in parent-before-child order.
+    std::vector<const cgltf_node*> order;
+    std::vector<int> parents;
+    std::map<const cgltf_node*, int> index;
+    if (const cgltf_scene* scene = mainScene(data)) {
+        for (cgltf_size i = 0; i < scene->nodes_count; ++i)
+            collectNodes(scene->nodes[i], -1, order, parents, index);
+    } else {
+        for (cgltf_size i = 0; i < data->nodes_count; ++i)
+            if (!data->nodes[i].parent)
+                collectNodes(&data->nodes[i], -1, order, parents, index);
+    }
+
+    auto skeleton = std::make_shared<Skeleton>();
+    skeleton->nodes.resize(order.size());
+    for (std::size_t i = 0; i < order.size(); ++i) {
+        const cgltf_node& n = *order[i];
+        Skeleton::Node& out = skeleton->nodes[i];
+        out.name = n.name ? n.name : "";
+        out.parent = parents[i];
+        if (n.has_matrix) {
+            glm::vec3 skew;
+            glm::vec4 perspective;
+            glm::decompose(glm::make_mat4(n.matrix), out.scale, out.rotation, out.translation, skew, perspective);
+        } else {
+            if (n.has_translation)
+                out.translation = glm::make_vec3(n.translation);
+            if (n.has_rotation)
+                out.rotation = glm::quat(n.rotation[3], n.rotation[0], n.rotation[1], n.rotation[2]);
+            if (n.has_scale)
+                out.scale = glm::make_vec3(n.scale);
+        }
+    }
+
+    for (cgltf_size s = 0; s < data->skins_count; ++s) {
+        const cgltf_skin& skin = data->skins[s];
+        Skeleton::Skin out;
+        out.joints.resize(skin.joints_count, 0);
+        out.inverseBind.assign(skin.joints_count, glm::mat4(1.0f));
+        for (cgltf_size j = 0; j < skin.joints_count; ++j) {
+            if (auto it = index.find(skin.joints[j]); it != index.end())
+                out.joints[j] = it->second;
+            if (skin.inverse_bind_matrices)
+                cgltf_accessor_read_float(skin.inverse_bind_matrices, j, glm::value_ptr(out.inverseBind[j]), 16);
+        }
+        skeleton->skins.push_back(std::move(out));
+    }
+
+    for (cgltf_size a = 0; a < data->animations_count; ++a) {
+        const cgltf_animation& anim = data->animations[a];
+        Skeleton::Clip clip;
+        clip.name = anim.name ? anim.name : "Clip " + std::to_string(a + 1);
+        for (cgltf_size c = 0; c < anim.channels_count; ++c) {
+            const cgltf_animation_channel& ch = anim.channels[c];
+            const auto it = index.find(ch.target_node);
+            if (it == index.end() || !ch.sampler)
+                continue;
+            Skeleton::Channel out;
+            out.node = it->second;
+            int components = 3;
+            switch (ch.target_path) {
+            case cgltf_animation_path_type_translation: out.path = Skeleton::Path::Translation; break;
+            case cgltf_animation_path_type_rotation: out.path = Skeleton::Path::Rotation; components = 4; break;
+            case cgltf_animation_path_type_scale: out.path = Skeleton::Path::Scale; break;
+            default: continue; // morph target weights are not supported
+            }
+            const cgltf_animation_sampler& sampler = *ch.sampler;
+            out.step = sampler.interpolation == cgltf_interpolation_type_step;
+            const bool cubic = sampler.interpolation == cgltf_interpolation_type_cubic_spline;
+            const cgltf_size keys = sampler.input->count;
+            out.times.resize(keys);
+            out.values.resize(keys, glm::vec4(0.0f));
+            for (cgltf_size k = 0; k < keys; ++k) {
+                cgltf_accessor_read_float(sampler.input, k, &out.times[k], 1);
+                // Cubic splines store (in-tangent, value, out-tangent); use the values linearly.
+                const cgltf_size element = cubic ? k * 3 + 1 : k;
+                cgltf_accessor_read_float(sampler.output, element, glm::value_ptr(out.values[k]), static_cast<cgltf_size>(components));
+            }
+            if (!out.times.empty())
+                clip.duration = std::max(clip.duration, out.times.back());
+            clip.channels.push_back(std::move(out));
+        }
+        skeleton->clips.push_back(std::move(clip));
+    }
+
+    // Rest pose, used for mirrored-node winding and the bounds.
+    std::vector<glm::mat4> rest;
+    evaluatePose(*skeleton, nullptr, rest);
+
+    model.parts.clear();
+    LoadContext ctx;
+    ctx.dir = file.parent_path();
+    for (std::size_t i = 0; i < order.size(); ++i) {
+        const cgltf_node& n = *order[i];
+        if (!n.mesh)
+            continue;
+        int skinIndex = -1;
+        if (n.skin)
+            skinIndex = static_cast<int>(n.skin - data->skins);
+        for (cgltf_size p = 0; p < n.mesh->primitives_count; ++p) {
+            const cgltf_primitive& prim = n.mesh->primitives[p];
+            // Skinned vertices are posed by the joints alone (glTF ignores the mesh node's transform);
+            // rigid parts follow their node, so a mirrored node needs flipped winding.
+            const bool mirrored = skinIndex < 0 && glm::determinant(glm::mat3(rest[i])) < 0.0f;
+            const glm::mat4 winding = glm::scale(glm::mat4(1.0f), glm::vec3(mirrored ? -1.0f : 1.0f, 1.0f, 1.0f));
+            MeshPart part;
+            if (!loadPrimitive(prim, winding, part, ctx))
+                continue;
+            if (skinIndex < 0) {
+                // A mirror made loadPrimitive flip the triangles; undo the mirror itself.
+                if (mirrored) {
+                    for (glm::vec3& v : part.positions)
+                        v.x = -v.x;
+                    for (glm::vec3& v : part.normals)
+                        v.x = -v.x;
+                }
+                part.node = static_cast<int>(i);
+            } else {
+                const cgltf_accessor* joints = findAttribute(prim, cgltf_attribute_type_joints);
+                const cgltf_accessor* weights = findAttribute(prim, cgltf_attribute_type_weights);
+                if (!joints || !weights)
+                    return fail("skinned mesh without JOINTS_0/WEIGHTS_0");
+                const std::size_t count = part.positions.size();
+                part.joints.resize(count);
+                part.weights.resize(count);
+                const std::size_t jointCount = skeleton->skins[static_cast<std::size_t>(skinIndex)].joints.size();
+                for (std::size_t v = 0; v < count; ++v) {
+                    cgltf_uint j[4] = {};
+                    cgltf_accessor_read_uint(joints, v, j, 4);
+                    glm::vec4 w(0.0f);
+                    cgltf_accessor_read_float(weights, v, glm::value_ptr(w), 4);
+                    for (int k = 0; k < 4; ++k)
+                        if (j[k] >= jointCount)
+                            w[k] = 0.0f, j[k] = 0;
+                    const float sum = w.x + w.y + w.z + w.w;
+                    part.weights[v] = sum > 0.0f ? w / sum : glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
+                    part.joints[v] = glm::u16vec4(j[0], j[1], j[2], j[3]);
+                }
+                part.skin = skinIndex;
+            }
+            model.parts.push_back(std::move(part));
+        }
+    }
+    if (model.parts.empty())
+        return fail("no triangle meshes found");
+
+    // Rest-pose bounds.
+    glm::vec3 lo(std::numeric_limits<float>::max());
+    glm::vec3 hi(std::numeric_limits<float>::lowest());
+    std::vector<std::vector<glm::mat4>> skinning(skeleton->skins.size());
+    for (std::size_t s = 0; s < skeleton->skins.size(); ++s)
+        skinMatrices(*skeleton, static_cast<int>(s), rest, skinning[s]);
+    for (const MeshPart& part : model.parts) {
+        for (std::size_t v = 0; v < part.positions.size(); ++v) {
+            glm::mat4 m(1.0f);
+            if (part.skin >= 0) {
+                const auto& jm = skinning[static_cast<std::size_t>(part.skin)];
+                const glm::u16vec4 j = part.joints[v];
+                const glm::vec4 w = part.weights[v];
+                m = jm[j.x] * w.x + jm[j.y] * w.y + jm[j.z] * w.z + jm[j.w] * w.w;
+            } else {
+                m = rest[static_cast<std::size_t>(part.node)];
+            }
+            const glm::vec3 p(m * glm::vec4(part.positions[v], 1.0f));
+            lo = glm::min(lo, p);
+            hi = glm::max(hi, p);
+        }
+    }
+    model.localBounds = {lo, hi};
+    model.skeleton = std::move(skeleton);
+    model.sourcePath = std::filesystem::absolute(file);
+    if (model.name.empty() || model.name == "Model")
+        model.name = file.stem().string();
+    return true;
+}
+
+std::shared_ptr<const Model> loadCharacterModel(const std::filesystem::path& file, std::string* error)
+{
+    static std::map<std::filesystem::path, std::weak_ptr<const Model>> cache;
+    const std::filesystem::path key = std::filesystem::absolute(file).lexically_normal();
+    if (auto it = cache.find(key); it != cache.end())
+        if (auto shared = it->second.lock())
+            return shared;
+    auto model = std::make_shared<Model>();
+    if (!loadAnimatedModelFile(*model, key, error))
+        return nullptr;
+    cache[key] = model;
+    return model;
 }
 
 } // namespace engine
