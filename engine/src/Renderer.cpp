@@ -1174,8 +1174,12 @@ void Renderer::render(const Scene& scene, const RenderView& view)
 void Renderer::drawTerrain(const Terrain& t, const RenderView& view)
 {
     const int res = t.resolution;
+    constexpr int kChunk = GpuTerrain::kChunk, kLevels = GpuTerrain::kLevels;
+    const std::size_t gridCount = static_cast<std::size_t>(res) * res;
     if (terrain_.meshVersion != t.meshVersion || terrain_.resolution != res) {
-        std::vector<Vertex> vertices(static_cast<std::size_t>(res) * res);
+        // Grid vertices, then a copy of each lowered by kSkirt metres (skirts).
+        constexpr float kSkirt = 6.0f;
+        std::vector<Vertex> vertices(gridCount * 2);
         const float d = t.spacing();
         auto h = [&](int x, int z) {
             return t.heights[static_cast<std::size_t>(std::clamp(z, 0, res - 1)) * res + std::clamp(x, 0, res - 1)];
@@ -1186,6 +1190,9 @@ void Renderer::drawTerrain(const Terrain& t, const RenderView& view)
                 v.position = {t.origin.x + x * d, h(x, z), t.origin.y + z * d};
                 v.normal = glm::normalize(glm::vec3(h(x - 1, z) - h(x + 1, z), 2.0f * d, h(x, z - 1) - h(x, z + 1)));
                 v.uv = {static_cast<float>(x) / (res - 1), static_cast<float>(z) / (res - 1)};
+                Vertex& skirt = vertices[gridCount + static_cast<std::size_t>(z) * res + x];
+                skirt = v;
+                skirt.position.y -= kSkirt;
             }
         if (!terrain_.vao) {
             glCreateVertexArrays(1, &terrain_.vao);
@@ -1193,21 +1200,72 @@ void Renderer::drawTerrain(const Terrain& t, const RenderView& view)
             glCreateBuffers(1, &terrain_.ibo);
         }
         glNamedBufferData(terrain_.vbo, static_cast<GLsizeiptr>(vertices.size() * sizeof(Vertex)), vertices.data(), GL_DYNAMIC_DRAW);
+        const int quads = res - 1;
+        const int chunksX = (quads + kChunk - 1) / kChunk;
         if (terrain_.resolution != res) {
+            // Index ranges of every chunk at every level (the same for any heights).
+            terrain_.chunks.assign(static_cast<std::size_t>(chunksX) * chunksX, {});
+            terrain_.chunksX = chunksX;
             std::vector<std::uint32_t> indices;
-            indices.reserve(static_cast<std::size_t>(res - 1) * (res - 1) * 6);
-            for (int z = 0; z + 1 < res; ++z)
-                for (int x = 0; x + 1 < res; ++x) {
-                    const std::uint32_t i = static_cast<std::uint32_t>(z * res + x);
-                    const std::uint32_t r = static_cast<std::uint32_t>(res);
-                    // Counter-clockwise seen from above.
-                    indices.insert(indices.end(), {i, i + r, i + 1, i + 1, i + r, i + r + 1});
+            auto vid = [&](int x, int z) { return static_cast<std::uint32_t>(z * res + x); };
+            const auto skirtBase = static_cast<std::uint32_t>(gridCount);
+            for (int cz = 0; cz < chunksX; ++cz)
+                for (int cx = 0; cx < chunksX; ++cx) {
+                    GpuTerrain::Chunk& chunk = terrain_.chunks[static_cast<std::size_t>(cz) * chunksX + cx];
+                    const int x0 = cx * kChunk, z0 = cz * kChunk;
+                    const int x1 = std::min(quads, x0 + kChunk), z1 = std::min(quads, z0 + kChunk);
+                    for (int level = 0; level < kLevels; ++level) {
+                        const int step = 1 << level;
+                        chunk.first[level] = static_cast<std::uint32_t>(indices.size());
+                        // Sample positions: every step-th vertex, always including the chunk edges.
+                        std::vector<int> xs, zs;
+                        for (int x = x0; x < x1; x += step)
+                            xs.push_back(x);
+                        xs.push_back(x1);
+                        for (int z = z0; z < z1; z += step)
+                            zs.push_back(z);
+                        zs.push_back(z1);
+                        for (std::size_t b = 0; b + 1 < zs.size(); ++b)
+                            for (std::size_t a = 0; a + 1 < xs.size(); ++a) {
+                                const std::uint32_t i00 = vid(xs[a], zs[b]), i10 = vid(xs[a + 1], zs[b]);
+                                const std::uint32_t i01 = vid(xs[a], zs[b + 1]), i11 = vid(xs[a + 1], zs[b + 1]);
+                                indices.insert(indices.end(), {i00, i01, i10, i10, i01, i11}); // counter-clockwise from above
+                            }
+                        // Skirts along the four edges.
+                        auto skirt = [&](std::uint32_t a, std::uint32_t b) { // both windings: seen from either side
+                            indices.insert(indices.end(), {a, b, skirtBase + a, skirtBase + a, b, skirtBase + b,
+                                                           b, a, skirtBase + a, b, skirtBase + a, skirtBase + b});
+                        };
+                        for (std::size_t a = 0; a + 1 < xs.size(); ++a) {
+                            skirt(vid(xs[a], z0), vid(xs[a + 1], z0));
+                            skirt(vid(xs[a + 1], z1), vid(xs[a], z1));
+                        }
+                        for (std::size_t b = 0; b + 1 < zs.size(); ++b) {
+                            skirt(vid(x0, zs[b + 1]), vid(x0, zs[b]));
+                            skirt(vid(x1, zs[b]), vid(x1, zs[b + 1]));
+                        }
+                        chunk.count[level] = static_cast<std::uint32_t>(indices.size()) - chunk.first[level];
+                    }
                 }
             glNamedBufferData(terrain_.ibo, static_cast<GLsizeiptr>(indices.size() * sizeof(std::uint32_t)), indices.data(), GL_STATIC_DRAW);
-            terrain_.indexCount = static_cast<int>(indices.size());
             setupVertexArray(terrain_.vao, terrain_.vbo);
             glVertexArrayElementBuffer(terrain_.vao, terrain_.ibo);
         }
+        // Chunk bounds from the heights.
+        for (int cz = 0; cz < chunksX; ++cz)
+            for (int cx = 0; cx < chunksX; ++cx) {
+                const int x0 = cx * kChunk, z0 = cz * kChunk;
+                const int x1 = std::min(quads, x0 + kChunk), z1 = std::min(quads, z0 + kChunk);
+                float lo = 1e30f, hi = -1e30f;
+                for (int z = z0; z <= z1; ++z)
+                    for (int x = x0; x <= x1; ++x) {
+                        const float y = t.heights[static_cast<std::size_t>(z) * res + x];
+                        lo = std::min(lo, y);
+                        hi = std::max(hi, y);
+                    }
+                terrain_.chunks[static_cast<std::size_t>(cz) * chunksX + cx].bounds = {
+                    {t.origin.x + x0 * d, lo, t.origin.y + z0 * d}, {t.origin.x + x1 * d, hi, t.origin.y + z1 * d}};
+            }
         terrain_.resolution = res;
         terrain_.meshVersion = t.meshVersion;
     }
@@ -1284,9 +1342,23 @@ void Renderer::drawTerrain(const Terrain& t, const RenderView& view)
         glUniform1i(loc_.alphaMode, 0);
     }
     glBindVertexArray(terrain_.vao);
-    glDrawElements(GL_TRIANGLES, terrain_.indexCount, GL_UNSIGNED_INT, nullptr);
-    ++drawCalls_;
-    triangles_ += terrain_.indexCount / 3;
+    // Chunks: frustum and occlusion culling, level by distance (coarser in shadow maps).
+    const float lodBase = 60.0f * quality_.lodScale;
+    for (const GpuTerrain::Chunk& chunk : terrain_.chunks) {
+        if (!visible(chunk.bounds) || occluded(chunk.bounds)) {
+            ++culled_;
+            continue;
+        }
+        const float d = distanceTo(view.cameraPosition, chunk.bounds);
+        int level = d < lodBase ? 0 : static_cast<int>(std::floor(std::log2(d / lodBase))) + 1;
+        if (shadowCascade_ >= 0)
+            level += shadowCascade_ == 0 ? 1 : 2;
+        level = std::clamp(level, 0, kLevels - 1);
+        glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(chunk.count[level]), GL_UNSIGNED_INT,
+                       reinterpret_cast<const void*>(static_cast<std::uintptr_t>(chunk.first[level]) * sizeof(std::uint32_t)));
+        ++drawCalls_;
+        triangles_ += chunk.count[level] / 3;
+    }
     if (!depthOnly_)
         glUniform1i(programs_.mesh.loc("uTerrain"), 0);
 }

@@ -333,10 +333,19 @@ private:
     void collectQueries();
     void flushInstances();
     // Terrain mesh and splat map on the GPU, rebuilt when the terrain's versions change.
+    // Terrain: one vertex buffer (grid + lowered skirt copies), drawn in 64-quad chunks
+    // with geomipmapping LOD (every 2nd, 4th... vertex); skirts hide the cracks between levels.
     struct GpuTerrain {
+        static constexpr int kChunk = 64, kLevels = 5;
+        struct Chunk {
+            Aabb bounds;
+            std::uint32_t first[kLevels] = {}, count[kLevels] = {}; // index ranges per level
+        };
         unsigned vao = 0, vbo = 0, ibo = 0, splat = 0;
-        int indexCount = 0, resolution = 0, splatResolution = 0;
+        int resolution = 0, splatResolution = 0;
         std::uint64_t meshVersion = 0, splatVersion = 0;
+        std::vector<Chunk> chunks;
+        int chunksX = 0;
     };
     GpuTerrain terrain_;
     void drawTerrain(const Terrain& terrain, const RenderView& view);
