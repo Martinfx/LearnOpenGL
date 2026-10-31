@@ -770,6 +770,16 @@ void testRotatedBox()
     engine::Scene loaded;
     check(engine::loadScene(loaded, "rotated.level", &err) && loaded.boxes.size() == 1 && loaded.boxes[0].rotation.y == 90.0f,
           "box rotation is saved: " + err);
+
+    // Texture placement from the editor's Modify Texture tools.
+    s.boxes[0].uvScale = {2.0f, 0.5f};
+    s.boxes[0].uvOffset = {0.25f, -0.5f};
+    s.boxes[0].uvRotation = 90.0f;
+    check(engine::saveScene(s, "rotated.level", &err), "save box uv: " + err);
+    engine::Scene uv;
+    check(engine::loadScene(uv, "rotated.level", &err) && uv.boxes[0].uvScale == glm::vec2(2.0f, 0.5f) &&
+              uv.boxes[0].uvOffset == glm::vec2(0.25f, -0.5f) && uv.boxes[0].uvRotation == 90.0f,
+          "box texture scale, shift and rotation are saved: " + err);
 }
 
 void testRotateGizmo()

@@ -5,6 +5,7 @@
 #include "EditorHistory.h"
 
 #include <QMainWindow>
+#include <functional>
 #include <utility>
 #include <vector>
 
@@ -28,6 +29,18 @@ class Vec3Editor;
 class Viewport;
 class WeaponPanel;
 class EnvironmentPanel;
+class ViewportPanel;
+class OutlinerPanel;
+class CollapsibleSection;
+class QFormLayout;
+class QTabBar;
+class QPlainTextEdit;
+class QProcess;
+class QDockWidget;
+class QStackedWidget;
+class QMenu;
+class QAction;
+class QFormLayout;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -45,6 +58,25 @@ protected:
 private:
     void buildMenus();
     void buildDocks();
+    void buildStatusBar();
+    void buildModePanel();          // left panel: Select / Place / Model modes
+    void setEditorMode(int mode);   // 0 select, 1 place, 2 model
+
+public:
+    void notify(const QString& message, int timeoutMs = 0); // status line + output log
+    void appendLog(const QString& line, int level);         // 0 info, 1 warning, 2 error
+    void runCommand(const QString& command);                // console (Cmd field)
+private:
+    void pauseGame();
+    void stopGame();
+    void updatePlayButtons();
+    void saveAll();
+    void updateDetailsVisibility();
+    void refreshTransformBox();
+    void applyTransformBox(int field, glm::vec3 value, bool delta);
+    void refreshTexturePanel();
+    void editBoxUv(const std::function<void(engine::Box&)>& edit);
+    void refreshMaterialList();
 
     void newLevel();
     void openLevel();
@@ -105,6 +137,35 @@ private:
     bool dirty_ = false;
 
     Viewport* viewport_ = nullptr;
+    ViewportPanel* viewportPanel_ = nullptr;
+    OutlinerPanel* outlinerPanel_ = nullptr;
+    QMenu* addMenu_ = nullptr;
+    QAction* pauseAction_ = nullptr;
+    QAction* stopAction_ = nullptr;
+    QAction* playAction_ = nullptr;
+    std::vector<QAction*> modeActions_;
+    QProcess* game_ = nullptr;
+    bool gamePaused_ = false;
+    QPlainTextEdit* log_ = nullptr;
+    QDockWidget* logDock_ = nullptr;
+    QDockWidget* assetsDock_ = nullptr;
+    QDockWidget* modesDock_ = nullptr;
+    QStackedWidget* modePages_ = nullptr;
+    QLabel* statusMessage_ = nullptr;
+    QLabel* detailsIcon_ = nullptr;
+    QLineEdit* detailsSearch_ = nullptr;
+    QTabBar* detailsTabs_ = nullptr;
+    struct DetailSection {
+        CollapsibleSection* section;
+        QFormLayout* form;
+        QString category;
+    };
+    std::vector<DetailSection> detailSections_;
+    QWidget* texturePanel_ = nullptr;
+    QDoubleSpinBox* uvSpins_[5] = {};   // scale U, V, shift U, V, rotation
+    QComboBox* activeMaterial_ = nullptr;
+    QLabel* selectionInfo_ = nullptr;   // Select mode page
+    QStringList commandHistory_;
     QTabWidget* tabs_ = nullptr;
     MaterialEditor* materialEditor_ = nullptr;
     class ShaderEditor* shaderEditor_ = nullptr;

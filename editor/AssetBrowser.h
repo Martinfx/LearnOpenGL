@@ -88,12 +88,23 @@ public:
 
     void rescan();
 
+    QIcon iconFor(const QString& path) const { return icons_.value(path); } // thumbnail made so far, or null
+    QString currentFolderPath() const; // absolute folder shown (assets root for "All")
+
 signals:
     void assetActivated(const QString& path, AssetType type);
     void assetSelected(const QString& path, AssetType type);
+    void saveAllRequested();
+    void newAssetRequested(const QString& kind, const QString& folder); // material, script, level
 
 private:
     void applyFilter();
+    void rebuildFolders();
+    void setFolder(const QString& folder); // relative to the asset root, empty = all
+    void updateBreadcrumb();
+    void updateStatus();
+    void newFolder();
+    void importFiles();
     void requestThumbnails();
     QIcon placeholderIcon(AssetType type) const;
     QString cacheFile(const QString& path) const;
@@ -103,6 +114,12 @@ private:
     QLineEdit* search_;
     QSlider* size_;
     QLabel* status_;
+    class QTreeWidget* folders_ = nullptr;
+    QWidget* breadcrumb_ = nullptr;
+    QString folder_;
+    QStringList favorites_;
+    bool rebuildingFolders_ = false;
+    int shown_ = 0;
     QTimer thumbTimer_;
     std::unique_ptr<QOffscreenSurface> surface_;
     QThread* thread_ = nullptr;

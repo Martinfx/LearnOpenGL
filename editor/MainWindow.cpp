@@ -12,6 +12,8 @@
 #include "WeaponPanel.h"
 #include "EnvironmentPanel.h"
 #include "ShaderEditor.h"
+#include "EditorUi.h"
+#include "ViewportPanel.h"
 
 #include <QAction>
 #include <QApplication>
@@ -52,7 +54,25 @@
 #include <QTextStream>
 #include <QToolBar>
 #include <QVBoxLayout>
+#include <QCompleter>
+#include <QDirIterator>
+#include <QFontDatabase>
+#include <QGridLayout>
+#include <QMenu>
+#include <QPlainTextEdit>
+#include <QStackedWidget>
+#include <QTime>
+#include <QTimer>
+#include <QToolButton>
+#include <algorithm>
 #include <array>
+#ifdef Q_OS_WIN
+#include <windows.h>
+#include <tlhelp32.h>
+#else
+#include <csignal>
+#include <sys/types.h>
+#endif
 #include <memory>
 
 #include <cmath>
@@ -73,12 +93,13 @@ MainWindow::MainWindow()
 {
     scene_ = engine::makeDefaultScene();
 
-    viewport_ = new Viewport(&scene_, this);
+    viewportPanel_ = new ViewportPanel(&scene_, this);
+    viewport_ = viewportPanel_->viewport();
     tabs_ = new QTabWidget(this);
     tabs_->setDocumentMode(true);
     tabs_->setTabsClosable(true);
     tabs_->setMovable(true);
-    tabs_->addTab(viewport_, tr("Level"));
+    tabs_->addTab(viewportPanel_, tr("Level"));
     tabs_->tabBar()->setTabButton(0, QTabBar::RightSide, nullptr); // the 3D view cannot be closed
     tabs_->tabBar()->setTabButton(0, QTabBar::LeftSide, nullptr);
     connect(tabs_, &QTabWidget::tabCloseRequested, this, [this](int index) { closeScriptTab(index); });
@@ -89,16 +110,16 @@ MainWindow::MainWindow()
         case AssetType::Model: placeModel(path, point); break;
         case AssetType::Material:
             if (!assignMaterial(path, object))
-                statusBar()->showMessage(tr("Drop a material onto a box or a model."), 5000);
+                notify(tr("Drop a material onto a box or a model."), 5000);
             break;
         default: openAsset(path, static_cast<int>(assetTypeOf(path))); break;
         }
     });
     connect(viewport_, &Viewport::rendererReady, this,
-            [this](const QString& info) { statusBar()->showMessage(info, 8000); });
+            [this](const QString& info) { notify(info, 8000); });
     connect(viewport_, &Viewport::renderWarning, this, [this](const QString& message) {
         qWarning("%s", qPrintable(message));
-        statusBar()->showMessage(message, 15000);
+        notify(message, 15000);
     });
     connect(viewport_, &Viewport::rendererFailed, this, [this](const QString& error) {
         QMessageBox::critical(this, tr("OpenGL"), tr("Renderer could not start:\n%1").arg(error));
@@ -106,12 +127,14 @@ MainWindow::MainWindow()
 
     buildMenus();
     buildDocks();
+    buildStatusBar();
+    connect(viewportPanel_->transformBox(), &TransformBox::edited, this, &MainWindow::applyTransformBox);
     refreshOutliner();
     refreshLevelProperties();
     select(-1);
     resetHistory();
     updateTitle();
-    statusBar()->showMessage(tr("Right mouse + WASD/QE: fly · Left click: select · F: focus · F5: play"));
+    notify(tr("Right mouse + WASD/QE: fly · Left click: select · F: focus · F5: play"));
 }
 
 void MainWindow::buildMenus()
@@ -183,6 +206,7 @@ void MainWindow::buildMenus()
 
     QMenu* game = menuBar()->addMenu(tr("&Game"));
     QAction* play = game->addAction(tr("&Play level"), QKeySequence(Qt::Key_F5), this, &MainWindow::playLevel);
+    playAction_ = play;
 
     // View: perspective or orthographic top / front / side, or all four at once.
     QMenu* viewMenu = menuBar()->addMenu(tr("&View"));
@@ -194,12 +218,22 @@ void MainWindow::buildMenus()
         a->setChecked(index == 0);
         a->setShortcut(QKeySequence(Qt::CTRL | static_cast<Qt::Key>(Qt::Key_1 + index)));
         viewGroup->addAction(a);
-        connect(a, &QAction::triggered, this, [this, index] {
-            if (index == 4)
-                viewport_->setQuadView(true);
-            else
-                viewport_->setViewMode(static_cast<Viewport::ViewMode>(index));
-        });
+        connect(a, &QAction::triggered, this, [this, index] { viewportPanel_->setView(index); });
+    }
+    connect(viewportPanel_, &ViewportPanel::viewChanged, this, [viewGroup](int index) {
+        if (QAction* a = viewGroup->actions().value(index))
+            a->setChecked(true);
+    });
+    viewMenu->addSeparator();
+    const char* shadingNames[4] = {"&Lit", "&Unlit", "Lighting &only", "&Wireframe"};
+    auto* shadingGroup = new QActionGroup(this);
+    for (int i = 0; i < 4; ++i) {
+        QAction* a = viewMenu->addAction(tr(shadingNames[i]));
+        a->setCheckable(true);
+        a->setChecked(i == 0);
+        a->setShortcut(QKeySequence(Qt::ALT | static_cast<Qt::Key>(Qt::Key_1 + i)));
+        shadingGroup->addAction(a);
+        connect(a, &QAction::triggered, this, [this, i] { viewportPanel_->setShading(i); });
     }
     viewMenu->addSeparator();
     viewMenu->addAction(tr("Orthographic views: right or middle drag pans, wheel zooms"))->setEnabled(false);
@@ -254,74 +288,127 @@ void MainWindow::buildMenus()
     render->addAction(tr("&Reload shaders from disk"), QKeySequence(Qt::CTRL | Qt::Key_F5), this, &MainWindow::applyShaders);
     viewport_->setQuality(quality);
 
-    QToolBar* tools = addToolBar(tr("Tools"));
-    tools->setObjectName("tools");
-    tools->addAction(add);
-    tools->addAction(import);
-    tools->addAction(enemy);
-    tools->addAction(dup);
-    tools->addAction(del);
-    tools->addSeparator();
-    tools->addAction(play);
-
-    // Snapping (Shift while dragging = off).
-    tools->addSeparator();
-    auto* gridCombo = new QComboBox(tools);
-    for (double g : {0.0, 0.125, 0.25, 0.5, 1.0, 2.0, 4.0})
-        gridCombo->addItem(g == 0.0 ? tr("Grid off") : tr("Grid %1 m").arg(g), g);
-    gridCombo->setCurrentIndex(2);
-    auto* angleCombo = new QComboBox(tools);
-    for (double a : {0.0, 5.0, 15.0, 45.0, 90.0})
-        angleCombo->addItem(a == 0.0 ? tr("Angle off") : tr("Angle %1°").arg(a), a);
-    angleCombo->setCurrentIndex(2);
-    auto* scaleCombo = new QComboBox(tools);
-    for (double sc : {0.0, 0.05, 0.1, 0.25, 0.5})
-        scaleCombo->addItem(sc == 0.0 ? tr("Scale off") : tr("Scale %1").arg(sc), sc);
-    scaleCombo->setCurrentIndex(2);
-    for (QComboBox* c : {gridCombo, angleCombo, scaleCombo}) {
-        c->setToolTip(tr("Snapping while dragging the gizmo (hold Shift to move freely)"));
-        tools->addWidget(c);
-    }
-    auto applySnap = [this, gridCombo, angleCombo, scaleCombo] {
-        viewport_->setSnap(static_cast<float>(gridCombo->currentData().toDouble()),
-                           static_cast<float>(angleCombo->currentData().toDouble()),
-                           static_cast<float>(scaleCombo->currentData().toDouble()));
-    };
-    for (QComboBox* c : {gridCombo, angleCombo, scaleCombo})
-        connect(c, &QComboBox::currentIndexChanged, this, applySnap);
-    applySnap();
-
-    // Left tool strip: select / move / rotate / scale (Q W E R).
-    QToolBar* modes = new QToolBar(tr("Transform tools"), this);
-    modes->setObjectName("modes");
-    modes->setOrientation(Qt::Vertical);
-    addToolBar(Qt::LeftToolBarArea, modes);
-    auto* group = new QActionGroup(this);
-    const std::pair<QString, Viewport::Tool> toolList[] = {{tr("Select\n(Q)"), Viewport::Tool::Select},
-                                                           {tr("Move\n(W)"), Viewport::Tool::Move},
-                                                           {tr("Rotate\n(E)"), Viewport::Tool::Rotate},
-                                                           {tr("Scale\n(R)"), Viewport::Tool::Scale}};
-    std::vector<QAction*> toolActions;
-    for (const auto& [label, tool] : toolList) {
-        QAction* a = modes->addAction(label);
-        a->setCheckable(true);
-        a->setChecked(tool == viewport_->tool());
-        group->addAction(a);
-        const Viewport::Tool t = tool;
-        connect(a, &QAction::triggered, this, [this, t] { viewport_->setTool(t); });
-        toolActions.push_back(a);
-    }
-    connect(viewport_, &Viewport::toolChanged, this, [toolActions](Viewport::Tool t) {
-        toolActions[static_cast<std::size_t>(t)]->setChecked(true);
+    // Main tool bar: save, history, add, play controls, quality.
+    QToolBar* main = addToolBar(tr("Main"));
+    main->setObjectName("main");
+    main->setIconSize(QSize(18, 18));
+    main->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    main->setMovable(false);
+    QAction* saveAction = main->addAction(editorIcon("save"), QString(), this, &MainWindow::saveCurrent);
+    saveAction->setToolTip(tr("Save (Ctrl+S)"));
+    undo->setIcon(editorIcon("undo"));
+    redo->setIcon(editorIcon("redo"));
+    main->addAction(undo);
+    main->addAction(redo);
+    main->addSeparator();
+    // Add menu, shared with the outliner's Add button.
+    addMenu_ = new QMenu(tr("Add"), this);
+    add->setIcon(editorIcon("cube"));
+    enemy->setIcon(editorIcon("person"));
+    import->setIcon(editorIcon("model"));
+    addMenu_->addAction(add);
+    addMenu_->addAction(enemy);
+    addMenu_->addAction(tr("Empty entity"), this, [this] { addEntity("empty"); });
+    addMenu_->addSeparator();
+    addMenu_->addAction(import);
+    auto* addButton = new QToolButton(main);
+    addButton->setText(tr("Add"));
+    addButton->setIcon(editorIcon("add"));
+    addButton->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    addButton->setPopupMode(QToolButton::InstantPopup);
+    addButton->setMenu(addMenu_);
+    main->addWidget(addButton);
+    main->addSeparator();
+    play->setIcon(editorIcon("play"));
+    play->setToolTip(tr("Play the level in the game (F5)"));
+    main->addAction(play);
+    pauseAction_ = main->addAction(editorIcon("pause"), QString(), this, &MainWindow::pauseGame);
+    pauseAction_->setCheckable(true);
+    pauseAction_->setToolTip(tr("Pause / resume the running game (F6)"));
+    pauseAction_->setShortcut(QKeySequence(Qt::Key_F6));
+    stopAction_ = main->addAction(editorIcon("stop"), QString(), this, &MainWindow::stopGame);
+    stopAction_->setToolTip(tr("Stop the running game (Shift+F5)"));
+    stopAction_->setShortcut(QKeySequence(Qt::SHIFT | Qt::Key_F5));
+    game->addAction(pauseAction_);
+    game->addAction(stopAction_);
+    pauseAction_->setText(tr("Pause"));
+    stopAction_->setText(tr("Stop"));
+    main->addSeparator();
+    auto* qualityLabel = new QLabel(tr("  Quality "), main);
+    qualityLabel->setObjectName("dim");
+    main->addWidget(qualityLabel);
+    auto* qualityCombo = new QComboBox(main);
+    for (const char* name : qualityNames)
+        qualityCombo->addItem(tr(name));
+    qualityCombo->setCurrentIndex(qualityLevel);
+    qualityCombo->setToolTip(tr("Viewport quality of this machine (shadows, SSAO, bloom)"));
+    main->addWidget(qualityCombo);
+    connect(qualityCombo, &QComboBox::currentIndexChanged, this, [qualityGroup](int i) {
+        if (QAction* a = qualityGroup->actions().value(i); a && !a->isChecked())
+            a->trigger();
     });
+    connect(qualityGroup, &QActionGroup::triggered, qualityCombo, [qualityGroup, qualityCombo](QAction* a) {
+        qualityCombo->blockSignals(true);
+        qualityCombo->setCurrentIndex(static_cast<int>(qualityGroup->actions().indexOf(a)));
+        qualityCombo->blockSignals(false);
+    });
+    updatePlayButtons();
+
+    // Second row: editor modes (they switch the tool panel on the left) and quick actions.
+    addToolBarBreak();
+    QToolBar* modes = addToolBar(tr("Modes"));
+    modes->setObjectName("modes");
+    modes->setIconSize(QSize(16, 16));
+    modes->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    modes->setMovable(false);
+    auto* modeGroup = new QActionGroup(this);
+    const std::pair<const char*, const char*> modeList[] = {{"Select", "select"}, {"Place", "add"}, {"Model", "cube"}};
+    for (int i = 0; i < 3; ++i) {
+        QAction* a = modes->addAction(editorIcon(modeList[i].second), tr(modeList[i].first));
+        a->setCheckable(true);
+        a->setChecked(i == 2);
+        a->setShortcut(QKeySequence(Qt::SHIFT | static_cast<Qt::Key>(Qt::Key_1 + i)));
+        a->setToolTip(tr("%1 mode (Shift+%2)").arg(tr(modeList[i].first)).arg(i + 1));
+        modeGroup->addAction(a);
+        connect(a, &QAction::triggered, this, [this, i] { setEditorMode(i); });
+        modeActions_.push_back(a);
+    }
     modes->addSeparator();
-    modes->addAction(add);
-    modes->addAction(enemy);
-    QAction* focus = modes->addAction(tr("Focus\n(F)"));
+    QAction* focus = modes->addAction(editorIcon("focus"), tr("Focus"));
+    focus->setToolTip(tr("Frame the selection (F)"));
     connect(focus, &QAction::triggered, this, [this] { viewport_->focusSelected(); });
-    QAction* drop = modes->addAction(tr("To floor\n(End)"));
+    QAction* drop = modes->addAction(editorIcon("floor"), tr("To floor"));
     drop->setShortcut(QKeySequence(Qt::Key_End));
+    drop->setToolTip(tr("Put the selection on what is below it (End)"));
     connect(drop, &QAction::triggered, this, &MainWindow::dropToFloor);
+    dup->setIcon(editorIcon("duplicate"));
+    del->setIcon(editorIcon("delete"));
+    modes->addAction(dup);
+    modes->addAction(del);
+
+    // View options menu of the viewport tool bar.
+    QMenu* options = viewportPanel_->optionsMenu();
+    options->addAction(focus);
+    options->addAction(drop);
+    options->addSeparator();
+    QAction* orthoWire = options->addAction(tr("Wireframe in orthographic views"));
+    orthoWire->setCheckable(true);
+    orthoWire->setChecked(QSettings().value("view/orthoWireframe", true).toBool());
+    viewport_->setOrthoWireframe(orthoWire->isChecked());
+    connect(orthoWire, &QAction::toggled, this, [this](bool on) {
+        QSettings().setValue("view/orthoWireframe", on);
+        viewport_->setOrthoWireframe(on);
+    });
+    options->addSeparator();
+    options->addMenu(qualityMenu);
+    for (QAction* t : *toggles)
+        options->addAction(t);
+    options->addSeparator();
+    options->addAction(tr("Player start = camera position"), this, [this] {
+        scene_.playerStart = viewport_->camera().position - glm::vec3(0.0f, 1.65f, 0.0f);
+        refreshLevelProperties();
+        markDirty();
+    });
 
     // Gizmo edits: children follow, history records the whole drag as one step.
     connect(viewport_, &Viewport::moveRequested, this, [this](int object, glm::vec3 delta) {
@@ -406,9 +493,11 @@ void MainWindow::buildDocks()
         markDirty();
     });
     connect(outliner_, &HierarchyTree::renamed, this, [this] { refreshProperties(); });
-    auto* outlinerDock = new QDockWidget(tr("Hierarchy"), this);
+    outlinerPanel_ = new OutlinerPanel(outliner_, this);
+    outlinerPanel_->setAddMenu(addMenu_, editorIcon("add"));
+    auto* outlinerDock = new QDockWidget(tr("Outliner"), this);
     outlinerDock->setObjectName("outliner");
-    outlinerDock->setWidget(outliner_);
+    outlinerDock->setWidget(outlinerPanel_);
     addDockWidget(Qt::RightDockWidgetArea, outlinerDock);
 
     // What the selected object uses and what else uses the same files.
@@ -420,7 +509,7 @@ void MainWindow::buildDocks()
         case engine::AssetKind::Texture: openTexture(path); break;
         case engine::AssetKind::Script: openScript(path); break;
         default:
-            statusBar()->showMessage(path, 5000);
+            notify(path, 5000);
             break;
         }
     });
@@ -431,10 +520,27 @@ void MainWindow::buildDocks()
 
     // Properties of the selected box.
     boxPanel_ = new QWidget(this);
-    auto* form = new QFormLayout(boxPanel_);
+    auto* sectionsLayout = new QVBoxLayout(boxPanel_);
+    sectionsLayout->setContentsMargins(0, 0, 0, 0);
+    sectionsLayout->setSpacing(0);
+    auto makeSection = [&](const QString& title, const QString& category) {
+        auto* section = new CollapsibleSection(title, boxPanel_);
+        auto* f = new QFormLayout();
+        f->setLabelAlignment(Qt::AlignLeft);
+        f->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
+        section->setBodyLayout(f);
+        sectionsLayout->addWidget(section);
+        detailSections_.push_back({section, f, category});
+        return f;
+    };
+    QFormLayout* generalForm = makeSection(tr("General"), "General");
+    QFormLayout* transformForm = makeSection(tr("Transform"), "Transform");
+    QFormLayout* renderingForm = makeSection(tr("Rendering"), "Rendering");
+    QFormLayout* characterForm = makeSection(tr("Character"), "Character");
+    QFormLayout* scriptForm = makeSection(tr("Script"), "Script");
     nameEdit_ = new QLineEdit(boxPanel_);
     kindLabel_ = new QLabel(boxPanel_);
-    form->addRow(tr("Type"), kindLabel_);
+    generalForm->addRow(tr("Type"), kindLabel_);
     positionEdit_ = new Vec3Editor(-10000.0, 10000.0, 0.25, boxPanel_);
     sizeEdit_ = new Vec3Editor(0.01, 10000.0, 0.25, boxPanel_);
     colorButton_ = new QPushButton(boxPanel_);
@@ -458,9 +564,8 @@ void MainWindow::buildDocks()
     scriptLayout->addWidget(scriptEdit_);
     scriptLayout->addWidget(browse);
     scriptLayout->addWidget(clear);
-    form->addRow(tr("Name"), nameEdit_);
-    form->addRow(tr("Entity type"), typeEdit_);
-    form->addRow(tr("Position"), positionEdit_);
+    generalForm->addRow(tr("Entity type"), typeEdit_);
+    transformForm->addRow(tr("Position"), positionEdit_);
     rotationEdit_ = new Vec3Editor(-360.0, 360.0, 15.0, boxPanel_);
     rotationEdit_->setToolTip(tr("Degrees around X, Y and Z"));
     scaleSpin_ = new QDoubleSpinBox(boxPanel_);
@@ -468,10 +573,10 @@ void MainWindow::buildDocks()
     scaleSpin_->setSingleStep(0.1);
     scaleSpin_->setDecimals(3);
     scaleSpin_->setKeyboardTracking(false);
-    form->addRow(tr("Yaw"), yawSpin_);
-    form->addRow(tr("Rotation"), rotationEdit_);
-    form->addRow(tr("Scale"), scaleSpin_);
-    form->addRow(tr("Size"), sizeEdit_);
+    transformForm->addRow(tr("Yaw"), yawSpin_);
+    transformForm->addRow(tr("Rotation"), rotationEdit_);
+    transformForm->addRow(tr("Scale"), scaleSpin_);
+    transformForm->addRow(tr("Size"), sizeEdit_);
     connect(rotationEdit_, &Vec3Editor::valueEdited, this, [this](glm::vec3 v) {
         if (auto* m = selectedModel()) {
             m->rotation = v;
@@ -487,7 +592,7 @@ void MainWindow::buildDocks()
             markDirty();
         }
     });
-    form->addRow(tr("Color"), colorButton_);
+    renderingForm->addRow(tr("Color"), colorButton_);
 
     // Box material (.material), and per-slot overrides of glTF materials for models.
     materialRow_ = new QWidget(boxPanel_);
@@ -505,7 +610,7 @@ void MainWindow::buildDocks()
     materialLayout->addWidget(browseMaterial);
     materialLayout->addWidget(clearMaterial);
     materialLayout->addWidget(editMaterial);
-    form->addRow(tr("Material"), materialRow_);
+    renderingForm->addRow(tr("Material"), materialRow_);
     connect(browseMaterial, &QPushButton::clicked, this, &MainWindow::browseBoxMaterial);
     connect(clearMaterial, &QPushButton::clicked, this, [this] {
         if (auto* b = selectedBox(); b && !b->materialPath.empty()) {
@@ -528,7 +633,7 @@ void MainWindow::buildDocks()
     materialSlots_->setEditTriggers(QAbstractItemView::NoEditTriggers);
     materialSlots_->setMinimumHeight(110);
     materialSlots_->setToolTip(tr("Double-click: choose a .material for this slot. Delete: back to the glTF material."));
-    form->addRow(materialSlots_);
+    renderingForm->addRow(materialSlots_);
     connect(materialSlots_, &QTableWidget::cellDoubleClicked, this, [this](int row, int) {
         auto* m = selectedModel();
         if (!m || row < 0)
@@ -561,7 +666,7 @@ void MainWindow::buildDocks()
         refreshMaterialSlots();
         markDirty();
     });
-    form->addRow(tr("Lua script"), scriptRow_);
+    scriptForm->addRow(tr("Lua script"), scriptRow_);
 
     // Animated character model (glTF with skeleton) drawn instead of the box.
     characterRow_ = new QWidget(boxPanel_);
@@ -592,10 +697,10 @@ void MainWindow::buildDocks()
     modelYawSpin_->setKeyboardTracking(false);
     animationCombo_ = new QComboBox(boxPanel_);
     animationCombo_->setToolTip(tr("Clip shown in the editor and played when the script does not choose one"));
-    form->addRow(tr("Character model"), characterRow_);
-    form->addRow(tr("Model scale"), modelScaleSpin_);
-    form->addRow(tr("Model yaw"), modelYawSpin_);
-    form->addRow(tr("Animation"), animationCombo_);
+    characterForm->addRow(tr("Character model"), characterRow_);
+    characterForm->addRow(tr("Model scale"), modelScaleSpin_);
+    characterForm->addRow(tr("Model yaw"), modelYawSpin_);
+    characterForm->addRow(tr("Animation"), animationCombo_);
     connect(browseCharacter, &QPushButton::clicked, this, &MainWindow::browseCharacter);
     connect(clearCharacter, &QPushButton::clicked, this, [this] {
         if (auto* e = selectedEntity(); e && !e->modelPath.empty()) {
@@ -636,8 +741,8 @@ void MainWindow::buildDocks()
     scriptParams_->verticalHeader()->hide();
     scriptParams_->setMinimumHeight(200);
     auto* editScript = new QPushButton(tr("Edit script"), boxPanel_);
-    form->addRow(scriptParams_);
-    form->addRow(editScript);
+    scriptForm->addRow(scriptParams_);
+    scriptForm->addRow(editScript);
     connect(editScript, &QPushButton::clicked, this, [this] {
         if (auto* e = selectedEntity(); e && !e->scriptPath.empty())
             openScript(QString::fromStdU16String(e->scriptPath.u16string()));
@@ -800,23 +905,75 @@ void MainWindow::buildDocks()
         markDirty();
     });
 
+    {
+        auto* levelSection = new CollapsibleSection(tr("Level"), boxPanel_);
+        auto* levelLayout = new QVBoxLayout();
+        levelLayout->addWidget(levelPanel);
+        levelSection->setBodyLayout(levelLayout);
+        detailSections_.push_back({levelSection, levelForm, "Level"});
+    }
+
+    // Details: object name and Add button, search, category tabs, then the sections.
     auto* propsHost = new QWidget(this);
     auto* propsLayout = new QVBoxLayout(propsHost);
-    auto* boxTitle = new QLabel(tr("<b>Selected object</b>"), propsHost);
-    auto* levelTitle = new QLabel(tr("<b>Level</b>"), propsHost);
-    propsLayout->addWidget(boxTitle);
-    propsLayout->addWidget(boxPanel_);
-    propsLayout->addSpacing(12);
-    propsLayout->addWidget(levelTitle);
-    propsLayout->addWidget(levelPanel);
-    propsLayout->addStretch(1);
-
-    auto* propsDock = new QDockWidget(tr("Properties"), this);
-    propsDock->setObjectName("properties");
+    propsLayout->setContentsMargins(0, 0, 0, 0);
+    propsLayout->setSpacing(0);
+    auto* header = new QHBoxLayout();
+    header->setContentsMargins(6, 6, 6, 4);
+    detailsIcon_ = new QLabel(propsHost);
+    nameEdit_->setPlaceholderText(tr("Nothing selected"));
+    auto* addComponent = new QToolButton(propsHost);
+    addComponent->setText(tr("Add"));
+    addComponent->setIcon(editorIcon("add"));
+    addComponent->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    addComponent->setPopupMode(QToolButton::InstantPopup);
+    auto* componentMenu = new QMenu(addComponent);
+    componentMenu->addAction(tr("Material..."), this, &MainWindow::browseBoxMaterial);
+    componentMenu->addAction(tr("Lua script..."), this, &MainWindow::browseScript);
+    componentMenu->addAction(tr("Character model..."), this, &MainWindow::browseCharacter);
+    addComponent->setMenu(componentMenu);
+    header->addWidget(detailsIcon_);
+    header->addWidget(nameEdit_, 1);
+    header->addWidget(addComponent);
+    propsLayout->addLayout(header);
+    detailsSearch_ = new QLineEdit(propsHost);
+    detailsSearch_->setPlaceholderText(tr("Search details"));
+    detailsSearch_->setClearButtonEnabled(true);
+    auto* searchRow = new QHBoxLayout();
+    searchRow->setContentsMargins(6, 0, 6, 4);
+    searchRow->addWidget(detailsSearch_);
+    propsLayout->addLayout(searchRow);
+    detailsTabs_ = new QTabBar(propsHost);
+    detailsTabs_->setObjectName("categories");
+    detailsTabs_->setDrawBase(false);
+    detailsTabs_->setExpanding(false);
+    detailsTabs_->setUsesScrollButtons(false);
+    for (const char* c : {"General", "Transform", "Rendering", "Character", "Script", "Level", "All"})
+        detailsTabs_->addTab(tr(c));
+    detailsTabs_->setCurrentIndex(6);
+    auto* tabRow = new QHBoxLayout();
+    tabRow->setContentsMargins(6, 0, 6, 6);
+    tabRow->addWidget(detailsTabs_);
+    tabRow->addStretch(1);
+    propsLayout->addLayout(tabRow);
+    auto* sectionsHost = new QWidget(propsHost);
+    auto* sectionsHostLayout = new QVBoxLayout(sectionsHost);
+    sectionsHostLayout->setContentsMargins(0, 0, 0, 0);
+    sectionsHostLayout->setSpacing(0);
+    sectionsHostLayout->addWidget(boxPanel_);
+    sectionsHostLayout->addWidget(detailSections_.back().section);
+    sectionsHostLayout->addStretch(1);
     auto* scroll = new QScrollArea(this);
-    scroll->setWidget(propsHost);
+    scroll->setWidget(sectionsHost);
     scroll->setWidgetResizable(true);
-    propsDock->setWidget(scroll);
+    scroll->setFrameShape(QFrame::NoFrame);
+    propsLayout->addWidget(scroll, 1);
+    connect(detailsTabs_, &QTabBar::currentChanged, this, &MainWindow::updateDetailsVisibility);
+    connect(detailsSearch_, &QLineEdit::textChanged, this, &MainWindow::updateDetailsVisibility);
+
+    auto* propsDock = new QDockWidget(tr("Details"), this);
+    propsDock->setObjectName("properties");
+    propsDock->setWidget(propsHost);
     addDockWidget(Qt::RightDockWidgetArea, propsDock);
 
     // Asset browser: thumbnails of everything under assets/.
@@ -824,7 +981,17 @@ void MainWindow::buildDocks()
     connect(assets_, &AssetBrowser::assetActivated, this, [this](const QString& path, AssetType type) {
         openAsset(path, static_cast<int>(type));
     });
-    auto* assetsDock = new QDockWidget(tr("Assets"), this);
+    connect(assets_, &AssetBrowser::saveAllRequested, this, &MainWindow::saveAll);
+    connect(assets_, &AssetBrowser::newAssetRequested, this, [this](const QString& kind, const QString&) {
+        if (kind == "material")
+            openMaterialEditor();
+        else if (kind == "script")
+            newScript();
+        else if (kind == "level")
+            newLevel();
+    });
+    assetsDock_ = new QDockWidget(tr("Content Browser"), this);
+    auto* assetsDock = assetsDock_;
     assetsDock->setObjectName("assets");
     assetsDock->setWidget(assets_);
     addDockWidget(Qt::BottomDockWidgetArea, assetsDock);
@@ -860,10 +1027,47 @@ void MainWindow::buildDocks()
     tabifyDockWidget(propsDock, weaponsDock);
     tabifyDockWidget(propsDock, environmentDock);
     propsDock->raise();
-    propsDock->setWindowTitle(tr("Details"));
-    resizeDocks({outlinerDock, propsDock}, {300, 500}, Qt::Vertical);
-    resizeDocks({outlinerDock}, {380}, Qt::Horizontal);
+
+    // Output log: editor messages, Qt warnings and the running game's output.
+    log_ = new QPlainTextEdit(this);
+    log_->setReadOnly(true);
+    log_->setMaximumBlockCount(5000);
+    log_->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
+    auto* logHost = new QWidget(this);
+    auto* logLayout = new QVBoxLayout(logHost);
+    logLayout->setContentsMargins(0, 0, 0, 0);
+    logLayout->setSpacing(0);
+    auto* logBar = new QHBoxLayout();
+    logBar->setContentsMargins(4, 4, 4, 4);
+    auto* logFilter = new QLineEdit(logHost);
+    logFilter->setPlaceholderText(tr("Search log"));
+    logFilter->setClearButtonEnabled(true);
+    auto* clearLog = new QPushButton(tr("Clear"), logHost);
+    logBar->addWidget(logFilter, 1);
+    logBar->addWidget(clearLog);
+    logLayout->addLayout(logBar);
+    logLayout->addWidget(log_, 1);
+    connect(clearLog, &QPushButton::clicked, log_, &QPlainTextEdit::clear);
+    connect(logFilter, &QLineEdit::returnPressed, this, [this, logFilter] {
+        if (!log_->find(logFilter->text())) {
+            log_->moveCursor(QTextCursor::Start);
+            log_->find(logFilter->text());
+        }
+    });
+    logDock_ = new QDockWidget(tr("Output Log"), this);
+    logDock_->setObjectName("outputLog");
+    logDock_->setWidget(logHost);
+    addDockWidget(Qt::BottomDockWidgetArea, logDock_);
+    tabifyDockWidget(assetsDock, logDock_);
+    assetsDock->raise();
+
+    buildModePanel();
+
+    resizeDocks({outlinerDock, propsDock}, {300, 560}, Qt::Vertical);
+    resizeDocks({outlinerDock}, {400}, Qt::Horizontal);
+    resizeDocks({assetsDock}, {270}, Qt::Vertical);
     setCorner(Qt::BottomRightCorner, Qt::RightDockWidgetArea);
+    setCorner(Qt::BottomLeftCorner, Qt::LeftDockWidgetArea);
 }
 
 engine::Box* MainWindow::selectedBox()
@@ -885,6 +1089,7 @@ void MainWindow::select(int index)
 {
     selected_ = (index >= 0 && index < scene_.objectCount()) ? index : -1;
     outliner_->selectObject(selected_);
+    outlinerPanel_->setCounts(scene_.objectCount(), selected_ >= 0 ? 1 : 0);
     dependencies_->showObject(selected_);
     viewport_->setSelected(selected_);
     refreshProperties();
@@ -893,6 +1098,7 @@ void MainWindow::select(int index)
 void MainWindow::refreshOutliner()
 {
     outliner_->rebuild();
+    outlinerPanel_->setCounts(scene_.objectCount(), selected_ >= 0 ? 1 : 0);
     outliner_->selectObject(selected_);
     dependencies_->showObject(selected_);
 }
@@ -951,6 +1157,11 @@ void MainWindow::refreshProperties()
         nameEdit_->clear();
         colorButton_->setStyleSheet(QString());
     }
+    nameEdit_->setEnabled(b || m || e);
+    detailsIcon_->setPixmap(editorIcon(b ? "cube" : m ? "model" : e ? "person" : "select").pixmap(18, 18));
+    updateDetailsVisibility();
+    refreshTransformBox();
+    refreshTexturePanel();
 }
 
 void MainWindow::refreshScriptParams()
@@ -959,7 +1170,7 @@ void MainWindow::refreshScriptParams()
     scriptProps_.clear();
     std::string error;
     if (e && !e->scriptPath.empty() && !engine::readScriptProperties(e->scriptPath, scriptProps_, &error))
-        statusBar()->showMessage(tr("Script error: %1").arg(QString::fromStdString(error)), 8000);
+        notify(tr("Script error: %1").arg(QString::fromStdString(error)), 8000);
 
     scriptParams_->blockSignals(true);
     scriptParams_->setRowCount(static_cast<int>(scriptProps_.size()));
@@ -1098,7 +1309,7 @@ bool MainWindow::placeModel(const QString& path, glm::vec3 point)
 {
     // Parsing the glTF and decoding its textures happens on a worker thread;
     // the model is added to the level when it is ready.
-    statusBar()->showMessage(tr("Loading %1...").arg(QFileInfo(path).fileName()));
+    notify(tr("Loading %1...").arg(QFileInfo(path).fileName()));
     QPointer<MainWindow> self(this);
     engine::JobSystem::global().run([self, path, point] {
         auto model = std::make_shared<engine::Model>();
@@ -1130,7 +1341,7 @@ void MainWindow::insertModel(const QString& path, engine::Model model, glm::vec3
     refreshOutliner();
     select(scene_.firstEntity() - 1);
     markDirty();
-    statusBar()->showMessage(tr("Placed %1").arg(QFileInfo(path).fileName()), 4000);
+    notify(tr("Placed %1").arg(QFileInfo(path).fileName()), 4000);
 }
 
 bool MainWindow::assignMaterial(const QString& path, int object)
@@ -1158,7 +1369,7 @@ bool MainWindow::assignMaterial(const QString& path, int object)
     }
     select(object);
     markDirty();
-    statusBar()->showMessage(tr("Material %1 assigned to %2").arg(QFileInfo(path).completeBaseName(),
+    notify(tr("Material %1 assigned to %2").arg(QFileInfo(path).completeBaseName(),
                                                                   QString::fromStdString(engine::objectName(scene_, object))), 5000);
     return true;
 }
@@ -1179,7 +1390,7 @@ void MainWindow::openAsset(const QString& path, int type)
         if (confirmDiscard())
             openFile(path);
         break;
-    default: statusBar()->showMessage(path, 5000); break;
+    default: notify(path, 5000); break;
     }
 }
 
@@ -1385,7 +1596,7 @@ void MainWindow::openLevel()
 bool MainWindow::openFile(const QString& path)
 {
     // Models, materials and textures of the level load on a worker thread.
-    statusBar()->showMessage(tr("Opening %1...").arg(QFileInfo(path).fileName()));
+    notify(tr("Opening %1...").arg(QFileInfo(path).fileName()));
     setEnabled(false);
     QPointer<MainWindow> self(this);
     engine::JobSystem::global().run([self, path] {
@@ -1419,7 +1630,7 @@ void MainWindow::applyLoadedLevel(const QString& path, engine::Scene loaded)
     select(-1);
     resetHistory();
     updateTitle();
-    statusBar()->showMessage(tr("Opened %1").arg(QFileInfo(path).fileName()), 4000);
+    notify(tr("Opened %1").arg(QFileInfo(path).fileName()), 4000);
     emit levelOpened();
 }
 
@@ -1455,7 +1666,7 @@ bool MainWindow::saveTo(const QString& path)
     currentFile_ = path;
     dirty_ = false;
     updateTitle();
-    statusBar()->showMessage(tr("Saved %1").arg(path), 4000);
+    notify(tr("Saved %1").arg(path), 4000);
     return true;
 }
 
@@ -1485,9 +1696,36 @@ void MainWindow::playLevel()
     QStringList args{snapshot};
     if (customShaders_)
         args << "--shaders" << shaderRoot(); // the game runs the shaders edited here
-    if (!QFileInfo::exists(exe) || !QProcess::startDetached(exe, args)) {
+    if (!QFileInfo::exists(exe)) {
         QMessageBox::warning(this, tr("Play"), tr("Could not start %1").arg(exe));
+        return;
     }
+    if (game_ && game_->state() != QProcess::NotRunning)
+        stopGame();
+    // Runs as a child process: its output goes to the Output Log, Pause and Stop control it.
+    game_ = new QProcess(this);
+    game_->setProcessChannelMode(QProcess::MergedChannels);
+    connect(game_, &QProcess::readyReadStandardOutput, this, [this, process = game_] {
+        const QString text = QString::fromLocal8Bit(process->readAllStandardOutput());
+        for (const QString& line : text.split('\n', Qt::SkipEmptyParts))
+            appendLog(QStringLiteral("[game] ") + line.trimmed(), 0);
+    });
+    connect(game_, &QProcess::finished, this, [this, process = game_](int code) {
+        appendLog(tr("[game] exited with code %1").arg(code), code == 0 ? 0 : 1);
+        process->deleteLater();
+        if (game_ == process)
+            game_ = nullptr;
+        gamePaused_ = false;
+        updatePlayButtons();
+    });
+    connect(game_, &QProcess::errorOccurred, this, [this](QProcess::ProcessError error) {
+        if (error == QProcess::FailedToStart)
+            appendLog(tr("[game] could not start"), 2);
+    });
+    appendLog(tr("Play: %1 %2").arg(QDir::toNativeSeparators(exe), args.join(' ')), 0);
+    game_->start(exe, args);
+    gamePaused_ = false;
+    updatePlayButtons();
 }
 
 void MainWindow::closeEvent(QCloseEvent* e)
@@ -1529,7 +1767,7 @@ ScriptEditor* MainWindow::openScript(const QString& path)
         // Parameters the script declares may have changed.
         if (auto* e = selectedEntity(); e && QFileInfo(QString::fromStdU16String(e->scriptPath.u16string())).absoluteFilePath() == saved)
             refreshScriptParams();
-        statusBar()->showMessage(tr("Saved %1").arg(saved), 4000);
+        notify(tr("Saved %1").arg(saved), 4000);
     });
     se->editor()->setFocus();
     return se;
@@ -1566,7 +1804,7 @@ void MainWindow::applyShaders()
     if (shaderEditor_)
         shaderEditor_->showResult(ok, error);
     if (ok)
-        statusBar()->showMessage(tr("Shaders reloaded from %1").arg(shaderRoot()), 4000);
+        notify(tr("Shaders reloaded from %1").arg(shaderRoot()), 4000);
     else if (!shaderEditor_)
         QMessageBox::warning(this, tr("Shaders"), error);
 }
@@ -1784,7 +2022,7 @@ void MainWindow::refreshMaterialSlots()
 {
     const engine::Model* m = selectedModel();
     const std::vector<std::string> slotNames = m ? m->materialSlots() : std::vector<std::string>{};
-    materialSlots_->setVisible(m != nullptr);
+    materialSlots_->setEnabled(m != nullptr); // the Details panel hides disabled rows
     materialSlots_->setRowCount(static_cast<int>(slotNames.size()));
     for (int row = 0; row < static_cast<int>(slotNames.size()); ++row) {
         const std::string& slot = slotNames[static_cast<std::size_t>(row)];
@@ -1797,5 +2035,706 @@ void MainWindow::refreshMaterialSlots()
         else
             value->setToolTip(QString::fromStdU16String(it->second.u16string()));
         materialSlots_->setItem(row, 1, value);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Status bar: content drawer, output log, console; messages on the right.
+
+void MainWindow::buildStatusBar()
+{
+    auto* bar = statusBar();
+    bar->setSizeGripEnabled(false);
+    auto toggleButton = [bar](const QString& icon, const QString& text, QDockWidget* dock) {
+        auto* b = new QToolButton(bar);
+        b->setIcon(editorIcon(icon));
+        b->setText(text);
+        b->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+        b->setAutoRaise(true);
+        QObject::connect(b, &QToolButton::clicked, dock, [dock] {
+            const bool show = !dock->isVisible() || dock->visibleRegion().isEmpty();
+            dock->setVisible(true);
+            if (show)
+                dock->raise();
+            else
+                dock->hide();
+        });
+        return b;
+    };
+    auto* host = new QWidget(bar);
+    auto* layout = new QHBoxLayout(host);
+    layout->setContentsMargins(2, 0, 2, 0);
+    layout->setSpacing(2);
+    layout->addWidget(toggleButton("content", tr("Content Drawer"), assetsDock_));
+    layout->addWidget(toggleButton("log", tr("Output Log"), logDock_));
+    auto* cmdLabel = new QLabel(tr("Cmd"), host);
+    cmdLabel->setObjectName("dim");
+    auto* cmd = new QLineEdit(host);
+    cmd->setPlaceholderText(tr("Enter console command (help)"));
+    cmd->setMinimumWidth(260);
+    cmd->setMaximumWidth(420);
+    auto* completer = new QCompleter(QStringList{"help", "play", "stop", "pause", "save", "view perspective", "view top", "view front",
+                                                 "view side", "view quad", "shading lit", "shading unlit", "shading lighting",
+                                                 "shading wireframe", "quality 0", "quality 1", "quality 2", "quality 3", "r.ssao 0",
+                                                 "r.ssao 1", "r.bloom 0", "r.bloom 1", "r.fxaa 0", "r.fxaa 1", "select ", "focus",
+                                                 "tool select", "tool move", "tool rotate", "tool scale", "camspeed ", "stat",
+                                                 "reloadshaders", "mode select", "mode place", "mode model", "clear"},
+                                     cmd);
+    completer->setCaseSensitivity(Qt::CaseInsensitive);
+    cmd->setCompleter(completer);
+    layout->addSpacing(8);
+    layout->addWidget(cmdLabel);
+    layout->addWidget(cmd);
+    statusMessage_ = new QLabel(bar);
+    statusMessage_->setObjectName("dim");
+    bar->addPermanentWidget(host);
+    bar->addPermanentWidget(statusMessage_, 1);
+    statusMessage_->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    connect(cmd, &QLineEdit::returnPressed, this, [this, cmd] {
+        const QString text = cmd->text().trimmed();
+        if (text.isEmpty())
+            return;
+        commandHistory_.removeAll(text);
+        commandHistory_ << text;
+        cmd->clear();
+        runCommand(text);
+    });
+    // Up / Down walk through the command history.
+    auto* up = new QShortcut(QKeySequence(Qt::Key_Up), cmd, nullptr, nullptr, Qt::WidgetShortcut);
+    auto* down = new QShortcut(QKeySequence(Qt::Key_Down), cmd, nullptr, nullptr, Qt::WidgetShortcut);
+    auto step = [this, cmd](int dir) {
+        if (commandHistory_.isEmpty())
+            return;
+        int i = static_cast<int>(commandHistory_.indexOf(cmd->text()));
+        i = i < 0 ? (dir < 0 ? static_cast<int>(commandHistory_.size()) - 1 : 0)
+                  : std::clamp(i + dir, 0, static_cast<int>(commandHistory_.size()) - 1);
+        cmd->setText(commandHistory_[i]);
+    };
+    connect(up, &QShortcut::activated, this, [step] { step(-1); });
+    connect(down, &QShortcut::activated, this, [step] { step(1); });
+}
+
+void MainWindow::notify(const QString& message, int timeoutMs)
+{
+    if (statusMessage_) {
+        statusMessage_->setText(message);
+        if (timeoutMs > 0)
+            QTimer::singleShot(timeoutMs, statusMessage_, [label = statusMessage_, message] {
+                if (label->text() == message)
+                    label->clear();
+            });
+    }
+    if (!message.isEmpty())
+        appendLog(message, 0);
+}
+
+void MainWindow::appendLog(const QString& line, int level)
+{
+    if (!log_)
+        return;
+    const QString color = level >= 2 ? "#ff6b5e" : level == 1 ? "#e8c35a" : "#c8cbd0";
+    log_->appendHtml(QStringLiteral("<span style='color:#6c6f75'>%1</span> <span style='color:%2'>%3</span>")
+                         .arg(QTime::currentTime().toString("HH:mm:ss"), color, line.toHtmlEscaped()));
+}
+
+void MainWindow::runCommand(const QString& command)
+{
+    appendLog(QStringLiteral("> ") + command, 0);
+    const QStringList words = command.split(' ', Qt::SkipEmptyParts);
+    const QString name = words.value(0).toLower();
+    const QString arg = words.value(1).toLower();
+    auto boolArg = [&] { return arg == "1" || arg == "on" || arg == "true"; };
+    auto setToggle = [&](bool engine::RenderQuality::*member, const char* key) {
+        engine::RenderQuality q = viewport_->quality();
+        q.*member = boolArg();
+        QSettings().setValue(key, q.*member);
+        setRenderQuality(q);
+    };
+    if (name == "help") {
+        appendLog(tr("Commands: play, stop, pause, save, view perspective|top|front|side|quad, "
+                     "shading lit|unlit|lighting|wireframe, quality 0-3, r.ssao|r.bloom|r.fxaa 0|1, select NAME, focus, "
+                     "tool select|move|rotate|scale, camspeed M/S, mode select|place|model, stat, reloadshaders, clear"),
+                  0);
+    } else if (name == "play") {
+        playLevel();
+    } else if (name == "stop") {
+        stopGame();
+    } else if (name == "pause") {
+        pauseGame();
+    } else if (name == "save") {
+        saveAll();
+    } else if (name == "clear") {
+        log_->clear();
+    } else if (name == "view") {
+        const QStringList views{"perspective", "top", "front", "side", "quad"};
+        const int i = static_cast<int>(views.indexOf(arg));
+        if (i < 0)
+            appendLog(tr("view: perspective, top, front, side or quad"), 1);
+        else
+            viewportPanel_->setView(i);
+    } else if (name == "shading") {
+        const QStringList modes{"lit", "unlit", "lighting", "wireframe"};
+        const int i = static_cast<int>(modes.indexOf(arg));
+        if (i < 0)
+            appendLog(tr("shading: lit, unlit, lighting or wireframe"), 1);
+        else
+            viewportPanel_->setShading(i);
+    } else if (name == "quality") {
+        bool ok = false;
+        const int level = arg.toInt(&ok);
+        if (!ok || level < 0 || level > 3) {
+            appendLog(tr("quality: 0 low, 1 medium, 2 high, 3 ultra"), 1);
+        } else {
+            QSettings().setValue("render/quality", level);
+            setRenderQuality(engine::RenderQuality::preset(level));
+        }
+    } else if (name == "r.ssao") {
+        setToggle(&engine::RenderQuality::ssao, "render/ssao");
+    } else if (name == "r.bloom") {
+        setToggle(&engine::RenderQuality::bloom, "render/bloom");
+    } else if (name == "r.fxaa") {
+        setToggle(&engine::RenderQuality::fxaa, "render/fxaa");
+    } else if (name == "select") {
+        const std::string wanted = command.section(' ', 1).trimmed().toStdString();
+        int found = -1;
+        for (int i = 0; i < scene_.objectCount() && found < 0; ++i)
+            if (engine::objectName(scene_, i) == wanted)
+                found = i;
+        if (found < 0)
+            appendLog(tr("No object named %1").arg(QString::fromStdString(wanted)), 1);
+        else
+            select(found);
+    } else if (name == "focus") {
+        viewport_->focusSelected();
+    } else if (name == "tool") {
+        const QStringList tools{"select", "move", "rotate", "scale"};
+        const int i = static_cast<int>(tools.indexOf(arg));
+        if (i >= 0)
+            viewport_->setTool(static_cast<Viewport::Tool>(i));
+    } else if (name == "camspeed") {
+        bool ok = false;
+        const float v = arg.toFloat(&ok);
+        if (ok && v > 0.0f)
+            viewport_->setCameraSpeed(std::clamp(v, 0.5f, 200.0f));
+    } else if (name == "mode") {
+        const QStringList modes{"select", "place", "model"};
+        const int i = static_cast<int>(modes.indexOf(arg));
+        if (i >= 0)
+            setEditorMode(i);
+    } else if (name == "stat") {
+        appendLog(tr("%1 boxes, %2 models, %3 entities, %4 groups; culled last frame: %5")
+                      .arg(scene_.boxes.size())
+                      .arg(scene_.models.size())
+                      .arg(scene_.entities.size())
+                      .arg(scene_.groups.size())
+                      .arg(viewport_->culledObjects()),
+                  0);
+    } else if (name == "reloadshaders") {
+        applyShaders();
+    } else {
+        appendLog(tr("Unknown command \"%1\" (type help)").arg(name), 1);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Play / Pause / Stop of the game process.
+
+void MainWindow::updatePlayButtons()
+{
+    const bool running = game_ && game_->state() != QProcess::NotRunning;
+    if (pauseAction_) {
+        pauseAction_->setEnabled(running);
+        pauseAction_->setChecked(running && gamePaused_);
+        stopAction_->setEnabled(running);
+    }
+}
+
+void MainWindow::pauseGame()
+{
+    if (!game_ || game_->state() != QProcess::Running) {
+        updatePlayButtons();
+        return;
+    }
+    const bool pause = !gamePaused_;
+#ifdef Q_OS_WIN
+    // Suspends every thread of the game.
+    const DWORD pid = static_cast<DWORD>(game_->processId());
+    HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+    if (snapshot != INVALID_HANDLE_VALUE) {
+        THREADENTRY32 entry{};
+        entry.dwSize = sizeof(entry);
+        for (BOOL ok = Thread32First(snapshot, &entry); ok; ok = Thread32Next(snapshot, &entry)) {
+            if (entry.th32OwnerProcessID != pid)
+                continue;
+            if (HANDLE thread = OpenThread(THREAD_SUSPEND_RESUME, FALSE, entry.th32ThreadID)) {
+                if (pause)
+                    SuspendThread(thread);
+                else
+                    ResumeThread(thread);
+                CloseHandle(thread);
+            }
+        }
+        CloseHandle(snapshot);
+    }
+#else
+    ::kill(static_cast<pid_t>(game_->processId()), pause ? SIGSTOP : SIGCONT);
+#endif
+    gamePaused_ = pause;
+    notify(pause ? tr("Game paused") : tr("Game resumed"), 3000);
+    updatePlayButtons();
+}
+
+void MainWindow::stopGame()
+{
+    if (!game_ || game_->state() == QProcess::NotRunning)
+        return;
+    if (gamePaused_)
+        pauseGame(); // a stopped process does not handle the terminate request
+    game_->terminate();
+    if (!game_->waitForFinished(1500))
+        game_->kill();
+}
+
+void MainWindow::saveAll()
+{
+    QString error;
+    if (!saveAllScripts())
+        return;
+    if (!weapons_->saveModified(&error))
+        appendLog(error, 2);
+    if (materialEditor_ && !materialEditor_->saveModified(&error))
+        appendLog(error, 2);
+    save();
+}
+
+// ---------------------------------------------------------------------------
+// Details: category tabs and search.
+
+void MainWindow::updateDetailsVisibility()
+{
+    if (!detailsTabs_)
+        return;
+    const engine::Box* b = selectedBox();
+    const engine::Model* m = selectedModel();
+    const engine::Entity* e = selectedEntity();
+    const bool any = b || m || e;
+    const QString category = QStringList{"General", "Transform", "Rendering", "Character", "Script", "Level", "All"}.value(detailsTabs_->currentIndex());
+    const QStringList words = detailsSearch_->text().toLower().split(' ', Qt::SkipEmptyParts);
+    for (const DetailSection& d : detailSections_) {
+        bool relevant = true;
+        if (d.category == "General" || d.category == "Transform")
+            relevant = any;
+        else if (d.category == "Rendering")
+            relevant = b || m || e;
+        else if (d.category == "Character" || d.category == "Script")
+            relevant = e != nullptr;
+        bool shown = relevant && (category == "All" || category == d.category);
+        // Search: rows whose label contains every word (a matching section title shows all rows).
+        const bool titleMatch = std::all_of(words.begin(), words.end(), [&](const QString& w) { return d.section->title().toLower().contains(w); });
+        int visibleRows = 0;
+        for (int row = 0; row < d.form->rowCount(); ++row) {
+            QString label;
+            if (QLayoutItem* item = d.form->itemAt(row, QFormLayout::LabelRole); item && item->widget())
+                if (auto* l = qobject_cast<QLabel*>(item->widget()))
+                    label = l->text().toLower();
+            // Fields that do not apply to the selection (disabled) are hidden.
+            QLayoutItem* field = d.form->itemAt(row, QFormLayout::FieldRole);
+            if (!field)
+                field = d.form->itemAt(row, QFormLayout::SpanningRole);
+            const bool applies = !any || !field || !field->widget() || field->widget()->isEnabled();
+            const bool match = applies && (words.isEmpty() || titleMatch ||
+                                           std::all_of(words.begin(), words.end(), [&](const QString& w) { return label.contains(w); }));
+            d.form->setRowVisible(row, match);
+            visibleRows += match ? 1 : 0;
+        }
+        if (!words.isEmpty() && visibleRows == 0)
+            shown = false;
+        d.section->setVisible(shown);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Floating transform box in the viewport.
+
+void MainWindow::refreshTransformBox()
+{
+    TransformBox* box = viewportPanel_->transformBox();
+    if (selected_ < 0) {
+        box->hide();
+        return;
+    }
+    if (auto* b = selectedBox())
+        box->setValues(b->position, b->rotation, b->size, tr("Size"), true, true);
+    else if (auto* m = selectedModel())
+        box->setValues(m->position, m->rotation, glm::vec3(m->scale), tr("Scale"), true, true);
+    else if (auto* e = selectedEntity())
+        box->setValues(e->position, glm::vec3(0.0f, e->yawDegrees, 0.0f), e->size, tr("Size"), true, true);
+    box->show();
+    box->adjustSize();
+    box->raise();
+}
+
+void MainWindow::applyTransformBox(int field, glm::vec3 v, bool delta)
+{
+    if (selected_ < 0)
+        return;
+    switch (field) {
+    case TransformBox::Location: {
+        const glm::vec3 move = delta ? v : v - engine::objectPosition(scene_, selected_);
+        for (int child : engine::descendantObjects(scene_, engine::objectName(scene_, selected_)))
+            engine::translateObject(scene_, child, move);
+        engine::translateObject(scene_, selected_, move);
+        break;
+    }
+    case TransformBox::Rotation:
+        if (auto* b = selectedBox())
+            b->rotation = delta ? b->rotation + v : v;
+        else if (auto* m = selectedModel())
+            m->rotation = delta ? m->rotation + v : v;
+        else if (auto* e = selectedEntity())
+            e->yawDegrees = delta ? e->yawDegrees + v.y : v.y;
+        break;
+    case TransformBox::Scale:
+        if (auto* b = selectedBox())
+            b->size = glm::max(delta ? b->size * v : v, glm::vec3(0.01f));
+        else if (auto* m = selectedModel()) {
+            // Models scale uniformly: take the component that changed.
+            const glm::vec3 cur(m->scale);
+            float s = v.x;
+            for (int i = 0; i < 3; ++i)
+                if (delta ? v[i] != 1.0f : v[i] != cur[i])
+                    s = v[i];
+            m->scale = std::max(0.01f, delta ? m->scale * s : s);
+        } else if (auto* e = selectedEntity())
+            e->size = glm::max(delta ? e->size * v : v, glm::vec3(0.05f));
+        break;
+    default: break;
+    }
+    refreshProperties();
+    markDirty();
+}
+
+// ---------------------------------------------------------------------------
+// Left tool panel: Select, Place and Model modes.
+
+void MainWindow::setEditorMode(int mode)
+{
+    if (!modePages_)
+        return;
+    modePages_->setCurrentIndex(mode);
+    if (mode >= 0 && mode < static_cast<int>(modeActions_.size()))
+        modeActions_[static_cast<std::size_t>(mode)]->setChecked(true);
+    modesDock_->setWindowTitle(QStringList{tr("Select"), tr("Place"), tr("Model")}.value(mode));
+    modesDock_->show();
+    if (mode == 2)
+        refreshMaterialList();
+}
+
+void MainWindow::buildModePanel()
+{
+    modePages_ = new QStackedWidget(this);
+    auto toolButton = [](const QString& icon, const QString& text, QWidget* parent) {
+        auto* b = new QPushButton(icon.isEmpty() ? QIcon() : editorIcon(icon), text, parent);
+        b->setObjectName("tool");
+        b->setMinimumHeight(26);
+        return b;
+    };
+
+    // Select: what is selected and the common actions.
+    {
+        auto* page = new QWidget(modePages_);
+        auto* layout = new QVBoxLayout(page);
+        selectionInfo_ = new QLabel(page);
+        selectionInfo_->setWordWrap(true);
+        layout->addWidget(selectionInfo_);
+        auto* grid = new QGridLayout();
+        auto* focus = toolButton("focus", tr("Focus"), page);
+        auto* floor = toolButton("floor", tr("To floor"), page);
+        auto* dup = toolButton("duplicate", tr("Duplicate"), page);
+        auto* del = toolButton("delete", tr("Delete"), page);
+        grid->addWidget(focus, 0, 0);
+        grid->addWidget(floor, 0, 1);
+        grid->addWidget(dup, 1, 0);
+        grid->addWidget(del, 1, 1);
+        layout->addLayout(grid);
+        auto* help = new QLabel(tr("<p><b>Mouse</b><br>Left click: select<br>Right drag + WASD/QE: fly<br>Wheel while flying: speed</p>"
+                                   "<p><b>Keys</b><br>Q W E R: select, move, rotate, scale<br>F: focus · End: to floor<br>"
+                                   "Ctrl+1..5: views · Alt+1..4: shading<br>Shift while dragging: no snap</p>"),
+                               page);
+        help->setObjectName("dim");
+        help->setWordWrap(true);
+        layout->addWidget(help);
+        layout->addStretch(1);
+        connect(focus, &QPushButton::clicked, this, [this] { viewport_->focusSelected(); });
+        connect(floor, &QPushButton::clicked, this, &MainWindow::dropToFloor);
+        connect(dup, &QPushButton::clicked, this, &MainWindow::duplicateBox);
+        connect(del, &QPushButton::clicked, this, &MainWindow::deleteBox);
+        modePages_->addWidget(page);
+    }
+
+    // Place: things to add to the level.
+    {
+        auto* page = new QWidget(modePages_);
+        auto* layout = new QVBoxLayout(page);
+        auto* box = toolButton("cube", tr("Box"), page);
+        auto* enemy = toolButton("person", tr("Enemy (random human)"), page);
+        auto* entity = toolButton("select", tr("Empty entity"), page);
+        auto* model = toolButton("model", tr("glTF model..."), page);
+        for (QPushButton* b : {box, enemy, entity, model})
+            layout->addWidget(b);
+        auto* hint = new QLabel(tr("Or drag a model from the Content Browser into the view: it lands where you drop it."), page);
+        hint->setObjectName("dim");
+        hint->setWordWrap(true);
+        layout->addWidget(hint);
+        layout->addStretch(1);
+        connect(box, &QPushButton::clicked, this, &MainWindow::addBox);
+        connect(enemy, &QPushButton::clicked, this, [this] { addEntity("enemy"); });
+        connect(entity, &QPushButton::clicked, this, [this] { addEntity("empty"); });
+        connect(model, &QPushButton::clicked, this, &MainWindow::importModel);
+        modePages_->addWidget(page);
+    }
+
+    // Model: mesh tools, texture placement and the active material.
+    {
+        auto* page = new QWidget(modePages_);
+        auto* layout = new QVBoxLayout(page);
+        layout->setContentsMargins(0, 0, 0, 0);
+        layout->setSpacing(0);
+
+        auto* meshSection = new CollapsibleSection(tr("Model"), page);
+        auto* meshGrid = new QGridLayout();
+        meshGrid->setSpacing(3);
+        const char* meshTools[] = {"Delete", "Detach", "Duplicate", "Collapse", "Offset", "Invert", "Transform Texture", "Inset", "Cut",
+                                   "Clean", "Extract", "Merge Faces", "Extrude", "Recalculate Normals", "Edit Pivot", "PushPull",
+                                   "Outset", "Bevel"};
+        int index = 0;
+        for (const char* t : meshTools) {
+            auto* b = toolButton(QString(), tr(t), page);
+            const QString name = QString::fromLatin1(t);
+            if (name == "Delete") {
+                b->setIcon(editorIcon("delete"));
+                connect(b, &QPushButton::clicked, this, &MainWindow::deleteBox);
+            } else if (name == "Duplicate") {
+                b->setIcon(editorIcon("duplicate"));
+                connect(b, &QPushButton::clicked, this, &MainWindow::duplicateBox);
+            } else if (name == "Transform Texture") {
+                connect(b, &QPushButton::clicked, this, [this] {
+                    if (texturePanel_)
+                        texturePanel_->setFocus();
+                    if (uvSpins_[0])
+                        uvSpins_[0]->setFocus();
+                });
+            } else {
+                b->setEnabled(false);
+                b->setToolTip(tr("%1 works on editable meshes (face / edge / vertex selection), which come next.").arg(tr(t)));
+            }
+            meshGrid->addWidget(b, index / 2, index % 2);
+            ++index;
+        }
+        meshSection->setBodyLayout(meshGrid);
+        layout->addWidget(meshSection);
+
+        // Texture placement on boxes (world-aligned mapping + scale / shift / rotation).
+        auto* textureSection = new CollapsibleSection(tr("Modify Texture"), page);
+        texturePanel_ = textureSection;
+        auto* textureLayout = new QVBoxLayout();
+        auto* textureGrid = new QGridLayout();
+        textureGrid->setSpacing(3);
+        struct TexTool {
+            const char* name;
+            const char* tip;
+            std::function<void(engine::Box&)> edit;
+        };
+        auto maxTiling = [](const engine::Box& b) { return b.material ? std::max(b.material->tiling.x, b.material->tiling.y) : 1.0f; };
+        const std::vector<TexTool> texTools = {
+            {"Align", "Back to the world grid: no shift, no rotation", [](engine::Box& b) { b.uvOffset = glm::vec2(0.0f); b.uvRotation = 0.0f; }},
+            {"Scale", "Texture twice as dense (Shift+click: half)",
+             [](engine::Box& b) { b.uvScale *= (QApplication::keyboardModifiers() & Qt::ShiftModifier) ? 0.5f : 2.0f; }},
+            {"Shift", "Move by a quarter tile along U (Shift+click: along V)",
+             [](engine::Box& b) {
+                 const int axis = (QApplication::keyboardModifiers() & Qt::ShiftModifier) ? 1 : 0;
+                 b.uvOffset[axis] = std::fmod(b.uvOffset[axis] + 0.25f, 1.0f);
+             }},
+            {"Rotate", "Rotate the texture by 90°", [](engine::Box& b) { b.uvRotation = std::fmod(b.uvRotation + 90.0f, 360.0f); }},
+            {"Fit", "One tile across the largest face of the box",
+             [maxTiling](engine::Box& b) {
+                 const float extent = std::max({b.size.x, b.size.y, b.size.z});
+                 b.uvScale = glm::vec2(1.0f / std::max(0.01f, extent * maxTiling(b)));
+                 b.uvOffset = glm::vec2(0.0f);
+             }},
+            {"Justify", "Start the texture at the box's lower corner",
+             [maxTiling](engine::Box& b) {
+                 const glm::vec3 lo = b.position - b.size * 0.5f;
+                 const glm::vec2 t = b.uvScale * maxTiling(b);
+                 b.uvOffset = glm::vec2(-std::fmod(lo.x * t.x, 1.0f), std::fmod(lo.y * t.y, 1.0f));
+             }},
+            {"Treat as One", "", nullptr},
+            {"Hotspot", "", nullptr},
+        };
+        index = 0;
+        for (const TexTool& t : texTools) {
+            auto* b = toolButton(QString(), tr(t.name), page);
+            if (t.edit) {
+                b->setToolTip(tr(t.tip));
+                connect(b, &QPushButton::clicked, this, [this, edit = t.edit] { editBoxUv(edit); });
+            } else {
+                b->setEnabled(false);
+                b->setToolTip(tr("Needs editable meshes (comes with mesh modelling)"));
+            }
+            textureGrid->addWidget(b, index / 2, index % 2);
+            ++index;
+        }
+        textureLayout->addLayout(textureGrid);
+        auto* uvForm = new QFormLayout();
+        const char* uvNames[5] = {"Scale U", "Scale V", "Shift U", "Shift V", "Rotation"};
+        for (int i = 0; i < 5; ++i) {
+            auto* spin = new QDoubleSpinBox(page);
+            spin->setDecimals(3);
+            spin->setKeyboardTracking(false);
+            if (i < 2) {
+                spin->setRange(0.01, 100.0);
+                spin->setSingleStep(0.1);
+            } else if (i < 4) {
+                spin->setRange(-100.0, 100.0);
+                spin->setSingleStep(0.05);
+            } else {
+                spin->setRange(-360.0, 360.0);
+                spin->setSingleStep(15.0);
+                spin->setSuffix(QStringLiteral(" °"));
+            }
+            uvSpins_[i] = spin;
+            uvForm->addRow(tr(uvNames[i]), spin);
+            connect(spin, &QDoubleSpinBox::valueChanged, this, [this, i](double v) {
+                editBoxUv([i, v](engine::Box& b) {
+                    const float f = static_cast<float>(v);
+                    if (i < 2)
+                        b.uvScale[i] = f;
+                    else if (i < 4)
+                        b.uvOffset[i - 2] = f;
+                    else
+                        b.uvRotation = f;
+                });
+            });
+        }
+        textureLayout->addLayout(uvForm);
+        textureSection->setBodyLayout(textureLayout);
+        layout->addWidget(textureSection);
+
+        // Active material: what Apply Material puts on the selection.
+        auto* materialSection = new CollapsibleSection(tr("Active Material"), page);
+        auto* materialLayout = new QVBoxLayout();
+        activeMaterial_ = new QComboBox(page);
+        activeMaterial_->setIconSize(QSize(32, 32));
+        activeMaterial_->setToolTip(tr("Materials under assets/materials"));
+        auto* materialButtons = new QHBoxLayout();
+        auto* apply = new QPushButton(tr("Apply Material"), page);
+        apply->setObjectName("accent");
+        auto* edit = new QPushButton(tr("Edit"), page);
+        materialButtons->addWidget(apply, 1);
+        materialButtons->addWidget(edit);
+        materialLayout->addWidget(activeMaterial_);
+        materialLayout->addLayout(materialButtons);
+        materialSection->setBodyLayout(materialLayout);
+        layout->addWidget(materialSection);
+        layout->addStretch(1);
+        connect(apply, &QPushButton::clicked, this, [this] {
+            const QString path = activeMaterial_->currentData().toString();
+            if (path.isEmpty() || selected_ < 0) {
+                notify(tr("Select a box or a model, then Apply Material."), 4000);
+                return;
+            }
+            if (!assignMaterial(path, selected_))
+                notify(tr("Materials go on boxes and models."), 4000);
+        });
+        connect(edit, &QPushButton::clicked, this, [this] {
+            const QString path = activeMaterial_->currentData().toString();
+            if (!path.isEmpty())
+                openMaterialEditor(path);
+        });
+        // Picking a material in the Content Browser makes it the active one.
+        connect(assets_, &AssetBrowser::assetSelected, this, [this](const QString& path, AssetType type) {
+            if (type != AssetType::Material)
+                return;
+            if (activeMaterial_->findData(path) < 0)
+                refreshMaterialList();
+            activeMaterial_->setCurrentIndex(activeMaterial_->findData(path));
+        });
+
+        auto* scroll = new QScrollArea(modePages_);
+        scroll->setWidget(page);
+        scroll->setWidgetResizable(true);
+        scroll->setFrameShape(QFrame::NoFrame);
+        modePages_->addWidget(scroll);
+    }
+
+    modesDock_ = new QDockWidget(tr("Model"), this);
+    modesDock_->setObjectName("modes");
+    modesDock_->setWidget(modePages_);
+    modesDock_->setMinimumWidth(250);
+    addDockWidget(Qt::LeftDockWidgetArea, modesDock_);
+    resizeDocks({modesDock_}, {270}, Qt::Horizontal);
+    setEditorMode(2);
+}
+
+void MainWindow::refreshMaterialList()
+{
+    if (!activeMaterial_)
+        return;
+    const QString current = activeMaterial_->currentData().toString();
+    activeMaterial_->blockSignals(true);
+    activeMaterial_->clear();
+    QDirIterator it(assetPath("materials"), {"*.material"}, QDir::Files, QDirIterator::Subdirectories);
+    QStringList files;
+    while (it.hasNext())
+        files << it.next();
+    files.sort(Qt::CaseInsensitive);
+    for (const QString& f : files) {
+        QIcon icon = editorIcon("content");
+        // Same thumbnails as the Content Browser when they are cached.
+        if (QIcon thumb = assets_->iconFor(f); !thumb.isNull())
+            icon = thumb;
+        activeMaterial_->addItem(icon, QFileInfo(f).completeBaseName(), f);
+    }
+    const int index = activeMaterial_->findData(current);
+    activeMaterial_->setCurrentIndex(index >= 0 ? index : 0);
+    activeMaterial_->blockSignals(false);
+}
+
+void MainWindow::editBoxUv(const std::function<void(engine::Box&)>& edit)
+{
+    engine::Box* b = selectedBox();
+    if (!b) {
+        notify(tr("Texture tools work on boxes: select one."), 4000);
+        return;
+    }
+    const glm::vec2 scale = b->uvScale, offset = b->uvOffset;
+    const float rotation = b->uvRotation;
+    edit(*b);
+    b->uvScale = glm::max(b->uvScale, glm::vec2(0.001f));
+    if (b->uvScale == scale && b->uvOffset == offset && b->uvRotation == rotation)
+        return;
+    refreshTexturePanel();
+    markDirty();
+}
+
+void MainWindow::refreshTexturePanel()
+{
+    if (selectionInfo_) {
+        if (selected_ < 0)
+            selectionInfo_->setText(tr("<b>Nothing selected</b><br>Click an object in the view or the Outliner."));
+        else
+            selectionInfo_->setText(tr("<b>%1</b><br>%2").arg(QString::fromStdString(engine::objectName(scene_, selected_)).toHtmlEscaped(),
+                                                             kindLabel_->text().toHtmlEscaped()));
+    }
+    if (!uvSpins_[0])
+        return;
+    const engine::Box* b = selectedBox();
+    const float values[5] = {b ? b->uvScale.x : 1.0f, b ? b->uvScale.y : 1.0f, b ? b->uvOffset.x : 0.0f, b ? b->uvOffset.y : 0.0f,
+                             b ? b->uvRotation : 0.0f};
+    for (int i = 0; i < 5; ++i) {
+        uvSpins_[i]->blockSignals(true);
+        uvSpins_[i]->setValue(values[i]);
+        uvSpins_[i]->setEnabled(b != nullptr);
+        uvSpins_[i]->blockSignals(false);
     }
 }

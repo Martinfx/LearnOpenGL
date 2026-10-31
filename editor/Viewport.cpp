@@ -138,6 +138,10 @@ void Viewport::paintGL()
         view.projection = paneProjection(pane.mode, aspect);
         view.cameraPosition = paneEye(pane.mode);
         view.fog = pane.mode == ViewMode::Perspective;
+        // Orthographic views are wireframe in Lit mode (like most level editors); other modes apply everywhere.
+        view.shading = pane.mode != ViewMode::Perspective && shading_ == engine::Shading::Lit && orthoWireframe_
+                           ? engine::Shading::Wireframe
+                           : shading_;
         view.selectedObject = selected_;
         view.drawPlayerStart = true;
         view.gizmoBoxes = gizmoBoxes();
@@ -409,6 +413,7 @@ void Viewport::wheelEvent(QWheelEvent* e)
     }
     if (flying_) {
         flySpeed_ = std::clamp(flySpeed_ * std::pow(1.2f, notches), 1.0f, 200.0f);
+        emit cameraSpeedChanged(flySpeed_);
     } else {
         camera_.position += camera_.forward() * notches * 2.0f;
         update();

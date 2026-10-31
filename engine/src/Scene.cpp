@@ -114,6 +114,9 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
             out << "  rotation " << b.rotation.x << ' ' << b.rotation.y << ' ' << b.rotation.z << '\n';
         if (!b.materialPath.empty())
             out << "  material " << std::quoted(relative(b.materialPath)) << '\n';
+        if (b.uvModified())
+            out << "  uv " << b.uvScale.x << ' ' << b.uvScale.y << ' ' << b.uvOffset.x << ' ' << b.uvOffset.y << ' '
+                << b.uvRotation << '\n';
     }
     for (const Model& m : scene.models) {
         std::filesystem::path rel = std::filesystem::absolute(m.sourcePath).lexically_relative(levelDir);
@@ -232,6 +235,13 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
             if (ok) {
                 glm::vec3& r = result.boxes.back().rotation;
                 ok = static_cast<bool>(ls >> r.x >> r.y >> r.z);
+            }
+        } else if (key == "uv") {
+            // Texture placement of the box on the line above.
+            ok = lastObject == LastObject::Box;
+            if (ok) {
+                Box& b = result.boxes.back();
+                ok = static_cast<bool>(ls >> b.uvScale.x >> b.uvScale.y >> b.uvOffset.x >> b.uvOffset.y >> b.uvRotation);
             }
         } else if (key == "player_start") {
             ok = static_cast<bool>(ls >> result.playerStart.x >> result.playerStart.y >> result.playerStart.z);

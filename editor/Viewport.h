@@ -29,6 +29,13 @@ public:
     void setSelected(int index);
     void focusSelected();
     const engine::FpsCamera& camera() const { return camera_; }
+    void setShading(engine::Shading shading) { shading_ = shading; update(); }
+    engine::Shading shading() const { return shading_; }
+    void setOrthoWireframe(bool on) { orthoWireframe_ = on; update(); }
+    bool orthoWireframe() const { return orthoWireframe_; }
+    void setCameraSpeed(float metersPerSecond) { flySpeed_ = metersPerSecond; }
+    float cameraSpeed() const { return flySpeed_; }
+    int culledObjects() const { return renderer_.lastCulled(); }
     void setQuality(const engine::RenderQuality& quality);
     const engine::RenderQuality& quality() const { return quality_; }
     // Recompiles the shaders from `directory` (over the built-in ones); false + compiler log on error.
@@ -45,6 +52,7 @@ signals:
     void scaleRequested(int object, glm::vec3 factor);
     void dragFinished(int object);
     void toolChanged(Tool tool);
+    void cameraSpeedChanged(float metersPerSecond);
     void rendererFailed(const QString& error);
     void renderWarning(const QString& message); // OpenGL error while drawing (reported once per error code)
 
@@ -131,6 +139,8 @@ private:
     int hoverAxis_ = -1; // gizmo handle under the cursor (highlighted)
     ViewMode mode_ = ViewMode::Perspective;
     bool quad_ = false;
+    engine::Shading shading_ = engine::Shading::Lit;
+    bool orthoWireframe_ = true;
     glm::vec3 orthoCenter_{0.0f, 0.0f, 0.0f};
     float orthoSize_ = 14.0f;                              // half height of the orthographic views, m
     mutable ViewMode paneMode_ = ViewMode::Perspective;    // pane being drawn or under the mouse

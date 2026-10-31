@@ -333,6 +333,10 @@ void Renderer::useMeshProgram(const Program& p)
     loc_.flash = p.loc("uFlash");
     loc_.tiling = p.loc("uTiling");
     loc_.worldUv = p.loc("uWorldUv");
+    loc_.uvScale = p.loc("uUvScale");
+    loc_.uvOffset = p.loc("uUvOffset");
+    loc_.uvRotation = p.loc("uUvRotation");
+    loc_.shading = p.loc("uShading");
     loc_.grid = p.loc("uGrid");
     loc_.emissiveColor = p.loc("uEmissiveColor");
     loc_.roughness = p.loc("uRoughness");
@@ -668,13 +672,15 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
     glUniform1f(loc_.flash, 0.0f);
     glUniform1i(loc_.overlay, 0);
     auto drawBox = [&](glm::vec3 center, glm::vec3 size, glm::vec3 color, float highlight, float yawDegrees = 0.0f,
-                       const Material* material = nullptr) {
+                       const Material* material = nullptr, const Box* uvBox = nullptr) {
         glm::mat4 model = glm::translate(glm::mat4(1.0f), center);
         if (yawDegrees != 0.0f)
             model = glm::rotate(model, -glm::radians(yawDegrees), glm::vec3(0.0f, 1.0f, 0.0f));
         model = glm::scale(model, size);
         glUniformMatrix4fv(loc_.model, 1, GL_FALSE, glm::value_ptr(model));
         applySurface(material, nullptr, color, true); // boxes have no UVs: world-space mapping
+        if (uvBox)
+            applyUv(*uvBox);
         glUniform1f(loc_.highlight, highlight);
         glBindVertexArray(vao_);
         glDrawArrays(GL_TRIANGLES, 0, vertexCount_);
@@ -688,12 +694,13 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         if (b.rotated()) {
             glUniformMatrix4fv(loc_.model, 1, GL_FALSE, glm::value_ptr(b.transform()));
             applySurface(b.material.get(), nullptr, b.color, true);
+            applyUv(b);
             glUniform1f(loc_.highlight, static_cast<int>(i) == view.selectedObject ? 1.0f : 0.0f);
             glBindVertexArray(vao_);
             glDrawArrays(GL_TRIANGLES, 0, vertexCount_);
             continue;
         }
-        drawBox(b.position, b.size, b.color, static_cast<int>(i) == view.selectedObject ? 1.0f : 0.0f, 0.0f, b.material.get());
+        drawBox(b.position, b.size, b.color, static_cast<int>(i) == view.selectedObject ? 1.0f : 0.0f, 0.0f, b.material.get(), &b);
     }
     for (std::size_t i = 0; i < scene.models.size(); ++i) {
         const Model& model = scene.models[i];
@@ -846,13 +853,30 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     glBindTextureUnit(7, quality_.ssao ? ssaoBlurTex_ : whiteTex_);
     glBindTextureUnit(8, envMap_);
     glBindTextureUnit(9, brdfLut_);
+    glUniform1i(loc_.shading, static_cast<int>(view.shading));
+    const bool wireframe = view.shading == Shading::Wireframe;
+    wireframe_ = wireframe;
+    if (wireframe) {
+        // Every edge, hidden ones included, on a dark background.
+        const float dark[4] = {0.012f, 0.013f, 0.016f, 1.0f};
+        glClearBufferfv(GL_COLOR, 0, dark);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        glDisable(GL_CULL_FACE);
+        glDisable(GL_DEPTH_TEST);
+    }
     drawGeometry(scene, view, false, viewProj);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glEnable(GL_CULL_FACE);
+    glEnable(GL_DEPTH_TEST);
+    glUniform1i(loc_.shading, 0);
 
     // Sky where nothing was drawn.
     glDepthMask(GL_FALSE);
-    glUseProgram(programs_.sky.id);
-    glBindVertexArray(emptyVao_);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
+    if (!wireframe) {
+        glUseProgram(programs_.sky.id);
+        glBindVertexArray(emptyVao_);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+    }
     glDepthMask(GL_TRUE);
     glDepthFunc(GL_LESS);
 
@@ -936,8 +960,9 @@ void Renderer::present()
     const Environment defaults;
     const Environment& e = env_ ? *env_ : defaults;
     glBindVertexArray(emptyVao_);
-    glBindFramebuffer(GL_FRAMEBUFFER, quality_.fxaa ? ldrFbo_ : static_cast<unsigned>(targetFbo_));
-    if (quality_.fxaa)
+    const bool fxaa = quality_.fxaa && !wireframe_; // FXAA breaks one-pixel lines into dots
+    glBindFramebuffer(GL_FRAMEBUFFER, fxaa ? ldrFbo_ : static_cast<unsigned>(targetFbo_));
+    if (fxaa)
         glViewport(0, 0, width_, height_);
     else
         glViewport(targetX_, targetY_, width_, height_);
@@ -954,7 +979,7 @@ void Renderer::present()
     glBindTextureUnit(0, hdrColor_);
     glBindTextureUnit(1, bloomTex_.empty() ? whiteTex_ : bloomTex_[0]);
     glDrawArrays(GL_TRIANGLES, 0, 3);
-    if (quality_.fxaa) {
+    if (fxaa) {
         glBindFramebuffer(GL_FRAMEBUFFER, static_cast<unsigned>(targetFbo_));
         glViewport(targetX_, targetY_, width_, height_);
         glUseProgram(programs_.fxaa.id);
@@ -1062,6 +1087,15 @@ void Renderer::drawModel(const Model& model, const glm::mat4& transform, float h
     glUniform1i(loc_.skinned, 0);
 }
 
+void Renderer::applyUv(const Box& box)
+{
+    if (depthOnly_ || !box.uvModified())
+        return;
+    glUniform2fv(loc_.uvScale, 1, glm::value_ptr(box.uvScale));
+    glUniform2fv(loc_.uvOffset, 1, glm::value_ptr(box.uvOffset));
+    glUniform1f(loc_.uvRotation, glm::radians(box.uvRotation));
+}
+
 void Renderer::applySurface(const Material* material, const MeshPart* part, glm::vec3 color, bool worldUv)
 {
     if (depthOnly_)
@@ -1109,6 +1143,9 @@ void Renderer::applySurface(const Material* material, const MeshPart* part, glm:
     glUniform3fv(loc_.emissiveColor, 1, glm::value_ptr(emissive));
     glUniform1i(loc_.worldUv, worldUv ? 1 : 0);
     glUniform1i(loc_.grid, grid ? 1 : 0);
+    glUniform2f(loc_.uvScale, 1.0f, 1.0f);
+    glUniform2f(loc_.uvOffset, 0.0f, 0.0f);
+    glUniform1f(loc_.uvRotation, 0.0f);
     for (int i = 0; i < 6; ++i) {
         const unsigned handle = maps[i] && !maps[i]->rgba.empty() ? texture(*maps[i]) : 0u;
         const bool has = handle != 0;

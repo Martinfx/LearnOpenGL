@@ -23,6 +23,9 @@ struct OverlayBox {
     bool emissive = false;
 };
 
+// How the main pass shades the scene (editor view modes).
+enum class Shading { Lit, Unlit, LightingOnly, Wireframe };
+
 struct RenderView {
     glm::mat4 view{1.0f};
     glm::mat4 projection{1.0f};
@@ -31,6 +34,7 @@ struct RenderView {
     int viewportHeight = 1;
     int viewportX = 0, viewportY = 0; // lower-left corner in the target framebuffer (split views)
     bool fog = true;                  // off for the editor's orthographic views
+    Shading shading = Shading::Lit;
     int selectedObject = -1;  // editor highlight (Scene object index), -1 = none
     bool drawPlayerStart = false;
     float time = 0.0f;        // seconds, animates clouds and film grain
@@ -116,7 +120,7 @@ private:
         int model = -1, viewProj = -1, color = -1, highlight = -1, emissive = -1, skinned = -1, flash = -1;
         int tiling = -1, worldUv = -1, grid = -1, emissiveColor = -1, roughness = -1, metallic = -1;
         int normalStrength = -1, roughnessChannel = -1, metallicChannel = -1, overlay = -1, envRotation = -1;
-        int overlaySun = -1;
+        int overlaySun = -1, uvScale = -1, uvOffset = -1, uvRotation = -1, shading = -1;
         int hasMap[6] = {-1, -1, -1, -1, -1, -1};
     };
 
@@ -138,6 +142,7 @@ private:
     const GpuMesh& upload(const MeshPart& part);
     unsigned texture(const Texture& tex);
     void drawModel(const Model& model, const glm::mat4& transform, float highlight, const Animator* animator = nullptr);
+    void applyUv(const Box& box); // texture placement of a box (after applySurface)
     void applySurface(const Material* material, const MeshPart* part, glm::vec3 color, bool worldUv);
     void drawCube(const glm::mat4& transform, glm::vec3 color, float highlight, bool emissive);
     void releaseUnused();
@@ -176,6 +181,7 @@ private:
     int targetFbo_ = 0;                 // framebuffer to present into
     int targetX_ = 0, targetY_ = 0;     // where in it
     bool pendingPresent_ = false;
+    bool wireframe_ = false;            // last render() was a wireframe view
     glm::mat4 view_{1.0f}, projection_{1.0f};
     std::string glInfo_;
     std::array<glm::vec4, 6> frustum_{}; // planes of the pass being drawn

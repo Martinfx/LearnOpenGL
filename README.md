@@ -104,6 +104,18 @@ AI nepřítele má klipy jako parametry (`anim_idle`, `anim_walk`, `anim_run`, `
 Nepřátelé jsou zatím lidský manekýn od Quaterniuse (CC0) se 46 animacemi (chůze, běh, míření a střelba z pistole, zásah, smrt), viz `assets/models/characters/CREDITS.md`. Skript `enemy.lua` je ozbrojený člověk: hlídkuje, pronásleduje, z dálky střílí a zblízka udeří.
 Z Blenderu: armatura + akce, export glTF 2.0 s volbou Animation (každá akce = jeden klip).
 
+## Rozložení editoru
+
+- **Hlavní lišta:** Save, Undo/Redo, Add (box, nepřítel, entita, glTF), Play / Pause (F6) / Stop (Shift+F5) a kvalita viewportu. Hra běží jako podproces editoru a její výstup jde do Output Logu.
+- **Řádek režimů:** Select, Place a Model (Shift+1..3) přepínají levý panel. Vedle jsou Focus, To floor, Duplicate a Delete.
+- **Levý panel Model:** nástroje sítě, Modify Texture a Active Material. Funkční jsou Delete, Duplicate, Align, Scale, Shift, Rotate, Fit, Justify a číselné pole posunu, měřítka a rotace textury boxu (ukládá se jako řádek `  uv` v levelu). Apply Material dá aktivní materiál na výběr. Extrude, Inset, Bevel a další nástroje sítě čekají na editovatelné meshe.
+- **Lišta viewportu:** menu voleb, pohled (perspektiva, top, front, side, čtyři pohledy), režim Lit / Unlit / Lighting only / Wireframe (Alt+1..4), nástroje Q W E R, přichytávání posunu, úhlu a měřítka (každé jde vypnout) a rychlost kamery. Ortho pohledy jsou v Lit režimu drátové (vypíná se v menu voleb).
+- **Plovoucí Transform:** Location, Rotation a Scale/Size výběru. S **Delta Mode** se zadaná hodnota přičte (měřítko vynásobí) a pole se vynuluje.
+- **Outliner:** hledání, sloupce Item Label a Type, Add menu a počet objektů.
+- **Details:** jméno výběru, Add (materiál, skript, model postavy), hledání a kategorie General, Transform, Rendering, Character, Script, Level a All. Řádky, které pro výběr neplatí, jsou skryté.
+- **Content Browser:** strom složek s Favorites (pravé tlačítko na složce), drobečková cesta, Add (složka, materiál, skript, level), Import (kopie souborů do složky) a Save All.
+- **Stavový řádek:** Content Drawer, Output Log a příkazový řádek Cmd (`help` vypíše příkazy, například `view quad`, `shading wireframe`, `quality 1`, `r.ssao 0`, `select Jméno`, `stat`).
+
 ## Co se nastavuje v editoru
 
 Všechno, co hra používá, se mění v editoru a ukládá do souborů úrovně nebo assetů:

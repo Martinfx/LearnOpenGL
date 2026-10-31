@@ -6,6 +6,9 @@
 #include <filesystem>
 
 class QLabel;
+class QLineEdit;
+class QMenu;
+class QToolButton;
 
 // Scene hierarchy: groups and objects as a tree. Drag an item onto another to
 // make it a child (drop between items to move it next to them), F2 renames,
@@ -17,6 +20,7 @@ public:
 
     void rebuild();                   // after the scene changed
     void selectObject(int object);    // -1 clears
+    void setFilter(const QString& text); // shows matching items and their parents
     static constexpr int kNameRole = Qt::UserRole;
     static constexpr int kObjectRole = Qt::UserRole + 1; // object index, -1 for groups
 
@@ -33,8 +37,26 @@ private:
     QTreeWidgetItem* itemForNode(const QString& name) const;
     void newGroup(const QString& parent);
 
+    void applyFilter();
+
     engine::Scene* scene_;
     bool rebuilding_ = false;
+    QString filter_;
+};
+
+// Outliner: search field and Add menu above the hierarchy, object count below.
+class OutlinerPanel : public QWidget {
+    Q_OBJECT
+public:
+    OutlinerPanel(HierarchyTree* tree, QWidget* parent = nullptr);
+    void setAddMenu(QMenu* menu, const QIcon& icon);
+    void setCounts(int objects, int selected);
+
+private:
+    HierarchyTree* tree_;
+    QLineEdit* search_;
+    QToolButton* addButton_;
+    QLabel* count_;
 };
 
 // "What relates to what" for the selected object: its parent and children, the

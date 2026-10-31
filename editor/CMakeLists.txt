@@ -24,6 +24,10 @@ add_executable(fps_editor
     WeaponPanel.cpp
     WeaponPanel.h
     Viewport.h
+    ViewportPanel.cpp
+    ViewportPanel.h
+    EditorUi.cpp
+    EditorUi.h
 )
 target_link_libraries(fps_editor PRIVATE engine Qt6::Widgets Qt6::OpenGLWidgets)
 # Development builds edit the repository's assets directly (the build's copy is overwritten on every build).

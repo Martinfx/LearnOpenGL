@@ -33,6 +33,10 @@ uniform vec3 uColor;           // sRGB
 uniform float uHighlight;
 uniform float uFlash;
 uniform vec2 uTiling;
+uniform vec2 uUvScale;         // box texture tools: scale, offset (in tiles) and rotation (radians)
+uniform vec2 uUvOffset;
+uniform float uUvRotation;
+uniform int uShading;          // 0 lit, 1 unlit, 2 lighting only, 3 wireframe
 uniform bool uWorldUv;
 uniform bool uGrid;
 uniform vec3 uEmissiveColor;   // sRGB
@@ -102,13 +106,28 @@ void main() {
         vec3 an = abs(n);
         uv = an.y > 0.5 ? vWorldPos.xz : (an.x > 0.5 ? vec2(vWorldPos.z, -vWorldPos.y) : vec2(vWorldPos.x, -vWorldPos.y));
     }
-    uv *= uTiling;
+    if (uUvRotation != 0.0) {
+        float c = cos(uUvRotation), s = sin(uUvRotation);
+        uv = mat2(c, s, -s, c) * uv;
+    }
+    uv = uv * uTiling * uUvScale + uUvOffset;
 
     vec3 albedo = pow(max(uColor, vec3(0.0)), vec3(2.2));
     if (uHasTexture)
         albedo *= texture(uAlbedoMap, uv).rgb;
     else if (uGrid)
         albedo *= 1.0 - 0.18 * gridLines(vWorldPos, n);
+    if (uShading == 1) { // unlit: base color only
+        fragColor = vec4(mix(albedo, vec3(1.0, 0.75, 0.2), uHighlight * 0.5), 1.0);
+        return;
+    }
+    if (uShading == 3) { // wireframe: lines in a light tint of the base color, selection in orange
+        vec3 line = mix(vec3(0.55), sqrt(clamp(albedo, 0.0, 1.0)), 0.5);
+        fragColor = vec4(mix(line, vec3(2.0, 1.0, 0.15), uHighlight), 1.0);
+        return;
+    }
+    if (uShading == 2)
+        albedo = vec3(0.5); // lighting only
     if (uHasNormalMap) {
         vec3 m = texture(uNormalMap, uv).xyz * 2.0 - 1.0;
         m.xy *= uNormalStrength;

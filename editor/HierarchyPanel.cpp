@@ -12,6 +12,10 @@
 #include <QMessageBox>
 #include <QVBoxLayout>
 
+#include <QLineEdit>
+#include <QToolButton>
+
+#include <functional>
 #include <map>
 
 namespace {
@@ -41,7 +45,7 @@ QColor kindColor(const engine::Scene& scene, int object)
 
 HierarchyTree::HierarchyTree(engine::Scene* scene, QWidget* parent) : QTreeWidget(parent), scene_(scene)
 {
-    setHeaderLabels({tr("Name"), tr("Kind")});
+    setHeaderLabels({tr("Item Label"), tr("Type")});
     header()->setStretchLastSection(false);
     header()->setSectionResizeMode(0, QHeaderView::Stretch);
     header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
@@ -136,6 +140,7 @@ void HierarchyTree::rebuild()
             if ((*it)->data(0, kObjectRole).toInt() == selected)
                 current = *it;
     setCurrentItem(current);
+    applyFilter();
     rebuilding_ = false;
 }
 
@@ -325,4 +330,71 @@ void DependencyPanel::showObject(int object)
     for (QTreeWidgetItemIterator it(tree_); *it; ++it)
         if ((*it)->text(0).startsWith(tr("Also used by").left(4)) && (*it)->childCount() > 3)
             (*it)->setExpanded(false);
+}
+
+// ---------------------------------------------------------------------------
+void HierarchyTree::setFilter(const QString& text)
+{
+    filter_ = text.trimmed();
+    applyFilter();
+}
+
+void HierarchyTree::applyFilter()
+{
+    const QStringList words = filter_.toLower().split(' ', Qt::SkipEmptyParts);
+    // An item is shown when it matches or has a matching descendant.
+    std::function<bool(QTreeWidgetItem*)> visit = [&](QTreeWidgetItem* item) {
+        bool childMatch = false;
+        for (int i = 0; i < item->childCount(); ++i)
+            childMatch = visit(item->child(i)) || childMatch;
+        const QString text = (item->text(0) + ' ' + item->text(1)).toLower();
+        bool match = true;
+        for (const QString& w : words)
+            match = match && text.contains(w);
+        item->setHidden(!(match || childMatch));
+        if (childMatch && !words.isEmpty())
+            item->setExpanded(true);
+        return match || childMatch;
+    };
+    for (int i = 0; i < topLevelItemCount(); ++i)
+        visit(topLevelItem(i));
+}
+
+OutlinerPanel::OutlinerPanel(HierarchyTree* tree, QWidget* parent) : QWidget(parent), tree_(tree)
+{
+    search_ = new QLineEdit(this);
+    search_->setPlaceholderText(tr("Search..."));
+    search_->setClearButtonEnabled(true);
+    addButton_ = new QToolButton(this);
+    addButton_->setText(tr("Add"));
+    addButton_->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    addButton_->setPopupMode(QToolButton::InstantPopup);
+    count_ = new QLabel(this);
+    count_->setObjectName("dim");
+    auto* top = new QHBoxLayout();
+    top->setContentsMargins(4, 4, 4, 2);
+    top->addWidget(addButton_);
+    top->addWidget(search_, 1);
+    auto* layout = new QVBoxLayout(this);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+    layout->addLayout(top);
+    tree_->setParent(this);
+    layout->addWidget(tree_, 1);
+    auto* bottom = new QHBoxLayout();
+    bottom->setContentsMargins(6, 3, 6, 3);
+    bottom->addWidget(count_);
+    layout->addLayout(bottom);
+    connect(search_, &QLineEdit::textChanged, tree_, &HierarchyTree::setFilter);
+}
+
+void OutlinerPanel::setAddMenu(QMenu* menu, const QIcon& icon)
+{
+    addButton_->setMenu(menu);
+    addButton_->setIcon(icon);
+}
+
+void OutlinerPanel::setCounts(int objects, int selected)
+{
+    count_->setText(tr("%n object(s)", nullptr, objects) + (selected > 0 ? tr(" (%1 selected)").arg(selected) : QString()));
 }

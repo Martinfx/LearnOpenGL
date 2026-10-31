@@ -4,7 +4,19 @@
 
 #include <engine/Material.h>
 
+#include "EditorUi.h"
+
 #include <QComboBox>
+#include <QDesktopServices>
+#include <QFile>
+#include <QFileDialog>
+#include <QInputDialog>
+#include <QMenu>
+#include <QMessageBox>
+#include <QSettings>
+#include <QSplitter>
+#include <QToolButton>
+#include <QTreeWidget>
 #include <QCryptographicHash>
 #include <QDateTime>
 #include <QDir>
@@ -29,6 +41,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include <algorithm>
+#include <functional>
 
 namespace {
 constexpr int kThumbSize = 160;
@@ -231,20 +244,21 @@ QMimeData* AssetList::mimeData(const QList<QListWidgetItem*>& items) const
 AssetBrowser::AssetBrowser(QWidget* parent) : QWidget(parent)
 {
     category_ = new QComboBox(this);
-    category_->addItem(tr("All"), -1);
+    category_->addItem(tr("All types"), -1);
     for (AssetType t : {AssetType::Model, AssetType::Material, AssetType::Texture, AssetType::Script, AssetType::Weapon,
                         AssetType::Level})
         category_->addItem(tr(typeName(t)) + "s", static_cast<int>(t));
-    category_->setCurrentIndex(1);
+    category_->setCurrentIndex(0);
     search_ = new QLineEdit(this);
-    search_->setPlaceholderText(tr("Search (name or folder)..."));
+    search_->setPlaceholderText(tr("Search %1").arg(tr("assets")));
     search_->setClearButtonEnabled(true);
     size_ = new QSlider(Qt::Horizontal, this);
     size_->setRange(48, kThumbSize);
-    size_->setValue(96);
-    size_->setMaximumWidth(120);
+    size_->setValue(88);
+    size_->setMaximumWidth(110);
+    size_->setToolTip(tr("Thumbnail size"));
     status_ = new QLabel(this);
-    auto* rescan = new QPushButton(tr("Rescan"), this);
+    status_->setObjectName("dim");
 
     list_ = new AssetList(this);
     list_->setViewMode(QListView::IconMode);
@@ -254,19 +268,109 @@ AssetBrowser::AssetBrowser(QWidget* parent) : QWidget(parent)
     list_->setWordWrap(true);
     list_->setDragEnabled(true);
     list_->setDragDropMode(QAbstractItemView::DragOnly);
-    list_->setSelectionMode(QAbstractItemView::SingleSelection);
+    list_->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    list_->setSpacing(4);
 
-    auto* bar = new QHBoxLayout();
-    bar->addWidget(category_);
-    bar->addWidget(search_, 1);
-    bar->addWidget(new QLabel(tr("Size"), this));
-    bar->addWidget(size_);
-    bar->addWidget(rescan);
+    // Tool row: Add, Import, Save All, then the folder path (breadcrumb).
+    auto* addButton = new QToolButton(this);
+    addButton->setText(tr("Add"));
+    addButton->setIcon(editorIcon("add"));
+    addButton->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    addButton->setPopupMode(QToolButton::InstantPopup);
+    auto* addMenu = new QMenu(addButton);
+    addMenu->addAction(editorIcon("folder"), tr("New folder..."), this, &AssetBrowser::newFolder);
+    addMenu->addSeparator();
+    addMenu->addAction(tr("New material"), this, [this] { emit newAssetRequested(QStringLiteral("material"), currentFolderPath()); });
+    addMenu->addAction(tr("New Lua script"), this, [this] { emit newAssetRequested(QStringLiteral("script"), currentFolderPath()); });
+    addMenu->addAction(tr("New level"), this, [this] { emit newAssetRequested(QStringLiteral("level"), currentFolderPath()); });
+    addButton->setMenu(addMenu);
+    auto* importButton = new QToolButton(this);
+    importButton->setText(tr("Import"));
+    importButton->setIcon(editorIcon("import"));
+    importButton->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    importButton->setToolTip(tr("Copy files (glTF, images, scripts...) into the current folder"));
+    auto* saveAll = new QToolButton(this);
+    saveAll->setText(tr("Save All"));
+    saveAll->setIcon(editorIcon("save"));
+    saveAll->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    saveAll->setToolTip(tr("Save the level, scripts, weapons and materials"));
+    auto* rescanButton = new QToolButton(this);
+    rescanButton->setText(tr("Rescan"));
+    breadcrumb_ = new QWidget(this);
+    auto* crumbs = new QHBoxLayout(breadcrumb_);
+    crumbs->setContentsMargins(8, 0, 0, 0);
+    crumbs->setSpacing(0);
+
+    auto* tools = new QHBoxLayout();
+    tools->setContentsMargins(4, 4, 4, 2);
+    tools->addWidget(addButton);
+    tools->addWidget(importButton);
+    tools->addWidget(saveAll);
+    tools->addWidget(breadcrumb_, 1);
+    tools->addWidget(rescanButton);
+
+    // Folder tree: favorites, then the asset folders.
+    folders_ = new QTreeWidget(this);
+    folders_->setHeaderHidden(true);
+    folders_->setMinimumWidth(170);
+    folders_->setContextMenuPolicy(Qt::CustomContextMenu);
+
+    auto* filterRow = new QHBoxLayout();
+    filterRow->setContentsMargins(4, 2, 4, 2);
+    filterRow->addWidget(category_);
+    filterRow->addWidget(search_, 1);
+    filterRow->addWidget(size_);
+    auto* right = new QWidget(this);
+    auto* rightLayout = new QVBoxLayout(right);
+    rightLayout->setContentsMargins(0, 0, 0, 0);
+    rightLayout->setSpacing(0);
+    rightLayout->addLayout(filterRow);
+    rightLayout->addWidget(list_, 1);
+    auto* footer = new QHBoxLayout();
+    footer->setContentsMargins(6, 2, 6, 2);
+    footer->addWidget(status_);
+    rightLayout->addLayout(footer);
+
+    auto* split = new QSplitter(Qt::Horizontal, this);
+    split->addWidget(folders_);
+    split->addWidget(right);
+    split->setStretchFactor(1, 1);
+    split->setSizes({200, 900});
+
     auto* layout = new QVBoxLayout(this);
-    layout->setContentsMargins(2, 2, 2, 2);
-    layout->addLayout(bar);
-    layout->addWidget(list_, 1);
-    layout->addWidget(status_);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+    layout->addLayout(tools);
+    layout->addWidget(split, 1);
+
+    connect(importButton, &QToolButton::clicked, this, &AssetBrowser::importFiles);
+    connect(saveAll, &QToolButton::clicked, this, &AssetBrowser::saveAllRequested);
+    connect(folders_, &QTreeWidget::currentItemChanged, this, [this](QTreeWidgetItem* item) {
+        if (!item || rebuildingFolders_)
+            return;
+        setFolder(item->data(0, Qt::UserRole).toString());
+    });
+    connect(folders_, &QTreeWidget::customContextMenuRequested, this, [this](const QPoint& pos) {
+        QTreeWidgetItem* item = folders_->itemAt(pos);
+        if (!item || item->data(0, Qt::UserRole + 1).toBool())
+            return;
+        const QString folder = item->data(0, Qt::UserRole).toString();
+        QMenu menu;
+        const bool favorite = favorites_.contains(folder);
+        menu.addAction(editorIcon("star"), favorite ? tr("Remove from Favorites") : tr("Add to Favorites"), this, [this, folder, favorite] {
+            if (favorite)
+                favorites_.removeAll(folder);
+            else
+                favorites_ << folder;
+            QSettings().setValue("content/favorites", favorites_);
+            rebuildFolders();
+        });
+        menu.addAction(editorIcon("folder"), tr("Show in file manager"), this,
+                       [folder] { QDesktopServices::openUrl(QUrl::fromLocalFile(QDir(assetRoot()).filePath(folder))); });
+        menu.exec(folders_->viewport()->mapToGlobal(pos));
+    });
+    connect(list_, &QListWidget::itemSelectionChanged, this, &AssetBrowser::updateStatus);
+    favorites_ = QSettings().value("content/favorites").toStringList();
 
     auto applySize = [this] {
         const int s = size_->value();
@@ -277,7 +381,7 @@ AssetBrowser::AssetBrowser(QWidget* parent) : QWidget(parent)
     connect(size_, &QSlider::valueChanged, this, applySize);
     connect(category_, &QComboBox::currentIndexChanged, this, &AssetBrowser::applyFilter);
     connect(search_, &QLineEdit::textChanged, this, &AssetBrowser::applyFilter);
-    connect(rescan, &QPushButton::clicked, this, &AssetBrowser::rescan);
+    connect(rescanButton, &QToolButton::clicked, this, &AssetBrowser::rescan);
     connect(list_, &QListWidget::itemActivated, this, [this](QListWidgetItem* item) {
         emit assetActivated(item->data(kPathRole).toString(), static_cast<AssetType>(item->data(kTypeRole).toInt()));
     });
@@ -285,7 +389,6 @@ AssetBrowser::AssetBrowser(QWidget* parent) : QWidget(parent)
         if (!item)
             return;
         const QString path = item->data(kPathRole).toString();
-        status_->setText(QDir::toNativeSeparators(QDir(assetRoot()).relativeFilePath(path)));
         emit assetSelected(path, static_cast<AssetType>(item->data(kTypeRole).toInt()));
     });
 
@@ -359,6 +462,7 @@ void AssetBrowser::rescan()
     while (it.hasNext())
         files << it.next();
     files.sort(Qt::CaseInsensitive);
+    rebuildFolders();
     for (const QString& file : files) {
         const AssetType type = assetTypeOf(file);
         if (type == AssetType::Other)
@@ -390,12 +494,16 @@ void AssetBrowser::applyFilter()
         QListWidgetItem* item = list_->item(i);
         const QString rel = QDir(assetRoot()).relativeFilePath(item->data(kPathRole).toString()).toLower();
         bool visible = type < 0 || item->data(kTypeRole).toInt() == type;
+        // The folder filter includes subfolders; a search looks everywhere.
+        if (!folder_.isEmpty() && words.isEmpty())
+            visible = visible && rel.startsWith(folder_.toLower() + '/');
         for (const QString& w : words)
             visible = visible && rel.contains(w);
         item->setHidden(!visible);
         shown += visible ? 1 : 0;
     }
-    status_->setText(tr("%n asset(s)", nullptr, shown));
+    shown_ = shown;
+    updateStatus();
     thumbTimer_.start(0);
 }
 
@@ -421,4 +529,142 @@ void AssetBrowser::requestThumbnails()
             QMetaObject::invokeMethod(worker_, "make", Qt::QueuedConnection, Q_ARG(QString, path),
                                       Q_ARG(int, static_cast<int>(type)), Q_ARG(QString, cacheFile(path)));
         }
+}
+
+// ---------------------------------------------------------------------------
+QString AssetBrowser::currentFolderPath() const
+{
+    return folder_.isEmpty() ? assetRoot() : QDir(assetRoot()).filePath(folder_);
+}
+
+void AssetBrowser::updateStatus()
+{
+    const int selected = static_cast<int>(list_->selectedItems().size());
+    QString text = tr("%n item(s)", nullptr, shown_);
+    if (selected > 0)
+        text += tr(" (%1 selected)").arg(selected);
+    if (selected == 1)
+        text += QStringLiteral("   ") +
+                QDir::toNativeSeparators(QDir(assetRoot()).relativeFilePath(list_->selectedItems().first()->data(kPathRole).toString()));
+    status_->setText(text);
+}
+
+void AssetBrowser::rebuildFolders()
+{
+    rebuildingFolders_ = true;
+    folders_->clear();
+    auto* favorites = new QTreeWidgetItem(folders_, {tr("Favorites")});
+    favorites->setIcon(0, editorIcon("star"));
+    favorites->setData(0, Qt::UserRole + 1, true);
+    favorites->setFlags(Qt::ItemIsEnabled);
+    for (const QString& f : favorites_) {
+        auto* item = new QTreeWidgetItem(favorites, {QFileInfo(f).fileName()});
+        item->setIcon(0, editorIcon("folder"));
+        item->setData(0, Qt::UserRole, f);
+        item->setToolTip(0, f);
+    }
+    auto* all = new QTreeWidgetItem(folders_, {tr("All")});
+    all->setIcon(0, editorIcon("content"));
+    all->setData(0, Qt::UserRole, QString());
+    std::function<void(QTreeWidgetItem*, const QString&)> add = [&](QTreeWidgetItem* parent, const QString& rel) {
+        QDir dir(QDir(assetRoot()).filePath(rel));
+        for (const QString& name : dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name | QDir::IgnoreCase)) {
+            const QString child = rel.isEmpty() ? name : rel + '/' + name;
+            if (child == "shaders")
+                continue;
+            auto* item = new QTreeWidgetItem(parent, {name});
+            item->setIcon(0, editorIcon("folder"));
+            item->setData(0, Qt::UserRole, child);
+            add(item, child);
+        }
+    };
+    add(all, QString());
+    favorites->setExpanded(true);
+    all->setExpanded(true);
+    QTreeWidgetItem* current = all;
+    for (QTreeWidgetItemIterator it(all); *it; ++it)
+        if ((*it)->data(0, Qt::UserRole).toString() == folder_)
+            current = *it;
+    folders_->setCurrentItem(current);
+    rebuildingFolders_ = false;
+    updateBreadcrumb();
+}
+
+void AssetBrowser::setFolder(const QString& folder)
+{
+    folder_ = folder;
+    updateBreadcrumb();
+    applyFilter();
+    if (!rebuildingFolders_) {
+        rebuildingFolders_ = true;
+        for (QTreeWidgetItemIterator it(folders_); *it; ++it)
+            if ((*it)->data(0, Qt::UserRole).toString() == folder && !(*it)->parent()->data(0, Qt::UserRole + 1).toBool()) {
+                folders_->setCurrentItem(*it);
+                break;
+            }
+        rebuildingFolders_ = false;
+    }
+}
+
+void AssetBrowser::updateBreadcrumb()
+{
+    auto* layout = static_cast<QHBoxLayout*>(breadcrumb_->layout());
+    while (QLayoutItem* item = layout->takeAt(0)) {
+        delete item->widget();
+        delete item;
+    }
+    auto crumb = [&](const QString& label, const QString& folder) {
+        auto* b = new QToolButton(breadcrumb_);
+        b->setText(label);
+        b->setAutoRaise(true);
+        connect(b, &QToolButton::clicked, this, [this, folder] { setFolder(folder); });
+        layout->addWidget(b);
+    };
+    crumb(tr("All"), QString());
+    QString path;
+    for (const QString& part : folder_.split('/', Qt::SkipEmptyParts)) {
+        auto* arrow = new QLabel(QStringLiteral("›"), breadcrumb_);
+        arrow->setObjectName("dim");
+        layout->addWidget(arrow);
+        path = path.isEmpty() ? part : path + '/' + part;
+        crumb(part, path);
+    }
+    layout->addStretch(1);
+}
+
+void AssetBrowser::newFolder()
+{
+    bool ok = false;
+    const QString name = QInputDialog::getText(this, tr("New folder"), tr("Folder name in %1:").arg(folder_.isEmpty() ? tr("assets") : folder_),
+                                               QLineEdit::Normal, QString(), &ok).trimmed();
+    if (!ok || name.isEmpty())
+        return;
+    if (!QDir(currentFolderPath()).mkpath(name)) {
+        QMessageBox::warning(this, tr("New folder"), tr("Could not create %1").arg(name));
+        return;
+    }
+    folder_ = folder_.isEmpty() ? name : folder_ + '/' + name;
+    rescan();
+}
+
+void AssetBrowser::importFiles()
+{
+    const QStringList files = QFileDialog::getOpenFileNames(
+        this, tr("Import into %1").arg(folder_.isEmpty() ? tr("assets") : folder_), QString(),
+        tr("Assets (*.glb *.gltf *.bin *.png *.jpg *.jpeg *.material *.lua *.weapon *.level);;All files (*)"));
+    if (files.isEmpty())
+        return;
+    QStringList failed;
+    for (const QString& file : files) {
+        const QString target = QDir(currentFolderPath()).filePath(QFileInfo(file).fileName());
+        if (QFileInfo::exists(target) &&
+            QMessageBox::question(this, tr("Import"), tr("%1 exists. Replace it?").arg(QFileInfo(target).fileName())) != QMessageBox::Yes)
+            continue;
+        QFile::remove(target);
+        if (!QFile::copy(file, target))
+            failed << QFileInfo(file).fileName();
+    }
+    if (!failed.isEmpty())
+        QMessageBox::warning(this, tr("Import"), tr("Could not copy:\n%1").arg(failed.join('\n')));
+    rescan();
 }
