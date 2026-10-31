@@ -10,3 +10,4 @@ assets/**/*.md -filter -diff -merge text
 assets/**/*.material -filter -diff -merge text
 assets/**/*.py -filter -diff -merge text
 assets/**/*.json -filter -diff -merge text
+assets/models/zone/*.glb filter=lfs diff=lfs merge=lfs -text

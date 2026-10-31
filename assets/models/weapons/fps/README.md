@@ -10,7 +10,7 @@ Each file is one skinned glTF (GLB): realistic arms (dirty bare hands, dark gree
 | `fp_knife.glb` | Combat knife, DJMaesen (CC-BY 4.0), gloves | `idle` 1.33 s loop, `slash` 0.67 s, `slash2` 0.67 s, `stab` 0.75 s, `slash3` 0.75 s, `draw` 0.33 s |
 | `fp_heavy_pistol.glb` | Heavy .50 pistol, DJMaesen (CC-BY 4.0), bare hands, two-hand grip | `idle` 0.83 s loop, `fire` 0.42 s, `fire_last` 0.42 s (slide locks back), `reload` 2.42 s, `reload_empty` 1.75 s (from locked slide), `draw` 1.08 s, `inspect` 0.92 s |
 
-`fp_ak74.glb`, `fp_pistol.glb` and `fp_smg.glb` are professional Cransh rigs. `fp_knife.glb` and `fp_heavy_pistol.glb` (DJMaesen) animate the weapon parts as separate glTF nodes (not skinned): the engine must play node TRS channels too. Heavy pistol muzzle about `0.04 -0.03 -0.50`; both use eye (6, 50, 12) in the source and scale 0.00657.
+`fp_ak74.glb`, `fp_pistol.glb` and `fp_smg.glb` are professional Cransh rigs. `fp_knife.glb` and `fp_heavy_pistol.glb` (DJMaesen) have their weapon parts (knife, slide, magazine, ...) baked onto extra `W_*` bones and rigidly skinned, so only skinning is needed. The knife viewmodel shows only the right arm (left arm removed) and sits 4 cm right, 5 cm lower and 6 cm further than the source camera. Heavy pistol muzzle about `0.04 -0.03 -0.50`; both use eye (6, 50, 12) in the source and scale 0.00657.
 
 `fp_pistol.glb` notes: held slightly lower-right than the animator's camera (`post_offset 0.045 -0.02 -0.045` in the converter), muzzle about `0.08 -0.05 -0.50`, the arms mesh in the download had its vertices
 in the wrong units (x -1e4); `source/fixgltf.py` repairs that before `source/convert_fps.py` runs.
