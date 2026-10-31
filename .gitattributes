@@ -1,0 +1,8 @@
+# Large binary assets are stored with Git LFS (install git-lfs before cloning).
+assets/textures/pbr/** filter=lfs diff=lfs merge=lfs -text
+assets/models/props/** filter=lfs diff=lfs merge=lfs -text
+assets/models/modular/** filter=lfs diff=lfs merge=lfs -text
+assets/models/weapons/fps/** filter=lfs diff=lfs merge=lfs -text
+assets/models/characters/library/** filter=lfs diff=lfs merge=lfs -text
+assets/**/*.md -filter -diff -merge text
+assets/**/*.material -filter -diff -merge text
