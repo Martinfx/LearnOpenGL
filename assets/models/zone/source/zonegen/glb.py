@@ -42,7 +42,10 @@ def write_glb(path, mesh, tex_rel_dir='textures', name='model'):
             pbr = {'baseColorFactor': col, 'metallicFactor': m.get('metal', 0.0), 'roughnessFactor': m.get('rough', 1.0)}
             mat = {'name': mname, 'pbrMetallicRoughness': pbr}
             t = m.get('tex')
-            if t:
+            if t and m.get('decal'):      # grime decals: RGBA png, alpha-blended over the wall
+                pbr['baseColorTexture'] = {'index': tex_index(f'{t}_albedo.png')}
+                mat['alphaMode'] = 'BLEND'
+            elif t:
                 pbr['baseColorTexture'] = {'index': tex_index(f'{t}_albedo.jpg')}
                 pbr['metallicRoughnessTexture'] = {'index': tex_index(f'{t}_orm.jpg')}
                 mat['normalTexture'] = {'index': tex_index(f'{t}_normal.jpg'), 'scale': m.get('normal', 1.0)}

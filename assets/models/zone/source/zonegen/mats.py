@@ -31,7 +31,7 @@ SETS = {
     'plaster_green': ('painted_plaster_wall', dict(tint=(0.78, 0.9, 0.8))),
     'plaster_blue': ('painted_plaster_wall', dict(tint=(0.72, 0.8, 0.9))),
     'tiles': ('large_grey_tiles', dict()),
-    'tiles_floor': ('floor_tiles_06', dict(saturation=0.6)),
+    'tiles_floor': ('floor_tiles_06', dict(saturation=0.45, tint=(0.72, 0.7, 0.64))),     # trodden, dusty
     'wood': ('weathered_planks', dict()),
     'wood_floor': ('wood_floor_worn', dict(saturation=0.7)),
     'wood_dark': ('dark_wooden_planks', dict()),
@@ -45,15 +45,15 @@ SETS = {
     'bark_dark': ('bark_brown_02', dict(tint=(0.62, 0.58, 0.54), saturation=0.6)),
     'roof_tar': ('grey_roof_01', dict(overlay='mossy_rock', overlay_mask=tex.noise_mask(13, 128, 0.6, 0.12))),
     # Skrunda-1 (real photo scans, Poly Haven CC0)
-    'silicate': ('whitewashed_brick', dict(saturation=0.55, overlay='white_bricks', overlay_mask=tex.noise_mask(21, 300, 0.68, 0.16))),
-    'silicate_dirty': ('white_bricks', dict(saturation=0.6, tint=(0.86, 0.85, 0.82))),
+    'silicate': ('whitewashed_brick', dict(saturation=0.3, tint=(1.1, 1.1, 1.08))),     # pale grey sand-lime brick (photos of Skrunda-1)
+    'silicate_dirty': ('whitewashed_brick', dict(saturation=0.25, tint=(0.98, 0.98, 0.96))),
     'panel': ('concrete_slab_wall_02', dict()),
     'plaster_mossy': ('worn_mossy_plasterwall', dict()),
-    'plaster_yellow': ('yellow_plaster', dict(saturation=0.7, overlay='worn_mossy_plasterwall', overlay_mask=tex.noise_mask(23, 128, 0.58, 0.14))),
+    'plaster_yellow': ('yellow_plaster', dict(saturation=0.6, tint=(1.02, 1.0, 0.94))),
     'plaster_peel': ('worn_plaster_wall', dict()),
     'wallpaper': ('decrepit_wallpaper', dict()),
     'stair_paint': ('blue_plaster_weathered', dict(saturation=0.65)),
-    'road': ('aerial_asphalt_01', dict(saturation=0.7)),
+    'road': ('aerial_asphalt_01', dict(saturation=0.35, tint=(0.88, 0.85, 0.78))),     # old sun-bleached asphalt, sand in it
     'road_worn': ('asphalt_04', dict()),
     'ground_grass': ('grass_ground', dict(tint=(0.85, 0.95, 0.75))),
     'ground_lush': ('sparse_grass', dict(tint=(0.95, 1.0, 0.9))),

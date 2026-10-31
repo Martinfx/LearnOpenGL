@@ -2,7 +2,7 @@
 # Skrunda-1 terrain layer: Poly Haven "grass_ground" (CC0) tinted like the zone ground textures.
 version 2
 name "Skrunda meadow"
-color 0.85 0.95 0.75
+color 1.0 1.0 0.82
 roughness 1
 metallic 0
 normal_strength 1

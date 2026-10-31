@@ -85,13 +85,14 @@ def gen(name, file, x, z, parent, yaw=0.0, lod_dist=60, has_lod=True, dy=0.0, **
 
 # LOD2 thinned to a quarter of the blades (assets/models/zone/source/thin_glb.py): file, distance
 FAR_LOD = {'grass_patch_tall': ('../models/zone/skrunda/veg/grass_patch_far.glb', 18),
+           'sk:grass_dry': ('../models/zone/skrunda/veg/grass_dry_far.glb', 18),
            'weed_patch': ('../models/zone/skrunda/veg/weed_patch_far.glb', 16)}
 
 
 FOLIAGE_TYPES = {}       # (file, lod_dist, cull, collision, shadows) -> type index
 FOLIAGE = []             # (x, y, z, yaw, scale, type)
 # brush density (instances / m2) and far density per kind, used when painting more in the editor
-FOLIAGE_KIND = {'Tree': (0.03, 1.0), 'Bush': (0.02, 0.8), 'Tall grass': (0.15, 0.6), 'Weeds': (0.1, 0.6),
+FOLIAGE_KIND = {'Tree': (0.03, 1.0), 'Bush': (0.02, 0.8), 'Tall grass': (0.25, 0.5), 'Weeds': (0.1, 0.6),
                 'Grass tuft': (0.3, 0.5), 'Crack grass': (0.2, 0.5)}
 
 
@@ -108,8 +109,9 @@ def foliage_lines():
     out = []
     for (name, file, lod_dist, cull, collision, shadows), _ in sorted(FOLIAGE_TYPES.items(), key=lambda kv: kv[1]):
         dens, far = FOLIAGE_KIND.get(name, (0.1, 1.0))
-        out.append(f'foliage_type "{V}{file}.glb" {dens:g} 0.85 1.15 {cull:g} {int(collision)} 0 {int(shadows)} {far:g}')
-        out.append(f'foliage_lod "{V}{file}_lod1.glb" {lod_dist:g}')
+        base = SK + 'veg/' + file[3:] if file.startswith('sk:') else V + file
+        out.append(f'foliage_type "{base}.glb" {dens:g} 0.85 1.15 {cull:g} {int(collision)} 0 {int(shadows)} {far:g}')
+        out.append(f'foliage_lod "{base}_lod1.glb" {lod_dist:g}')
         if file in FAR_LOD:
             out.append(f'foliage_lod "{FAR_LOD[file][0]}" {FAR_LOD[file][1]:g}')
     return out
@@ -196,35 +198,37 @@ L += [
     # engine terrain: heights, splat map and the painted vegetation are in skrunda1.terrain (Landscape and
     # Foliage modes in the editor); roads, paths and ponds are the draped overlay models in group Terrain
     'terrain "skrunda1.terrain"',
-    'terrain_layer 0 "../materials/skrunda/terrain_lush.material" 0.5',
-    'terrain_layer 1 "../materials/skrunda/terrain_meadow.material" 0.4',
-    'terrain_layer 2 "../materials/skrunda/terrain_dry.material" 0.5',
+    'terrain_layer 0 "../materials/skrunda/terrain_meadow.material" 0.4',
+    'terrain_layer 1 "../materials/skrunda/terrain_dry.material" 0.5',
+    'terrain_layer 2 "../materials/skrunda/terrain_lush.material" 0.5',
     'terrain_layer 3 "../materials/skrunda/terrain_dirt.material" 0.5',
     '@FOLIAGE_TYPES@',
-    'sun 0.55 -0.42 -0.35',              # overcast late afternoon, sun low in the south-west
-    'env sun_color 1 0.84 0.66',
-    'env sun_intensity 1.9',
-    'env sky_zenith 0.36 0.4 0.44',
-    'env sky_horizon 0.72 0.7 0.64',
-    'env ground_color 0.2 0.21 0.16',
-    'env cloud_cover 0.82',
-    'env ambient_intensity 0.8',
-    'env fog_color 0.62 0.63 0.6',
-    'env fog_density 0.0065',
-    'env fog_height 3',
-    'env fog_height_falloff 0.04',
-    'env fog_sun_scatter 1.2',
-    'env exposure 1.05',
-    'env bloom_intensity 0.05',
-    'env bloom_threshold 1.3',
+    # early spring day after the photos of Skrunda-1 on Wikimedia Commons: bright sky with fair-weather
+    # clouds, crisp sun shadows, almost no haze, last year's straw-coloured grass
+    'sun 0.42 -0.68 -0.6',
+    'env sun_color 1 0.94 0.84',
+    'env sun_intensity 3.4',
+    'env sky_zenith 0.28 0.44 0.7',
+    'env sky_horizon 0.74 0.8 0.86',
+    'env ground_color 0.34 0.31 0.24',
+    'env cloud_cover 0.4',
+    'env ambient_intensity 1.0',
+    'env fog_color 0.72 0.78 0.85',
+    'env fog_density 0.0022',
+    'env fog_height 2',
+    'env fog_height_falloff 0.03',
+    'env fog_sun_scatter 0.8',
+    'env exposure 1.0',
+    'env bloom_intensity 0.04',
+    'env bloom_threshold 1.4',
     'env ssao_radius 0.8',
-    'env ssao_intensity 1.3',
-    'env shadow_distance 80',
-    'env saturation 0.78',
-    'env contrast 1.1',
-    'env tint 1.0 1.0 0.96',
-    'env vignette 0.32',
-    'env grain 0.03',
+    'env ssao_intensity 1.2',
+    'env shadow_distance 90',
+    'env saturation 0.95',
+    'env contrast 1.06',
+    'env tint 1.0 1.0 1.0',
+    'env vignette 0.18',
+    'env grain 0.02',
     'weapon "../weapons/ak74.weapon"',
     'weapon "../weapons/pistol.weapon"',
     'weapon "../weapons/knife.weapon"',
@@ -232,6 +236,7 @@ L += [
 ]
 for g, p in (('Terrain', ''), ('Buildings', ''), ('Blocks', 'Buildings'), ('Public', 'Buildings'), ('Small', 'Buildings'),
              ('Fences', ''), ('Street', ''), ('Wrecks', 'Street'), ('Lamps', 'Street'), ('Camp', ''), ('Bandit base', ''),
+             ('Clutter', ''),
              ('Vegetation', ''), ('Forest', 'Vegetation'), ('Trees', 'Vegetation'), ('Bushes', 'Vegetation'),
              ('Grass', 'Vegetation'), ('Weeds', 'Vegetation'), ('Debris', ''), ('Loot', ''), ('Markers', ''),
              ('NPC', ''), ('Stalkers', 'NPC'), ('Bandits', 'NPC')):
@@ -381,6 +386,7 @@ wrecks = [(-74.0, 40.0, 92, 'car_sedan_blue'), (-74.5, 46.5, 88, 'car_estate_rus
           (-140.5, -36.6, 2, 'car_van_green'), (-104.0, -34.0, 178, 'car_sedan_blue'), (-157.0, 24.0, 85, 'car_estate_red'),
           (-61.0, -150.0, 95, 'car_sedan_green'), (-12.0, 45.0, 36, 'bus_small_cream'), (-58.0, 74.0, 120, 'car_burnt'),
           (-160.0, -100.0, 86, 'car_sedan_green')]
+wrecks = [w for w in wrecks if w[3] in ('car_burnt', 'bus_small_cream')]
 for x, z, yaw, f in wrecks:
     tilt = 0.0
     if f == 'car_burnt':
@@ -456,7 +462,7 @@ while z < site.Z0 + site.SIZE - 2:
             if forest:
                 p = 0.75 if ed < 30 else 0.45
             elif in_town(jx, jz):
-                p = 0.22 if grove > 0.58 else 0.035
+                p = 0.3 if grove > 0.58 else 0.11
             else:
                 p = 0.3 if grove > 0.6 else 0.05
             if rng.random() < p:
@@ -485,7 +491,7 @@ for x, z, forest, grove in trees:
         f = ('birch_a' if r < 0.35 else 'birch_b' if r < 0.6 else 'birch_young' if r < 0.75 else 'broadleaf_a' if r < 0.85 else
              'broadleaf_b' if r < 0.93 else 'dead_a')
         parent = 'Trees'
-    veg('Tree', f, x, z, parent, lod_dist=30, cull=230, shadows=True, collision=True, scale=rng.uniform(0.85, 1.15))
+    veg('Tree', f if f == 'dead_a' else 'sk:' + f, x, z, parent, lod_dist=30, cull=230, shadows=True, collision=True, scale=rng.uniform(0.85, 1.15))
 
 # bushes along walls and fences, undergrowth at forest edges
 for k in range(2600):
@@ -507,20 +513,23 @@ while z < site.Z0 + site.SIZE - 1:
     x = site.X0 + 1
     while x < site.X0 + site.SIZE - 1:
         inside = inside_z and site.PLAY[0] < x < site.PLAY[2]
-        g = 2.6 if inside else 5.0
+        g = 2.0 if inside else 5.0
         jx, jz = x + rng.uniform(-0.45, 0.45) * g, z + rng.uniform(-0.45, 0.45) * g
         if free(jx, jz, 0.6):
             bd = float(T.field('bdist', jx, jz))
             if bd < 5.0 and rng.random() < (0.3 if inside else 0.55):
                 veg('Weeds', 'weed_patch' if rng.random() < 0.6 else 'nettle_tall_a', jx, jz, 'Weeds', lod_dist=8, cull=45)
-            elif rng.random() < (0.88 if inside else 0.55):
-                veg('Tall grass', 'grass_patch_tall', jx, jz, 'Grass', lod_dist=8, cull=50,
-                    scale=rng.uniform(0.85, 1.15))
+            elif rng.random() < (0.92 if inside else 0.55):
+                veg('Tall grass', 'sk:grass_dry' if rng.random() < 0.65 else 'grass_patch_tall', jx, jz, 'Grass',
+                    lod_dist=8, cull=50, scale=rng.uniform(0.85, 1.2))
+                if inside:          # second, lower layer between the patches: a closed sward like in the photos
+                    veg('Tall grass', 'sk:grass_dry' if rng.random() < 0.7 else 'grass_patch_tall',
+                        jx + g * 0.5, jz + g * 0.5, 'Grass', lod_dist=8, cull=50, scale=rng.uniform(0.6, 0.85))
             elif inside and rng.random() < 0.5:
                 veg('Grass tuft', rng.choice(['grass_tall_a', 'grass_tall_b']), jx, jz, 'Grass', lod_dist=12, cull=40,
                     scale=rng.uniform(1.0, 1.4))
         x += g
-    z += 2.6 if inside_z else 5.0
+    z += 2.0 if inside_z else 5.0
 
 # grass and weeds in the cracks and potholes of the asphalt, along the kerbs
 for k in range(5000):
@@ -548,6 +557,93 @@ for bid, b in BUILD.items():
             gprop('Trash', 'trashbag', x, z, 'Debris', yaw=rng.uniform(0, 360))
         else:
             gprop('Bucket', 'wooden_bucket_02', x, z, 'Debris', yaw=rng.uniform(0, 360))
+
+# ---------------------------------------------------------------------------- clutter (asset thread, CC0 / Poly Haven)
+C = P + 'clutter/'
+
+
+def clutter(name, file, x, y, z, parent, yaw=None, collision=False, cull=45, **kw):
+    """Generated junk from models/props/clutter (origin at the bottom centre). Paper, rags and cardboard have
+    no collision; bricks, blocks, pallets and rubble do."""
+    model(name, C + file + '.glb', x, y, z, parent, rng.uniform(0, 360) if yaw is None else yaw, collision=collision,
+          cull=cull, shadows=collision, **kw)
+
+
+def scatter(bid, lx0, lx1, lz0, lz1, y, items, n, parent):
+    for _ in range(n):
+        f = rng.choice(items)
+        x, yy, z = to_world(bid, rng.uniform(lx0, lx1), y, rng.uniform(lz0, lz1))
+        solid = f.startswith(('brick', 'cinder', 'wooden_pallet', 'rubble', 'planks', 'cardboard_box'))
+        clutter(f.replace('_', ' ').capitalize(), f, x, yy, z, parent, collision=solid)
+
+
+PAPER = ['newspaper_sheet_a', 'newspaper_sheet_b', 'cardboard_flattened', 'rag_a', 'rag_b', 'newspaper_stack',
+         'cardboard_box_crushed']
+# inside the blocks: paper, rags and crushed boxes in the flats of every floor (people left in a hurry in 1998)
+for bid, b in BUILD.items():
+    if not b['model'].startswith('block'):
+        continue
+    sec = int(b['model'].split('_')[-1][:-1])
+    sw = b['length'] / sec
+    for k in range(sec):
+        cx = -b['length'] / 2 + sw * (k + 0.5)
+        for f in range(5):
+            if rng.random() < 0.6:
+                scatter(bid, cx - sw / 2 + 0.9, cx - 1.8, -b['width'] / 2 + 0.9, -0.9, floor_y(f) + 0.01, PAPER, 2, 'Clutter')
+            if rng.random() < 0.6:
+                scatter(bid, cx + 1.8, cx + sw / 2 - 0.9, -b['width'] / 2 + 0.9, -0.9, floor_y(f) + 0.01, PAPER, 2, 'Clutter')
+    # outside: rubble, bricks and broken cinder blocks under the balconies and at the gable ends
+    for k in range(int(b['length'] / 9)):
+        lx = rng.uniform(-b['length'] / 2 + 1, b['length'] / 2 - 1)
+        x, y, z = to_world(bid, lx, 0, -(b['width'] / 2 + rng.uniform(0.8, 2.2)))
+        f = rng.choice(['rubble_pile_small', 'rubble_pile_small', 'brick_pile', 'cinder_block_broken', 'rubble_pile_large'])
+        clutter('Rubble', f, x, h(x, z) - 0.05, z, 'Debris', collision=True, cull=70)
+    for s in (-1, 1):
+        x, y, z = to_world(bid, s * (b['length'] / 2 + 1.5), 0, rng.uniform(-3, 3))
+        clutter('Rubble', 'rubble_pile_small', x, h(x, z) - 0.05, z, 'Debris', collision=True, cull=70)
+
+# hospital: boxes, papers and a medical box along the corridors (looted)
+b = BUILD[HOSP]
+for f in range(3):
+    scatter(HOSP, -b['length'] / 2 + 6, b['length'] / 2 - 6, -1.0, 1.0, floor_y(f) + 0.01,
+            ['newspaper_sheet_a', 'newspaper_sheet_b', 'cardboard_box_crushed', 'cardboard_flattened', 'rag_a'], 10, 'Clutter')
+x, y, z = to_world(HOSP, -b['length'] / 2 + 8.4, floor_y(2), -b['width'] / 2 + 3.2)
+prop('Medical box', 'medical_box', x, y, z, 'Loot', yaw=rng.uniform(0, 360))
+x, y, z = to_world(HOSP, -b['length'] / 2 + 6.8, floor_y(2), -b['width'] / 2 + 2.0)
+clutter('Lyokha rag', 'rag_a', x, y + 0.01, z, 'Loot')
+
+# Venta: the bandits' loot corner in the back room, pallets and cinder blocks outside
+b = BUILD[VENTA]
+for i, (lx, lz, f) in enumerate(((-b['length'] / 2 + 1.6, -b['width'] / 2 + 1.4, 'plastic_crate_01'),
+                                 (-b['length'] / 2 + 2.3, -b['width'] / 2 + 1.3, 'plastic_crate_02'),
+                                 (-b['length'] / 2 + 1.6, -b['width'] / 2 + 2.2, 'russian_food_cans_01'),
+                                 (-b['length'] / 2 + 3.2, -b['width'] / 2 + 1.2, 'long_life_food'),
+                                 (-b['length'] / 2 + 3.9, -b['width'] / 2 + 1.3, 'wine_bottles_01'),
+                                 (-b['length'] / 2 + 1.5, -b['width'] / 2 + 3.2, 'metal_toolbox'),
+                                 (-b['length'] / 2 + 2.6, -b['width'] / 2 + 2.6, 'vintage_suitcase'))):
+    x, y, z = to_world(VENTA, lx, floor_y(0), lz)
+    prop('Bandit loot', f, x, y, z, 'Bandit base', yaw=rng.uniform(-20, 20) + b['yaw'])
+for lx, lz, f in ((-4.0, -b['width'] / 2 - 1.2, 'wooden_pallet'), (-2.6, -b['width'] / 2 - 1.3, 'wooden_pallet_broken'),
+                  (3.0, -b['width'] / 2 - 1.0, 'cinder_block'), (3.5, -b['width'] / 2 - 1.1, 'cinder_block_broken'),
+                  (b['length'] / 2 + 1.2, 1.0, 'planks_scrap_pile')):
+    x, y, z = to_world(VENTA, lx, 0, lz)
+    clutter('Bandit junk', f, x, h(x, z) - 0.02, z, 'Bandit base', collision=True)
+x, y, z = to_world(VENTA, 0.8, floor_y(0), 0.6)
+for f, dx, dz in (('wine_bottles_01', 0.6, 0.2), ('cigarette_pack', -0.5, 0.4)):
+    xx, yy, zz = to_world(VENTA, 0.8 + dx, floor_y(0), 0.6 + dz)
+    prop('Bandit fire junk', f, xx, yy, zz, 'Bandit base', yaw=rng.uniform(0, 360))
+
+# HQ camp: supplies stacked by the wall, rags and cans by the fire
+b = BUILD[HQ]
+for lx, lz, f in ((-7.5, b['width'] / 2 + 1.2, 'plastic_crate_03'), (-6.7, b['width'] / 2 + 1.1, 'plastic_crate_01'),
+                  (-7.1, b['width'] / 2 + 1.9, 'industrial_pastic_container'), (7.2, b['width'] / 2 + 1.2, 'russian_food_cans_01'),
+                  (2.0 + 1.1, b['width'] / 2 + 8.0 + 1.3, 'pot_enamel_01')):
+    x, y, z = to_world(HQ, lx, 0, lz)
+    gprop('Camp supplies', f, x, z, 'Camp', yaw=rng.uniform(0, 360))
+for lx, lz, f in ((9.0, b['width'] / 2 + 1.0, 'wooden_pallet'), (9.2, b['width'] / 2 + 1.05, 'wooden_pallet'),
+                  (2.0 - 1.6, b['width'] / 2 + 8.0 + 1.4, 'rag_b')):
+    x, y, z = to_world(HQ, lx, 0, lz)
+    clutter('Camp junk', f, x, h(x, z) + (0.15 if lx > 9.1 else 0.0), z, 'Camp', collision=f != 'rag_b')
 
 # ---------------------------------------------------------------------------- objective, loot, markers
 b = BUILD[HOSP]

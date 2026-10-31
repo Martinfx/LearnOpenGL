@@ -6,88 +6,91 @@ version 5
 player_start 47.96 0.35 61.55
 map_bounds -330 -320 576
 terrain "skrunda1.terrain"
-terrain_layer 0 "../materials/skrunda/terrain_lush.material" 0.5
-terrain_layer 1 "../materials/skrunda/terrain_meadow.material" 0.4
-terrain_layer 2 "../materials/skrunda/terrain_dry.material" 0.5
+terrain_layer 0 "../materials/skrunda/terrain_meadow.material" 0.4
+terrain_layer 1 "../materials/skrunda/terrain_dry.material" 0.5
+terrain_layer 2 "../materials/skrunda/terrain_lush.material" 0.5
 terrain_layer 3 "../materials/skrunda/terrain_dirt.material" 0.5
-foliage_type "../models/zone/vegetation/birch_b.glb" 0.03 0.85 1.15 230 1 0 1 1
-foliage_lod "../models/zone/vegetation/birch_b_lod1.glb" 30
-foliage_type "../models/zone/vegetation/pine_a.glb" 0.03 0.85 1.15 230 1 0 1 1
-foliage_lod "../models/zone/vegetation/pine_a_lod1.glb" 30
-foliage_type "../models/zone/vegetation/pine_b.glb" 0.03 0.85 1.15 230 1 0 1 1
-foliage_lod "../models/zone/vegetation/pine_b_lod1.glb" 30
-foliage_type "../models/zone/vegetation/spruce_a.glb" 0.03 0.85 1.15 230 1 0 1 1
-foliage_lod "../models/zone/vegetation/spruce_a_lod1.glb" 30
-foliage_type "../models/zone/vegetation/birch_a.glb" 0.03 0.85 1.15 230 1 0 1 1
-foliage_lod "../models/zone/vegetation/birch_a_lod1.glb" 30
-foliage_type "../models/zone/vegetation/spruce_b.glb" 0.03 0.85 1.15 230 1 0 1 1
-foliage_lod "../models/zone/vegetation/spruce_b_lod1.glb" 30
-foliage_type "../models/zone/vegetation/spruce_young.glb" 0.03 0.85 1.15 230 1 0 1 1
-foliage_lod "../models/zone/vegetation/spruce_young_lod1.glb" 30
-foliage_type "../models/zone/vegetation/broadleaf_a.glb" 0.03 0.85 1.15 230 1 0 1 1
-foliage_lod "../models/zone/vegetation/broadleaf_a_lod1.glb" 30
+foliage_type "../models/zone/skrunda/veg/birch_b.glb" 0.03 0.85 1.15 230 1 0 1 1
+foliage_lod "../models/zone/skrunda/veg/birch_b_lod1.glb" 30
+foliage_type "../models/zone/skrunda/veg/pine_a.glb" 0.03 0.85 1.15 230 1 0 1 1
+foliage_lod "../models/zone/skrunda/veg/pine_a_lod1.glb" 30
+foliage_type "../models/zone/skrunda/veg/pine_b.glb" 0.03 0.85 1.15 230 1 0 1 1
+foliage_lod "../models/zone/skrunda/veg/pine_b_lod1.glb" 30
+foliage_type "../models/zone/skrunda/veg/spruce_a.glb" 0.03 0.85 1.15 230 1 0 1 1
+foliage_lod "../models/zone/skrunda/veg/spruce_a_lod1.glb" 30
+foliage_type "../models/zone/skrunda/veg/birch_a.glb" 0.03 0.85 1.15 230 1 0 1 1
+foliage_lod "../models/zone/skrunda/veg/birch_a_lod1.glb" 30
+foliage_type "../models/zone/skrunda/veg/spruce_b.glb" 0.03 0.85 1.15 230 1 0 1 1
+foliage_lod "../models/zone/skrunda/veg/spruce_b_lod1.glb" 30
+foliage_type "../models/zone/skrunda/veg/spruce_young.glb" 0.03 0.85 1.15 230 1 0 1 1
+foliage_lod "../models/zone/skrunda/veg/spruce_young_lod1.glb" 30
+foliage_type "../models/zone/skrunda/veg/broadleaf_a.glb" 0.03 0.85 1.15 230 1 0 1 1
+foliage_lod "../models/zone/skrunda/veg/broadleaf_a_lod1.glb" 30
 foliage_type "../models/zone/vegetation/dead_a.glb" 0.03 0.85 1.15 230 1 0 1 1
 foliage_lod "../models/zone/vegetation/dead_a_lod1.glb" 30
-foliage_type "../models/zone/vegetation/broadleaf_b.glb" 0.03 0.85 1.15 230 1 0 1 1
-foliage_lod "../models/zone/vegetation/broadleaf_b_lod1.glb" 30
-foliage_type "../models/zone/vegetation/birch_young.glb" 0.03 0.85 1.15 230 1 0 1 1
-foliage_lod "../models/zone/vegetation/birch_young_lod1.glb" 30
-foliage_type "../models/zone/vegetation/bush_wide_a.glb" 0.02 0.85 1.15 110 0 0 1 0.8
-foliage_lod "../models/zone/vegetation/bush_wide_a_lod1.glb" 20
-foliage_type "../models/zone/vegetation/bush_c.glb" 0.02 0.85 1.15 110 0 0 1 0.8
-foliage_lod "../models/zone/vegetation/bush_c_lod1.glb" 20
-foliage_type "../models/zone/vegetation/bush_dense_a.glb" 0.02 0.85 1.15 110 0 0 1 0.8
-foliage_lod "../models/zone/vegetation/bush_dense_a_lod1.glb" 20
+foliage_type "../models/zone/skrunda/veg/broadleaf_b.glb" 0.03 0.85 1.15 230 1 0 1 1
+foliage_lod "../models/zone/skrunda/veg/broadleaf_b_lod1.glb" 30
+foliage_type "../models/zone/skrunda/veg/birch_young.glb" 0.03 0.85 1.15 230 1 0 1 1
+foliage_lod "../models/zone/skrunda/veg/birch_young_lod1.glb" 30
 foliage_type "../models/zone/vegetation/bush_b.glb" 0.02 0.85 1.15 110 0 0 1 0.8
 foliage_lod "../models/zone/vegetation/bush_b_lod1.glb" 20
+foliage_type "../models/zone/vegetation/bush_dense_a.glb" 0.02 0.85 1.15 110 0 0 1 0.8
+foliage_lod "../models/zone/vegetation/bush_dense_a_lod1.glb" 20
+foliage_type "../models/zone/vegetation/bush_c.glb" 0.02 0.85 1.15 110 0 0 1 0.8
+foliage_lod "../models/zone/vegetation/bush_c_lod1.glb" 20
+foliage_type "../models/zone/vegetation/bush_wide_a.glb" 0.02 0.85 1.15 110 0 0 1 0.8
+foliage_lod "../models/zone/vegetation/bush_wide_a_lod1.glb" 20
 foliage_type "../models/zone/vegetation/bush_a.glb" 0.02 0.85 1.15 110 0 0 1 0.8
 foliage_lod "../models/zone/vegetation/bush_a_lod1.glb" 20
-foliage_type "../models/zone/vegetation/grass_patch_tall.glb" 0.15 0.85 1.15 50 0 0 0 0.6
+foliage_type "../models/zone/skrunda/veg/grass_dry.glb" 0.25 0.85 1.15 50 0 0 0 0.5
+foliage_lod "../models/zone/skrunda/veg/grass_dry_lod1.glb" 8
+foliage_lod "../models/zone/skrunda/veg/grass_dry_far.glb" 18
+foliage_type "../models/zone/vegetation/grass_patch_tall.glb" 0.25 0.85 1.15 50 0 0 0 0.5
 foliage_lod "../models/zone/vegetation/grass_patch_tall_lod1.glb" 8
 foliage_lod "../models/zone/skrunda/veg/grass_patch_far.glb" 18
-foliage_type "../models/zone/vegetation/grass_tall_b.glb" 0.3 0.85 1.15 40 0 0 0 0.5
-foliage_lod "../models/zone/vegetation/grass_tall_b_lod1.glb" 12
 foliage_type "../models/zone/vegetation/grass_tall_a.glb" 0.3 0.85 1.15 40 0 0 0 0.5
 foliage_lod "../models/zone/vegetation/grass_tall_a_lod1.glb" 12
+foliage_type "../models/zone/vegetation/grass_tall_b.glb" 0.3 0.85 1.15 40 0 0 0 0.5
+foliage_lod "../models/zone/vegetation/grass_tall_b_lod1.glb" 12
+foliage_type "../models/zone/vegetation/nettle_tall_a.glb" 0.1 0.85 1.15 45 0 0 0 0.6
+foliage_lod "../models/zone/vegetation/nettle_tall_a_lod1.glb" 8
 foliage_type "../models/zone/vegetation/weed_patch.glb" 0.1 0.85 1.15 45 0 0 0 0.6
 foliage_lod "../models/zone/vegetation/weed_patch_lod1.glb" 8
 foliage_lod "../models/zone/skrunda/veg/weed_patch_far.glb" 16
-foliage_type "../models/zone/vegetation/nettle_tall_a.glb" 0.1 0.85 1.15 45 0 0 0 0.6
-foliage_lod "../models/zone/vegetation/nettle_tall_a_lod1.glb" 8
 foliage_type "../models/zone/vegetation/grass_clump_a.glb" 0.2 0.85 1.15 40 0 0 0 0.5
 foliage_lod "../models/zone/vegetation/grass_clump_a_lod1.glb" 12
-foliage_type "../models/zone/vegetation/grass_short_a.glb" 0.2 0.85 1.15 40 0 0 0 0.5
-foliage_lod "../models/zone/vegetation/grass_short_a_lod1.glb" 12
 foliage_type "../models/zone/vegetation/grass_tall_b.glb" 0.2 0.85 1.15 40 0 0 0 0.5
 foliage_lod "../models/zone/vegetation/grass_tall_b_lod1.glb" 12
-foliage_type "../models/zone/vegetation/weed_b.glb" 0.2 0.85 1.15 40 0 0 0 0.5
-foliage_lod "../models/zone/vegetation/weed_b_lod1.glb" 12
 foliage_type "../models/zone/vegetation/weed_a.glb" 0.2 0.85 1.15 40 0 0 0 0.5
 foliage_lod "../models/zone/vegetation/weed_a_lod1.glb" 12
-sun 0.55 -0.42 -0.35
-env sun_color 1 0.84 0.66
-env sun_intensity 1.9
-env sky_zenith 0.36 0.4 0.44
-env sky_horizon 0.72 0.7 0.64
-env ground_color 0.2 0.21 0.16
-env cloud_cover 0.82
-env ambient_intensity 0.8
-env fog_color 0.62 0.63 0.6
-env fog_density 0.0065
-env fog_height 3
-env fog_height_falloff 0.04
-env fog_sun_scatter 1.2
-env exposure 1.05
-env bloom_intensity 0.05
-env bloom_threshold 1.3
+foliage_type "../models/zone/vegetation/weed_b.glb" 0.2 0.85 1.15 40 0 0 0 0.5
+foliage_lod "../models/zone/vegetation/weed_b_lod1.glb" 12
+foliage_type "../models/zone/vegetation/grass_short_a.glb" 0.2 0.85 1.15 40 0 0 0 0.5
+foliage_lod "../models/zone/vegetation/grass_short_a_lod1.glb" 12
+sun 0.42 -0.68 -0.6
+env sun_color 1 0.94 0.84
+env sun_intensity 3.4
+env sky_zenith 0.28 0.44 0.7
+env sky_horizon 0.74 0.8 0.86
+env ground_color 0.34 0.31 0.24
+env cloud_cover 0.4
+env ambient_intensity 1.0
+env fog_color 0.72 0.78 0.85
+env fog_density 0.0022
+env fog_height 2
+env fog_height_falloff 0.03
+env fog_sun_scatter 0.8
+env exposure 1.0
+env bloom_intensity 0.04
+env bloom_threshold 1.4
 env ssao_radius 0.8
-env ssao_intensity 1.3
-env shadow_distance 80
-env saturation 0.78
-env contrast 1.1
-env tint 1.0 1.0 0.96
-env vignette 0.32
-env grain 0.03
+env ssao_intensity 1.2
+env shadow_distance 90
+env saturation 0.95
+env contrast 1.06
+env tint 1.0 1.0 1.0
+env vignette 0.18
+env grain 0.02
 weapon "../weapons/ak74.weapon"
 weapon "../weapons/pistol.weapon"
 weapon "../weapons/knife.weapon"
@@ -103,6 +106,7 @@ group "Wrecks" "Street"
 group "Lamps" "Street"
 group "Camp" ""
 group "Bandit base" ""
+group "Clutter" ""
 group "Vegetation" ""
 group "Forest" "Vegetation"
 group "Trees" "Vegetation"
@@ -903,46 +907,18 @@ model "Lamp post 69" "../models/zone/gen/lamp_post_leaning.glb" -193.99 -0.67 18
 model "Lamp post 70" "../models/zone/gen/lamp_post.glb" -216.62 -0.58 207.09
   parent "Lamps"
   transform 0.0 -47.6 0.0 1
-model "Wreck" "../models/zone/gen/car_sedan_blue.glb" -74.00 0.30 40.00
-  parent "Wrecks"
-  transform 0.0 92.0 0.0 1
-  lod "../models/zone/gen/car_sedan_blue_lod1.glb" 70
-model "Wreck 2" "../models/zone/gen/car_estate_rust.glb" -74.50 0.30 46.50
-  parent "Wrecks"
-  transform 0.0 88.0 0.0 1
-  lod "../models/zone/gen/car_estate_rust_lod1.glb" 70
-model "Wreck 3" "../models/zone/gen/car_burnt.glb" -66.60 -0.04 -12.00
+model "Wreck" "../models/zone/gen/car_burnt.glb" -66.60 -0.04 -12.00
   parent "Wrecks"
   transform 0.0 94.0 -0.9 1
   lod "../models/zone/gen/car_burnt_lod1.glb" 70
-model "Wreck 4" "../models/zone/gen/car_van_green.glb" -140.50 0.12 -36.60
-  parent "Wrecks"
-  transform 0.0 2.0 0.0 1
-  lod "../models/zone/gen/car_van_green_lod1.glb" 70
-model "Wreck 5" "../models/zone/gen/car_sedan_blue.glb" -104.00 0.05 -34.00
-  parent "Wrecks"
-  transform 0.0 178.0 0.0 1
-  lod "../models/zone/gen/car_sedan_blue_lod1.glb" 70
-model "Wreck 6" "../models/zone/gen/car_estate_red.glb" -157.00 0.39 24.00
-  parent "Wrecks"
-  transform 0.0 85.0 0.0 1
-  lod "../models/zone/gen/car_estate_red_lod1.glb" 70
-model "Wreck 7" "../models/zone/gen/car_sedan_green.glb" -61.00 -0.26 -150.00
-  parent "Wrecks"
-  transform 0.0 95.0 0.0 1
-  lod "../models/zone/gen/car_sedan_green_lod1.glb" 70
-model "Wreck 8" "../models/zone/gen/bus_small_cream.glb" -12.00 0.15 45.00
+model "Wreck 2" "../models/zone/gen/bus_small_cream.glb" -12.00 0.15 45.00
   parent "Wrecks"
   transform 0.0 36.0 0.0 1
   lod "../models/zone/gen/bus_small_cream_lod1.glb" 70
-model "Wreck 9" "../models/zone/gen/car_burnt.glb" -58.00 0.40 74.00
+model "Wreck 3" "../models/zone/gen/car_burnt.glb" -58.00 0.40 74.00
   parent "Wrecks"
   transform 0.0 120.0 2.2 1
   lod "../models/zone/gen/car_burnt_lod1.glb" 70
-model "Wreck 10" "../models/zone/gen/car_sedan_green.glb" -160.00 -0.07 -100.00
-  parent "Wrecks"
-  transform 0.0 86.0 0.0 1
-  lod "../models/zone/gen/car_sedan_green_lod1.glb" 70
 model "Concrete barrier" "../models/props/concrete_road_barrier_02/concrete_road_barrier_02.gltf" -66.00 0.30 60.00
   parent "Street"
   transform 0.0 20.0 0.0 1
@@ -981,170 +957,4004 @@ model "Puddle 6" "../models/zone/gen/puddle_a.glb" 19.89 0.02 25.93
   transform 0.0 154.1 0.0 1
   collision 0
   cull_distance 120
-model "Bucket" "../models/props/wooden_bucket_02/wooden_bucket_02.gltf" -156.64 -0.05 -205.65
+model "Rubble" "../models/zone/gen/rubble_a.glb" -156.83 -0.06 -229.97
   parent "Debris"
-  transform 0.0 210.1 0.0 1
-  cull_distance 90
-model "Tyre" "../models/props/old_tyre/old_tyre.gltf" -175.98 0.17 -264.98
-  parent "Debris"
-  transform 90.0 330.0 0.0 1
-  cull_distance 90
-model "Rubble" "../models/zone/gen/rubble_b.glb" -155.07 0.01 -251.87
-  parent "Debris"
-  transform 0.0 270.1 0.0 1
-  lod "../models/zone/gen/rubble_b_lod1.glb" 40
-model "Trash" "../models/props/trashbag/trashbag.gltf" -175.71 -0.07 -234.45
-  parent "Debris"
-  transform 0.0 165.2 0.0 1
-  cull_distance 90
-model "Trash 2" "../models/props/trashbag/trashbag.gltf" -177.02 -0.07 -205.42
-  parent "Debris"
-  transform 0.0 292.1 0.0 1
-  cull_distance 90
-model "Rubble 2" "../models/zone/gen/rubble_b.glb" -175.81 -0.05 -252.80
-  parent "Debris"
-  transform 0.0 129.0 0.0 1
-  lod "../models/zone/gen/rubble_b_lod1.glb" 40
-model "Bucket 2" "../models/props/wooden_bucket_02/wooden_bucket_02.gltf" -141.80 0.22 -45.88
-  parent "Debris"
-  transform 0.0 271.9 0.0 1
-  cull_distance 90
-model "Trash 3" "../models/props/trashbag/trashbag.gltf" -141.84 0.21 -56.03
-  parent "Debris"
-  transform 0.0 131.1 0.0 1
-  cull_distance 90
-model "Tyre 2" "../models/props/old_tyre/old_tyre.gltf" -121.82 0.32 -61.35
-  parent "Debris"
-  transform 90.0 357.8 0.0 1
-  cull_distance 90
-model "Rubble 3" "../models/zone/gen/rubble_a.glb" -56.90 -0.00 -73.47
-  parent "Debris"
-  transform 0.0 353.9 0.0 1
+  transform 0.0 323.4 0.0 1
   lod "../models/zone/gen/rubble_a_lod1.glb" 40
-model "Trash 4" "../models/props/trashbag/trashbag.gltf" -57.07 0.02 -53.55
+model "Tyre" "../models/props/old_tyre/old_tyre.gltf" -177.39 0.01 -232.00
   parent "Debris"
-  transform 0.0 2.3 0.0 1
+  transform 90.0 242.9 0.0 1
   cull_distance 90
-model "Trash 5" "../models/props/trashbag/trashbag.gltf" -56.15 -0.03 -86.53
+model "Bucket" "../models/props/wooden_bucket_02/wooden_bucket_02.gltf" -155.49 -0.05 -238.26
+  parent "Debris"
+  transform 0.0 175.0 0.0 1
+  cull_distance 90
+model "Tyre 2" "../models/props/old_tyre/old_tyre.gltf" -174.92 0.04 -239.97
+  parent "Debris"
+  transform 90.0 89.0 0.0 1
+  cull_distance 90
+model "Tyre 3" "../models/props/old_tyre/old_tyre.gltf" -175.44 0.09 -261.38
+  parent "Debris"
+  transform 90.0 312.6 0.0 1
+  cull_distance 90
+model "Tyre 4" "../models/props/old_tyre/old_tyre.gltf" -175.46 0.08 -259.84
+  parent "Debris"
+  transform 90.0 359.0 0.0 1
+  cull_distance 90
+model "Trash" "../models/props/trashbag/trashbag.gltf" -140.53 0.22 -52.53
+  parent "Debris"
+  transform 0.0 338.4 0.0 1
+  cull_distance 90
+model "Rubble 2" "../models/zone/gen/rubble_b.glb" -120.90 0.22 -61.86
+  parent "Debris"
+  transform 0.0 270.0 0.0 1
+  lod "../models/zone/gen/rubble_b_lod1.glb" 40
+model "Rubble 3" "../models/zone/gen/rubble_a.glb" -141.08 0.22 -53.28
+  parent "Debris"
+  transform 0.0 250.9 0.0 1
+  lod "../models/zone/gen/rubble_a_lod1.glb" 40
+model "Trash 2" "../models/props/trashbag/trashbag.gltf" -36.25 0.02 -60.54
+  parent "Debris"
+  transform 0.0 96.2 0.0 1
+  cull_distance 90
+model "Trash 3" "../models/props/trashbag/trashbag.gltf" -58.91 0.04 -53.75
+  parent "Debris"
+  transform 0.0 162.3 0.0 1
+  cull_distance 90
+model "Tyre 5" "../models/props/old_tyre/old_tyre.gltf" -56.09 0.07 -86.82
+  parent "Debris"
+  transform 90.0 40.2 0.0 1
+  cull_distance 90
+model "Rubble 4" "../models/zone/gen/rubble_a.glb" -56.44 0.02 -60.82
+  parent "Debris"
+  transform 0.0 173.3 0.0 1
+  lod "../models/zone/gen/rubble_a_lod1.glb" 40
+model "Trash 4" "../models/props/trashbag/trashbag.gltf" -57.42 0.02 -46.38
+  parent "Debris"
+  transform 0.0 1.5 0.0 1
+  cull_distance 90
+model "Rubble 5" "../models/zone/gen/rubble_b.glb" -119.91 0.16 -183.61
+  parent "Debris"
+  transform 0.0 121.0 0.0 1
+  lod "../models/zone/gen/rubble_b_lod1.glb" 40
+model "Rubble 6" "../models/zone/gen/rubble_b.glb" -114.02 0.15 -203.71
+  parent "Debris"
+  transform 0.0 68.9 0.0 1
+  lod "../models/zone/gen/rubble_b_lod1.glb" 40
+model "Bucket 2" "../models/props/wooden_bucket_02/wooden_bucket_02.gltf" -113.81 0.15 -203.90
+  parent "Debris"
+  transform 0.0 96.3 0.0 1
+  cull_distance 90
+model "Rubble 7" "../models/zone/gen/rubble_a.glb" -103.59 0.46 12.02
+  parent "Debris"
+  transform 0.0 80.1 0.0 1
+  lod "../models/zone/gen/rubble_a_lod1.glb" 40
+model "Trash 5" "../models/props/trashbag/trashbag.gltf" -105.01 0.48 7.82
+  parent "Debris"
+  transform 0.0 259.0 0.0 1
+  cull_distance 90
+model "Trash 6" "../models/props/trashbag/trashbag.gltf" -102.49 0.46 4.68
+  parent "Debris"
+  transform 0.0 123.5 0.0 1
+  cull_distance 90
+model "Rubble 8" "../models/zone/gen/rubble_b.glb" -125.25 0.73 16.93
+  parent "Debris"
+  transform 0.0 345.9 0.0 1
+  lod "../models/zone/gen/rubble_b_lod1.glb" 40
+model "Trash 7" "../models/props/trashbag/trashbag.gltf" -145.12 0.76 22.12
+  parent "Debris"
+  transform 0.0 71.2 0.0 1
+  cull_distance 90
+model "Rubble 9" "../models/zone/gen/rubble_a.glb" -145.51 0.75 13.48
   parent "Debris"
   transform 0.0 344.1 0.0 1
-  cull_distance 90
-model "Rubble 4" "../models/zone/gen/rubble_b.glb" -38.01 0.02 -44.27
+  lod "../models/zone/gen/rubble_a_lod1.glb" 40
+model "Rubble 10" "../models/zone/gen/rubble_b.glb" -74.68 -0.12 -136.00
   parent "Debris"
+  transform 0.0 179.3 0.0 1
+  lod "../models/zone/gen/rubble_b_lod1.glb" 40
+model "Trash 8" "../models/props/trashbag/trashbag.gltf" -76.58 -0.11 -126.80
+  parent "Debris"
+  transform 0.0 4.2 0.0 1
+  cull_distance 90
+model "Trash 9" "../models/props/trashbag/trashbag.gltf" -74.84 -0.12 -142.02
+  parent "Debris"
+  transform 0.0 344.5 0.0 1
+  cull_distance 90
+model "Rubble 11" "../models/zone/gen/rubble_a.glb" -63.83 0.26 17.99
+  parent "Debris"
+  transform 0.0 180.3 0.0 1
+  lod "../models/zone/gen/rubble_a_lod1.glb" 40
+model "Bucket 3" "../models/props/wooden_bucket_02/wooden_bucket_02.gltf" -41.73 0.24 15.96
+  parent "Debris"
+  transform 0.0 180.0 0.0 1
+  cull_distance 90
+model "Rubble 12" "../models/zone/gen/rubble_a.glb" -44.58 0.24 47.93
+  parent "Debris"
+  transform 0.0 349.0 0.0 1
+  lod "../models/zone/gen/rubble_a_lod1.glb" 40
+model "Rubble 13" "../models/zone/gen/rubble_a.glb" -62.68 0.26 16.38
+  parent "Debris"
+  transform 0.0 245.4 0.0 1
+  lod "../models/zone/gen/rubble_a_lod1.glb" 40
+model "Trash 10" "../models/props/trashbag/trashbag.gltf" -62.98 0.26 12.83
+  parent "Debris"
+  transform 0.0 139.5 0.0 1
+  cull_distance 90
+model "Trash 11" "../models/props/trashbag/trashbag.gltf" -51.41 -0.18 -225.37
+  parent "Debris"
+  transform 0.0 41.0 0.0 1
+  cull_distance 90
+model "Tyre 6" "../models/props/old_tyre/old_tyre.gltf" -97.23 -0.07 -247.38
+  parent "Debris"
+  transform 90.0 159.1 0.0 1
+  cull_distance 90
+model "Bucket 4" "../models/props/wooden_bucket_02/wooden_bucket_02.gltf" -97.90 -0.17 -229.71
+  parent "Debris"
+  transform 0.0 352.9 0.0 1
+  cull_distance 90
+model "Rubble 14" "../models/zone/gen/rubble_a.glb" -91.50 -0.18 -246.85
+  parent "Debris"
+  transform 0.0 5.4 0.0 1
+  lod "../models/zone/gen/rubble_a_lod1.glb" 40
+model "Bucket 5" "../models/props/wooden_bucket_02/wooden_bucket_02.gltf" -62.66 -0.18 -226.61
+  parent "Debris"
+  transform 0.0 200.8 0.0 1
+  cull_distance 90
+model "Rubble 15" "../models/zone/gen/rubble_b.glb" -94.92 -0.04 -249.09
+  parent "Debris"
+  transform 0.0 158.3 0.0 1
+  lod "../models/zone/gen/rubble_b_lod1.glb" 40
+model "Bucket 6" "../models/props/wooden_bucket_02/wooden_bucket_02.gltf" -44.16 -0.18 -244.19
+  parent "Debris"
+  transform 0.0 24.7 0.0 1
+  cull_distance 90
+model "Trash 12" "../models/props/trashbag/trashbag.gltf" -79.29 0.14 -65.66
+  parent "Debris"
+  transform 0.0 335.5 0.0 1
+  cull_distance 90
+model "Rubble 16" "../models/zone/gen/rubble_a.glb" -100.27 0.15 -61.75
+  parent "Debris"
+  transform 0.0 194.2 0.0 1
+  lod "../models/zone/gen/rubble_a_lod1.glb" 40
+model "Bucket 7" "../models/props/wooden_bucket_02/wooden_bucket_02.gltf" -100.42 0.14 -42.18
+  parent "Debris"
+  transform 0.0 108.0 0.0 1
+  cull_distance 90
+model "Cardboard box crushed" "../models/props/clutter/cardboard_box_crushed.glb" -163.90 0.55 -269.81
+  parent "Clutter"
+  transform 0.0 90.8 0.0 1
+  cull_distance 45
+model "Cardboard box crushed 2" "../models/props/clutter/cardboard_box_crushed.glb" -163.11 0.55 -268.38
+  parent "Clutter"
+  transform 0.0 24.5 0.0 1
+  cull_distance 45
+model "Newspaper stack" "../models/props/clutter/newspaper_stack.glb" -161.35 0.55 -259.76
+  parent "Clutter"
+  transform 0.0 296.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a" "../models/props/clutter/rag_a.glb" -162.29 0.55 -260.91
+  parent "Clutter"
+  transform 0.0 348.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 2" "../models/props/clutter/newspaper_stack.glb" -160.39 3.55 -258.48
+  parent "Clutter"
+  transform 0.0 323.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b" "../models/props/clutter/rag_b.glb" -164.03 3.55 -259.50
+  parent "Clutter"
+  transform 0.0 225.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b" "../models/props/clutter/newspaper_sheet_b.glb" -160.53 6.55 -261.73
+  parent "Clutter"
+  transform 0.0 25.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 2" "../models/props/clutter/rag_b.glb" -160.17 6.55 -260.91
+  parent "Clutter"
+  transform 0.0 122.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 3" "../models/props/clutter/rag_b.glb" -162.72 9.55 -268.74
+  parent "Clutter"
+  transform 0.0 75.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 4" "../models/props/clutter/rag_b.glb" -160.06 9.55 -266.46
+  parent "Clutter"
+  transform 0.0 96.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 2" "../models/props/clutter/newspaper_sheet_b.glb" -163.70 9.55 -260.35
+  parent "Clutter"
+  transform 0.0 67.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 5" "../models/props/clutter/rag_b.glb" -163.31 9.55 -259.46
+  parent "Clutter"
+  transform 0.0 248.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 6" "../models/props/clutter/rag_b.glb" -162.31 0.55 -255.86
+  parent "Clutter"
+  transform 0.0 339.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 3" "../models/props/clutter/newspaper_sheet_b.glb" -164.37 0.55 -253.55
+  parent "Clutter"
+  transform 0.0 334.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened" "../models/props/clutter/cardboard_flattened.glb" -162.86 6.55 -256.33
+  parent "Clutter"
+  transform 0.0 101.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a" "../models/props/clutter/newspaper_sheet_a.glb" -160.73 6.55 -253.07
+  parent "Clutter"
+  transform 0.0 135.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 2" "../models/props/clutter/newspaper_sheet_a.glb" -161.58 6.55 -245.22
+  parent "Clutter"
+  transform 0.0 109.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 3" "../models/props/clutter/cardboard_box_crushed.glb" -164.77 6.55 -244.89
+  parent "Clutter"
+  transform 0.0 177.7 0.0 1
+  cull_distance 45
+model "Rag b 7" "../models/props/clutter/rag_b.glb" -164.00 9.55 -256.10
+  parent "Clutter"
+  transform 0.0 209.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 3" "../models/props/clutter/newspaper_stack.glb" -161.01 9.55 -256.19
+  parent "Clutter"
+  transform 0.0 290.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 4" "../models/props/clutter/newspaper_stack.glb" -161.75 9.55 -246.14
+  parent "Clutter"
+  transform 0.0 347.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 3" "../models/props/clutter/newspaper_sheet_a.glb" -160.94 9.55 -247.39
+  parent "Clutter"
+  transform 0.0 352.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 2" "../models/props/clutter/cardboard_flattened.glb" -162.55 12.55 -252.38
+  parent "Clutter"
+  transform 0.0 42.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 4" "../models/props/clutter/newspaper_sheet_b.glb" -164.03 12.55 -255.36
+  parent "Clutter"
+  transform 0.0 152.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 2" "../models/props/clutter/rag_a.glb" -161.76 12.55 -248.53
+  parent "Clutter"
+  transform 0.0 356.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 3" "../models/props/clutter/rag_a.glb" -161.05 12.55 -247.06
+  parent "Clutter"
+  transform 0.0 42.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 3" "../models/props/clutter/cardboard_flattened.glb" -162.98 0.55 -242.65
+  parent "Clutter"
+  transform 0.0 236.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 4" "../models/props/clutter/cardboard_flattened.glb" -164.49 0.55 -240.37
+  parent "Clutter"
+  transform 0.0 241.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 4" "../models/props/clutter/newspaper_sheet_a.glb" -161.98 3.55 -242.82
+  parent "Clutter"
+  transform 0.0 263.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 5" "../models/props/clutter/newspaper_sheet_b.glb" -164.85 3.55 -240.55
+  parent "Clutter"
+  transform 0.0 125.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 4" "../models/props/clutter/rag_a.glb" -163.16 3.55 -234.53
+  parent "Clutter"
+  transform 0.0 260.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 5" "../models/props/clutter/newspaper_stack.glb" -161.73 3.55 -235.06
+  parent "Clutter"
+  transform 0.0 52.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 6" "../models/props/clutter/newspaper_stack.glb" -164.71 6.55 -234.68
+  parent "Clutter"
+  transform 0.0 31.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 7" "../models/props/clutter/newspaper_stack.glb" -162.96 6.55 -231.99
+  parent "Clutter"
+  transform 0.0 342.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 5" "../models/props/clutter/cardboard_flattened.glb" -161.78 9.55 -240.64
+  parent "Clutter"
+  transform 0.0 7.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 6" "../models/props/clutter/cardboard_flattened.glb" -162.61 9.55 -240.03
+  parent "Clutter"
+  transform 0.0 17.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 8" "../models/props/clutter/newspaper_stack.glb" -163.12 12.55 -240.57
+  parent "Clutter"
+  transform 0.0 76.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 4" "../models/props/clutter/cardboard_box_crushed.glb" -161.89 12.55 -241.30
+  parent "Clutter"
+  transform 0.0 84.1 0.0 1
+  cull_distance 45
+model "Cardboard box crushed 5" "../models/props/clutter/cardboard_box_crushed.glb" -161.77 12.55 -234.62
+  parent "Clutter"
+  transform 0.0 160.3 0.0 1
+  cull_distance 45
+model "Newspaper stack 9" "../models/props/clutter/newspaper_stack.glb" -163.70 12.55 -235.16
+  parent "Clutter"
+  transform 0.0 208.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 7" "../models/props/clutter/cardboard_flattened.glb" -163.91 0.55 -228.00
+  parent "Clutter"
+  transform 0.0 340.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 8" "../models/props/clutter/rag_b.glb" -161.71 0.55 -226.56
+  parent "Clutter"
+  transform 0.0 213.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 8" "../models/props/clutter/cardboard_flattened.glb" -166.06 0.55 -218.34
+  parent "Clutter"
+  transform 0.0 17.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 10" "../models/props/clutter/newspaper_stack.glb" -163.14 0.55 -220.57
+  parent "Clutter"
+  transform 0.0 347.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 9" "../models/props/clutter/cardboard_flattened.glb" -164.29 6.55 -227.10
+  parent "Clutter"
+  transform 0.0 12.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 6" "../models/props/clutter/cardboard_box_crushed.glb" -162.95 6.55 -225.70
+  parent "Clutter"
+  transform 0.0 308.7 0.0 1
+  cull_distance 45
+model "Cardboard flattened 10" "../models/props/clutter/cardboard_flattened.glb" -166.15 6.55 -218.06
+  parent "Clutter"
+  transform 0.0 122.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 6" "../models/props/clutter/newspaper_sheet_b.glb" -165.50 6.55 -218.65
+  parent "Clutter"
+  transform 0.0 64.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 5" "../models/props/clutter/newspaper_sheet_a.glb" -162.61 9.55 -227.73
+  parent "Clutter"
+  transform 0.0 105.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 5" "../models/props/clutter/rag_a.glb" -165.47 9.55 -228.30
+  parent "Clutter"
+  transform 0.0 332.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 11" "../models/props/clutter/cardboard_flattened.glb" -162.60 9.55 -218.74
+  parent "Clutter"
+  transform 0.0 71.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 7" "../models/props/clutter/cardboard_box_crushed.glb" -165.05 9.55 -219.51
+  parent "Clutter"
+  transform 0.0 13.4 0.0 1
+  cull_distance 45
+model "Rag a 6" "../models/props/clutter/rag_a.glb" -165.40 12.55 -229.59
+  parent "Clutter"
+  transform 0.0 120.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 6" "../models/props/clutter/newspaper_sheet_a.glb" -161.58 12.55 -228.89
+  parent "Clutter"
+  transform 0.0 111.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 7" "../models/props/clutter/rag_a.glb" -164.12 12.55 -218.76
+  parent "Clutter"
+  transform 0.0 153.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 8" "../models/props/clutter/cardboard_box_crushed.glb" -162.97 12.55 -220.62
+  parent "Clutter"
+  transform 0.0 195.5 0.0 1
+  cull_distance 45
+model "Cardboard box crushed 9" "../models/props/clutter/cardboard_box_crushed.glb" -164.08 0.55 -214.81
+  parent "Clutter"
+  transform 0.0 80.9 0.0 1
+  cull_distance 45
+model "Rag a 8" "../models/props/clutter/rag_a.glb" -164.63 0.55 -216.11
+  parent "Clutter"
+  transform 0.0 49.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 9" "../models/props/clutter/rag_b.glb" -164.13 0.55 -208.53
+  parent "Clutter"
+  transform 0.0 248.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 7" "../models/props/clutter/newspaper_sheet_b.glb" -163.52 0.55 -206.06
+  parent "Clutter"
+  transform 0.0 290.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 8" "../models/props/clutter/newspaper_sheet_b.glb" -163.68 3.55 -205.27
+  parent "Clutter"
+  transform 0.0 104.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 11" "../models/props/clutter/newspaper_stack.glb" -164.94 3.55 -204.62
+  parent "Clutter"
+  transform 0.0 131.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 7" "../models/props/clutter/newspaper_sheet_a.glb" -166.13 6.55 -212.58
+  parent "Clutter"
+  transform 0.0 217.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 10" "../models/props/clutter/cardboard_box_crushed.glb" -164.42 6.55 -214.18
+  parent "Clutter"
+  transform 0.0 150.8 0.0 1
+  cull_distance 45
+model "Rag a 9" "../models/props/clutter/rag_a.glb" -162.36 12.55 -215.34
+  parent "Clutter"
+  transform 0.0 149.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 11" "../models/props/clutter/cardboard_box_crushed.glb" -164.05 12.55 -215.13
+  parent "Clutter"
+  transform 0.0 239.9 0.0 1
+  cull_distance 45
+model "Rag a 10" "../models/props/clutter/rag_a.glb" -163.64 12.55 -207.99
+  parent "Clutter"
+  transform 0.0 178.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 12" "../models/props/clutter/cardboard_box_crushed.glb" -164.72 12.55 -206.07
+  parent "Clutter"
+  transform 0.0 309.7 0.0 1
+  cull_distance 45
+model "Cardboard box crushed 13" "../models/props/clutter/cardboard_box_crushed.glb" -163.66 0.55 -199.69
+  parent "Clutter"
+  transform 0.0 359.9 0.0 1
+  cull_distance 45
+model "Cardboard flattened 12" "../models/props/clutter/cardboard_flattened.glb" -165.94 0.55 -201.00
+  parent "Clutter"
+  transform 0.0 97.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 10" "../models/props/clutter/rag_b.glb" -165.84 0.55 -191.57
+  parent "Clutter"
+  transform 0.0 18.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 8" "../models/props/clutter/newspaper_sheet_a.glb" -166.79 0.55 -194.36
+  parent "Clutter"
+  transform 0.0 156.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 11" "../models/props/clutter/rag_b.glb" -165.01 3.55 -199.98
+  parent "Clutter"
+  transform 0.0 106.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 12" "../models/props/clutter/newspaper_stack.glb" -166.24 3.55 -200.62
+  parent "Clutter"
+  transform 0.0 335.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 11" "../models/props/clutter/rag_a.glb" -166.21 3.55 -193.40
+  parent "Clutter"
+  transform 0.0 102.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 9" "../models/props/clutter/newspaper_sheet_b.glb" -163.20 3.55 -192.47
+  parent "Clutter"
+  transform 0.0 336.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 12" "../models/props/clutter/rag_b.glb" -163.02 6.55 -201.86
+  parent "Clutter"
+  transform 0.0 357.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 13" "../models/props/clutter/newspaper_stack.glb" -166.86 6.55 -199.77
+  parent "Clutter"
+  transform 0.0 49.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 10" "../models/props/clutter/newspaper_sheet_b.glb" -165.05 6.55 -194.71
+  parent "Clutter"
+  transform 0.0 330.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 14" "../models/props/clutter/newspaper_stack.glb" -164.00 6.55 -194.64
+  parent "Clutter"
+  transform 0.0 43.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 13" "../models/props/clutter/cardboard_flattened.glb" -164.26 12.55 -191.85
+  parent "Clutter"
+  transform 0.0 41.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 11" "../models/props/clutter/newspaper_sheet_b.glb" -163.85 12.55 -193.42
+  parent "Clutter"
+  transform 0.0 142.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rubble 17" "../models/props/clutter/rubble_pile_small.glb" -158.64 -0.11 -229.06
+  parent "Debris"
+  transform 0.0 321.0 0.0 1
+  cull_distance 70
+model "Rubble 18" "../models/props/clutter/brick_pile.glb" -158.21 -0.11 -241.81
+  parent "Debris"
+  transform 0.0 74.4 0.0 1
+  cull_distance 70
+model "Rubble 19" "../models/props/clutter/cinder_block_broken.glb" -160.46 -0.11 -212.18
+  parent "Debris"
+  transform 0.0 76.5 0.0 1
+  cull_distance 70
+model "Rubble 20" "../models/props/clutter/rubble_pile_small.glb" -161.23 -0.11 -193.41
+  parent "Debris"
+  transform 0.0 313.2 0.0 1
+  cull_distance 70
+model "Rubble 21" "../models/props/clutter/brick_pile.glb" -158.90 -0.11 -241.09
+  parent "Debris"
+  transform 0.0 226.7 0.0 1
+  cull_distance 70
+model "Rubble 22" "../models/props/clutter/rubble_pile_small.glb" -160.34 -0.11 -197.63
+  parent "Debris"
+  transform 0.0 196.6 0.0 1
+  cull_distance 70
+model "Rubble 23" "../models/props/clutter/cinder_block_broken.glb" -158.38 -0.11 -233.87
+  parent "Debris"
+  transform 0.0 140.5 0.0 1
+  cull_distance 70
+model "Rubble 24" "../models/props/clutter/rubble_pile_small.glb" -158.57 -0.11 -244.42
+  parent "Debris"
+  transform 0.0 167.6 0.0 1
+  cull_distance 70
+model "Rubble 25" "../models/props/clutter/rubble_pile_small.glb" -165.86 -0.11 -272.35
+  parent "Debris"
+  transform 0.0 85.9 0.0 1
+  cull_distance 70
+model "Rubble 26" "../models/props/clutter/rubble_pile_small.glb" -168.07 -0.11 -188.88
+  parent "Debris"
+  transform 0.0 228.6 0.0 1
+  cull_distance 70
+model "Newspaper sheet b 12" "../models/props/clutter/newspaper_sheet_b.glb" -125.06 3.83 -77.29
+  parent "Clutter"
+  transform 0.0 175.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 13" "../models/props/clutter/rag_b.glb" -125.08 3.83 -77.37
+  parent "Clutter"
+  transform 0.0 224.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 14" "../models/props/clutter/rag_b.glb" -127.70 6.83 -79.23
+  parent "Clutter"
+  transform 0.0 3.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 15" "../models/props/clutter/newspaper_stack.glb" -128.19 6.83 -77.95
+  parent "Clutter"
+  transform 0.0 230.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 14" "../models/props/clutter/cardboard_box_crushed.glb" -127.18 9.83 -86.67
+  parent "Clutter"
+  transform 0.0 298.4 0.0 1
+  cull_distance 45
+model "Cardboard box crushed 15" "../models/props/clutter/cardboard_box_crushed.glb" -126.32 9.83 -83.99
+  parent "Clutter"
+  transform 0.0 178.3 0.0 1
+  cull_distance 45
+model "Newspaper stack 16" "../models/props/clutter/newspaper_stack.glb" -126.83 9.83 -79.90
+  parent "Clutter"
+  transform 0.0 123.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 9" "../models/props/clutter/newspaper_sheet_a.glb" -125.50 9.83 -79.48
+  parent "Clutter"
+  transform 0.0 126.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 14" "../models/props/clutter/cardboard_flattened.glb" -126.50 12.83 -79.26
+  parent "Clutter"
+  transform 0.0 278.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 12" "../models/props/clutter/rag_a.glb" -126.46 12.83 -76.96
+  parent "Clutter"
+  transform 0.0 293.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 13" "../models/props/clutter/newspaper_sheet_b.glb" -128.32 0.83 -73.86
+  parent "Clutter"
+  transform 0.0 105.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 15" "../models/props/clutter/rag_b.glb" -126.15 0.83 -72.23
+  parent "Clutter"
+  transform 0.0 185.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 14" "../models/props/clutter/newspaper_sheet_b.glb" -129.27 0.83 -65.08
+  parent "Clutter"
+  transform 0.0 72.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 13" "../models/props/clutter/rag_a.glb" -129.50 0.83 -67.96
+  parent "Clutter"
+  transform 0.0 116.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 15" "../models/props/clutter/cardboard_flattened.glb" -129.02 3.83 -68.25
+  parent "Clutter"
+  transform 0.0 99.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 16" "../models/props/clutter/rag_b.glb" -127.20 3.83 -66.86
+  parent "Clutter"
+  transform 0.0 298.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 17" "../models/props/clutter/rag_b.glb" -128.93 6.83 -73.56
+  parent "Clutter"
+  transform 0.0 287.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 16" "../models/props/clutter/cardboard_flattened.glb" -128.93 6.83 -74.71
+  parent "Clutter"
+  transform 0.0 184.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 16" "../models/props/clutter/cardboard_box_crushed.glb" -128.60 9.83 -66.55
+  parent "Clutter"
+  transform 0.0 167.4 0.0 1
+  cull_distance 45
+model "Cardboard box crushed 17" "../models/props/clutter/cardboard_box_crushed.glb" -127.42 9.83 -67.03
+  parent "Clutter"
+  transform 0.0 92.1 0.0 1
+  cull_distance 45
+model "Newspaper sheet a 10" "../models/props/clutter/newspaper_sheet_a.glb" -127.59 12.83 -73.71
+  parent "Clutter"
+  transform 0.0 16.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 11" "../models/props/clutter/newspaper_sheet_a.glb" -126.77 12.83 -73.35
+  parent "Clutter"
+  transform 0.0 345.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 18" "../models/props/clutter/cardboard_box_crushed.glb" -127.74 12.83 -67.75
+  parent "Clutter"
+  transform 0.0 163.1 0.0 1
+  cull_distance 45
+model "Rag b 18" "../models/props/clutter/rag_b.glb" -126.06 12.83 -66.65
+  parent "Clutter"
+  transform 0.0 240.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 14" "../models/props/clutter/rag_a.glb" -130.04 3.83 -55.47
+  parent "Clutter"
+  transform 0.0 191.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 15" "../models/props/clutter/rag_a.glb" -126.53 3.83 -53.14
+  parent "Clutter"
+  transform 0.0 165.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 17" "../models/props/clutter/cardboard_flattened.glb" -128.05 6.83 -53.36
+  parent "Clutter"
+  transform 0.0 9.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 16" "../models/props/clutter/rag_a.glb" -128.25 6.83 -53.92
+  parent "Clutter"
+  transform 0.0 93.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 19" "../models/props/clutter/rag_b.glb" -128.48 9.83 -62.78
+  parent "Clutter"
+  transform 0.0 28.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 12" "../models/props/clutter/newspaper_sheet_a.glb" -126.24 9.83 -61.39
+  parent "Clutter"
+  transform 0.0 196.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 15" "../models/props/clutter/newspaper_sheet_b.glb" -128.89 0.83 -49.68
+  parent "Clutter"
+  transform 0.0 83.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 18" "../models/props/clutter/cardboard_flattened.glb" -127.49 0.83 -49.28
+  parent "Clutter"
+  transform 0.0 11.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 20" "../models/props/clutter/rag_b.glb" -129.60 0.83 -43.07
+  parent "Clutter"
+  transform 0.0 329.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 17" "../models/props/clutter/newspaper_stack.glb" -129.06 0.83 -42.67
+  parent "Clutter"
+  transform 0.0 205.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 16" "../models/props/clutter/newspaper_sheet_b.glb" -129.70 3.83 -43.88
+  parent "Clutter"
+  transform 0.0 196.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 19" "../models/props/clutter/cardboard_box_crushed.glb" -130.53 3.83 -43.68
+  parent "Clutter"
+  transform 0.0 170.0 0.0 1
+  cull_distance 45
+model "Newspaper sheet b 17" "../models/props/clutter/newspaper_sheet_b.glb" -127.72 6.83 -49.25
+  parent "Clutter"
+  transform 0.0 148.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 17" "../models/props/clutter/rag_a.glb" -129.76 6.83 -51.21
+  parent "Clutter"
+  transform 0.0 178.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 18" "../models/props/clutter/newspaper_sheet_b.glb" -129.75 9.83 -43.89
+  parent "Clutter"
+  transform 0.0 9.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 21" "../models/props/clutter/rag_b.glb" -128.39 9.83 -44.30
+  parent "Clutter"
+  transform 0.0 350.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 19" "../models/props/clutter/cardboard_flattened.glb" -128.55 12.83 -48.05
+  parent "Clutter"
+  transform 0.0 229.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 18" "../models/props/clutter/rag_a.glb" -130.31 12.83 -50.24
+  parent "Clutter"
+  transform 0.0 12.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 20" "../models/props/clutter/cardboard_flattened.glb" -129.58 12.83 -42.96
+  parent "Clutter"
+  transform 0.0 275.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 21" "../models/props/clutter/cardboard_flattened.glb" -129.94 12.83 -41.79
+  parent "Clutter"
+  transform 0.0 306.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rubble 27" "../models/props/clutter/brick_pile.glb" -123.62 0.17 -62.31
+  parent "Debris"
+  transform 0.0 228.5 0.0 1
+  cull_distance 70
+model "Rubble 28" "../models/props/clutter/rubble_pile_large.glb" -123.97 0.17 -59.50
+  parent "Debris"
+  transform 0.0 128.1 0.0 1
+  cull_distance 70
+model "Rubble 29" "../models/props/clutter/brick_pile.glb" -123.65 0.17 -64.57
+  parent "Debris"
+  transform 0.0 140.6 0.0 1
+  cull_distance 70
+model "Rubble 30" "../models/props/clutter/rubble_pile_small.glb" -122.28 0.17 -70.33
+  parent "Debris"
+  transform 0.0 113.6 0.0 1
+  cull_distance 70
+model "Rubble 31" "../models/props/clutter/brick_pile.glb" -124.55 0.17 -52.01
+  parent "Debris"
+  transform 0.0 30.4 0.0 1
+  cull_distance 70
+model "Rubble 32" "../models/props/clutter/rubble_pile_small.glb" -131.41 0.17 -89.72
+  parent "Debris"
+  transform 0.0 306.4 0.0 1
+  cull_distance 70
+model "Rubble 33" "../models/props/clutter/rubble_pile_small.glb" -134.57 0.17 -39.21
+  parent "Debris"
+  transform 0.0 209.9 0.0 1
+  cull_distance 70
+model "Newspaper sheet b 19" "../models/props/clutter/newspaper_sheet_b.glb" -41.96 0.62 -91.67
+  parent "Clutter"
+  transform 0.0 122.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 20" "../models/props/clutter/newspaper_sheet_b.glb" -39.72 0.62 -93.05
+  parent "Clutter"
+  transform 0.0 358.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 21" "../models/props/clutter/newspaper_sheet_b.glb" -39.59 0.62 -85.69
+  parent "Clutter"
+  transform 0.0 342.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 13" "../models/props/clutter/newspaper_sheet_a.glb" -38.69 0.62 -85.87
+  parent "Clutter"
+  transform 0.0 246.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 19" "../models/props/clutter/rag_a.glb" -42.79 6.62 -85.79
+  parent "Clutter"
+  transform 0.0 175.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 20" "../models/props/clutter/cardboard_box_crushed.glb" -41.09 6.62 -86.12
+  parent "Clutter"
+  transform 0.0 313.3 0.0 1
+  cull_distance 45
+model "Rag a 20" "../models/props/clutter/rag_a.glb" -40.18 9.62 -84.80
+  parent "Clutter"
+  transform 0.0 178.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 22" "../models/props/clutter/cardboard_flattened.glb" -38.79 9.62 -87.22
+  parent "Clutter"
+  transform 0.0 312.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 21" "../models/props/clutter/rag_a.glb" -40.64 12.62 -93.34
+  parent "Clutter"
+  transform 0.0 185.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 18" "../models/props/clutter/newspaper_stack.glb" -42.91 12.62 -92.51
+  parent "Clutter"
+  transform 0.0 53.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 19" "../models/props/clutter/newspaper_stack.glb" -43.85 0.62 -79.97
+  parent "Clutter"
+  transform 0.0 35.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 21" "../models/props/clutter/cardboard_box_crushed.glb" -42.79 0.62 -79.75
+  parent "Clutter"
+  transform 0.0 225.2 0.0 1
+  cull_distance 45
+model "Newspaper sheet a 14" "../models/props/clutter/newspaper_sheet_a.glb" -41.53 0.62 -72.42
+  parent "Clutter"
+  transform 0.0 320.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 15" "../models/props/clutter/newspaper_sheet_a.glb" -43.69 0.62 -74.56
+  parent "Clutter"
+  transform 0.0 31.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 22" "../models/props/clutter/rag_a.glb" -43.17 3.62 -72.33
+  parent "Clutter"
+  transform 0.0 3.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 23" "../models/props/clutter/rag_a.glb" -41.01 3.62 -73.32
+  parent "Clutter"
+  transform 0.0 185.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 24" "../models/props/clutter/rag_a.glb" -39.73 6.62 -79.43
+  parent "Clutter"
+  transform 0.0 85.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 20" "../models/props/clutter/newspaper_stack.glb" -39.14 6.62 -81.18
+  parent "Clutter"
+  transform 0.0 49.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 21" "../models/props/clutter/newspaper_stack.glb" -39.68 9.62 -78.98
+  parent "Clutter"
+  transform 0.0 121.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 22" "../models/props/clutter/cardboard_box_crushed.glb" -43.74 9.62 -80.40
+  parent "Clutter"
+  transform 0.0 0.6 0.0 1
+  cull_distance 45
+model "Newspaper sheet a 16" "../models/props/clutter/newspaper_sheet_a.glb" -40.35 9.62 -72.61
+  parent "Clutter"
+  transform 0.0 19.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 22" "../models/props/clutter/newspaper_sheet_b.glb" -42.86 9.62 -71.92
+  parent "Clutter"
+  transform 0.0 55.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 25" "../models/props/clutter/rag_a.glb" -42.62 12.62 -80.97
+  parent "Clutter"
+  transform 0.0 275.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 22" "../models/props/clutter/newspaper_stack.glb" -42.05 12.62 -80.56
+  parent "Clutter"
+  transform 0.0 84.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 23" "../models/props/clutter/newspaper_sheet_b.glb" -42.62 3.62 -68.92
+  parent "Clutter"
+  transform 0.0 195.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 23" "../models/props/clutter/cardboard_flattened.glb" -43.46 3.62 -67.56
+  parent "Clutter"
+  transform 0.0 223.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 24" "../models/props/clutter/cardboard_flattened.glb" -41.65 6.62 -59.97
+  parent "Clutter"
+  transform 0.0 65.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 24" "../models/props/clutter/newspaper_sheet_b.glb" -45.00 6.62 -61.09
+  parent "Clutter"
+  transform 0.0 11.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 17" "../models/props/clutter/newspaper_sheet_a.glb" -44.02 9.62 -67.02
+  parent "Clutter"
+  transform 0.0 0.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 18" "../models/props/clutter/newspaper_sheet_a.glb" -44.20 9.62 -67.55
+  parent "Clutter"
+  transform 0.0 286.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 23" "../models/props/clutter/cardboard_box_crushed.glb" -45.57 9.62 -59.43
+  parent "Clutter"
+  transform 0.0 85.0 0.0 1
+  cull_distance 45
+model "Cardboard flattened 25" "../models/props/clutter/cardboard_flattened.glb" -42.51 9.62 -60.34
+  parent "Clutter"
+  transform 0.0 251.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 24" "../models/props/clutter/cardboard_box_crushed.glb" -43.33 12.62 -61.79
+  parent "Clutter"
+  transform 0.0 188.8 0.0 1
+  cull_distance 45
+model "Newspaper stack 23" "../models/props/clutter/newspaper_stack.glb" -41.79 12.62 -60.04
+  parent "Clutter"
+  transform 0.0 109.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 25" "../models/props/clutter/cardboard_box_crushed.glb" -44.81 0.62 -56.25
+  parent "Clutter"
+  transform 0.0 352.3 0.0 1
+  cull_distance 45
+model "Newspaper sheet a 19" "../models/props/clutter/newspaper_sheet_a.glb" -44.43 0.62 -53.74
+  parent "Clutter"
+  transform 0.0 229.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 24" "../models/props/clutter/newspaper_stack.glb" -42.09 0.62 -48.62
+  parent "Clutter"
+  transform 0.0 235.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 25" "../models/props/clutter/newspaper_stack.glb" -44.22 0.62 -49.44
+  parent "Clutter"
+  transform 0.0 241.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 26" "../models/props/clutter/cardboard_box_crushed.glb" -42.93 3.62 -54.23
+  parent "Clutter"
+  transform 0.0 121.9 0.0 1
+  cull_distance 45
+model "Cardboard box crushed 27" "../models/props/clutter/cardboard_box_crushed.glb" -41.39 3.62 -57.04
+  parent "Clutter"
+  transform 0.0 329.9 0.0 1
+  cull_distance 45
+model "Cardboard box crushed 28" "../models/props/clutter/cardboard_box_crushed.glb" -45.03 6.62 -46.83
+  parent "Clutter"
+  transform 0.0 281.5 0.0 1
+  cull_distance 45
+model "Cardboard box crushed 29" "../models/props/clutter/cardboard_box_crushed.glb" -44.91 6.62 -49.16
+  parent "Clutter"
+  transform 0.0 332.3 0.0 1
+  cull_distance 45
+model "Newspaper sheet b 25" "../models/props/clutter/newspaper_sheet_b.glb" -42.71 9.62 -56.04
+  parent "Clutter"
+  transform 0.0 272.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 26" "../models/props/clutter/newspaper_sheet_b.glb" -41.79 9.62 -56.05
+  parent "Clutter"
+  transform 0.0 139.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 26" "../models/props/clutter/newspaper_stack.glb" -44.31 9.62 -46.57
+  parent "Clutter"
+  transform 0.0 287.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 30" "../models/props/clutter/cardboard_box_crushed.glb" -46.49 9.62 -48.01
+  parent "Clutter"
+  transform 0.0 21.6 0.0 1
+  cull_distance 45
+model "Newspaper sheet b 27" "../models/props/clutter/newspaper_sheet_b.glb" -45.98 12.62 -53.98
+  parent "Clutter"
+  transform 0.0 49.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 31" "../models/props/clutter/cardboard_box_crushed.glb" -44.65 12.62 -55.26
+  parent "Clutter"
+  transform 0.0 33.5 0.0 1
+  cull_distance 45
+model "Cardboard flattened 26" "../models/props/clutter/cardboard_flattened.glb" -43.69 0.62 -42.07
+  parent "Clutter"
+  transform 0.0 149.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 32" "../models/props/clutter/cardboard_box_crushed.glb" -45.05 0.62 -42.10
+  parent "Clutter"
+  transform 0.0 137.4 0.0 1
+  cull_distance 45
+model "Newspaper stack 27" "../models/props/clutter/newspaper_stack.glb" -44.53 3.62 -41.59
+  parent "Clutter"
+  transform 0.0 50.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 20" "../models/props/clutter/newspaper_sheet_a.glb" -45.58 3.62 -43.37
+  parent "Clutter"
+  transform 0.0 81.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 22" "../models/props/clutter/rag_b.glb" -42.62 6.62 -42.85
+  parent "Clutter"
+  transform 0.0 217.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 23" "../models/props/clutter/rag_b.glb" -42.92 6.62 -41.08
+  parent "Clutter"
+  transform 0.0 224.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 24" "../models/props/clutter/rag_b.glb" -47.20 6.62 -37.31
+  parent "Clutter"
+  transform 0.0 268.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 33" "../models/props/clutter/cardboard_box_crushed.glb" -45.36 6.62 -36.45
+  parent "Clutter"
   transform 0.0 298.5 0.0 1
-  lod "../models/zone/gen/rubble_b_lod1.glb" 40
-model "Rubble 5" "../models/zone/gen/rubble_a.glb" -38.74 0.02 -39.59
+  cull_distance 45
+model "Cardboard box crushed 34" "../models/props/clutter/cardboard_box_crushed.glb" -43.51 9.62 -43.42
+  parent "Clutter"
+  transform 0.0 121.9 0.0 1
+  cull_distance 45
+model "Newspaper stack 28" "../models/props/clutter/newspaper_stack.glb" -44.45 9.62 -42.27
+  parent "Clutter"
+  transform 0.0 148.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 27" "../models/props/clutter/cardboard_flattened.glb" -45.11 12.62 -44.08
+  parent "Clutter"
+  transform 0.0 51.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 29" "../models/props/clutter/newspaper_stack.glb" -43.09 12.62 -43.13
+  parent "Clutter"
+  transform 0.0 66.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rubble 34" "../models/props/clutter/rubble_pile_small.glb" -39.25 -0.04 -44.70
   parent "Debris"
-  transform 0.0 73.1 0.0 1
-  lod "../models/zone/gen/rubble_a_lod1.glb" 40
-model "Trash 6" "../models/props/trashbag/trashbag.gltf" -95.68 0.13 -182.15
+  transform 0.0 173.5 0.0 1
+  cull_distance 70
+model "Rubble 35" "../models/props/clutter/brick_pile.glb" -38.33 -0.04 -67.56
   parent "Debris"
-  transform 0.0 224.0 0.0 1
-  cull_distance 90
-model "Tyre 3" "../models/props/old_tyre/old_tyre.gltf" -101.84 0.25 -184.29
+  transform 0.0 205.9 0.0 1
+  cull_distance 70
+model "Rubble 36" "../models/props/clutter/rubble_pile_large.glb" -36.49 -0.04 -81.26
   parent "Debris"
-  transform 90.0 144.0 0.0 1
-  cull_distance 90
-model "Trash 7" "../models/props/trashbag/trashbag.gltf" -132.68 0.15 -203.81
+  transform 0.0 7.8 0.0 1
+  cull_distance 70
+model "Rubble 37" "../models/props/clutter/brick_pile.glb" -39.59 -0.04 -48.43
   parent "Debris"
-  transform 0.0 358.1 0.0 1
-  cull_distance 90
-model "Bucket 3" "../models/props/wooden_bucket_02/wooden_bucket_02.gltf" -83.59 0.45 -1.32
+  transform 0.0 39.6 0.0 1
+  cull_distance 70
+model "Rubble 38" "../models/props/clutter/brick_pile.glb" -37.21 -0.04 -71.44
   parent "Debris"
-  transform 0.0 31.5 0.0 1
-  cull_distance 90
-model "Rubble 6" "../models/zone/gen/rubble_b.glb" -81.72 0.44 -11.58
+  transform 0.0 271.5 0.0 1
+  cull_distance 70
+model "Rubble 39" "../models/props/clutter/rubble_pile_small.glb" -39.36 -0.04 -55.11
   parent "Debris"
-  transform 0.0 350.8 0.0 1
-  lod "../models/zone/gen/rubble_b_lod1.glb" 40
-model "Tyre 4" "../models/props/old_tyre/old_tyre.gltf" -83.79 0.56 -4.88
+  transform 0.0 25.8 0.0 1
+  cull_distance 70
+model "Rubble 40" "../models/props/clutter/rubble_pile_small.glb" -44.80 -0.04 -97.62
   parent "Debris"
-  transform 90.0 166.1 0.0 1
-  cull_distance 90
-model "Rubble 7" "../models/zone/gen/rubble_a.glb" -123.92 0.75 -1.19
+  transform 0.0 234.9 0.0 1
+  cull_distance 70
+model "Rubble 41" "../models/props/clutter/rubble_pile_small.glb" -48.18 -0.04 -31.81
   parent "Debris"
+  transform 0.0 340.2 0.0 1
+  cull_distance 70
+model "Rag b 25" "../models/props/clutter/rag_b.glb" -135.04 3.76 -198.78
+  parent "Clutter"
+  transform 0.0 173.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 35" "../models/props/clutter/cardboard_box_crushed.glb" -134.87 3.76 -199.91
+  parent "Clutter"
+  transform 0.0 196.8 0.0 1
+  cull_distance 45
+model "Newspaper sheet a 21" "../models/props/clutter/newspaper_sheet_a.glb" -128.14 3.76 -195.84
+  parent "Clutter"
+  transform 0.0 289.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 28" "../models/props/clutter/cardboard_flattened.glb" -129.54 3.76 -197.75
+  parent "Clutter"
+  transform 0.0 298.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 22" "../models/props/clutter/newspaper_sheet_a.glb" -135.71 6.76 -199.30
+  parent "Clutter"
+  transform 0.0 336.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 23" "../models/props/clutter/newspaper_sheet_a.glb" -134.73 6.76 -200.01
+  parent "Clutter"
+  transform 0.0 318.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 36" "../models/props/clutter/cardboard_box_crushed.glb" -129.24 6.76 -197.42
+  parent "Clutter"
+  transform 0.0 258.4 0.0 1
+  cull_distance 45
+model "Cardboard flattened 29" "../models/props/clutter/cardboard_flattened.glb" -127.47 6.76 -196.83
+  parent "Clutter"
+  transform 0.0 234.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 26" "../models/props/clutter/rag_a.glb" -137.25 9.76 -197.88
+  parent "Clutter"
+  transform 0.0 98.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 27" "../models/props/clutter/rag_a.glb" -133.99 9.76 -200.40
+  parent "Clutter"
+  transform 0.0 108.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 28" "../models/props/clutter/newspaper_sheet_b.glb" -128.12 12.76 -198.79
+  parent "Clutter"
+  transform 0.0 3.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 37" "../models/props/clutter/cardboard_box_crushed.glb" -129.95 12.76 -199.43
+  parent "Clutter"
   transform 0.0 205.1 0.0 1
-  lod "../models/zone/gen/rubble_a_lod1.glb" 40
-model "Tyre 5" "../models/props/old_tyre/old_tyre.gltf" -124.45 0.85 -1.49
+  cull_distance 45
+model "Cardboard flattened 30" "../models/props/clutter/cardboard_flattened.glb" -122.41 3.76 -196.80
+  parent "Clutter"
+  transform 0.0 235.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 29" "../models/props/clutter/newspaper_sheet_b.glb" -123.46 3.76 -197.40
+  parent "Clutter"
+  transform 0.0 190.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 38" "../models/props/clutter/cardboard_box_crushed.glb" -117.57 3.76 -195.68
+  parent "Clutter"
+  transform 0.0 102.5 0.0 1
+  cull_distance 45
+model "Rag a 28" "../models/props/clutter/rag_a.glb" -117.42 3.76 -198.55
+  parent "Clutter"
+  transform 0.0 329.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 29" "../models/props/clutter/rag_a.glb" -116.32 6.76 -197.85
+  parent "Clutter"
+  transform 0.0 188.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 24" "../models/props/clutter/newspaper_sheet_a.glb" -117.14 6.76 -198.87
+  parent "Clutter"
+  transform 0.0 245.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 26" "../models/props/clutter/rag_b.glb" -125.25 12.76 -198.53
+  parent "Clutter"
+  transform 0.0 120.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 39" "../models/props/clutter/cardboard_box_crushed.glb" -123.08 12.76 -196.48
+  parent "Clutter"
+  transform 0.0 247.1 0.0 1
+  cull_distance 45
+model "Cardboard flattened 31" "../models/props/clutter/cardboard_flattened.glb" -116.57 12.76 -198.21
+  parent "Clutter"
+  transform 0.0 199.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 27" "../models/props/clutter/rag_b.glb" -115.93 12.76 -197.50
+  parent "Clutter"
+  transform 0.0 316.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 30" "../models/props/clutter/newspaper_sheet_b.glb" -111.32 3.76 -195.28
+  parent "Clutter"
+  transform 0.0 32.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 32" "../models/props/clutter/cardboard_flattened.glb" -113.13 3.76 -198.66
+  parent "Clutter"
+  transform 0.0 202.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 28" "../models/props/clutter/rag_b.glb" -105.17 3.76 -194.38
+  parent "Clutter"
+  transform 0.0 199.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 30" "../models/props/clutter/rag_a.glb" -103.95 3.76 -198.22
+  parent "Clutter"
+  transform 0.0 229.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 30" "../models/props/clutter/newspaper_stack.glb" -111.63 6.76 -195.92
+  parent "Clutter"
+  transform 0.0 64.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 31" "../models/props/clutter/newspaper_sheet_b.glb" -113.45 6.76 -194.79
+  parent "Clutter"
+  transform 0.0 93.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 29" "../models/props/clutter/rag_b.glb" -104.54 6.76 -197.88
+  parent "Clutter"
+  transform 0.0 243.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 25" "../models/props/clutter/newspaper_sheet_a.glb" -105.04 6.76 -195.63
+  parent "Clutter"
+  transform 0.0 273.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 31" "../models/props/clutter/newspaper_stack.glb" -113.07 9.76 -196.51
+  parent "Clutter"
+  transform 0.0 242.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 26" "../models/props/clutter/newspaper_sheet_a.glb" -113.01 9.76 -198.55
+  parent "Clutter"
+  transform 0.0 203.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 31" "../models/props/clutter/rag_a.glb" -101.45 0.76 -197.02
+  parent "Clutter"
+  transform 0.0 87.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 30" "../models/props/clutter/rag_b.glb" -101.62 0.76 -195.11
+  parent "Clutter"
+  transform 0.0 262.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 32" "../models/props/clutter/newspaper_sheet_b.glb" -93.62 0.76 -195.79
+  parent "Clutter"
+  transform 0.0 199.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 27" "../models/props/clutter/newspaper_sheet_a.glb" -93.27 0.76 -195.76
+  parent "Clutter"
+  transform 0.0 134.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 32" "../models/props/clutter/newspaper_stack.glb" -100.52 3.76 -196.19
+  parent "Clutter"
+  transform 0.0 109.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 28" "../models/props/clutter/newspaper_sheet_a.glb" -98.70 3.76 -196.50
+  parent "Clutter"
+  transform 0.0 231.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 32" "../models/props/clutter/rag_a.glb" -94.45 6.76 -195.47
+  parent "Clutter"
+  transform 0.0 243.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 29" "../models/props/clutter/newspaper_sheet_a.glb" -94.40 6.76 -193.79
+  parent "Clutter"
+  transform 0.0 332.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 31" "../models/props/clutter/rag_b.glb" -94.99 9.76 -195.51
+  parent "Clutter"
+  transform 0.0 157.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 33" "../models/props/clutter/newspaper_sheet_b.glb" -92.38 9.76 -197.23
+  parent "Clutter"
+  transform 0.0 149.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 40" "../models/props/clutter/cardboard_box_crushed.glb" -99.50 12.76 -194.32
+  parent "Clutter"
+  transform 0.0 140.8 0.0 1
+  cull_distance 45
+model "Newspaper stack 33" "../models/props/clutter/newspaper_stack.glb" -98.96 12.76 -194.81
+  parent "Clutter"
+  transform 0.0 108.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 33" "../models/props/clutter/cardboard_flattened.glb" -93.40 12.76 -194.47
+  parent "Clutter"
+  transform 0.0 76.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 34" "../models/props/clutter/newspaper_stack.glb" -93.23 12.76 -197.31
+  parent "Clutter"
+  transform 0.0 291.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rubble 42" "../models/props/clutter/rubble_pile_small.glb" -112.37 0.10 -200.98
   parent "Debris"
-  transform 90.0 141.8 0.0 1
-  cull_distance 90
-model "Rubble 8" "../models/zone/gen/rubble_a.glb" -142.21 0.76 -15.64
+  transform 0.0 261.2 0.0 1
+  cull_distance 70
+model "Rubble 43" "../models/props/clutter/rubble_pile_small.glb" -122.18 0.10 -201.83
   parent "Debris"
-  transform 0.0 109.4 0.0 1
-  lod "../models/zone/gen/rubble_a_lod1.glb" 40
-model "Rubble 9" "../models/zone/gen/rubble_b.glb" -76.24 -0.11 -134.41
+  transform 0.0 125.0 0.0 1
+  cull_distance 70
+model "Rubble 44" "../models/props/clutter/cinder_block_broken.glb" -107.80 0.10 -200.64
   parent "Debris"
-  transform 0.0 246.9 0.0 1
-  lod "../models/zone/gen/rubble_b_lod1.glb" 40
-model "Trash 8" "../models/props/trashbag/trashbag.gltf" -76.42 -0.12 -122.63
+  transform 0.0 304.2 0.0 1
+  cull_distance 70
+model "Rubble 45" "../models/props/clutter/brick_pile.glb" -125.42 0.10 -201.72
   parent "Debris"
+  transform 0.0 94.4 0.0 1
+  cull_distance 70
+model "Rubble 46" "../models/props/clutter/brick_pile.glb" -114.12 0.10 -201.38
+  parent "Debris"
+  transform 0.0 120.1 0.0 1
+  cull_distance 70
+model "Rubble 47" "../models/props/clutter/rubble_pile_small.glb" -140.16 0.10 -192.92
+  parent "Debris"
+  transform 0.0 238.7 0.0 1
+  cull_distance 70
+model "Rubble 48" "../models/props/clutter/rubble_pile_small.glb" -89.66 0.10 -193.33
+  parent "Debris"
+  transform 0.0 18.2 0.0 1
+  cull_distance 70
+model "Newspaper sheet a 30" "../models/props/clutter/newspaper_sheet_a.glb" -99.82 1.07 27.64
+  parent "Clutter"
+  transform 0.0 99.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 31" "../models/props/clutter/newspaper_sheet_a.glb" -99.43 1.07 28.25
+  parent "Clutter"
+  transform 0.0 262.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 34" "../models/props/clutter/cardboard_flattened.glb" -97.00 4.07 20.36
+  parent "Clutter"
+  transform 0.0 119.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 35" "../models/props/clutter/newspaper_stack.glb" -97.83 4.07 20.37
+  parent "Clutter"
+  transform 0.0 337.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 36" "../models/props/clutter/newspaper_stack.glb" -98.74 7.07 19.95
+  parent "Clutter"
+  transform 0.0 169.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 41" "../models/props/clutter/cardboard_box_crushed.glb" -99.64 7.07 19.41
+  parent "Clutter"
+  transform 0.0 276.7 0.0 1
+  cull_distance 45
+model "Rag b 32" "../models/props/clutter/rag_b.glb" -100.46 10.07 26.73
+  parent "Clutter"
+  transform 0.0 48.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 33" "../models/props/clutter/rag_b.glb" -99.61 10.07 26.94
+  parent "Clutter"
+  transform 0.0 20.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 42" "../models/props/clutter/cardboard_box_crushed.glb" -99.17 10.07 20.95
+  parent "Clutter"
+  transform 0.0 178.8 0.0 1
+  cull_distance 45
+model "Newspaper sheet b 34" "../models/props/clutter/newspaper_sheet_b.glb" -97.96 10.07 20.25
+  parent "Clutter"
+  transform 0.0 302.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 34" "../models/props/clutter/rag_b.glb" -100.40 13.07 27.96
+  parent "Clutter"
+  transform 0.0 162.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 35" "../models/props/clutter/rag_b.glb" -98.63 13.07 28.72
+  parent "Clutter"
+  transform 0.0 217.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 37" "../models/props/clutter/newspaper_stack.glb" -97.79 13.07 21.86
+  parent "Clutter"
+  transform 0.0 63.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 38" "../models/props/clutter/newspaper_stack.glb" -98.74 13.07 19.85
+  parent "Clutter"
+  transform 0.0 251.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 36" "../models/props/clutter/rag_b.glb" -98.16 4.07 8.07
+  parent "Clutter"
+  transform 0.0 33.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 37" "../models/props/clutter/rag_b.glb" -95.96 4.07 9.11
+  parent "Clutter"
+  transform 0.0 259.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 33" "../models/props/clutter/rag_a.glb" -98.89 7.07 15.46
+  parent "Clutter"
+  transform 0.0 151.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 38" "../models/props/clutter/rag_b.glb" -99.12 7.07 15.76
+  parent "Clutter"
+  transform 0.0 163.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 43" "../models/props/clutter/cardboard_box_crushed.glb" -97.29 7.07 8.59
+  parent "Clutter"
+  transform 0.0 275.1 0.0 1
+  cull_distance 45
+model "Newspaper sheet b 35" "../models/props/clutter/newspaper_sheet_b.glb" -97.24 7.07 7.72
+  parent "Clutter"
+  transform 0.0 336.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 39" "../models/props/clutter/newspaper_stack.glb" -97.80 13.07 9.28
+  parent "Clutter"
+  transform 0.0 158.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 32" "../models/props/clutter/newspaper_sheet_a.glb" -96.57 13.07 7.07
+  parent "Clutter"
+  transform 0.0 329.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 39" "../models/props/clutter/rag_b.glb" -98.60 1.07 3.59
+  parent "Clutter"
+  transform 0.0 32.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 40" "../models/props/clutter/newspaper_stack.glb" -97.14 1.07 2.30
+  parent "Clutter"
+  transform 0.0 72.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 40" "../models/props/clutter/rag_b.glb" -97.83 1.07 -3.49
+  parent "Clutter"
+  transform 0.0 4.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 41" "../models/props/clutter/rag_b.glb" -94.57 1.07 -2.24
+  parent "Clutter"
+  transform 0.0 297.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 33" "../models/props/clutter/newspaper_sheet_a.glb" -96.68 4.07 3.12
+  parent "Clutter"
+  transform 0.0 336.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 35" "../models/props/clutter/cardboard_flattened.glb" -96.75 4.07 2.87
+  parent "Clutter"
+  transform 0.0 196.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 36" "../models/props/clutter/cardboard_flattened.glb" -97.88 4.07 -2.84
+  parent "Clutter"
+  transform 0.0 311.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 44" "../models/props/clutter/cardboard_box_crushed.glb" -94.51 4.07 -3.88
+  parent "Clutter"
+  transform 0.0 54.6 0.0 1
+  cull_distance 45
+model "Newspaper sheet b 36" "../models/props/clutter/newspaper_sheet_b.glb" -98.60 7.07 3.90
+  parent "Clutter"
+  transform 0.0 180.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 45" "../models/props/clutter/cardboard_box_crushed.glb" -95.21 7.07 2.66
+  parent "Clutter"
+  transform 0.0 11.6 0.0 1
+  cull_distance 45
+model "Newspaper sheet b 37" "../models/props/clutter/newspaper_sheet_b.glb" -96.16 7.07 -2.64
+  parent "Clutter"
+  transform 0.0 53.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 42" "../models/props/clutter/rag_b.glb" -97.50 7.07 -3.50
+  parent "Clutter"
+  transform 0.0 317.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 37" "../models/props/clutter/cardboard_flattened.glb" -96.30 10.07 4.62
+  parent "Clutter"
+  transform 0.0 14.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 38" "../models/props/clutter/cardboard_flattened.glb" -95.53 10.07 2.24
+  parent "Clutter"
+  transform 0.0 182.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 34" "../models/props/clutter/rag_a.glb" -95.19 10.07 -1.99
+  parent "Clutter"
+  transform 0.0 48.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 38" "../models/props/clutter/newspaper_sheet_b.glb" -95.92 10.07 -2.01
+  parent "Clutter"
+  transform 0.0 237.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 46" "../models/props/clutter/cardboard_box_crushed.glb" -95.91 13.07 4.26
+  parent "Clutter"
+  transform 0.0 359.0 0.0 1
+  cull_distance 45
+model "Rag a 35" "../models/props/clutter/rag_a.glb" -97.73 13.07 3.16
+  parent "Clutter"
   transform 0.0 243.0 0.0 1
-  cull_distance 90
-model "Trash 9" "../models/props/trashbag/trashbag.gltf" -76.77 -0.10 -109.19
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 43" "../models/props/clutter/rag_b.glb" -96.07 1.07 -7.95
+  parent "Clutter"
+  transform 0.0 97.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 41" "../models/props/clutter/newspaper_stack.glb" -93.81 1.07 -8.71
+  parent "Clutter"
+  transform 0.0 302.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 42" "../models/props/clutter/newspaper_stack.glb" -93.32 4.07 -13.83
+  parent "Clutter"
+  transform 0.0 189.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 34" "../models/props/clutter/newspaper_sheet_a.glb" -93.85 4.07 -15.22
+  parent "Clutter"
+  transform 0.0 355.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 43" "../models/props/clutter/newspaper_stack.glb" -96.23 7.07 -8.94
+  parent "Clutter"
+  transform 0.0 13.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 47" "../models/props/clutter/cardboard_box_crushed.glb" -97.61 7.07 -9.14
+  parent "Clutter"
+  transform 0.0 289.5 0.0 1
+  cull_distance 45
+model "Rag b 44" "../models/props/clutter/rag_b.glb" -93.69 7.07 -15.70
+  parent "Clutter"
+  transform 0.0 203.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 39" "../models/props/clutter/cardboard_flattened.glb" -96.72 7.07 -13.93
+  parent "Clutter"
+  transform 0.0 141.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 39" "../models/props/clutter/newspaper_sheet_b.glb" -95.16 10.07 -9.30
+  parent "Clutter"
+  transform 0.0 306.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 36" "../models/props/clutter/rag_a.glb" -94.94 10.07 -7.52
+  parent "Clutter"
+  transform 0.0 218.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 35" "../models/props/clutter/newspaper_sheet_a.glb" -96.48 10.07 -16.58
+  parent "Clutter"
+  transform 0.0 13.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 40" "../models/props/clutter/cardboard_flattened.glb" -94.66 10.07 -16.45
+  parent "Clutter"
+  transform 0.0 296.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 41" "../models/props/clutter/cardboard_flattened.glb" -96.40 13.07 -8.18
+  parent "Clutter"
+  transform 0.0 278.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 48" "../models/props/clutter/cardboard_box_crushed.glb" -95.24 13.07 -6.61
+  parent "Clutter"
+  transform 0.0 214.8 0.0 1
+  cull_distance 45
+model "Rubble 49" "../models/props/clutter/rubble_pile_small.glb" -102.75 0.41 23.60
   parent "Debris"
-  transform 0.0 303.1 0.0 1
-  cull_distance 90
-model "Bucket 4" "../models/props/wooden_bucket_02/wooden_bucket_02.gltf" -43.46 0.23 32.74
+  transform 0.0 311.6 0.0 1
+  cull_distance 70
+model "Rubble 50" "../models/props/clutter/rubble_pile_large.glb" -102.35 0.41 8.12
   parent "Debris"
-  transform 0.0 50.6 0.0 1
-  cull_distance 90
-model "Trash 10" "../models/props/trashbag/trashbag.gltf" -44.02 0.25 29.90
+  transform 0.0 230.6 0.0 1
+  cull_distance 70
+model "Rubble 51" "../models/props/clutter/cinder_block_broken.glb" -99.78 0.41 -11.25
   parent "Debris"
+  transform 0.0 345.0 0.0 1
+  cull_distance 70
+model "Rubble 52" "../models/props/clutter/rubble_pile_small.glb" -101.25 0.41 5.63
+  parent "Debris"
+  transform 0.0 200.9 0.0 1
+  cull_distance 70
+model "Rubble 53" "../models/props/clutter/cinder_block_broken.glb" -100.34 0.41 -8.44
+  parent "Debris"
+  transform 0.0 131.8 0.0 1
+  cull_distance 70
+model "Rubble 54" "../models/props/clutter/rubble_pile_small.glb" -97.19 0.41 31.40
+  parent "Debris"
+  transform 0.0 0.3 0.0 1
+  cull_distance 70
+model "Rubble 55" "../models/props/clutter/rubble_pile_small.glb" -94.94 0.41 -19.03
+  parent "Debris"
+  transform 0.0 334.0 0.0 1
+  cull_distance 70
+model "Cardboard box crushed 49" "../models/props/clutter/cardboard_box_crushed.glb" -129.67 1.37 -10.35
+  parent "Clutter"
+  transform 0.0 308.3 0.0 1
+  cull_distance 45
+model "Newspaper sheet a 36" "../models/props/clutter/newspaper_sheet_a.glb" -130.87 1.37 -11.65
+  parent "Clutter"
+  transform 0.0 41.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 37" "../models/props/clutter/rag_a.glb" -130.76 4.37 -10.05
+  parent "Clutter"
+  transform 0.0 222.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 40" "../models/props/clutter/newspaper_sheet_b.glb" -129.05 4.37 -10.39
+  parent "Clutter"
+  transform 0.0 76.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 38" "../models/props/clutter/rag_a.glb" -131.57 7.37 -17.06
+  parent "Clutter"
+  transform 0.0 267.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 39" "../models/props/clutter/rag_a.glb" -130.46 7.37 -16.88
+  parent "Clutter"
+  transform 0.0 142.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 41" "../models/props/clutter/newspaper_sheet_b.glb" -129.84 10.37 -18.43
+  parent "Clutter"
+  transform 0.0 239.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 50" "../models/props/clutter/cardboard_box_crushed.glb" -132.37 10.37 -16.17
+  parent "Clutter"
+  transform 0.0 258.9 0.0 1
+  cull_distance 45
+model "Newspaper sheet b 42" "../models/props/clutter/newspaper_sheet_b.glb" -132.35 10.37 -11.69
+  parent "Clutter"
+  transform 0.0 216.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 43" "../models/props/clutter/newspaper_sheet_b.glb" -132.96 10.37 -8.98
+  parent "Clutter"
+  transform 0.0 159.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 40" "../models/props/clutter/rag_a.glb" -133.25 4.37 -5.34
+  parent "Clutter"
+  transform 0.0 48.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 45" "../models/props/clutter/rag_b.glb" -130.78 4.37 -4.98
+  parent "Clutter"
+  transform 0.0 182.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 46" "../models/props/clutter/rag_b.glb" -132.45 7.37 -4.89
+  parent "Clutter"
+  transform 0.0 320.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 47" "../models/props/clutter/rag_b.glb" -133.16 7.37 -6.93
+  parent "Clutter"
+  transform 0.0 168.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 44" "../models/props/clutter/newspaper_stack.glb" -131.90 10.37 0.11
+  parent "Clutter"
+  transform 0.0 58.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 42" "../models/props/clutter/cardboard_flattened.glb" -129.78 10.37 0.92
+  parent "Clutter"
+  transform 0.0 329.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 43" "../models/props/clutter/cardboard_flattened.glb" -130.21 13.37 2.06
+  parent "Clutter"
+  transform 0.0 67.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 44" "../models/props/clutter/cardboard_flattened.glb" -131.67 13.37 1.25
+  parent "Clutter"
+  transform 0.0 313.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 48" "../models/props/clutter/rag_b.glb" -131.86 1.37 12.16
+  parent "Clutter"
+  transform 0.0 23.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 45" "../models/props/clutter/newspaper_stack.glb" -133.19 1.37 12.57
+  parent "Clutter"
+  transform 0.0 153.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 51" "../models/props/clutter/cardboard_box_crushed.glb" -133.03 4.37 5.73
+  parent "Clutter"
+  transform 0.0 201.9 0.0 1
+  cull_distance 45
+model "Newspaper sheet a 37" "../models/props/clutter/newspaper_sheet_a.glb" -131.86 4.37 5.24
+  parent "Clutter"
+  transform 0.0 196.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 46" "../models/props/clutter/newspaper_stack.glb" -134.64 4.37 14.83
+  parent "Clutter"
+  transform 0.0 249.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 38" "../models/props/clutter/newspaper_sheet_a.glb" -132.61 4.37 14.05
+  parent "Clutter"
+  transform 0.0 249.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 39" "../models/props/clutter/newspaper_sheet_a.glb" -130.46 7.37 6.62
+  parent "Clutter"
+  transform 0.0 282.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 40" "../models/props/clutter/newspaper_sheet_a.glb" -133.77 7.37 5.10
+  parent "Clutter"
+  transform 0.0 157.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 49" "../models/props/clutter/rag_b.glb" -134.21 7.37 12.72
+  parent "Clutter"
+  transform 0.0 90.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 44" "../models/props/clutter/newspaper_sheet_b.glb" -132.73 7.37 12.64
+  parent "Clutter"
   transform 0.0 292.7 0.0 1
-  cull_distance 90
-model "Bucket 5" "../models/props/wooden_bucket_02/wooden_bucket_02.gltf" -43.30 0.26 11.85
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 45" "../models/props/clutter/newspaper_sheet_b.glb" -133.95 10.37 7.84
+  parent "Clutter"
+  transform 0.0 238.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 45" "../models/props/clutter/cardboard_flattened.glb" -133.30 10.37 6.52
+  parent "Clutter"
+  transform 0.0 149.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 41" "../models/props/clutter/rag_a.glb" -131.08 10.37 12.53
+  parent "Clutter"
+  transform 0.0 236.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 50" "../models/props/clutter/rag_b.glb" -132.62 10.37 14.16
+  parent "Clutter"
+  transform 0.0 115.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 41" "../models/props/clutter/newspaper_sheet_a.glb" -133.87 13.37 6.18
+  parent "Clutter"
+  transform 0.0 22.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 42" "../models/props/clutter/newspaper_sheet_a.glb" -131.42 13.37 5.07
+  parent "Clutter"
+  transform 0.0 107.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 46" "../models/props/clutter/cardboard_flattened.glb" -130.87 13.37 12.25
+  parent "Clutter"
+  transform 0.0 25.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 47" "../models/props/clutter/cardboard_flattened.glb" -132.62 13.37 14.61
+  parent "Clutter"
+  transform 0.0 311.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 43" "../models/props/clutter/newspaper_sheet_a.glb" -135.23 1.37 25.54
+  parent "Clutter"
+  transform 0.0 163.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 52" "../models/props/clutter/cardboard_box_crushed.glb" -132.71 1.37 24.59
+  parent "Clutter"
+  transform 0.0 220.7 0.0 1
+  cull_distance 45
+model "Cardboard flattened 48" "../models/props/clutter/cardboard_flattened.glb" -134.60 4.37 18.23
+  parent "Clutter"
+  transform 0.0 132.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 51" "../models/props/clutter/rag_b.glb" -132.56 4.37 18.01
+  parent "Clutter"
+  transform 0.0 275.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 49" "../models/props/clutter/cardboard_flattened.glb" -135.29 7.37 23.49
+  parent "Clutter"
+  transform 0.0 79.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 42" "../models/props/clutter/rag_a.glb" -133.81 7.37 25.96
+  parent "Clutter"
+  transform 0.0 2.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 43" "../models/props/clutter/rag_a.glb" -134.35 10.37 18.36
+  parent "Clutter"
+  transform 0.0 252.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 44" "../models/props/clutter/newspaper_sheet_a.glb" -133.89 10.37 18.50
+  parent "Clutter"
+  transform 0.0 204.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 50" "../models/props/clutter/cardboard_flattened.glb" -132.17 10.37 26.55
+  parent "Clutter"
+  transform 0.0 137.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 51" "../models/props/clutter/cardboard_flattened.glb" -134.07 10.37 23.69
+  parent "Clutter"
+  transform 0.0 78.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 53" "../models/props/clutter/cardboard_box_crushed.glb" -135.24 13.37 19.77
+  parent "Clutter"
+  transform 0.0 244.4 0.0 1
+  cull_distance 45
+model "Newspaper sheet a 45" "../models/props/clutter/newspaper_sheet_a.glb" -133.87 13.37 18.35
+  parent "Clutter"
+  transform 0.0 192.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 47" "../models/props/clutter/newspaper_stack.glb" -134.98 13.37 24.97
+  parent "Clutter"
+  transform 0.0 76.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 48" "../models/props/clutter/newspaper_stack.glb" -132.60 13.37 26.69
+  parent "Clutter"
+  transform 0.0 145.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rubble 56" "../models/props/clutter/brick_pile.glb" -127.30 0.71 -2.76
   parent "Debris"
-  transform 0.0 239.5 0.0 1
-  cull_distance 90
-model "Rubble 10" "../models/zone/gen/rubble_b.glb" -45.88 0.26 40.66
-  parent "Debris"
-  transform 0.0 322.0 0.0 1
-  lod "../models/zone/gen/rubble_b_lod1.glb" 40
-model "Rubble 11" "../models/zone/gen/rubble_a.glb" -40.79 0.26 1.31
-  parent "Debris"
-  transform 0.0 142.0 0.0 1
-  lod "../models/zone/gen/rubble_a_lod1.glb" 40
-model "Rubble 12" "../models/zone/gen/rubble_b.glb" -31.83 -0.18 -242.32
-  parent "Debris"
-  transform 0.0 17.7 0.0 1
-  lod "../models/zone/gen/rubble_b_lod1.glb" 40
-model "Rubble 13" "../models/zone/gen/rubble_b.glb" -74.28 -0.11 -225.76
-  parent "Debris"
-  transform 0.0 291.7 0.0 1
-  lod "../models/zone/gen/rubble_b_lod1.glb" 40
-model "Trash 11" "../models/props/trashbag/trashbag.gltf" -74.79 -0.16 -227.05
-  parent "Debris"
-  transform 0.0 211.3 0.0 1
-  cull_distance 90
-model "Trash 12" "../models/props/trashbag/trashbag.gltf" -105.26 -0.16 -248.33
-  parent "Debris"
-  transform 0.0 147.2 0.0 1
-  cull_distance 90
-model "Tyre 6" "../models/props/old_tyre/old_tyre.gltf" -82.58 -0.06 -246.74
-  parent "Debris"
-  transform 90.0 180.6 0.0 1
-  cull_distance 90
-model "Bucket 6" "../models/props/wooden_bucket_02/wooden_bucket_02.gltf" -81.35 -0.17 -228.04
-  parent "Debris"
-  transform 0.0 255.9 0.0 1
-  cull_distance 90
-model "Trash 13" "../models/props/trashbag/trashbag.gltf" -38.51 -0.19 -243.98
-  parent "Debris"
-  transform 0.0 96.7 0.0 1
-  cull_distance 90
-model "Rubble 14" "../models/zone/gen/rubble_a.glb" -98.13 0.14 -63.79
+  transform 0.0 203.8 0.0 1
+  cull_distance 70
+model "Rubble 57" "../models/props/clutter/rubble_pile_small.glb" -127.99 0.71 12.07
   parent "Debris"
   transform 0.0 240.5 0.0 1
-  lod "../models/zone/gen/rubble_a_lod1.glb" 40
-model "Rubble 15" "../models/zone/gen/rubble_a.glb" -79.51 0.14 -72.49
+  cull_distance 70
+model "Rubble 58" "../models/props/clutter/cinder_block_broken.glb" -126.43 0.71 -11.07
   parent "Debris"
-  transform 0.0 347.5 0.0 1
-  lod "../models/zone/gen/rubble_a_lod1.glb" 40
-model "Rubble 16" "../models/zone/gen/rubble_a.glb" -79.44 0.14 -65.10
+  transform 0.0 38.7 0.0 1
+  cull_distance 70
+model "Rubble 59" "../models/props/clutter/brick_pile.glb" -127.49 0.71 9.23
   parent "Debris"
-  transform 0.0 138.7 0.0 1
-  lod "../models/zone/gen/rubble_a_lod1.glb" 40
+  transform 0.0 296.8 0.0 1
+  cull_distance 70
+model "Rubble 60" "../models/props/clutter/rubble_pile_large.glb" -127.59 0.71 9.63
+  parent "Debris"
+  transform 0.0 173.9 0.0 1
+  cull_distance 70
+model "Rubble 61" "../models/props/clutter/rubble_pile_small.glb" -133.64 0.71 -21.29
+  parent "Debris"
+  transform 0.0 102.0 0.0 1
+  cull_distance 70
+model "Rubble 62" "../models/props/clutter/rubble_pile_small.glb" -136.91 0.71 28.98
+  parent "Debris"
+  transform 0.0 256.8 0.0 1
+  cull_distance 70
+model "Newspaper sheet b 46" "../models/props/clutter/newspaper_sheet_b.glb" -90.39 0.50 -107.97
+  parent "Clutter"
+  transform 0.0 108.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 49" "../models/props/clutter/newspaper_stack.glb" -90.27 0.50 -106.64
+  parent "Clutter"
+  transform 0.0 277.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 46" "../models/props/clutter/newspaper_sheet_a.glb" -88.59 0.50 -113.23
+  parent "Clutter"
+  transform 0.0 159.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 44" "../models/props/clutter/rag_a.glb" -91.25 0.50 -113.06
+  parent "Clutter"
+  transform 0.0 81.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 45" "../models/props/clutter/rag_a.glb" -88.69 3.50 -107.39
+  parent "Clutter"
+  transform 0.0 270.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 54" "../models/props/clutter/cardboard_box_crushed.glb" -90.90 3.50 -107.29
+  parent "Clutter"
+  transform 0.0 163.6 0.0 1
+  cull_distance 45
+model "Cardboard flattened 52" "../models/props/clutter/cardboard_flattened.glb" -87.73 9.50 -112.19
+  parent "Clutter"
+  transform 0.0 266.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 47" "../models/props/clutter/newspaper_sheet_a.glb" -87.87 9.50 -111.67
+  parent "Clutter"
+  transform 0.0 29.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 48" "../models/props/clutter/newspaper_sheet_a.glb" -88.61 12.50 -112.03
+  parent "Clutter"
+  transform 0.0 359.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 47" "../models/props/clutter/newspaper_sheet_b.glb" -90.85 12.50 -112.68
+  parent "Clutter"
+  transform 0.0 338.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 52" "../models/props/clutter/rag_b.glb" -90.73 0.50 -118.45
+  parent "Clutter"
+  transform 0.0 29.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 49" "../models/props/clutter/newspaper_sheet_a.glb" -88.82 0.50 -118.94
+  parent "Clutter"
+  transform 0.0 355.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 46" "../models/props/clutter/rag_a.glb" -88.54 3.50 -118.37
+  parent "Clutter"
+  transform 0.0 80.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 55" "../models/props/clutter/cardboard_box_crushed.glb" -88.67 3.50 -118.25
+  parent "Clutter"
+  transform 0.0 163.1 0.0 1
+  cull_distance 45
+model "Cardboard box crushed 56" "../models/props/clutter/cardboard_box_crushed.glb" -89.26 3.50 -126.28
+  parent "Clutter"
+  transform 0.0 273.6 0.0 1
+  cull_distance 45
+model "Cardboard flattened 53" "../models/props/clutter/cardboard_flattened.glb" -90.80 3.50 -123.66
+  parent "Clutter"
+  transform 0.0 69.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 50" "../models/props/clutter/newspaper_sheet_a.glb" -87.89 6.50 -117.85
+  parent "Clutter"
+  transform 0.0 95.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 50" "../models/props/clutter/newspaper_stack.glb" -87.92 6.50 -117.26
+  parent "Clutter"
+  transform 0.0 133.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 57" "../models/props/clutter/cardboard_box_crushed.glb" -90.74 9.50 -124.00
+  parent "Clutter"
+  transform 0.0 187.8 0.0 1
+  cull_distance 45
+model "Rag a 47" "../models/props/clutter/rag_a.glb" -89.57 9.50 -124.61
+  parent "Clutter"
+  transform 0.0 23.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 54" "../models/props/clutter/cardboard_flattened.glb" -89.47 12.50 -117.87
+  parent "Clutter"
+  transform 0.0 293.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 48" "../models/props/clutter/newspaper_sheet_b.glb" -89.34 12.50 -118.06
+  parent "Clutter"
+  transform 0.0 208.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 51" "../models/props/clutter/newspaper_stack.glb" -86.29 0.50 -128.51
+  parent "Clutter"
+  transform 0.0 86.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 52" "../models/props/clutter/newspaper_stack.glb" -87.44 0.50 -130.20
+  parent "Clutter"
+  transform 0.0 224.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 53" "../models/props/clutter/newspaper_stack.glb" -88.67 3.50 -131.26
+  parent "Clutter"
+  transform 0.0 231.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 53" "../models/props/clutter/rag_b.glb" -86.50 3.50 -129.26
+  parent "Clutter"
+  transform 0.0 330.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 51" "../models/props/clutter/newspaper_sheet_a.glb" -88.56 3.50 -135.93
+  parent "Clutter"
+  transform 0.0 355.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 52" "../models/props/clutter/newspaper_sheet_a.glb" -85.49 3.50 -137.75
+  parent "Clutter"
+  transform 0.0 75.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 53" "../models/props/clutter/newspaper_sheet_a.glb" -89.17 9.50 -130.46
+  parent "Clutter"
+  transform 0.0 121.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 54" "../models/props/clutter/rag_b.glb" -86.17 9.50 -130.34
+  parent "Clutter"
+  transform 0.0 43.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 49" "../models/props/clutter/newspaper_sheet_b.glb" -88.98 0.50 -141.64
+  parent "Clutter"
+  transform 0.0 307.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 54" "../models/props/clutter/newspaper_sheet_a.glb" -86.02 0.50 -140.62
+  parent "Clutter"
+  transform 0.0 167.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 50" "../models/props/clutter/newspaper_sheet_b.glb" -87.26 3.50 -140.84
+  parent "Clutter"
+  transform 0.0 335.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 51" "../models/props/clutter/newspaper_sheet_b.glb" -86.11 3.50 -142.74
+  parent "Clutter"
+  transform 0.0 246.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 52" "../models/props/clutter/newspaper_sheet_b.glb" -87.75 6.50 -143.26
+  parent "Clutter"
+  transform 0.0 299.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 58" "../models/props/clutter/cardboard_box_crushed.glb" -86.09 6.50 -141.80
+  parent "Clutter"
+  transform 0.0 152.9 0.0 1
+  cull_distance 45
+model "Newspaper stack 54" "../models/props/clutter/newspaper_stack.glb" -87.83 9.50 -142.70
+  parent "Clutter"
+  transform 0.0 199.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 59" "../models/props/clutter/cardboard_box_crushed.glb" -86.16 9.50 -140.58
+  parent "Clutter"
+  transform 0.0 311.9 0.0 1
+  cull_distance 45
+model "Cardboard box crushed 60" "../models/props/clutter/cardboard_box_crushed.glb" -87.79 12.50 -140.69
+  parent "Clutter"
+  transform 0.0 301.3 0.0 1
+  cull_distance 45
+model "Cardboard flattened 55" "../models/props/clutter/cardboard_flattened.glb" -86.64 12.50 -140.75
+  parent "Clutter"
+  transform 0.0 202.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rubble 63" "../models/props/clutter/rubble_pile_small.glb" -93.09 -0.16 -129.18
+  parent "Debris"
+  transform 0.0 89.7 0.0 1
+  cull_distance 70
+model "Rubble 64" "../models/props/clutter/rubble_pile_large.glb" -93.10 -0.16 -125.74
+  parent "Debris"
+  transform 0.0 357.8 0.0 1
+  cull_distance 70
+model "Rubble 65" "../models/props/clutter/brick_pile.glb" -91.71 -0.16 -142.40
+  parent "Debris"
+  transform 0.0 214.1 0.0 1
+  cull_distance 70
+model "Rubble 66" "../models/props/clutter/rubble_pile_large.glb" -93.39 -0.16 -115.38
+  parent "Debris"
+  transform 0.0 254.4 0.0 1
+  cull_distance 70
+model "Rubble 67" "../models/props/clutter/brick_pile.glb" -92.53 -0.16 -132.92
+  parent "Debris"
+  transform 0.0 325.1 0.0 1
+  cull_distance 70
+model "Rubble 68" "../models/props/clutter/rubble_pile_small.glb" -88.63 -0.16 -102.34
+  parent "Debris"
+  transform 0.0 281.5 0.0 1
+  cull_distance 70
+model "Rubble 69" "../models/props/clutter/rubble_pile_small.glb" -84.27 -0.16 -152.24
+  parent "Debris"
+  transform 0.0 70.0 0.0 1
+  cull_distance 70
+model "Newspaper stack 55" "../models/props/clutter/newspaper_stack.glb" -46.74 0.87 -11.28
+  parent "Clutter"
+  transform 0.0 171.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 53" "../models/props/clutter/newspaper_sheet_b.glb" -45.65 0.87 -10.96
+  parent "Clutter"
+  transform 0.0 99.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 48" "../models/props/clutter/rag_a.glb" -45.93 3.87 -10.44
+  parent "Clutter"
+  transform 0.0 48.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 55" "../models/props/clutter/rag_b.glb" -48.15 3.87 -11.47
+  parent "Clutter"
+  transform 0.0 294.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 54" "../models/props/clutter/newspaper_sheet_b.glb" -49.68 6.87 -9.25
+  parent "Clutter"
+  transform 0.0 355.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 61" "../models/props/clutter/cardboard_box_crushed.glb" -48.90 6.87 -12.62
+  parent "Clutter"
+  transform 0.0 30.6 0.0 1
+  cull_distance 45
+model "Newspaper stack 56" "../models/props/clutter/newspaper_stack.glb" -46.46 6.87 -4.77
+  parent "Clutter"
+  transform 0.0 17.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 56" "../models/props/clutter/rag_b.glb" -46.01 6.87 -4.74
+  parent "Clutter"
+  transform 0.0 269.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 49" "../models/props/clutter/rag_a.glb" -46.39 9.87 -3.46
+  parent "Clutter"
+  transform 0.0 22.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 62" "../models/props/clutter/cardboard_box_crushed.glb" -47.84 9.87 -4.33
+  parent "Clutter"
+  transform 0.0 119.6 0.0 1
+  cull_distance 45
+model "Newspaper sheet a 55" "../models/props/clutter/newspaper_sheet_a.glb" -49.39 12.87 -5.02
+  parent "Clutter"
+  transform 0.0 46.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 50" "../models/props/clutter/rag_a.glb" -47.76 12.87 -4.70
+  parent "Clutter"
+  transform 0.0 291.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 56" "../models/props/clutter/newspaper_sheet_a.glb" -47.38 0.87 2.94
+  parent "Clutter"
+  transform 0.0 233.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 51" "../models/props/clutter/rag_a.glb" -48.63 0.87 1.77
+  parent "Clutter"
+  transform 0.0 224.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 57" "../models/props/clutter/newspaper_stack.glb" -49.52 6.87 3.59
+  parent "Clutter"
+  transform 0.0 305.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 55" "../models/props/clutter/newspaper_sheet_b.glb" -50.60 6.87 1.10
+  parent "Clutter"
+  transform 0.0 247.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 57" "../models/props/clutter/newspaper_sheet_a.glb" -49.76 6.87 8.93
+  parent "Clutter"
+  transform 0.0 17.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 57" "../models/props/clutter/rag_b.glb" -49.29 6.87 7.97
+  parent "Clutter"
+  transform 0.0 3.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 56" "../models/props/clutter/cardboard_flattened.glb" -47.88 9.87 0.60
+  parent "Clutter"
+  transform 0.0 61.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 58" "../models/props/clutter/newspaper_sheet_a.glb" -46.98 9.87 2.07
+  parent "Clutter"
+  transform 0.0 104.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 52" "../models/props/clutter/rag_a.glb" -51.47 9.87 9.68
+  parent "Clutter"
+  transform 0.0 120.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 53" "../models/props/clutter/rag_a.glb" -50.84 9.87 9.96
+  parent "Clutter"
+  transform 0.0 198.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 58" "../models/props/clutter/newspaper_stack.glb" -47.94 12.87 0.87
+  parent "Clutter"
+  transform 0.0 323.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 56" "../models/props/clutter/newspaper_sheet_b.glb" -49.27 12.87 0.48
+  parent "Clutter"
+  transform 0.0 293.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 59" "../models/props/clutter/newspaper_sheet_a.glb" -49.52 12.87 9.79
+  parent "Clutter"
+  transform 0.0 0.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 63" "../models/props/clutter/cardboard_box_crushed.glb" -48.56 12.87 9.30
+  parent "Clutter"
+  transform 0.0 17.4 0.0 1
+  cull_distance 45
+model "Rag b 58" "../models/props/clutter/rag_b.glb" -52.40 6.87 22.08
+  parent "Clutter"
+  transform 0.0 220.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 64" "../models/props/clutter/cardboard_box_crushed.glb" -50.07 6.87 22.64
+  parent "Clutter"
+  transform 0.0 238.8 0.0 1
+  cull_distance 45
+model "Rag b 59" "../models/props/clutter/rag_b.glb" -52.07 9.87 21.56
+  parent "Clutter"
+  transform 0.0 264.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 60" "../models/props/clutter/rag_b.glb" -49.11 9.87 20.23
+  parent "Clutter"
+  transform 0.0 203.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 60" "../models/props/clutter/newspaper_sheet_a.glb" -47.93 12.87 14.53
+  parent "Clutter"
+  transform 0.0 176.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 57" "../models/props/clutter/cardboard_flattened.glb" -50.88 12.87 13.30
+  parent "Clutter"
+  transform 0.0 65.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 61" "../models/props/clutter/rag_b.glb" -49.93 0.87 25.60
+  parent "Clutter"
+  transform 0.0 19.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 62" "../models/props/clutter/rag_b.glb" -49.21 0.87 27.11
+  parent "Clutter"
+  transform 0.0 95.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 58" "../models/props/clutter/cardboard_flattened.glb" -52.88 3.87 25.80
+  parent "Clutter"
+  transform 0.0 142.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 59" "../models/props/clutter/newspaper_stack.glb" -48.55 3.87 26.96
+  parent "Clutter"
+  transform 0.0 285.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 63" "../models/props/clutter/rag_b.glb" -51.76 6.87 33.49
+  parent "Clutter"
+  transform 0.0 13.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 65" "../models/props/clutter/cardboard_box_crushed.glb" -53.25 6.87 34.78
+  parent "Clutter"
+  transform 0.0 124.2 0.0 1
+  cull_distance 45
+model "Cardboard box crushed 66" "../models/props/clutter/cardboard_box_crushed.glb" -52.18 9.87 25.87
+  parent "Clutter"
+  transform 0.0 305.0 0.0 1
+  cull_distance 45
+model "Newspaper stack 60" "../models/props/clutter/newspaper_stack.glb" -52.21 9.87 27.40
+  parent "Clutter"
+  transform 0.0 5.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 57" "../models/props/clutter/newspaper_sheet_b.glb" -52.18 12.87 26.82
+  parent "Clutter"
+  transform 0.0 281.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 54" "../models/props/clutter/rag_a.glb" -48.58 12.87 25.85
+  parent "Clutter"
+  transform 0.0 179.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 58" "../models/props/clutter/newspaper_sheet_b.glb" -53.15 12.87 34.22
+  parent "Clutter"
+  transform 0.0 353.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 59" "../models/props/clutter/cardboard_flattened.glb" -52.70 12.87 32.86
+  parent "Clutter"
+  transform 0.0 116.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 60" "../models/props/clutter/cardboard_flattened.glb" -52.95 0.87 41.40
+  parent "Clutter"
+  transform 0.0 214.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 59" "../models/props/clutter/newspaper_sheet_b.glb" -50.43 0.87 39.74
+  parent "Clutter"
+  transform 0.0 218.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 67" "../models/props/clutter/cardboard_box_crushed.glb" -53.17 0.87 48.29
+  parent "Clutter"
+  transform 0.0 231.0 0.0 1
+  cull_distance 45
+model "Newspaper sheet b 60" "../models/props/clutter/newspaper_sheet_b.glb" -52.70 0.87 47.93
+  parent "Clutter"
+  transform 0.0 300.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 68" "../models/props/clutter/cardboard_box_crushed.glb" -51.35 3.87 41.00
+  parent "Clutter"
+  transform 0.0 150.0 0.0 1
+  cull_distance 45
+model "Cardboard box crushed 69" "../models/props/clutter/cardboard_box_crushed.glb" -53.94 3.87 40.99
+  parent "Clutter"
+  transform 0.0 180.7 0.0 1
+  cull_distance 45
+model "Newspaper stack 61" "../models/props/clutter/newspaper_stack.glb" -53.25 3.87 47.16
+  parent "Clutter"
+  transform 0.0 58.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 64" "../models/props/clutter/rag_b.glb" -51.87 3.87 48.84
+  parent "Clutter"
+  transform 0.0 25.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 70" "../models/props/clutter/cardboard_box_crushed.glb" -51.96 9.87 40.08
+  parent "Clutter"
+  transform 0.0 216.7 0.0 1
+  cull_distance 45
+model "Newspaper sheet a 61" "../models/props/clutter/newspaper_sheet_a.glb" -52.95 9.87 40.79
+  parent "Clutter"
+  transform 0.0 335.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 61" "../models/props/clutter/newspaper_sheet_b.glb" -50.54 9.87 48.23
+  parent "Clutter"
+  transform 0.0 126.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 61" "../models/props/clutter/cardboard_flattened.glb" -53.47 9.87 45.21
+  parent "Clutter"
+  transform 0.0 170.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rubble 70" "../models/props/clutter/cinder_block_broken.glb" -43.97 0.21 -5.60
+  parent "Debris"
+  transform 0.0 242.5 0.0 1
+  cull_distance 70
+model "Rubble 71" "../models/props/clutter/cinder_block_broken.glb" -45.45 0.21 14.67
+  parent "Debris"
+  transform 0.0 248.0 0.0 1
+  cull_distance 70
+model "Rubble 72" "../models/props/clutter/cinder_block_broken.glb" -42.50 0.21 -10.99
+  parent "Debris"
+  transform 0.0 58.2 0.0 1
+  cull_distance 70
+model "Rubble 73" "../models/props/clutter/rubble_pile_small.glb" -43.52 0.21 -6.01
+  parent "Debris"
+  transform 0.0 337.7 0.0 1
+  cull_distance 70
+model "Rubble 74" "../models/props/clutter/brick_pile.glb" -47.25 0.21 45.51
+  parent "Debris"
+  transform 0.0 143.1 0.0 1
+  cull_distance 70
+model "Rubble 75" "../models/props/clutter/brick_pile.glb" -47.54 0.21 45.81
+  parent "Debris"
+  transform 0.0 194.7 0.0 1
+  cull_distance 70
+model "Rubble 76" "../models/props/clutter/cinder_block_broken.glb" -43.39 0.21 2.31
+  parent "Debris"
+  transform 0.0 166.3 0.0 1
+  cull_distance 70
+model "Rubble 77" "../models/props/clutter/rubble_pile_small.glb" -52.95 0.21 -15.38
+  parent "Debris"
+  transform 0.0 257.5 0.0 1
+  cull_distance 70
+model "Rubble 78" "../models/props/clutter/rubble_pile_small.glb" -55.86 0.21 50.98
+  parent "Debris"
+  transform 0.0 294.4 0.0 1
+  cull_distance 70
+model "Cardboard flattened 62" "../models/props/clutter/cardboard_flattened.glb" -105.34 6.43 -241.02
+  parent "Clutter"
+  transform 0.0 41.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 71" "../models/props/clutter/cardboard_box_crushed.glb" -106.47 6.43 -242.62
+  parent "Clutter"
+  transform 0.0 63.7 0.0 1
+  cull_distance 45
+model "Rag a 55" "../models/props/clutter/rag_a.glb" -106.04 9.43 -243.30
+  parent "Clutter"
+  transform 0.0 44.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 56" "../models/props/clutter/rag_a.glb" -107.96 9.43 -241.03
+  parent "Clutter"
+  transform 0.0 100.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 57" "../models/props/clutter/rag_a.glb" -97.03 9.43 -242.14
+  parent "Clutter"
+  transform 0.0 189.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 62" "../models/props/clutter/newspaper_sheet_a.glb" -100.96 9.43 -239.91
+  parent "Clutter"
+  transform 0.0 19.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 63" "../models/props/clutter/cardboard_flattened.glb" -100.25 12.43 -241.61
+  parent "Clutter"
+  transform 0.0 241.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 64" "../models/props/clutter/cardboard_flattened.glb" -99.95 12.43 -239.93
+  parent "Clutter"
+  transform 0.0 179.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 62" "../models/props/clutter/newspaper_stack.glb" -92.16 0.43 -240.09
+  parent "Clutter"
+  transform 0.0 35.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 58" "../models/props/clutter/rag_a.glb" -91.93 0.43 -239.97
+  parent "Clutter"
+  transform 0.0 264.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 62" "../models/props/clutter/newspaper_sheet_b.glb" -93.21 3.43 -241.04
+  parent "Clutter"
+  transform 0.0 283.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 65" "../models/props/clutter/cardboard_flattened.glb" -91.24 3.43 -240.22
+  parent "Clutter"
+  transform 0.0 172.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 65" "../models/props/clutter/rag_b.glb" -84.30 9.43 -240.77
+  parent "Clutter"
+  transform 0.0 219.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 66" "../models/props/clutter/rag_b.glb" -87.53 9.43 -241.01
+  parent "Clutter"
+  transform 0.0 121.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 67" "../models/props/clutter/rag_b.glb" -91.40 12.43 -242.06
+  parent "Clutter"
+  transform 0.0 279.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 66" "../models/props/clutter/cardboard_flattened.glb" -91.30 12.43 -242.73
+  parent "Clutter"
+  transform 0.0 158.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 63" "../models/props/clutter/newspaper_sheet_b.glb" -85.53 12.43 -241.22
+  parent "Clutter"
+  transform 0.0 85.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 64" "../models/props/clutter/newspaper_sheet_b.glb" -87.33 12.43 -241.97
+  parent "Clutter"
+  transform 0.0 275.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 63" "../models/props/clutter/newspaper_sheet_a.glb" -77.85 0.43 -239.56
+  parent "Clutter"
+  transform 0.0 135.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 59" "../models/props/clutter/rag_a.glb" -80.70 0.43 -240.57
+  parent "Clutter"
+  transform 0.0 71.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 68" "../models/props/clutter/rag_b.glb" -79.01 3.43 -239.61
+  parent "Clutter"
+  transform 0.0 249.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 67" "../models/props/clutter/cardboard_flattened.glb" -79.47 3.43 -241.29
+  parent "Clutter"
+  transform 0.0 319.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 69" "../models/props/clutter/rag_b.glb" -79.81 6.43 -241.59
+  parent "Clutter"
+  transform 0.0 104.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 65" "../models/props/clutter/newspaper_sheet_b.glb" -80.54 6.43 -240.86
+  parent "Clutter"
+  transform 0.0 152.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 64" "../models/props/clutter/newspaper_sheet_a.glb" -72.05 6.43 -238.96
+  parent "Clutter"
+  transform 0.0 5.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 70" "../models/props/clutter/rag_b.glb" -71.61 6.43 -237.70
+  parent "Clutter"
+  transform 0.0 343.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 66" "../models/props/clutter/newspaper_sheet_b.glb" -78.89 12.43 -239.58
+  parent "Clutter"
+  transform 0.0 223.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 67" "../models/props/clutter/newspaper_sheet_b.glb" -79.09 12.43 -242.05
+  parent "Clutter"
+  transform 0.0 308.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 72" "../models/props/clutter/cardboard_box_crushed.glb" -66.93 0.43 -238.85
+  parent "Clutter"
+  transform 0.0 185.7 0.0 1
+  cull_distance 45
+model "Newspaper sheet b 68" "../models/props/clutter/newspaper_sheet_b.glb" -64.88 0.43 -238.54
+  parent "Clutter"
+  transform 0.0 241.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 65" "../models/props/clutter/newspaper_sheet_a.glb" -57.92 0.43 -240.20
+  parent "Clutter"
+  transform 0.0 50.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 60" "../models/props/clutter/rag_a.glb" -59.97 0.43 -239.55
+  parent "Clutter"
+  transform 0.0 140.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 73" "../models/props/clutter/cardboard_box_crushed.glb" -67.07 6.43 -239.79
+  parent "Clutter"
+  transform 0.0 288.9 0.0 1
+  cull_distance 45
+model "Newspaper sheet a 66" "../models/props/clutter/newspaper_sheet_a.glb" -65.23 6.43 -237.66
+  parent "Clutter"
+  transform 0.0 14.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 71" "../models/props/clutter/rag_b.glb" -59.41 6.43 -239.39
+  parent "Clutter"
+  transform 0.0 354.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 72" "../models/props/clutter/rag_b.glb" -59.63 6.43 -239.13
+  parent "Clutter"
+  transform 0.0 244.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 73" "../models/props/clutter/rag_b.glb" -65.14 12.43 -238.33
+  parent "Clutter"
+  transform 0.0 9.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 74" "../models/props/clutter/rag_b.glb" -66.05 12.43 -239.59
+  parent "Clutter"
+  transform 0.0 41.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 68" "../models/props/clutter/cardboard_flattened.glb" -59.02 12.43 -238.85
+  parent "Clutter"
+  transform 0.0 306.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 75" "../models/props/clutter/rag_b.glb" -58.60 12.43 -238.27
+  parent "Clutter"
+  transform 0.0 277.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 61" "../models/props/clutter/rag_a.glb" -53.22 0.43 -238.34
+  parent "Clutter"
+  transform 0.0 214.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 62" "../models/props/clutter/rag_a.glb" -52.60 0.43 -240.21
+  parent "Clutter"
+  transform 0.0 195.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 63" "../models/props/clutter/rag_a.glb" -45.61 0.43 -238.04
+  parent "Clutter"
+  transform 0.0 125.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 64" "../models/props/clutter/rag_a.glb" -45.16 0.43 -237.21
+  parent "Clutter"
+  transform 0.0 208.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 69" "../models/props/clutter/cardboard_flattened.glb" -54.36 3.43 -236.54
+  parent "Clutter"
+  transform 0.0 44.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 65" "../models/props/clutter/rag_a.glb" -53.69 3.43 -238.75
+  parent "Clutter"
+  transform 0.0 241.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 74" "../models/props/clutter/cardboard_box_crushed.glb" -44.03 3.43 -239.63
+  parent "Clutter"
+  transform 0.0 160.0 0.0 1
+  cull_distance 45
+model "Rag b 76" "../models/props/clutter/rag_b.glb" -47.18 3.43 -238.77
+  parent "Clutter"
+  transform 0.0 156.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 66" "../models/props/clutter/rag_a.glb" -52.22 6.43 -237.69
+  parent "Clutter"
+  transform 0.0 357.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 67" "../models/props/clutter/newspaper_sheet_a.glb" -54.33 6.43 -237.74
+  parent "Clutter"
+  transform 0.0 331.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 70" "../models/props/clutter/cardboard_flattened.glb" -44.55 6.43 -239.72
+  parent "Clutter"
+  transform 0.0 192.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 71" "../models/props/clutter/cardboard_flattened.glb" -47.06 6.43 -238.80
+  parent "Clutter"
+  transform 0.0 46.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 75" "../models/props/clutter/cardboard_box_crushed.glb" -45.14 9.43 -239.50
+  parent "Clutter"
+  transform 0.0 14.1 0.0 1
+  cull_distance 45
+model "Newspaper stack 63" "../models/props/clutter/newspaper_stack.glb" -46.92 9.43 -236.89
+  parent "Clutter"
+  transform 0.0 239.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 68" "../models/props/clutter/newspaper_sheet_a.glb" -39.41 0.43 -236.72
+  parent "Clutter"
+  transform 0.0 353.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 77" "../models/props/clutter/rag_b.glb" -39.84 0.43 -238.42
+  parent "Clutter"
+  transform 0.0 76.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 78" "../models/props/clutter/rag_b.glb" -39.80 3.43 -236.77
+  parent "Clutter"
+  transform 0.0 150.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 69" "../models/props/clutter/newspaper_sheet_a.glb" -40.92 3.43 -237.93
+  parent "Clutter"
+  transform 0.0 176.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 79" "../models/props/clutter/rag_b.glb" -33.55 3.43 -238.96
+  parent "Clutter"
+  transform 0.0 29.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 72" "../models/props/clutter/cardboard_flattened.glb" -30.90 3.43 -236.50
+  parent "Clutter"
+  transform 0.0 347.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 69" "../models/props/clutter/newspaper_sheet_b.glb" -39.18 6.43 -237.09
+  parent "Clutter"
+  transform 0.0 67.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 70" "../models/props/clutter/newspaper_sheet_b.glb" -40.27 6.43 -238.36
+  parent "Clutter"
+  transform 0.0 315.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 73" "../models/props/clutter/cardboard_flattened.glb" -31.72 6.43 -236.23
+  parent "Clutter"
+  transform 0.0 270.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 70" "../models/props/clutter/newspaper_sheet_a.glb" -33.30 6.43 -237.28
+  parent "Clutter"
+  transform 0.0 89.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 76" "../models/props/clutter/cardboard_box_crushed.glb" -40.22 9.43 -237.79
+  parent "Clutter"
+  transform 0.0 217.2 0.0 1
+  cull_distance 45
+model "Cardboard flattened 74" "../models/props/clutter/cardboard_flattened.glb" -40.69 9.43 -238.66
+  parent "Clutter"
+  transform 0.0 350.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 80" "../models/props/clutter/rag_b.glb" -30.92 9.43 -238.70
+  parent "Clutter"
+  transform 0.0 246.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 77" "../models/props/clutter/cardboard_box_crushed.glb" -30.95 9.43 -237.35
+  parent "Clutter"
+  transform 0.0 8.9 0.0 1
+  cull_distance 45
+model "Newspaper stack 64" "../models/props/clutter/newspaper_stack.glb" -40.48 12.43 -237.63
+  parent "Clutter"
+  transform 0.0 251.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 71" "../models/props/clutter/newspaper_sheet_b.glb" -40.01 12.43 -237.21
+  parent "Clutter"
+  transform 0.0 311.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 75" "../models/props/clutter/cardboard_flattened.glb" -24.91 0.43 -235.53
+  parent "Clutter"
+  transform 0.0 83.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 76" "../models/props/clutter/cardboard_flattened.glb" -27.54 0.43 -234.56
+  parent "Clutter"
+  transform 0.0 148.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 81" "../models/props/clutter/rag_b.glb" -18.58 3.43 -236.93
+  parent "Clutter"
+  transform 0.0 165.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 71" "../models/props/clutter/newspaper_sheet_a.glb" -17.02 3.43 -233.93
+  parent "Clutter"
+  transform 0.0 337.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 67" "../models/props/clutter/rag_a.glb" -27.06 6.43 -237.82
+  parent "Clutter"
+  transform 0.0 318.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 77" "../models/props/clutter/cardboard_flattened.glb" -27.51 6.43 -235.75
+  parent "Clutter"
+  transform 0.0 80.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 72" "../models/props/clutter/newspaper_sheet_b.glb" -16.82 6.43 -236.17
+  parent "Clutter"
+  transform 0.0 144.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 78" "../models/props/clutter/cardboard_flattened.glb" -17.25 6.43 -234.32
+  parent "Clutter"
+  transform 0.0 273.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 82" "../models/props/clutter/rag_b.glb" -26.94 9.43 -236.49
+  parent "Clutter"
+  transform 0.0 94.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 72" "../models/props/clutter/newspaper_sheet_a.glb" -26.89 9.43 -235.58
+  parent "Clutter"
+  transform 0.0 127.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 68" "../models/props/clutter/rag_a.glb" -25.91 12.43 -234.57
+  parent "Clutter"
+  transform 0.0 180.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 69" "../models/props/clutter/rag_a.glb" -26.81 12.43 -236.53
+  parent "Clutter"
+  transform 0.0 287.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rubble 79" "../models/props/clutter/rubble_pile_small.glb" -36.20 -0.23 -241.92
+  parent "Debris"
+  transform 0.0 49.4 0.0 1
+  cull_distance 70
+model "Rubble 80" "../models/props/clutter/cinder_block_broken.glb" -80.50 -0.23 -245.07
+  parent "Debris"
+  transform 0.0 136.2 0.0 1
+  cull_distance 70
+model "Rubble 81" "../models/props/clutter/rubble_pile_large.glb" -23.79 -0.23 -240.75
+  parent "Debris"
+  transform 0.0 293.4 0.0 1
+  cull_distance 70
+model "Rubble 82" "../models/props/clutter/rubble_pile_small.glb" -94.07 -0.23 -245.97
+  parent "Debris"
+  transform 0.0 230.4 0.0 1
+  cull_distance 70
+model "Rubble 83" "../models/props/clutter/brick_pile.glb" -98.66 -0.23 -246.31
+  parent "Debris"
+  transform 0.0 299.8 0.0 1
+  cull_distance 70
+model "Rubble 84" "../models/props/clutter/brick_pile.glb" -19.30 -0.23 -239.84
+  parent "Debris"
+  transform 0.0 140.0 0.0 1
+  cull_distance 70
+model "Rubble 85" "../models/props/clutter/rubble_pile_small.glb" -23.97 -0.23 -241.00
+  parent "Debris"
+  transform 0.0 358.6 0.0 1
+  cull_distance 70
+model "Rubble 86" "../models/props/clutter/brick_pile.glb" -78.96 -0.23 -244.89
+  parent "Debris"
+  transform 0.0 327.3 0.0 1
+  cull_distance 70
+model "Rubble 87" "../models/props/clutter/rubble_pile_large.glb" -62.08 -0.23 -243.41
+  parent "Debris"
+  transform 0.0 118.9 0.0 1
+  cull_distance 70
+model "Rubble 88" "../models/props/clutter/rubble_pile_small.glb" -20.25 -0.23 -240.32
+  parent "Debris"
+  transform 0.0 227.9 0.0 1
+  cull_distance 70
+model "Rubble 89" "../models/props/clutter/rubble_pile_small.glb" -111.13 -0.23 -239.46
+  parent "Debris"
+  transform 0.0 165.2 0.0 1
+  cull_distance 70
+model "Rubble 90" "../models/props/clutter/rubble_pile_small.glb" -14.32 -0.23 -234.79
+  parent "Debris"
+  transform 0.0 73.9 0.0 1
+  cull_distance 70
+model "Newspaper sheet a 73" "../models/props/clutter/newspaper_sheet_a.glb" -92.40 0.75 -45.36
+  parent "Clutter"
+  transform 0.0 207.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 74" "../models/props/clutter/newspaper_sheet_a.glb" -92.07 0.75 -45.50
+  parent "Clutter"
+  transform 0.0 336.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 79" "../models/props/clutter/cardboard_flattened.glb" -93.28 3.75 -40.32
+  parent "Clutter"
+  transform 0.0 205.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 80" "../models/props/clutter/cardboard_flattened.glb" -94.40 3.75 -40.64
+  parent "Clutter"
+  transform 0.0 294.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 78" "../models/props/clutter/cardboard_box_crushed.glb" -93.62 6.75 -40.56
+  parent "Clutter"
+  transform 0.0 209.1 0.0 1
+  cull_distance 45
+model "Rag a 70" "../models/props/clutter/rag_a.glb" -95.08 6.75 -40.33
+  parent "Clutter"
+  transform 0.0 224.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 79" "../models/props/clutter/cardboard_box_crushed.glb" -92.81 6.75 -45.79
+  parent "Clutter"
+  transform 0.0 149.8 0.0 1
+  cull_distance 45
+model "Rag a 71" "../models/props/clutter/rag_a.glb" -95.27 6.75 -48.11
+  parent "Clutter"
+  transform 0.0 120.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 81" "../models/props/clutter/cardboard_flattened.glb" -92.79 9.75 -41.24
+  parent "Clutter"
+  transform 0.0 54.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 75" "../models/props/clutter/newspaper_sheet_a.glb" -93.32 9.75 -40.37
+  parent "Clutter"
+  transform 0.0 317.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 65" "../models/props/clutter/newspaper_stack.glb" -94.46 9.75 -45.75
+  parent "Clutter"
+  transform 0.0 215.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 82" "../models/props/clutter/cardboard_flattened.glb" -93.48 9.75 -47.44
+  parent "Clutter"
+  transform 0.0 248.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 83" "../models/props/clutter/cardboard_flattened.glb" -94.47 0.75 -53.44
+  parent "Clutter"
+  transform 0.0 159.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 84" "../models/props/clutter/cardboard_flattened.glb" -94.72 0.75 -53.03
+  parent "Clutter"
+  transform 0.0 290.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 72" "../models/props/clutter/rag_a.glb" -91.47 3.75 -53.08
+  parent "Clutter"
+  transform 0.0 45.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 73" "../models/props/clutter/rag_a.glb" -93.84 3.75 -52.97
+  parent "Clutter"
+  transform 0.0 337.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 76" "../models/props/clutter/newspaper_sheet_a.glb" -92.69 6.75 -52.48
+  parent "Clutter"
+  transform 0.0 231.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 85" "../models/props/clutter/cardboard_flattened.glb" -94.05 6.75 -51.84
+  parent "Clutter"
+  transform 0.0 68.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 66" "../models/props/clutter/newspaper_stack.glb" -93.82 6.75 -59.39
+  parent "Clutter"
+  transform 0.0 292.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 73" "../models/props/clutter/newspaper_sheet_b.glb" -93.08 6.75 -59.97
+  parent "Clutter"
+  transform 0.0 269.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 83" "../models/props/clutter/rag_b.glb" -93.86 12.75 -50.74
+  parent "Clutter"
+  transform 0.0 80.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 77" "../models/props/clutter/newspaper_sheet_a.glb" -94.28 12.75 -52.41
+  parent "Clutter"
+  transform 0.0 327.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag b 84" "../models/props/clutter/rag_b.glb" -94.19 0.75 -64.11
+  parent "Clutter"
+  transform 0.0 172.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 86" "../models/props/clutter/cardboard_flattened.glb" -91.83 0.75 -62.68
+  parent "Clutter"
+  transform 0.0 113.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 67" "../models/props/clutter/newspaper_stack.glb" -90.46 0.75 -70.41
+  parent "Clutter"
+  transform 0.0 235.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 74" "../models/props/clutter/rag_a.glb" -91.06 0.75 -69.06
+  parent "Clutter"
+  transform 0.0 150.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 68" "../models/props/clutter/newspaper_stack.glb" -93.83 3.75 -63.40
+  parent "Clutter"
+  transform 0.0 287.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 78" "../models/props/clutter/newspaper_sheet_a.glb" -91.41 3.75 -63.93
+  parent "Clutter"
+  transform 0.0 141.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 75" "../models/props/clutter/rag_a.glb" -92.43 3.75 -70.84
+  parent "Clutter"
+  transform 0.0 314.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 87" "../models/props/clutter/cardboard_flattened.glb" -91.28 3.75 -68.81
+  parent "Clutter"
+  transform 0.0 314.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 76" "../models/props/clutter/rag_a.glb" -93.63 9.75 -65.18
+  parent "Clutter"
+  transform 0.0 217.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 69" "../models/props/clutter/newspaper_stack.glb" -92.45 9.75 -64.85
+  parent "Clutter"
+  transform 0.0 233.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 80" "../models/props/clutter/cardboard_box_crushed.glb" -93.92 9.75 -69.14
+  parent "Clutter"
+  transform 0.0 219.2 0.0 1
+  cull_distance 45
+model "Newspaper sheet a 79" "../models/props/clutter/newspaper_sheet_a.glb" -91.14 9.75 -71.21
+  parent "Clutter"
+  transform 0.0 19.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 70" "../models/props/clutter/newspaper_stack.glb" -93.75 12.75 -71.59
+  parent "Clutter"
+  transform 0.0 234.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 74" "../models/props/clutter/newspaper_sheet_b.glb" -90.98 12.75 -71.18
+  parent "Clutter"
+  transform 0.0 0.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 88" "../models/props/clutter/cardboard_flattened.glb" -89.71 0.75 -76.29
+  parent "Clutter"
+  transform 0.0 225.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 77" "../models/props/clutter/rag_a.glb" -92.61 0.75 -73.96
+  parent "Clutter"
+  transform 0.0 209.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 81" "../models/props/clutter/cardboard_box_crushed.glb" -90.50 0.75 -82.53
+  parent "Clutter"
+  transform 0.0 303.2 0.0 1
+  cull_distance 45
+model "Newspaper stack 71" "../models/props/clutter/newspaper_stack.glb" -91.86 0.75 -81.68
+  parent "Clutter"
+  transform 0.0 235.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 82" "../models/props/clutter/cardboard_box_crushed.glb" -93.19 3.75 -80.92
+  parent "Clutter"
+  transform 0.0 228.5 0.0 1
+  cull_distance 45
+model "Newspaper sheet b 75" "../models/props/clutter/newspaper_sheet_b.glb" -89.87 3.75 -80.75
+  parent "Clutter"
+  transform 0.0 356.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 80" "../models/props/clutter/newspaper_sheet_a.glb" -93.00 6.75 -75.13
+  parent "Clutter"
+  transform 0.0 59.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 89" "../models/props/clutter/cardboard_flattened.glb" -92.57 6.75 -74.15
+  parent "Clutter"
+  transform 0.0 257.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 78" "../models/props/clutter/rag_a.glb" -89.52 6.75 -80.34
+  parent "Clutter"
+  transform 0.0 80.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 83" "../models/props/clutter/cardboard_box_crushed.glb" -92.01 6.75 -83.56
+  parent "Clutter"
+  transform 0.0 218.0 0.0 1
+  cull_distance 45
+model "Newspaper stack 72" "../models/props/clutter/newspaper_stack.glb" -90.87 9.75 -73.88
+  parent "Clutter"
+  transform 0.0 301.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 90" "../models/props/clutter/cardboard_flattened.glb" -89.73 9.75 -76.34
+  parent "Clutter"
+  transform 0.0 83.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 79" "../models/props/clutter/rag_a.glb" -92.65 9.75 -83.52
+  parent "Clutter"
+  transform 0.0 340.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 91" "../models/props/clutter/cardboard_flattened.glb" -92.67 9.75 -80.68
+  parent "Clutter"
+  transform 0.0 54.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 84" "../models/props/clutter/cardboard_box_crushed.glb" -89.47 12.75 -75.75
+  parent "Clutter"
+  transform 0.0 326.6 0.0 1
+  cull_distance 45
+model "Newspaper stack 73" "../models/props/clutter/newspaper_stack.glb" -93.59 12.75 -76.13
+  parent "Clutter"
+  transform 0.0 85.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper stack 74" "../models/props/clutter/newspaper_stack.glb" -91.30 12.75 -82.17
+  parent "Clutter"
+  transform 0.0 114.7 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 85" "../models/props/clutter/cardboard_box_crushed.glb" -90.14 12.75 -82.22
+  parent "Clutter"
+  transform 0.0 118.2 0.0 1
+  cull_distance 45
+model "Rubble 91" "../models/props/clutter/rubble_pile_small.glb" -98.09 0.09 -41.90
+  parent "Debris"
+  transform 0.0 141.7 0.0 1
+  cull_distance 70
+model "Rubble 92" "../models/props/clutter/rubble_pile_small.glb" -98.23 0.09 -51.49
+  parent "Debris"
+  transform 0.0 45.0 0.0 1
+  cull_distance 70
+model "Rubble 93" "../models/props/clutter/cinder_block_broken.glb" -99.02 0.09 -45.49
+  parent "Debris"
+  transform 0.0 144.2 0.0 1
+  cull_distance 70
+model "Rubble 94" "../models/props/clutter/cinder_block_broken.glb" -95.72 0.09 -74.93
+  parent "Debris"
+  transform 0.0 42.2 0.0 1
+  cull_distance 70
+model "Rubble 95" "../models/props/clutter/rubble_pile_small.glb" -95.23 0.09 -82.91
+  parent "Debris"
+  transform 0.0 259.4 0.0 1
+  cull_distance 70
+model "Rubble 96" "../models/props/clutter/rubble_pile_small.glb" -89.16 0.09 -35.71
+  parent "Debris"
+  transform 0.0 285.0 0.0 1
+  cull_distance 70
+model "Rubble 97" "../models/props/clutter/rubble_pile_small.glb" -88.36 0.09 -85.73
+  parent "Debris"
+  transform 0.0 21.5 0.0 1
+  cull_distance 70
+model "Newspaper sheet b 76" "../models/props/clutter/newspaper_sheet_b.glb" -175.59 0.63 -49.55
+  parent "Clutter"
+  transform 0.0 340.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 81" "../models/props/clutter/newspaper_sheet_a.glb" -172.86 0.63 -79.62
+  parent "Clutter"
+  transform 0.0 245.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 77" "../models/props/clutter/newspaper_sheet_b.glb" -172.94 0.63 -78.29
+  parent "Clutter"
+  transform 0.0 135.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 78" "../models/props/clutter/newspaper_sheet_b.glb" -174.38 0.63 -69.96
+  parent "Clutter"
+  transform 0.0 144.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 79" "../models/props/clutter/newspaper_sheet_b.glb" -173.08 0.63 -70.54
+  parent "Clutter"
+  transform 0.0 318.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 82" "../models/props/clutter/newspaper_sheet_a.glb" -174.25 0.63 -54.12
+  parent "Clutter"
+  transform 0.0 220.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 83" "../models/props/clutter/newspaper_sheet_a.glb" -172.78 0.63 -89.81
+  parent "Clutter"
+  transform 0.0 189.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 80" "../models/props/clutter/newspaper_sheet_b.glb" -173.90 0.63 -77.16
+  parent "Clutter"
+  transform 0.0 212.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 92" "../models/props/clutter/cardboard_flattened.glb" -175.53 0.63 -58.97
+  parent "Clutter"
+  transform 0.0 337.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 93" "../models/props/clutter/cardboard_flattened.glb" -173.46 0.63 -84.32
+  parent "Clutter"
+  transform 0.0 200.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 80" "../models/props/clutter/rag_a.glb" -175.42 3.63 -52.33
+  parent "Clutter"
+  transform 0.0 352.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 94" "../models/props/clutter/cardboard_flattened.glb" -174.86 3.63 -47.79
+  parent "Clutter"
+  transform 0.0 110.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 86" "../models/props/clutter/cardboard_box_crushed.glb" -175.19 3.63 -60.46
+  parent "Clutter"
+  transform 0.0 220.0 0.0 1
+  cull_distance 45
+model "Newspaper sheet b 81" "../models/props/clutter/newspaper_sheet_b.glb" -173.98 3.63 -67.10
+  parent "Clutter"
+  transform 0.0 184.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 87" "../models/props/clutter/cardboard_box_crushed.glb" -175.65 3.63 -54.87
+  parent "Clutter"
+  transform 0.0 93.8 0.0 1
+  cull_distance 45
+model "Rag a 81" "../models/props/clutter/rag_a.glb" -174.07 3.63 -77.67
+  parent "Clutter"
+  transform 0.0 276.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet a 84" "../models/props/clutter/newspaper_sheet_a.glb" -174.32 3.63 -75.33
+  parent "Clutter"
+  transform 0.0 251.6 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 95" "../models/props/clutter/cardboard_flattened.glb" -175.63 3.63 -54.54
+  parent "Clutter"
+  transform 0.0 338.0 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 96" "../models/props/clutter/cardboard_flattened.glb" -175.99 3.63 -47.55
+  parent "Clutter"
+  transform 0.0 199.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 82" "../models/props/clutter/newspaper_sheet_b.glb" -172.88 3.63 -74.27
+  parent "Clutter"
+  transform 0.0 5.3 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 88" "../models/props/clutter/cardboard_box_crushed.glb" -174.32 6.63 -62.56
+  parent "Clutter"
+  transform 0.0 277.4 0.0 1
+  cull_distance 45
+model "Rag a 82" "../models/props/clutter/rag_a.glb" -175.24 6.63 -56.51
+  parent "Clutter"
+  transform 0.0 136.1 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 97" "../models/props/clutter/cardboard_flattened.glb" -173.76 6.63 -77.40
+  parent "Clutter"
+  transform 0.0 53.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 98" "../models/props/clutter/cardboard_flattened.glb" -176.16 6.63 -49.04
+  parent "Clutter"
+  transform 0.0 321.4 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 83" "../models/props/clutter/newspaper_sheet_b.glb" -171.92 6.63 -87.38
+  parent "Clutter"
+  transform 0.0 219.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard box crushed 89" "../models/props/clutter/cardboard_box_crushed.glb" -174.34 6.63 -57.52
+  parent "Clutter"
+  transform 0.0 49.6 0.0 1
+  cull_distance 45
+model "Newspaper sheet b 84" "../models/props/clutter/newspaper_sheet_b.glb" -175.04 6.63 -49.42
+  parent "Clutter"
+  transform 0.0 350.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Cardboard flattened 99" "../models/props/clutter/cardboard_flattened.glb" -173.30 6.63 -90.10
+  parent "Clutter"
+  transform 0.0 317.8 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Rag a 83" "../models/props/clutter/rag_a.glb" -173.72 6.63 -87.19
+  parent "Clutter"
+  transform 0.0 354.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Newspaper sheet b 85" "../models/props/clutter/newspaper_sheet_b.glb" -173.58 6.63 -62.79
+  parent "Clutter"
+  transform 0.0 199.9 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Medical box" "../models/props/medical_box/medical_box.gltf" -178.76 6.62 -49.21
+  parent "Loot"
+  transform 0.0 24.9 0.0 1
+  cull_distance 90
+model "Lyokha rag" "../models/props/clutter/rag_a.glb" -180.06 6.63 -47.69
+  parent "Loot"
+  transform 0.0 144.5 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
+model "Bandit loot" "../models/props/plastic_crate_01/plastic_crate_01.gltf" -187.35 1.24 12.16
+  parent "Bandit base"
+  transform 0.0 72.3 0.0 1
+  cull_distance 90
+model "Bandit loot 2" "../models/props/plastic_crate_02/plastic_crate_02.gltf" -187.40 1.24 11.46
+  parent "Bandit base"
+  transform 0.0 76.9 0.0 1
+  cull_distance 90
+model "Bandit loot 3" "../models/props/russian_food_cans_01/russian_food_cans_01.gltf" -186.55 1.24 12.22
+  parent "Bandit base"
+  transform 0.0 77.6 0.0 1
+  cull_distance 90
+model "Bandit loot 4" "../models/props/long_life_food/long_life_food.gltf" -187.44 1.24 10.55
+  parent "Bandit base"
+  transform 0.0 69.2 0.0 1
+  cull_distance 90
+model "Bandit loot 5" "../models/props/wine_bottles_01/wine_bottles_01.gltf" -187.29 1.24 9.86
+  parent "Bandit base"
+  transform 0.0 95.1 0.0 1
+  cull_distance 90
+model "Bandit loot 6" "../models/props/metal_toolbox/metal_toolbox.gltf" -185.56 1.24 12.39
+  parent "Bandit base"
+  transform 0.0 87.3 0.0 1
+  cull_distance 90
+model "Bandit loot 7" "../models/props/vintage_suitcase/vintage_suitcase.gltf" -186.09 1.24 11.25
+  parent "Bandit base"
+  transform 0.0 70.1 0.0 1
+  cull_distance 90
+model "Bandit junk 7" "../models/props/clutter/wooden_pallet.glb" -189.07 0.62 -0.86
+  parent "Bandit base"
+  transform 0.0 344.7 0.0 1
+  cull_distance 45
+model "Bandit junk 8" "../models/props/clutter/wooden_pallet_broken.glb" -189.08 0.62 -2.26
+  parent "Bandit base"
+  transform 0.0 7.7 0.0 1
+  cull_distance 45
+model "Bandit junk 9" "../models/props/clutter/cinder_block.glb" -188.40 0.62 -7.83
+  parent "Bandit base"
+  transform 0.0 166.1 0.0 1
+  cull_distance 45
+model "Bandit junk 10" "../models/props/clutter/cinder_block_broken.glb" -188.47 0.62 -8.33
+  parent "Bandit base"
+  transform 0.0 289.1 0.0 1
+  cull_distance 45
+model "Bandit junk 11" "../models/props/clutter/planks_scrap_pile.glb" -174.70 0.62 -23.61
+  parent "Bandit base"
+  transform 0.0 21.9 0.0 1
+  cull_distance 45
+model "Bandit fire junk" "../models/props/wine_bottles_01/wine_bottles_01.gltf" -176.14 1.24 -5.39
+  parent "Bandit base"
+  transform 0.0 167.1 0.0 1
+  cull_distance 90
+model "Bandit fire junk 2" "../models/props/cigarette_pack/cigarette_pack.gltf" -176.01 1.24 -4.28
+  parent "Bandit base"
+  transform 0.0 158.3 0.0 1
+  cull_distance 90
+model "Camp supplies" "../models/props/plastic_crate_03/plastic_crate_03.gltf" 50.99 0.25 72.53
+  parent "Camp"
+  transform 0.0 336.6 0.0 1
+  cull_distance 90
+model "Camp supplies 2" "../models/props/plastic_crate_01/plastic_crate_01.gltf" 50.41 0.25 71.96
+  parent "Camp"
+  transform 0.0 81.3 0.0 1
+  cull_distance 90
+model "Camp supplies 3" "../models/props/industrial_pastic_container/industrial_pastic_container.gltf" 51.29 0.25 71.78
+  parent "Camp"
+  transform 0.0 33.1 0.0 1
+  cull_distance 90
+model "Camp supplies 4" "../models/props/russian_food_cans_01/russian_food_cans_01.gltf" 41.91 0.25 60.97
+  parent "Camp"
+  transform 0.0 206.8 0.0 1
+  cull_distance 90
+model "Camp supplies 5" "../models/props/pot_enamel_01/pot_enamel_01.gltf" 50.81 0.04 59.19
+  parent "Camp"
+  transform 0.0 203.8 0.0 1
+  cull_distance 90
+model "Camp junk" "../models/props/clutter/wooden_pallet.glb" 40.64 0.25 59.67
+  parent "Camp"
+  transform 0.0 268.6 0.0 1
+  cull_distance 45
+model "Camp junk 2" "../models/props/clutter/wooden_pallet.glb" 40.55 0.40 59.49
+  parent "Camp"
+  transform 0.0 269.9 0.0 1
+  cull_distance 45
+model "Camp junk 3" "../models/props/clutter/rag_b.glb" 52.55 0.07 61.25
+  parent "Camp"
+  transform 0.0 30.2 0.0 1
+  collision 0
+  cull_distance 45
+  cast_shadows 0
 model "Lyokha backpack" "../models/props/old_military_crate/old_military_crate.gltf" -179.41 6.62 -48.45
   parent "Loot"
   transform 0.0 96.3 0.0 1
@@ -1246,8 +5056,3 @@ entity "Bandit at the tower" "enemy" -271.72 0.12 -20.03 200 0.6 1.8 0.6 0.55 0.
   parent "Bandits"
   character "../models/characters/humans/bandit.glb" 1 0 "Idle_Loop"
   prop "patrol_radius" "4"
-player_sounds "../sounds/player/step_gravel.sound" "../sounds/player/land.sound" "../sounds/player/hurt.sound"
-entity "Ambience wind" "sound" 0 -100 0 0 4000 400 4000 0.25 0.55 0.95 ""
-  prop "sound" "sounds/ambient/wind.sound"
-  prop "zone" "1"
-  prop "fade" "50"

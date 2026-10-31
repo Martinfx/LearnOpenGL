@@ -167,7 +167,7 @@ class Terrain:
         self.layers['apron'] = np.where(self.bmask > 0.05, 1.05 - self.bmask, -1.0) + 0.5 * (n(X + 33, Z, 1.3) - 0.5) - \
             smoothstep(0.7, 0.8, n(X - 70, Z, 2.5))
         verge = np.minimum(paved, self.road_d['track'] - ROAD_HALF['track'])
-        dirt = smoothstep(0.62, 0.7, n.fbm(X + 900, Z, 14.0, 2)) + smoothstep(3.0, 1.2, self.bmask) * 0.8 + \
+        dirt = smoothstep(0.7, 0.78, n.fbm(X + 900, Z, 14.0, 2)) + smoothstep(1.6, 0.8, self.bmask) * 0.8 + \
             smoothstep(1.0, 0.2, verge) * 0.5 * n(X, Z + 3, 3.0)
         self.layers['dirt'] = dirt - 0.5 + 0.25 * (n(X + 1, Z + 1, 1.2) - 0.5)
         self.layers['grass'] = smoothstep(0.45, 0.55, n.fbm(X + 60, Z - 900, 18.0, 2)) - 0.5 + 0.3 * (n(X, Z + 9, 2.0) - 0.5)
@@ -177,8 +177,9 @@ class Terrain:
         # nothing grows/lies on asphalt or under buildings
         for k in ('grass', 'dirt', 'dry', 'leaves'):
             self.layers[k] = np.where(self.layers['road'] > 0, -1.0, self.layers[k])
+        # 0.35 m margin: marching squares on the 1 m grid would otherwise cut a sliver into the building floor
         for k in self.layers:
-            self.layers[k] = np.where(self.bmask <= 0.0, -1.0, self.layers[k])
+            self.layers[k] = np.where(self.bmask <= 0.35, -1.0, self.layers[k])
 
     # ---------------------------------------------------------------- queries
     def _sample(self, A, x, z):

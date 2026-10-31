@@ -12,6 +12,7 @@ import os
 import numpy as np
 from PIL import Image, ImageDraw
 from .mesh import Mesh, rot_y
+from . import tex
 from .mats import PALETTE, TEX_OUT, _font, _weather, _flat_maps
 from .buildings import wall_x, wall_z, slab, stair_flight, railing_x, railing_z, stairwell, STOREY, SLAB, DOOR_H
 
@@ -63,6 +64,88 @@ def sign(m, row, x0, x1, y0, y1, z, facing=1, frac=1.0):
                uvs=[(u0, -v1), (u1, -v1), (u1, -v0), (u0, -v0)])
 
 
+# --------------------------------------------------------------------------- grime decals
+def make_grime():
+    """RGBA atlas of weathering decals (rain streaks under sills, drips from the roof edge, splash dirt at the
+    plinth), like on the sand-lime brick walls in the Skrunda-1 photos. Top half: 4 sill streaks (the last
+    one rusty from the tin sill); bottom left: roof-edge drips; bottom right: plinth splash band."""
+    path = f'{TEX_OUT}/grime_albedo.png'
+    if os.path.exists(path):
+        return
+    rng = np.random.default_rng(77)
+    N = 1024
+    A = np.zeros((N, N), np.float32)
+    C = np.zeros((N, N, 3), np.float32)
+    C[:] = (0.15, 0.14, 0.12)
+    yy, xx = np.mgrid[0:N, 0:N].astype(np.float32)
+    noise = tex.noise_mask(5, 40, 0.0, 1.0)(N, N)[:N, :N] if hasattr(tex, 'noise_mask') else np.ones((N, N))
+    noise = 0.55 + 0.45 * np.clip(noise, 0, 1)
+
+    def drips(x0, x1, y0, y1, count, wide):
+        h = y1 - y0
+        reg = np.zeros((h, x1 - x0), np.float32)
+        lx = np.arange(x1 - x0, dtype=np.float32)[None, :]
+        ly = np.arange(h, dtype=np.float32)[:, None]
+        if wide:
+            cx = (x1 - x0) / 2
+            reg += 0.55 * np.exp(-((lx - cx) / ((x1 - x0) * 0.28)) ** 2) * np.clip(1 - ly / (h * 0.45), 0, 1) ** 1.5
+        for _ in range(count):
+            c = rng.uniform(0.1, 0.9) * (x1 - x0)
+            sg = rng.uniform(2.0, 9.0)
+            ln = rng.uniform(0.3, 1.0) * h
+            reg += rng.uniform(0.25, 0.6) * np.exp(-((lx - c) / sg) ** 2) * np.clip(1 - ly / ln, 0, 1) ** 0.8
+        A[y0:y1, x0:x1] = np.maximum(A[y0:y1, x0:x1], np.clip(reg, 0, 1))
+    for k in range(4):
+        drips(k * 256 + 8, (k + 1) * 256 - 8, 0, 512, 9, True)
+        if k == 3:
+            C[0:512, 768:1024] = (0.33, 0.19, 0.1)
+    drips(0, 512, 512, 1024, 40, False)
+    # plinth splash: dense at the bottom, ragged top edge
+    band = np.clip((yy[512:, 512:] - 512 - 120 - 90 * noise[512:, 512:]) / 260, 0, 1) ** 1.2
+    A[512:, 512:] = 0.75 * band
+    A = A * noise * 0.85
+    # soften the region borders so neighbours never bleed through mip levels
+    for x in (0, 256, 512, 768):            # sill streaks: 4 cells
+        A[:512, x:x + 4] = 0
+        A[:512, x + 252:x + 256] = 0
+    for x in (0, 512):                      # roof drips and splash: 2 cells
+        A[512:, x:x + 4] = 0
+        A[512:, x + 508:x + 512] = 0
+    rgba = np.dstack([C, A])
+    Image.fromarray(np.clip(rgba * 255 + 0.5, 0, 255).astype(np.uint8), 'RGBA').save(path)
+
+
+PALETTE['grime'] = dict(tex='grime', decal=True, tile=1.0, color=(1, 1, 1), rough=1.0, metal=0.0)
+
+
+def grime(m, x0, x1, y_top, y_bot, z, region, k=0):
+    """Decal quad on a wall face at z (canonical frame: wall in the XY plane, +Z outwards). region:
+    'sill' (variant k 0..3), 'roof' or 'plinth'."""
+    if y_bot >= y_top or x1 <= x0:
+        return
+    if region == 'sill':
+        u0, u1, v0, v1 = k / 4, (k + 1) / 4, 0.0, 0.5
+    elif region == 'roof':
+        u0, u1, v0, v1 = 0.0, 0.5, 0.5, 1.0
+    else:
+        u0, u1, v0, v1 = 0.5, 1.0, 0.5, 1.0
+    m.poly('grime', [(x0, y_bot, z), (x1, y_bot, z), (x1, y_top, z), (x0, y_top, z)],
+           uvs=[(u0, -v1), (u1, -v1), (u1, -v0), (u0, -v0)])
+
+
+def facade_grime(m, x0, x1, top, z, rng, plinth=None):
+    """Roof-edge drips along a wall from x0 to x1 (canonical frame, face at z) and, with plinth=(y0, y1, z),
+    splash dirt on the plinth."""
+    x = x0
+    while x < x1 - 0.5:
+        w = min(rng.uniform(1.6, 3.4), x1 - x)
+        if rng.random() < 0.7:
+            grime(m, x, x + w, top, top - rng.uniform(1.0, 3.2), z, 'roof')
+        if plinth:
+            grime(m, x, x + w, plinth[1], plinth[0], plinth[2], 'plinth')
+        x += w
+
+
 # --------------------------------------------------------------------------- facade details
 def _frame(m, rot, cx, z_out, y_lo, y_hi, w, rng, kind, frame_mat='wood', door=False):
     """Window/door filling in an opening of width w between y_lo..y_hi. The outer wall face is at
@@ -86,6 +169,10 @@ def _frame(m, rot, cx, z_out, y_lo, y_hi, w, rng, kind, frame_mat='wood', door=F
             m.box(frame_mat, (-hw + fw, ty - 0.03, zf0), (hw - fw, ty + 0.03, zf1))     # transom
     if not door:
         m.box('rust', (-hw - 0.04, y_lo - 0.035, -0.12), (hw + 0.04, y_lo, 0.07))       # tin sill
+        if rng.random() < 0.85:      # rain streak washed down from the sill
+            sw = w * rng.uniform(0.8, 1.15)
+            grime(m, -sw / 2, sw / 2, y_lo - 0.035, max(0.05, y_lo - rng.uniform(0.7, 2.4)), 0.025, 'sill',
+                  int(rng.integers(0, 4)))
     zg = (zf0 + zf1) / 2
     if kind == 'glass' and not door:
         m.poly('glass', [(-hw + fw, y_lo + fw, zg), (hw - fw, y_lo + fw, zg), (hw - fw, y_hi - fw, zg), (-hw + fw, y_hi - fw, zg)])
@@ -115,12 +202,14 @@ def _rot_for(side):
 
 
 def _window_kind(rng, floor, p_glass=0.3):
+    """Skrunda-1 photos: almost every window is a black hole without glass, frames often gone too;
+    a few ground-floor openings boarded."""
     r = rng.random()
-    if floor == 0 and r < 0.3:
+    if floor == 0 and r < 0.12:
         return 'boarded'
-    if r < p_glass:
+    if r < p_glass * 0.2:
         return 'glass'
-    if r < 0.92:
+    if r < 0.5:
         return 'broken'
     return 'empty'
 
@@ -162,10 +251,7 @@ def _junk(m, rng, x0, x1, z0, z1, y, n):
                 for lz in (-0.3, 0.3):
                     m.box_c('wood', (lx, 0.21, lz), (0.04, 0.42, 0.04))
         else:
-            r = rng.uniform(0.4, 0.9)
-            m.poly('debris', [(-r, 0.01, -r), (r, 0.01, -r * 0.7), (0, 0.25 * r, 0)][::-1])
-            m.poly('debris', [(r, 0.01, -r * 0.7), (r * 0.5, 0.01, r), (0, 0.25 * r, 0)][::-1])
-            m.poly('debris', [(r * 0.5, 0.01, r), (-r, 0.01, -r), (0, 0.25 * r, 0)][::-1])
+            rng.uniform(0.4, 0.9)       # was a 3-sided debris pyramid (read as fake); real rubble clutter is placed by the level
         m.pop()
 
 
@@ -292,6 +378,11 @@ def block(length=47.4, sections=4, floors=5, depth=12.0, seed=0, lod=0, ext='sil
                 m.push((cx - 0.55, 0.05, hz - 0.12), rot_y(-a))
                 m.box('wood_dark', (0, 0, -0.03), (1.08, DOOR_H, 0.03))
                 m.pop()
+    if lod == 0:                # rain and splash dirt on all four walls
+        for side, half, other in (('+z', hx, hz), ('-z', hx, hz), ('+x', hz, hx), ('-x', hz, hx)):
+            m.push({'+z': (0, 0, hz), '-z': (0, 0, -hz), '+x': (hx, 0, 0), '-x': (-hx, 0, 0)}[side], _rot_for(side))
+            facade_grime(m, -half, half, top + 0.75, 0.025, rng, plinth=(-BASE + 0.05, -0.02, 0.065))
+            m.pop()
     # plinth band (concrete) around the building, down into the ground
     for (a, b, c, d, faces) in ((-hx - 0.04, hz, hx + 0.04, hz + 0.04, 'Z'), (-hx - 0.04, -hz - 0.04, hx + 0.04, -hz, 'z'),
                                 (-hx - 0.04, -hz, -hx, hz, 'x'), (hx, -hz, hx + 0.04, hz, 'X')):
@@ -518,7 +609,7 @@ def shop(length=37.0, width=21.2, seed=0, lod=0, ext='silicate_dirty', sign_row=
     hx, hz = L / 2, D / 2
     t = 0.45
     H = 4.4
-    inn = 'plaster_peel'
+    inn = 'plaster_green'      # painted shop walls (photos), not the blotchy peel
     m.push((0, BASE - 0.05, 0))
     slab(m, (-hx + t / 2, -hz + t / 2, hx - t / 2, hz - t / 2), [], 0.05, 0.3, 'tiles_floor', 'plaster', inn)
     slab(m, (-hx + t / 2, -hz + t / 2, hx - t / 2, hz - t / 2), [], H, 0.3, 'roof_tar', 'plaster', inn)

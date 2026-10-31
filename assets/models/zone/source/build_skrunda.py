@@ -108,6 +108,7 @@ def build_overlays(only=None):
 if __name__ == '__main__':
     mats.ensure_textures()
     skrunda.make_signs()
+    skrunda.make_grime()
     args = sys.argv[1:]
     if args[:1] == ['overlays']:
         build_overlays()
