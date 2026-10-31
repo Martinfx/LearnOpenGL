@@ -1,7 +1,3 @@
-add_library(glad STATIC third_party/glad/src/gl.c)
-target_include_directories(glad PUBLIC third_party/glad/include)
-set_target_properties(glad PROPERTIES POSITION_INDEPENDENT_CODE ON)
-
 add_library(engine STATIC
     src/Animation.cpp
     src/Camera.cpp
@@ -17,9 +13,8 @@ add_library(engine STATIC
     src/Scene.cpp
 )
 target_include_directories(engine PUBLIC include)
-target_link_libraries(engine PUBLIC glm::glm PRIVATE glad Jolt::Jolt lua_static sol2::sol2)
+target_link_libraries(engine PUBLIC glm::glm PRIVATE glad Jolt::Jolt lua_static sol2::sol2 cgltf_headers stb_headers)
 target_compile_definitions(engine PRIVATE SOL_ALL_SAFETIES_ON=1)
-target_include_directories(engine PRIVATE third_party/cgltf third_party/stb)
 target_compile_definitions(engine PUBLIC GLM_FORCE_RADIANS GLM_ENABLE_EXPERIMENTAL)
 set_target_properties(engine PROPERTIES POSITION_INDEPENDENT_CODE ON)
 

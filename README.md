@@ -13,17 +13,18 @@ Návrh architektury a milníků: https://claude.ai/artifact/LzheekHA7ScTb93AKpf7
 | `game/` | Spustitelná hra (`fps_game`), okno a vstup přes GLFW |
 | `editor/` | Level editor (`fps_editor`) v Qt 6 Widgets, viewport používá stejný renderer jako hra |
 | `tests/` | Testy jádra bez OpenGL (CTest) |
+| `3rdparty/` | Knihovny třetích stran v původní podobě (needitují se), viz [`3rdparty/README.md`](3rdparty/README.md) |
 | `assets/` | Ukázková úroveň, modely, zbraně (`weapons/*.weapon`), AI skript `scripts/enemy.lua` |
 
 ## Závislosti
 
-Build bere knihovny nejdřív ze systému a chybějící si stáhne sám (GLM, GLFW, Jolt Physics, Lua 5.4, sol2).
-glad a cgltf jsou přímo v repozitáři.
-Qt 6 se nestahuje, musí být nainstalované.
+Všechny knihovny třetích stran jsou v `3rdparty/` beze změn (glad, cgltf, stb_image, GLM, GLFW,
+Jolt Physics, Lua 5.4, sol2), build nic nestahuje. GLM, GLFW a Jolt se berou ze systému, pokud
+jsou nainstalované (vypnutí: `-DENGINE_USE_SYSTEM_DEPS=OFF`). Qt 6 musí být nainstalované.
 
 **FreeBSD**
 ```sh
-pkg install git cmake ninja glfw glm qt6-base
+pkg install cmake ninja glfw glm qt6-base
 ```
 
 **Linux (Debian/Ubuntu)**

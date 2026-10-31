@@ -1,18 +1,18 @@
 # Each dependency is taken from the system first (FreeBSD pkg, Linux distro,
-# vcpkg on Windows) and downloaded with FetchContent only when it is missing.
-include(FetchContent)
+# vcpkg on Windows) and otherwise built from the copy in 3rdparty/.
+# Files in 3rdparty/ are kept exactly as released upstream (see 3rdparty/README.md):
+# everything project-specific is done here, through options and wrapper targets.
+set(ENGINE_3RDPARTY ${CMAKE_CURRENT_LIST_DIR}/../3rdparty)
 
 # --- GLM (header-only math) -------------------------------------------------
 if(ENGINE_USE_SYSTEM_DEPS)
     find_package(glm CONFIG QUIET)
 endif()
 if(NOT TARGET glm::glm)
-    message(STATUS "GLM: downloading")
-    FetchContent_Declare(glm
-        GIT_REPOSITORY https://github.com/g-truc/glm.git
-        GIT_TAG 1.0.1
-        GIT_SHALLOW TRUE)
-    FetchContent_MakeAvailable(glm)
+    message(STATUS "GLM: 3rdparty/glm")
+    add_library(glm_headers INTERFACE)
+    target_include_directories(glm_headers SYSTEM INTERFACE ${ENGINE_3RDPARTY}/glm)
+    add_library(glm::glm ALIAS glm_headers)
 else()
     message(STATUS "GLM: system package")
 endif()
@@ -23,7 +23,7 @@ if(ENGINE_BUILD_GAME)
         find_package(glfw3 3.3 CONFIG QUIET)
     endif()
     if(NOT TARGET glfw)
-        message(STATUS "GLFW: downloading")
+        message(STATUS "GLFW: 3rdparty/glfw")
         set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
         set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
         set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
@@ -35,11 +35,7 @@ if(ENGINE_BUILD_GAME)
                 set(GLFW_BUILD_WAYLAND OFF CACHE BOOL "" FORCE)
             endif()
         endif()
-        FetchContent_Declare(glfw
-            GIT_REPOSITORY https://github.com/glfw/glfw.git
-            GIT_TAG 3.4
-            GIT_SHALLOW TRUE)
-        FetchContent_MakeAvailable(glfw)
+        add_subdirectory(${ENGINE_3RDPARTY}/glfw ${CMAKE_BINARY_DIR}/3rdparty/glfw EXCLUDE_FROM_ALL)
     else()
         message(STATUS "GLFW: system package")
     endif()
@@ -52,7 +48,7 @@ endif()
 if(TARGET Jolt::Jolt)
     message(STATUS "Jolt: system package")
 else()
-    message(STATUS "Jolt: downloading")
+    message(STATUS "Jolt: 3rdparty/jolt")
     # Portable build: SSE4.2 baseline (no AVX), dynamic MSVC runtime to match Qt,
     # RTTI/exceptions on because engine classes derive from Jolt interfaces.
     set(USE_AVX OFF CACHE BOOL "" FORCE)
@@ -75,12 +71,7 @@ else()
     set(JPH_USE_DX12 OFF CACHE BOOL "" FORCE)
     set(JPH_USE_VK OFF CACHE BOOL "" FORCE)
     set(JPH_USE_MTL OFF CACHE BOOL "" FORCE)
-    FetchContent_Declare(JoltPhysics
-        GIT_REPOSITORY https://github.com/jrouwe/JoltPhysics.git
-        GIT_TAG v5.6.0
-        GIT_SHALLOW TRUE
-        SOURCE_SUBDIR Build)
-    FetchContent_MakeAvailable(JoltPhysics)
+    add_subdirectory(${ENGINE_3RDPARTY}/jolt/Build ${CMAKE_BINARY_DIR}/3rdparty/jolt EXCLUDE_FROM_ALL)
     if(NOT TARGET Jolt::Jolt)
         add_library(Jolt::Jolt ALIAS Jolt)
     endif()
@@ -88,11 +79,7 @@ endif()
 
 # --- Lua 5.4 + sol2 (gameplay scripting) -------------------------------------
 # Lua is built from source so every platform runs the exact same version.
-FetchContent_Declare(lua
-    GIT_REPOSITORY https://github.com/lua/lua.git
-    GIT_TAG v5.4.7
-    GIT_SHALLOW TRUE)
-FetchContent_MakeAvailable(lua)
+set(lua_SOURCE_DIR ${ENGINE_3RDPARTY}/lua)
 file(GLOB LUA_SOURCES ${lua_SOURCE_DIR}/*.c)
 list(FILTER LUA_SOURCES EXCLUDE REGEX "/(lua|luac|onelua|ltests)\\.c$")
 add_library(lua_static STATIC ${LUA_SOURCES})
@@ -103,11 +90,21 @@ if(UNIX)
     target_link_libraries(lua_static PRIVATE m)
 endif()
 
-FetchContent_Declare(sol2
-    GIT_REPOSITORY https://github.com/ThePhD/sol2.git
-    GIT_TAG v3.5.0
-    GIT_SHALLOW TRUE)
-FetchContent_MakeAvailable(sol2)
+# sol2 is header-only; its own CMake project is not needed.
+add_library(sol2_headers INTERFACE)
+target_include_directories(sol2_headers SYSTEM INTERFACE ${ENGINE_3RDPARTY}/sol2/include)
+target_link_libraries(sol2_headers INTERFACE lua_static)
+add_library(sol2::sol2 ALIAS sol2_headers)
+
+# --- Vendored single-file libraries ------------------------------------------
+add_library(glad STATIC ${ENGINE_3RDPARTY}/glad/src/gl.c)
+target_include_directories(glad PUBLIC ${ENGINE_3RDPARTY}/glad/include)
+set_target_properties(glad PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+add_library(cgltf_headers INTERFACE)
+target_include_directories(cgltf_headers SYSTEM INTERFACE ${ENGINE_3RDPARTY}/cgltf)
+add_library(stb_headers INTERFACE)
+target_include_directories(stb_headers SYSTEM INTERFACE ${ENGINE_3RDPARTY}/stb)
 
 # --- Qt 6 (editor) -- always a system/installer package ----------------------
 if(ENGINE_BUILD_EDITOR)
