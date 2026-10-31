@@ -1,7 +1,9 @@
 #pragma once
 #include "engine/Scene.h"
 #include <glm/mat4x4.hpp>
+#include <cstdint>
 #include <string>
+#include <unordered_map>
 
 namespace engine {
 
@@ -15,7 +17,7 @@ struct RenderView {
     glm::vec3 cameraPosition{0.0f};
     int viewportWidth = 1;
     int viewportHeight = 1;
-    int selectedBox = -1;     // editor highlight, -1 = none
+    int selectedObject = -1;  // editor highlight (Scene object index), -1 = none
     bool drawPlayerStart = false;
 };
 
@@ -34,6 +36,15 @@ public:
     std::string glInfo() const { return glInfo_; }
 
 private:
+    struct GpuMesh {
+        unsigned vao = 0, vbo = 0, ibo = 0;
+        int indexCount = 0;
+        bool used = false;
+    };
+    const GpuMesh& upload(const MeshPart& part);
+    void releaseUnused();
+
+    std::unordered_map<std::uint64_t, GpuMesh> meshes_; // keyed by MeshPart::id
     unsigned program_ = 0;
     unsigned vao_ = 0;
     unsigned vbo_ = 0;

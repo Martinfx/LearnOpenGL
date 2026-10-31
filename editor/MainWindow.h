@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 
+class QLabel;
 class QLineEdit;
 class QListWidget;
 class QPushButton;
@@ -33,6 +34,7 @@ private:
     void playLevel();
 
     void addBox();
+    void importModel();
     void duplicateBox();
     void deleteBox();
     void select(int index);
@@ -43,6 +45,7 @@ private:
     void markDirty();
     void updateTitle();
     engine::Box* selectedBox();
+    engine::Model* selectedModel();
 
     engine::Scene scene_;
     int selected_ = -1;
@@ -53,6 +56,7 @@ private:
     QListWidget* outliner_ = nullptr;
     QWidget* boxPanel_ = nullptr;
     QLineEdit* nameEdit_ = nullptr;
+    QLabel* kindLabel_ = nullptr;
     Vec3Editor* positionEdit_ = nullptr;
     Vec3Editor* sizeEdit_ = nullptr;
     QPushButton* colorButton_ = nullptr;

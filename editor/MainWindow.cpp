@@ -24,6 +24,7 @@
 #include <QVBoxLayout>
 
 #include <cmath>
+#include <filesystem>
 #include <glm/geometric.hpp>
 
 namespace {
@@ -70,6 +71,7 @@ void MainWindow::buildMenus()
 
     QMenu* edit = menuBar()->addMenu(tr("&Edit"));
     QAction* add = edit->addAction(tr("&Add box"), QKeySequence(Qt::CTRL | Qt::Key_B), this, &MainWindow::addBox);
+    QAction* import = edit->addAction(tr("&Import glTF model..."), QKeySequence(Qt::CTRL | Qt::Key_I), this, &MainWindow::importModel);
     QAction* dup = edit->addAction(tr("&Duplicate"), QKeySequence(Qt::CTRL | Qt::Key_D), this, &MainWindow::duplicateBox);
     QAction* del = edit->addAction(tr("De&lete"), QKeySequence::Delete, this, &MainWindow::deleteBox);
 
@@ -79,6 +81,7 @@ void MainWindow::buildMenus()
     QToolBar* tools = addToolBar(tr("Tools"));
     tools->setObjectName("tools");
     tools->addAction(add);
+    tools->addAction(import);
     tools->addAction(dup);
     tools->addAction(del);
     tools->addSeparator();
@@ -102,6 +105,8 @@ void MainWindow::buildDocks()
     boxPanel_ = new QWidget(this);
     auto* form = new QFormLayout(boxPanel_);
     nameEdit_ = new QLineEdit(boxPanel_);
+    kindLabel_ = new QLabel(boxPanel_);
+    form->addRow(tr("Type"), kindLabel_);
     positionEdit_ = new Vec3Editor(-10000.0, 10000.0, 0.25, boxPanel_);
     sizeEdit_ = new Vec3Editor(0.01, 10000.0, 0.25, boxPanel_);
     colorButton_ = new QPushButton(boxPanel_);
@@ -111,17 +116,21 @@ void MainWindow::buildDocks()
     form->addRow(tr("Color"), colorButton_);
 
     connect(nameEdit_, &QLineEdit::editingFinished, this, [this] {
-        if (auto* b = selectedBox(); b && b->name != nameEdit_->text().toStdString()) {
-            b->name = nameEdit_->text().toStdString();
-            outliner_->item(selected_)->setText(nameEdit_->text());
+        std::string* name = selectedBox() ? &selectedBox()->name : (selectedModel() ? &selectedModel()->name : nullptr);
+        if (name && *name != nameEdit_->text().toStdString()) {
+            *name = nameEdit_->text().toStdString();
+            refreshOutliner();
             markDirty();
         }
     });
     connect(positionEdit_, &Vec3Editor::valueEdited, this, [this](glm::vec3 v) {
-        if (auto* b = selectedBox()) {
+        if (auto* b = selectedBox())
             b->position = v;
-            markDirty();
-        }
+        else if (auto* m = selectedModel())
+            m->position = v;
+        else
+            return;
+        markDirty();
     });
     connect(sizeEdit_, &Vec3Editor::valueEdited, this, [this](glm::vec3 v) {
         if (auto* b = selectedBox()) {
@@ -170,7 +179,7 @@ void MainWindow::buildDocks()
 
     auto* propsHost = new QWidget(this);
     auto* propsLayout = new QVBoxLayout(propsHost);
-    auto* boxTitle = new QLabel(tr("<b>Selected box</b>"), propsHost);
+    auto* boxTitle = new QLabel(tr("<b>Selected object</b>"), propsHost);
     auto* levelTitle = new QLabel(tr("<b>Level</b>"), propsHost);
     propsLayout->addWidget(boxTitle);
     propsLayout->addWidget(boxPanel_);
@@ -187,14 +196,17 @@ void MainWindow::buildDocks()
 
 engine::Box* MainWindow::selectedBox()
 {
-    if (selected_ < 0 || selected_ >= static_cast<int>(scene_.boxes.size()))
-        return nullptr;
-    return &scene_.boxes[static_cast<std::size_t>(selected_)];
+    return scene_.isBox(selected_) ? &scene_.boxes[static_cast<std::size_t>(selected_)] : nullptr;
+}
+
+engine::Model* MainWindow::selectedModel()
+{
+    return scene_.isModel(selected_) ? &scene_.model(selected_) : nullptr;
 }
 
 void MainWindow::select(int index)
 {
-    selected_ = (index >= 0 && index < static_cast<int>(scene_.boxes.size())) ? index : -1;
+    selected_ = (index >= 0 && index < scene_.objectCount()) ? index : -1;
     outliner_->blockSignals(true);
     outliner_->setCurrentRow(selected_);
     outliner_->blockSignals(false);
@@ -208,6 +220,8 @@ void MainWindow::refreshOutliner()
     outliner_->clear();
     for (const engine::Box& b : scene_.boxes)
         outliner_->addItem(QString::fromStdString(b.name));
+    for (const engine::Model& m : scene_.models)
+        outliner_->addItem(QString::fromStdString(m.name) + tr("  [glTF]"));
     outliner_->setCurrentRow(selected_);
     outliner_->blockSignals(false);
 }
@@ -215,16 +229,26 @@ void MainWindow::refreshOutliner()
 void MainWindow::refreshProperties()
 {
     const engine::Box* b = selectedBox();
-    boxPanel_->setEnabled(b != nullptr);
-    if (!b) {
+    const engine::Model* m = selectedModel();
+    boxPanel_->setEnabled(b || m);
+    sizeEdit_->setEnabled(b != nullptr);
+    colorButton_->setEnabled(b != nullptr);
+    if (b) {
+        kindLabel_->setText(tr("Box"));
+        nameEdit_->setText(QString::fromStdString(b->name));
+        positionEdit_->setValue(b->position);
+        sizeEdit_->setValue(b->size);
+        colorButton_->setStyleSheet(colorStyle(b->color));
+    } else if (m) {
+        kindLabel_->setText(tr("glTF model: %1").arg(QString::fromStdU16String(m->sourcePath.filename().u16string())));
+        nameEdit_->setText(QString::fromStdString(m->name));
+        positionEdit_->setValue(m->position);
+        colorButton_->setStyleSheet(QString());
+    } else {
+        kindLabel_->clear();
         nameEdit_->clear();
         colorButton_->setStyleSheet(QString());
-        return;
     }
-    nameEdit_->setText(QString::fromStdString(b->name));
-    positionEdit_->setValue(b->position);
-    sizeEdit_->setValue(b->size);
-    colorButton_->setStyleSheet(colorStyle(b->color));
 }
 
 void MainWindow::refreshLevelProperties()
@@ -261,26 +285,60 @@ void MainWindow::addBox()
     markDirty();
 }
 
+void MainWindow::importModel()
+{
+    const QString path = QFileDialog::getOpenFileName(this, tr("Import glTF model"), QString(),
+                                                      tr("glTF 2.0 (*.gltf *.glb);;All files (*)"));
+    if (path.isEmpty())
+        return;
+    engine::Model model;
+    std::string error;
+    if (!engine::loadModelFile(model, std::filesystem::path(path.toStdU16String()), &error)) {
+        QMessageBox::warning(this, tr("Import glTF"), QString::fromStdString(error));
+        return;
+    }
+    model.name = QFileInfo(path).completeBaseName().toStdString();
+    // Place it on the ground in front of the camera.
+    const auto& cam = viewport_->camera();
+    const glm::vec3 p = cam.position + cam.flatForward() * 8.0f;
+    model.position = {std::round(p.x), 0.0f, std::round(p.z)};
+    scene_.models.push_back(std::move(model));
+    refreshOutliner();
+    select(scene_.objectCount() - 1);
+    markDirty();
+}
+
 void MainWindow::duplicateBox()
 {
-    const engine::Box* b = selectedBox();
-    if (!b)
+    if (const engine::Box* b = selectedBox()) {
+        engine::Box copy = *b;
+        copy.name += " copy";
+        copy.position.x += copy.size.x;
+        scene_.boxes.push_back(copy);
+        refreshOutliner();
+        select(static_cast<int>(scene_.boxes.size()) - 1);
+    } else if (const engine::Model* m = selectedModel()) {
+        engine::Model copy = *m; // shares mesh ids, so the GPU data is shared too
+        copy.name += " copy";
+        copy.position.x += copy.localBounds.max.x - copy.localBounds.min.x + 1.0f;
+        scene_.models.push_back(std::move(copy));
+        refreshOutliner();
+        select(scene_.objectCount() - 1);
+    } else {
         return;
-    engine::Box copy = *b;
-    copy.name += " copy";
-    copy.position.x += copy.size.x;
-    scene_.boxes.push_back(copy);
-    refreshOutliner();
-    select(static_cast<int>(scene_.boxes.size()) - 1);
+    }
     markDirty();
 }
 
 void MainWindow::deleteBox()
 {
-    if (!selectedBox())
+    if (selectedBox())
+        scene_.boxes.erase(scene_.boxes.begin() + selected_);
+    else if (selectedModel())
+        scene_.models.erase(scene_.models.begin() + (selected_ - static_cast<int>(scene_.boxes.size())));
+    else
         return;
-    scene_.boxes.erase(scene_.boxes.begin() + selected_);
-    const int next = std::min(selected_, static_cast<int>(scene_.boxes.size()) - 1);
+    const int next = std::min(selected_, scene_.objectCount() - 1);
     selected_ = -1;
     refreshOutliner();
     select(next);
@@ -326,7 +384,7 @@ bool MainWindow::openFile(const QString& path)
 {
     engine::Scene loaded;
     std::string error;
-    if (!engine::loadScene(loaded, path.toStdString(), &error)) {
+    if (!engine::loadScene(loaded, std::filesystem::path(path.toStdU16String()), &error)) {
         QMessageBox::warning(this, tr("Open level"), QString::fromStdString(error));
         return false;
     }
@@ -359,7 +417,7 @@ bool MainWindow::saveAs()
 bool MainWindow::saveTo(const QString& path)
 {
     std::string error;
-    if (!engine::saveScene(scene_, path.toStdString(), &error)) {
+    if (!engine::saveScene(scene_, std::filesystem::path(path.toStdU16String()), &error)) {
         QMessageBox::warning(this, tr("Save level"), QString::fromStdString(error));
         return false;
     }
@@ -377,7 +435,7 @@ void MainWindow::playLevel()
     const QString tempDir = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
     const QString snapshot = QDir(tempDir).filePath("fps_engine_play.level");
     std::string error;
-    if (!engine::saveScene(scene_, snapshot.toStdString(), &error)) {
+    if (!engine::saveScene(scene_, std::filesystem::path(snapshot.toStdU16String()), &error)) {
         QMessageBox::warning(this, tr("Play"), QString::fromStdString(error));
         return;
     }

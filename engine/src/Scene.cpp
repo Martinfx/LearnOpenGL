@@ -6,6 +6,17 @@
 namespace engine {
 
 namespace {
+std::filesystem::path pathFromUtf8(const std::string& s)
+{
+    return std::filesystem::path(std::u8string(s.begin(), s.end()));
+}
+
+std::string pathToUtf8(const std::filesystem::path& p)
+{
+    const std::u8string u = p.generic_u8string();
+    return std::string(u.begin(), u.end());
+}
+
 void setError(std::string* error, std::string message)
 {
     if (error)
@@ -48,7 +59,7 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
         return false;
     }
     out << std::setprecision(6);
-    out << "# FPS engine level\nversion 1\n";
+    out << "# FPS engine level\nversion 2\n";
     out << "player_start " << scene.playerStart.x << ' ' << scene.playerStart.y << ' ' << scene.playerStart.z << '\n';
     out << "sun " << scene.sunDirection.x << ' ' << scene.sunDirection.y << ' ' << scene.sunDirection.z << '\n';
     for (const Box& b : scene.boxes) {
@@ -56,6 +67,14 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
             << b.position.x << ' ' << b.position.y << ' ' << b.position.z << ' '
             << b.size.x << ' ' << b.size.y << ' ' << b.size.z << ' '
             << b.color.r << ' ' << b.color.g << ' ' << b.color.b << '\n';
+    }
+    const std::filesystem::path levelDir = std::filesystem::absolute(file).parent_path();
+    for (const Model& m : scene.models) {
+        std::filesystem::path rel = std::filesystem::absolute(m.sourcePath).lexically_relative(levelDir);
+        if (rel.empty())
+            rel = std::filesystem::absolute(m.sourcePath); // e.g. another drive on Windows
+        out << "model " << std::quoted(m.name) << ' ' << std::quoted(pathToUtf8(rel)) << ' '
+            << m.position.x << ' ' << m.position.y << ' ' << m.position.z << '\n';
     }
     if (!out) {
         setError(error, "Write failed: " + file.string());
@@ -83,7 +102,7 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
         bool ok = true;
         if (key == "version") {
             int v = 0;
-            ok = static_cast<bool>(ls >> v) && v == 1;
+            ok = static_cast<bool>(ls >> v) && (v == 1 || v == 2);
         } else if (key == "player_start") {
             ok = static_cast<bool>(ls >> result.playerStart.x >> result.playerStart.y >> result.playerStart.z);
         } else if (key == "sun") {
@@ -96,6 +115,22 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                                       >> b.color.r >> b.color.g >> b.color.b);
             if (ok)
                 result.boxes.push_back(std::move(b));
+        } else if (key == "model") {
+            Model m;
+            std::string path;
+            ok = static_cast<bool>(ls >> std::quoted(m.name) >> std::quoted(path)
+                                      >> m.position.x >> m.position.y >> m.position.z);
+            if (ok) {
+                std::filesystem::path p = pathFromUtf8(path);
+                if (p.is_relative())
+                    p = std::filesystem::absolute(file).parent_path() / p;
+                std::string modelError;
+                if (!loadModelFile(m, p.lexically_normal(), &modelError)) {
+                    setError(error, file.string() + ":" + std::to_string(lineNo) + ": " + modelError);
+                    return false;
+                }
+                result.models.push_back(std::move(m));
+            }
         } else {
             ok = false;
         }
@@ -108,13 +143,14 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
     return true;
 }
 
-int pickBox(const Scene& scene, glm::vec3 origin, glm::vec3 dir)
+int pickObject(const Scene& scene, glm::vec3 origin, glm::vec3 dir)
 {
     int best = -1;
     float bestT = 0.0f;
-    for (std::size_t i = 0; i < scene.boxes.size(); ++i) {
-        if (auto t = rayAabb(origin, dir, scene.boxes[i].bounds()); t && (best < 0 || *t < bestT)) {
-            best = static_cast<int>(i);
+    for (int i = 0; i < scene.objectCount(); ++i) {
+        const Aabb bounds = scene.isBox(i) ? scene.boxes[static_cast<std::size_t>(i)].bounds() : scene.model(i).bounds();
+        if (auto t = rayAabb(origin, dir, bounds); t && (best < 0 || *t < bestT)) {
+            best = i;
             bestT = *t;
         }
     }

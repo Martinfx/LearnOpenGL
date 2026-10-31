@@ -69,7 +69,7 @@ void Viewport::paintGL()
     view.view = camera_.view();
     view.projection = camera_.projection(static_cast<float>(view.viewportWidth) / static_cast<float>(view.viewportHeight));
     view.cameraPosition = camera_.position;
-    view.selectedBox = selected_;
+    view.selectedObject = selected_;
     view.drawPlayerStart = true;
     renderer_.render(*scene_, view);
 }
@@ -82,11 +82,13 @@ void Viewport::setSelected(int index)
 
 void Viewport::focusSelected()
 {
-    if (selected_ < 0 || selected_ >= static_cast<int>(scene_->boxes.size()))
+    if (selected_ < 0 || selected_ >= scene_->objectCount())
         return;
-    const engine::Box& b = scene_->boxes[static_cast<std::size_t>(selected_)];
-    const float distance = std::max(3.0f, glm::length(b.size) * 1.2f);
-    camera_.position = b.position - camera_.forward() * distance;
+    const engine::Aabb bounds = scene_->isBox(selected_) ? scene_->boxes[static_cast<std::size_t>(selected_)].bounds()
+                                                         : scene_->model(selected_).bounds();
+    const glm::vec3 center = (bounds.min + bounds.max) * 0.5f;
+    const float distance = std::max(3.0f, glm::length(bounds.max - bounds.min) * 1.2f);
+    camera_.position = center - camera_.forward() * distance;
     update();
 }
 
@@ -108,7 +110,7 @@ void Viewport::mousePressEvent(QMouseEvent* e)
         glm::vec4 farPt = inv * glm::vec4(x, y, 1.0f, 1.0f);
         const glm::vec3 origin = glm::vec3(nearPt) / nearPt.w;
         const glm::vec3 dir = glm::normalize(glm::vec3(farPt) / farPt.w - origin);
-        const int hit = engine::pickBox(*scene_, origin, dir);
+        const int hit = engine::pickObject(*scene_, origin, dir);
         setSelected(hit);
         emit boxPicked(hit);
     }

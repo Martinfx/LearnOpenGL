@@ -177,10 +177,62 @@ bool Renderer::init(GlLoader loader, std::string* error)
 
 void Renderer::shutdown()
 {
+    for (auto& [id, m] : meshes_) {
+        glDeleteVertexArrays(1, &m.vao);
+        glDeleteBuffers(1, &m.vbo);
+        glDeleteBuffers(1, &m.ibo);
+    }
+    meshes_.clear();
     if (vao_) glDeleteVertexArrays(1, &vao_);
     if (vbo_) glDeleteBuffers(1, &vbo_);
     if (program_) glDeleteProgram(program_);
     vao_ = vbo_ = program_ = 0;
+}
+
+const Renderer::GpuMesh& Renderer::upload(const MeshPart& part)
+{
+    auto it = meshes_.find(part.id);
+    if (it != meshes_.end()) {
+        it->second.used = true;
+        return it->second;
+    }
+    std::vector<Vertex> vertices(part.positions.size());
+    for (std::size_t i = 0; i < vertices.size(); ++i)
+        vertices[i] = {part.positions[i], part.normals[i]};
+
+    GpuMesh m;
+    glCreateBuffers(1, &m.vbo);
+    glNamedBufferStorage(m.vbo, static_cast<GLsizeiptr>(vertices.size() * sizeof(Vertex)), vertices.data(), 0);
+    glCreateBuffers(1, &m.ibo);
+    glNamedBufferStorage(m.ibo, static_cast<GLsizeiptr>(part.indices.size() * sizeof(std::uint32_t)), part.indices.data(), 0);
+    glCreateVertexArrays(1, &m.vao);
+    glVertexArrayVertexBuffer(m.vao, 0, m.vbo, 0, sizeof(Vertex));
+    glVertexArrayElementBuffer(m.vao, m.ibo);
+    glEnableVertexArrayAttrib(m.vao, 0);
+    glEnableVertexArrayAttrib(m.vao, 1);
+    glVertexArrayAttribFormat(m.vao, 0, 3, GL_FLOAT, GL_FALSE, offsetof(Vertex, position));
+    glVertexArrayAttribFormat(m.vao, 1, 3, GL_FLOAT, GL_FALSE, offsetof(Vertex, normal));
+    glVertexArrayAttribBinding(m.vao, 0, 0);
+    glVertexArrayAttribBinding(m.vao, 1, 0);
+    m.indexCount = static_cast<int>(part.indices.size());
+    m.used = true;
+    return meshes_.emplace(part.id, m).first->second;
+}
+
+void Renderer::releaseUnused()
+{
+    // Meshes of models removed from the scene are freed after one frame.
+    for (auto it = meshes_.begin(); it != meshes_.end();) {
+        if (!it->second.used) {
+            glDeleteVertexArrays(1, &it->second.vao);
+            glDeleteBuffers(1, &it->second.vbo);
+            glDeleteBuffers(1, &it->second.ibo);
+            it = meshes_.erase(it);
+        } else {
+            it->second.used = false;
+            ++it;
+        }
+    }
 }
 
 void Renderer::render(const Scene& scene, const RenderView& view)
@@ -209,8 +261,23 @@ void Renderer::render(const Scene& scene, const RenderView& view)
 
     for (std::size_t i = 0; i < scene.boxes.size(); ++i) {
         const Box& b = scene.boxes[i];
-        drawBox(b.position, b.size, b.color, static_cast<int>(i) == view.selectedBox ? 1.0f : 0.0f);
+        drawBox(b.position, b.size, b.color, static_cast<int>(i) == view.selectedObject ? 1.0f : 0.0f);
     }
+    for (std::size_t i = 0; i < scene.models.size(); ++i) {
+        const Model& model = scene.models[i];
+        const bool selected = static_cast<int>(scene.boxes.size() + i) == view.selectedObject;
+        const glm::mat4 transform = glm::translate(glm::mat4(1.0f), model.position);
+        glUniformMatrix4fv(locModel_, 1, GL_FALSE, glm::value_ptr(transform));
+        glUniform1f(locHighlight_, selected ? 1.0f : 0.0f);
+        for (const MeshPart& part : model.parts) {
+            const GpuMesh& mesh = upload(part);
+            glUniform3fv(locColor_, 1, glm::value_ptr(part.color));
+            glBindVertexArray(mesh.vao);
+            glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, nullptr);
+        }
+    }
+    glBindVertexArray(vao_);
+    releaseUnused();
     if (view.drawPlayerStart) {
         // Player-sized marker so level designers see the spawn and its scale.
         drawBox(scene.playerStart + glm::vec3(0.0f, 0.9f, 0.0f), glm::vec3(0.6f, 1.8f, 0.6f),

@@ -9,15 +9,16 @@ Návrh architektury a milníků: https://claude.ai/artifact/LzheekHA7ScTb93AKpf7
 
 | Složka | Obsah |
 | --- | --- |
-| `engine/` | Knihovna enginu: renderer, FPS kamera, game loop s pevným krokem, hráč a kolize, formát úrovní |
+| `engine/` | Knihovna enginu: renderer, FPS kamera, game loop s pevným krokem, fyzika (Jolt), hráč, import glTF, formát úrovní |
 | `game/` | Spustitelná hra (`fps_game`), okno a vstup přes GLFW |
 | `editor/` | Level editor (`fps_editor`) v Qt 6 Widgets, viewport používá stejný renderer jako hra |
 | `tests/` | Testy jádra bez OpenGL (CTest) |
-| `assets/levels/` | Ukázková úroveň `test.level` |
+| `assets/` | Ukázková úroveň `levels/test.level` a model `models/ramp.gltf` |
 
 ## Závislosti
 
-Build bere knihovny nejdřív ze systému a chybějící si stáhne sám (GLM, GLFW).
+Build bere knihovny nejdřív ze systému a chybějící si stáhne sám (GLM, GLFW, Jolt Physics).
+glad a cgltf jsou přímo v repozitáři.
 Qt 6 se nestahuje, musí být nainstalované.
 
 **FreeBSD**
@@ -49,9 +50,15 @@ Výstupy jsou v `build/bin/`.
 **Hra** (`fps_game [soubor.level]`): WASD pohyb, myš rozhlížení, mezerník skok, Shift sprint, Esc uvolní myš.
 
 **Editor** (`fps_editor [soubor.level]`): pravé tlačítko + WASD/QE létání (kolečko mění rychlost),
-levé tlačítko výběr, F zaměří výběr, Ctrl+B přidá box, Ctrl+D duplikuje, Del smaže, **F5 spustí úroveň ve hře**.
+levé tlačítko výběr, F zaměří výběr, Ctrl+B přidá box, Ctrl+I importuje glTF model, Ctrl+D duplikuje, Del smaže,
+**F5 spustí úroveň ve hře**.
+
+## Modely z Blenderu
+
+File > Export > glTF 2.0 (`.glb` nebo `.gltf`), Y nahoru (výchozí). V editoru Ctrl+I.
+Model je zároveň statická kolize (Jolt MeshShape), takže po něm jde chodit. Barva se bere z Base Color materiálu.
 
 ## Stav
 
-Milník 1 rozpracovaný: hratelný pohyb po úrovni z boxů se schody a skokem. Další krok je Jolt Physics
-character controller a načítání glTF z Blenderu.
+Milník 1 hotový: hráč (Jolt CharacterVirtual) chodí po úrovni z boxů a glTF modelů, schody, svahy, skok.
+Další je editor pro celou hru: entity a komponenty, gizmo, undo/redo (viz plán v dokumentu).

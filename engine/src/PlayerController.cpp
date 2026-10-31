@@ -1,66 +1,51 @@
 #include "engine/PlayerController.h"
+#include "PhysicsImpl.h"
+
+#include <Jolt/Physics/Character/CharacterVirtual.h>
+#include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
+#include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
+
 #include <algorithm>
-#include <cmath>
-#include <glm/geometric.hpp>
 
 namespace engine {
 
-namespace {
-constexpr float kSkin = 0.001f; // gap kept between player and walls
-}
+struct PlayerController::Impl {
+    PhysicsWorld::Impl* world = nullptr;
+    JPH::Ref<JPH::CharacterVirtual> character;
+};
 
-void PlayerController::spawn(glm::vec3 feet)
+PlayerController::PlayerController() : impl_(std::make_unique<Impl>()) {}
+PlayerController::~PlayerController() = default;
+
+void PlayerController::spawn(PhysicsWorld& world, glm::vec3 feet)
 {
+    spawnPoint_ = feet;
     feet_ = previousFeet_ = feet;
     velocity_ = glm::vec3(0.0f);
     grounded_ = false;
+    impl_->world = &world.impl();
+
+    // Capsule standing on the origin, so the character position is the feet.
+    const float halfCylinder = std::max(0.01f, (settings.height - 2.0f * settings.radius) * 0.5f);
+    JPH::RefConst<JPH::Shape> capsule =
+        JPH::RotatedTranslatedShapeSettings(JPH::Vec3(0.0f, halfCylinder + settings.radius, 0.0f), JPH::Quat::sIdentity(),
+                                            new JPH::CapsuleShape(halfCylinder, settings.radius))
+            .Create()
+            .Get();
+
+    JPH::Ref<JPH::CharacterVirtualSettings> cs = new JPH::CharacterVirtualSettings();
+    cs->mShape = capsule;
+    cs->mMaxSlopeAngle = JPH::DegreesToRadians(settings.maxSlopeDegrees);
+    // Only contacts below the lower hemisphere's center count as ground.
+    cs->mSupportingVolume = JPH::Plane(JPH::Vec3::sAxisY(), -settings.radius);
+    impl_->character = new JPH::CharacterVirtual(cs, toJolt(feet), JPH::Quat::sIdentity(), 0, &impl_->world->system);
 }
 
-Aabb PlayerController::boundsAt(glm::vec3 feet) const
+void PlayerController::fixedUpdate(const InputState& input, const FpsCamera& camera, float dt)
 {
-    const float w = settings.halfWidth;
-    return {feet - glm::vec3(w, 0.0f, w), feet + glm::vec3(w, settings.height, w)};
-}
-
-bool PlayerController::collides(const Scene& scene, glm::vec3 feet) const
-{
-    const Aabb me = boundsAt(feet);
-    for (const Box& b : scene.boxes)
-        if (me.overlaps(b.bounds()))
-            return true;
-    return false;
-}
-
-// Moves along one axis and stops flush against the first box in the way.
-void PlayerController::moveAxis(const Scene& scene, int axis, float amount)
-{
-    if (amount == 0.0f)
+    if (!impl_->character)
         return;
-    glm::vec3 target = feet_;
-    target[axis] += amount;
-    const Aabb me = boundsAt(target);
-    for (const Box& b : scene.boxes) {
-        const Aabb other = b.bounds();
-        if (!me.overlaps(other))
-            continue;
-        if (amount > 0.0f) {
-            const float limit = other.min[axis] - (axis == 1 ? settings.height : settings.halfWidth) - kSkin;
-            target[axis] = std::min(target[axis], limit);
-        } else {
-            const float limit = other.max[axis] + (axis == 1 ? 0.0f : settings.halfWidth) + kSkin;
-            target[axis] = std::max(target[axis], limit);
-        }
-        if (axis == 1) {
-            if (amount < 0.0f)
-                grounded_ = true;
-            velocity_.y = 0.0f;
-        }
-    }
-    feet_ = target;
-}
-
-void PlayerController::fixedUpdate(const InputState& input, const FpsCamera& camera, const Scene& scene, float dt)
-{
+    JPH::CharacterVirtual& ch = *impl_->character;
     previousFeet_ = feet_;
 
     glm::vec3 wish(0.0f);
@@ -70,50 +55,55 @@ void PlayerController::fixedUpdate(const InputState& input, const FpsCamera& cam
     if (input.isDown(Action::MoveLeft))    wish -= camera.right();
     if (glm::dot(wish, wish) > 0.0f)
         wish = glm::normalize(wish);
-
     const float speed = input.isDown(Action::Sprint) ? settings.sprintSpeed : settings.walkSpeed;
-    // Full control on the ground, reduced in the air.
-    const float control = grounded_ ? 1.0f : 0.15f;
-    velocity_.x += (wish.x * speed - velocity_.x) * control;
-    velocity_.z += (wish.z * speed - velocity_.z) * control;
+    const glm::vec3 desired = wish * speed;
 
-    const bool jump = input.isDown(Action::Jump);
-    if (jump && !jumpHeld_ && grounded_)
-        velocity_.y = settings.jumpSpeed;
-    jumpHeld_ = jump;
+    const bool jumpDown = input.isDown(Action::Jump);
+    const bool jumpPressed = jumpDown && !jumpHeld_;
+    jumpHeld_ = jumpDown;
 
-    velocity_.y -= settings.gravity * dt;
+    // Velocity handling follows Jolt's CharacterVirtual sample: inherit the
+    // ground velocity while standing, keep vertical momentum in the air.
+    ch.UpdateGroundVelocity();
+    const JPH::Vec3 gravity(0.0f, -settings.gravity, 0.0f);
+    const JPH::Vec3 current = ch.GetLinearVelocity();
+    const JPH::Vec3 groundVelocity = ch.GetGroundVelocity();
+    const bool onGround = ch.GetGroundState() == JPH::CharacterVirtual::EGroundState::OnGround;
 
-    // Horizontal moves; if blocked while grounded, try again lifted by stepHeight.
-    const bool wasGrounded = grounded_;
-    for (int axis : {0, 2}) {
-        const float amount = velocity_[axis] * dt;
-        const glm::vec3 before = feet_;
-        moveAxis(scene, axis, amount);
-        const bool blocked = std::abs((feet_[axis] - before[axis]) - amount) > 1e-4f;
-        if (blocked && wasGrounded) {
-            glm::vec3 lifted = before;
-            lifted.y += settings.stepHeight;
-            lifted[axis] += amount;
-            if (!collides(scene, lifted)) {
-                feet_ = lifted; // snapped down by the vertical move below
-            }
-        }
+    JPH::Vec3 velocity;
+    glm::vec3 horizontal;
+    if (onGround && current.GetY() - groundVelocity.GetY() < 0.1f) {
+        velocity = groundVelocity;
+        if (jumpPressed)
+            velocity += JPH::Vec3(0.0f, settings.jumpSpeed, 0.0f);
+        horizontal = desired;
+    } else {
+        velocity = JPH::Vec3(0.0f, current.GetY(), 0.0f);
+        const glm::vec3 currentHorizontal(current.GetX(), 0.0f, current.GetZ());
+        horizontal = currentHorizontal + (desired - currentHorizontal) * settings.airControl;
     }
+    velocity += gravity * dt;
+    velocity += toJolt(horizontal);
+    ch.SetLinearVelocity(velocity);
 
-    grounded_ = false;
-    moveAxis(scene, 1, velocity_.y * dt);
-    // Stick to the ground when walking down steps or slopes.
-    if (!grounded_ && wasGrounded && velocity_.y <= 0.0f) {
-        glm::vec3 probe = feet_;
-        probe.y -= settings.stepHeight;
-        if (collides(scene, probe)) {
-            moveAxis(scene, 1, -settings.stepHeight);
-        }
+    JPH::CharacterVirtual::ExtendedUpdateSettings update;
+    update.mStickToFloorStepDown = JPH::Vec3(0.0f, -settings.stepHeight, 0.0f);
+    update.mWalkStairsStepUp = JPH::Vec3(0.0f, settings.stepHeight, 0.0f);
+    JPH::PhysicsSystem& system = impl_->world->system;
+    ch.ExtendedUpdate(dt, gravity, update,
+                      system.GetDefaultBroadPhaseLayerFilter(Layers::Moving),
+                      system.GetDefaultLayerFilter(Layers::Moving),
+                      JPH::BodyFilter(), JPH::ShapeFilter(), *impl_->world->tempAllocator);
+
+    feet_ = toGlm(ch.GetPosition());
+    velocity_ = toGlm(ch.GetLinearVelocity());
+    grounded_ = ch.GetGroundState() == JPH::CharacterVirtual::EGroundState::OnGround;
+
+    if (feet_.y < settings.killY) {
+        ch.SetPosition(toJolt(spawnPoint_));
+        ch.SetLinearVelocity(JPH::Vec3::sZero());
+        feet_ = previousFeet_ = spawnPoint_;
     }
-
-    if (feet_.y < settings.killY)
-        spawn(scene.playerStart);
 }
 
 glm::vec3 PlayerController::interpolatedEye(float alpha) const

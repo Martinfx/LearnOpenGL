@@ -1,0 +1,106 @@
+{
+ "asset": {
+  "version": "2.0",
+  "generator": "fps-engine make_ramp.py"
+ },
+ "scene": 0,
+ "scenes": [
+  {
+   "nodes": [
+    0
+   ]
+  }
+ ],
+ "nodes": [
+  {
+   "name": "Ramp",
+   "mesh": 0
+  }
+ ],
+ "meshes": [
+  {
+   "name": "Ramp",
+   "primitives": [
+    {
+     "attributes": {
+      "POSITION": 0,
+      "NORMAL": 1
+     },
+     "indices": 2,
+     "material": 0
+    }
+   ]
+  }
+ ],
+ "materials": [
+  {
+   "name": "Concrete",
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     0.25,
+     0.32,
+     0.45,
+     1.0
+    ],
+    "metallicFactor": 0.0,
+    "roughnessFactor": 0.9
+   }
+  }
+ ],
+ "buffers": [
+  {
+   "byteLength": 696,
+   "uri": "data:application/octet-stream;base64,AAAAwAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAQAAAAEAAAMDAAAAAwAAAAEAAAMDAAAAAQAAAAAAAAAAAAAAAQAAAAAAAAMDAAAAAQAAAAEAAAMDAAAAAwAAAAAAAAAAAAAAAwAAAAEAAAMDAAAAAwAAAAAAAAMDAAAAAwAAAAEAAAMDAAAAAQAAAAEAAAMDAAAAAQAAAAEAAACDBAAAAwAAAAEAAACDBAAAAQAAAAAAAAMDAAAAAQAAAAAAAACDBAAAAQAAAAEAAACDBAAAAQAAAAEAAAMDAAAAAwAAAAAAAACDBAAAAwAAAAAAAAMDAAAAAwAAAAEAAAMDAAAAAwAAAAEAAACDBAAAAQAAAAAAAACDBAAAAwAAAAAAAACDBAAAAwAAAAEAAACDBAAAAQAAAAEAAACDBAAAAgOnccj+b6KE+AAAAgOnccj+b6KE+AAAAgOnccj+b6KE+AAAAgOnccj+b6KE+AACAPwAAAAAAAAAAAACAPwAAAAAAAAAAAACAPwAAAAAAAAAAAACAvwAAAAAAAAAAAACAvwAAAAAAAAAAAACAvwAAAAAAAAAAAAAAgAAAgD8AAAAAAAAAgAAAgD8AAAAAAAAAgAAAgD8AAAAAAAAAgAAAgD8AAAAAAACAPwAAAAAAAAAAAACAPwAAAAAAAAAAAACAPwAAAAAAAAAAAACAPwAAAAAAAAAAAACAvwAAAAAAAAAAAACAvwAAAAAAAAAAAACAvwAAAAAAAAAAAACAvwAAAAAAAAAAAAAAAAAAAAAAAIC/AAAAAAAAAAAAAIC/AAAAAAAAAAAAAIC/AAAAAAAAAAAAAIC/AAABAAIAAAACAAMABAAFAAYABwAIAAkACgALAAwACgAMAA0ADgAPABAADgAQABEAEgATABQAEgAUABUAFgAXABgAFgAYABkA"
+  }
+ ],
+ "bufferViews": [
+  {
+   "buffer": 0,
+   "byteOffset": 0,
+   "byteLength": 312,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 312,
+   "byteLength": 312,
+   "target": 34962
+  },
+  {
+   "buffer": 0,
+   "byteOffset": 624,
+   "byteLength": 72,
+   "target": 34963
+  }
+ ],
+ "accessors": [
+  {
+   "bufferView": 0,
+   "componentType": 5126,
+   "count": 26,
+   "type": "VEC3",
+   "min": [
+    -2.0,
+    0,
+    -10.0
+   ],
+   "max": [
+    2.0,
+    2.0,
+    0
+   ]
+  },
+  {
+   "bufferView": 1,
+   "componentType": 5126,
+   "count": 26,
+   "type": "VEC3"
+  },
+  {
+   "bufferView": 2,
+   "componentType": 5123,
+   "count": 36,
+   "type": "SCALAR"
+  }
+ ]
+}

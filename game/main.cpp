@@ -3,6 +3,7 @@
 #include <engine/Camera.h>
 #include <engine/FixedStepClock.h>
 #include <engine/Input.h>
+#include <engine/Physics.h>
 #include <engine/PlayerController.h>
 #include <engine/Renderer.h>
 #include <engine/Scene.h>
@@ -92,8 +93,10 @@ int main(int argc, char** argv)
     }
 
     engine::FpsCamera camera;
+    engine::PhysicsWorld physics;
+    physics.setLevel(scene);
     engine::PlayerController player;
-    player.spawn(scene.playerStart);
+    player.spawn(physics, scene.playerStart);
     engine::FixedStepClock clock;
     engine::InputState input;
 
@@ -148,8 +151,11 @@ int main(int argc, char** argv)
             input = {};
 
         const int steps = clock.advance(frameTime);
-        for (int i = 0; i < steps; ++i)
-            player.fixedUpdate(input, camera, scene, static_cast<float>(clock.step()));
+        for (int i = 0; i < steps; ++i) {
+            const float dt = static_cast<float>(clock.step());
+            player.fixedUpdate(input, camera, dt);
+            physics.step(dt);
+        }
 
         camera.position = player.interpolatedEye(static_cast<float>(clock.alpha()));
 

@@ -1,6 +1,7 @@
 // Headless tests for the engine core (no OpenGL needed).
 #include <engine/Camera.h>
 #include <engine/FixedStepClock.h>
+#include <engine/Physics.h>
 #include <engine/PlayerController.h>
 #include <engine/Scene.h>
 
@@ -29,7 +30,7 @@ engine::Scene flatFloor()
 }
 
 // Runs the player for `seconds` holding the given actions, camera facing -Z.
-void simulate(engine::PlayerController& p, const engine::Scene& s, std::vector<engine::Action> held, float seconds)
+void simulate(engine::PlayerController& p, std::vector<engine::Action> held, float seconds)
 {
     engine::FpsCamera cam; // yaw -90 => forward is -Z
     engine::InputState in;
@@ -37,7 +38,7 @@ void simulate(engine::PlayerController& p, const engine::Scene& s, std::vector<e
         in.set(a, true);
     const float dt = 1.0f / 60.0f;
     for (int i = 0; i < static_cast<int>(seconds / dt); ++i)
-        p.fixedUpdate(in, cam, s, dt);
+        p.fixedUpdate(in, cam, dt);
 }
 
 void testFixedStep()
@@ -51,23 +52,27 @@ void testFixedStep()
 void testFallsAndLands()
 {
     auto s = flatFloor();
+    engine::PhysicsWorld world;
+    world.setLevel(s);
     engine::PlayerController p;
-    p.spawn({0, 3, 0});
-    simulate(p, s, {}, 2.0f);
+    p.spawn(world, {0, 3, 0});
+    simulate(p, {}, 2.0f);
     check(p.grounded(), "player lands on the floor");
-    check(std::abs(p.feet().y) < 0.01f, "feet rest at floor height");
+    check(std::abs(p.feet().y) < 0.05f, "feet rest at floor height");
 }
 
 void testWallBlocks()
 {
     auto s = flatFloor();
     s.boxes.push_back({"Wall", {0, 2, -5}, {10, 4, 1}, {1, 1, 1}});
+    engine::PhysicsWorld world;
+    world.setLevel(s);
     engine::PlayerController p;
-    p.spawn({0, 0, 0});
-    simulate(p, s, {engine::Action::MoveForward}, 3.0f);
-    const float wallFront = -4.5f + p.settings.halfWidth;
-    check(p.feet().z >= wallFront - 0.01f, "wall stops the player");
-    check(p.feet().z < wallFront + 0.05f, "player reaches the wall");
+    p.spawn(world, {0, 0, 0});
+    simulate(p, {engine::Action::MoveForward}, 3.0f);
+    const float wallFront = -4.5f + p.settings.radius;
+    check(p.feet().z >= wallFront - 0.001f, "wall stops the player");
+    check(p.feet().z < wallFront + 0.1f, "player reaches the wall");
 }
 
 void testClimbsSteps()
@@ -78,24 +83,28 @@ void testClimbsSteps()
         s.boxes.push_back({"Step", {0, h * 0.5f, -2.0f - i * 0.6f}, {3, h, 0.6f}, {1, 1, 1}});
     }
     s.boxes.push_back({"Landing", {0, 0.75f, -10.0f}, {3, 1.5f, 10}, {1, 1, 1}});
+    engine::PhysicsWorld world;
+    world.setLevel(s);
     engine::PlayerController p;
-    p.spawn({0, 0, 0});
-    simulate(p, s, {engine::Action::MoveForward}, 3.0f);
-    check(std::abs(p.feet().y - 1.5f) < 0.01f, "player walks up 0.3 m steps onto the landing");
+    p.spawn(world, {0, 0, 0});
+    simulate(p, {engine::Action::MoveForward}, 3.0f);
+    check(std::abs(p.feet().y - 1.5f) < 0.05f, "player walks up 0.3 m steps onto the landing");
 }
 
 void testJump()
 {
     auto s = flatFloor();
+    engine::PhysicsWorld world;
+    world.setLevel(s);
     engine::PlayerController p;
-    p.spawn({0, 0, 0});
-    simulate(p, s, {}, 0.2f);
+    p.spawn(world, {0, 0, 0});
+    simulate(p, {}, 0.2f);
     float peak = 0.0f;
     engine::FpsCamera cam;
     engine::InputState in;
     in.set(engine::Action::Jump, true);
     for (int i = 0; i < 90; ++i) {
-        p.fixedUpdate(in, cam, s, 1.0f / 60.0f);
+        p.fixedUpdate(in, cam, 1.0f / 60.0f);
         peak = std::max(peak, p.feet().y);
     }
     // v^2 / 2g = 5.5^2 / 36 = 0.84 m
@@ -115,12 +124,54 @@ void testSceneRoundTrip()
     check(!t.boxes.empty() && t.boxes[0].name == s.boxes[0].name, "names survive quoting");
 }
 
+void testGltfRamp()
+{
+    engine::Model ramp;
+    std::string err;
+    check(engine::loadModelFile(ramp, ENGINE_TEST_ASSETS "/models/ramp.gltf", &err), "load ramp.gltf: " + err);
+    check(ramp.parts.size() == 1 && ramp.parts[0].indices.size() == 36, "ramp has 12 triangles");
+    check(std::abs(ramp.localBounds.max.y - 2.0f) < 1e-4f, "ramp is 2 m high");
+
+    // Walk up the 18 degree glTF ramp: collision comes from Jolt's MeshShape.
+    auto s = flatFloor();
+    s.models.push_back(ramp);
+    engine::PhysicsWorld world;
+    world.setLevel(s);
+    engine::PlayerController p;
+    p.spawn(world, {0, 0, 1});
+    simulate(p, {engine::Action::MoveForward}, 2.0f); // ~9 m: ramp is 6 m, landing ends at 10 m
+    check(std::abs(p.feet().y - 2.0f) < 0.05f, "player walks up the ramp onto the landing");
+}
+
+void testLevelWithModel()
+{
+    engine::Scene s;
+    std::string err;
+    check(engine::loadScene(s, ENGINE_TEST_ASSETS "/levels/test.level", &err), "load test.level: " + err);
+    check(s.models.size() == 1, "test level references one glTF model");
+    check(engine::saveScene(s, "with_model.level", &err), "save: " + err);
+    engine::Scene t;
+    // Saved next to the test binary: the model path must be rewritten relative to it.
+    check(engine::loadScene(t, "with_model.level", &err), "reload: " + err);
+    check(t.models.size() == 1 && !t.models[0].parts.empty(), "model path survives save + load");
+}
+
+void testRaycast()
+{
+    auto s = flatFloor();
+    engine::PhysicsWorld world;
+    world.setLevel(s);
+    auto hit = world.raycast({0, 5, 0}, {0, -1, 0}, 100.0f);
+    check(hit && std::abs(hit->distance - 5.0f) < 1e-3f, "raycast hits the floor 5 m below");
+    check(!world.raycast({0, 5, 0}, {0, 1, 0}, 100.0f), "raycast upward hits nothing");
+}
+
 void testPick()
 {
     auto s = flatFloor();
     s.boxes.push_back({"Target", {0, 1, -10}, {1, 1, 1}, {1, 1, 1}});
-    check(engine::pickBox(s, {0, 1, 0}, {0, 0, -1}) == 1, "ray hits the box in front");
-    check(engine::pickBox(s, {0, 5, 0}, {0, 1, 0}) == -1, "ray into the sky hits nothing");
+    check(engine::pickObject(s, {0, 1, 0}, {0, 0, -1}) == 1, "ray hits the box in front");
+    check(engine::pickObject(s, {0, 5, 0}, {0, 1, 0}) == -1, "ray into the sky hits nothing");
 }
 } // namespace
 
@@ -132,6 +183,9 @@ int main()
     testClimbsSteps();
     testJump();
     testSceneRoundTrip();
+    testGltfRamp();
+    testLevelWithModel();
+    testRaycast();
     testPick();
     std::printf(failures ? "%d test(s) failed\n" : "all tests passed\n", failures);
     return failures ? 1 : 0;

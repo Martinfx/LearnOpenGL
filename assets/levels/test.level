@@ -1,5 +1,5 @@
 # FPS engine level
-version 1
+version 2
 player_start 0 0 8
 sun -0.4 -1 -0.3
 box "Floor" 0 -0.5 0 40 1 40 0.62 0.6 0.56
@@ -17,3 +17,4 @@ box "Step 4" 8 0.6 4.2 3 1.2 0.6 0.62 0.6 0.56
 box "Step 5" 8 0.75 3.6 3 1.5 0.6 0.62 0.6 0.56
 box "Step 6" 8 0.9 3 3 1.8 0.6 0.62 0.6 0.56
 box "Platform" 8 0.9 -1.8 6 1.8 4 0.62 0.6 0.56
+model "Ramp" "../models/ramp.gltf" -10 0 10
