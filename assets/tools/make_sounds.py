@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Synthesizes the placeholder sound effects in assets/sounds/ (original, CC0).
+"""Synthesizes the remaining placeholder sounds in assets/sounds/ (original, CC0).
+
+Most sounds are now real recordings (assets/sounds/CREDITS.md, rebuilt by
+assets/sounds/source/build_sounds.py). By default this script only writes the
+ones still synthesized: the knife swing and the Geiger counter loop. The other
+groups stay here for reference; running them overwrites the recordings.
 
 Everything is generated from noise and oscillators, so the sounds are ours and
 can be regenerated or tweaked here. Short effects are 16-bit mono WAV (decoded
@@ -180,6 +185,9 @@ def make_weapons():
     at(draw, metal_click(2400, 0.06, 0.012), 0.28, 0.8)
     write_wav("weapons/draw.wav", draw)
 
+
+
+def make_swing():
     for i in range(2):
         n = 0.38
         t = t_axis(n)
@@ -235,15 +243,7 @@ def make_player():
 
 # ---------------------------------------------------------------- ambience (streamed loops)
 
-def make_ambience():
-    n = 32.0
-    t = t_axis(n + 2.0)
-    gust = 0.55 + 0.45 * np.sin(2 * np.pi * t / 11.0) * np.sin(2 * np.pi * t / 4.3 + 1.0)
-    wind = bandpass(noise(n + 2.0), 280 + 520 * gust, 1.4) * (0.35 + 0.65 * gust)
-    wind += lowpass(noise(n + 2.0), 180) * 1.5                          # low rumble
-    whistle = bandpass(noise(n + 2.0), 1100 + 300 * np.sin(2 * np.pi * t / 7.0), 18) * np.clip(gust - 0.6, 0, 1) * 2.5
-    write_ogg("ambient/wind_loop.ogg", seamless(wind + whistle, 2.0))
-
+def make_geiger():
     n = 12.0
     geiger = np.zeros(int((n + 1.0) * RATE))
     time = 0.0
@@ -252,6 +252,16 @@ def make_ambience():
         time += rng.exponential(1.0 / rate)
         at(geiger, highpass(noise(0.004), 1500) * env(0.004, 0.0001, 0.0008), time, rng.uniform(0.6, 1.0))
     write_ogg("ambient/geiger_loop.ogg", seamless(geiger, 1.0), 0.7)
+
+
+def make_ambience():
+    n = 32.0
+    t = t_axis(n + 2.0)
+    gust = 0.55 + 0.45 * np.sin(2 * np.pi * t / 11.0) * np.sin(2 * np.pi * t / 4.3 + 1.0)
+    wind = bandpass(noise(n + 2.0), 280 + 520 * gust, 1.4) * (0.35 + 0.65 * gust)
+    wind += lowpass(noise(n + 2.0), 180) * 1.5                          # low rumble
+    whistle = bandpass(noise(n + 2.0), 1100 + 300 * np.sin(2 * np.pi * t / 7.0), 18) * np.clip(gust - 0.6, 0, 1) * 2.5
+    write_ogg("ambient/wind_loop.ogg", seamless(wind + whistle, 2.0))
 
     n = 40.0
     t = t_axis(n + 4.0)
@@ -263,6 +273,8 @@ def make_ambience():
 
 
 if __name__ == "__main__":
-    groups = {"weapons": make_weapons, "impacts": make_impacts, "player": make_player, "ambient": make_ambience}
-    for name in sys.argv[1:] or groups:
+    groups = {"swing": make_swing, "geiger": make_geiger,
+              # replaced by recordings: only on explicit request
+              "weapons": make_weapons, "impacts": make_impacts, "player": make_player, "ambient": make_ambience}
+    for name in sys.argv[1:] or ["swing", "geiger"]:
         groups[name]()

@@ -1,5 +1,7 @@
 // Headless tests for the engine core (no OpenGL needed).
 #include <engine/Audio.h>
+#include <engine/NavMesh.h>
+#include <atomic>
 #include <chrono>
 #include <thread>
 #include <engine/Gizmo.h>
@@ -1038,6 +1040,50 @@ void testSharedMeshes()
     check(shared > 0, "level instances of one file share meshes");
 }
 
+void testNavMesh()
+{
+    // A 40 x 40 m floor with a wall across the middle that has a gap at one end:
+    // the path from one side to the other must go around through the gap.
+    engine::Scene scene;
+    engine::Box floor;
+    floor.position = {0.0f, -0.5f, 0.0f};
+    floor.size = {40.0f, 1.0f, 40.0f};
+    scene.boxes.push_back(floor);
+    engine::Box wall;
+    wall.position = {-3.0f, 1.5f, 0.0f};
+    wall.size = {34.0f, 3.0f, 0.5f}; // x from -20 to 14: gap from 14 to 20
+    scene.boxes.push_back(wall);
+    engine::NavMesh nav;
+    std::string error;
+    std::atomic<float> progress{0.0f};
+    check(nav.build(scene, scene.nav, &error, &progress) && nav.ready() && nav.polygonCount() > 0 && progress == 1.0f,
+          "navmesh builds from boxes " + error);
+    const auto path = nav.findPath({-10.0f, 0.0f, -10.0f}, {-10.0f, 0.0f, 10.0f});
+    bool aroundGap = false;
+    for (const glm::vec3& p : path)
+        aroundGap = aroundGap || p.x > 13.5f;
+    check(path.size() >= 3 && aroundGap && glm::distance(path.back(), glm::vec3(-10.0f, 0.0f, 10.0f)) < 0.5f,
+          "path goes around the wall through the gap");
+    check(!nav.clearPath({-10.0f, 0.0f, -10.0f}, {-10.0f, 0.0f, 10.0f}) && nav.clearPath({-10.0f, 0.0f, -10.0f}, {5.0f, 0.0f, -10.0f}),
+          "navmesh ray is blocked by the wall only");
+    const auto onTop = nav.nearestPoint({0.0f, 5.0f, 0.0f}, {1.0f, 10.0f, 1.0f});
+    check(!onTop || onTop->y < 1.0f, "the 3 m wall top is not walkable (too small, too high)");
+    for (int i = 0; i < 20; ++i) {
+        const auto p = nav.randomPointAround({0.0f, 0.0f, -10.0f}, 5.0f);
+        if (!p || std::abs(p->y) > 0.3f) {
+            check(false, "random patrol points lie on the floor");
+            break;
+        }
+    }
+    // Round trip of the level settings.
+    scene.nav.agentRadius = 0.5f;
+    scene.nav.enabled = false;
+    const auto file = std::filesystem::temp_directory_path() / "nav_roundtrip.level";
+    engine::Scene back;
+    check(engine::saveScene(scene, file) && engine::loadScene(back, file) && back.nav.agentRadius == 0.5f && !back.nav.enabled,
+          "navmesh settings round trip");
+}
+
 void testAudio()
 {
     namespace fs = std::filesystem;
@@ -1156,6 +1202,7 @@ int main()
     testScriptSyntaxCheck();
     testMaterialsAndTextures();
     testAudio();
+    testNavMesh();
     std::printf(failures ? "%d test(s) failed\n" : "all tests passed\n", failures);
     return failures ? 1 : 0;
 }

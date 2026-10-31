@@ -13,6 +13,7 @@
 #include "GameAudio.h"
 #include "MapHud.h"
 #include <engine/Scripting.h>
+#include <engine/NavMesh.h>
 #include <engine/Weapon.h>
 
 #include <glm/gtc/matrix_transform.hpp>
@@ -344,7 +345,24 @@ int main(int argc, char** argv)
     GameAudio audio;
     audio.init(std::filesystem::path(argv[0]).parent_path() / "assets");
 
+    // Navigation mesh: built from the level collision in the background (tiles in
+    // parallel); enemies walk straight lines until it is ready.
+    engine::NavMesh navmesh;
+    std::thread navBuilder;
+    std::atomic<bool> navCancel{false};
+    if (scene.nav.enabled)
+        navBuilder = std::thread([&] {
+            std::string navError;
+            if (navmesh.build(scene, scene.nav, &navError, nullptr, &navCancel))
+                std::printf("Navmesh: %d tiles, %d polygons in %.1f s\n", navmesh.tileCount(), navmesh.polygonCount(),
+                            navmesh.buildSeconds());
+            else
+                std::fprintf(stderr, "%s\n", navError.c_str());
+            std::fflush(stdout);
+        });
+
     engine::ScriptSystem scripts(scene, physics, player);
+    scripts.setNavMesh(&navmesh);
     scripts.setPlayerHealth(scene.player.maxHealth);
     scripts.setSoundHandler([&audio](const std::string& sound, const glm::vec3* position, float volume) {
         audio.playAsset(sound, position, volume);
@@ -606,6 +624,9 @@ int main(int argc, char** argv)
         }
     }
 
+    navCancel = true;
+    if (navBuilder.joinable())
+        navBuilder.join();
     renderer.shutdown();
     glfwDestroyWindow(window);
     glfwTerminate();

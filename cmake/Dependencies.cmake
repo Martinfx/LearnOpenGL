@@ -106,6 +106,14 @@ target_include_directories(cgltf_headers SYSTEM INTERFACE ${ENGINE_3RDPARTY}/cgl
 add_library(stb_headers INTERFACE)
 target_include_directories(stb_headers SYSTEM INTERFACE ${ENGINE_3RDPARTY}/stb)
 
+# Recast/Detour: navmesh building and path queries (static library, no warnings).
+file(GLOB RECAST_SOURCES ${ENGINE_3RDPARTY}/recastnavigation/Recast/Source/*.cpp
+                         ${ENGINE_3RDPARTY}/recastnavigation/Detour/Source/*.cpp)
+add_library(recastnav STATIC ${RECAST_SOURCES})
+target_include_directories(recastnav SYSTEM PUBLIC ${ENGINE_3RDPARTY}/recastnavigation/Recast/Include
+                                                  ${ENGINE_3RDPARTY}/recastnavigation/Detour/Include)
+set_target_properties(recastnav PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
 # miniaudio (+ stb_vorbis for .ogg): one implementation unit, built without the
 # project's warning flags. Backends: WASAPI (Windows), PulseAudio/ALSA/JACK
 # (Linux, loaded at runtime), OSS/sndio (FreeBSD).

@@ -2,6 +2,7 @@
 #include "engine/Animation.h"
 #include "engine/Geometry.h"
 #include "engine/Material.h"
+#include "engine/NavMesh.h"
 #include "engine/TextureCook.h"
 #include "engine/Terrain.h"
 #include <cstdint>
@@ -330,6 +331,7 @@ struct Scene {
     std::vector<Model> models;
     std::vector<Entity> entities;
     std::vector<std::filesystem::path> loadout;
+    NavSettings nav;       // navmesh build settings (agent size, cell size)
     PlayerSettings player; // player's .weapon files (absolute), slot 1, 2, ...
     glm::vec3 playerStart{0.0f, 0.0f, 0.0f}; // feet position
     glm::vec3 sunDirection{-0.4f, -1.0f, -0.3f};

@@ -1,5 +1,6 @@
 #include "engine/Scripting.h"
 #include "engine/CharacterBody.h"
+#include "engine/NavMesh.h"
 #include "engine/Physics.h"
 #include "engine/PlayerController.h"
 
@@ -31,8 +32,62 @@ struct ScriptEntity {
     sol::protected_function onDamage;
     sol::protected_function onDeath;
     bool failed = false;
+    // move_to(): the path being followed (navmesh corners).
+    const NavMesh* const* nav = nullptr;
+    const double* time = nullptr;
+    std::vector<glm::vec3> path;
+    std::size_t corner = 0;
+    glm::vec3 pathTarget{0.0f};
+    double pathTime = -1e9;
 
     Entity& e() const { return scene->entities[index]; }
+
+    void steer(glm::vec3 to, float speed)
+    {
+        glm::vec3 d = to - e().position;
+        d.y = 0.0f;
+        desiredVelocity = glm::dot(d, d) > 1e-8f ? glm::normalize(d) * speed : glm::vec3(0.0f);
+        if (glm::dot(d, d) > 1e-6f)
+            e().yawDegrees = glm::degrees(std::atan2(d.z, d.x));
+    }
+
+    // Walks toward `target` around obstacles; true once there (or as close as the mesh gets).
+    bool moveTo(glm::vec3 target, float speed)
+    {
+        const glm::vec3 pos = e().position;
+        auto flatDist = [](glm::vec3 a, glm::vec3 b) { return glm::length(glm::vec2(a.x - b.x, a.z - b.z)); };
+        if (flatDist(pos, target) < 0.3f) {
+            desiredVelocity = glm::vec3(0.0f);
+            path.clear();
+            return true;
+        }
+        const NavMesh* mesh = nav ? *nav : nullptr;
+        if (!mesh || !mesh->ready()) { // no navmesh (yet): straight line
+            steer(target, speed);
+            return false;
+        }
+        // New path when the target moved, every second (others block the way), or when done.
+        if (path.empty() || corner >= path.size() || flatDist(target, pathTarget) > 1.0f || *time - pathTime > 1.0) {
+            path = mesh->findPath(pos, target);
+            corner = 1;
+            pathTarget = target;
+            pathTime = *time;
+            if (path.size() < 2) {
+                path.clear();
+                steer(target, speed);
+                return false;
+            }
+        }
+        while (corner < path.size() && flatDist(pos, path[corner]) < 0.35f)
+            ++corner;
+        if (corner >= path.size()) {
+            desiredVelocity = glm::vec3(0.0f);
+            path.clear();
+            return true; // end of a partial path: as close as it gets
+        }
+        steer(path[corner], speed);
+        return false;
+    }
 };
 
 } // namespace
@@ -81,6 +136,7 @@ struct ScriptSystem::Impl {
     PlayerController& player;
     LogFn log;
     SoundFn playSound;
+    const NavMesh* nav = nullptr;
     sol::state lua;
     std::vector<std::unique_ptr<ScriptEntity>> entities;
     float playerHealth = 100.0f;
@@ -163,6 +219,7 @@ void ScriptSystem::Impl::bindApi()
             s.desiredVelocity = glm::dot(d, d) > 1e-8f ? glm::normalize(d) * speed : glm::vec3(0.0f);
         },
         "jump", [](ScriptEntity& s, float speed) { s.jumpRequest = speed; },
+        "move_to", [](ScriptEntity& s, const glm::vec3& target, float speed) { return s.moveTo(target, speed); },
         "face", [](ScriptEntity& s, const glm::vec3& point) {
             const glm::vec3 d = point - s.e().position;
             if (d.x * d.x + d.z * d.z > 1e-6f)
@@ -208,6 +265,22 @@ void ScriptSystem::Impl::bindApi()
     game.set_function("play_sound", [this](const std::string& sound, sol::optional<glm::vec3> position, sol::optional<float> volume) {
         if (playSound)
             playSound(sound, position ? &*position : nullptr, volume.value_or(1.0f));
+    });
+    game.set_function("nav_ready", [this] { return nav && nav->ready(); });
+    game.set_function("random_nav_point", [this](const glm::vec3& center, float radius) -> sol::optional<glm::vec3> {
+        if (nav && nav->ready())
+            if (auto p = nav->randomPointAround(center, radius))
+                return *p;
+        return sol::nullopt;
+    });
+    game.set_function("find_path", [this](const glm::vec3& from, const glm::vec3& to) {
+        sol::table t = lua.create_table();
+        if (nav && nav->ready()) {
+            int i = 1;
+            for (const glm::vec3& p : nav->findPath(from, to))
+                t[i++] = p;
+        }
+        return t;
     });
     game.set_function("damage_player", [this](float amount) { playerHealth = std::max(0.0f, playerHealth - amount); });
     game.set_function("time", [this] { return time; });
@@ -260,6 +333,8 @@ int ScriptSystem::start()
         se->log = &d.log;
         se->scene = &d.scene;
         se->physics = &d.physics;
+        se->nav = &d.nav;
+        se->time = &d.time;
         se->index = i;
         d.entities.push_back(std::move(se));
     }
@@ -418,6 +493,7 @@ ScriptCheck checkScriptSyntax(const std::string& source, const std::string& chun
 
 float ScriptSystem::playerHealth() const { return impl_->playerHealth; }
 void ScriptSystem::setSoundHandler(SoundFn handler) { impl_->playSound = std::move(handler); }
+void ScriptSystem::setNavMesh(const NavMesh* nav) { impl_->nav = nav; }
 void ScriptSystem::setPlayerHealth(float health) { impl_->playerHealth = health; }
 int ScriptSystem::errorCount() const { return impl_->errors; }
 

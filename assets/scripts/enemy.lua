@@ -51,10 +51,14 @@ local function steer(self, dir)
 end
 
 local function walk_to(self, target, speed)
-    local dir = (target - self.position):flat()
-    if dir:length() < 0.2 then return true end
+    if (target - self.position):flat():length() < 0.3 then return true end
     moving = true
-    dir = steer(self, dir:normalized())
+    if game.nav_ready() then
+        -- Navmesh path around walls and buildings (re-planned as the target moves).
+        return self:move_to(target, speed)
+    end
+    -- No navmesh (disabled or still building): feel the way with rays.
+    local dir = steer(self, (target - self.position):flat():normalized())
     self:move(dir, speed)
     self:face(self.position + dir)
     return false
@@ -73,6 +77,8 @@ local function sees_player(self)
 end
 
 local function pick_patrol_target()
+    local p = game.random_nav_point(home, props.patrol_radius)
+    if p then return p end -- a reachable spot
     local a = math.random() * math.pi * 2
     local r = props.patrol_radius * (0.4 + 0.6 * math.random())
     return home + vec3(math.cos(a) * r, 0, math.sin(a) * r)

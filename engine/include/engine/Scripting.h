@@ -8,6 +8,7 @@
 namespace engine {
 
 class PhysicsWorld;
+class NavMesh;
 
 // Result of compiling a script without running it (editor syntax check).
 struct ScriptCheck {
@@ -45,6 +46,9 @@ public:
     // the assets folder; position nil = not positioned (2D). The game plays it.
     using SoundFn = std::function<void(const std::string& sound, const glm::vec3* position, float volume)>;
     void setSoundHandler(SoundFn handler);
+
+    // Navigation for self:move_to() and game.find_path(); null or not ready = straight lines.
+    void setNavMesh(const NavMesh* nav);
 
     float playerHealth() const;
     void setPlayerHealth(float health);

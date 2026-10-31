@@ -11,6 +11,7 @@ add_library(engine STATIC
     src/Material.cpp
     src/TextureCook.cpp
     src/Memory.cpp
+    src/NavMesh.cpp
     src/Terrain.cpp
     src/CharacterBody.cpp
     src/Physics.cpp
@@ -26,7 +27,7 @@ add_library(engine STATIC
 )
 target_include_directories(engine PUBLIC include)
 find_package(Threads REQUIRED)
-target_link_libraries(engine PUBLIC glm::glm Threads::Threads PRIVATE glad Jolt::Jolt lua_static sol2::sol2 cgltf_headers stb_headers miniaudio)
+target_link_libraries(engine PUBLIC glm::glm Threads::Threads PRIVATE glad Jolt::Jolt lua_static sol2::sol2 cgltf_headers stb_headers miniaudio recastnav)
 target_compile_definitions(engine PRIVATE SOL_ALL_SAFETIES_ON=1)
 if(WIN32)
     target_link_libraries(engine PRIVATE psapi) # process memory for the editor memory panel

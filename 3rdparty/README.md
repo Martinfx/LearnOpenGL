@@ -23,6 +23,7 @@ copies are used only as a fallback.
 | `jolt/` | Jolt Physics | 5.6.0 | MIT (`jolt/LICENSE`) | https://github.com/jrouwe/JoltPhysics |
 | `lua/` | Lua | 5.4.7 | MIT (in `lua/lua.h`) | https://github.com/lua/lua |
 | `miniaudio/` | miniaudio (audio playback, mixing, 3D sound, decoding) | 0.11.26 | Public domain (Unlicense) or MIT-0 (`miniaudio/LICENSE`) | https://github.com/mackron/miniaudio |
+| `recastnavigation/` | Recast (navmesh building) + Detour (path queries) | 1.6.0+ (main, commit 9f4ce64) | zlib (`recastnavigation/License.txt`) | https://github.com/recastnavigation/recastnavigation |
 | `sol2/` | sol2 (C++ ↔ Lua binding) | 3.5.0 | MIT (`sol2/LICENSE.txt`) | https://github.com/ThePhD/sol2 |
 
 Not in this folder: Qt 6 (editor), which is installed from the system or the Qt installer.

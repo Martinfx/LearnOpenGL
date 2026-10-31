@@ -193,6 +193,11 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
             out << "player_sounds " << std::quoted(rel(pl.footstepSound)) << ' ' << std::quoted(rel(pl.landSound)) << ' '
                 << std::quoted(rel(pl.hurtSound)) << '\n';
     }
+    {
+        const NavSettings& n = scene.nav;
+        out << "navmesh " << (n.enabled ? 1 : 0) << ' ' << n.cellSize << ' ' << n.cellHeight << ' ' << n.agentRadius << ' '
+            << n.agentHeight << ' ' << n.agentClimb << ' ' << n.maxSlope << ' ' << n.tileSize << ' ' << n.minRegion << '\n';
+    }
     for (const std::filesystem::path& w : scene.loadout) {
         const std::filesystem::path rel = std::filesystem::absolute(w).lexically_relative(levelDir);
         out << "weapon " << std::quoted(pathToUtf8(rel.empty() ? std::filesystem::absolute(w) : rel)) << '\n';
@@ -545,6 +550,12 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
             PlayerSettings& pl = result.player;
             ok = static_cast<bool>(ls >> pl.walkSpeed >> pl.sprintSpeed >> pl.jumpSpeed >> pl.gravity >> pl.airControl
                                       >> pl.height >> pl.eyeHeight >> pl.stepHeight >> pl.maxSlopeDegrees >> pl.maxHealth);
+        } else if (key == "navmesh") {
+            NavSettings& n = result.nav;
+            int enabled = 1;
+            ok = static_cast<bool>(ls >> enabled >> n.cellSize >> n.cellHeight >> n.agentRadius >> n.agentHeight >> n.agentClimb >>
+                                   n.maxSlope >> n.tileSize >> n.minRegion);
+            n.enabled = enabled != 0;
         } else if (key == "player_sounds") {
             std::string paths[3];
             ok = static_cast<bool>(ls >> std::quoted(paths[0]) >> std::quoted(paths[1]) >> std::quoted(paths[2]));

@@ -56,6 +56,7 @@ methods `:length()`, `:normalized()`, `:flat()` (y = 0), `:dot(other)`.
 | `:animation_done()` | A non-looping clip reached its end (it then holds the last frame) |
 | `animation_time` | Seconds into the current clip |
 | `:has_animation(clip)` | The model has this clip |
+| `:move_to(target, speed)` | Walks along the navmesh around obstacles (re-plans as `target` moves); returns `true` on arrival. Without a navmesh it walks straight |
 | `flash` | Seconds of white hit flash (e.g. `self.flash = 0.12` in `on_damage`) |
 
 ## `game`
@@ -65,6 +66,9 @@ methods `:length()`, `:normalized()`, `:flat()` (y = 0), `:dot(other)`.
 | `game.player_position()` / `game.player_eye()` | `vec3` |
 | `game.player_health()` | number 0..100 |
 | `game.damage_player(amount)` | |
+| `game.nav_ready()` | `true` once the level's navmesh is built (it builds in the background after loading) |
+| `game.random_nav_point(center, radius)` | A reachable `vec3` within `radius`, or `nil` |
+| `game.find_path(from, to)` | Table of `vec3` corners along the navmesh (empty when there is no way) |
 | `game.play_sound(sound, [position], [volume])` | Plays a `.sound` or audio file (path relative to `assets/`, e.g. `"sounds/weapons/pistol_shot.sound"`) at a `vec3` position, or not positioned when `position` is `nil` |
 | `game.time()` | Seconds since the level started |
 | `game.can_see(from, to)` | `true` when no level geometry is in between |
