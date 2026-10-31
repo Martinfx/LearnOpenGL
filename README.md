@@ -24,3 +24,6 @@ Compile only FreeBSD, Linux projects are in .pro for QTCreator
 ### Support OS
   * FreeBSD
   * Linux
+
+### FPS engine
+Vlastní FPS engine s Qt editorem je ve složce [`fps-engine/`](fps-engine/README.md) (CMake, Windows/Linux/FreeBSD).
