@@ -51,6 +51,14 @@ void GameAudio::play(const std::filesystem::path& sound, glm::vec3 position, flo
         audio_.play(*def, position, volume);
 }
 
+engine::AudioSystem::Handle GameAudio::start(const std::filesystem::path& sound, const glm::vec3* position, float volume)
+{
+    auto def = get(sound);
+    if (!def)
+        return 0;
+    return position ? audio_.play(*def, *position, volume) : audio_.play2D(*def, volume);
+}
+
 void GameAudio::play2D(const std::filesystem::path& sound, float volume)
 {
     if (auto def = get(sound))

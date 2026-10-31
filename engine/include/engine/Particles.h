@@ -79,6 +79,8 @@ struct ParticleEmitter {
     float gravity = 0.0f;                   // multiples of 9.81 m/s² down (smoke: slightly negative = rises)
     float drag = 0.0f;                      // 1/s, velocity lost per second
     glm::vec3 wind{0.0f};                   // m/s added drift
+    float attract = 0.0f;                   // m/s² toward the effect's vertical axis (negative = away): vortices, anomalies
+    float orbit = 0.0f;                     // m/s² around that axis (swirl), positive = counter-clockwise seen from above
     bool worldSpace = true;                 // particles stay where they were born when the effect moves
     // Appearance over life
     float lifeMin = 1.0f, lifeMax = 2.0f;   // seconds

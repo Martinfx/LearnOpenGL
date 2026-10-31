@@ -1,0 +1,29 @@
+# Spatial rift throw: a violet flash and motes scattering (played where you left and where you land).
+emitter "Flash"
+blend additive
+lit 0
+burst 1
+rate 0
+life 0.15 0.2
+size 2 2.5
+color 0.75 0.55 1
+intensity 6
+color_key 0 1 1 1 1
+color_key 1 1 1 1 0
+emitter "Motes"
+blend additive
+lit 0
+burst 40
+rate 0
+max 40
+life 0.4 0.9
+shape sphere 0.4 0 0
+direction 0 1 0
+spread 180
+speed 2 6
+drag 3
+size 0.03 0.06
+color 0.8 0.65 1
+intensity 5
+color_key 0 1 1 1 1
+color_key 1 1 1 1 0

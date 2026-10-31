@@ -15,6 +15,7 @@
 #include <engine/Scene.h>
 #include <engine/Ui2D.h>
 
+#include "GameAnomalies.h"
 #include "GameAudio.h"
 #include "GameEffects.h"
 #include "GameConsole.h"
@@ -421,6 +422,11 @@ int main(int argc, char** argv)
     GameEffects effects;
     effects.init(std::filesystem::path(argv[0]).parent_path() / "assets", audio.surfaces());
     effects.startLevel(scene);
+    // Anomalies (gravity traps, discharges, vents, acid, rifts, radiation), detector and Geiger counter.
+    GameAnomalies anomalies;
+    anomalies.init(std::filesystem::path(argv[0]).parent_path() / "assets", audio);
+    anomalies.startLevel(scene);
+    bool boltHeld = false;
     bool wasReloading = false;
     if (const int errors = scripts.start())
         LOG_ERROR("script", "%d script error(s), see above", errors);
@@ -604,6 +610,16 @@ int main(int argc, char** argv)
             next = (next + weapons.size() + static_cast<std::size_t>(dir + static_cast<int>(weapons.size()))) % weapons.size();
         }
         mouse.scroll = 0.0;
+        // G: throw a bolt (finds anomalies and sets them off). FPS_ENGINE_BOLT=1 throws one at the start (test hook).
+        {
+            static bool testBolt = std::getenv("FPS_ENGINE_BOLT") != nullptr;
+            const bool g = captured && glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS;
+            if ((g && !boltHeld) || (testBolt && frame == 2)) {
+                anomalies.throwBolt(player.eye(), camera.forward(), player.velocity());
+                testBolt = false;
+            }
+            boltHeld = g;
+        }
 
         const int steps = clock.advance(frameTime);
         for (int i = 0; i < steps; ++i) {
@@ -707,6 +723,7 @@ int main(int argc, char** argv)
             scripts.fixedUpdate(dt);
             if (scripts.playerHealth() < healthBefore)
                 audio.play2D(scene.player.hurtSound);
+            anomalies.fixedUpdate(dt, scene, physics, player, scripts); // forces act on the next movement step
             {
                 std::string ground;
                 if (player.grounded())
@@ -719,6 +736,7 @@ int main(int argc, char** argv)
                 LOG_INFO("game", "You died. Respawning.");
                 player.respawn();
                 scripts.setPlayerHealth(scene.player.maxHealth);
+                anomalies.resetDose();
             }
         }
 
@@ -726,6 +744,7 @@ int main(int argc, char** argv)
         engine::updateAnimations(scene, static_cast<float>(frameTime)); // per frame for smooth motion
         audio.update(static_cast<float>(frameTime), scene, camera.position, camera.forward());
         effects.update(static_cast<float>(frameTime), scene, physics, camera.position, audio);
+        anomalies.update(static_cast<float>(frameTime), physics, camera.position);
 
         int width = 0, height = 0;
         glfwGetFramebufferSize(window, &width, &height);
@@ -748,6 +767,7 @@ int main(int argc, char** argv)
             view.deferPresent = true; // the weapon layer is drawn before post-processing
             engine::OverlayPass effectsOverlay; // muzzle flashes, drawn with the weapon below
             effects.fill(view, view.view, effectsOverlay);
+            anomalies.fill(view, view.view);
             renderer.render(scene, view);
 
             // First-person layer: weapon, muzzle flash and crosshair.
@@ -784,6 +804,8 @@ int main(int argc, char** argv)
                 map.drawFullMap(ui, width, height, player.feet(), camera.flatForward());
             else
                 map.drawMinimap(ui, width, height, player.feet(), camera.flatForward());
+            if (!mapOpen)
+                anomalies.drawHud(ui, width, height);
             if (cvShowFps.boolean()) {
                 char fps[32];
                 std::snprintf(fps, sizeof fps, "%.0f FPS", frameTime > 0.0 ? 1.0 / frameTime : 0.0);
@@ -791,7 +813,7 @@ int main(int argc, char** argv)
             }
             console.draw(ui, width, height, now);
             ui.end();
-            if (screenshotFile && frameLimit > 0 && frame + 1 == frameLimit) {
+            if (screenshotFile && frameLimit > 0 && frame + 1 == frameLimit) { // with the HUD
                 const std::vector<std::uint8_t> rgb = renderer.readPixels(width, height);
                 std::ofstream shot(screenshotFile, std::ios::binary);
                 shot << "P6\n" << width << ' ' << height << "\n255\n";
@@ -818,8 +840,8 @@ int main(int argc, char** argv)
             else
                 std::snprintf(ammo, sizeof ammo, "%d/%d%s", weapons[current].ammo(), weapons[current].settings.magazineSize,
                               weapons[current].reloading() ? " (reloading)" : "");
-            std::snprintf(title, sizeof title, "FPS Engine | HP %.0f | [%zu] %s %s | Kills %d | %.0f FPS | %.2f ms | pos %.1f %.1f %.1f%s",
-                          scripts.playerHealth(), current + 1, weapons[current].settings.name.c_str(), ammo, kills,
+            std::snprintf(title, sizeof title, "FPS Engine | HP %.0f | RAD %.0f | [%zu] %s %s | Kills %d | %.0f FPS | %.2f ms | pos %.1f %.1f %.1f%s",
+                          scripts.playerHealth(), anomalies.dose(), current + 1, weapons[current].settings.name.c_str(), ammo, kills,
                           fpsFrames / fpsTimer, 1000.0 * fpsTimer / fpsFrames,
                           player.feet().x, player.feet().y, player.feet().z, player.grounded() ? "" : " (air)");
             // FPS_ENGINE_STATS=1 prints frame statistics (profiling, comparing optimizations).
@@ -839,6 +861,9 @@ int main(int argc, char** argv)
         }
     }
 
+    if (frameLimit >= 0) // smoke tests: where the run ended
+        LOG_INFO("game", "End: pos %.2f %.2f %.2f | HP %.1f | dose %.1f rad | kills %d", player.feet().x, player.feet().y, player.feet().z,
+                    scripts.playerHealth(), anomalies.dose(), kills);
     cvars.saveConfig((engine::userDirectory("config") / "game.cfg").string());
     navCancel = true;
     if (navBuilder.joinable())

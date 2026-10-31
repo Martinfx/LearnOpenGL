@@ -1,0 +1,11 @@
+# Spatial rift throw: in-rush and pop
+file "rift_burst.wav"
+volume 1
+pitch 0.9 1.1
+distance 3 70
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group sfx
+max_instances 4

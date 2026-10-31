@@ -1,0 +1,58 @@
+# Heat vent, idle: glow in the crack, embers and thin dark smoke (the heat haze is a screen warp).
+emitter "Glow"
+blend additive
+lit 0
+rate 5
+max 12
+life 0.6 1.0
+shape disc 0.5 0 0
+direction 0 1 0
+spread 5
+speed 0.05 0.1
+size 0.5 0.8
+color 1 0.4 0.12
+intensity 2
+color_key 0 1 1 1 0
+color_key 0.5 1 1 1 0.6
+color_key 1 1 1 1 0
+emitter "Embers"
+texture "../textures/particles/spark.png"
+blend additive
+lit 0
+stretch 1 0.03
+rate 3
+max 30
+life 1 2
+shape disc 0.5 0 0
+direction 0 1 0
+spread 15
+speed 1 2.5
+gravity -0.05
+wind 0.2 0 0
+size 0.01 0.016
+color 1 0.55 0.2
+intensity 6
+color_key 0 1 1 1 1
+color_key 1 1 0.4 0.1 0
+emitter "Smoke"
+texture "../textures/particles/smoke_8x8.png"
+flipbook 8 8 0 1
+lit 1
+rate 1.5
+max 20
+life 3 5
+shape disc 0.4 0 0
+direction 0 1 0
+spread 8
+speed 0.6 1
+gravity -0.02
+wind 0.2 0 0.1
+size 0.3 0.5
+size_key 0 0.6
+size_key 1 3
+color 0.15 0.14 0.13
+color_key 0 1 1 1 0
+color_key 0.2 1 1 1 0.35
+color_key 1 1 1 1 0
+rotation 0 360
+spin -20 20

@@ -43,6 +43,16 @@ struct DebugGeometry {
 // How the main pass shades the scene (editor view modes).
 enum class Shading { Lit, Unlit, LightingOnly, Wireframe };
 
+// Screen-space warp around a point in the world (anomalies): heat haze rising over
+// a vent, or a lens that bends the image toward its middle. The renderer keeps up
+// to 8 per frame, applied in post-processing (not to the first-person weapon).
+struct ScreenDistortion {
+    glm::vec3 position{0.0f};
+    float radius = 1.0f;      // m
+    float strength = 1.0f;    // 0..1 (scaled by the mode's own maximum)
+    bool lens = false;        // false = heat shimmer, true = lens / gravity bend
+};
+
 struct RenderView {
     glm::mat4 view{1.0f};
     glm::mat4 projection{1.0f};
@@ -68,6 +78,7 @@ struct RenderView {
     std::vector<SpriteBatch> sprites;   // particles and decals (ParticleSystem::appendSprites, decal pools)
     std::vector<const DebugGeometry*> debug; // editor helpers (navmesh), not owned
     std::vector<OverlayBox> gizmoBoxes; // editor handles, drawn on top of everything (world space)
+    std::vector<ScreenDistortion> distortions; // anomalies: heat haze, lens bends
 };
 
 // First-person layer drawn on top of the world (weapon, muzzle flash, crosshair).
@@ -187,6 +198,7 @@ public:
     std::string glInfo() const { return glInfo_; }
 
 private:
+    void collectDistortions(const RenderView& view); // anomaly warps of this frame into screen space
     struct GpuMesh {
         unsigned vao = 0, vbo = 0, ibo = 0;
         int indexCount = 0;
@@ -426,6 +438,9 @@ private:
     RenderQuality quality_;
     const Environment* env_ = nullptr;  // of the scene being rendered
     float time_ = 0.0f;
+    std::vector<glm::vec4> distortions_;  // this frame: uv center, radius (uv height), signed strength (<0 lens)
+    float aspect_ = 1.0f;
+    bool overlayDrawn_ = false;           // first-person layer in the depth buffer (masks the distortion)
     int targetFbo_ = 0;                 // framebuffer to present into
     int targetX_ = 0, targetY_ = 0;     // where in it
     bool pendingPresent_ = false;

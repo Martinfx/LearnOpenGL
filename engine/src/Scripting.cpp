@@ -8,6 +8,7 @@
 
 #include <sol/sol.hpp>
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <glm/geometric.hpp>
@@ -29,6 +30,10 @@ struct ScriptEntity {
     std::optional<CharacterBody> body;
     glm::vec3 desiredVelocity{0.0f};
     float jumpRequest = 0.0f;
+    // Outside forces for the next step (ScriptSystem::pushEntity).
+    glm::vec3 impulse{0.0f};
+    glm::vec3 drift{0.0f};
+    float slow = 0.0f;
     sol::environment env;
     sol::protected_function onUpdate;
     sol::protected_function onDamage;
@@ -400,13 +405,51 @@ void ScriptSystem::fixedUpdate(float dt)
         }
     }
     for (auto& se : d.entities) {
-        if (!se->body || !se->e().alive)
+        if (!se->e().alive) {
+            se->impulse = se->drift = glm::vec3(0.0f);
             continue;
-        se->body->step(se->desiredVelocity, se->jumpRequest, 18.0f, 0.2f, dt);
+        }
+        if (!se->body) { // no capsule: outside forces just move it
+            se->e().position += (se->drift + se->impulse * 0.1f) * dt;
+            se->impulse = se->drift = glm::vec3(0.0f);
+            continue;
+        }
+        glm::vec3 impulse = se->impulse;
+        if (se->drift.y > 0.0f)
+            impulse.y += (se->drift.y - std::max(0.0f, se->body->velocity().y)) * std::min(1.0f, 8.0f * dt) + 18.0f * dt;
+        const bool pushed = glm::dot(se->impulse, se->impulse) > 0.0f;
+        se->body->step(se->desiredVelocity * (1.0f - std::clamp(se->slow, 0.0f, 1.0f)) + glm::vec3(se->drift.x, 0.0f, se->drift.z) +
+                           (pushed ? glm::vec3(se->impulse.x, 0.0f, se->impulse.z) : glm::vec3(0.0f)),
+                       se->jumpRequest, 18.0f, pushed ? 1.0f : 0.2f, dt, glm::vec3(0.0f, impulse.y, 0.0f));
         se->e().position = se->body->feet();
         se->desiredVelocity = glm::vec3(0.0f);
         se->jumpRequest = 0.0f;
+        se->impulse = se->drift = glm::vec3(0.0f);
+        se->slow = 0.0f;
     }
+}
+
+void ScriptSystem::pushEntity(int entityIndex, glm::vec3 impulse, glm::vec3 drift, float slow)
+{
+    Impl& d = *impl_;
+    if (entityIndex < 0 || entityIndex >= static_cast<int>(d.entities.size()))
+        return;
+    ScriptEntity& se = *d.entities[static_cast<std::size_t>(entityIndex)];
+    se.impulse += impulse;
+    se.drift += drift;
+    se.slow = std::max(se.slow, slow);
+}
+
+void ScriptSystem::teleportEntity(int entityIndex, glm::vec3 feet)
+{
+    Impl& d = *impl_;
+    if (entityIndex < 0 || entityIndex >= static_cast<int>(d.entities.size()))
+        return;
+    ScriptEntity& se = *d.entities[static_cast<std::size_t>(entityIndex)];
+    if (se.body)
+        se.body->teleport(feet);
+    se.e().position = feet;
+    se.path.clear();
 }
 
 void ScriptSystem::damageEntity(int entityIndex, float amount)

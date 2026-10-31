@@ -1,0 +1,11 @@
+# Acid pool idle: bubbling sludge
+file "acid_loop.ogg"
+volume 0.5
+pitch 1 1
+distance 2 20
+rolloff 1
+loop 1
+stream 1
+spatial 1
+group ambient
+max_instances 8

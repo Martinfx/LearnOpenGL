@@ -1,0 +1,35 @@
+# Acid pool stirred up (something fell in or waded through): splash and a puff of fumes.
+emitter "Splash"
+blend additive
+lit 0
+burst 26
+rate 0
+max 26
+life 0.4 0.8
+shape disc 0.3 0 0
+direction 0 1 0
+spread 40
+speed 1.5 3.5
+gravity 1
+size 0.03 0.06
+color 0.6 1 0.25
+intensity 2
+emitter "Fumes"
+texture "../textures/particles/smoke_8x8.png"
+flipbook 8 8 0 1
+lit 1
+burst 6
+rate 0
+life 1.5 2.5
+shape disc 0.3 0 0
+direction 0 1 0
+spread 30
+speed 0.4 0.9
+gravity -0.03
+size 0.5 0.8
+size_key 0 0.5
+size_key 1 2
+color 0.6 0.75 0.4
+color_key 0 1 1 1 0.5
+color_key 1 1 1 1 0
+rotation 0 360

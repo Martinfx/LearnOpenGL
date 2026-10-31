@@ -1,0 +1,13 @@
+# Bolt landing on something hard
+file "bolt_hit_1.wav"
+file "bolt_hit_2.wav"
+file "bolt_hit_3.wav"
+volume 0.6
+pitch 0.9 1.1
+distance 1 25
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group sfx
+max_instances 6

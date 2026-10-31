@@ -1,0 +1,11 @@
+# Electric field idle: mains hum and faint crackle
+file "discharge_loop.ogg"
+volume 0.45
+pitch 1 1
+distance 2 22
+rolloff 1
+loop 1
+stream 1
+spatial 1
+group ambient
+max_instances 8

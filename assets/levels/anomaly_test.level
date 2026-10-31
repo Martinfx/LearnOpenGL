@@ -1,0 +1,170 @@
+# FPS engine level
+version 5
+player_start 0 0 20
+sun -0.45 -0.75 -0.3
+env sun_color 1 0.86 0.68
+env sun_intensity 2.4
+env sky_zenith 0.38 0.42 0.44
+env sky_horizon 0.68 0.66 0.58
+env ground_color 0.26 0.24 0.2
+env cloud_cover 0.72
+env ambient_intensity 0.8
+env fog_color 0.6 0.6 0.54
+env fog_density 0.018
+env fog_height 1
+env fog_height_falloff 0.12
+env fog_sun_scatter 1.2
+env exposure 1
+env bloom_intensity 0.05
+env bloom_threshold 1.3
+env ssao_radius 0.6
+env ssao_intensity 1.1
+env shadow_distance 60
+env saturation 0.72
+env contrast 1.1
+env tint 1.02 1 0.9
+env vignette 0.35
+env grain 0.035
+loading_image "../textures/ui/loading_zone.jpg"
+loading_title "Zóna: zkušební polygon anomálií"
+loading_hint "G hází šroub. Detektor pípá u anomálií, geiger cvaká v radiaci."
+weapon "../weapons/ak74.weapon"
+weapon "../weapons/pistol.weapon"
+weapon "../weapons/knife.weapon"
+group "Ground" ""
+group "Walls" "Ground"
+group "Props" ""
+group "Anomalies" ""
+group "Enemies" ""
+group "Map markers" ""
+group "Ambience" ""
+box "Floor" 0 -0.5 0 56 1 64 0.5 0.48 0.42
+  parent "Ground"
+  material "../materials/pbr/dry_ground_01.material"
+box "Wall N" 0 1.5 -32 56 3 1 0.5 0.5 0.5
+  parent "Walls"
+  material "../materials/concrete.material"
+box "Wall S" 0 1.5 32 56 3 1 0.5 0.5 0.5
+  parent "Walls"
+  material "../materials/concrete.material"
+box "Wall W" -28 1.5 0 1 3 64 0.5 0.5 0.5
+  parent "Walls"
+  material "../materials/concrete.material"
+box "Wall E" 28 1.5 0 1 3 64 0.5 0.5 0.5
+  parent "Walls"
+  material "../materials/concrete.material"
+box "Divider 1" -6 0.6 0 1 1.2 8 0.55 0.53 0.5
+  parent "Walls"
+  material "../materials/concrete.material"
+box "Divider 2" 6 0.6 0 1 1.2 8 0.55 0.53 0.5
+  parent "Walls"
+  material "../materials/concrete.material"
+box "Divider 3" 0 0.6 -12 10 1.2 1 0.55 0.53 0.5
+  parent "Walls"
+  material "../materials/concrete.material"
+box "Divider 4" -18 0.6 -4 8 1.2 1 0.55 0.53 0.5
+  parent "Walls"
+  material "../materials/concrete.material"
+box "Divider 5" 18 0.6 -4 8 1.2 1 0.55 0.53 0.5
+  parent "Walls"
+  material "../materials/concrete.material"
+box "Crate crusher A" -14.5 0.4 9 0.8 0.8 0.8 0.6 0.45 0.25
+  parent "Props"
+  material "../materials/prototype_orange.material"
+box "Crate crusher B" -9 0.4 4 0.8 0.8 0.8 0.6 0.45 0.25
+  parent "Props"
+  material "../materials/prototype_orange.material"
+box "Pylon base" 0 0.15 6 0.6 0.3 0.6 0.4 0.4 0.42
+  parent "Props"
+  material "../materials/metal_plate.material"
+box "Pylon" 0 2.3 6 0.2 4 0.2 0.4 0.4 0.42
+  parent "Props"
+  material "../materials/metal_plate.material"
+box "Vent slab 1" 13.503508193257453 0.05 6.54723222932107 1.4 0.1 0.9 0.35 0.33 0.3
+  parent "Props"
+  rotation 0 20 0
+  material "../materials/concrete.material"
+box "Vent slab 2" 11.45276777067893 0.05 7.503508193257454 1.4 0.1 0.9 0.35 0.33 0.3
+  parent "Props"
+  rotation 0 110 0
+  material "../materials/concrete.material"
+box "Vent slab 3" 10.496491806742547 0.05 5.45276777067893 1.4 0.1 0.9 0.35 0.33 0.3
+  parent "Props"
+  rotation 0 200 0
+  material "../materials/concrete.material"
+box "Vent slab 4" 12.54723222932107 0.05 4.496491806742546 1.4 0.1 0.9 0.35 0.33 0.3
+  parent "Props"
+  rotation 0 290 0
+  material "../materials/concrete.material"
+box "Acid surface 1" -12 0.012 -14 4.9 0.02 4.9 0.16 0.22 0.08
+  parent "Props"
+  rotation 0 0 0
+box "Acid surface 2" -12 0.014 -14 4.9 0.02 4.9 0.16 0.22 0.08
+  parent "Props"
+  rotation 0 22.5 0
+box "Acid surface 3" -12 0.016 -14 4.9 0.02 4.9 0.16 0.22 0.08
+  parent "Props"
+  rotation 0 45 0
+box "Acid surface 4" -12 0.018000000000000002 -14 4.9 0.02 4.9 0.16 0.22 0.08
+  parent "Props"
+  rotation 0 67.5 0
+box "Exit platform" 16 1 -20 5 2 5 0.5 0.5 0.5
+  parent "Props"
+  material "../materials/concrete.material"
+box "Barrel hot" -20 0.45 -24 0.6 0.9 0.6 0.45 0.45 0.2
+  parent "Props"
+  material "../materials/metal_plate.material"
+box "Barrel hot 2" -19.2 0.45 -24.6 0.6 0.9 0.6 0.45 0.45 0.2
+  parent "Props"
+  material "../materials/metal_plate.material"
+entity "Crusher 1" "anomaly" -12 0 6 0 5 3 5 0.55 0.5 0.75 ""
+  parent "Anomalies"
+  prop "kind" "crusher"
+entity "Discharge 1" "anomaly" 0 0 6 0 3.5 3 3.5 0.35 0.6 1 ""
+  parent "Anomalies"
+  prop "kind" "discharge"
+entity "Vent 1" "anomaly" 12 0 6 0 2 5 2 1 0.45 0.15 ""
+  parent "Anomalies"
+  prop "kind" "vent"
+  prop "period" "6"
+entity "Acid pool 1" "anomaly" -12 0 -14 0 6 1 6 0.45 0.85 0.2 ""
+  parent "Anomalies"
+  prop "kind" "acid"
+entity "Rift 1" "anomaly" 10 0 -14 0 2.5 2.5 2.5 0.75 0.4 0.95 ""
+  parent "Anomalies"
+  prop "kind" "rift"
+  prop "link" "Rift exit"
+entity "Rift exit" "particle" 16 2 -20 0 0.4 0.4 0.4 0.75 0.4 0.95 ""
+  parent "Anomalies"
+  prop "effect" "particles/anomaly_rift_idle.particle"
+entity "Radiation hotspot" "anomaly" -20 0 -24 0 8 4 8 0.9 0.85 0.2 ""
+  parent "Anomalies"
+  prop "kind" "radiation"
+  prop "intensity" "30"
+entity "Radiation area" "anomaly" 0 0 -24 0 10 4 8 0.9 0.85 0.2 ""
+  parent "Anomalies"
+  prop "kind" "radiation"
+  prop "area" "1"
+  prop "intensity" "4"
+  prop "fade" "3"
+entity "Guard" "enemy" 0 0 -4 90 0.6 1.8 0.6 0.55 0.5 0.5 "../scripts/enemy.lua"
+  parent "Enemies"
+  character "../models/characters/humans/bandit.glb" 1 0 "Idle_Loop"
+entity "Drtič" "map_marker" -12 0 6 0 1 1 1 0.85 0.3 0.2 ""
+  parent "Map markers"
+entity "Výboj" "map_marker" 0 0 6 0 1 1 1 0.85 0.3 0.2 ""
+  parent "Map markers"
+entity "Výheň" "map_marker" 12 0 6 0 1 1 1 0.85 0.3 0.2 ""
+  parent "Map markers"
+entity "Žíravina" "map_marker" -12 0 -14 0 1 1 1 0.85 0.3 0.2 ""
+  parent "Map markers"
+entity "Zlom" "map_marker" 10 0 -14 0 1 1 1 0.85 0.3 0.2 ""
+  parent "Map markers"
+entity "Radiace" "map_marker" -20 0 -24 0 1 1 1 0.85 0.3 0.2 ""
+  parent "Map markers"
+player_sounds "../sounds/player/step_gravel.sound" "../sounds/player/land.sound" "../sounds/player/hurt.sound"
+entity "Zone drone" "sound" 0 -50 0 0 400 200 400 0.25 0.55 0.95 ""
+  parent "Ambience"
+  prop "sound" "sounds/ambient/zone_drone.sound"
+  prop "zone" "1"
+  prop "fade" "20"

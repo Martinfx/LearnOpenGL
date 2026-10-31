@@ -1,0 +1,14 @@
+# Geiger counter: one click (the game plays them at the dose rate)
+file "geiger_click_1.wav"
+file "geiger_click_2.wav"
+file "geiger_click_3.wav"
+file "geiger_click_4.wav"
+volume 0.7
+pitch 0.9 1.15
+distance 2 40
+rolloff 1
+loop 0
+stream 0
+spatial 0
+group ui
+max_instances 12

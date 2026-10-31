@@ -46,7 +46,7 @@ bool CharacterBody::valid() const
     return impl_ && impl_->character != nullptr;
 }
 
-void CharacterBody::step(glm::vec3 desiredVelocity, float jumpSpeed, float gravity, float airControl, float dt)
+void CharacterBody::step(glm::vec3 desiredVelocity, float jumpSpeed, float gravity, float airControl, float dt, glm::vec3 impulse)
 {
     if (!valid())
         return;
@@ -73,6 +73,7 @@ void CharacterBody::step(glm::vec3 desiredVelocity, float jumpSpeed, float gravi
     }
     velocity += g * dt;
     velocity += toJolt(horizontal);
+    velocity += toJolt(impulse);
     ch.SetLinearVelocity(velocity);
 
     JPH::CharacterVirtual::ExtendedUpdateSettings update;

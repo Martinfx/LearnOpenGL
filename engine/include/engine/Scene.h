@@ -234,13 +234,15 @@ struct Entity {
 
     // Editor-only helpers (sound sources and zones, map markers): not drawn in the
     // game and not hit by weapons.
-    bool helper() const { return type == "sound" || type == "map_marker" || type == "particle"; }
+    bool helper() const { return type == "sound" || type == "map_marker" || type == "particle" || type == "anomaly"; }
     // What the editor draws and picks: a sound zone can span the whole level, so
     // it is shown as a small speaker cube at its position; the zone is its size.
     Aabb markerBounds() const
     {
         if (type == "sound" || type == "particle")
             return {position, position + glm::vec3(type == "sound" ? 0.6f : 0.4f)};
+        if (type == "anomaly") // the field (size) is drawn as rings by the editor
+            return {position - glm::vec3(0.3f, 0.0f, 0.3f), position + glm::vec3(0.3f, 0.6f, 0.3f)};
         return bounds();
     }
 };
@@ -263,6 +265,9 @@ struct PlayerSettings {
     std::filesystem::path footstepSound; // one play per stride while walking
     std::filesystem::path landSound;     // landing after a fall
     std::filesystem::path hurtSound;     // taking damage
+    // Radiation (anomalies of kind "radiation"): the dose drains health and wears off slowly.
+    float radiationDamage = 1.0f; // hit points per second per 100 rad of dose
+    float radiationDecay = 0.5f;  // rad per second the dose drops by itself
 };
 
 // Look of the level: sun, sky, fog, ambient light and post-processing.

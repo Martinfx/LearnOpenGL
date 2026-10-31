@@ -42,6 +42,11 @@ public:
     // entity dies (on_death(self), no longer drawn or simulated).
     void damageEntity(int entityIndex, float amount);
 
+    // Outside forces on an entity for the next fixedUpdate (anomalies): a one-off
+    // velocity change, an extra velocity (pull, lift) and 0..1 of its walking speed taken away.
+    void pushEntity(int entityIndex, glm::vec3 impulse, glm::vec3 drift = glm::vec3(0.0f), float slow = 0.0f);
+    void teleportEntity(int entityIndex, glm::vec3 feet);
+
     // game.play_sound(sound [, position] [, volume]): `sound` is a path relative to
     // the assets folder; position nil = not positioned (2D). The game plays it.
     using SoundFn = std::function<void(const std::string& sound, const glm::vec3* position, float volume)>;

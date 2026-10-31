@@ -1,0 +1,11 @@
+# Heat vent about to erupt
+file "vent_charge.wav"
+volume 0.9
+pitch 1 1
+distance 3 50
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group sfx
+max_instances 4

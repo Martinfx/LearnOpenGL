@@ -1,0 +1,11 @@
+# Anomaly detector beep (faster when closer)
+file "detector_beep.wav"
+volume 0.7
+pitch 1 1
+distance 2 40
+rolloff 1
+loop 0
+stream 0
+spatial 0
+group ui
+max_instances 3

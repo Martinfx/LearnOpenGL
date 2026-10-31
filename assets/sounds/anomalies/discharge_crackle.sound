@@ -1,0 +1,13 @@
+# Electric field idle spark / arming
+file "discharge_crackle_1.wav"
+file "discharge_crackle_2.wav"
+file "discharge_crackle_3.wav"
+volume 0.6
+pitch 0.9 1.15
+distance 2 30
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group sfx
+max_instances 4

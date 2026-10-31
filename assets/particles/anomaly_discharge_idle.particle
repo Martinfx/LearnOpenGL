@@ -1,0 +1,67 @@
+# Electric field (discharge), idle: faint blue motes and a rare spark.
+emitter "Motes"
+blend additive
+lit 0
+rate 4
+max 30
+life 1 2
+shape disc 0.9 0 0
+direction 0 1 0
+spread 30
+speed 0.1 0.5
+drag 0.5
+size 0.03 0.06
+color 0.55 0.75 1
+intensity 3
+color_key 0 1 1 1 0
+color_key 0.5 1 1 1 1
+color_key 1 1 1 1 0
+emitter "Sparks"
+texture "../textures/particles/spark.png"
+blend additive
+lit 0
+stretch 1 0.04
+rate 1.5
+max 20
+life 0.08 0.2
+shape disc 0.8 0 0
+direction 0 1 0
+spread 120
+speed 2 5
+size 0.008 0.014
+color 0.6 0.8 1
+intensity 10
+emitter "Static"
+blend additive
+lit 0
+rate 14
+max 40
+life 0.15 0.45
+shape disc 0.9 0 0
+direction 0 1 0
+spread 10
+speed 0.5 3
+drag 2
+size 0.12 0.3
+color 0.5 0.7 1
+intensity 2.5
+color_key 0 1 1 1 0
+color_key 0.3 1 1 1 0.5
+color_key 0.6 1 1 1 0.1
+color_key 1 1 1 1 0
+emitter "Ground scorch glow"
+blend additive
+lit 0
+rate 2
+max 6
+life 1.5 2.5
+shape disc 0.2 0 0
+direction 0 1 0
+spread 0
+speed 0 0.05
+size 1.6 2
+color 0.35 0.55 1
+intensity 0.5
+color_key 0 1 1 1 0
+color_key 0.5 1 1 1 0.35
+color_key 1 1 1 1 0

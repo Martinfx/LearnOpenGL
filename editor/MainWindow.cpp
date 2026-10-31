@@ -1,8 +1,10 @@
 #include "MainWindow.h"
 
+#include <engine/Anomaly.h>
 #include <engine/Memory.h>
 #include <QCheckBox>
 #include <engine/TextureCook.h>
+#include "AnomalyPanel.h"
 #include "HierarchyPanel.h"
 #include "AssetBrowser.h"
 
@@ -185,6 +187,12 @@ void MainWindow::buildMenus()
     edit->addAction(tr("Add empty en&tity"), this, [this] { addEntity("empty"); });
     edit->addAction(tr("Add &sound source"), this, [this] { addEntity("sound"); });
     edit->addAction(tr("Add &particle effect"), this, [this] { addEntity("particle"); });
+    {
+        QMenu* anomaly = edit->addMenu(tr("Add a&nomaly"));
+        for (int k = 0; k < static_cast<int>(engine::AnomalyKind::Count); ++k)
+            anomaly->addAction(QString::fromUtf8(engine::anomalyKindInfo(static_cast<engine::AnomalyKind>(k)).name), this,
+                               [this, k] { addAnomaly(k); });
+    }
     QAction* dup = edit->addAction(tr("&Duplicate"), QKeySequence(Qt::CTRL | Qt::Key_D), this, &MainWindow::duplicateBox);
     QAction* del = edit->addAction(tr("De&lete"), QKeySequence::Delete, this, &MainWindow::deleteBox);
 
@@ -618,6 +626,7 @@ void MainWindow::buildDocks()
     QFormLayout* scriptForm = makeSection(tr("Script"), "Script");
     QFormLayout* soundForm = makeSection(tr("Sound"), "Sound");
     effectForm_ = makeSection(tr("Particle effect"), "Rendering");
+    anomalyForm_ = makeSection(tr("Anomaly"), "General");
     nameEdit_ = new QLineEdit(boxPanel_);
     kindLabel_ = new QLabel(boxPanel_);
     generalForm->addRow(tr("Type"), kindLabel_);
@@ -1066,6 +1075,12 @@ void MainWindow::buildDocks()
         });
     }
 
+    // Anomaly (entity type "anomaly"): kind, its parameters, rift link, effect/sound overrides.
+    anomalyPanel_ = new AnomalyPanel([this] { return assetRoot(); }, boxPanel_);
+    anomalyForm_->addRow(anomalyPanel_);
+    connect(anomalyPanel_, &AnomalyPanel::edited, this, &MainWindow::markDirty);
+    connect(anomalyPanel_, &AnomalyPanel::kindChanged, this, &MainWindow::refreshProperties);
+
     // Tunables the script declares in `properties`; values are saved per entity.
     scriptParams_ = new QTableWidget(0, 2, boxPanel_);
     scriptParams_->setHorizontalHeaderLabels({tr("Script parameter"), tr("Value")});
@@ -1292,6 +1307,8 @@ void MainWindow::buildDocks()
         {"Step height", &engine::PlayerSettings::stepHeight, 0, 2, 0.05, " m"},
         {"Max slope", &engine::PlayerSettings::maxSlopeDegrees, 0, 89, 1, " °"},
         {"Health", &engine::PlayerSettings::maxHealth, 1, 10000, 10, ""},
+        {"Radiation damage", &engine::PlayerSettings::radiationDamage, 0, 100, 0.1, " HP/s per 100 rad"},
+        {"Radiation decay", &engine::PlayerSettings::radiationDecay, 0, 100, 0.1, " rad/s"},
     };
     auto* playerTitle = new QLabel(tr("<b>Player</b>"), levelPanel);
     levelForm->addRow(playerTitle);
@@ -1886,6 +1903,7 @@ void MainWindow::refreshProperties()
         entityEffect_->setText(effect);
         entityEffect_->setEnabled(particle);
     }
+    anomalyPanel_->setEntity(e && e->type == "anomaly" ? selectedEntity() : nullptr, &scene_);
     detailsIcon_->setPixmap(editorIcon(b ? "cube" : m ? "model" : e ? "person" : "select").pixmap(18, 18));
     updateDetailsVisibility();
     refreshTransformBox();
@@ -2227,6 +2245,20 @@ void MainWindow::openAsset(const QString& path, int type)
     }
 }
 
+void MainWindow::addAnomaly(int kind)
+{
+    addEntity("anomaly");
+    if (engine::Entity* e = selectedEntity(); e && e->type == "anomaly") {
+        engine::setAnomalyKind(*e, static_cast<engine::AnomalyKind>(kind));
+        const std::string base = engine::anomalyKindInfo(static_cast<engine::AnomalyKind>(kind)).id;
+        e->name = engine::uniqueNodeName(scene_, std::string(1, static_cast<char>(std::toupper(base[0]))) + base.substr(1) + " " +
+                                                     std::to_string(scene_.entities.size()));
+        refreshOutliner();
+        refreshProperties();
+        markDirty();
+    }
+}
+
 void MainWindow::addEntity(const QString& type)
 {
     const auto& cam = viewport_->camera();
@@ -2240,6 +2272,8 @@ void MainWindow::addEntity(const QString& type)
         e.color = {0.25f, 0.55f, 0.95f};
         e.properties["sound"] = "sounds/ambient/geiger.sound";
     }
+    if (type == "anomaly")
+        engine::initAnomalyEntity(e, engine::AnomalyKind::Crusher);
     if (type == "particle") {
         e.size = {0.4f, 0.4f, 0.4f};
         e.color = {0.95f, 0.55f, 0.2f};
@@ -2265,7 +2299,7 @@ void MainWindow::addEntity(const QString& type)
             else
                 e.modelPath.clear();
         }
-    } else {
+    } else if (type != "sound" && type != "particle" && type != "anomaly") {
         e.size = {0.5f, 0.5f, 0.5f};
         e.color = {0.3f, 0.6f, 0.9f};
     }
@@ -3494,6 +3528,8 @@ void MainWindow::updateDetailsVisibility()
             relevant = e != nullptr && e->type == "sound";
         if (d.form == effectForm_)
             relevant = e != nullptr && e->type == "particle";
+        if (d.form == anomalyForm_)
+            relevant = e != nullptr && e->type == "anomaly";
         bool shown = relevant && (category == "All" || category == d.category);
         // Search: rows whose label contains every word (a matching section title shows all rows).
         const bool titleMatch = std::all_of(words.begin(), words.end(), [&](const QString& w) { return d.section->title().toLower().contains(w); });
@@ -3650,8 +3686,16 @@ void MainWindow::buildModePanel()
         auto* entity = toolButton("select", tr("Empty entity"), page);
         auto* sound = toolButton("sound", tr("Sound source / ambient zone"), page);
         auto* particles = toolButton("particles", tr("Particle effect (fire, smoke, dust)"), page);
+        auto* anomaly = toolButton("particles", tr("Anomaly (gravity, electric, fire, acid, rift, radiation)"), page);
+        {
+            auto* menu = new QMenu(anomaly);
+            for (int k = 0; k < static_cast<int>(engine::AnomalyKind::Count); ++k)
+                menu->addAction(QString::fromUtf8(engine::anomalyKindInfo(static_cast<engine::AnomalyKind>(k)).name), this,
+                                [this, k] { addAnomaly(k); });
+            anomaly->setMenu(menu);
+        }
         auto* model = toolButton("model", tr("glTF model..."), page);
-        for (QPushButton* b : {box, enemy, entity, sound, particles, model})
+        for (QPushButton* b : {box, enemy, entity, sound, particles, anomaly, model})
             layout->addWidget(b);
         auto* hint = new QLabel(tr("Or drag a model from the Content Browser into the view: it lands where you drop it."), page);
         hint->setObjectName("dim");

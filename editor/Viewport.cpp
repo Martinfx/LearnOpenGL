@@ -1,5 +1,7 @@
 #include "Viewport.h"
 
+#include <engine/Anomaly.h>
+
 #include <filesystem>
 
 #include <engine/Geometry.h>
@@ -53,7 +55,8 @@ Viewport::Viewport(engine::Scene* scene, QWidget* parent)
     // Repaint ~30 times a second while the level has something animated (effects, rain).
     connect(&particleTimer_, &QTimer::timeout, this, [this] {
         if (isVisible() && (!liveEffects_.empty() || scene_->environment.rain > 0.0f ||
-                            std::any_of(scene_->entities.begin(), scene_->entities.end(), [](const engine::Entity& e) { return e.type == "particle"; })))
+                            std::any_of(scene_->entities.begin(), scene_->entities.end(),
+                                        [](const engine::Entity& e) { return e.type == "particle" || e.type == "anomaly"; })))
             update();
     });
     particleTimer_.start(33);
@@ -158,19 +161,75 @@ void Viewport::setShowReference(bool on)
     update();
 }
 
+// Anomaly fields: rings at the bottom and top of the field (and the vent's fire
+// column), in the anomaly's color; in the perspective view also its idle warp.
+void Viewport::addAnomalyHelpers(engine::RenderView& view, bool warp) const
+{
+    for (std::size_t i = 0; i < scene_->entities.size(); ++i) {
+        const engine::Entity& e = scene_->entities[i];
+        if (e.type != "anomaly")
+            continue;
+        const engine::AnomalySettings cfg = engine::anomalySettings(e);
+        const float r = std::max(0.1f, std::max(e.size.x, e.size.z) * 0.5f);
+        const bool selected = selected_ == scene_->firstEntity() + static_cast<int>(i);
+        const glm::vec3 color = selected ? glm::vec3(1.0f, 0.85f, 0.3f) : e.color;
+        const int n = std::clamp(static_cast<int>(r * 12.0f), 16, 96);
+        const float s = std::clamp(r * 0.025f, 0.04f, 0.15f);
+        std::vector<float> heights = {0.02f, e.size.y};
+        if (cfg.kind == engine::AnomalyKind::Vent)
+            heights.push_back(cfg.get("column"));
+        for (float h : heights)
+            for (int k = 0; k < n; ++k) {
+                const float a = 6.2831853f * static_cast<float>(k) / static_cast<float>(n);
+                view.worldBoxes.push_back({e.position + glm::vec3(std::cos(a) * r, h, std::sin(a) * r), glm::vec3(s), color, true});
+            }
+        if (cfg.kind == engine::AnomalyKind::Crusher) // core
+            for (int k = 0; k < 16; ++k) {
+                const float a = 6.2831853f * static_cast<float>(k) / 16.0f, c = cfg.get("core");
+                view.worldBoxes.push_back({e.position + glm::vec3(std::cos(a) * c, 0.05f, std::sin(a) * c), glm::vec3(s * 0.8f),
+                                           glm::vec3(1.0f, 0.3f, 0.3f), true});
+            }
+        if (!warp)
+            continue;
+        engine::ScreenDistortion d;
+        d.position = e.position + glm::vec3(0.0f, std::min(1.0f, e.size.y * 0.5f), 0.0f);
+        d.radius = r;
+        switch (cfg.kind) {
+        case engine::AnomalyKind::Crusher: d.strength = 0.45f; d.lens = true; break;
+        case engine::AnomalyKind::Rift: d.strength = 0.55f; d.lens = true; break;
+        case engine::AnomalyKind::Vent:
+            d.strength = 0.3f;
+            d.radius = std::max(r, 1.2f) * 1.3f;
+            d.position = e.position + glm::vec3(0.0f, d.radius * 0.8f, 0.0f);
+            break;
+        case engine::AnomalyKind::Acid: d.strength = 0.12f; break;
+        default: d.strength = 0.0f; break;
+        }
+        if (d.strength > 0.0f)
+            view.distortions.push_back(d);
+    }
+}
+
 void Viewport::syncParticles(float dt)
 {
     // Match the running effects to the level's "particle" entities (added, moved, removed, effect changed).
     std::vector<LiveEffect> next;
     for (const engine::Entity& e : scene_->entities) {
-        if (e.type != "particle")
+        if (e.type != "particle" && e.type != "anomaly")
             continue;
-        const auto it = e.properties.find("effect");
-        if (it == e.properties.end() || it->second.empty())
+        std::string effectRel;
+        glm::mat3 yaw(glm::rotate(glm::mat4(1.0f), glm::radians(-e.yawDegrees), glm::vec3(0.0f, 1.0f, 0.0f)));
+        if (e.type == "anomaly") { // idle look of the anomaly, stretched over its field like in the game
+            effectRel = engine::anomalySettings(e).idleEffect;
+            const float r = std::max(0.1f, std::max(e.size.x, e.size.z) * 0.5f);
+            yaw = glm::mat3(glm::vec3(r, 0, 0), glm::vec3(0, 1, 0), glm::vec3(0, 0, r));
+        } else if (const auto it = e.properties.find("effect"); it != e.properties.end()) {
+            effectRel = it->second;
+        }
+        if (effectRel.empty())
             continue;
         const std::filesystem::path file =
-            std::filesystem::path(QDir(assetRoot()).absoluteFilePath(QString::fromStdString(it->second)).toStdU16String()).lexically_normal();
-        const glm::mat3 yaw(glm::rotate(glm::mat4(1.0f), glm::radians(-e.yawDegrees), glm::vec3(0.0f, 1.0f, 0.0f)));
+            std::filesystem::path(QDir(assetRoot()).absoluteFilePath(QString::fromStdString(effectRel)).toStdU16String()).lexically_normal();
         auto live = std::find_if(liveEffects_.begin(), liveEffects_.end(),
                                  [&](const LiveEffect& l) { return l.entity == e.name && l.file == file; });
         // A finished one-shot effect (an impact) starts again, so it can be seen while placing it.
@@ -181,6 +240,8 @@ void Viewport::syncParticles(float dt)
         } else {
             auto fx = engine::loadParticleEffect(file);
             next.push_back({e.name, file, fx ? particles_.spawn(fx, e.position, yaw) : 0});
+            if (e.type == "anomaly" && next.back().handle)
+                particles_.setRateScale(next.back().handle, std::clamp(yaw[0][0] * yaw[0][0], 0.5f, 12.0f));
         }
     }
     for (const LiveEffect& l : liveEffects_)
@@ -262,6 +323,7 @@ void Viewport::paintGL()
         }
         if (pane.mode == ViewMode::Perspective && shading_ != engine::Shading::Wireframe)
             particles_.appendSprites(view.cameraPosition, glm::mat3(glm::inverse(view.view)), view.sprites);
+        addAnomalyHelpers(view, pane.mode == ViewMode::Perspective && shading_ != engine::Shading::Wireframe);
         renderer_.render(*scene_, view);
     }
     // Report driver errors instead of silently showing a broken view.

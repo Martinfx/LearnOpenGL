@@ -1,0 +1,11 @@
+# Heat vent eruption: fire column roar
+file "vent_burst.wav"
+volume 1
+pitch 0.95 1.05
+distance 4 90
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group sfx
+max_instances 4

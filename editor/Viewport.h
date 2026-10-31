@@ -104,6 +104,7 @@ private:
         engine::ParticleSystem::Handle handle = 0;
     };
     std::vector<LiveEffect> liveEffects_;
+    void addAnomalyHelpers(engine::RenderView& view, bool warp) const;
     engine::ParticleSystem::Handle rain_ = 0;
     QTimer particleTimer_;
     QElapsedTimer particleClock_;

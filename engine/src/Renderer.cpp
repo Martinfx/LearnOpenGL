@@ -931,7 +931,7 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         }
         if (!e.alive)
             continue;
-        if (e.type == "sound" || e.type == "particle") { // marker cube; a sound zone itself is the entity size
+        if (e.type == "sound" || e.type == "particle" || e.type == "anomaly") { // marker cube; a sound zone itself is the entity size
             const Aabb m = e.markerBounds();
             drawBox((m.min + m.max) * 0.5f, m.max - m.min, e.color, highlight, 0.0f);
             continue;
@@ -1050,6 +1050,7 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     targetY_ = view.viewportY;
     env_ = &scene.environment;
     time_ = view.time;
+    collectDistortions(view);
     keptAlive_.clear();
     updateModelGrid(scene);
     pollOcclusion();
@@ -1810,6 +1811,7 @@ void Renderer::renderOverlay(const RenderView& view, const OverlayPass& pass)
 {
     // First-person layer: own depth range and projection, so the weapon never clips into walls.
     beginPass(PassOverlay);
+    overlayDrawn_ = true;
     glBindFramebuffer(GL_FRAMEBUFFER, hdrFbo_);
     glViewport(0, 0, width_, height_);
     glEnable(GL_DEPTH_TEST);
@@ -1866,6 +1868,35 @@ void Renderer::renderBloom()
     glDisable(GL_BLEND);
 }
 
+void Renderer::collectDistortions(const RenderView& view)
+{
+    distortions_.clear();
+    overlayDrawn_ = false;
+    aspect_ = static_cast<float>(std::max(1, view.viewportWidth)) / static_cast<float>(std::max(1, view.viewportHeight));
+    const glm::mat4 viewProj = view.projection * view.view;
+    struct Candidate {
+        glm::vec4 data;
+        float weight;
+    };
+    std::vector<Candidate> found;
+    for (const ScreenDistortion& d : view.distortions) {
+        if (d.strength <= 0.0f || d.radius <= 0.0f)
+            continue;
+        const glm::vec4 clip = viewProj * glm::vec4(d.position, 1.0f);
+        if (clip.w <= 0.05f)
+            continue;
+        const glm::vec2 ndc = glm::vec2(clip) / clip.w;
+        const float r = d.radius * view.projection[1][1] / clip.w; // NDC height units
+        if (std::abs(ndc.x) - r * 2.0f > 1.0f || std::abs(ndc.y) - r * 2.0f > 1.0f || r < 0.002f)
+            continue;
+        const float rUv = std::min(r * 0.5f, 1.5f);
+        found.push_back({glm::vec4(ndc * 0.5f + 0.5f, rUv, d.lens ? -d.strength : d.strength), d.strength * rUv});
+    }
+    std::sort(found.begin(), found.end(), [](const Candidate& a, const Candidate& b) { return a.weight > b.weight; });
+    for (std::size_t i = 0; i < found.size() && i < 8; ++i)
+        distortions_.push_back(found[i].data);
+}
+
 void Renderer::present()
 {
     if (!pendingPresent_)
@@ -1897,8 +1928,14 @@ void Renderer::present()
     glUniform1f(post.loc("uGrain"), e.grain);
     glUniform1f(post.loc("uTime"), time_);
     glUniform1i(post.loc("uLumaAlpha"), fxaa ? 1 : 0);
+    glUniform1i(post.loc("uDistortCount"), static_cast<int>(distortions_.size()));
+    if (!distortions_.empty())
+        glUniform4fv(post.loc("uDistort"), static_cast<int>(distortions_.size()), glm::value_ptr(distortions_[0]));
+    glUniform1f(post.loc("uAspect"), aspect_);
+    glUniform1i(post.loc("uDistortMask"), overlayDrawn_ ? 1 : 0);
     glBindTextureUnit(0, hdrColor_);
     glBindTextureUnit(1, bloomTex_.empty() ? whiteTex_ : bloomTex_[0]);
+    glBindTextureUnit(2, depthTex_);
     glDrawArrays(GL_TRIANGLES, 0, 3);
     if (fxaa) {
         glBindFramebuffer(GL_FRAMEBUFFER, static_cast<unsigned>(targetFbo_));

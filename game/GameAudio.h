@@ -21,6 +21,8 @@ public:
     // A path relative to assets/ (Lua scripts, entity properties).
     void playAsset(const std::string& relative, const glm::vec3* position, float volume);
     void preload(const std::filesystem::path& sound);
+    // Like play/play2D (position null = 2D) but returns the voice, e.g. to stop a loop later; 0 = silent.
+    engine::AudioSystem::Handle start(const std::filesystem::path& sound, const glm::vec3* position, float volume = 1.0f);
 
     // Starts the loops of the level's "sound" entities.
     void startLevel(const engine::Scene& scene);

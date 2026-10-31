@@ -1,0 +1,11 @@
+# Gravity trap squeezing
+file "crusher_charge.wav"
+volume 0.9
+pitch 1 1
+distance 3 45
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group sfx
+max_instances 4

@@ -2,6 +2,8 @@
 
 #include <glm/geometric.hpp>
 
+#include <algorithm>
+
 namespace engine {
 
 void PlayerController::spawn(PhysicsWorld& world, glm::vec3 feet)
@@ -18,8 +20,22 @@ void PlayerController::spawn(PhysicsWorld& world, glm::vec3 feet)
 
 void PlayerController::respawn()
 {
-    body_.teleport(spawnPoint_);
-    feet_ = previousFeet_ = spawnPoint_;
+    teleport(spawnPoint_);
+}
+
+void PlayerController::teleport(glm::vec3 feet)
+{
+    body_.teleport(feet);
+    feet_ = previousFeet_ = feet;
+    knock_ = drift_ = glm::vec3(0.0f);
+    launch_ = 0.0f;
+}
+
+void PlayerController::push(glm::vec3 velocityChange)
+{
+    knock_ += glm::vec3(velocityChange.x, 0.0f, velocityChange.z);
+    launch_ += velocityChange.y;
+    freshPush_ = true;
 }
 
 void PlayerController::fixedUpdate(const InputState& input, const FpsCamera& camera, float dt)
@@ -35,14 +51,26 @@ void PlayerController::fixedUpdate(const InputState& input, const FpsCamera& cam
     if (input.isDown(Action::MoveLeft))    wish -= camera.right();
     if (glm::dot(wish, wish) > 0.0f)
         wish = glm::normalize(wish);
-    const float speed = input.isDown(Action::Sprint) ? settings.sprintSpeed : settings.walkSpeed;
+    const float speed = (input.isDown(Action::Sprint) ? settings.sprintSpeed : settings.walkSpeed) * (1.0f - std::clamp(slow_, 0.0f, 1.0f));
 
     const bool jumpDown = input.isDown(Action::Jump);
     const bool jumpPressed = jumpDown && !jumpHeld_;
     jumpHeld_ = jumpDown;
 
-    body_.step(wish * speed, jumpPressed ? settings.jumpSpeed : 0.0f, settings.gravity, settings.airControl, dt);
+    // Outside forces: the push and pull go into the wished velocity (so walking can
+    // fight a pull but the push carries on in the air); the vertical part is one impulse.
+    glm::vec3 desired = wish * speed + knock_ + glm::vec3(drift_.x, 0.0f, drift_.z);
+    glm::vec3 impulse(0.0f, launch_, 0.0f);
+    if (drift_.y > 0.0f) // lift: hold against gravity
+        impulse.y += (drift_.y - std::max(0.0f, body_.velocity().y)) * std::min(1.0f, 8.0f * dt) + settings.gravity * dt;
+    const bool pushed = freshPush_; // the push step takes the full velocity, later steps keep it as momentum
+    freshPush_ = false;
+    body_.step(desired, jumpPressed ? settings.jumpSpeed : 0.0f, settings.gravity, pushed ? 1.0f : settings.airControl, dt, impulse);
     feet_ = body_.feet();
+    launch_ = 0.0f;
+    drift_ = glm::vec3(0.0f);
+    slow_ = 0.0f;
+    knock_ *= std::max(0.0f, 1.0f - 2.5f * dt);
 
     if (feet_.y < settings.killY)
         respawn();

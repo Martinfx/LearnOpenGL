@@ -1,0 +1,17 @@
+# Spatial rift, idle: a few pale violet motes drifting in the fold (the bend is a screen warp).
+emitter "Motes"
+blend additive
+lit 0
+rate 6
+max 40
+life 1.5 3
+shape sphere 0.8 0 0
+direction 0 1 0
+spread 180
+speed 0.05 0.2
+size 0.025 0.05
+color 0.8 0.65 1
+intensity 3
+color_key 0 1 1 1 0
+color_key 0.5 1 1 1 1
+color_key 1 1 1 1 0

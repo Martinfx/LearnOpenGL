@@ -1,0 +1,89 @@
+# Gravity trap (crusher), idle. Authored for a 1 m field; the game stretches x/z to the field radius.
+# Dust and grit lifted off the ground hover in the field; leaves circle down.
+emitter "Dust haze"
+texture "../textures/particles/smoke_8x8.png"
+flipbook 8 8 0 1
+lit 1
+rate 3
+max 40
+life 3 5
+shape disc 0.9 0 0
+direction 0 1 0
+spread 25
+speed 0.1 0.3
+gravity -0.01
+drag 0.4
+size 0.6 1.1
+size_key 0 0.5
+size_key 1 1.4
+color 0.42 0.38 0.32
+color_key 0 1 1 1 0
+color_key 0.3 1 1 1 0.4
+color_key 1 1 1 1 0
+rotation 0 360
+spin -40 40
+emitter "Vortex"
+texture "../textures/particles/debris_4x4.png"
+flipbook 4 4 0 1
+lit 1
+rate 14
+max 120
+life 2.5 4
+shape disc 1 0 0
+direction 0 1 0
+spread 30
+speed 0.2 0.6
+gravity -0.02
+drag 0.7
+attract 2.2 3.5
+size 0.05 0.12
+color 0.3 0.27 0.23
+color_key 0 1 1 1 0
+color_key 0.15 1 1 1 1
+color_key 0.85 1 1 1 1
+color_key 1 1 1 1 0
+rotation 0 360
+spin -300 300
+emitter "Dust swirl"
+texture "../textures/particles/smoke_8x8.png"
+flipbook 8 8 0 1
+lit 1
+rate 4
+max 40
+life 2 3
+shape disc 1 0 0
+direction 0 1 0
+spread 20
+speed 0.1 0.3
+drag 0.6
+attract 1.5 2.5
+size 0.4 0.7
+size_key 0 0.5
+size_key 1 1.2
+color 0.45 0.4 0.33
+color_key 0 1 1 1 0
+color_key 0.4 1 1 1 0.3
+color_key 1 1 1 1 0
+rotation 0 360
+spin -90 90
+emitter "Floating grit"
+texture "../textures/particles/debris_4x4.png"
+flipbook 4 4 0 1
+lit 1
+rate 4
+max 60
+life 2.5 4
+shape disc 0.8 0 0
+direction 0 1 0
+spread 10
+speed 0.4 0.9
+gravity 0.02
+drag 0.9
+size 0.03 0.07
+color 0.35 0.32 0.28
+color_key 0 1 1 1 0
+color_key 0.15 1 1 1 1
+color_key 0.85 1 1 1 1
+color_key 1 1 1 1 0
+rotation 0 360
+spin -200 200

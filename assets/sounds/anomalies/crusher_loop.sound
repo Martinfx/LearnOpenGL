@@ -1,0 +1,11 @@
+# Gravity trap idle: pulsing sub hum and creaking
+file "crusher_loop.ogg"
+volume 0.8
+pitch 1 1
+distance 3 35
+rolloff 1
+loop 1
+stream 1
+spatial 1
+group ambient
+max_instances 8

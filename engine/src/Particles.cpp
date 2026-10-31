@@ -149,6 +149,7 @@ bool loadParticleFile(ParticleEffect& effect, const std::filesystem::path& file,
         else if (key == "gravity") ok = static_cast<bool>(ls >> e->gravity);
         else if (key == "drag") ok = static_cast<bool>(ls >> e->drag);
         else if (key == "wind") ok = static_cast<bool>(ls >> e->wind.x >> e->wind.y >> e->wind.z);
+        else if (key == "attract") ok = static_cast<bool>(ls >> e->attract >> e->orbit);
         else if (key == "world_space") ok = static_cast<bool>(ls >> e->worldSpace);
         else if (key == "life") ok = static_cast<bool>(ls >> e->lifeMin >> e->lifeMax);
         else if (key == "size") ok = static_cast<bool>(ls >> e->sizeMin >> e->sizeMax);
@@ -214,6 +215,8 @@ bool saveParticleFile(const ParticleEffect& effect, const std::filesystem::path&
         out << "gravity " << e.gravity << '\n';
         out << "drag " << e.drag << '\n';
         out << "wind " << e.wind.x << ' ' << e.wind.y << ' ' << e.wind.z << '\n';
+        if (e.attract != 0.0f || e.orbit != 0.0f)
+            out << "attract " << e.attract << ' ' << e.orbit << '\n';
         out << "world_space " << e.worldSpace << '\n';
         out << "life " << e.lifeMin << ' ' << e.lifeMax << '\n';
         out << "size " << e.sizeMin << ' ' << e.sizeMax << '\n';
@@ -436,9 +439,20 @@ void ParticleSystem::update(float dt)
             // Move and age.
             const glm::vec3 accel = glm::vec3(0.0f, -9.81f * e.gravity, 0.0f);
             const float damp = std::exp(-std::max(0.0f, e.drag) * dt);
+            const bool swirl = e.attract != 0.0f || e.orbit != 0.0f;
+            const glm::vec3 axis = e.worldSpace ? inst.position : glm::vec3(0.0f);
             for (Particle& p : st.particles) {
                 p.age += dt;
-                p.velocity = p.velocity * damp + accel * dt;
+                glm::vec3 a = accel;
+                if (swirl) { // pull toward / swirl around the effect's vertical axis
+                    glm::vec3 in(axis.x - p.position.x, 0.0f, axis.z - p.position.z);
+                    const float len = std::sqrt(in.x * in.x + in.z * in.z);
+                    if (len > 0.02f) {
+                        in /= len;
+                        a += in * e.attract * std::min(1.0f, len * 4.0f) + glm::vec3(in.z, 0.0f, -in.x) * e.orbit;
+                    }
+                }
+                p.velocity = p.velocity * damp + a * dt;
                 p.position += (p.velocity + e.wind) * dt;
                 p.rotation += p.spin * dt;
             }

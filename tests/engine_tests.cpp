@@ -2,6 +2,7 @@
 #include <engine/Log.h>
 #include <set>
 #include <engine/Assert.h>
+#include <engine/Anomaly.h>
 #include <engine/Audio.h>
 #include <engine/NavMesh.h>
 #include <engine/Surfaces.h>
@@ -34,6 +35,7 @@
 #include <functional>
 #include <string>
 #include <vector>
+#include <map>
 
 namespace {
 int failures = 0;
@@ -1369,6 +1371,193 @@ void testAudio()
     audio.shutdown();
 }
 
+// ------------------------------------------------------------------ anomalies
+
+engine::Scene anomalyScene(engine::AnomalyKind kind, std::map<std::string, std::string> props = {})
+{
+    engine::Scene s;
+    engine::Entity e;
+    engine::initAnomalyEntity(e, kind);
+    e.name = "A";
+    e.position = {0, 0, 0};
+    for (auto& [k, v] : props)
+        e.properties[k] = v;
+    s.entities.push_back(e);
+    return s;
+}
+
+// Runs the field for `seconds` with one body that follows the influences like a simple point.
+struct AnomalyRun {
+    float damage = 0.0f, radiation = 0.0f;
+    bool teleported = false, burst = false, charged = false;
+    glm::vec3 lastDrift{0.0f}, impulse{0.0f}, feet{0.0f}, teleportTo{0.0f};
+};
+AnomalyRun runAnomaly(engine::Scene& s, glm::vec3 feet, float seconds, bool small = false, bool move = true)
+{
+    engine::AnomalyField field;
+    field.build(s);
+    AnomalyRun r;
+    std::vector<engine::AnomalyBody> bodies(1);
+    std::vector<engine::AnomalyInfluence> out;
+    std::vector<engine::AnomalyEvent> events;
+    const float dt = 1.0f / 60.0f;
+    for (float t = 0.0f; t < seconds; t += dt) {
+        bodies[0] = {feet, small ? 0.05f : 1.8f, {}, small};
+        events.clear();
+        field.step(dt, bodies, out, events);
+        const engine::AnomalyInfluence& in = out[0];
+        r.damage += in.damage;
+        r.radiation = std::max(r.radiation, in.radiation);
+        if (glm::dot(in.drift, in.drift) > 0.0f)
+            r.lastDrift = in.drift;
+        r.impulse += in.impulse;
+        if (in.teleport) {
+            r.teleported = true;
+            r.teleportTo = in.teleportTo;
+            feet = in.teleportTo;
+        }
+        if (move)
+            feet += glm::vec3(in.drift.x, 0.0f, in.drift.z) * dt;
+        for (const auto& ev : events) {
+            r.burst = r.burst || ev.type == engine::AnomalyEvent::Burst;
+            r.charged = r.charged || ev.type == engine::AnomalyEvent::Charge;
+        }
+    }
+    r.feet = feet;
+    return r;
+}
+
+void testAnomalies()
+{
+    using K = engine::AnomalyKind;
+    // Kinds and their parameters round-trip through the level file.
+    {
+        auto s = anomalyScene(K::Vent, {{"period", "3.5"}});
+        const auto file = std::filesystem::temp_directory_path() / "anomaly_roundtrip.level";
+        check(engine::saveScene(s, file), "anomaly level saves");
+        engine::Scene loaded;
+        check(engine::loadScene(loaded, file), "anomaly level loads");
+        check(loaded.entities.size() == 1 && loaded.entities[0].type == "anomaly" && loaded.entities[0].helper(),
+              "anomaly entity is a helper (not hit by bullets, not drawn)");
+        const auto cfg = engine::anomalySettings(loaded.entities[0]);
+        check(cfg.kind == K::Vent && std::abs(cfg.get("period") - 3.5f) < 1e-4f && std::abs(cfg.get("burst") - 1.8f) < 1e-4f,
+              "vent kind, edited period and default burst time come back");
+        check(engine::anomalyKindFromId("rift") == K::Rift && engine::anomalyParams(K::Crusher).size() > 3, "kind table");
+    }
+    // Crusher: pulls toward the core, squeezes, crushes and flings outward.
+    {
+        auto s = anomalyScene(K::Crusher); // radius 2.5, core 0.7
+        auto r = runAnomaly(s, {2.0f, 0.0f, 0.0f}, 0.1f, false, false);
+        check(r.lastDrift.x < -1.0f, "crusher pulls toward its middle");
+        r = runAnomaly(s, {2.0f, 0.0f, 0.0f}, 3.0f);
+        check(r.charged && r.burst, "crusher charges and crushes once something reaches the core");
+        check(r.damage >= 60.0f, "crusher crush hurts");
+        check(glm::length(r.impulse) > 5.0f && r.impulse.y > 0.0f, "crusher flings up and away");
+        r = runAnomaly(s, {6.0f, 0.0f, 0.0f}, 2.0f);
+        check(r.damage == 0.0f && !r.burst, "crusher leaves things outside alone");
+        r = runAnomaly(s, {0.3f, 0.0f, 0.0f}, 2.0f, true);
+        check(r.burst && r.damage == 0.0f, "a bolt sets the crusher off without being 'hurt'");
+    }
+    // Discharge: strikes after the delay, then recharges.
+    {
+        auto s = anomalyScene(K::Discharge, {{"idle", "0"}});
+        auto r = runAnomaly(s, {0.5f, 0.0f, 0.0f}, 1.0f);
+        check(r.burst && std::abs(r.damage - 35.0f) < 0.01f, "one lightning strike in the first second (35 HP)");
+        r = runAnomaly(s, {0.5f, 0.0f, 0.0f}, 3.5f);
+        check(r.damage > 69.0f && r.damage < 106.0f, "it strikes again after recharging");
+    }
+    // Vent: erupts on its cycle and when stepped on; burns while active.
+    {
+        auto s = anomalyScene(K::Vent, {{"on_step", "1"}, {"period", "0"}});
+        auto r = runAnomaly(s, {0.2f, 0.0f, 0.0f}, 2.5f);
+        check(r.burst && r.damage > 30.0f && r.damage < 80.0f, "stepping on the vent sets the fire column off (about 1.8 s x 40 HP/s)");
+        auto quiet = anomalyScene(K::Vent, {{"on_step", "0"}, {"period", "0"}});
+        r = runAnomaly(quiet, {0.2f, 0.0f, 0.0f}, 3.0f);
+        check(!r.burst && r.damage == 0.0f, "a vent without cycle or step trigger stays quiet");
+    }
+    // Acid: burns and slows while wading; bolts dissolve.
+    {
+        auto s = anomalyScene(K::Acid);
+        engine::AnomalyField field;
+        field.build(s);
+        std::vector<engine::AnomalyInfluence> out;
+        std::vector<engine::AnomalyEvent> events;
+        field.step(1.0f, {{{1.0f, 0.0f, 0.0f}, 1.8f, {}, false}, {{1.0f, 1.5f, 0.0f}, 1.8f, {}, false}}, out, events);
+        check(std::abs(out[0].damage - 8.0f) < 0.01f && out[0].slow > 0.4f, "acid burns 8 HP/s and slows");
+        check(out[1].damage == 0.0f, "feet above the sludge are safe");
+    }
+    // Rift: throws to its linked entity, not back into itself.
+    {
+        auto s = anomalyScene(K::Rift, {{"link", "Exit"}});
+        engine::Entity exit;
+        exit.name = "Exit";
+        exit.position = {30.0f, 2.0f, -5.0f};
+        s.entities.push_back(exit);
+        auto r = runAnomaly(s, {0.2f, 0.0f, 0.0f}, 0.2f);
+        check(r.teleported && glm::distance(glm::vec2(r.teleportTo.x, r.teleportTo.z), glm::vec2(30.0f, -5.0f)) < 2.0f,
+              "rift throws you to its exit");
+        auto lone = anomalyScene(K::Rift, {{"jump", "12"}});
+        r = runAnomaly(lone, {0.2f, 0.0f, 0.0f}, 0.2f);
+        check(r.teleported && glm::length(glm::vec2(r.teleportTo.x, r.teleportTo.z)) > 1.25f + 1.0f, "unlinked rift throws you out of it");
+    }
+    // Radiation: hotspot fades out to the radius, areas are even inside the box.
+    {
+        auto s = anomalyScene(K::Radiation, {{"intensity", "40"}}); // 8 m wide: radius 4
+        engine::AnomalyField field;
+        field.build(s);
+        check(field.radiationAt({0, 1, 0}) > 35.0f, "hotspot is strongest in the middle");
+        check(field.radiationAt({3, 1, 0}) < field.radiationAt({1, 1, 0}), "and weaker toward the edge");
+        check(field.radiationAt({5, 1, 0}) == 0.0f, "nothing beyond its radius");
+        auto area = anomalyScene(K::Radiation, {{"area", "1"}, {"intensity", "5"}, {"fade", "2"}});
+        engine::AnomalyField af;
+        af.build(area);
+        check(std::abs(af.radiationAt({3.5f, 1, 3.5f}) - 5.0f) < 0.01f && af.radiationAt({5.0f, 1, 0}) > 0.0f &&
+                  af.radiationAt({7.0f, 1, 0}) == 0.0f,
+              "radiation area: even inside, fading over 2 m outside");
+        check(field.detectorSignal({0, 1, 0}) == 0.0f, "the anomaly detector ignores radiation");
+    }
+    // Detector: stronger closer to the field edge.
+    {
+        auto s = anomalyScene(K::Discharge); // radius 1.75, detect 5
+        engine::AnomalyField field;
+        field.build(s);
+        const float near = field.detectorSignal({3.0f, 1.0f, 0.0f}), far = field.detectorSignal({6.0f, 1.0f, 0.0f});
+        check(near > far && far > 0.0f && field.detectorSignal({8.0f, 1.0f, 0.0f}) == 0.0f, "detector signal grows toward the field");
+    }
+    // Player: a push flings, drift pulls, slow slows.
+    {
+        auto s = flatFloor();
+        engine::PhysicsWorld world;
+        world.setLevel(s);
+        engine::PlayerController p;
+        p.spawn(world, {0, 0, 0});
+        simulate(p, {}, 0.3f);
+        p.push({6.0f, 5.0f, 0.0f});
+        float peak = 0.0f;
+        engine::FpsCamera cam;
+        for (int i = 0; i < 60; ++i) {
+            p.fixedUpdate({}, cam, 1.0f / 60.0f);
+            peak = std::max(peak, p.feet().y);
+        }
+        check(peak > 0.4f && p.feet().x > 1.5f, "a push throws the player up and sideways");
+        const float x = p.feet().x;
+        for (int i = 0; i < 60; ++i) {
+            p.drift({-3.0f, 0.0f, 0.0f});
+            p.fixedUpdate({}, cam, 1.0f / 60.0f);
+        }
+        check(p.feet().x < x - 2.0f, "a drift pulls the player along");
+        const glm::vec3 start = p.feet();
+        engine::InputState in;
+        in.set(engine::Action::MoveForward, true);
+        for (int i = 0; i < 60; ++i) {
+            p.slow(0.5f);
+            p.fixedUpdate(in, cam, 1.0f / 60.0f);
+        }
+        const float walked = glm::length(glm::vec2(p.feet().x - start.x, p.feet().z - start.z));
+        check(walked > 2.0f && walked < 3.0f, "half the walking speed while slowed (5 m/s -> about 2.5 m in 1 s)");
+    }
+}
+
 int main()
 {
     // Hermetic cook cache for the tests.
@@ -1415,6 +1604,7 @@ int main()
     testLog();
     testEnsure();
     testSurfaces();
+    testAnomalies();
     std::printf(failures ? "%d test(s) failed\n" : "all tests passed\n", failures);
     return failures ? 1 : 0;
 }

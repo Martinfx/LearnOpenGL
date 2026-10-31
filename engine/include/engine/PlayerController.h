@@ -25,6 +25,15 @@ public:
     bool grounded() const { return body_.grounded(); }
     glm::vec3 velocity() const { return body_.velocity(); }
 
+    // Outside forces (anomalies, explosions). push(): a one-off velocity change; its
+    // horizontal part wears off over a second or so. drift(): extra velocity for the
+    // next step only (a pull). slow(): 0..1 of the walking speed taken away next step.
+    void push(glm::vec3 velocityChange);
+    void drift(glm::vec3 velocity) { drift_ += velocity; }
+    void slow(float amount) { slow_ = amount; }
+    // Moves the player (keeps the spawn point).
+    void teleport(glm::vec3 feet);
+
     // Eye position blended between the last two simulation steps.
     glm::vec3 interpolatedEye(float alpha) const;
 
@@ -34,6 +43,11 @@ private:
     glm::vec3 feet_{0.0f};
     glm::vec3 previousFeet_{0.0f};
     bool jumpHeld_ = false;
+    glm::vec3 knock_{0.0f};   // horizontal push, decays
+    float launch_ = 0.0f;     // vertical push for the next step
+    glm::vec3 drift_{0.0f};
+    float slow_ = 0.0f;
+    bool freshPush_ = false;
 };
 
 } // namespace engine

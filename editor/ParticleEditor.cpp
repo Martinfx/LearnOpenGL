@@ -549,6 +549,10 @@ ParticleEditor::ParticleEditor(QWidget* parent) : QWidget(parent)
     form->addRow(tr("Drag"), drag_);
     wind_ = new Vec3Editor(-50, 50, 0.1, form_);
     form->addRow(tr("Wind m/s"), wind_);
+    attract_ = number(-100, 100, 0.5, 2, form_, tr("m/s² toward the effect's vertical axis; negative pushes away (vortex, anomaly pull)"));
+    form->addRow(tr("Attract"), attract_);
+    orbit_ = number(-100, 100, 0.5, 2, form_, tr("m/s² around the effect's vertical axis (swirl)"));
+    form->addRow(tr("Orbit"), orbit_);
     worldSpace_ = new QCheckBox(tr("World space (stays behind when the effect moves)"), form_);
     form->addRow(QString(), worldSpace_);
 
@@ -586,7 +590,7 @@ ParticleEditor::ParticleEditor(QWidget* parent) : QWidget(parent)
     connect(name_, &QLineEdit::editingFinished, this, changed);
     for (QSpinBox* s : {columns_, rows_, burst_, max_})
         connect(s, &QSpinBox::valueChanged, this, changed);
-    for (QDoubleSpinBox* s : {frameRate_, stretchFactor_, rate_, duration_, delay_, spread_, speedMin_, speedMax_, gravity_, drag_,
+    for (QDoubleSpinBox* s : {frameRate_, stretchFactor_, rate_, duration_, delay_, spread_, speedMin_, speedMax_, gravity_, drag_, attract_, orbit_,
                               lifeMin_, lifeMax_, sizeMin_, sizeMax_, intensity_, rotationMin_, rotationMax_, spinMin_, spinMax_})
         connect(s, &QDoubleSpinBox::valueChanged, this, changed);
     for (QCheckBox* c : {randomFrame_, lit_, stretch_, worldSpace_})
@@ -807,6 +811,8 @@ void ParticleEditor::showEmitter()
     speedMin_->setValue(e->speedMin);
     speedMax_->setValue(e->speedMax);
     gravity_->setValue(e->gravity);
+    attract_->setValue(e->attract);
+    orbit_->setValue(e->orbit);
     drag_->setValue(e->drag);
     wind_->setValue(e->wind);
     worldSpace_->setChecked(e->worldSpace);
@@ -853,6 +859,8 @@ void ParticleEditor::edited()
     e->speedMin = static_cast<float>(speedMin_->value());
     e->speedMax = static_cast<float>(std::max(speedMin_->value(), speedMax_->value()));
     e->gravity = static_cast<float>(gravity_->value());
+    e->attract = static_cast<float>(attract_->value());
+    e->orbit = static_cast<float>(orbit_->value());
     e->drag = static_cast<float>(drag_->value());
     e->wind = wind_->value();
     e->worldSpace = worldSpace_->isChecked();

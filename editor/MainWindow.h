@@ -146,6 +146,7 @@ private:
     bool assignMaterial(const QString& material, int object);
     void openAsset(const QString& path, int type);
     void addEntity(const QString& type);
+    void addAnomaly(int kind); // engine::AnomalyKind
     void browseScript();
     void browseCharacter();
     void refreshCharacter();
@@ -244,6 +245,8 @@ private:
     QWidget* characterRow_ = nullptr;
     SoundPicker* entitySound_ = nullptr;
     QFormLayout* effectForm_ = nullptr;          // entity type "particle"
+    QFormLayout* anomalyForm_ = nullptr;         // entity type "anomaly"
+    class AnomalyPanel* anomalyPanel_ = nullptr;
     QLineEdit* entityEffect_ = nullptr;          // its .particle (relative to the assets)      // entity type "sound": what plays
     QCheckBox* soundZoneCheck_ = nullptr;     // ambient zone filling the entity box
     QDoubleSpinBox* soundFadeSpin_ = nullptr; // zone fade-out distance

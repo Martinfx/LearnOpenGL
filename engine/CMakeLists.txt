@@ -1,6 +1,7 @@
 include(cmake_embed_shaders.cmake)
 add_library(engine STATIC
     src/Animation.cpp
+    src/Anomaly.cpp
     src/Audio.cpp
     src/Camera.cpp
     src/CpuFeatures.cpp

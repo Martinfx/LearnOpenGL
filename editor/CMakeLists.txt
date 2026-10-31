@@ -23,6 +23,7 @@ add_executable(fps_editor
     Vec3Editor.h
     Viewport.cpp
     WeaponPanel.cpp
+    AnomalyPanel.cpp
     SoundEditor.cpp
     SurfacesEditor.cpp
     ParticleEditor.cpp

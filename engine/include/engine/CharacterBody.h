@@ -26,7 +26,9 @@ public:
     bool valid() const;
 
     // One fixed step. desiredVelocity is horizontal (m/s); jumpSpeed > 0 jumps when grounded.
-    void step(glm::vec3 desiredVelocity, float jumpSpeed, float gravity, float airControl, float dt);
+    // `impulse` is a one-off velocity change (explosions, anomalies), applied on the ground and in the air.
+    void step(glm::vec3 desiredVelocity, float jumpSpeed, float gravity, float airControl, float dt,
+              glm::vec3 impulse = glm::vec3(0.0f));
     void teleport(glm::vec3 feet);
 
     glm::vec3 feet() const;

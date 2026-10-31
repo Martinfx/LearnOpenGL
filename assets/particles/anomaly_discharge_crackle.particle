@@ -1,0 +1,28 @@
+# Electric field arming / idle crackle: a short spray of sparks.
+emitter "Sparks"
+texture "../textures/particles/spark.png"
+blend additive
+lit 0
+stretch 1 0.05
+burst 16
+rate 0
+max 16
+life 0.08 0.25
+shape sphere 0.2 0 0
+direction 0 1 0
+spread 180
+speed 2 6
+size 0.008 0.014
+color 0.6 0.8 1
+intensity 12
+emitter "Glow"
+blend additive
+lit 0
+burst 1
+rate 0
+life 0.12 0.15
+size 0.5 0.6
+color 0.45 0.65 1
+intensity 4
+color_key 0 1 1 1 1
+color_key 1 1 1 1 0

@@ -1,0 +1,12 @@
+# Acid hiss and splash
+file "acid_burst_1.wav"
+file "acid_burst_2.wav"
+volume 0.8
+pitch 0.9 1.1
+distance 2 35
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group sfx
+max_instances 4

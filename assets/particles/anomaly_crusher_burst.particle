@@ -1,0 +1,41 @@
+# Gravity trap (crusher) crush: a ring of grit and dust thrown out.
+emitter "Debris"
+texture "../textures/particles/debris_4x4.png"
+flipbook 4 4 0 1
+lit 1
+burst 45
+rate 0
+max 45
+life 0.8 1.6
+shape sphere 0.3 0 0
+direction 0 1 0
+spread 80
+speed 4 10
+gravity 1
+drag 0.4
+size 0.04 0.1
+color 0.33 0.3 0.27
+rotation 0 360
+spin -500 500
+emitter "Dust ring"
+texture "../textures/particles/smoke_8x8.png"
+flipbook 8 8 0 1
+lit 1
+burst 18
+rate 0
+max 18
+life 1.2 2.2
+shape disc 0.4 0 0
+direction 0 1 0
+spread 85
+speed 2.5 5
+drag 2.5
+gravity -0.02
+size 0.8 1.4
+size_key 0 0.6
+size_key 1 2.4
+color 0.45 0.4 0.34
+color_key 0 1 1 1 0.6
+color_key 1 1 1 1 0
+rotation 0 360
+spin -60 60

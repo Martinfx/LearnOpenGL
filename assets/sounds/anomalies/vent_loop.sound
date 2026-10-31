@@ -1,0 +1,11 @@
+# Heat vent idle: hot air hiss and low rumble
+file "vent_loop.ogg"
+volume 0.55
+pitch 1 1
+distance 2 25
+rolloff 1
+loop 1
+stream 1
+spatial 1
+group ambient
+max_instances 8

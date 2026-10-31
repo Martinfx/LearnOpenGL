@@ -1,0 +1,11 @@
+# Throwing a bolt
+file "bolt_throw.wav"
+volume 0.5
+pitch 0.9 1.1
+distance 1 15
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group sfx
+max_instances 4
