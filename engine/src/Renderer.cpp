@@ -1707,6 +1707,14 @@ void Renderer::drawSprites(const std::vector<SpriteBatch>& batches, const glm::m
         glUniform1i(p.loc("uSpriteDecal"), b.decal ? 1 : 0);
         glUniform1i(p.loc("uSpriteAdditive"), b.blend == SpriteBlend::Additive ? 1 : 0);
         glUniform1f(p.loc("uDecalLift"), b.decal ? 0.004f : 0.0f);
+        // Decals lie on surfaces: a depth bias that grows with the slope keeps them in front at
+        // grazing angles and at distance, where a fixed lift loses to depth precision (speckles).
+        if (b.decal) {
+            glEnable(GL_POLYGON_OFFSET_FILL);
+            glPolygonOffset(-2.0f, -16.0f);
+        } else {
+            glDisable(GL_POLYGON_OFFSET_FILL);
+        }
         glUniform1i(p.loc("uSpriteBase"), bases[i]);
         if (b.blend == SpriteBlend::Additive)
             glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_ZERO, GL_ONE);
@@ -1716,6 +1724,7 @@ void Renderer::drawSprites(const std::vector<SpriteBatch>& batches, const glm::m
         ++drawCalls_;
     }
     ignoreUploadBudget_ = budget;
+    glDisable(GL_POLYGON_OFFSET_FILL);
     glDisable(GL_BLEND);
     glDepthMask(GL_TRUE);
     glDepthFunc(GL_LESS);

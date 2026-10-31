@@ -21,7 +21,7 @@ namespace engine {
 namespace {
 
 constexpr std::uint32_t kMagic = 0x58455443; // "CTEX"
-constexpr std::uint32_t kVersion = 1;        // bump when cooking changes (invalidates caches)
+constexpr std::uint32_t kVersion = 2;        // bump when cooking changes (invalidates caches)
 
 struct FileHeader {
     std::uint32_t magic;
@@ -90,12 +90,19 @@ std::vector<std::uint8_t> halve(const std::vector<std::uint8_t>& src, int w, int
                     const float len = std::sqrt(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]);
                     for (int k = 0; k < 3; ++k)
                         d[k] = static_cast<std::uint8_t>(std::clamp((len > 1e-6f ? n[k] / len : (k == 2 ? 1.0f : 0.0f)) * 127.5f + 127.5f, 0.0f, 255.0f));
-                } else if (srgb) {
-                    for (int k = 0; k < 3; ++k)
-                        d[k] = linearToSrgb8((lin[p[0][k]] + lin[p[1][k]] + lin[p[2][k]] + lin[p[3][k]]) * 0.25f);
                 } else {
-                    for (int k = 0; k < 3; ++k)
-                        d[k] = static_cast<std::uint8_t>((p[0][k] + p[1][k] + p[2][k] + p[3][k] + 2) / 4);
+                    // Colour weighted by alpha: transparent texels (often black) must not darken
+                    // the visible ones in smaller levels (dark fringes / speckles on particles, decals, leaves).
+                    const int asum = p[0][3] + p[1][3] + p[2][3] + p[3][3];
+                    float wgt[4];
+                    for (int i = 0; i < 4; ++i)
+                        wgt[i] = asum > 0 ? p[i][3] / static_cast<float>(asum) : 0.25f;
+                    for (int k = 0; k < 3; ++k) {
+                        if (srgb)
+                            d[k] = linearToSrgb8(lin[p[0][k]] * wgt[0] + lin[p[1][k]] * wgt[1] + lin[p[2][k]] * wgt[2] + lin[p[3][k]] * wgt[3]);
+                        else
+                            d[k] = static_cast<std::uint8_t>(std::clamp(p[0][k] * wgt[0] + p[1][k] * wgt[1] + p[2][k] * wgt[2] + p[3][k] * wgt[3] + 0.5f, 0.0f, 255.0f));
+                    }
                 }
                 d[3] = static_cast<std::uint8_t>((p[0][3] + p[1][3] + p[2][3] + p[3][3] + 2) / 4);
             }
@@ -106,6 +113,52 @@ std::vector<std::uint8_t> halve(const std::vector<std::uint8_t>& src, int w, int
     else
         rows(0, static_cast<std::size_t>(outH));
     return dst;
+}
+
+// Gives fully transparent texels the colour of their visible neighbours (a few texels
+// deep), so bilinear filtering at the edge of a cut-out never blends in their black.
+void bleedColorIntoTransparent(std::vector<std::uint8_t>& rgba, int w, int h)
+{
+    std::vector<std::uint8_t> known(static_cast<std::size_t>(w) * h);
+    std::size_t unknown = 0;
+    for (std::size_t i = 0; i < known.size(); ++i) {
+        known[i] = rgba[i * 4 + 3] > 0;
+        unknown += !known[i];
+    }
+    if (unknown == 0 || unknown == known.size())
+        return;
+    std::vector<std::uint8_t> next = known;
+    for (int pass = 0; pass < 8; ++pass) {
+        bool changed = false;
+        for (int y = 0; y < h; ++y)
+            for (int x = 0; x < w; ++x) {
+                const std::size_t i = static_cast<std::size_t>(y) * w + x;
+                if (known[i])
+                    continue;
+                int sum[3] = {0, 0, 0}, n = 0;
+                for (int dy = -1; dy <= 1; ++dy)
+                    for (int dx = -1; dx <= 1; ++dx) {
+                        const int nx = x + dx, ny = y + dy;
+                        if ((dx | dy) == 0 || nx < 0 || ny < 0 || nx >= w || ny >= h)
+                            continue;
+                        const std::size_t j = static_cast<std::size_t>(ny) * w + nx;
+                        if (!known[j])
+                            continue;
+                        for (int k = 0; k < 3; ++k)
+                            sum[k] += rgba[j * 4 + k];
+                        ++n;
+                    }
+                if (n > 0) {
+                    for (int k = 0; k < 3; ++k)
+                        rgba[i * 4 + k] = static_cast<std::uint8_t>(sum[k] / n);
+                    next[i] = 1;
+                    changed = true;
+                }
+            }
+        known = next;
+        if (!changed)
+            break;
+    }
 }
 
 void compressLevel(const std::uint8_t* rgba, int w, int h, TextureFormat format, std::uint8_t* out)
@@ -267,6 +320,8 @@ CookedTexture cookTexture(const std::uint8_t* rgba, int width, int height, const
     // Mip chain in RGBA8; levels above maxSize are only steps toward the smaller ones.
     std::vector<std::uint8_t> level(rgba, rgba + static_cast<std::size_t>(width) * static_cast<std::size_t>(height) * 4);
     int w = width, h = height;
+    if (options.usage == TextureUsage::Color)
+        bleedColorIntoTransparent(level, w, h);
     bool first = true;
     const bool coverage = options.alphaCoverage > 0.0f && options.alphaCoverage < 1.0f && options.usage == TextureUsage::Color;
     const float targetCoverage = coverage ? alphaCoverageOf(level, options.alphaCoverage, 1.0f) : 0.0f;

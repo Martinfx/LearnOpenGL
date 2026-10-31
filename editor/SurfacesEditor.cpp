@@ -22,7 +22,7 @@
 
 namespace {
 
-enum Column { Name, Step, StepVolume, Impact, Effect, Casing, DecalRow, DecalSize, Columns };
+enum Column { Name, Step, StepVolume, Impact, Effect, Casing, DecalRow, DecalSize, Ricochet, RicochetAngle, RicochetSound, Columns };
 constexpr int OriginalRole = Qt::UserRole + 1; // index into SurfacesEditor::originals_
 
 std::filesystem::path toPath(const QString& s)
@@ -117,12 +117,13 @@ SurfacesEditor::SurfacesEditor(QWidget* parent) : QWidget(parent)
 
     table_ = new QTableWidget(0, Columns, this);
     table_->setHorizontalHeaderLabels({tr("Surface"), tr("Footstep"), tr("Step volume"), tr("Impact sound"),
-                                       tr("Impact particles"), tr("Case landing"), tr("Hole style"), tr("Hole size (m)")});
+                                       tr("Impact particles"), tr("Case landing"), tr("Hole style"), tr("Hole size (m)"),
+                                       tr("Ricochet chance"), tr("Ricochet below °"), tr("Ricochet sound")});
     // Pickers need room for a file name; the table scrolls sideways when the tab is narrow.
     table_->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
     table_->horizontalHeader()->setStretchLastSection(false);
     table_->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
-    const int widths[Columns] = {90, 240, 90, 240, 220, 240, 100, 100};
+    const int widths[Columns] = {90, 240, 90, 240, 220, 240, 100, 100, 110, 110, 240};
     for (int c = 0; c < Columns; ++c)
         table_->setColumnWidth(c, widths[c]);
     table_->verticalHeader()->hide();
@@ -224,6 +225,18 @@ void SurfacesEditor::addRow(const engine::SurfaceType& type)
     decal->setToolTip(tr("Diameter of the bullet hole, 0 = none (water, flesh)"));
     connect(decal, &QDoubleSpinBox::valueChanged, this, &SurfacesEditor::edited);
     table_->setCellWidget(r, DecalSize, decal);
+    auto* ricochet = spin(0, 1, 0.05, type.ricochet, table_);
+    ricochet->setToolTip(tr("Chance that a bullet grazing this surface glances off and flies on (0 = never)"));
+    connect(ricochet, &QDoubleSpinBox::valueChanged, this, &SurfacesEditor::edited);
+    table_->setCellWidget(r, Ricochet, ricochet);
+    auto* ricochetAngle = spin(0, 90, 1, type.ricochetAngle, table_);
+    ricochetAngle->setToolTip(tr("Steeper hits (angle between shot and surface) never ricochet; the chance grows toward 0°"));
+    connect(ricochetAngle, &QDoubleSpinBox::valueChanged, this, &SurfacesEditor::edited);
+    table_->setCellWidget(r, RicochetAngle, ricochetAngle);
+    auto* ricochetSound = new SoundPicker(table_);
+    ricochetSound->setPath(toQString(type.ricochetSound));
+    connect(ricochetSound, &SoundPicker::pathChanged, this, &SurfacesEditor::edited);
+    table_->setCellWidget(r, RicochetSound, ricochetSound);
     updating_ = was;
 }
 
@@ -269,6 +282,12 @@ engine::SurfaceTable SurfacesEditor::collect() const
             s.casing = toPath(p->path());
         if (auto* c = qobject_cast<QComboBox*>(table_->cellWidget(r, DecalRow)))
             s.decalRow = c->currentData().toInt();
+        if (auto* v = qobject_cast<QDoubleSpinBox*>(table_->cellWidget(r, Ricochet)))
+            s.ricochet = static_cast<float>(v->value());
+        if (auto* v = qobject_cast<QDoubleSpinBox*>(table_->cellWidget(r, RicochetAngle)))
+            s.ricochetAngle = static_cast<float>(v->value());
+        if (auto* p = qobject_cast<SoundPicker*>(table_->cellWidget(r, RicochetSound)))
+            s.ricochetSound = toPath(p->path());
         if (auto* v = qobject_cast<QDoubleSpinBox*>(table_->cellWidget(r, DecalSize)))
             s.decalSize = static_cast<float>(v->value());
         t.types.push_back(std::move(s));

@@ -1064,6 +1064,9 @@ void testSurfaces()
     w.name = "wood";
     w.impact = dir / "impact wood.sound";
     w.decalSize = 0.2f;
+    c.ricochet = 0.6f;
+    c.ricochetAngle = 25.0f;
+    c.ricochetSound = dir / "ricochet.sound";
     t.types = {c, w};
     std::string error;
     check(engine::saveSurfaces(t, dir / "surfaces.cfg", &error), "save surfaces " + error);
@@ -1072,6 +1075,16 @@ void testSurfaces()
     check(back.types.size() == 2 && back.types[0].footstep == c.footstep && back.types[1].impact == w.impact &&
               std::abs(back.types[1].decalSize - 0.2f) < 1e-5f,
           "surfaces round trip");
+    check(back.types[0].ricochet == 0.6f && back.types[0].ricochetAngle == 25.0f && back.types[0].ricochetSound == c.ricochetSound,
+          "ricochet settings round trip");
+    // Ricochets: grazing shots glance off, steep ones never; the new path leaves the surface.
+    const glm::vec3 up(0, 1, 0);
+    const glm::vec3 grazing = glm::normalize(glm::vec3(1, -0.05f, 0)), steep = glm::normalize(glm::vec3(1, -1, 0));
+    check(engine::ricochetChance(c, grazing, up) > 0.5f && engine::ricochetChance(c, steep, up) == 0.0f &&
+              engine::ricochetChance(w, grazing, up) == 0.0f,
+          "ricochet chance depends on angle and surface");
+    const glm::vec3 out = engine::ricochetDirection(grazing, up, 3.0f);
+    check(out.y > 0.0f && out.x > 0.9f, "ricochet flies on, away from the surface");
     check(back.find("glass") && back.find("glass")->name == "concrete", "unknown surface falls back");
 
     // The physics ray reports the surface of what it hit, and its normal.

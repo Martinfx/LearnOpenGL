@@ -105,6 +105,12 @@ void GameEffects::impact(glm::vec3 point, glm::vec3 normal, const std::string& s
     }
 }
 
+void GameEffects::ricochet(glm::vec3 point, glm::vec3 direction, const engine::SurfaceType& surface)
+{
+    if (auto fx = effect(surface.ricochetEffect))
+        world_.spawn(fx, point, engine::basisFromUp(direction));
+}
+
 void GameEffects::shot(const engine::WeaponSettings& weapon, const glm::mat4& view, glm::vec3 muzzleView, glm::vec3 playerVelocity)
 {
     const glm::mat4 toWorld = glm::inverse(view);

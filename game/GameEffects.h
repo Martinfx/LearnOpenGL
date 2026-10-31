@@ -28,6 +28,8 @@ public:
 
     // A bullet hit level geometry (surface effect and bullet hole) or a character (blood).
     void impact(glm::vec3 point, glm::vec3 normal, const std::string& surface, bool character);
+    // A bullet glancing off `surface` at `point`, flying on along `direction` (sparks).
+    void ricochet(glm::vec3 point, glm::vec3 direction, const engine::SurfaceType& surface);
     // A shot: muzzle flash (first-person layer), gun smoke and a spent case.
     // `view` is the camera's view matrix; `muzzleView` the muzzle in view space.
     void shot(const engine::WeaponSettings& weapon, const glm::mat4& view, glm::vec3 muzzleView, glm::vec3 playerVelocity);

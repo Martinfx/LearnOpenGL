@@ -41,11 +41,13 @@ void DecalPool::add(std::shared_ptr<TextureAsset> texture, int columns, int rows
     d.columns = columns;
     d.rows = rows;
     d.fade = fadeSeconds;
-    d.sprite.position = position + basis[1] * 0.002f;
+    // 6 mm off the surface: hit points come from collision shapes, which can sit a few
+    // millimetres inside the visible mesh (the rest is polygon offset, see Renderer::drawSprites).
+    d.sprite.position = position + basis[1] * 0.006f;
     d.sprite.frame = static_cast<float>(row * columns + column);
     d.sprite.axisX = x * (0.5f * size * scale);
     d.sprite.axisY = y * (0.5f * size * scale);
-    d.sprite.color = glm::vec4(1.0f);
+    d.sprite.color = glm::vec4(1.0f, 1.0f, 1.0f, 0.9f); // the scorch blends a little with the wall
     if (decals_.size() < capacity_) {
         decals_.push_back(std::move(d));
     } else {

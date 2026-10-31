@@ -1,0 +1,31 @@
+# Bullet glancing off: a narrow fan of streaking sparks along the new path (+Y = ricochet direction).
+emitter "Sparks"
+texture "../textures/particles/spark.png"
+blend additive
+lit 0
+stretch 1 0.06
+burst 10
+rate 0
+life 0.08 0.3
+direction 0 1 0
+spread 22
+speed 10 26
+gravity 1
+drag 0.8
+size 0.007 0.013
+color 1 0.8 0.45
+intensity 9
+color_key 0 1 1 1 1
+color_key 0.5 1 0.65 0.3 1
+color_key 1 1 0.3 0.1 0
+emitter "Flash"
+blend additive
+lit 0
+burst 1
+rate 0
+life 0.04 0.05
+size 0.08 0.12
+color 1 0.85 0.6
+intensity 6
+color_key 0 1 1 1 1
+color_key 1 1 1 1 0

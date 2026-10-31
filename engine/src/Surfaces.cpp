@@ -1,4 +1,7 @@
 #include "engine/Surfaces.h"
+#include <cmath>
+#include <glm/trigonometric.hpp>
+#include <glm/geometric.hpp>
 
 #include "engine/Material.h"
 
@@ -95,6 +98,35 @@ std::string surfaceOf(const Material* material, std::string_view fallbackText)
     return guessSurface(fallbackText);
 }
 
+float ricochetChance(const SurfaceType& surface, glm::vec3 dir, glm::vec3 normal)
+{
+    if (surface.ricochet <= 0.0f || surface.ricochetAngle <= 0.0f)
+        return 0.0f;
+    const float len = glm::length(dir) * glm::length(normal);
+    if (len <= 0.0f)
+        return 0.0f;
+    // angle between the shot and the surface plane: 0 = grazing, 90 = straight in
+    const float angle = glm::degrees(std::asin(std::clamp(std::abs(glm::dot(dir, normal)) / len, 0.0f, 1.0f)));
+    if (angle >= surface.ricochetAngle)
+        return 0.0f;
+    const float t = 1.0f - angle / surface.ricochetAngle;
+    return std::clamp(surface.ricochet, 0.0f, 1.0f) * t * t * (3.0f - 2.0f * t);
+}
+
+glm::vec3 ricochetDirection(glm::vec3 dir, glm::vec3 normal, float liftDegrees)
+{
+    const glm::vec3 n = glm::normalize(normal);
+    glm::vec3 r = glm::reflect(glm::normalize(dir), n);
+    // Glancing bullets lose most of their speed across the surface normal: flatten,
+    // then lift by a few degrees so the new path does not start inside the surface.
+    glm::vec3 along = r - n * glm::dot(r, n);
+    if (glm::length(along) < 1e-4f)
+        return n;
+    along = glm::normalize(along);
+    const float out = std::max(glm::dot(r, n) * 0.5f, std::sin(glm::radians(liftDegrees)));
+    return glm::normalize(along * std::sqrt(std::max(0.0f, 1.0f - out * out)) + n * out);
+}
+
 bool loadSurfaces(SurfaceTable& table, const std::filesystem::path& file, std::string* error)
 {
     std::ifstream in(file);
@@ -151,6 +183,12 @@ bool loadSurfaces(SurfaceTable& table, const std::filesystem::path& file, std::s
                 ls >> t.decalSize;
             else if (k == "step_volume")
                 ls >> t.stepVolume;
+            else if (k == "ricochet")
+                ls >> t.ricochet >> t.ricochetAngle;
+            else if (k == "ricochet_sound" && ls >> std::quoted(value))
+                t.ricochetSound = path(value);
+            else if (k == "ricochet_effect" && ls >> std::quoted(value))
+                t.ricochetEffect = path(value);
         }
         result.types.push_back(std::move(t));
     }
@@ -185,7 +223,14 @@ bool saveSurfaces(const SurfaceTable& table, const std::filesystem::path& file, 
         if (!t.decal.empty())
             out << " decal " << std::quoted(rel(t.decal)) << " decal_grid " << t.decalColumns << ' ' << t.decalRows
                 << " decal_row " << t.decalRow;
-        out << " decal_size " << t.decalSize << " step_volume " << t.stepVolume << '\n';
+        out << " decal_size " << t.decalSize << " step_volume " << t.stepVolume;
+        if (t.ricochet > 0.0f)
+            out << " ricochet " << t.ricochet << ' ' << t.ricochetAngle;
+        if (!t.ricochetSound.empty())
+            out << " ricochet_sound " << std::quoted(rel(t.ricochetSound));
+        if (!t.ricochetEffect.empty())
+            out << " ricochet_effect " << std::quoted(rel(t.ricochetEffect));
+        out << '\n';
     }
     if (!out) {
         setError(error, "Cannot write " + file.string());

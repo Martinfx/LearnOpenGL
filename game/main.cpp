@@ -32,6 +32,7 @@
 #include <array>
 #include <cmath>
 #include <string>
+#include <random>
 #include <vector>
 
 namespace {
@@ -99,6 +100,21 @@ std::vector<engine::Weapon> loadLoadout(const engine::Scene& scene, const std::f
         weapons.emplace_back(); // bare default so the game stays playable
     return weapons;
 }
+
+// Ricochet dice (gameplay randomness, not reproducible on purpose).
+std::mt19937& ricochetRng()
+{
+    static std::mt19937 rng{std::random_device{}()};
+    return rng;
+}
+bool ricochetRoll(float chance)
+{
+    static const bool always = std::getenv("FPS_ENGINE_RICOCHET") != nullptr; // test hook: every possible ricochet happens
+    if (always && chance > 0.0f)
+        return true;
+    return chance > 0.0f && std::uniform_real_distribution<float>(0.0f, 1.0f)(ricochetRng()) < chance;
+}
+float ricochetLift() { return std::uniform_real_distribution<float>(1.0f, 8.0f)(ricochetRng()); }
 
 void readInput(GLFWwindow* window, engine::InputState& input)
 {
@@ -415,6 +431,11 @@ int main(int argc, char** argv)
     // Test helpers: FPS_ENGINE_AUTOFIRE=1 holds the trigger, FPS_ENGINE_SCREENSHOT=file.ppm saves the last frame.
     const bool autoFire = std::getenv("FPS_ENGINE_AUTOFIRE") != nullptr;
     const char* screenshotFile = std::getenv("FPS_ENGINE_SCREENSHOT");
+    if (const char* pos = std::getenv("FPS_ENGINE_POS")) { // "x y z" feet position (test hook)
+        glm::vec3 p(0.0f);
+        if (std::sscanf(pos, "%f %f %f", &p.x, &p.y, &p.z) == 3)
+            player.spawn(physics, p);
+    }
     if (const char* look = std::getenv("FPS_ENGINE_LOOK")) // "yaw pitch" in degrees
         std::sscanf(look, "%f %f", &camera.yawDegrees, &camera.pitchDegrees);
 
@@ -520,15 +541,19 @@ int main(int argc, char** argv)
             weapon.animate(dt, player.grounded() ? std::sqrt(moveVel.x * moveVel.x + moveVel.z * moveVel.z) : 0.0f);
             const int rays = weapon.settings.melee() ? shots : shots * weapon.settings.pellets;
             for (int s = 0; s < rays; ++s) {
-                const glm::vec3 eye = player.eye();
+                glm::vec3 origin = player.eye();
+                glm::vec3 dir = weapon.settings.melee() ? camera.forward() : weapon.spreadDirection(camera.forward());
+                float range = weapon.settings.range;
+                float damage = weapon.settings.damage;
+                // A bullet may glance off hard surfaces at a shallow angle (assets/surfaces.cfg `ricochet`)
+                // and fly on with less energy; at most two bounces.
+                for (int bounce = 0; bounce < 3; ++bounce) {
                 const engine::ShotHit hit =
                     weapon.settings.melee()
-                        ? engine::traceMelee(scene, physics, eye, camera.forward(), weapon.settings.range,
-                                             weapon.settings.spreadDegrees)
-                        : engine::traceShot(scene, physics, eye, weapon.spreadDirection(camera.forward()),
-                                            weapon.settings.range);
+                        ? engine::traceMelee(scene, physics, origin, dir, range, weapon.settings.spreadDegrees)
+                        : engine::traceShot(scene, physics, origin, dir, range);
                 if (!hit.hit)
-                    continue;
+                    break;
                 impacts.push_back({hit.point, 0.0f, hit.entity >= 0});
                 effects.impact(hit.point, hit.normal, hit.surface, hit.entity >= 0);
                 if (hit.entity >= 0)
@@ -539,9 +564,24 @@ int main(int argc, char** argv)
                     audio.impact(hit.point, hit.surface, weapon.settings.soundImpact);
                 if (hit.entity >= 0) {
                     const bool wasAlive = scene.entities[static_cast<std::size_t>(hit.entity)].alive;
-                    scripts.damageEntity(hit.entity, weapon.settings.damage);
+                    scripts.damageEntity(hit.entity, damage);
                     if (wasAlive && !scene.entities[static_cast<std::size_t>(hit.entity)].alive)
                         ++kills;
+                    break;
+                }
+                if (weapon.settings.melee())
+                    break;
+                const engine::SurfaceType* surface = audio.surfaces().find(hit.surface);
+                if (!surface || !ricochetRoll(engine::ricochetChance(*surface, dir, hit.normal)))
+                    break;
+                dir = engine::ricochetDirection(dir, hit.normal, ricochetLift());
+                range = std::max(0.0f, range - glm::distance(origin, hit.point)) * 0.6f;
+                damage *= 0.5f;
+                origin = hit.point + hit.normal * 0.02f;
+                effects.ricochet(hit.point, dir, *surface);
+                audio.play(surface->ricochetSound, hit.point);
+                if (range < 1.0f)
+                    break;
                 }
             }
             for (Impact& impact : impacts)

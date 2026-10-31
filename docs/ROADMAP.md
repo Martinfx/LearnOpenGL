@@ -133,7 +133,7 @@ Jedna lokace zóny od menu po smrt/uložení, se zvukem a chytřejšími nepřá
 - [ ] **Okno a ovládání** (1 týden): VSync / limit FPS, fullscreen / borderless, výběr monitoru, render scale, `NvOptimusEnablement`; přemapování kláves z configu, citlivost a inverze myši, gamepad přes GLFW (přesunuto z M5).
 - [ ] **Propojení entit** (1 týden): výstupy a vstupy jako v Hammeru (`OnTrigger` → `Open`), propojení klikem v editoru, volitelně z Lua.
 - [ ] **Předměty a inventář, základ** (1 týden): pickupy (munice, lékárnička), jednoduchý inventář zbraní.
-- [x] **Decaly a částice, základ** (1,5 týdne): díry po kulkách a krev z existujícího atlasu, prach a jiskry při zásahu, kouř z hlavně; nastavení v `.weapon` a fyzikálním materiálu. *Hotovo: `.particle` efekty, ParticleSystem na JobSystemu, DecalPool, nábojnice s odrazy, Particle editor s živým náhledem.*
+- [x] **Decaly a částice, základ** (1,5 týdne): díry po kulkách a krev z existujícího atlasu, prach a jiskry při zásahu, kouř z hlavně; nastavení v `.weapon` a fyzikálním materiálu. *Hotovo: `.particle` efekty, ParticleSystem na JobSystemu, DecalPool, nábojnice s odrazy, Particle editor s živým náhledem. 2026-10-31: odražené kulky (šance podle povrchu a úhlu, svištění, jiskry, poloviční poškození, nastavení v Assets > Surfaces), menší díry a oprava tečkovaného šumu (barva průhledných texelů při kompresi a mip mapách).*
 - [ ] **Fyzika v levelu** (1 týden): dynamická tělesa (sudy, bedny), fyzikální materiály povrchů (zvuk kroků, decal, částice), triggery v editoru.
 
 Hotovo, když: hra se spustí do menu, jde projít lokaci, nepřátelé obcházejí překážky, vše zní, hra jde uložit a načíst.
@@ -146,7 +146,8 @@ Hotovo, když: hra se spustí do menu, jde projít lokaci, nepřátelé obcháze
   Hotovo: režim Foliage (štětec, typy s hustotou, měřítkem, cull distance, kolizí, náklonem, stíny), instancing po 32m buňkách, kolize stromů. LOD úrovně foliage (`foliage_lod`) a řídnutí do dálky (far density). Zbývá: hustota podle vrstev, vítr, fade.
 - [ ] **Streamování světa** (3 týdny): rozdělení levelu na buňky (např. 128 × 128 m), načítání a uvolňování podle vzdálenosti na pracovních vláknech, HLOD/impostory budov, editor zobrazí buňky a umí je zamknout/načíst; rozpočet paměti.
 - [ ] **Voda** (1 týden): řeka a louže (odrazy SSR nebo probe, průhlednost, mlha pod hladinou).
-- [ ] **Počasí a denní doba** (1 týden): animované slunce, déšť, mlha a bouřka jako přechody mezi presety Environment; editor časové osy dne.
+- [ ] **Střídání dne a noci** (1,5 týdne, přání martina 2026-10-31): slunce a měsíc po skutečné dráze podle zeměpisné šířky a data, nastavitelná délka dne; obloha s atmosférickým rozptylem (východ a západ slunce), noční obloha s hvězdami a měsícem; stíny, ambient, mlha a expozice podle času. Vše v Environment, v editoru posuvník času a přehrávání, v Lua `game.set_time`.
+- [ ] **Počasí** (1 týden): déšť (hotový základ), mlha a bouřka jako přechody mezi presety Environment, blesky; editor časové osy dne.
 
 - [ ] **Rozpočty paměti** (1 týden): limity po kategoriích (textury, meshe, audio, fyzika, Lua) s varováním v doku Memory, snímkový alokátor, pooly pro částice a decaly.
 - [ ] **Asset registry a hot reload** (2 týdny): závislosti assetů podle GUID, přejmenování bez rozbití odkazů, validace (měřítko, chybějící textury) v editoru i CI, sledování souborů a reload textur, modelů, zvuků, `.weapon`, `.particle` a Lua za běhu.
@@ -209,5 +210,6 @@ Hotovo, když: zóna 1 × 1 km jde projít bez načítací obrazovky a paměť d
 
 1. Dokončit M0 (zbývá indirect draw, impostory, SoA data, graf úloh).
 2. M0.5 Základy v pořadí: logování → asserty a crash handler → GUID entit → cvars a konzole → konfigurace → smoke test v CI → debug kreslení → GL ladění.
-3. Potom zbytek M1: UI hry a credits → stavy hry → okno a ovládání → uložení hry → lokální světla → fyzika v levelu → propojení entit → audio dál.
-4. Souběžně s M1 může běžet obsah (assety, level zóny) v ostatních vláknech.
+3. Mezitím rychlé opravy z hraní (ruce stejné u všech zbraní). Potom zbytek M1: UI hry a credits → stavy hry → okno a ovládání → uložení hry → lokální světla → fyzika v levelu → propojení entit → audio dál.
+4. Střídání dne a noci hned po M1 (začátek M2/M3).
+5. Souběžně s M1 může běžet obsah (assety, level zóny) v ostatních vláknech.
