@@ -71,6 +71,16 @@ vchod a chodby nemocnice; na východě je staré město (scéna "Postwar City", 
 `assets/models/zone/postwar/CREDITS.md`). Na mapě (M) jsou značky míst. Plán s trasami:
 `assets/levels/source/hospital_street_map.png`, rozložení `assets/levels/source/make_street_level.py`.
 
+**Level Skrunda-1** (`fps_game assets/levels/skrunda1.level`): opuštěné sovětské radarové městečko Skrunda-1
+v Lotyšsku. Budovy, ulice a rybník jsou 1:1 podle OpenStreetMap (© OpenStreetMap contributors, ODbL,
+`assets/levels/source/osm/`), budovy mají skutečné rozměry půdorysů: chruščovky, posádková nemocnice
+(Госпиталь), štáb, obchod „Venta", jídelna, vodárna. Textury jsou reálné fotoskeny Poly Haven (CC0).
+Úkol: najít PDA stalkera Ljochy ve 3. patře nemocnice a vrátit se do Štábu, volitelně jeho skrýš ve vodárně.
+Trasy: hlavní po Nové ulici pod odstřelovačem, boční přes dvory k zadnímu vchodu nemocnice, třetí k vodárně.
+Plán s trasami: `assets/levels/source/skrunda1_plan.png` (`draw_skrunda_plan.py` ho překreslí z levelu).
+Modely a terén: `python3 -I assets/models/zone/source/build_skrunda.py` (budovy) a `... build_skrunda.py terrain`
+(dlaždice 9 × 9 po 64 m), rozložení `python3 -I assets/levels/source/make_skrunda_level.py`.
+
 ## Skriptování a AI (Lua)
 
 Entity (nepřátelé, pickupy, triggery…) se přidávají v editoru (Ctrl+E přidá nepřítele) a každá může mít

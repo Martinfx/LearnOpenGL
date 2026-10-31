@@ -34,7 +34,7 @@ def footprint_models():
             models[name] = (skrunda.block, dict(length=round(L, 1), sections=sec, depth=round(W, 1), seed=int(b['id']) % 97), True)
         elif kind == 'hospital':
             name = 'hospital_56m'
-            models[name] = (skrunda.corridor, dict(length=round(L, 1), depth=round(W, 1), floors=3, seed=5, sign_row=0,
+            models[name] = (skrunda.corridor, dict(length=round(L, 1), depth=round(W, 1), floors=3, seed=5, sign_row=0, inn='stair_paint',
                                                    ext='silicate_dirty'), True)
         elif kind == 'retail':
             name = 'shop_venta'

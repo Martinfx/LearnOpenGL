@@ -319,10 +319,10 @@ for r in site.load()['roads']:
 
 # abandoned cars where people left them: parked at the blocks, one in the ditch, a bus at the stop
 CARS = ['car_sedan_green', 'car_sedan_blue', 'car_sedan_cream', 'car_estate_rust', 'car_estate_red', 'car_burnt', 'car_van_green']
-wrecks = [(-74.0, 40.0, 92, 'car_sedan_cream'), (-74.5, 46.5, 88, 'car_estate_rust'), (-66.6, -12.0, 94, 'car_burnt'),
+wrecks = [(-74.0, 40.0, 92, 'car_sedan_blue'), (-74.5, 46.5, 88, 'car_estate_rust'), (-66.6, -12.0, 94, 'car_burnt'),
           (-140.5, -36.6, 2, 'car_van_green'), (-104.0, -34.0, 178, 'car_sedan_blue'), (-157.0, 24.0, 85, 'car_estate_red'),
           (-61.0, -150.0, 95, 'car_sedan_green'), (-12.0, 45.0, 36, 'bus_small_cream'), (-58.0, 74.0, 120, 'car_burnt'),
-          (-160.0, -100.0, 86, 'car_sedan_cream')]
+          (-160.0, -100.0, 86, 'car_sedan_green')]
 for x, z, yaw, f in wrecks:
     tilt = 0.0
     if f == 'car_burnt':
@@ -410,26 +410,34 @@ for k in range(2600):
         f = 'bush_a' if r < 0.3 else 'bush_b' if r < 0.5 else 'bush_c' if r < 0.65 else 'bush_wide_a' if r < 0.85 else 'bush_dense_a'
         veg('Bush', f, x, z, 'Bushes', lod_dist=30, cull=150)
 
-# ground cover: tall grass everywhere it is not trodden, nettles and weeds at the walls, dry grass patches
-g = 5.0
+# ground cover: tall grass everywhere it is not trodden, nettles and weeds at the walls, dry grass patches.
+# Dense (2.6 m grid, one 2.5 m patch per cell = closed sward) in the playable town, sparse outside it.
 z = site.Z0 + 1
 while z < site.Z0 + site.SIZE - 1:
+    inside_z = site.PLAY[1] < z < site.PLAY[3]
     x = site.X0 + 1
     while x < site.X0 + site.SIZE - 1:
-        jx, jz = x + rng.uniform(-2.2, 2.2), z + rng.uniform(-2.2, 2.2)
+        inside = inside_z and site.PLAY[0] < x < site.PLAY[2]
+        g = 2.6 if inside else 5.0
+        jx, jz = x + rng.uniform(-0.45, 0.45) * g, z + rng.uniform(-0.45, 0.45) * g
         if free(jx, jz, 0.6):
             bd = float(T.field('bdist', jx, jz))
             dry = T.field('dry', jx, jz) > 0
-            if bd < 5.0 and rng.random() < 0.55:
+            if bd < 5.0 and rng.random() < (0.3 if inside else 0.55):
                 veg('Weeds', 'weed_patch' if rng.random() < 0.6 else 'nettle_tall_a', jx, jz, 'Weeds', lod_dist=18, cull=55)
-            elif rng.random() < 0.55:
-                if dry:
-                    veg('Dry grass', rng.choice(['grass_dry_a', 'grass_dry_b', 'grass_dry_c']), jx, jz, 'Grass', lod_dist=15,
-                        cull=45, scale=rng.uniform(1.0, 1.6))
-                else:
-                    veg('Tall grass', 'grass_patch_tall', jx, jz, 'Grass', lod_dist=20, cull=60)
+            elif rng.random() < (0.88 if inside else 0.55):
+                veg('Tall grass', 'grass_patch_tall', jx, jz, 'Grass', lod_dist=20, cull=60,
+                    scale=rng.uniform(0.85, 1.15))
+                if dry and rng.random() < 0.7:
+                    for _ in range(2):
+                        dx, dz = jx + rng.uniform(-1.2, 1.2), jz + rng.uniform(-1.2, 1.2)
+                        veg('Dry grass', rng.choice(['grass_dry_a', 'grass_dry_b', 'grass_dry_c']), dx, dz, 'Grass',
+                            lod_dist=15, cull=40, scale=rng.uniform(1.4, 2.0))
+            elif inside and rng.random() < 0.5:
+                veg('Grass tuft', rng.choice(['grass_tall_a', 'grass_tall_b']), jx, jz, 'Grass', lod_dist=12, cull=40,
+                    scale=rng.uniform(1.0, 1.4))
         x += g
-    z += g
+    z += 2.6 if inside_z else 5.0
 
 # grass and weeds in the cracks and potholes of the asphalt, along the kerbs
 for k in range(5000):

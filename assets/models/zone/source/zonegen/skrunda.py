@@ -43,7 +43,7 @@ def make_signs():
         f = _font(150 if len(text) < 14 else 110)
         tw = d.textlength(text, font=f)
         d.text(((W - tw) / 2, y0 + 40 if len(text) < 14 else y0 + 62), text, font=f, fill=fg)
-    im = _weather(im, 31, 0.4)
+    im = _weather(im, 31, 0.1)          # light: signs must stay readable from the street
     im.save(path, quality=88)
     _flat_maps('skrunda_signs', rough=0.7, metal=0.1, size=(256, 256))
 
@@ -412,7 +412,7 @@ def corridor(length=56.0, depth=13.4, floors=3, seed=0, lod=0, ext='plaster_moss
                         continue
                     zz = zc + (pi / 2 + 0.03) * (1 if zc > 0 else -1)
                     if rng.random() < 0.7:
-                        a = rng.uniform(30, 100) * (1 if zc > 0 else -1)
+                        a = rng.uniform(75, 105) * (1 if zc > 0 else -1)     # wide open: doorway stays passable
                         m.push((cxo - 0.52, ya, zz), rot_y(a))
                         m.box('wood_dark', (0, 0, -0.025), (1.0, DOOR_H - 0.02, 0.025))
                         m.pop()
@@ -456,10 +456,10 @@ def corridor(length=56.0, depth=13.4, floors=3, seed=0, lod=0, ext='plaster_moss
                             m.box('rust', (-0.45, 0.55, -1.0), (0.45, 1.05, -0.96))
                             m.pop()
                     else:
-                        _junk(m, rng, xc - room / 2 + 0.3, xc + room / 2 - 0.3, min(zs * 1.6, zs * (hz - t - 0.3)),
+                        _junk(m, rng, xc - room / 2 + 0.3, xc - 0.2, min(zs * 1.6, zs * (hz - t - 0.3)),
                               max(zs * 1.6, zs * (hz - t - 0.3)), ya, 2)
-                    if rng.random() < 0.4:
-                        _junk(m, rng, xc - room / 2 + 0.3, xc + room / 2 - 0.3, min(zs * 1.6, zs * (hz - t - 0.3)),
+                    if rng.random() < 0.4:          # junk stays on the half of the room away from the door (xc + 1.4)
+                        _junk(m, rng, xc - room / 2 + 0.3, xc - 0.2, min(zs * 1.6, zs * (hz - t - 0.3)),
                               max(zs * 1.6, zs * (hz - t - 0.3)), ya, 1)
     if lod == 0:
         for side, c, w, ylo, yhi, f, door in win:
