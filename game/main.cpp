@@ -102,6 +102,7 @@ void readInput(GLFWwindow* window, engine::InputState& input)
     input.set(Action::Sprint, glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS);
     input.set(Action::Fire, glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS);
     input.set(Action::Reload, glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS);
+    input.set(Action::Aim, glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS);
 }
 
 struct Impact {
@@ -112,10 +113,18 @@ struct Impact {
 
 // View-space transform of the first-person weapon: idle offset, walk bob,
 // recoil kick and the reload dip.
+float smoothAim(const engine::Weapon& weapon)
+{
+    const float a = weapon.aimAmount();
+    return a * a * (3.0f - 2.0f * a);
+}
+
 glm::mat4 weaponTransform(const engine::Weapon& weapon, float time, float moveSpeed, float lowered)
 {
-    const float bob = std::min(moveSpeed / 5.0f, 1.5f);
-    glm::vec3 offset = weapon.settings.viewOffset;
+    // Aiming brings the sights to the eye and steadies the walk bob.
+    const float aim = smoothAim(weapon);
+    const float bob = std::min(moveSpeed / 5.0f, 1.5f) * (1.0f - 0.85f * aim);
+    glm::vec3 offset = glm::mix(weapon.settings.viewOffset, weapon.settings.aimOffset, aim);
     offset.y -= lowered * 0.35f; // weapon switch
     offset.x += std::sin(time * 9.0f) * 0.012f * bob;
     offset.y += std::abs(std::cos(time * 9.0f)) * 0.012f * bob;
@@ -134,7 +143,7 @@ glm::mat4 weaponTransform(const engine::Weapon& weapon, float time, float moveSp
     m = glm::rotate(m, glm::radians(swing * 55.0f), glm::vec3(0, 1, 0));
     m = glm::rotate(m, glm::radians(weapon.recoil() * 5.0f + reload * 20.0f - swing * 25.0f), glm::vec3(1, 0, 0));
     // Turn the model so it points into the screen (glTF guns usually point +Z).
-    const glm::vec3 r = weapon.settings.viewRotation;
+    const glm::vec3 r = weapon.settings.viewRotation + weapon.settings.aimRotation * aim;
     m = glm::rotate(m, glm::radians(r.y), glm::vec3(0, 1, 0));
     m = glm::rotate(m, glm::radians(r.x), glm::vec3(1, 0, 0));
     m = glm::rotate(m, glm::radians(r.z), glm::vec3(0, 0, 1));
@@ -210,6 +219,7 @@ int main(int argc, char** argv)
     }
 
     engine::FpsCamera camera;
+    const float hipFov = camera.fovDegrees, hipSensitivity = camera.sensitivity;
     engine::PhysicsWorld physics;
     physics.setLevel(scene);
     engine::PlayerController player;
@@ -317,6 +327,9 @@ int main(int argc, char** argv)
             const bool ready = next == current && lowered <= 0.0f;
             const int shots = weapon.update(dt, ready && input.isDown(engine::Action::Fire),
                                             ready && input.isDown(engine::Action::Reload));
+            if (next != current)
+                weapon.aim(1.0f, false); // switching drops the aim
+            weapon.aim(dt, ready && input.isDown(engine::Action::Aim));
             const glm::vec3 moveVel = player.velocity();
             weapon.animate(dt, player.grounded() ? std::sqrt(moveVel.x * moveVel.x + moveVel.z * moveVel.z) : 0.0f);
             const int rays = weapon.settings.melee() ? shots : shots * weapon.settings.pellets;
@@ -357,6 +370,13 @@ int main(int argc, char** argv)
         int width = 0, height = 0;
         glfwGetFramebufferSize(window, &width, &height);
         if (width > 0 && height > 0) {
+            // Aiming zooms in; mouse sensitivity follows so the aim stays steady.
+            {
+                const engine::Weapon& w = weapons[current];
+                const float zoom = w.canAim() ? smoothAim(w) : 0.0f;
+                camera.fovDegrees = glm::mix(hipFov, w.canAim() ? w.settings.aimFov : hipFov, zoom);
+                camera.sensitivity = hipSensitivity * camera.fovDegrees / hipFov;
+            }
             engine::RenderView view;
             view.view = camera.view();
             view.projection = camera.projection(static_cast<float>(width) / static_cast<float>(height));
@@ -373,7 +393,8 @@ int main(int argc, char** argv)
             // First-person layer: weapon, muzzle flash and crosshair.
             engine::OverlayPass overlay;
             const float aspect = static_cast<float>(width) / static_cast<float>(height);
-            overlay.projection = glm::perspective(glm::radians(60.0f), aspect, 0.01f, 10.0f);
+            const float aimed = smoothAim(weapons[current]);
+            overlay.projection = glm::perspective(glm::radians(glm::mix(60.0f, 50.0f, aimed)), aspect, 0.01f, 10.0f);
             overlay.sunDirectionViewSpace = glm::mat3(view.view) * scene.sunDirection;
             const engine::Weapon& weapon = weapons[current];
             overlay.model = weapon.viewModel.get();
@@ -385,12 +406,15 @@ int main(int argc, char** argv)
                 const glm::vec3 muzzle = glm::vec3(overlay.modelTransform * glm::vec4(weapon.settings.muzzle, 1.0f));
                 overlay.boxes.push_back({muzzle, glm::vec3(0.05f), glm::vec3(1.0f, 0.85f, 0.35f), true});
             }
-            const float gap = 0.008f, len = 0.012f, thick = 0.0016f;
-            const glm::vec3 white(0.95f);
-            overlay.boxes.push_back({{0, gap + len * 0.5f, -1}, {thick, len, thick}, white, true});
-            overlay.boxes.push_back({{0, -gap - len * 0.5f, -1}, {thick, len, thick}, white, true});
-            overlay.boxes.push_back({{gap + len * 0.5f, 0, -1}, {len, thick, thick}, white, true});
-            overlay.boxes.push_back({{-gap - len * 0.5f, 0, -1}, {len, thick, thick}, white, true});
+            // Crosshair only from the hip: aimed, the sights are the reticle.
+            if (aimed < 0.3f) {
+                const float gap = 0.008f, len = 0.012f, thick = 0.0016f;
+                const glm::vec3 white(0.95f);
+                overlay.boxes.push_back({{0, gap + len * 0.5f, -1}, {thick, len, thick}, white, true});
+                overlay.boxes.push_back({{0, -gap - len * 0.5f, -1}, {thick, len, thick}, white, true});
+                overlay.boxes.push_back({{gap + len * 0.5f, 0, -1}, {len, thick, thick}, white, true});
+                overlay.boxes.push_back({{-gap - len * 0.5f, 0, -1}, {len, thick, thick}, white, true});
+            }
             renderer.renderOverlay(view, overlay);
             renderer.present();
         }

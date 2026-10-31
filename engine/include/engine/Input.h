@@ -16,6 +16,7 @@ enum class Action : std::size_t {
     Sprint,
     Fire,
     Reload,
+    Aim, // right mouse: aim down the sights
     Count
 };
 

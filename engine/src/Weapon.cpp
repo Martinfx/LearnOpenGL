@@ -116,7 +116,12 @@ bool saveWeaponFile(const WeaponSettings& w, const std::filesystem::path& file, 
         << "anim_draw " << std::quoted(w.animDraw) << '\n'
         << "anim_reload_empty " << std::quoted(w.animReloadEmpty) << '\n'
         << "reload_empty_time " << w.reloadEmptyTime << '\n'
-        << "anim_walk " << std::quoted(w.animWalk) << '\n';
+        << "anim_walk " << std::quoted(w.animWalk) << '\n'
+        << "aim_offset " << w.aimOffset.x << ' ' << w.aimOffset.y << ' ' << w.aimOffset.z << '\n'
+        << "aim_rotation " << w.aimRotation.x << ' ' << w.aimRotation.y << ' ' << w.aimRotation.z << '\n'
+        << "aim_fov " << w.aimFov << '\n'
+        << "aim_time " << w.aimTime << '\n'
+        << "aim_spread " << w.aimSpread << '\n';
     return static_cast<bool>(out);
 }
 
@@ -173,6 +178,11 @@ bool loadWeaponFile(WeaponSettings& weapon, const std::filesystem::path& file, s
         else if (key == "anim_reload_empty") ok = static_cast<bool>(ls >> std::quoted(w.animReloadEmpty));
         else if (key == "reload_empty_time") ok = static_cast<bool>(ls >> w.reloadEmptyTime);
         else if (key == "anim_walk") ok = static_cast<bool>(ls >> std::quoted(w.animWalk));
+        else if (key == "aim_offset") ok = static_cast<bool>(ls >> w.aimOffset.x >> w.aimOffset.y >> w.aimOffset.z);
+        else if (key == "aim_rotation") ok = static_cast<bool>(ls >> w.aimRotation.x >> w.aimRotation.y >> w.aimRotation.z);
+        else if (key == "aim_fov") ok = static_cast<bool>(ls >> w.aimFov);
+        else if (key == "aim_time") ok = static_cast<bool>(ls >> w.aimTime);
+        else if (key == "aim_spread") ok = static_cast<bool>(ls >> w.aimSpread);
         else if (key == "muzzle") ok = static_cast<bool>(ls >> w.muzzle.x >> w.muzzle.y >> w.muzzle.z);
         // Unknown keys are ignored so newer files still load.
         if (!ok) {
@@ -285,6 +295,13 @@ void Weapon::animate(float dt, float moveSpeed)
     animator.update(*skel, dt);
 }
 
+void Weapon::aim(float dt, bool held)
+{
+    const bool up = held && canAim() && !reloading();
+    const float step = dt / std::max(settings.aimTime, 0.01f);
+    aim_ = std::clamp(aim_ + (up ? step : -step), 0.0f, 1.0f);
+}
+
 float Weapon::swing() const
 {
     return swingTimer_ > 0.0f ? 1.0f - swingTimer_ / settings.fireInterval : 0.0f;
@@ -307,7 +324,8 @@ glm::vec3 Weapon::spreadDirection(glm::vec3 aim)
     const glm::vec3 helper = std::abs(aim.y) < 0.99f ? glm::vec3(0, 1, 0) : glm::vec3(1, 0, 0);
     const glm::vec3 u = glm::normalize(glm::cross(aim, helper));
     const glm::vec3 v = glm::cross(u, aim);
-    const float angle = glm::radians(settings.spreadDegrees) * std::sqrt(random01());
+    const float spread = settings.spreadDegrees * (1.0f + (settings.aimSpread - 1.0f) * aim_);
+    const float angle = glm::radians(spread) * std::sqrt(random01());
     const float phi = 6.2831853f * random01();
     return glm::normalize(aim + (u * std::cos(phi) + v * std::sin(phi)) * std::tan(angle));
 }

@@ -49,7 +49,7 @@ Výstupy jsou v `build/bin/`.
 ## Ovládání
 
 **Hra** (`fps_game [soubor.level]`): WASD pohyb, myš rozhlížení, mezerník skok, Shift sprint,
-levé tlačítko střelba, R přebití, 1–9 nebo kolečko výběr zbraně, Esc uvolní myš.
+levé tlačítko střelba, pravé tlačítko míření přes mířidla (přiblížení, menší rozptyl; nastavení `aim_*` v panelu Weapons), R přebití, 1–9 nebo kolečko výběr zbraně, Esc uvolní myš.
 
 **Editor** (`fps_editor [soubor.level]`): pravé tlačítko + WASD/QE létání (kolečko mění rychlost),
 levé tlačítko výběr, F zaměří výběr, Ctrl+B přidá box, Ctrl+I importuje glTF model, Ctrl+D duplikuje, Del smaže,

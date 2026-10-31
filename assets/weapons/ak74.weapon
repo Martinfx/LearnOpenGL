@@ -22,3 +22,8 @@ anim_draw "draw"
 anim_reload_empty "reload_empty"
 reload_empty_time 3.46
 anim_walk "walk"
+aim_offset -0.023 0.016 0
+aim_rotation 0 0 0
+aim_fov 55
+aim_time 0.22
+aim_spread 0.3

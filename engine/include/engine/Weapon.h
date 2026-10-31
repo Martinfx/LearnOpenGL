@@ -36,6 +36,12 @@ struct WeaponSettings {
     std::string animReloadEmpty;  // reload from an empty magazine (with chambering), optional
     float reloadEmptyTime = 0.0f; // s, 0 = reload_time
     std::string animWalk;         // loops while the player moves, optional
+    // Aiming down the sights (right mouse). aim_fov 0 = the weapon cannot aim.
+    glm::vec3 aimOffset{0.0f};    // view offset while aiming: puts the sights on the screen center
+    glm::vec3 aimRotation{0.0f};  // extra pitch, yaw, roll (degrees) while aiming, to line up the sights
+    float aimFov = 0.0f;          // vertical camera FOV while aiming (degrees)
+    float aimTime = 0.2f;         // s to raise the weapon to the eye
+    float aimSpread = 0.35f;      // spread multiplier while aiming
 
     bool melee() const { return type == Type::Melee; }
 };
@@ -87,6 +93,10 @@ public:
     bool reloading() const { return reloadTimer_ > 0.0f; }
     float reloadProgress() const; // 0..1 while reloading
     float recoil() const { return recoil_; } // 0..1, decays after each shot
+    // Raises the sights while `held` (not while reloading or for melee); 0 hip .. 1 aimed.
+    void aim(float dt, bool held);
+    float aimAmount() const { return aim_; }
+    bool canAim() const { return !settings.melee() && settings.aimFov > 0.0f; }
     bool flash() const { return flashTimer_ > 0.0f; }
 
 private:
@@ -95,6 +105,7 @@ private:
     float cooldown_ = 0.0f;
     float reloadTimer_ = 0.0f;
     float reloadDuration_ = 1.0f;
+    float aim_ = 0.0f;
     bool reloadEmpty_ = false;
     float recoil_ = 0.0f;
     float flashTimer_ = 0.0f;

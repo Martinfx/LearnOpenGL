@@ -13,7 +13,7 @@ Vec3Editor::Vec3Editor(double min, double max, double step, QWidget* parent)
         auto* spin = new QDoubleSpinBox(this);
         spin->setRange(min, max);
         spin->setSingleStep(step);
-        spin->setDecimals(2);
+        spin->setDecimals(step < 0.01 ? 3 : 2); // fine steps (e.g. aim offsets in mm) need a third decimal
         spin->setPrefix(prefixes[i]);
         spin->setKeyboardTracking(false);
         connect(spin, &QDoubleSpinBox::valueChanged, this, [this] {

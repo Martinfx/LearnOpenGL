@@ -396,6 +396,28 @@ void testKnifeAndGuns()
         swings += w.update(1.0f / 60.0f, true, i == 30);
     check(swings == 4, "knife swings every 0.6 s while held (" + std::to_string(swings) + ")");
     check(!w.reloading(), "knife never reloads");
+    w.aim(1.0f, true);
+    check(w.aimAmount() == 0.0f, "knife cannot aim");
+
+    // Aiming down the sights: raised over aim_time, tighter spread, dropped while reloading.
+    engine::Weapon gun(pistol);
+    check(gun.canAim() && pistol.aimFov > 0.0f && pistol.aimSpread < 1.0f, "pistol can aim");
+    gun.aim(pistol.aimTime * 0.5f, true);
+    check(gun.aimAmount() > 0.4f && gun.aimAmount() < 0.6f, "aim rises over aim_time");
+    gun.aim(1.0f, true);
+    check(gun.aimAmount() == 1.0f, "fully aimed");
+    float hip = 0.0f, aimed = 0.0f;
+    for (int i = 0; i < 400; ++i)
+        aimed = std::max(aimed, glm::degrees(std::acos(glm::clamp(gun.spreadDirection({0, 0, -1}).z * -1.0f, -1.0f, 1.0f))));
+    gun.aim(1.0f, false);
+    for (int i = 0; i < 400; ++i)
+        hip = std::max(hip, glm::degrees(std::acos(glm::clamp(gun.spreadDirection({0, 0, -1}).z * -1.0f, -1.0f, 1.0f))));
+    check(aimed < hip * 0.6f && hip <= pistol.spreadDegrees + 0.01f, "aiming tightens the spread");
+    gun.aim(1.0f, true);
+    gun.update(1.0f / 60.0f, true, false); // one shot, then reload
+    gun.update(1.0f / 60.0f, false, true);
+    gun.aim(1.0f, true);
+    check(gun.reloading() && gun.aimAmount() == 0.0f, "no aiming while reloading");
     w.update(1.0f / 60.0f, false, false);
     check(w.swing() > 0.0f && w.swing() < 1.0f, "swing progress during a swing");
 

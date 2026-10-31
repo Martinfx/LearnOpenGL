@@ -117,6 +117,23 @@ WeaponPanel::WeaponPanel(engine::Scene* scene, QWidget* parent) : QWidget(parent
     form->addRow(tr("View rotation"), viewRotation_);
     form->addRow(tr("View scale"), viewScale_);
     form->addRow(tr("Muzzle"), muzzle_);
+    aimLabel_ = new QLabel(tr("<b>Aiming down the sights</b> (right mouse)"), form_);
+    form->addRow(aimLabel_);
+    aimFov_ = spin(form_, 0, 120, 1, 0, tr(" °"));
+    aimFov_->setSpecialValueText(tr("cannot aim"));
+    aimFov_->setToolTip(tr("Camera field of view while aiming (zoom); 0 = the weapon cannot aim"));
+    aimOffset_ = new Vec3Editor(-2.0, 2.0, 0.002, form_);
+    aimOffset_->setToolTip(tr("View offset while aiming: move it until the sights sit on the screen center"));
+    aimRotation_ = new Vec3Editor(-90.0, 90.0, 0.5, form_);
+    aimRotation_->setToolTip(tr("Extra pitch, yaw, roll while aiming, to line up front and rear sight"));
+    aimTime_ = spin(form_, 0.01, 2, 0.01, 2, tr(" s"));
+    aimSpread_ = spin(form_, 0, 2, 0.05, 2, tr(" ×"));
+    aimSpread_->setToolTip(tr("Spread multiplier while aiming"));
+    form->addRow(tr("Zoom (FOV)"), aimFov_);
+    form->addRow(tr("Aim offset"), aimOffset_);
+    form->addRow(tr("Aim rotation"), aimRotation_);
+    form->addRow(tr("Raise time"), aimTime_);
+    form->addRow(tr("Aimed spread"), aimSpread_);
     form->addRow(new QLabel(tr("<b>Arms / weapon animation</b>"), form_));
     form->addRow(QString(), clipInfo_);
     for (int i = 0; i < 6; ++i) {
@@ -132,6 +149,11 @@ WeaponPanel::WeaponPanel(engine::Scene* scene, QWidget* parent) : QWidget(parent
     firearmRows_[4] = clips_[2];
     firearmRows_[5] = clips_[4];
     firearmRows_[6] = reloadEmpty_;
+    firearmRows_[7] = aimFov_;
+    firearmRows_[8] = aimOffset_;
+    firearmRows_[9] = aimRotation_;
+    firearmRows_[10] = aimTime_;
+    firearmRows_[11] = aimSpread_;
     formLayout_ = form;
     layout->addWidget(form_);
     layout->addStretch(1);
@@ -156,7 +178,7 @@ WeaponPanel::WeaponPanel(engine::Scene* scene, QWidget* parent) : QWidget(parent
         fillClipNames();
     });
     connect(name_, &QLineEdit::editingFinished, this, &WeaponPanel::edited);
-    for (QDoubleSpinBox* s : {damage_, interval_, reload_, reloadEmpty_, spread_, range_, viewScale_})
+    for (QDoubleSpinBox* s : {damage_, interval_, reload_, reloadEmpty_, aimFov_, aimTime_, aimSpread_, spread_, range_, viewScale_})
         connect(s, &QDoubleSpinBox::valueChanged, this, &WeaponPanel::edited);
     for (QSpinBox* s : {pellets_, magazine_})
         connect(s, &QSpinBox::valueChanged, this, &WeaponPanel::edited);
@@ -164,6 +186,8 @@ WeaponPanel::WeaponPanel(engine::Scene* scene, QWidget* parent) : QWidget(parent
     connect(viewOffset_, &Vec3Editor::valueEdited, this, &WeaponPanel::edited);
     connect(viewRotation_, &Vec3Editor::valueEdited, this, &WeaponPanel::edited);
     connect(muzzle_, &Vec3Editor::valueEdited, this, &WeaponPanel::edited);
+    connect(aimOffset_, &Vec3Editor::valueEdited, this, &WeaponPanel::edited);
+    connect(aimRotation_, &Vec3Editor::valueEdited, this, &WeaponPanel::edited);
     connect(type_, &QComboBox::currentIndexChanged, this, [this] {
         edited();
         updateTypeRows();
@@ -219,6 +243,11 @@ void WeaponPanel::showCurrent()
     magazine_->setValue(w->magazineSize);
     reload_->setValue(w->reloadTime);
     reloadEmpty_->setValue(w->reloadEmptyTime);
+    aimFov_->setValue(w->aimFov);
+    aimOffset_->setValue(w->aimOffset);
+    aimRotation_->setValue(w->aimRotation);
+    aimTime_->setValue(w->aimTime);
+    aimSpread_->setValue(w->aimSpread);
     spread_->setValue(w->spreadDegrees);
     range_->setValue(w->range);
     viewOffset_->setValue(w->viewOffset);
@@ -267,6 +296,7 @@ void WeaponPanel::updateTypeRows()
     const bool melee = type_->currentIndex() == 1;
     for (QWidget* row : firearmRows_)
         formLayout_->setRowVisible(row, !melee);
+    aimLabel_->setVisible(!melee);
     damageLabel_->setText(melee ? tr("Damage per hit") : tr("Damage"));
     damage_->setSuffix(melee ? QString() : tr(" per pellet"));
     intervalLabel_->setText(melee ? tr("Swing time") : tr("Fire interval"));
@@ -287,6 +317,11 @@ void WeaponPanel::edited()
     w->magazineSize = magazine_->value();
     w->reloadTime = static_cast<float>(reload_->value());
     w->reloadEmptyTime = static_cast<float>(reloadEmpty_->value());
+    w->aimFov = static_cast<float>(aimFov_->value());
+    w->aimOffset = aimOffset_->value();
+    w->aimRotation = aimRotation_->value();
+    w->aimTime = static_cast<float>(aimTime_->value());
+    w->aimSpread = static_cast<float>(aimSpread_->value());
     w->spreadDegrees = static_cast<float>(spread_->value());
     w->range = static_cast<float>(range_->value());
     w->viewOffset = viewOffset_->value();
