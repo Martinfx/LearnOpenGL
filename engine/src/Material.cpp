@@ -115,6 +115,11 @@ TextureSettings readTextureSettings(const std::filesystem::path& image, const Te
             ls >> s.saturation;
         } else if (k == "tint") {
             ls >> s.tint.r >> s.tint.g >> s.tint.b;
+        } else if (k == "compress") {
+            ls >> s.compress;
+        } else if (k == "max_size") {
+            ls >> s.maxSize;
+            s.maxSize = std::max(0, s.maxSize);
         }
     }
     return s;
@@ -129,7 +134,62 @@ std::recursive_mutex& cacheMutex()
 }
 } // namespace
 
-std::shared_ptr<TextureAsset> loadTextureAsset(const std::filesystem::path& image, std::string* error, bool color)
+namespace {
+
+CookOptions cookOptions(const TextureAsset& asset)
+{
+    const TextureSettings& s = asset.settings;
+    CookOptions o;
+    o.usage = asset.usage == TextureUsage::Normal ? TextureUsage::Normal : (s.srgb ? TextureUsage::Color : TextureUsage::Data);
+    o.srgb = s.srgb;
+    // Pixel-art (nearest) textures stay sharp: block compression would smear them.
+    o.compress = textureCookConfig().compress && s.compress && !s.nearest;
+    o.mipmaps = s.mipmaps;
+    o.maxSize = s.maxSize;
+    return o;
+}
+
+// Everything that changes the cooked pixels, for the cache key.
+std::string settingsKey(const TextureSettings& s)
+{
+    std::ostringstream k;
+    k << s.flipY << ' ' << s.brightness << ' ' << s.contrast << ' ' << s.saturation << ' ' << s.tint.r << ' ' << s.tint.g << ' '
+      << s.tint.b;
+    return k.str();
+}
+
+void applySampling(const TextureSettings& s, Texture& t)
+{
+    t.srgb = s.srgb;
+    t.nearest = s.nearest;
+    t.mipmaps = s.mipmaps;
+    t.wrap = static_cast<int>(s.wrap);
+}
+
+bool decodeImage(const std::filesystem::path& file, TextureAsset& asset, std::string* error)
+{
+    std::vector<unsigned char> bytes;
+    if (!readFile(file, bytes)) {
+        setError(error, "Cannot open " + file.string());
+        return false;
+    }
+    int w = 0, h = 0, comp = 0;
+    stbi_uc* pixels = stbi_load_from_memory(bytes.data(), static_cast<int>(bytes.size()), &w, &h, &comp, 4);
+    if (!pixels) {
+        setError(error, file.string() + ": unsupported image (PNG or JPEG expected)");
+        return false;
+    }
+    asset.width = w;
+    asset.height = h;
+    asset.source.assign(pixels, pixels + static_cast<std::size_t>(w) * static_cast<std::size_t>(h) * 4);
+    stbi_image_free(pixels);
+    return true;
+}
+
+} // namespace
+
+std::shared_ptr<TextureAsset> loadTextureAsset(const std::filesystem::path& image, std::string* error, bool color,
+                                               TextureUsage usage)
 {
     const std::lock_guard lock(cacheMutex());
     static std::map<std::filesystem::path, std::weak_ptr<TextureAsset>> cache;
@@ -138,53 +198,67 @@ std::shared_ptr<TextureAsset> loadTextureAsset(const std::filesystem::path& imag
         if (auto shared = it->second.lock())
             return shared;
 
-    std::vector<unsigned char> bytes;
-    if (!readFile(key, bytes)) {
+    if (!std::filesystem::exists(key)) {
         setError(error, "Cannot open " + key.string());
-        return nullptr;
-    }
-    int w = 0, h = 0, comp = 0;
-    stbi_uc* pixels = stbi_load_from_memory(bytes.data(), static_cast<int>(bytes.size()), &w, &h, &comp, 4);
-    if (!pixels) {
-        setError(error, key.string() + ": unsupported image (PNG or JPEG expected)");
         return nullptr;
     }
     auto asset = std::make_shared<TextureAsset>();
     asset->imagePath = key;
-    asset->width = w;
-    asset->height = h;
-    asset->source.assign(pixels, pixels + static_cast<std::size_t>(w) * static_cast<std::size_t>(h) * 4);
-    stbi_image_free(pixels);
-
+    asset->usage = usage;
     TextureSettings defaults;
     defaults.srgb = color;
     asset->settings = readTextureSettings(key, defaults);
+
+    // Cooked copy in the disk cache: no decode, no compression.
+    const TextureCookConfig& config = textureCookConfig();
+    if (config.diskCache) {
+        const CookOptions options = cookOptions(*asset);
+        const std::filesystem::path file = textureCachePath(textureCacheKey(key, settingsKey(asset->settings), options));
+        CookedTexture cooked;
+        if (readCookedTextureInfo(file, cooked)) { // pixels are read by the renderer when needed
+            asset->width = cooked.width;
+            asset->height = cooked.height;
+            asset->texture = std::make_shared<Texture>();
+            asset->texture->id = newResourceId();
+            applySampling(asset->settings, *asset->texture);
+            asset->texture->setCooked(std::move(cooked), file);
+            asset->texture->mipmaps = asset->settings.mipmaps;
+            cache[key] = asset;
+            return asset;
+        }
+    }
+    if (!decodeImage(key, *asset, error))
+        return nullptr;
     asset->texture = std::make_shared<Texture>();
     applyTextureSettings(*asset);
     cache[key] = asset;
     return asset;
 }
 
-void applyTextureSettings(TextureAsset& asset)
+bool ensureTextureSource(TextureAsset& asset, std::string* error)
 {
+    if (!asset.source.empty())
+        return true;
+    return decodeImage(asset.imagePath, asset, error);
+}
+
+void applyTextureSettings(TextureAsset& asset, bool cook)
+{
+    if (asset.source.empty() && !ensureTextureSource(asset))
+        return;
     const TextureSettings& s = asset.settings;
     if (!asset.texture)
         asset.texture = std::make_shared<Texture>();
     Texture& t = *asset.texture;
     t.id = newResourceId(); // the renderer uploads the new pixels and frees the old ones
-    t.width = asset.width;
-    t.height = asset.height;
-    t.srgb = s.srgb;
-    t.nearest = s.nearest;
-    t.mipmaps = s.mipmaps;
-    t.wrap = static_cast<int>(s.wrap);
-    t.rgba.resize(asset.source.size());
+    applySampling(s, t);
+    std::vector<std::uint8_t> rgba(asset.source.size());
     const bool identity = s.brightness == 0.0f && s.contrast == 1.0f && s.saturation == 1.0f && s.tint == glm::vec3(1.0f);
     const std::size_t rowBytes = static_cast<std::size_t>(asset.width) * 4;
     for (int y = 0; y < asset.height; ++y) {
         const int srcY = s.flipY ? asset.height - 1 - y : y;
         const std::uint8_t* src = asset.source.data() + static_cast<std::size_t>(srcY) * rowBytes;
-        std::uint8_t* dst = t.rgba.data() + static_cast<std::size_t>(y) * rowBytes;
+        std::uint8_t* dst = rgba.data() + static_cast<std::size_t>(y) * rowBytes;
         if (identity) {
             std::copy(src, src + rowBytes, dst);
             continue;
@@ -203,6 +277,26 @@ void applyTextureSettings(TextureAsset& asset)
             dst[x * 4 + 3] = src[x * 4 + 3];
         }
     }
+    if (cook) {
+        const CookOptions options = cookOptions(asset);
+        CookedTexture cooked = cookTexture(rgba.data(), asset.width, asset.height, options);
+        std::filesystem::path file;
+        if (textureCookConfig().diskCache) {
+            file = textureCachePath(textureCacheKey(asset.imagePath, settingsKey(s), options));
+            if (!writeCookedTexture(file, cooked))
+                file.clear();
+        }
+        t.setCooked(std::move(cooked), file);
+        t.mipmaps = s.mipmaps;
+    } else {
+        t.setCooked({}, {});
+        t.width = asset.width;
+        t.height = asset.height;
+        t.format = TextureFormat::RGBA8;
+        t.mipCount = 1;
+        t.mipmaps = s.mipmaps;
+    }
+    t.rgba = std::move(rgba); // full-size pixels for previews (the renderer may drop them after upload)
 }
 
 bool saveTextureSettings(const TextureAsset& asset, std::string* error)
@@ -225,7 +319,9 @@ bool saveTextureSettings(const TextureAsset& asset, std::string* error)
         << "brightness " << s.brightness << '\n'
         << "contrast " << s.contrast << '\n'
         << "saturation " << s.saturation << '\n'
-        << "tint " << s.tint.r << ' ' << s.tint.g << ' ' << s.tint.b << '\n';
+        << "tint " << s.tint.r << ' ' << s.tint.g << ' ' << s.tint.b << '\n'
+        << "compress " << s.compress << '\n'
+        << "max_size " << s.maxSize << '\n';
     if (!out) {
         setError(error, "Write failed: " + file.string());
         return false;
@@ -396,7 +492,9 @@ bool setMaterialMap(Material& material, MapKind kind, const std::filesystem::pat
         material.maps[i].reset();
         return true;
     }
-    auto asset = loadTextureAsset(image, error, mapIsColor(kind));
+    auto asset = loadTextureAsset(image, error, mapIsColor(kind),
+                                  kind == MapKind::Normal ? TextureUsage::Normal
+                                                          : (mapIsColor(kind) ? TextureUsage::Color : TextureUsage::Data));
     if (!asset)
         return false;
     material.mapPaths[i] = asset->imagePath;

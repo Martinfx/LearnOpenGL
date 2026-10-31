@@ -4,6 +4,8 @@
 #include <array>
 #include <cstdint>
 #include <filesystem>
+#include "engine/TextureCook.h"
+#include <future>
 #include <map>
 #include <string>
 #include <unordered_map>
@@ -71,6 +73,13 @@ struct RenderQuality {
     bool bloom = true;
     bool fxaa = true;
     int textureUploadsPerFrame = 6; // new textures sent to the GPU per frame, 0 = all at once
+    // Memory. Textures larger than textureMaxSize drop their top mip levels (0 = full size).
+    // Texture streaming: objects farther than textureStreamDistance get a small copy
+    // (at most 256 px) on the GPU; the full one is read from the cook cache on a worker
+    // thread when you come closer (0 = always full size).
+    int textureMaxSize = 0;
+    float textureStreamDistance = 40.0f;
+    bool releaseCpuTextures = true; // drop CPU pixels once on the GPU (re-read from the cache if needed)
 
     static RenderQuality preset(int level); // 0 low, 1 medium, 2 high, 3 ultra
 };
@@ -97,7 +106,8 @@ public:
     // (loading screen), so walking toward new models does not stall on uploads.
     // Call once per loading-screen frame; works for about `budgetMs` and returns
     // the fraction done (1 = finished). `cursor` starts at 0.
-    float preload(const Scene& scene, std::size_t& cursor, double budgetMs);
+    // `viewer` (e.g. the player start) decides which textures start at full size (streaming).
+    float preload(const Scene& scene, std::size_t& cursor, double budgetMs, glm::vec3 viewer = glm::vec3(0.0f));
 
     // Renders the level from straight above (orthographic, no fog) into a new
     // texture of `pixels` x `pixels` covering [minXZ, minXZ + size] in X and Z.
@@ -106,7 +116,18 @@ public:
     unsigned renderTopDown(const Scene& scene, glm::vec2 minXZ, float size, int pixels);
     static void deleteTexture(unsigned texture);
 
-    void setQuality(const RenderQuality& quality) { quality_ = quality; }
+    // GPU memory held by this renderer (bytes), for the editor's memory panel.
+    struct MemoryStats {
+        std::size_t textureBytes = 0, meshBytes = 0, targetBytes = 0;
+        int textures = 0, meshes = 0;
+        int streamedLow = 0;   // textures with only their small mips resident
+        int streaming = 0;     // reads from the cook cache in flight
+        std::size_t savedBytes = 0; // vs. uncompressed full-size RGBA8 with mipmaps
+    };
+    MemoryStats memoryStats() const;
+
+    // Texture size / streaming changes apply to loaded textures too (streamed from the cook cache).
+    void setQuality(const RenderQuality& quality);
     const RenderQuality& quality() const { return quality_; }
 
     // Compiles the shaders from `directory` (files named as in engine/shaders/).
@@ -120,11 +141,27 @@ private:
     struct GpuMesh {
         unsigned vao = 0, vbo = 0, ibo = 0;
         int indexCount = 0;
+        std::size_t bytes = 0;
         bool used = false;
     };
     struct GpuTexture {
         unsigned handle = 0;
         bool used = false;
+        std::size_t bytes = 0;
+        std::size_t fullBytes = 0;     // uncompressed RGBA8 with mips, for the "saved" figure
+        // Streaming (textures with a cook cache file).
+        std::filesystem::path file;
+        TextureFormat format = TextureFormat::RGBA8;
+        bool srgb = true, nearest = false, mipmaps = true;
+        int wrap = 0;
+        int firstMip = 0;              // top resident level of the full chain
+        int lowMip = 0;                // level used while far away
+        int maxMip = 0;                // level for textureMaxSize
+        int width = 0, height = 0, mipCount = 1; // full chain
+        float nearest_m = 1e30f;       // closest use this frame (metres)
+        double farSince = -1.0;        // time the texture became far, -1 = near
+        std::shared_ptr<std::future<CookedTexture>> pending;
+        int pendingMip = 0;
     };
     struct Program {
         unsigned id = 0;
@@ -166,6 +203,9 @@ private:
     void drawCube(const glm::mat4& transform, glm::vec3 color, float highlight, bool emissive);
     void releaseUnused();
     void keepAlive(const Model& model);
+    void keepTextureAlive(const Texture* tex);
+    void updateStreaming();
+    unsigned createTexture(GpuTexture& g, const CookedTexture& cooked, int firstMipOffset);
 
     std::unordered_map<std::uint64_t, GpuTexture> textures_;
     std::unordered_map<std::uint64_t, GpuMesh> meshes_; // keyed by MeshPart::id
@@ -173,6 +213,8 @@ private:
     MeshLocations loc_;
     bool depthOnly_ = false;
     int texturesUploaded_ = 0;          // this frame; large uploads are spread over frames
+    float drawDistance_ = 0.0f;         // camera to the object being drawn (texture streaming)
+    bool s3tc_ = true, s3tcSrgb_ = true;
     unsigned vao_ = 0, vbo_ = 0, emptyVao_ = 0;
     int vertexCount_ = 0;
     unsigned jointBuffer_ = 0;          // uniform block with skinning matrices (binding 0)

@@ -33,50 +33,79 @@ namespace {
 
 std::atomic<std::uint64_t> nextPartId{1};
 
-// Decodes the base color image of a material (external file or embedded in the .glb).
-std::shared_ptr<const Texture> loadImage(const cgltf_image* image, const std::filesystem::path& gltfDir,
-                                         std::map<std::pair<const cgltf_image*, bool>, std::shared_ptr<const Texture>>& cache,
-                                         bool srgb = true)
+// The cooked (mip-mapped, block-compressed) image of a material slot. A cooked
+// copy in the disk cache skips the PNG/JPEG decode and the compression.
+std::shared_ptr<const Texture> loadImage(const cgltf_image* image, const std::filesystem::path& gltfFile,
+                                         const cgltf_data* data, TextureUsage usage,
+                                         std::map<std::pair<const cgltf_image*, int>, std::shared_ptr<const Texture>>& cache)
 {
     if (!image)
         return nullptr;
-    if (auto it = cache.find({image, srgb}); it != cache.end())
+    const bool srgb = usage == TextureUsage::Color;
+    if (auto it = cache.find({image, static_cast<int>(usage)}); it != cache.end())
         return it->second;
 
-    int w = 0, h = 0, comp = 0;
-    stbi_uc* pixels = nullptr;
-    if (image->buffer_view && image->buffer_view->buffer->data) {
-        const auto* bytes = static_cast<const stbi_uc*>(image->buffer_view->buffer->data) + image->buffer_view->offset;
-        pixels = stbi_load_from_memory(bytes, static_cast<int>(image->buffer_view->size), &w, &h, &comp, 4);
-    } else if (image->uri && std::string_view(image->uri).substr(0, 5) != "data:") {
+    // Source of the pixels: the .glb itself (embedded) or an image file next to the .gltf.
+    std::filesystem::path source = gltfFile;
+    std::string extra = "image" + std::to_string(image - data->images);
+    const bool embedded = image->buffer_view && image->buffer_view->buffer->data;
+    if (!embedded && image->uri && std::string_view(image->uri).substr(0, 5) != "data:") {
         std::string uri = image->uri;
         cgltf_decode_uri(uri.data());
         uri.resize(std::char_traits<char>::length(uri.c_str()));
-        const std::filesystem::path file = gltfDir / std::filesystem::path(std::u8string(uri.begin(), uri.end()));
-        const std::u8string u8 = file.u8string();
+        source = gltfFile.parent_path() / std::filesystem::path(std::u8string(uri.begin(), uri.end()));
+        extra.clear();
+    } else if (!embedded) {
+        return nullptr; // data: URIs are not supported
+    }
+
+    const TextureCookConfig& config = textureCookConfig();
+    CookOptions options;
+    options.usage = usage;
+    options.srgb = srgb;
+    options.compress = config.compress;
+    const std::string key = textureCacheKey(source, extra, options);
+    const std::filesystem::path cacheFile = config.diskCache ? textureCachePath(key) : std::filesystem::path();
+
+    auto tex = std::make_shared<Texture>();
+    tex->id = nextPartId++;
+    tex->srgb = srgb;
+    CookedTexture cooked;
+    // Cached: only the header now; the renderer reads the pixels on a worker when
+    // it first needs them, and only the mip levels it needs (streaming).
+    if (!cacheFile.empty() && readCookedTextureInfo(cacheFile, cooked)) {
+        tex->setCooked(std::move(cooked), cacheFile);
+        cache[{image, static_cast<int>(usage)}] = tex;
+        return tex;
+    }
+
+    int w = 0, h = 0, comp = 0;
+    stbi_uc* pixels = nullptr;
+    if (embedded) {
+        const auto* bytes = static_cast<const stbi_uc*>(image->buffer_view->buffer->data) + image->buffer_view->offset;
+        pixels = stbi_load_from_memory(bytes, static_cast<int>(image->buffer_view->size), &w, &h, &comp, 4);
+    } else {
+        const std::u8string u8 = source.u8string();
         // stbi_load takes a UTF-8 path on Windows only with STBI_WINDOWS_UTF8; read the bytes ourselves.
         if (FILE* f = std::fopen(std::string(u8.begin(), u8.end()).c_str(), "rb")) {
-            std::vector<stbi_uc> data;
+            std::vector<stbi_uc> bytes;
             stbi_uc buf[65536];
             std::size_t n;
             while ((n = std::fread(buf, 1, sizeof buf, f)) > 0)
-                data.insert(data.end(), buf, buf + n);
+                bytes.insert(bytes.end(), buf, buf + n);
             std::fclose(f);
-            pixels = stbi_load_from_memory(data.data(), static_cast<int>(data.size()), &w, &h, &comp, 4);
+            pixels = stbi_load_from_memory(bytes.data(), static_cast<int>(bytes.size()), &w, &h, &comp, 4);
         }
     }
     std::shared_ptr<const Texture> result;
     if (pixels) {
-        auto tex = std::make_shared<Texture>();
-        tex->id = nextPartId++;
-        tex->width = w;
-        tex->height = h;
-        tex->srgb = srgb;
-        tex->rgba.assign(pixels, pixels + static_cast<std::size_t>(w) * static_cast<std::size_t>(h) * 4);
+        cooked = cookTexture(pixels, w, h, options);
         stbi_image_free(pixels);
+        const bool saved = !cacheFile.empty() && writeCookedTexture(cacheFile, cooked);
+        tex->setCooked(std::move(cooked), saved ? cacheFile : std::filesystem::path());
         result = std::move(tex);
     }
-    cache[{image, srgb}] = result;
+    cache[{image, static_cast<int>(usage)}] = result;
     return result;
 }
 
@@ -109,8 +138,9 @@ const cgltf_accessor* findAttribute(const cgltf_primitive& prim, cgltf_attribute
 }
 
 struct LoadContext {
-    std::filesystem::path dir;
-    std::map<std::pair<const cgltf_image*, bool>, std::shared_ptr<const Texture>> images;
+    std::filesystem::path file; // the .gltf/.glb
+    const cgltf_data* data = nullptr;
+    std::map<std::pair<const cgltf_image*, int>, std::shared_ptr<const Texture>> images;
 };
 
 bool loadPrimitive(const cgltf_primitive& prim, const glm::mat4& world, MeshPart& part, LoadContext& ctx)
@@ -168,25 +198,25 @@ bool loadPrimitive(const cgltf_primitive& prim, const glm::mat4& world, MeshPart
     if (prim.material && prim.material->name)
         part.materialName = prim.material->name;
     const cgltf_accessor* uv = findAttribute(prim, cgltf_attribute_type_texcoord);
-    auto textureOf = [&](const cgltf_texture_view& view, bool srgb) -> std::shared_ptr<const Texture> {
+    auto textureOf = [&](const cgltf_texture_view& view, TextureUsage usage) -> std::shared_ptr<const Texture> {
         if (!view.texture || !uv)
             return nullptr;
-        return loadImage(view.texture->image, ctx.dir, ctx.images, srgb);
+        return loadImage(view.texture->image, ctx.file, ctx.data, usage, ctx.images);
     };
     if (const cgltf_material* mat = prim.material) {
         if (mat->has_pbr_metallic_roughness) {
             const cgltf_pbr_metallic_roughness& pbr = mat->pbr_metallic_roughness;
             const float* c = pbr.base_color_factor; // linear
             part.color = {linearToSrgb(c[0]), linearToSrgb(c[1]), linearToSrgb(c[2])};
-            part.texture = textureOf(pbr.base_color_texture, true);
-            part.metalRoughTexture = textureOf(pbr.metallic_roughness_texture, false);
+            part.texture = textureOf(pbr.base_color_texture, TextureUsage::Color);
+            part.metalRoughTexture = textureOf(pbr.metallic_roughness_texture, TextureUsage::Data);
             part.metallic = pbr.metallic_factor;
             part.roughness = pbr.roughness_factor;
         }
-        part.normalTexture = textureOf(mat->normal_texture, false);
+        part.normalTexture = textureOf(mat->normal_texture, TextureUsage::Normal);
         part.normalScale = mat->normal_texture.texture ? mat->normal_texture.scale : 1.0f;
-        part.occlusionTexture = textureOf(mat->occlusion_texture, false);
-        part.emissiveTexture = textureOf(mat->emissive_texture, true);
+        part.occlusionTexture = textureOf(mat->occlusion_texture, TextureUsage::Data);
+        part.emissiveTexture = textureOf(mat->emissive_texture, TextureUsage::Color);
         const float* e = mat->emissive_factor;
         part.emissive = {linearToSrgb(e[0]), linearToSrgb(e[1]), linearToSrgb(e[2])};
     }
@@ -260,6 +290,36 @@ std::uint64_t newResourceId()
     return nextPartId++;
 }
 
+void Texture::setCooked(CookedTexture c, std::filesystem::path file)
+{
+    width = c.width;
+    height = c.height;
+    format = c.format;
+    mipCount = static_cast<int>(c.mips.size());
+    mipmaps = mipCount > 1;
+    cooked = std::move(c);
+    if (cooked.data.empty())
+        cooked.mips.clear(); // header only: the cache file has the pixels
+    cookedFile = std::move(file);
+    rgba.clear();
+}
+
+std::size_t Texture::gpuBytes() const
+{
+    if (format == TextureFormat::RGBA8 && cooked.mips.empty() && cookedFile.empty()) { // GPU-made mipmaps add a third
+        const std::size_t base = static_cast<std::size_t>(width) * static_cast<std::size_t>(height) * 4;
+        return mipmaps ? base * 4 / 3 : base;
+    }
+    std::size_t bytes = 0;
+    int w = width, h = height;
+    for (int i = 0; i < mipCount; ++i) {
+        bytes += textureLevelBytes(format, w, h);
+        w = std::max(1, w / 2);
+        h = std::max(1, h / 2);
+    }
+    return bytes;
+}
+
 std::vector<std::string> Model::materialSlots() const
 {
     std::vector<std::string> slots;
@@ -285,7 +345,8 @@ bool loadModelFile(Model& model, const std::filesystem::path& file, std::string*
     model.parts.clear();
     model.skeleton.reset();
     LoadContext ctx;
-    ctx.dir = file.parent_path();
+    ctx.file = file;
+    ctx.data = data;
     const cgltf_scene* scene = mainScene(data);
     if (scene) {
         for (cgltf_size i = 0; i < scene->nodes_count; ++i)
@@ -430,7 +491,8 @@ bool loadAnimatedModelFile(Model& model, const std::filesystem::path& file, std:
 
     model.parts.clear();
     LoadContext ctx;
-    ctx.dir = file.parent_path();
+    ctx.file = file;
+    ctx.data = data;
     for (std::size_t i = 0; i < order.size(); ++i) {
         const cgltf_node& n = *order[i];
         if (!n.mesh)

@@ -205,6 +205,22 @@ výšková mlha se září ke slunci, bloom, ACES, barevné ladění (saturace, 
   se zvýrazněním GLSL; *Apply* (Ctrl+S) je uloží a hned přeloží. Chyba se označí na řádku a běží dál
   předchozí shadery. *Play level* předá upravené shadery hře (`fps_game level --shaders DIR`).
 
+## Paměť a textury
+
+- **Komprese textur:** při prvním načtení se každá textura „uvaří“: mipmapy (u barev v lineárním světle)
+  a GPU komprese BC1 (barvy), BC3 (s alfou), BC5 (normal mapy, shader dopočítá Z). Paměť textury klesne
+  na 1/4 až 1/8. Výsledek se uloží do cache (`~/.cache/fps_engine/textures`, na Windows
+  `%LOCALAPPDATA%\fps_engine\cache\textures`), takže další načtení přeskočí dekódování PNG/JPEG i kompresi.
+- **Streamování:** objekty dál než vzdálenost streamování mají na GPU jen malou kopii (max. 256 px).
+  Plné rozlišení se načte z cache na pracovním vlákně, když se přiblížíš; po 5 s v dálce se zase uvolní.
+  CPU kopie pixelů se po nahrání na GPU zahazují.
+- **Editor:** textura má v *Texture editoru* sekci *Memory* (komprese zap./vyp., max. velikost). Render →
+  *Texture size* omezí velikost všech textur. Dok **Memory** ukazuje GPU (textury, meshe, render targety)
+  i CPU (meshe, pixely, celý proces). Kvalita Low/Medium omezuje textury na 1024/2048 px.
+- **Sdílené meshe:** kopie jednoho modelu (např. 18 dílů plotu) sdílí vrcholy v RAM i v historii undo.
+- Testovací level: načtení 21,0 s → 2,3 s (s teplou cache), paměť hry 4,4 GB → 0,54 GB (llvmpipe, kde je
+  i „VRAM“ v RAM).
+
 ## Modely z Blenderu
 
 File > Export > glTF 2.0 (`.glb` nebo `.gltf`), Y nahoru (výchozí). V editoru Ctrl+I.

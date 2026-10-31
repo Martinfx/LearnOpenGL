@@ -49,6 +49,8 @@ private:
     QCheckBox* mipmaps_;
     QCheckBox* srgb_;
     QCheckBox* flipY_;
+    QCheckBox* compress_;
+    QComboBox* maxSize_;
     QDoubleSpinBox* brightness_;
     QDoubleSpinBox* contrast_;
     QDoubleSpinBox* saturation_;

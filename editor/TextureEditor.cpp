@@ -68,6 +68,14 @@ TextureEditor::TextureEditor(QWidget* parent)
     srgb_ = new QCheckBox(tr("Color texture (sRGB)"), form_);
     srgb_->setToolTip(tr("Off for data textures such as masks or roughness"));
     flipY_ = new QCheckBox(tr("Flip vertically"), form_);
+    compress_ = new QCheckBox(tr("GPU compression (BC1/BC3, BC5 for normal maps)"), form_);
+    compress_->setToolTip(tr("Takes 1/4 to 1/8 of the memory of plain RGBA. Off for pixel art or UI images "
+                             "that must stay exact (nearest filtering is never compressed)."));
+    maxSize_ = new QComboBox(form_);
+    maxSize_->addItem(tr("Original"), 0);
+    for (int size : {4096, 2048, 1024, 512, 256, 128})
+        maxSize_->addItem(QString("%1 px").arg(size), size);
+    maxSize_->setToolTip(tr("Longest side in the game; larger images are scaled down when cooked"));
     auto makeSpin = [this](double min, double max, double step) {
         auto* s = new QDoubleSpinBox(form_);
         s->setRange(min, max);
@@ -91,6 +99,9 @@ TextureEditor::TextureEditor(QWidget* parent)
     form->addRow(tr("Filter"), filter_);
     form->addRow(QString(), mipmaps_);
     form->addRow(QString(), srgb_);
+    form->addRow(new QLabel(tr("<b>Memory</b>"), form_));
+    form->addRow(QString(), compress_);
+    form->addRow(tr("Max size"), maxSize_);
     form->addRow(new QLabel(tr("<b>Adjustments</b> (the image file is not changed)"), form_));
     form->addRow(tr("Brightness"), brightness_);
     form->addRow(tr("Contrast"), contrast_);
@@ -109,9 +120,9 @@ TextureEditor::TextureEditor(QWidget* parent)
     layout->setContentsMargins(4, 4, 4, 4);
     layout->addWidget(split);
 
-    for (QComboBox* c : {wrap_, filter_})
+    for (QComboBox* c : {wrap_, filter_, maxSize_})
         connect(c, &QComboBox::currentIndexChanged, this, &TextureEditor::edited);
-    for (QCheckBox* c : {mipmaps_, srgb_, flipY_})
+    for (QCheckBox* c : {mipmaps_, srgb_, flipY_, compress_})
         connect(c, &QCheckBox::toggled, this, &TextureEditor::edited);
     connect(zoom_, &QComboBox::currentIndexChanged, this, &TextureEditor::refreshPreview);
     connect(tile_, &QCheckBox::toggled, this, &TextureEditor::refreshPreview);
@@ -166,6 +177,8 @@ bool TextureEditor::load(const QString& image, QString* error)
         return false;
     }
     asset_ = std::move(asset);
+    if (asset_->texture && asset_->texture->rgba.empty())
+        engine::applyTextureSettings(*asset_); // loaded from the cook cache: decode for the preview
     modified_ = false;
     form_->setEnabled(true);
     refreshForm();
@@ -183,9 +196,11 @@ bool TextureEditor::save(QString* error)
             *error = QString::fromStdString(err);
         return false;
     }
+    engine::applyTextureSettings(*asset_, true); // cook (compress, size limit) as the game will see it
     modified_ = false;
     emit modificationChanged(false);
     refreshPreview();
+    emit textureChanged();
     return true;
 }
 
@@ -217,6 +232,8 @@ void TextureEditor::refreshForm()
     contrast_->setValue(s.contrast);
     saturation_->setValue(s.saturation);
     tint_->setStyleSheet(colorStyle(s.tint));
+    compress_->setChecked(s.compress);
+    maxSize_->setCurrentIndex(std::max(0, maxSize_->findData(s.maxSize)));
     loading_ = false;
 }
 
@@ -233,8 +250,11 @@ void TextureEditor::edited()
     s.brightness = static_cast<float>(brightness_->value());
     s.contrast = static_cast<float>(contrast_->value());
     s.saturation = static_cast<float>(saturation_->value());
+    s.compress = compress_->isChecked();
+    s.maxSize = maxSize_->currentData().toInt();
     tint_->setStyleSheet(colorStyle(s.tint));
-    engine::applyTextureSettings(*asset_);
+    // Live preview without cooking (fast while dragging); Save cooks it.
+    engine::applyTextureSettings(*asset_, false);
     if (!modified_) {
         modified_ = true;
         emit modificationChanged(true);
@@ -248,10 +268,13 @@ void TextureEditor::refreshPreview()
     if (!asset_ || !asset_->texture)
         return;
     const engine::Texture& t = *asset_->texture;
-    const QImage img(t.rgba.data(), t.width, t.height, t.width * 4, QImage::Format_RGBA8888);
+    if (t.rgba.empty())
+        engine::applyTextureSettings(*asset_, !modified_); // the renderer released the pixels
+    const int width = asset_->width, height = asset_->height;
+    const QImage img(t.rgba.data(), width, height, width * 4, QImage::Format_RGBA8888);
     const int zoom = zoom_->currentData().toInt();
     const int tiles = tile_->isChecked() ? 3 : 1;
-    const QSize cell(std::max(1, t.width * zoom / 100), std::max(1, t.height * zoom / 100));
+    const QSize cell(std::max(1, width * zoom / 100), std::max(1, height * zoom / 100));
     QPixmap pix(cell.width() * tiles, cell.height() * tiles);
     pix.fill(Qt::transparent);
     QPainter p(&pix);
@@ -266,10 +289,22 @@ void TextureEditor::refreshPreview()
         }
     p.end();
     image_->setPixmap(pix);
-    info_->setText(tr("%1  ·  %2 x %3 px  ·  settings: %4%5")
+    const double mb = 1024.0 * 1024.0;
+    const double plain = static_cast<double>(width) * height * 4 * 4 / 3 / mb;
+    QString memory;
+    if (modified_)
+        memory = tr("GPU: cooked on Save");
+    else
+        memory = tr("GPU: %1 x %2 %3, %4 MB (plain RGBA %5 MB)")
+                     .arg(t.width)
+                     .arg(t.height)
+                     .arg(engine::textureFormatName(t.format))
+                     .arg(static_cast<double>(t.gpuBytes()) / mb, 0, 'f', 2)
+                     .arg(plain, 0, 'f', 2);
+    info_->setText(tr("%1  ·  %2 x %3 px  ·  %4  ·  settings: %5%6")
                        .arg(QDir::toNativeSeparators(path()))
-                       .arg(t.width)
-                       .arg(t.height)
+                       .arg(width)
+                       .arg(height)
+                       .arg(memory)
                        .arg(QString::fromStdU16String(engine::textureSettingsPath(asset_->imagePath).filename().u16string()))
-                       .arg(modified_ ? tr("  (unsaved)") : QString()));
-}
+                       .arg(modified_ ? tr("  (unsaved)") : QString()));}

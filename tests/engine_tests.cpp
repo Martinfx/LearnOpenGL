@@ -8,6 +8,9 @@
 #include <engine/Scripting.h>
 #include <engine/JobSystem.h>
 #include <engine/Material.h>
+#include <engine/TextureCook.h>
+#include <algorithm>
+#include <filesystem>
 #include <engine/SceneGraph.h>
 #include <engine/Weapon.h>
 
@@ -716,6 +719,8 @@ void testMaterialsAndTextures()
 
     // Texture adjustments rebuild the pixels and give the GPU a new id.
     engine::TextureAsset& tex = *m->map(engine::MapKind::Albedo);
+    engine::applyTextureSettings(tex); // the asset may come from the cook cache without pixels
+    check(!tex.source.empty() && tex.texture->format == engine::TextureFormat::BC1, "bricks decoded and compressed to BC1");
     const std::uint64_t before = tex.texture->id;
     const std::uint8_t r0 = tex.texture->rgba[0];
     tex.settings.brightness = 0.3f;
@@ -810,8 +815,66 @@ void testRotateGizmo()
             check(std::abs(glm::length(p - c) - r) < 1e-4f && std::abs((p - c)[axis]) < 1e-4f, "ring points lie on the circle");
 }
 
+void testTextureCooking()
+{
+    // 64x32 opaque gradient -> BC1, 7 mips (64x32 .. 1x1), 8 bytes per 4x4 block.
+    std::vector<std::uint8_t> px(64 * 32 * 4);
+    for (int i = 0; i < 64 * 32; ++i) {
+        px[i * 4] = static_cast<std::uint8_t>(i % 64 * 4);
+        px[i * 4 + 1] = static_cast<std::uint8_t>(i / 64 * 8);
+        px[i * 4 + 2] = 128;
+        px[i * 4 + 3] = 255;
+    }
+    engine::CookOptions o;
+    engine::CookedTexture c = engine::cookTexture(px.data(), 64, 32, o);
+    check(c.format == engine::TextureFormat::BC1 && c.mips.size() == 7 && c.mips[0].size == 16 * 8 * 8 && c.mips[6].size == 8,
+          "cook: BC1 mip chain");
+    px[3] = 10; // any alpha -> BC3
+    check(engine::cookTexture(px.data(), 64, 32, o).format == engine::TextureFormat::BC3, "cook: alpha uses BC3");
+    o.usage = engine::TextureUsage::Normal;
+    check(engine::cookTexture(px.data(), 64, 32, o).format == engine::TextureFormat::BC5, "cook: normal maps use BC5");
+    o.usage = engine::TextureUsage::Color;
+    o.maxSize = 16;
+    const engine::CookedTexture small = engine::cookTexture(px.data(), 64, 32, o);
+    check(small.width == 16 && small.height == 8 && small.mips.size() == 5, "cook: max size drops the top mips");
+
+    // Cache file round trip, also reading only the small mips (streaming).
+    check(engine::writeCookedTexture("cooked_test.ctex", c), "cook: write cache file");
+    engine::CookedTexture all, tail;
+    check(engine::readCookedTexture("cooked_test.ctex", all) && all.data == c.data && all.mips.size() == 7, "cook: read cache file");
+    check(engine::readCookedTexture("cooked_test.ctex", tail, 2) && tail.width == 16 && tail.mips.size() == 5 &&
+              tail.mips[0].offset == 0 &&
+              std::equal(tail.data.begin(), tail.data.end(), c.data.begin() + static_cast<long>(c.mips[2].offset)),
+          "cook: read from mip 2");
+}
+
+void testSharedMeshes()
+{
+    // Copies of a model share their vertices; editing a copy detaches it.
+    std::string err;
+    engine::Model a;
+    check(engine::loadModelFile(a, ENGINE_TEST_ASSETS "/models/ramp.gltf", &err), "load ramp: " + err);
+    engine::Model b = a;
+    check(b.parts.sharedWith(a.parts) && &b.parts[0] == &a.parts[0], "model copies share mesh parts");
+    b.parts.push_back(engine::MeshPart{});
+    check(!b.parts.sharedWith(a.parts) && b.parts.size() == a.parts.size() + 1, "changing a copy detaches it");
+    engine::Scene s;
+    check(engine::loadScene(s, ENGINE_TEST_ASSETS "/levels/test.level", &err), "load test level: " + err);
+    int shared = 0;
+    for (std::size_t i = 0; i < s.models.size(); ++i)
+        for (std::size_t j = i + 1; j < s.models.size(); ++j)
+            if (s.models[i].sourcePath == s.models[j].sourcePath && s.models[i].parts.sharedWith(s.models[j].parts))
+                ++shared;
+    check(shared > 0, "level instances of one file share meshes");
+}
+
 int main()
 {
+    // Hermetic cook cache for the tests.
+    engine::textureCookConfig().cacheDir = std::filesystem::current_path() / "texture_cache";
+    std::filesystem::remove_all(engine::textureCookConfig().cacheDir);
+    testTextureCooking();
+    testSharedMeshes();
     testFixedStep();
     testFallsAndLands();
     testWallBlocks();

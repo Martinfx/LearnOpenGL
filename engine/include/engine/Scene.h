@@ -2,6 +2,7 @@
 #include "engine/Animation.h"
 #include "engine/Geometry.h"
 #include "engine/Material.h"
+#include "engine/TextureCook.h"
 #include <cstdint>
 #include <filesystem>
 #include <glm/gtc/type_precision.hpp>
@@ -42,16 +43,30 @@ struct Box {
     Aabb bounds() const;         // world-space, encloses the rotated box
 };
 
-// Decoded RGBA8 image (sRGB), shared by all parts that use it.
+// Image shared by all parts and materials that use it.
+// Pixels come either as plain RGBA8 (`rgba`, mipmaps made on the GPU) or as a
+// cooked mip chain (`cooked`, usually block-compressed, see TextureCook.h).
+// Once the GPU has a texture made from a cache file, the renderer may drop the
+// CPU copies (`cookedFile` is enough to stream the data in again); hence mutable.
 struct Texture {
     std::uint64_t id = 0;            // GPU cache key; a new id makes the renderer upload again
-    int width = 0;
+    int width = 0;                   // full size (mip 0)
     int height = 0;
-    std::vector<std::uint8_t> rgba;
+    mutable std::vector<std::uint8_t> rgba;
+    mutable CookedTexture cooked;
+    std::filesystem::path cookedFile; // disk cache with the same mip chain, empty = none
+    TextureFormat format = TextureFormat::RGBA8;
+    int mipCount = 1;                // of the cooked chain (1 for plain RGBA8)
     bool srgb = true;                // sampling settings (TextureSettings)
     bool nearest = false;
     bool mipmaps = true;
     int wrap = 0;                    // 0 repeat, 1 clamp, 2 mirror
+
+    // Something to draw: pixels in memory or a cache file to read them from.
+    bool valid() const { return width > 0 && (!rgba.empty() || !cooked.data.empty() || !cookedFile.empty()); }
+    // Takes a cooked chain (sets size, format and mip count).
+    void setCooked(CookedTexture c, std::filesystem::path file = {});
+    std::size_t gpuBytes() const;    // full chain on the GPU
 };
 
 // Unique id for GPU caches (mesh parts, textures).
@@ -83,13 +98,49 @@ struct MeshPart {
     std::vector<glm::vec4> weights;
 };
 
+// The mesh parts of a model, shared by every copy: placing the same .glb twenty
+// times (or keeping it in the editor's undo history) stores its vertices once.
+// Reads go to the shared list; push_back/clear make the list unique first.
+class PartList {
+public:
+    using const_iterator = std::vector<MeshPart>::const_iterator;
+    const_iterator begin() const { return list().begin(); }
+    const_iterator end() const { return list().end(); }
+    std::size_t size() const { return parts_ ? parts_->size() : 0; }
+    bool empty() const { return size() == 0; }
+    const MeshPart& operator[](std::size_t i) const { return (*parts_)[i]; }
+    const MeshPart& front() const { return parts_->front(); }
+    const MeshPart& back() const { return parts_->back(); }
+    void push_back(MeshPart part) { unique().push_back(std::move(part)); }
+    void clear() { parts_.reset(); }
+    // True when both lists are the same shared data.
+    bool sharedWith(const PartList& other) const { return parts_ && parts_ == other.parts_; }
+    long useCount() const { return parts_.use_count(); }
+
+private:
+    const std::vector<MeshPart>& list() const
+    {
+        static const std::vector<MeshPart> none;
+        return parts_ ? *parts_ : none;
+    }
+    std::vector<MeshPart>& unique()
+    {
+        if (!parts_)
+            parts_ = std::make_shared<std::vector<MeshPart>>();
+        else if (parts_.use_count() > 1)
+            parts_ = std::make_shared<std::vector<MeshPart>>(*parts_);
+        return *parts_;
+    }
+    std::shared_ptr<std::vector<MeshPart>> parts_;
+};
+
 // Static level geometry imported from glTF (Blender: File > Export > glTF 2.0).
 struct Model {
     std::string name = "Model";
     std::string parent;               // hierarchy parent (object or group name), empty = root
     std::filesystem::path sourcePath; // absolute path of the .gltf/.glb
     glm::vec3 position{0.0f};
-    std::vector<MeshPart> parts;
+    PartList parts;                   // shared between copies of the model
     Aabb localBounds;                 // animated models: bounds in the rest pose
     std::shared_ptr<const Skeleton> skeleton; // null for static models
     // Engine materials replacing glTF materials, by glTF material name (set in the editor).

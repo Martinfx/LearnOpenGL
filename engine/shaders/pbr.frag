@@ -129,7 +129,10 @@ void main() {
     if (uShading == 2)
         albedo = vec3(0.5); // lighting only
     if (uHasNormalMap) {
-        vec3 m = texture(uNormalMap, uv).xyz * 2.0 - 1.0;
+        // X and Y only, Z rebuilt: works for RGB maps and two-channel BC5 maps alike.
+        vec3 m;
+        m.xy = texture(uNormalMap, uv).xy * 2.0 - 1.0;
+        m.z = sqrt(max(1.0 - dot(m.xy, m.xy), 0.0));
         m.xy *= uNormalStrength;
         n = perturbNormal(n, vWorldPos, uv, normalize(m));
     }

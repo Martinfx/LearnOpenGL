@@ -1,6 +1,7 @@
 #include "engine/Renderer.h"
 
 #include <glad/gl.h>
+#include "engine/JobSystem.h"
 #include <chrono>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -16,6 +17,16 @@
 namespace engine {
 
 namespace {
+
+// S3TC sRGB formats come from EXT_texture_sRGB (not in glad's core header).
+constexpr GLenum kSrgbDxt1 = 0x8C4C;      // GL_COMPRESSED_SRGB_S3TC_DXT1_EXT
+constexpr GLenum kSrgbAlphaDxt5 = 0x8C4F; // GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT
+
+// Metres from a point to a box (0 inside): texture streaming distance.
+float distanceTo(glm::vec3 p, const Aabb& b)
+{
+    return glm::length(glm::max(glm::max(b.min - p, p - b.max), glm::vec3(0.0f)));
+}
 
 struct Vertex {
     glm::vec3 position{0.0f};
@@ -239,9 +250,15 @@ RenderQuality RenderQuality::preset(int level)
 {
     RenderQuality q;
     switch (level) {
-    case 0: q.shadowResolution = 1024; q.shadowCascades = 2; q.ssao = false; q.bloom = false; q.fxaa = true; break;
-    case 1: q.shadowResolution = 1024; q.shadowCascades = 3; q.ssao = true; q.bloom = true; break;
-    case 3: q.shadowResolution = 4096; q.shadowCascades = 3; break;
+    case 0:
+        q.shadowResolution = 1024; q.shadowCascades = 2; q.ssao = false; q.bloom = false; q.fxaa = true;
+        q.textureMaxSize = 1024; q.textureStreamDistance = 20.0f;
+        break;
+    case 1:
+        q.shadowResolution = 1024; q.shadowCascades = 3; q.ssao = true; q.bloom = true;
+        q.textureMaxSize = 2048; q.textureStreamDistance = 30.0f;
+        break;
+    case 3: q.shadowResolution = 4096; q.shadowCascades = 3; q.textureStreamDistance = 80.0f; break;
     default: break; // high
     }
     return q;
@@ -362,6 +379,15 @@ bool Renderer::init(GlLoader loader, std::string* error)
             *error = "OpenGL 4.5 or newer is required";
         return false;
     }
+    // Block-compressed textures need S3TC (every desktop driver has it); without it the cooker keeps RGBA8.
+    s3tc_ = GLAD_GL_EXT_texture_compression_s3tc != 0;
+    if (s3tc_) {
+        GLint ok = 0;
+        glGetInternalformativ(GL_TEXTURE_2D, kSrgbDxt1, GL_INTERNALFORMAT_SUPPORTED, 1, &ok);
+        s3tcSrgb_ = ok == GL_TRUE || GLAD_GL_EXT_texture_sRGB;
+    }
+    if (!s3tc_ || !s3tcSrgb_)
+        textureCookConfig().compress = false;
     glInfo_ = std::string(reinterpret_cast<const char*>(glGetString(GL_RENDERER))) + " / OpenGL "
             + reinterpret_cast<const char*>(glGetString(GL_VERSION));
     if (!buildPrograms(embeddedShaders(), programs_, error))
@@ -690,9 +716,16 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
     for (std::size_t i = 0; i < scene.boxes.size(); ++i) {
         const Box& b = scene.boxes[i];
         if (!visible(b.bounds())) {
+            if (b.material) { // keep its maps on the GPU while out of view
+                drawDistance_ = distanceTo(view.cameraPosition, b.bounds());
+                for (const auto& asset : b.material->maps)
+                    if (asset)
+                        keepTextureAlive(asset->texture.get());
+            }
             ++culled_;
             continue;
         }
+        drawDistance_ = distanceTo(view.cameraPosition, b.bounds());
         if (b.rotated()) {
             glUniformMatrix4fv(loc_.model, 1, GL_FALSE, glm::value_ptr(b.transform()));
             applySurface(b.material.get(), nullptr, b.color, true);
@@ -706,6 +739,7 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
     }
     for (std::size_t i = 0; i < scene.models.size(); ++i) {
         const Model& model = scene.models[i];
+        drawDistance_ = distanceTo(view.cameraPosition, model.bounds());
         if (!visible(model.bounds())) {
             keepAlive(model); // stays uploaded while out of view
             if (model.lod)
@@ -724,6 +758,7 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         }
         drawModel(*draw, model.transform(), selected ? 1.0f : 0.0f);
     }
+    drawDistance_ = 0.0f; // weapon in hand, previews
     for (const auto& [extra, transform] : view.extraModels)
         if (extra)
             drawModel(*extra, transform, 0.0f);
@@ -738,6 +773,7 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         const float highlight = static_cast<int>(scene.boxes.size() + scene.models.size() + i) == view.selectedObject ? 1.0f : 0.0f;
         // Generous box: animations reach outside the rest pose.
         const float reach = std::max({e.size.x, e.size.y, e.size.z}) * 1.5f;
+        drawDistance_ = std::max(0.0f, glm::distance(view.cameraPosition, e.position) - reach);
         if (!visible(Aabb::fromCenterSize(e.position + glm::vec3(0.0f, e.size.y * 0.5f, 0.0f), glm::vec3(reach)))) {
             if (e.model)
                 keepAlive(*e.model);
@@ -835,6 +871,7 @@ void Renderer::render(const Scene& scene, const RenderView& view)
 {
     resetGlState();
     // Free GPU data nothing drew since the previous render() (removed models).
+    updateStreaming(); // before releaseUnused(): uses last frame's distances
     releaseUnused();
     texturesUploaded_ = 0;
     culled_ = 0;
@@ -1077,8 +1114,78 @@ const Renderer::GpuMesh& Renderer::upload(const MeshPart& part)
     setupVertexArray(m.vao, m.vbo);
     glVertexArrayElementBuffer(m.vao, m.ibo);
     m.indexCount = static_cast<int>(part.indices.size());
+    m.bytes = vertices.size() * sizeof(Vertex) + part.indices.size() * sizeof(std::uint32_t);
     m.used = true;
     return meshes_.emplace(part.id, m).first->second;
+}
+
+namespace {
+GLenum internalFormat(TextureFormat f, bool srgb)
+{
+    switch (f) {
+    case TextureFormat::BC1: return srgb ? kSrgbDxt1 : GL_COMPRESSED_RGB_S3TC_DXT1_EXT;
+    case TextureFormat::BC3: return srgb ? kSrgbAlphaDxt5 : GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
+    case TextureFormat::BC5: return GL_COMPRESSED_RG_RGTC2;
+    default: return srgb ? GL_SRGB8_ALPHA8 : GL_RGBA8;
+    }
+}
+
+// First level of a chain that is at most `size` pixels on its longest side.
+int mipForSize(int width, int height, int mipCount, int size)
+{
+    if (size <= 0)
+        return 0;
+    int mip = 0;
+    while (mip + 1 < mipCount && std::max(width >> mip, height >> mip) > size)
+        ++mip;
+    return mip;
+}
+
+constexpr int kStreamLowSize = 256; // far-away textures keep at most this many pixels
+constexpr double kStreamOutDelay = 5.0; // seconds far away before the big mips are freed
+
+double secondsNow()
+{
+    return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+} // namespace
+
+unsigned Renderer::createTexture(GpuTexture& g, const CookedTexture& c, int skip)
+{
+    skip = std::clamp(skip, 0, std::max(0, static_cast<int>(c.mips.size()) - 1));
+    const int levels = static_cast<int>(c.mips.size()) - skip;
+    if (levels <= 0)
+        return 0;
+    if (c.format != TextureFormat::RGBA8 && (!s3tc_ || (g.srgb && c.format != TextureFormat::BC5 && !s3tcSrgb_)))
+        return 0; // GPU without S3TC: textureCookConfig().compress is off, so this is a stale cache
+    unsigned handle = 0;
+    glCreateTextures(GL_TEXTURE_2D, 1, &handle);
+    const GLenum fmt = internalFormat(c.format, g.srgb && c.format != TextureFormat::BC5);
+    const TextureMip& top = c.mips[static_cast<std::size_t>(skip)];
+    glTextureStorage2D(handle, levels, fmt, top.width, top.height);
+    std::size_t bytes = 0;
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    for (int i = 0; i < levels; ++i) {
+        const TextureMip& m = c.mips[static_cast<std::size_t>(skip + i)];
+        if (c.format == TextureFormat::RGBA8)
+            glTextureSubImage2D(handle, i, 0, 0, m.width, m.height, GL_RGBA, GL_UNSIGNED_BYTE, c.data.data() + m.offset);
+        else
+            glCompressedTextureSubImage2D(handle, i, 0, 0, m.width, m.height, fmt, static_cast<GLsizei>(m.size),
+                                          c.data.data() + m.offset);
+        bytes += m.size;
+    }
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+    const bool mips = g.mipmaps && levels > 1;
+    const GLint minFilter = g.nearest ? (mips ? GL_NEAREST_MIPMAP_LINEAR : GL_NEAREST) : (mips ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
+    glTextureParameteri(handle, GL_TEXTURE_MIN_FILTER, minFilter);
+    glTextureParameteri(handle, GL_TEXTURE_MAG_FILTER, g.nearest ? GL_NEAREST : GL_LINEAR);
+    const GLint wrap = g.wrap == 1 ? GL_CLAMP_TO_EDGE : (g.wrap == 2 ? GL_MIRRORED_REPEAT : GL_REPEAT);
+    glTextureParameteri(handle, GL_TEXTURE_WRAP_S, wrap);
+    glTextureParameteri(handle, GL_TEXTURE_WRAP_T, wrap);
+    if (GLAD_GL_VERSION_4_6 || GLAD_GL_EXT_texture_filter_anisotropic)
+        glTextureParameterf(handle, GL_TEXTURE_MAX_ANISOTROPY, 8.0f); // sharp floors at grazing angles
+    g.bytes = bytes;
+    return handle;
 }
 
 unsigned Renderer::texture(const Texture& tex)
@@ -1086,31 +1193,170 @@ unsigned Renderer::texture(const Texture& tex)
     auto it = textures_.find(tex.id);
     if (it != textures_.end()) {
         it->second.used = true;
+        it->second.nearest_m = std::min(it->second.nearest_m, drawDistance_);
         return it->second.handle;
     }
     // Uploading many 2K textures at once would stall a frame: spread them out
     // (surfaces draw without the map until it is on the GPU).
     if (!ignoreUploadBudget_ && quality_.textureUploadsPerFrame > 0 && ++texturesUploaded_ > quality_.textureUploadsPerFrame)
         return 0;
-    GpuTexture t;
-    glCreateTextures(GL_TEXTURE_2D, 1, &t.handle);
-    const int levels = tex.mipmaps ? 1 + static_cast<int>(std::floor(std::log2(std::max(tex.width, tex.height)))) : 1;
-    glTextureStorage2D(t.handle, levels, tex.srgb ? GL_SRGB8_ALPHA8 : GL_RGBA8, tex.width, tex.height);
-    glTextureSubImage2D(t.handle, 0, 0, 0, tex.width, tex.height, GL_RGBA, GL_UNSIGNED_BYTE, tex.rgba.data());
-    if (tex.mipmaps)
-        glGenerateTextureMipmap(t.handle);
-    const GLint minFilter = tex.nearest ? (tex.mipmaps ? GL_NEAREST_MIPMAP_LINEAR : GL_NEAREST)
-                                        : (tex.mipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
-    glTextureParameteri(t.handle, GL_TEXTURE_MIN_FILTER, minFilter);
-    glTextureParameteri(t.handle, GL_TEXTURE_MAG_FILTER, tex.nearest ? GL_NEAREST : GL_LINEAR);
-    const GLint wrap = tex.wrap == 1 ? GL_CLAMP_TO_EDGE : (tex.wrap == 2 ? GL_MIRRORED_REPEAT : GL_REPEAT);
-    glTextureParameteri(t.handle, GL_TEXTURE_WRAP_S, wrap);
-    glTextureParameteri(t.handle, GL_TEXTURE_WRAP_T, wrap);
-    if (GLAD_GL_VERSION_4_6 || GLAD_GL_EXT_texture_filter_anisotropic)
-        glTextureParameterf(t.handle, GL_TEXTURE_MAX_ANISOTROPY, 8.0f); // sharp floors at grazing angles
-    t.used = true;
-    textures_.emplace(tex.id, t);
-    return t.handle;
+    GpuTexture g;
+    g.srgb = tex.srgb;
+    g.nearest = tex.nearest;
+    g.mipmaps = tex.mipmaps;
+    g.wrap = tex.wrap;
+    g.format = tex.format;
+    g.file = tex.cookedFile;
+    g.used = true;
+    g.nearest_m = drawDistance_;
+    g.fullBytes = static_cast<std::size_t>(tex.width) * static_cast<std::size_t>(tex.height) * 4 * 4 / 3;
+    const bool cooked = !tex.cooked.mips.empty() || !tex.cookedFile.empty();
+    if (cooked) {
+        const int count = tex.cooked.mips.empty() ? tex.mipCount : static_cast<int>(tex.cooked.mips.size());
+        g.width = tex.width;
+        g.height = tex.height;
+        g.mipCount = count;
+        g.maxMip = mipForSize(tex.width, tex.height, count, quality_.textureMaxSize);
+        const bool streams = !g.file.empty() && quality_.textureStreamDistance > 0.0f && count > 1;
+        g.lowMip = streams ? std::max(g.maxMip, mipForSize(tex.width, tex.height, count, kStreamLowSize)) : g.maxMip;
+        const int want = drawDistance_ > quality_.textureStreamDistance ? g.lowMip : g.maxMip;
+        if (!tex.cooked.data.empty()) {
+            g.handle = createTexture(g, tex.cooked, want);
+            g.firstMip = want;
+        } else {
+            // Pixels already released: read them back from the cook cache on a worker.
+            const std::filesystem::path file = g.file;
+            g.pending = std::make_shared<std::future<CookedTexture>>(JobSystem::global().submit([file, want] {
+                CookedTexture c;
+                readCookedTexture(file, c, want);
+                return c;
+            }));
+            g.pendingMip = want;
+            g.firstMip = want;
+        }
+        if (want != g.maxMip)
+            g.farSince = secondsNow();
+    } else if (!tex.rgba.empty()) {
+        glCreateTextures(GL_TEXTURE_2D, 1, &g.handle);
+        const int levels = tex.mipmaps ? 1 + static_cast<int>(std::floor(std::log2(std::max(tex.width, tex.height)))) : 1;
+        glTextureStorage2D(g.handle, levels, tex.srgb ? GL_SRGB8_ALPHA8 : GL_RGBA8, tex.width, tex.height);
+        glTextureSubImage2D(g.handle, 0, 0, 0, tex.width, tex.height, GL_RGBA, GL_UNSIGNED_BYTE, tex.rgba.data());
+        if (tex.mipmaps)
+            glGenerateTextureMipmap(g.handle);
+        const GLint minFilter = tex.nearest ? (tex.mipmaps ? GL_NEAREST_MIPMAP_LINEAR : GL_NEAREST)
+                                            : (tex.mipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
+        glTextureParameteri(g.handle, GL_TEXTURE_MIN_FILTER, minFilter);
+        glTextureParameteri(g.handle, GL_TEXTURE_MAG_FILTER, tex.nearest ? GL_NEAREST : GL_LINEAR);
+        const GLint wrap = tex.wrap == 1 ? GL_CLAMP_TO_EDGE : (tex.wrap == 2 ? GL_MIRRORED_REPEAT : GL_REPEAT);
+        glTextureParameteri(g.handle, GL_TEXTURE_WRAP_S, wrap);
+        glTextureParameteri(g.handle, GL_TEXTURE_WRAP_T, wrap);
+        if (GLAD_GL_VERSION_4_6 || GLAD_GL_EXT_texture_filter_anisotropic)
+            glTextureParameterf(g.handle, GL_TEXTURE_MAX_ANISOTROPY, 8.0f);
+        g.bytes = tex.gpuBytes();
+    } else {
+        return 0;
+    }
+    // The GPU has it and the cook cache can give it back: free the CPU copy.
+    if (quality_.releaseCpuTextures && !tex.cookedFile.empty() && g.handle) {
+        std::vector<std::uint8_t>().swap(tex.rgba);
+        tex.cooked = CookedTexture{};
+    }
+    const unsigned handle = g.handle;
+    textures_.emplace(tex.id, std::move(g));
+    return handle;
+}
+
+void Renderer::updateStreaming()
+{
+    const double now = secondsNow();
+    int uploads = 0;
+    for (auto& [id, g] : textures_) {
+        // Finished reads: swap in the new texture.
+        if (g.pending && g.pending->wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+            if (quality_.textureUploadsPerFrame > 0 && uploads >= quality_.textureUploadsPerFrame)
+                continue;
+            const CookedTexture c = g.pending->get();
+            g.pending.reset();
+            if (!c.mips.empty()) {
+                if (const unsigned handle = createTexture(g, c, 0)) {
+                    if (g.handle)
+                        glDeleteTextures(1, &g.handle);
+                    g.handle = handle;
+                    g.firstMip = g.pendingMip;
+                    ++uploads;
+                }
+            }
+        }
+        const float distance = g.nearest_m;
+        g.nearest_m = 1e30f; // gathered again by this frame's draws
+        if (g.file.empty() || g.pending || (g.lowMip == g.maxMip && g.firstMip == g.maxMip))
+            continue;
+        const bool near = distance <= quality_.textureStreamDistance;
+        int want = g.firstMip;
+        if (near) {
+            g.farSince = -1.0;
+            want = g.maxMip;
+        } else {
+            if (g.farSince < 0.0)
+                g.farSince = now;
+            if (now - g.farSince > kStreamOutDelay)
+                want = g.lowMip;
+        }
+        if (want == g.firstMip)
+            continue;
+        const std::filesystem::path file = g.file;
+        g.pending = std::make_shared<std::future<CookedTexture>>(JobSystem::global().submit([file, want] {
+            CookedTexture c;
+            readCookedTexture(file, c, want);
+            return c;
+        }));
+        g.pendingMip = want;
+    }
+}
+
+void Renderer::setQuality(const RenderQuality& quality)
+{
+    quality_ = quality;
+    for (auto& [id, g] : textures_) {
+        if (g.file.empty())
+            continue; // plain uploads keep their size until they are uploaded again
+        g.maxMip = mipForSize(g.width, g.height, g.mipCount, quality_.textureMaxSize);
+        const bool streams = quality_.textureStreamDistance > 0.0f && g.mipCount > 1;
+        g.lowMip = streams ? std::max(g.maxMip, mipForSize(g.width, g.height, g.mipCount, kStreamLowSize)) : g.maxMip;
+        g.farSince = -1.0;
+        if (!g.pending && g.firstMip != g.maxMip) { // updateStreaming() then picks low or full by distance
+            const std::filesystem::path file = g.file;
+            const int want = g.maxMip;
+            g.pending = std::make_shared<std::future<CookedTexture>>(JobSystem::global().submit([file, want] {
+                CookedTexture c;
+                readCookedTexture(file, c, want);
+                return c;
+            }));
+            g.pendingMip = want;
+        }
+    }
+}
+
+Renderer::MemoryStats Renderer::memoryStats() const
+{
+    MemoryStats m;
+    for (const auto& [id, g] : textures_) {
+        m.textureBytes += g.bytes;
+        m.savedBytes += g.fullBytes > g.bytes ? g.fullBytes - g.bytes : 0;
+        ++m.textures;
+        if (!g.file.empty() && g.firstMip > g.maxMip)
+            ++m.streamedLow;
+        if (g.pending)
+            ++m.streaming;
+    }
+    for (const auto& [id, mesh] : meshes_) {
+        m.meshBytes += mesh.bytes;
+        ++m.meshes;
+    }
+    const std::size_t pixels = static_cast<std::size_t>(width_) * static_cast<std::size_t>(height_);
+    // HDR color + depth + SSAO (two) + LDR + bloom chain (about a third of HDR).
+    m.targetBytes = pixels * (8 + 4 + 2 + 4 + 3) + static_cast<std::size_t>(shadowRes_) * shadowRes_ * 4 * 3;
+    return m;
 }
 
 void Renderer::drawModel(const Model& model, const glm::mat4& transform, float highlight, const Animator* animator)
@@ -1204,7 +1450,7 @@ void Renderer::applySurface(const Material* material, const MeshPart* part, glm:
     glUniform2f(loc_.uvOffset, 0.0f, 0.0f);
     glUniform1f(loc_.uvRotation, 0.0f);
     for (int i = 0; i < 6; ++i) {
-        const unsigned handle = maps[i] && !maps[i]->rgba.empty() ? texture(*maps[i]) : 0u;
+        const unsigned handle = maps[i] && maps[i]->valid() ? texture(*maps[i]) : 0u;
         const bool has = handle != 0;
         if (has)
             glBindTextureUnit(static_cast<unsigned>(i), handle);
@@ -1223,6 +1469,16 @@ void Renderer::drawCube(const glm::mat4& transform, glm::vec3 color, float highl
     glUniform1i(loc_.emissive, 0);
 }
 
+void Renderer::keepTextureAlive(const Texture* tex)
+{
+    if (!tex)
+        return;
+    if (auto t = textures_.find(tex->id); t != textures_.end()) {
+        t->second.used = true;
+        t->second.nearest_m = std::min(t->second.nearest_m, drawDistance_); // streaming goes by distance, not visibility
+    }
+}
+
 void Renderer::keepAlive(const Model& model)
 {
     // Culled models keep their GPU meshes and textures (no re-upload when they come back into view).
@@ -1231,12 +1487,13 @@ void Renderer::keepAlive(const Model& model)
             it->second.used = true;
         if (const Material* m = model.materialFor(part))
             for (const auto& asset : m->maps)
-                if (asset && asset->texture)
-                    if (auto t = textures_.find(asset->texture->id); t != textures_.end())
-                        t->second.used = true;
-        if (part.texture)
-            if (auto t = textures_.find(part.texture->id); t != textures_.end())
-                t->second.used = true;
+                if (asset)
+                    keepTextureAlive(asset->texture.get());
+        // Every glTF map, not only the base color: a culled model must not lose its
+        // normal/roughness maps and upload them again when it comes back into view.
+        for (const Texture* tex : {part.texture.get(), part.normalTexture.get(), part.metalRoughTexture.get(),
+                                   part.occlusionTexture.get(), part.emissiveTexture.get()})
+            keepTextureAlive(tex);
     }
 }
 
@@ -1287,49 +1544,73 @@ void Renderer::deleteTexture(unsigned texture)
         glDeleteTextures(1, &texture);
 }
 
-float Renderer::preload(const Scene& scene, std::size_t& cursor, double budgetMs)
+float Renderer::preload(const Scene& scene, std::size_t& cursor, double budgetMs, glm::vec3 viewer)
 {
-    std::vector<const Model*> models;
+    // Distance from the viewer decides small (streamed) or full textures.
+    std::vector<std::pair<const Model*, float>> models;
     for (const Model& m : scene.models) {
-        models.push_back(&m);
+        const float d = distanceTo(viewer, m.bounds());
+        models.emplace_back(&m, d);
         if (m.lod)
-            models.push_back(m.lod.get());
+            models.emplace_back(m.lod.get(), d);
     }
     for (const Entity& e : scene.entities)
         if (e.model)
-            models.push_back(e.model.get());
-    std::vector<const Material*> materials;
+            models.emplace_back(e.model.get(), glm::distance(viewer, e.position));
+    std::vector<std::pair<const Material*, float>> materials;
     for (const Box& b : scene.boxes)
         if (b.material)
-            materials.push_back(b.material.get());
+            materials.emplace_back(b.material.get(), distanceTo(viewer, b.bounds()));
     const std::size_t total = models.size() + materials.size();
     const auto start = std::chrono::steady_clock::now();
     ignoreUploadBudget_ = true;
     auto upMaterial = [this](const Material* material) {
         for (const auto& asset : material->maps)
-            if (asset && asset->texture && !asset->texture->rgba.empty())
+            if (asset && asset->texture && asset->texture->valid())
                 texture(*asset->texture);
     };
     while (cursor < total) {
         if (cursor < models.size()) {
-            const Model& model = *models[cursor];
+            const Model& model = *models[cursor].first;
+            drawDistance_ = models[cursor].second;
             for (const MeshPart& part : model.parts) {
                 upload(part);
                 if (const Material* m = model.materialFor(part))
                     upMaterial(m);
                 for (const Texture* t : {part.texture.get(), part.normalTexture.get(), part.metalRoughTexture.get(),
                                          part.occlusionTexture.get(), part.emissiveTexture.get()})
-                    if (t && !t->rgba.empty())
+                    if (t && t->valid())
                         texture(*t);
             }
         } else {
-            upMaterial(materials[cursor - models.size()]);
+            drawDistance_ = materials[cursor - models.size()].second;
+            upMaterial(materials[cursor - models.size()].first);
         }
         ++cursor;
         if (std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count() > budgetMs)
             break;
     }
+    // Textures read from the cook cache on workers: wait for them on the loading screen.
+    int waiting = 0;
+    for (auto& [id, g] : textures_) {
+        if (!g.pending)
+            continue;
+        if (g.pending->wait_for(std::chrono::seconds(0)) != std::future_status::ready) {
+            ++waiting;
+            continue;
+        }
+        const CookedTexture c = g.pending->get();
+        g.pending.reset();
+        if (const unsigned handle = c.mips.empty() ? 0u : createTexture(g, c, 0)) {
+            if (g.handle)
+                glDeleteTextures(1, &g.handle);
+            g.handle = handle;
+            g.firstMip = g.pendingMip;
+        }
+    }
     ignoreUploadBudget_ = false;
+    if (cursor >= total)
+        return waiting ? 0.99f : 1.0f;
     return total ? static_cast<float>(cursor) / static_cast<float>(total) : 1.0f;
 }
 

@@ -306,7 +306,7 @@ int main(int argc, char** argv)
             std::fprintf(stderr, "%s, using the built-in level\n", loadError.c_str());
         std::size_t cursor = 0;
         for (float uploaded = 0.0f; uploaded < 1.0f;) {
-            uploaded = renderer.preload(scene, cursor, 12.0);
+            uploaded = renderer.preload(scene, cursor, 12.0, scene.playerStart); // full textures near the start
             drawLoading(0.85f + 0.15f * uploaded, "textures to the GPU");
         }
         drawLoading(1.0f, "map");

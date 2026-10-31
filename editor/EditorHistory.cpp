@@ -2,32 +2,16 @@
 
 SceneSnapshot MeshStore::capture(engine::Scene& scene, int selected)
 {
+    // Model meshes are shared lists (engine::PartList): copying the scene does not copy vertices.
     SceneSnapshot snap;
     snap.selected = selected;
-    // Move the mesh parts out while copying so the copy stays cheap.
-    std::vector<std::vector<engine::MeshPart>> parts(scene.models.size());
-    for (std::size_t i = 0; i < scene.models.size(); ++i) {
-        engine::Model& m = scene.models[i];
-        const std::uint64_t key = m.parts.empty() ? 0 : m.parts.front().id;
-        if (key && !meshes_.count(key))
-            meshes_[key] = std::make_shared<const std::vector<engine::MeshPart>>(m.parts);
-        snap.meshKeys.push_back(key);
-        parts[i] = std::move(m.parts);
-        m.parts.clear();
-    }
     snap.scene = scene;
-    for (std::size_t i = 0; i < scene.models.size(); ++i)
-        scene.models[i].parts = std::move(parts[i]);
     return snap;
 }
 
 engine::Scene MeshStore::restore(const SceneSnapshot& snapshot) const
 {
-    engine::Scene scene = snapshot.scene;
-    for (std::size_t i = 0; i < scene.models.size() && i < snapshot.meshKeys.size(); ++i)
-        if (auto it = meshes_.find(snapshot.meshKeys[i]); it != meshes_.end())
-            scene.models[i].parts = *it->second;
-    return scene;
+    return snapshot.scene;
 }
 
 SceneEditCommand::SceneEditCommand(const QString& label, std::shared_ptr<SceneSnapshot> before,

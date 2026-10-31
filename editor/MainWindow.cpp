@@ -1,4 +1,7 @@
 #include "MainWindow.h"
+
+#include <engine/Memory.h>
+#include <engine/TextureCook.h>
 #include "HierarchyPanel.h"
 #include "AssetBrowser.h"
 
@@ -281,6 +284,23 @@ void MainWindow::buildMenus()
             QSettings().setValue(toggleKeys[i], on);
             engine::RenderQuality q = viewport_->quality();
             q.*toggleMembers[i] = on;
+            setRenderQuality(q);
+        });
+    }
+    // Texture memory: size limit on top of the preset (drops top mip levels, no re-cook).
+    QMenu* texMenu = render->addMenu(tr("&Texture size"));
+    auto* texGroup = new QActionGroup(this);
+    const int texMax = settings.value("render/texture_max", quality.textureMaxSize).toInt();
+    quality.textureMaxSize = texMax;
+    for (int size : {0, 4096, 2048, 1024, 512}) {
+        QAction* a = texMenu->addAction(size ? tr("%1 px").arg(size) : tr("Full"));
+        a->setCheckable(true);
+        a->setChecked(size == texMax);
+        texGroup->addAction(a);
+        connect(a, &QAction::triggered, this, [this, size] {
+            QSettings().setValue("render/texture_max", size);
+            engine::RenderQuality q = viewport_->quality();
+            q.textureMaxSize = size;
             setRenderQuality(q);
         });
     }
@@ -1241,6 +1261,53 @@ void MainWindow::buildDocks()
     logDock_->setWidget(logHost);
     addDockWidget(Qt::BottomDockWidgetArea, logDock_);
     tabifyDockWidget(assetsDock, logDock_);
+
+    // Memory: GPU (renderer) and CPU (level assets, whole process), refreshed while visible.
+    auto* memoryLabel = new QLabel(this);
+    memoryLabel->setTextFormat(Qt::RichText);
+    memoryLabel->setAlignment(Qt::AlignTop | Qt::AlignLeft);
+    memoryLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    memoryLabel->setContentsMargins(8, 6, 8, 6);
+    auto* memoryScroll = new QScrollArea(this);
+    memoryScroll->setWidget(memoryLabel);
+    memoryScroll->setWidgetResizable(true);
+    auto* memoryDock = new QDockWidget(tr("Memory"), this);
+    memoryDock->setObjectName("memory");
+    memoryDock->setWidget(memoryScroll);
+    addDockWidget(Qt::BottomDockWidgetArea, memoryDock);
+    tabifyDockWidget(logDock_, memoryDock);
+    auto* memoryTimer = new QTimer(this);
+    connect(memoryTimer, &QTimer::timeout, this, [this, memoryLabel, memoryDock] {
+        if (!memoryDock->isVisible() || memoryDock->visibleRegion().isEmpty())
+            return;
+        const auto mb = [](std::size_t bytes) { return QString::number(static_cast<double>(bytes) / (1024.0 * 1024.0), 'f', 1) + " MB"; };
+        const engine::Renderer::MemoryStats g = viewport_->memoryStats();
+        const engine::SceneMemory c = engine::sceneMemory(scene_);
+        const std::size_t process = engine::processMemoryBytes();
+        const QString row = "<tr><td>%1</td><td align='right'>&nbsp;&nbsp;<b>%2</b></td><td>&nbsp;&nbsp;%3</td></tr>";
+        QString html = "<table cellspacing='2'>";
+        html += "<tr><td colspan='3'><b>GPU (3D view)</b></td></tr>";
+        html += row.arg(tr("Textures"), mb(g.textureBytes),
+                        tr("%1 textures, %2 saved by compression and streaming, %3 small (far away), %4 loading")
+                            .arg(g.textures)
+                            .arg(mb(g.savedBytes))
+                            .arg(g.streamedLow)
+                            .arg(g.streaming));
+        html += row.arg(tr("Meshes"), mb(g.meshBytes), tr("%1 vertex/index buffers").arg(g.meshes));
+        html += row.arg(tr("Render targets"), mb(g.targetBytes), tr("HDR, depth, SSAO, bloom, shadow maps"));
+        html += row.arg(tr("Total"), mb(g.textureBytes + g.meshBytes + g.targetBytes), QString());
+        html += "<tr><td colspan='3'><br><b>CPU (level assets)</b></td></tr>";
+        html += row.arg(tr("Meshes"), mb(c.meshBytes),
+                        tr("%1 parts; %2 saved by sharing between copies of a model").arg(c.meshParts).arg(mb(c.sharedMeshBytes)));
+        html += row.arg(tr("Texture pixels"), mb(c.textureBytes),
+                        tr("%1 textures (pixels are dropped once on the GPU; the cook cache has them)").arg(c.textures));
+        if (process)
+            html += row.arg(tr("Editor process"), mb(process), tr("resident memory (with a software GPU driver this includes the GPU data)"));
+        html += "</table>";
+        html += tr("<p>Texture cook cache: %1</p>").arg(QDir::toNativeSeparators(QString::fromStdU16String(engine::textureCookConfig().cacheDir.u16string())));
+        memoryLabel->setText(html);
+    });
+    memoryTimer->start(1000);
     assetsDock->raise();
 
     buildModePanel();

@@ -8,6 +8,8 @@
 #include <string>
 #include <vector>
 
+#include "engine/TextureCook.h"
+
 namespace engine {
 
 struct Texture;
@@ -25,6 +27,10 @@ struct TextureSettings {
     float contrast = 1.0f;    // 0..3, around mid grey
     float saturation = 1.0f;  // 0 = grey, 1 = unchanged
     glm::vec3 tint{1.0f};     // multiplied (sRGB 0..1)
+    // Memory: GPU block compression (BC1/BC3, BC5 for normal maps) and a size
+    // limit (longest side, 0 = original). Compressed textures take 1/4..1/8 of the memory.
+    bool compress = true;
+    int maxSize = 0;
 };
 
 // An image file plus its settings. `texture` is what the renderer draws; it is
@@ -34,15 +40,21 @@ struct TextureAsset {
     TextureSettings settings;
     int width = 0;
     int height = 0;
-    std::vector<std::uint8_t> source;          // original RGBA8 pixels
+    TextureUsage usage = TextureUsage::Color;  // from the material slot (normal maps compress differently)
+    std::vector<std::uint8_t> source;          // original RGBA8 pixels; empty when loaded from the cook cache
     std::shared_ptr<Texture> texture;
 };
 
 // Cached per path: every material using the image shares one asset. Null on error.
 // Images without a settings file default to sRGB when `color` is true (albedo) and linear otherwise (normal maps...).
+// A cooked copy in the disk cache is used without decoding the image (`source` stays empty).
 std::shared_ptr<TextureAsset> loadTextureAsset(const std::filesystem::path& image, std::string* error = nullptr,
-                                               bool color = true);
-void applyTextureSettings(TextureAsset& asset);
+                                               bool color = true, TextureUsage usage = TextureUsage::Color);
+// Decodes the image into `source` if it was loaded from the cache (editors need the pixels).
+bool ensureTextureSource(TextureAsset& asset, std::string* error = nullptr);
+// Rebuilds the texture from `source` and the settings. `cook` = also mip-map and
+// compress (slower; the texture editor previews uncompressed while dragging sliders).
+void applyTextureSettings(TextureAsset& asset, bool cook = true);
 bool saveTextureSettings(const TextureAsset& asset, std::string* error = nullptr);
 std::filesystem::path textureSettingsPath(const std::filesystem::path& image);
 // Reads "<image>.texture"; `defaults` when the file does not exist.

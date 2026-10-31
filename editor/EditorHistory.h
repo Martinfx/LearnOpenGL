@@ -7,11 +7,10 @@
 #include <map>
 #include <memory>
 
-// Full level state for undo/redo. Model meshes are not copied per step:
-// they are kept once per loaded model and shared by all snapshots.
+// Full level state for undo/redo. Model meshes are not copied per step: copies
+// of a model share its mesh parts (engine::PartList).
 struct SceneSnapshot {
-    engine::Scene scene;                       // models without their mesh parts
-    std::vector<std::uint64_t> meshKeys;       // per model: key into the mesh store
+    engine::Scene scene;
     int selected = -1;
 };
 
@@ -19,9 +18,6 @@ class MeshStore {
 public:
     SceneSnapshot capture(engine::Scene& scene, int selected);
     engine::Scene restore(const SceneSnapshot& snapshot) const;
-
-private:
-    std::map<std::uint64_t, std::shared_ptr<const std::vector<engine::MeshPart>>> meshes_;
 };
 
 // One undoable edit: the level before and after. Consecutive edits with the
