@@ -8,6 +8,11 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <iomanip>
 #include <sstream>
+#include <cstdio>
+#include <chrono>
+#include <mutex>
+#include <unordered_set>
+#include <random>
 
 namespace engine {
 
@@ -65,7 +70,7 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
         return false;
     }
     out << std::setprecision(6);
-    out << "# FPS engine level\nversion 5\n";
+    out << "# FPS engine level\nversion 6\n";
     out << "player_start " << scene.playerStart.x << ' ' << scene.playerStart.y << ' ' << scene.playerStart.z << '\n';
     out << "sun " << scene.sunDirection.x << ' ' << scene.sunDirection.y << ' ' << scene.sunDirection.z << '\n';
     const std::filesystem::path levelDir = std::filesystem::absolute(file).parent_path();
@@ -142,16 +147,18 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
         out << "loading_hint " << std::quoted(scene.loading.hint) << '\n';
     for (const Group& g : scene.groups)
         out << "group " << std::quoted(g.name) << ' ' << std::quoted(g.parent) << '\n';
-    auto writeParent = [&out](const std::string& parent) {
+    auto writeParent = [&out](const std::string& parent, ObjectId id = 0) {
         if (!parent.empty())
             out << "  parent " << std::quoted(parent) << '\n';
+        if (id != 0)
+            out << "  id " << objectIdToString(id) << '\n';
     };
     for (const Box& b : scene.boxes) {
         out << "box " << std::quoted(b.name) << ' '
             << b.position.x << ' ' << b.position.y << ' ' << b.position.z << ' '
             << b.size.x << ' ' << b.size.y << ' ' << b.size.z << ' '
             << b.color.r << ' ' << b.color.g << ' ' << b.color.b << '\n';
-        writeParent(b.parent);
+        writeParent(b.parent, b.id);
         if (b.rotated())
             out << "  rotation " << b.rotation.x << ' ' << b.rotation.y << ' ' << b.rotation.z << '\n';
         if (!b.materialPath.empty())
@@ -166,7 +173,7 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
             rel = std::filesystem::absolute(m.sourcePath); // e.g. another drive on Windows
         out << "model " << std::quoted(m.name) << ' ' << std::quoted(pathToUtf8(rel)) << ' '
             << m.position.x << ' ' << m.position.y << ' ' << m.position.z << '\n';
-        writeParent(m.parent);
+        writeParent(m.parent, m.id);
         if (m.rotation != glm::vec3(0.0f) || m.scale != 1.0f)
             out << "  transform " << m.rotation.x << ' ' << m.rotation.y << ' ' << m.rotation.z << ' ' << m.scale << '\n';
         for (const auto& [slot, path] : m.materialOverrides)
@@ -217,7 +224,7 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
             << e.position.x << ' ' << e.position.y << ' ' << e.position.z << ' ' << e.yawDegrees << ' '
             << e.size.x << ' ' << e.size.y << ' ' << e.size.z << ' '
             << e.color.r << ' ' << e.color.g << ' ' << e.color.b << ' ' << std::quoted(script) << '\n';
-        writeParent(e.parent);
+        writeParent(e.parent, e.id);
         if (!e.modelPath.empty()) {
             const std::filesystem::path rel = std::filesystem::absolute(e.modelPath).lexically_relative(levelDir);
             out << "  character " << std::quoted(pathToUtf8(rel.empty() ? std::filesystem::absolute(e.modelPath) : rel))
@@ -338,7 +345,7 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
         bool ok = true;
         if (key == "version") {
             int v = 0;
-            ok = static_cast<bool>(ls >> v) && v >= 1 && v <= 5;
+            ok = static_cast<bool>(ls >> v) && v >= 1 && v <= 6; // < 6: objects get IDs on load
         } else if (key == "env") {
             // Unknown environment keys are skipped so older editors can open newer levels.
             Environment& e = result.environment;
@@ -493,6 +500,19 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
             if (ok) {
                 Model& m = result.models.back();
                 ok = static_cast<bool>(ls >> m.rotation.x >> m.rotation.y >> m.rotation.z >> m.scale);
+            }
+        } else if (key == "id") {
+            // Persistent ID of the object on the line above.
+            std::string text;
+            ok = static_cast<bool>(ls >> text) && lastObject != LastObject::None;
+            if (ok) {
+                const ObjectId id = objectIdFromString(text);
+                if (lastObject == LastObject::Box)
+                    result.boxes.back().id = id;
+                else if (lastObject == LastObject::Model)
+                    result.models.back().id = id;
+                else
+                    result.entities.back().id = id;
             }
         } else if (key == "parent") {
             // Hierarchy parent of the object on the line above.
@@ -670,8 +690,90 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
     }
     if (progress)
         ++progress->done;
+    assignObjectIds(result); // levels before version 6, objects added by hand
     scene = std::move(result);
     return true;
+}
+
+ObjectId newObjectId()
+{
+    static std::mutex mutex;
+    static std::mt19937_64 rng = [] {
+        std::random_device rd;
+        std::seed_seq seed{rd(), rd(), rd(), rd(),
+                           static_cast<unsigned>(std::chrono::high_resolution_clock::now().time_since_epoch().count())};
+        return std::mt19937_64(seed);
+    }();
+    std::lock_guard lock(mutex);
+    ObjectId id = 0;
+    while (id == 0)
+        id = rng();
+    return id;
+}
+
+std::string objectIdToString(ObjectId id)
+{
+    char buf[17];
+    std::snprintf(buf, sizeof buf, "%016llx", static_cast<unsigned long long>(id));
+    return buf;
+}
+
+ObjectId objectIdFromString(const std::string& text)
+{
+    if (text.empty() || text.size() > 16)
+        return 0;
+    ObjectId id = 0;
+    for (char c : text) {
+        int v;
+        if (c >= '0' && c <= '9')
+            v = c - '0';
+        else if (c >= 'a' && c <= 'f')
+            v = c - 'a' + 10;
+        else if (c >= 'A' && c <= 'F')
+            v = c - 'A' + 10;
+        else
+            return 0;
+        id = (id << 4) | static_cast<ObjectId>(v);
+    }
+    return id;
+}
+
+int assignObjectIds(Scene& scene)
+{
+    std::unordered_set<ObjectId> used;
+    used.reserve(static_cast<std::size_t>(scene.objectCount()) * 2);
+    int changed = 0;
+    auto fix = [&](ObjectId& id) {
+        if (id == 0 || !used.insert(id).second) {
+            do
+                id = newObjectId();
+            while (!used.insert(id).second);
+            ++changed;
+        }
+    };
+    for (Box& b : scene.boxes)
+        fix(b.id);
+    for (Model& m : scene.models)
+        fix(m.id);
+    for (Entity& e : scene.entities)
+        fix(e.id);
+    return changed;
+}
+
+int findObjectById(const Scene& scene, ObjectId id)
+{
+    if (id == 0)
+        return -1;
+    for (std::size_t i = 0; i < scene.boxes.size(); ++i)
+        if (scene.boxes[i].id == id)
+            return static_cast<int>(i);
+    for (std::size_t i = 0; i < scene.models.size(); ++i)
+        if (scene.models[i].id == id)
+            return scene.firstModel() + static_cast<int>(i);
+    for (std::size_t i = 0; i < scene.entities.size(); ++i)
+        if (scene.entities[i].id == id)
+            return scene.firstEntity() + static_cast<int>(i);
+    return -1;
 }
 
 glm::mat4 Model::transform() const

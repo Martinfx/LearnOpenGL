@@ -1826,6 +1826,11 @@ void MainWindow::refreshProperties()
         nameEdit_->clear();
         colorButton_->setStyleSheet(QString());
     }
+    // Persistent ID (saved games, links, prefabs refer to it); selectable to copy.
+    if (const engine::ObjectId id = b ? b->id : m ? m->id : e ? e->id : 0) {
+        kindLabel_->setText(kindLabel_->text() + QStringLiteral("  ·  ID ") + QString::fromStdString(engine::objectIdToString(id)));
+        kindLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    }
     lodRow_->setEnabled(m != nullptr);
     lodDistanceSpin_->setEnabled(m != nullptr && !m->lodPath.empty());
     lodEdit_->setText(m && !m->lodPath.empty() ? QString::fromStdU16String(m->lodPath.filename().u16string()) : QString());
@@ -2034,6 +2039,7 @@ void MainWindow::buildNavMesh()
 void MainWindow::markDirty()
 {
     setNavOutOfDate();
+    engine::assignObjectIds(scene_); // new, pasted and duplicated objects get their own persistent ID
     if (!restoring_ && history_) {
         auto after = std::make_shared<SceneSnapshot>(meshStore_.capture(scene_, selected_));
         if (lastState_)

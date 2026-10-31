@@ -1,5 +1,6 @@
 // Headless tests for the engine core (no OpenGL needed).
 #include <engine/Log.h>
+#include <set>
 #include <engine/Assert.h>
 #include <engine/Audio.h>
 #include <engine/NavMesh.h>
@@ -1043,6 +1044,39 @@ void testSharedMeshes()
     check(shared > 0, "level instances of one file share meshes");
 }
 
+void testObjectIds()
+{
+    namespace fs = std::filesystem;
+    engine::Scene scene = engine::makeDefaultScene();
+    engine::assignObjectIds(scene);
+    bool allSet = true;
+    std::set<engine::ObjectId> ids;
+    for (const auto& b : scene.boxes)
+        allSet &= b.id != 0 && ids.insert(b.id).second;
+    for (const auto& e : scene.entities)
+        allSet &= e.id != 0 && ids.insert(e.id).second;
+    check(allSet && !ids.empty(), "every object gets a unique ID");
+    // A copy (duplicate / paste) keeps the original's ID until assigned: then only the copy changes.
+    const engine::ObjectId first = scene.boxes[0].id;
+    scene.boxes.push_back(scene.boxes[0]);
+    check(engine::assignObjectIds(scene) == 1 && scene.boxes[0].id == first && scene.boxes.back().id != first,
+          "a duplicated object gets a new ID, the original keeps its own");
+    scene.boxes[0].name = "Renamed";
+    const fs::path file = fs::temp_directory_path() / "ids_roundtrip.level";
+    engine::Scene back;
+    check(engine::saveScene(scene, file) && engine::loadScene(back, file) && back.boxes[0].id == first &&
+              engine::findObjectById(back, first) == 0,
+          "IDs survive save, load and renaming");
+    check(engine::objectIdFromString(engine::objectIdToString(0x0123456789abcdefull)) == 0x0123456789abcdefull &&
+              engine::objectIdFromString("xyz") == 0,
+          "ID text round trip");
+    // Old levels (version 5, no id lines) get IDs on load.
+    std::ofstream(fs::temp_directory_path() / "old_v5.level") << "version 5\nbox \"A\" 0 0 0 1 1 1 0.5 0.5 0.5\n";
+    engine::Scene old;
+    check(engine::loadScene(old, fs::temp_directory_path() / "old_v5.level") && old.boxes.size() == 1 && old.boxes[0].id != 0,
+          "version 5 level migrates to IDs");
+}
+
 void testLog()
 {
     namespace fs = std::filesystem;
@@ -1343,6 +1377,7 @@ int main()
     testMaterialsAndTextures();
     testAudio();
     testNavMesh();
+    testObjectIds();
     testLog();
     testEnsure();
     testSurfaces();

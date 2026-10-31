@@ -187,6 +187,7 @@ void ScriptSystem::Impl::bindApi()
 
     lua.new_usertype<ScriptEntity>("Entity", sol::no_constructor,
         "name", sol::property([](ScriptEntity& s) { return s.e().name; }),
+        "id", sol::property([](ScriptEntity& s) { return objectIdToString(s.e().id); }), // persistent, 16 hex digits
         "type", sol::property([](ScriptEntity& s) { return s.e().type; }),
         "position", sol::property(
             [](ScriptEntity& s) { return s.e().position; },

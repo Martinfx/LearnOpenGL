@@ -20,6 +20,14 @@
 
 namespace engine {
 
+// Persistent 64-bit object ID: stays the same when the object is renamed, moved or
+// re-parented, so saved games, links between objects, streaming and prefabs can
+// refer to it. 0 = none yet (assignObjectIds gives one).
+using ObjectId = std::uint64_t;
+ObjectId newObjectId();               // random, never 0
+std::string objectIdToString(ObjectId id); // 16 hex digits
+ObjectId objectIdFromString(const std::string& text); // 0 when invalid
+
 // Axis-aligned box: quick blockout geometry placed in the editor.
 struct Box {
     Box() = default;
@@ -27,6 +35,7 @@ struct Box {
         : name(std::move(n)), position(p), size(s), color(c) {}
 
     std::string name = "Box";
+    ObjectId id = 0;                // persistent ID (level line `id`), see ObjectId
     std::string parent;             // name of the parent object or group in the hierarchy, empty = root
     glm::vec3 position{0.0f};       // center
     glm::vec3 size{1.0f};
@@ -144,6 +153,7 @@ private:
 // Static level geometry imported from glTF (Blender: File > Export > glTF 2.0).
 struct Model {
     std::string name = "Model";
+    ObjectId id = 0;                // persistent ID (level line `id`), see ObjectId
     std::string parent;               // hierarchy parent (object or group name), empty = root
     std::filesystem::path sourcePath; // absolute path of the .gltf/.glb
     glm::vec3 position{0.0f};
@@ -190,6 +200,7 @@ struct Model {
 // Gameplay object (enemy, pickup, trigger...). Behaviour comes from its Lua script.
 struct Entity {
     std::string name = "Entity";
+    ObjectId id = 0;                // persistent ID (level line `id`), see ObjectId
     std::string parent;                  // hierarchy parent (object or group name), empty = root
     std::string type = "empty";          // gameplay role, readable from scripts
     glm::vec3 position{0.0f};            // base (feet) position
@@ -391,6 +402,12 @@ std::shared_ptr<const Model> loadCharacterModel(const std::filesystem::path& fil
 void updateAnimations(Scene& scene, float dt);
 
 // A tunable declared by a script in its `properties` table (shown in the editor).
+// Gives every box, model and entity without an ID (or with one already used by
+// another object, e.g. after a copy) a new one. Returns how many changed.
+int assignObjectIds(Scene& scene);
+// Object index (Scene::objectCount order) with this ID, -1 if none.
+int findObjectById(const Scene& scene, ObjectId id);
+
 struct ScriptProperty {
     std::string name;
     std::string defaultValue;   // as text: number, true/false or string
