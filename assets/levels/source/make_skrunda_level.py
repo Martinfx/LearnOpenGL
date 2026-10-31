@@ -61,7 +61,7 @@ def group(name, parent=''):
 
 
 def model(name, path, x, y, z, parent, yaw=0.0, scale=1.0, lod=None, lod_dist=60, rx=0.0, rz=0.0, collision=True,
-          cull=0):
+          cull=0, shadows=True):
     L.append(f'model "{uname(name)}" "{path}" {x:.2f} {y:.2f} {z:.2f}')
     L.append(f'  parent "{parent}"')
     if yaw or scale != 1.0 or rx or rz:
@@ -72,6 +72,8 @@ def model(name, path, x, y, z, parent, yaw=0.0, scale=1.0, lod=None, lod_dist=60
         L.append('  collision 0')
     if cull:
         L.append(f'  cull_distance {cull:g}')
+    if not shadows:
+        L.append('  cast_shadows 0')
 
 
 def gen(name, file, x, z, parent, yaw=0.0, lod_dist=60, has_lod=True, dy=0.0, **kw):
@@ -79,12 +81,20 @@ def gen(name, file, x, z, parent, yaw=0.0, lod_dist=60, has_lod=True, dy=0.0, **
           lod_dist=lod_dist, **kw)
 
 
-def veg(name, file, x, z, parent, lod_dist=25, cull=60, collision=False, yaw=None, scale=1.0, dy=-0.03):
+# far LODs thinned to a quarter of the blades (assets/models/zone/source/thin_glb.py)
+FAR_LOD = {'grass_patch_tall': '../models/zone/skrunda/veg/grass_patch_far.glb',
+           'weed_patch': '../models/zone/skrunda/veg/weed_patch_far.glb'}
+
+
+def veg(name, file, x, z, parent, lod_dist=25, cull=60, collision=False, yaw=None, scale=1.0, dy=-0.03, shadows=False):
+    """Vegetation: no collision; only trees and bushes cast shadows (ground cover is too small to matter)."""
     model(name, V + file + '.glb', x, h(x, z) + dy, z, parent, rng.uniform(0, 360) if yaw is None else yaw, scale=scale,
-          lod=V + file + '_lod1.glb', lod_dist=lod_dist, collision=collision, cull=cull)
+          lod=FAR_LOD.get(file, V + file + '_lod1.glb'), lod_dist=lod_dist, collision=collision, cull=cull,
+          shadows=shadows)
 
 
 def prop(name, folder, x, y, z, parent, yaw=0.0, **kw):
+    kw.setdefault('cull', 90)           # scanned props are 5k-40k triangles each and have no LOD
     model(name, f'{P}{folder}/{folder}.gltf', x, y, z, parent, yaw, **kw)
 
 
@@ -249,9 +259,9 @@ fence_line(dx, dz, ax, az, 'Fences')
 # gate: concrete blocks and an old barrier
 for s in (-1, 1):
     gx, gy, gz = to_world(HQ, s * 4.6, 0, hz + 0.6)
-    gprop('Gate block', 'concrete_road_barrier', gx, gz, 'Camp', yaw=b['yaw'])
+    gprop('Gate block', 'concrete_road_barrier_02', gx, gz, 'Camp', yaw=b['yaw'])
     gx, gy, gz = to_world(HQ, hx + 0.6, 0, s * 4.6)
-    gprop('Gate block', 'concrete_road_barrier', gx, gz, 'Camp', yaw=b['yaw'] + 90)
+    gprop('Gate block', 'concrete_road_barrier_02', gx, gz, 'Camp', yaw=b['yaw'] + 90)
 # camp in the yard in front of the HQ entrance
 cxw, cyw, czw = to_world(HQ, 2.0, 0, b['width'] / 2 + 8.0)
 gprop('Camp fire', 'stone_fire_pit', cxw, czw, 'Camp')
@@ -330,7 +340,7 @@ for x, z, yaw, f in wrecks:
     gen('Wreck', f, x, z, 'Wrecks', yaw=yaw, rz=tilt, lod_dist=70, dy=-0.05)
 # bus stop shelter-like props and kiosk debris at the junction
 gprop('Concrete barrier', 'concrete_road_barrier_02', -66.0, 60.0, 'Street', yaw=20)
-gprop('Concrete barrier', 'concrete_road_barrier', -63.6, 61.2, 'Street', yaw=35)
+gprop('Concrete barrier', 'concrete_road_barrier_02', -63.6, 61.2, 'Street', yaw=35)
 
 # puddles in the potholes of the main roads
 for k in range(70):
@@ -396,7 +406,7 @@ for x, z, forest, grove in trees:
         f = ('birch_a' if r < 0.35 else 'birch_b' if r < 0.6 else 'birch_young' if r < 0.75 else 'broadleaf_a' if r < 0.85 else
              'broadleaf_b' if r < 0.93 else 'dead_a')
         parent = 'Trees'
-    veg('Tree', f, x, z, parent, lod_dist=45, cull=320, scale=rng.uniform(0.85, 1.15))
+    veg('Tree', f, x, z, parent, lod_dist=30, cull=230, shadows=True, scale=rng.uniform(0.85, 1.15))
 
 # bushes along walls and fences, undergrowth at forest edges
 for k in range(2600):
@@ -408,7 +418,7 @@ for k in range(2600):
     if 2.5 < bd < 7.0 or (edge_dist(x, z) < 60 and rng.random() < 0.5) or rng.random() < 0.12:
         r = rng.random()
         f = 'bush_a' if r < 0.3 else 'bush_b' if r < 0.5 else 'bush_c' if r < 0.65 else 'bush_wide_a' if r < 0.85 else 'bush_dense_a'
-        veg('Bush', f, x, z, 'Bushes', lod_dist=30, cull=150)
+        veg('Bush', f, x, z, 'Bushes', lod_dist=20, cull=110, shadows=True)
 
 # ground cover: tall grass everywhere it is not trodden, nettles and weeds at the walls, dry grass patches.
 # Dense (2.6 m grid, one 2.5 m patch per cell = closed sward) in the playable town, sparse outside it.
@@ -422,17 +432,11 @@ while z < site.Z0 + site.SIZE - 1:
         jx, jz = x + rng.uniform(-0.45, 0.45) * g, z + rng.uniform(-0.45, 0.45) * g
         if free(jx, jz, 0.6):
             bd = float(T.field('bdist', jx, jz))
-            dry = T.field('dry', jx, jz) > 0
             if bd < 5.0 and rng.random() < (0.3 if inside else 0.55):
-                veg('Weeds', 'weed_patch' if rng.random() < 0.6 else 'nettle_tall_a', jx, jz, 'Weeds', lod_dist=18, cull=55)
+                veg('Weeds', 'weed_patch' if rng.random() < 0.6 else 'nettle_tall_a', jx, jz, 'Weeds', lod_dist=12, cull=45)
             elif rng.random() < (0.88 if inside else 0.55):
-                veg('Tall grass', 'grass_patch_tall', jx, jz, 'Grass', lod_dist=20, cull=60,
+                veg('Tall grass', 'grass_patch_tall', jx, jz, 'Grass', lod_dist=14, cull=50,
                     scale=rng.uniform(0.85, 1.15))
-                if dry and rng.random() < 0.7:
-                    for _ in range(2):
-                        dx, dz = jx + rng.uniform(-1.2, 1.2), jz + rng.uniform(-1.2, 1.2)
-                        veg('Dry grass', rng.choice(['grass_dry_a', 'grass_dry_b', 'grass_dry_c']), dx, dz, 'Grass',
-                            lod_dist=15, cull=40, scale=rng.uniform(1.4, 2.0))
             elif inside and rng.random() < 0.5:
                 veg('Grass tuft', rng.choice(['grass_tall_a', 'grass_tall_b']), jx, jz, 'Grass', lod_dist=12, cull=40,
                     scale=rng.uniform(1.0, 1.4))
