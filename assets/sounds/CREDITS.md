@@ -15,7 +15,7 @@ recordings with placeholders.
 
 | Our files | Source | Author | License |
 |---|---|---|---|
-| `weapons/rifle_shot_*` (AK-47), `rifle_shot_far_*`, `pistol_shot_*` (Bersa .380, Walther PPQ 9 mm), `smg_shot_*` (Carl Gustav M45 9 mm), `heavy_pistol_shot_*` (M1911 .45), `sniper_shot_*` (Mosin-Nagant) | [The Free Firearm Sound Library](https://opengameart.org/content/the-free-firearm-sound-library) | Still North Media (posted by bart) | CC0 |
+| `weapons/rifle_shot_*` (AK-47), `rifle_shot_far_*`, `pistol_shot_*` (Bersa .380, Walther PPQ 9 mm), `smg_shot_*` (Carl Gustav M45 9 mm), `heavy_pistol_shot_*` (M1911 .45), `sniper_shot_*` (Mosin-Nagant) | [The Free Firearm Sound Library](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney ([freefirearmsfx.com](http://freefirearmsfx.com), posted by bart) | CC0 |
 | `weapons/reload.wav` (assault rifle), `reload_smg.wav` | [Gun reload sounds](https://opengameart.org/content/gun-reload-sounds) | SpringySpringo | CC0 |
 | `weapons/reload_pistol.wav` | [Handgun Reload Sound Effect](https://opengameart.org/content/handgun-reload-sound-effect) | zer0_sol | CC0 |
 | `weapons/mag_in.wav`, `mag_out.wav` | [Gun Reload Sound Effects](https://opengameart.org/content/gun-reload-sound-effects) | BMacZero | CC0 |
