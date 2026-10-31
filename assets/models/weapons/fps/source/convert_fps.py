@@ -14,15 +14,17 @@ for name,k in cfg.get('fix_mesh',{}).items():
     me=bpy.data.objects[name].data
     me.transform(Matrix.Scale(k,4))
     if k<0: me.flip_normals()
-idle=[a for a in bpy.data.actions if a.name.endswith(cfg['clips']['idle'])][0]
+idle=[a for a in bpy.data.actions if a.name.endswith(list(cfg['clips'].values())[0] if 'idle' not in cfg['clips'] else cfg['clips']['idle'])][0]
 arm.animation_data.action=idle
 try: arm.animation_data.action_slot=idle.slots[0]
 except: pass
 sc.frame_set(0)
 for o in list(bpy.data.objects):
     if o.type=='CAMERA': bpy.data.objects.remove(o)
-M=arm.matrix_world@arm.pose.bones[cfg['cam']].matrix
-eye=M.translation.copy()
+if 'eye' in cfg: eye=Vector(cfg['eye'])
+else:
+    M=arm.matrix_world@arm.pose.bones[cfg['cam']].matrix
+    eye=M.translation.copy()
 # real-world scale from weapon length
 ms=[o for o in bpy.data.objects if o.type=='MESH']
 dg=bpy.context.evaluated_depsgraph_get()
@@ -35,6 +37,8 @@ print('scale',s,'eye',eye)
 # model looks along Blender -Y; glTF -Z == Blender +Y  -> rotate 180 deg about Z
 T=Matrix.Scale(s,4)@Matrix.Rotation(math.pi,4,'Z')@Matrix.Translation(-eye)
 tops=[o for o in bpy.data.objects if o.parent is None]
+pr=cfg.get('post_rot',[0,0,0])
+T=Matrix.Translation(Vector(cfg.get('post_offset',[0,0,0])))@__import__('mathutils').Euler([math.radians(a) for a in pr],'XYZ').to_matrix().to_4x4()@T
 for o in tops: o.matrix_world=T@o.matrix_world
 # rename clips
 keep=set()
@@ -45,7 +49,7 @@ for a in list(bpy.data.actions):
 # shrink textures
 for im in bpy.data.images:
     if im.size[0]>cfg.get('max_tex',2048): im.scale(cfg.get('max_tex',2048),cfg.get('max_tex',2048)*im.size[1]//im.size[0])
-arm.animation_data.action=bpy.data.actions['idle']
+arm.animation_data.action=bpy.data.actions['idle' if 'idle' in cfg['clips'] else list(cfg['clips'])[0]]
 bpy.ops.export_scene.gltf(filepath=out,export_format='GLB',export_animations=True,export_animation_mode='ACTIONS',
     export_force_sampling=True,export_cameras=False,export_lights=False,export_image_format='JPEG',export_jpeg_quality=88,
     export_yup=True,export_skins=True,export_def_bones=False,export_optimize_animation_size=False)
