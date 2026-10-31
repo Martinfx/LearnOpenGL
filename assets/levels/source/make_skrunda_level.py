@@ -667,6 +667,62 @@ prop('Bandit ammo', 'ammo_box', x, y, z, 'Loot', yaw=15)
 x, y, z = to_world('845508052', 0, 0.15, 0)
 prop('Medkit box', 'metal_tool_chest', x, y, z, 'Loot', yaw=20)
 
+# ---------------------------------------------------------------------------- anomalies
+# Each one guards a route decision (engine/Anomaly.h; edited in the editor's Anomaly section):
+#  - a discharge just outside the camp teaches the detector and the bolt (G) on a safe stretch,
+#  - a heat vent in the cracked asphalt of Novaya street: the fast route is visible from afar and must be timed,
+#  - the "safe" flank through the courtyards pays with a gravity trap and a second discharge,
+#  - sludge leaking from the hospital stores sits by its back door,
+#  - the old X-ray room keeps a radiation hotspot, the water tower stash a contaminated area,
+#  - a rift on the way to the tower throws the careless into the reeds.
+group('Anomalies')
+
+
+def anomaly(name, kind, near, side, size, props=(), y=None):
+    """Anomaly next to a route point: `near` (x, z), shifted `side` metres sideways until clear of buildings."""
+    x, z = near
+    r = max(size[0], size[2]) / 2
+    for k in range(24):
+        a = math.radians(k * 15)
+        cx, cz = x + math.cos(a) * side, z + math.sin(a) * side
+        if T.field('bdist', cx, cz) > r + 0.5:
+            x, z = cx, cz
+            break
+    gy = h(x, z) if y is None else y
+    L.append(f'entity "{uname(name)}" "anomaly" {x:.2f} {gy:.2f} {z:.2f} 0 {size[0]:g} {size[1]:g} {size[2]:g} 0.6 0.6 0.6 ""')
+    L.append('  parent "Anomalies"')
+    L.append(f'  prop "kind" "{kind}"')
+    for k_, v in props:
+        L.append(f'  prop "{k_}" "{v}"')
+    return x, z
+
+
+def along(points, t):
+    """Point at fraction t of a route polyline."""
+    segs = list(zip(points, points[1:]))
+    lens = [math.hypot(bx - ax, bz - az) for (ax, az), (bx, bz) in segs]
+    d = t * sum(lens)
+    for ((ax, az), (bx, bz)), l in zip(segs, lens):
+        if d <= l:
+            return ax + (bx - ax) * d / l, az + (bz - az) * d / l
+        d -= l
+    return points[-1]
+
+
+main, flank, tower = ROUTES['main'], ROUTES['flank'], ROUTES['tower']
+anomaly('Discharge at the camp', 'discharge', (-20.0, 49.0), 5.0, (3.5, 3, 3.5), (('damage', '20'),))
+anomaly('Vent on Novaya', 'vent', ((-74 - 100) / 2, (-30 - 28) / 2), 3.0, (2.2, 5, 2.2), (('period', '7'), ('column', '6')))
+anomaly('Crusher in the courtyard', 'crusher', along(flank, 0.3), 4.0, (6, 3, 6))
+anomaly('Discharge in the courtyard', 'discharge', along(flank, 0.62), 2.5, (3, 3, 3))
+anomaly('Acid by the back door', 'acid', flank[-1], 6.0, (7, 1, 7))
+b = BUILD[HOSP]
+xr, yr, zr = to_world(HOSP, b['length'] / 2 - 6, floor_y(0), 0.0)
+anomaly('Radiation: X-ray room', 'radiation', (xr, zr), 0.0, (6, 3.5, 6), (('intensity', '15'),), y=yr)
+b = BUILD[TOWER]
+anomaly('Radiation: water tower', 'radiation', (b['cx'], b['cz']), 0.0, (16, 8, 16),
+        (('area', '1'), ('intensity', '3'), ('fade', '4')), y=b['y'] - 1)
+anomaly('Rift by the tower path', 'rift', along(tower, 0.55), 3.0, (2.5, 2.5, 2.5), (('jump', '14'),))
+
 MARK = [('Stab (tabor)', HQ), ('Gospital', HOSP), ('TD Venta (bandite)', VENTA), ('Vodarna', TOWER), ('Jidelna', CANTEEN)]
 for name, bid in MARK:
     entity(name, 'map_marker', BUILD[bid]['cx'], BUILD[bid]['y'], BUILD[bid]['cz'], 0, None, 'Markers', script='',
@@ -696,6 +752,11 @@ x, y, z = -120.0, 0, -33.0
 entity('Bandit street patrol', 'enemy', x, h(x, z), z, 0, 'bandit', 'Bandits', props=patrol(10))
 x, z = BUILD[TOWER]['cx'] + 5, BUILD[TOWER]['cz'] + 4
 entity('Bandit at the tower', 'enemy', x, h(x, z), z, 200, 'bandit', 'Bandits', props=patrol(4))
+
+# player footsteps and the wind over the whole map (added by the audio work, kept when regenerating)
+L.append('player_sounds "../sounds/player/step_gravel.sound" "../sounds/player/land.sound" "../sounds/player/hurt.sound"')
+L.append('entity "Ambience wind" "sound" 0 -100 0 0 4000 400 4000 0.25 0.55 0.95 ""')
+L += ['  prop "sound" "sounds/ambient/wind.sound"', '  prop "zone" "1"', '  prop "fade" "50"']
 
 i = L.index('@FOLIAGE_TYPES@')
 L[i:i + 1] = foliage_lines()

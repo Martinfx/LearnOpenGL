@@ -198,11 +198,12 @@ Hotovo, když: zóna 1 × 1 km jde projít bez načítací obrazovky a paměť d
 - [ ] Simulace mimo dohled hráče (zjednodušená A-life: skupiny se přesouvají mezi body zájmu na mapě, i když nejsou načtené).
   **[atm]** Konkrétně: NPC online do ~150 m (s hysterezí), dál offline záznamy; graf zóny přes nenačtené buňky; tábory nabízejí role (hlídka, spánek, oheň, obchod) s rozvrhem den/noc; offline střety vyhodnocené statisticky s následky (těla, loot) a slyšitelnou střelbou ze správného směru; uložení s GUID. Editor: body zájmu a role v levelu, ladicí pohled na simulaci na mapě.
 - [ ] **[atm] Fauna**: smečky psů s doupaty, vrány, které vyletí při přiblížení (jednoduché boidy).
-- [ ] **[atm] Radiace a detektor**: praskání jako Poissonův proces podle dávky, pípání detektoru podle vzdálenosti anomálie.
+- [x] **[atm] Radiace a detektor**: praskání jako Poissonův proces podle dávky, pípání detektoru podle vzdálenosti anomálie.
 - [ ] **[atm] Anomální bouře** (vlastní design): událost řízená počasím s varováním (zvuk, obloha, ducking), nutnost úkrytu.
 - [ ] Úkoly a dialogy: data v souborech, editor dialogů jako strom, PDA s úkoly (navazuje na mapu).
 - [ ] Obchod, peníze, opotřebení zbraní a zbroje, váha inventáře.
 - [ ] Anomálie a artefakty (vlastní design): trigger + VFX + zvuk + poškození, detektor. **[atm]** Distorze z M3, hučení, reakce na hozený předmět.
+  - [x] Anomálie (2026-10-31): Drtič, Výboj, Výheň, Žíravina, Zlom, Radiace; šrouby (G), detektor, geiger, dávka a HUD; zkreslení obrazu v post-processu (zatím zjednodušené, bez zápisu z částic); editor + `anomaly_test.level` + 8 ve Skrundě. Artefakty zbývají.
 - [ ] **[atm] Detaily zóny**: rozptyl odpadků, suti a malých meshů štětcem (Foliage režim), decaly nápisů a skvrn, rádia s filtrovaným zvukem, prach v kuželech světla.
 - [ ] Debugger Lua (breakpointy, proměnné) a hot reload skriptů za běhu.
 - [ ] Datové třídy s dědičností (`base ak74` v `.weapon`, NPC, předměty, frakce), editor ukáže zděděné hodnoty.

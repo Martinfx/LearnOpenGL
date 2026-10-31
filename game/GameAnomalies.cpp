@@ -370,6 +370,57 @@ void GameAnomalies::fill(engine::RenderView& view, const glm::mat4& viewMatrix) 
         }
         view.distortions.push_back(d);
     }
+    // Ground marks under the fields (soft round sprites lying on the ground): pressed
+    // soil under a crusher, scorch around discharges and vents, the sludge of an acid pool.
+    engine::SpriteBatch marks, glows;
+    marks.decal = glows.decal = false; // plain flat sprites, 3 cm above the ground
+    marks.distance = 1e6f; // under every other effect: drawn first
+    glows.distance = 1e6f - 1.0f;
+    glows.blend = engine::SpriteBlend::Additive;
+    glows.lit = false;
+    auto flat = [](glm::vec3 at, float radius, glm::vec4 color) {
+        engine::SpriteInstance q;
+        q.position = at + glm::vec3(0.0f, 0.03f, 0.0f);
+        q.axisX = glm::vec3(0.0f, 0.0f, radius); // normal (axisX x axisY) points up: lit from above
+        q.axisY = glm::vec3(radius, 0.0f, 0.0f);
+        q.color = color;
+        return q;
+    };
+    for (std::size_t i = 0; i < states.size(); ++i) {
+        const auto& s = states[i];
+        if (glm::distance(s.center, view.cameraPosition) > 120.0f)
+            continue;
+        using engine::AnomalyKind;
+        // The soft round sprite is mostly edge: a few stacked layers make a solid middle with a soft rim.
+        auto patch = [&](float radius, glm::vec4 color, int layers) {
+            for (int k = 0; k < layers; ++k)
+                marks.instances.push_back(flat(s.center, radius * (1.0f - 0.18f * static_cast<float>(k)), color));
+        };
+        switch (s.settings.kind) {
+        case AnomalyKind::Crusher:
+            patch(s.radius * 0.9f, {0.08f, 0.07f, 0.06f, 0.35f}, 3);
+            patch(s.settings.get("core") * 1.8f, {0.03f, 0.03f, 0.03f, 0.5f}, 2);
+            break;
+        case AnomalyKind::Discharge:
+            patch(s.radius * 0.7f, {0.03f, 0.03f, 0.035f, 0.4f}, 2);
+            glows.instances.push_back(flat(s.center, s.radius * 0.5f, glm::vec4(0.15f, 0.25f, 0.6f, 0.25f + 0.6f * s.activity)));
+            break;
+        case AnomalyKind::Vent:
+            patch(s.radius * 1.4f, {0.02f, 0.018f, 0.015f, 0.55f}, 3);
+            glows.instances.push_back(flat(s.center, s.radius * 0.6f, glm::vec4(1.2f, 0.35f, 0.08f, 0.5f + 0.5f * s.activity)));
+            break;
+        case AnomalyKind::Acid:
+            patch(s.radius * 1.1f, {0.09f, 0.12f, 0.04f, 0.6f}, 4);
+            glows.instances.push_back(flat(s.center, s.radius * 0.8f, {0.25f, 0.45f, 0.05f, 0.3f}));
+            break;
+        default:
+            break;
+        }
+    }
+    if (!marks.instances.empty())
+        view.sprites.push_back(std::move(marks));
+    if (!glows.instances.empty())
+        view.sprites.push_back(std::move(glows));
     for (const Bolt& b : bolts_)
         view.worldBoxes.push_back({b.position, glm::vec3(0.035f, 0.035f, 0.035f), glm::vec3(0.42f, 0.4f, 0.38f), false});
 }

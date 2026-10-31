@@ -96,18 +96,6 @@ box "Vent slab 4" 12.54723222932107 0.05 4.496491806742546 1.4 0.1 0.9 0.35 0.33
   parent "Props"
   rotation 0 290 0
   material "../materials/concrete.material"
-box "Acid surface 1" -12 0.012 -14 4.9 0.02 4.9 0.16 0.22 0.08
-  parent "Props"
-  rotation 0 0 0
-box "Acid surface 2" -12 0.014 -14 4.9 0.02 4.9 0.16 0.22 0.08
-  parent "Props"
-  rotation 0 22.5 0
-box "Acid surface 3" -12 0.016 -14 4.9 0.02 4.9 0.16 0.22 0.08
-  parent "Props"
-  rotation 0 45 0
-box "Acid surface 4" -12 0.018000000000000002 -14 4.9 0.02 4.9 0.16 0.22 0.08
-  parent "Props"
-  rotation 0 67.5 0
 box "Exit platform" 16 1 -20 5 2 5 0.5 0.5 0.5
   parent "Props"
   material "../materials/concrete.material"
