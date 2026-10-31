@@ -1,6 +1,6 @@
 # Roadmapa enginu
 
-Stav k 2026-10-31 (větev `engine`, commit `a0f515b`). Živá verze s komentáři:
+Stav k 2026-10-31 (větev `engine`, commit `a0f515b`; doplněno o průzkum základů enginu, viz [`ENGINE_RESEARCH.md`](ENGINE_RESEARCH.md)). Živá verze s komentáři:
 https://claude.ai/artifact/VUAGLWrtDXKEaPskTdDCTQ
 
 Cíl: engine pro jednoho hráče, FPS v postapokalyptické zóně (žánr S.T.A.L.K.E.R., vlastní obsah),
@@ -42,16 +42,39 @@ Odhady jsou v týdnech soustředěné práce (1 vývojář + Claude), hrubé.
 | Build a balení | Packaging, launcher, crash reporter / Build Settings, Player | CMake, CI na Linux/Windows/FreeBSD, testy jádra (CTest) | Balíček hry (exe + pak soubory), instalátor/zip, crash dump a log, verze buildu, automatický smoke test levelu v CI | P2 | M5 |
 | Platformy | Windows, konzole, mobily, XR / totéž + WebGL | Windows, Linux, FreeBSD (OpenGL 4.6) | Ovladač (gamepad přes GLFW), přemapování kláves, Steam Deck (Linux), volitelně Vulkan backend přes tenkou RHI vrstvu | P2 / P3 | M5 / – |
 
+## 1b. Doplněk auditu: základy, které profi engine řeší skrytě (2026-10-31)
+
+Podrobný průzkum (Unreal, Unity, Godot, X-Ray, id Tech, Source 2) je v [`ENGINE_RESEARCH.md`](ENGINE_RESEARCH.md).
+Funkce výše jsou pokryté; chyběla hlavně „neviditelná“ infrastruktura:
+
+| Oblast | Co máme | Co chybí | Prio | Milník |
+| --- | --- | --- | --- | --- |
+| Logování a asserty | `fprintf(stderr)`, Output log v editoru | Úrovně a kategorie, soubor `logs/`, kruhový buffer, `ENGINE_CHECK/ENSURE/VERIFY` | P0 | M0.5 |
+| Pády | nic | Crash handler (DbgHelp minidump / `backtrace` + `sigaltstack`), report s logem, verzí, GPU a levelem; obnova editoru | P0 | M0.5 |
+| Konzole a cvars | pevné příkazy v editoru | Registr cvars s příznaky (config/dev/cheat), konzole ve hře `~`, příkazová řádka, Lua; presety kvality jako sady cvars | P0 | M0.5 |
+| Konfigurace a cesty | nic | Uživatelské složky (`%APPDATA%`, XDG) pro nastavení, uložené hry, logy, cache; hierarchie výchozí → uživatel → CLI | P0 | M0.5 |
+| Identita entit | jméno a pořadí v souboru | Trvalé GUID entit a assetů (save, streaming, odkazy, prefaby, A-Life) | P0 | M0.5 |
+| Testy a QA | 25 unit testů v CTest | Smoke test všech levelů v CI (xvfb + llvmpipe), golden image testy, ASan/UBSan/TSan | P0 / P1 | M0.5 / M3 |
+| Debug nástroje | Frame a Memory doky | Debug kreslení z C++/Lua, cheaty (`noclip`, `god`, `give`, `teleport`, `timescale`), GL debug labely a callback | P0 | M0.5 |
+| Stavy hry | `game/main.cpp` jede rovnou do levelu | Boot → Menu → Loading → Playing ↔ Paused, přechody mezi lokacemi | P1 | M1 |
+| Data a formáty | číslo verze v levelu/materiálu | Pravidlo migrace + test starých souborů; verze obsahu v uložené hře; atomický zápis | P1 | M1 |
+| Hot reload a registry | ruční reload shaderů a materiálů | Sledování souborů a reload všech assetů; registry závislostí, validace, nepoužité assety | P1 | M2 |
+| Profiler | časy průchodů + GPU timery | Timeline vláken (Tracy v `3rdparty/`) | P1 | M3 |
+| Okno a platforma | `glfwSwapInterval(0)` natvrdo | VSync/limit FPS, fullscreen/borderless, monitor, DPI, render scale, `NvOptimusEnablement` | P1 | M1 |
+| Editor a data | instance modelů | Prefaby s přepisy, propojení entit (entity I/O), datové třídy s dědičností (`.weapon` base), autosave levelu | P1 / P2 | M1 / M2 / M4 |
+| Lokalizace a přístupnost | fonty s češtinou | Tabulky řetězců (cs, en, plurály), titulky, FOV, velikost textu | P2 | M5 |
+| Výroba | CI na 3 OS | Verze z gitu, symboly ke každému vydání, VFS + `mods/`, licence 3rdparty, demo/benchmark | P2 | M4 / M5 |
+
 ## 2. Milníky
 
 Pořadí je dané závislostmi: bez měření a komprese nemá smysl stavět větší svět, bez zvuku,
 navigace a menu není hra hratelná, bez streamování neuneseme celou zónu.
 
 ```
-M0 Výkon a měření ──► M1 Hratelný řez ──► M2 Otevřená zóna ──► M4 Zóna žije
-                              │                      │                 ▲
-                              └──► M3 Kvalita obrazu a animací ────────┘
-                                                                        └──► M5 Vydání
+M0 Výkon a měření ──► M0.5 Základy ──► M1 Hratelný řez ──► M2 Otevřená zóna ──► M4 Zóna žije
+                                              │                      │                 ▲
+                                              └──► M3 Kvalita obrazu a animací ────────┘
+                                                                                       └──► M5 Vydání
 ```
 
 ### M0 – Výkon, paměť a měření (probíhá, ~3–4 týdny)
@@ -79,6 +102,21 @@ Podrobně ve výkonové roadmapě vlákna "Vytvořit 3D FPS engine"; tady jen sh
 
 Hotovo, když: zóna (`zone.level`) běží na střední kartě nad 60 FPS na High, editor ukazuje čas snímku a paměť, žádné záseky při chůzi.
 
+### M0.5 – Základy enginu (~3 týdny, hned po M0, může se prolínat se začátkem M1)
+
+Infrastruktura z auditu 1b. Každá další funkce na ní staví, později by se dodělávala do hotového kódu.
+
+- [ ] **Logování** (0,5 týdne): úrovně a kategorie, soubor v `logs/`, kruhový buffer, výstup do Output logu editoru, herní konzole a Lua `game.log`.
+- [ ] **Asserty a crash handler** (1 týden): `ENGINE_CHECK/ENSURE/VERIFY`; při pádu stack trace (Windows minidump, Linux/FreeBSD `backtrace` + `sigaltstack`), posledních 500 řádků logu, verze buildu, GPU/driver, level; editor nabídne obnovu.
+- [ ] **Cvars a konzole ve hře** (1 týden): registr s typem, popisem a příznaky, konzole `~` ve hře, `+cvar hodnota` z příkazové řádky, přístup z Lua, presety kvality jako sady cvars; editorová konzole na stejném registru.
+- [ ] **Konfigurace a uživatelské složky** (0,5 týdne): `%APPDATA%` / XDG pro nastavení, uložené hry, logy a cache; výchozí → uživatelské → CLI.
+- [ ] **GUID entit a assetů** (1 týden): trvalé 64bitové ID v levelu (verze 6 s migrací), zachované při kopírování/přesunu; podklad pro uložení, streaming, odkazy a prefaby.
+- [ ] **Smoke test levelů v CI** (0,5 týdne, přesunuto z M5): každý level 300 snímků pod `xvfb-run`, bez GL chyb a assertů; noční job s ASan+UBSan a TSan.
+- [ ] **Debug kreslení a cheaty** (0,5 týdne): čáry/boxy/koule/text z C++ i Lua s dobou trvání; `noclip`, `god`, `give`, `teleport`, `timescale`, volná kamera.
+- [ ] **GL ladění** (0,5 týdne): `glDebugMessageCallback` do logu, `glObjectLabel` + `glPushDebugGroup` po průchodech (RenderDoc), `glProgramBinary` cache.
+
+Hotovo, když: každý pád zanechá report s logem, nastavení přežije restart, CI spustí všechny levely a entity mají trvalé ID.
+
 ### M1 – Hratelný vertikální řez (~8–10 týdnů)
 
 Jedna lokace zóny od menu po smrt/uložení, se zvukem a chytřejšími nepřáteli.
@@ -90,7 +128,10 @@ Jedna lokace zóny od menu po smrt/uložení, se zvukem a chytřejšími nepřá
 - [ ] **Lokální světla** (1,5 týdne): bodová a reflektorová světla, clustered forward, stíny pro pár nejbližších; světla jako objekty v editoru s gizmem dosahu; blikající zářivky.
 - [x] **Navigace** (2 týdny, zbývají krycí body; zobrazení a nastavení v editoru hotové: Details > Level > Navigation, View > Navigation mesh `P`): Recast/Detour do `3rdparty/`, stavba navmeshe na pozadí z kolizí levelu, zobrazení a nastavení v editoru, `self:move_to()` v Lua, krycí body.
 - [ ] **UI hry** (1,5 týdne): hlavní menu, pauza, nastavení (grafika, myš, klávesy, hlasitost), HUD (zdraví, munice), credits s CC-BY autory, obrazovka smrti.
-- [ ] **Uložení hry** (1 týden): serializace stavu entit, hráče a skriptů (Lua tabulka `save`), quick save/load.
+- [ ] **Uložení hry** (1 týden): serializace stavu entit, hráče a skriptů (Lua tabulka `save`), quick save/load. Po entitách s GUID jako rozdíl proti levelu, atomický zápis (dočasný soubor + `rename`), kontrolní součet, verze obsahu, sloty, autosave.
+- [ ] **Stavy hry a přechody** (1 týden): Boot → Menu → Loading → Playing ↔ Paused; pauza zastaví simulaci, ne UI; přechod mezi lokacemi s přenosem hráče a inventáře.
+- [ ] **Okno a ovládání** (1 týden): VSync / limit FPS, fullscreen / borderless, výběr monitoru, render scale, `NvOptimusEnablement`; přemapování kláves z configu, citlivost a inverze myši, gamepad přes GLFW (přesunuto z M5).
+- [ ] **Propojení entit** (1 týden): výstupy a vstupy jako v Hammeru (`OnTrigger` → `Open`), propojení klikem v editoru, volitelně z Lua.
 - [ ] **Předměty a inventář, základ** (1 týden): pickupy (munice, lékárnička), jednoduchý inventář zbraní.
 - [x] **Decaly a částice, základ** (1,5 týdne): díry po kulkách a krev z existujícího atlasu, prach a jiskry při zásahu, kouř z hlavně; nastavení v `.weapon` a fyzikálním materiálu. *Hotovo: `.particle` efekty, ParticleSystem na JobSystemu, DecalPool, nábojnice s odrazy, Particle editor s živým náhledem.*
 - [ ] **Fyzika v levelu** (1 týden): dynamická tělesa (sudy, bedny), fyzikální materiály povrchů (zvuk kroků, decal, částice), triggery v editoru.
@@ -107,6 +148,10 @@ Hotovo, když: hra se spustí do menu, jde projít lokaci, nepřátelé obcháze
 - [ ] **Voda** (1 týden): řeka a louže (odrazy SSR nebo probe, průhlednost, mlha pod hladinou).
 - [ ] **Počasí a denní doba** (1 týden): animované slunce, déšť, mlha a bouřka jako přechody mezi presety Environment; editor časové osy dne.
 
+- [ ] **Rozpočty paměti** (1 týden): limity po kategoriích (textury, meshe, audio, fyzika, Lua) s varováním v doku Memory, snímkový alokátor, pooly pro částice a decaly.
+- [ ] **Asset registry a hot reload** (2 týdny): závislosti assetů podle GUID, přejmenování bez rozbití odkazů, validace (měřítko, chybějící textury) v editoru i CI, sledování souborů a reload textur, modelů, zvuků, `.weapon`, `.particle` a Lua za běhu.
+- [ ] **Prefaby s přepisy** (1,5 týdne): skupina entit jako asset, kopie v levelu s přepsanými vlastnostmi, změna prefabu se propíše; autosave levelu v editoru.
+
 Hotovo, když: zóna 1 × 1 km jde projít bez načítací obrazovky a paměť drží rozpočet.
 
 ### M3 – Kvalita obrazu a animací (~6–8 týdnů, souběžně s M2)
@@ -115,6 +160,7 @@ Hotovo, když: zóna 1 × 1 km jde projít bez načítací obrazovky a paměť d
 - [ ] **Ragdolly** (1 týden): Jolt ragdoll ze skeletonu, přechod ze smrti; nastavení kloubů v editoru.
 - [ ] **Osvětlení** (2 týdny): reflection probes s ručním umístěním a bake v editoru, irradiance probe grid pro interiéry, volumetrická mlha a světelné kužele.
 - [ ] **Obraz** (1 týden): TAA (místo FXAA na High), motion blur volitelně, kvalitnější SSAO (GTAO), SSR.
+- [ ] **Profiler a testy obrazu** (1 týden): Tracy (`3rdparty/`) s časovou osou vláken a GPU zónami; golden image testy rendereru v CI s tolerancí.
 - [ ] **Materiály** (1–2 týdny): instance materiálu, vertex paint a blend vrstev, detail mapy; **VFX editor** pro částice z M1.
 
 ### M4 – Zóna žije: gameplay systémy (~8–10 týdnů)
@@ -125,12 +171,17 @@ Hotovo, když: zóna 1 × 1 km jde projít bez načítací obrazovky a paměť d
 - [ ] Obchod, peníze, opotřebení zbraní a zbroje, váha inventáře.
 - [ ] Anomálie a artefakty (vlastní design): trigger + VFX + zvuk + poškození, detektor.
 - [ ] Debugger Lua (breakpointy, proměnné) a hot reload skriptů za běhu.
+- [ ] Datové třídy s dědičností (`base ak74` v `.weapon`, NPC, předměty, frakce), editor ukáže zděděné hodnoty.
+- [ ] Demo záznam vstupů a semínek náhody, přehrání jako benchmark trasy zónou (průměr a 1 % low FPS) a pro reprodukci chyb.
 
 ### M5 – Vydání (~3–4 týdny)
 
 - [ ] Cooking: binární meshe, komprimované textury, balení do archivů, kontrola chybějících a nepoužitých assetů.
-- [ ] Balíček pro Windows/Linux/FreeBSD, crash dump a log, verze buildu, automatický smoke test levelu v CI.
-- [ ] Gamepad, přemapování ovládání, lokalizace textů (čeština, angličtina).
+- [ ] Balíček pro Windows/Linux/FreeBSD, verze buildu z `git describe` (log, menu, crash report), symboly ke každému vydání, release s LTO, artefakty z CI.
+- [ ] VFS s mount pointy: volné soubory → archiv → složka `mods/` přepisující soubory podle cesty.
+- [ ] Lokalizace: tabulky řetězců s klíči (čeština, angličtina, plurály), editor tabulek, kontrola nepřeložených.
+- [ ] Přístupnost: titulky, FOV, vypnutí houpání kamery a motion bluru, velikost textu.
+- [ ] Souhrn licencí třetích stran (OpenAL Soft LGPL: dynamické linkování a text licence).
 - [ ] Credits a licence všech assetů ve hře.
 
 ## 3. Co záměrně neděláme
@@ -156,6 +207,7 @@ Hotovo, když: zóna 1 × 1 km jde projít bez načítací obrazovky a paměť d
 
 ## 5. Nejbližší kroky
 
-1. Dokončit M0 ve vlákně "Vytvořit 3D FPS engine" (komprese textur, paměť, instancing, profiler).
-2. Hned potom M1 v pořadí: audio → navmesh → UI hry a credits → uložení hry → lokální světla → decaly/částice → fyzika v levelu.
-3. Souběžně s M1 může běžet obsah (assety, level zóny) v ostatních vláknech.
+1. Dokončit M0 (zbývá indirect draw, impostory, SoA data, graf úloh).
+2. M0.5 Základy v pořadí: logování → asserty a crash handler → GUID entit → cvars a konzole → konfigurace → smoke test v CI → debug kreslení → GL ladění.
+3. Potom zbytek M1: UI hry a credits → stavy hry → okno a ovládání → uložení hry → lokální světla → fyzika v levelu → propojení entit → audio dál.
+4. Souběžně s M1 může běžet obsah (assety, level zóny) v ostatních vláknech.
