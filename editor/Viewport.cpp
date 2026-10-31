@@ -200,6 +200,15 @@ void Viewport::paintGL()
             painter.drawRect(pane.rect);
         }
     }
+    // The far shadow cascades are refreshed every few frames: draw a few more after each
+    // change so a static view does not keep a stale shadow.
+    if (!settling_ && quality_.shadowCache)
+        settleFrames_ = 4;
+    settling_ = false;
+    if (settleFrames_ > 0) {
+        --settleFrames_;
+        QTimer::singleShot(0, this, [this] { settling_ = true; update(); });
+    }
 }
 
 std::vector<Viewport::Pane> Viewport::panes() const

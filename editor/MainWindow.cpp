@@ -38,6 +38,7 @@
 #include <QUrl>
 #include <QDoubleSpinBox>
 #include <QHBoxLayout>
+#include <QLocale>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFormLayout>
@@ -1341,6 +1342,73 @@ void MainWindow::buildDocks()
         memoryLabel->setText(html);
     });
     memoryTimer->start(1000);
+
+    // Frame: CPU and GPU time per render pass (timer queries), draw calls and culling,
+    // with the renderer optimizations that can be switched off to compare.
+    auto* framePanel = new QWidget(this);
+    auto* frameLayout = new QVBoxLayout(framePanel);
+    frameLayout->setContentsMargins(8, 6, 8, 6);
+    auto* frameOptions = new QHBoxLayout;
+    auto* instancingCheck = new QCheckBox(tr("GPU instancing"), framePanel);
+    instancingCheck->setToolTip(tr("Copies of one model in one draw call per mesh part"));
+    auto* shadowCacheCheck = new QCheckBox(tr("Shadow cascade cache"), framePanel);
+    shadowCacheCheck->setToolTip(tr("Far shadow cascades re-rendered every 2nd / 4th frame, without small casters"));
+    instancingCheck->setChecked(viewport_->quality().instancing);
+    shadowCacheCheck->setChecked(viewport_->quality().shadowCache);
+    frameOptions->addWidget(instancingCheck);
+    frameOptions->addWidget(shadowCacheCheck);
+    frameOptions->addStretch();
+    frameLayout->addLayout(frameOptions);
+    auto* frameLabel = new QLabel(framePanel);
+    frameLabel->setTextFormat(Qt::RichText);
+    frameLabel->setAlignment(Qt::AlignTop | Qt::AlignLeft);
+    frameLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    frameLayout->addWidget(frameLabel, 1);
+    auto applyFrameOption = [this, instancingCheck, shadowCacheCheck] {
+        engine::RenderQuality q = viewport_->quality();
+        q.instancing = instancingCheck->isChecked();
+        q.shadowCache = shadowCacheCheck->isChecked();
+        viewport_->setQuality(q);
+    };
+    connect(instancingCheck, &QCheckBox::toggled, this, applyFrameOption);
+    connect(shadowCacheCheck, &QCheckBox::toggled, this, applyFrameOption);
+    auto* frameScroll = new QScrollArea(this);
+    frameScroll->setWidget(framePanel);
+    frameScroll->setWidgetResizable(true);
+    auto* frameDock = new QDockWidget(tr("Frame"), this);
+    frameDock->setObjectName("frame");
+    frameDock->setWidget(frameScroll);
+    addDockWidget(Qt::BottomDockWidgetArea, frameDock);
+    tabifyDockWidget(logDock_, frameDock);
+    auto* frameTimer = new QTimer(this);
+    connect(frameTimer, &QTimer::timeout, this, [this, frameLabel, frameDock, instancingCheck, shadowCacheCheck] {
+        if (!frameDock->isVisible() || frameDock->visibleRegion().isEmpty())
+            return;
+        instancingCheck->blockSignals(true); // quality presets change these too
+        instancingCheck->setChecked(viewport_->quality().instancing);
+        instancingCheck->blockSignals(false);
+        shadowCacheCheck->blockSignals(true);
+        shadowCacheCheck->setChecked(viewport_->quality().shadowCache);
+        shadowCacheCheck->blockSignals(false);
+        const engine::Renderer::FrameStats& f = viewport_->frameStats();
+        const auto ms = [](double v) { return QString::number(v, 'f', 2); };
+        QString html = "<table cellspacing='2'><tr><td><b>" + tr("Pass") + "</b></td><td align='right'>&nbsp;&nbsp;<b>CPU ms</b></td>"
+                       "<td align='right'>&nbsp;&nbsp;<b>GPU ms</b></td></tr>";
+        for (int p = 0; p < engine::Renderer::PassCount; ++p)
+            html += QString("<tr><td>%1</td><td align='right'>%2</td><td align='right'>%3</td></tr>")
+                        .arg(QString::fromUtf8(engine::Renderer::passName(p)), ms(f.cpuMs[p]), f.gpuValid ? ms(f.gpuMs[p]) : QStringLiteral("-"));
+        html += QString("<tr><td><b>%1</b></td><td align='right'><b>%2</b></td><td align='right'><b>%3</b></td></tr></table>")
+                    .arg(tr("Total"), ms(f.cpuTotalMs), f.gpuValid ? ms(f.gpuTotalMs) : QStringLiteral("-"));
+        html += tr("<p>%1 draw calls, %2 triangles, %3 objects instanced, %4 culled</p>")
+                    .arg(f.drawCalls)
+                    .arg(QLocale().toString(f.triangles))
+                    .arg(f.instanced)
+                    .arg(f.culled);
+        if (!f.gpuValid)
+            html += tr("<p>GPU timer queries are not available on this driver.</p>");
+        frameLabel->setText(html);
+    });
+    frameTimer->start(500);
     assetsDock->raise();
 
     buildModePanel();

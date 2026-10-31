@@ -43,6 +43,7 @@ public:
     engine::Renderer::MemoryStats memoryStats() const { return renderer_.memoryStats(); }
     int drawCalls() const { return renderer_.lastDrawCalls(); }
     int instancedObjects() const { return renderer_.lastInstanced(); }
+    const engine::Renderer::FrameStats& frameStats() const { return renderer_.frameStats(); }
     void setQuality(const engine::RenderQuality& quality);
     const engine::RenderQuality& quality() const { return quality_; }
     // Recompiles the shaders from `directory` (over the built-in ones); false + compiler log on error.
@@ -150,6 +151,8 @@ private:
     bool orthoWireframe_ = true;
     bool showGrid_ = true;
     bool showReference_ = false;
+    int settleFrames_ = 0;      // extra repaints so cached shadow cascades catch up
+    bool settling_ = false;
     bool referenceLoading_ = false;
     std::shared_ptr<engine::Model> reference_;
     glm::vec3 orthoCenter_{0.0f, 0.0f, 0.0f};
