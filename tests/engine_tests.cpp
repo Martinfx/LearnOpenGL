@@ -29,6 +29,8 @@
 
 #include <cmath>
 #include <cstdio>
+#include <engine/CVars.h>
+
 #include <functional>
 #include <string>
 #include <vector>
@@ -1077,6 +1079,37 @@ void testObjectIds()
           "version 5 level migrates to IDs");
 }
 
+void testCVars()
+{
+    engine::CVarRegistry r;
+    int changes = 0;
+    r.add("t_float", engine::CVarType::Float, "1", "test", engine::CVarConfig, 0.0, 2.0).onChange =
+        [&](const engine::CVar&) { ++changes; };
+    r.add("t_bool", engine::CVarType::Bool, "0", "test", engine::CVarConfig);
+    r.add("t_cheat", engine::CVarType::Int, "0", "test", engine::CVarCheat);
+    r.add("t_ro", engine::CVarType::String, "x", "test", engine::CVarReadOnly);
+    check(r.set("t_float", "5") && r.find("t_float")->number() == 2.0f && changes == 1, "cvar clamps to max and fires onChange");
+    check(!r.set("t_float", "abc") && r.find("t_float")->number() == 2.0f, "cvar rejects a non-number");
+    check(r.set("t_bool", "on") && r.find("t_bool")->boolean() && r.set("t_bool", "false") && !r.find("t_bool")->boolean(),
+          "bool cvar parses on/false");
+    check(!r.set("t_cheat", "1"), "cheat cvar locked without cheats");
+    check(!r.set("t_ro", "y"), "read-only cvar cannot be set");
+    const engine::ConsoleResult show = r.execute("t_float");
+    check(show.ok && show.text.find('2') != std::string::npos, "console shows a value");
+    check(!r.execute("no_such_thing").ok, "unknown console word fails");
+    const auto rest = r.applyCommandLine({"+t_bool", "1", "level.level"});
+    check(r.find("t_bool")->boolean() && rest.size() == 1 && rest[0] == "level.level", "command line +name value");
+    const std::string file = (std::filesystem::temp_directory_path() / "cvars_test.cfg").string();
+    r.set("t_float", "0.25");
+    check(r.saveConfig(file), "config saves");
+    engine::CVarRegistry r2;
+    r2.add("t_float", engine::CVarType::Float, "1", "test", engine::CVarConfig, 0.0, 2.0);
+    r2.add("t_bool", engine::CVarType::Bool, "0", "test", engine::CVarConfig);
+    check(r2.loadConfig(file) && r2.find("t_float")->number() == 0.25f && r2.find("t_bool")->boolean(), "config round trip");
+    const auto words = engine::splitConsoleLine("say \"hello world\" 3");
+    check(words.size() == 3 && words[1] == "hello world", "console line keeps quoted words");
+}
+
 void testLog()
 {
     namespace fs = std::filesystem;
@@ -1378,6 +1411,7 @@ int main()
     testAudio();
     testNavMesh();
     testObjectIds();
+    testCVars();
     testLog();
     testEnsure();
     testSurfaces();

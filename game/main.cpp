@@ -1,6 +1,8 @@
 // Game runtime: GLFW window, fixed 60 Hz simulation, first-person player.
 // Usage: fps_game [level-file]
 #include <engine/Log.h>
+#include <engine/CVars.h>
+#include <engine/Paths.h>
 #include <engine/Crash.h>
 #include <engine/Assert.h>
 #include <engine/Camera.h>
@@ -15,6 +17,7 @@
 
 #include "GameAudio.h"
 #include "GameEffects.h"
+#include "GameConsole.h"
 #include "MapHud.h"
 #include <engine/Scripting.h>
 #include <engine/NavMesh.h>
@@ -32,6 +35,8 @@
 #include <algorithm>
 #include <atomic>
 #include <thread>
+#include <chrono>
+#include <functional>
 #include <array>
 #include <cmath>
 #include <string>
@@ -45,6 +50,7 @@ struct Mouse {
     bool first = true;
     glm::vec2 delta{0.0f};
     double scroll = 0.0;
+    GameConsole* console = nullptr; // receives typed text and keys while open
 };
 
 // Attribution required by CC-BY assets: print the CREDITS.md rows that name the
@@ -246,9 +252,13 @@ int main(int argc, char** argv)
 
     // Command line: [level] [--shaders DIR] (shaders edited in the editor replace the built-in ones).
     std::filesystem::path levelPath = std::filesystem::path(argv[0]).parent_path() / "assets/levels/test.level";
+    std::vector<std::string> cvarArgs; // "+name value" pairs, applied once the variables exist
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
-        if (arg == "--shaders" && i + 1 < argc) {
+        if (arg.size() > 1 && arg[0] == '+' && i + 1 < argc) {
+            cvarArgs.push_back(arg);
+            cvarArgs.push_back(argv[++i]);
+        } else if (arg == "--shaders" && i + 1 < argc) {
             if (!renderer.reloadShaders(argv[++i], &error))
                 LOG_WARN("shaders", "%s\n", error.c_str());
         } else {
@@ -361,7 +371,7 @@ int main(int argc, char** argv)
     }
 
     engine::FpsCamera camera;
-    const float hipFov = camera.fovDegrees, hipSensitivity = camera.sensitivity;
+
     engine::PlayerController player;
     player.settings = scene.player; // movement and health come from the level (editor: Level > Player)
     player.spawn(physics, scene.playerStart);
@@ -417,8 +427,77 @@ int main(int argc, char** argv)
     engine::FixedStepClock clock;
     engine::InputState input;
 
+    // Console variables: defaults here, then the user's config, then +name value from the command line.
+    engine::CVarRegistry& cvars = engine::CVarRegistry::global();
+    const float baseSensitivity = camera.sensitivity;
+    {
+        using engine::CVarType;
+        cvars.add("m_sensitivity", CVarType::Float, "1", "Mouse sensitivity multiplier", engine::CVarConfig, 0.05, 10.0);
+        cvars.add("m_invert_y", CVarType::Bool, "0", "Invert vertical mouse look", engine::CVarConfig);
+        cvars.add("fov", CVarType::Float, "90", "Vertical field of view (degrees, hip fire)", engine::CVarConfig, 50.0, 120.0);
+        cvars.add("vsync", CVarType::Bool, "0", "Wait for the monitor refresh (no tearing, adds latency)", engine::CVarConfig)
+            .onChange = [](const engine::CVar& v) { glfwSwapInterval(v.boolean() ? 1 : 0); };
+        cvars.add("fps_max", CVarType::Int, "0", "Frame rate limit, 0 = none", engine::CVarConfig, 0.0, 1000.0);
+        cvars.add("r_quality", CVarType::Int, "2", "Graphics preset: 0 low, 1 medium, 2 high, 3 ultra", engine::CVarConfig, 0.0, 3.0)
+            .onChange = [&renderer](const engine::CVar& v) { renderer.setQuality(engine::RenderQuality::preset(v.integer())); };
+        auto volume = [&](const char* name, const char* description, std::function<void(float)> apply) {
+            cvars.add(name, CVarType::Float, "1", description, engine::CVarConfig, 0.0, 1.0).onChange =
+                [apply](const engine::CVar& v) { apply(v.number()); };
+        };
+        volume("snd_volume", "Master volume", [&audio](float v) { audio.system().setMasterVolume(v); });
+        volume("snd_sfx", "Weapons, footsteps and effects volume", [&audio](float v) { audio.system().setGroupVolume(engine::AudioGroup::Sfx, v); });
+        volume("snd_ambient", "Ambience and weather volume", [&audio](float v) { audio.system().setGroupVolume(engine::AudioGroup::Ambient, v); });
+        volume("snd_music", "Music volume", [&audio](float v) { audio.system().setGroupVolume(engine::AudioGroup::Music, v); });
+        cvars.add("cl_showfps", CVarType::Bool, "0", "Frame rate in the corner", engine::CVarConfig);
+        cvars.addCommand("quit", "Leaves the game", [window](const std::vector<std::string>&) {
+            glfwSetWindowShouldClose(window, GLFW_TRUE);
+            return engine::ConsoleResult{true, "bye"};
+        });
+        cvars.addCommand("pos", "Prints the player's position and view", [&player, &camera](const std::vector<std::string>&) {
+            char buf[160];
+            const glm::vec3 p = player.feet();
+            std::snprintf(buf, sizeof buf, "feet %.2f %.2f %.2f, yaw %.1f, pitch %.1f", p.x, p.y, p.z, camera.yawDegrees, camera.pitchDegrees);
+            return engine::ConsoleResult{true, buf};
+        });
+        cvars.addCommand("config_save", "Saves the settings now (also done on exit)", [&cvars](const std::vector<std::string>&) {
+            const std::string file = (engine::userDirectory("config") / "game.cfg").string();
+            const bool ok = cvars.saveConfig(file);
+            return engine::ConsoleResult{ok, ok ? "saved " + file : "cannot write " + file};
+        });
+        const std::filesystem::path config = engine::userDirectory("config") / "game.cfg";
+        if (cvars.loadConfig(config.string()))
+            LOG_INFO("cvar", "Settings from %s", config.string().c_str());
+        for (const std::string& rest : cvars.applyCommandLine(cvarArgs))
+            LOG_WARN("cvar", "Ignored command line argument %s", rest.c_str());
+        // Apply what the callbacks have not (values equal to the defaults do not fire onChange).
+        for (const char* name : {"vsync", "r_quality", "snd_volume", "snd_sfx", "snd_ambient", "snd_music"})
+            if (const engine::CVar* v = cvars.find(name); v && v->onChange)
+                v->onChange(*v);
+    }
+    const engine::CVar& cvSensitivity = *cvars.find("m_sensitivity");
+    const engine::CVar& cvInvert = *cvars.find("m_invert_y");
+    const engine::CVar& cvFov = *cvars.find("fov");
+    const engine::CVar& cvFpsMax = *cvars.find("fps_max");
+    const engine::CVar& cvShowFps = *cvars.find("cl_showfps");
+    GameConsole console;
+
     Mouse mouse;
+    mouse.console = &console;
     glfwSetWindowUserPointer(window, &mouse);
+    glfwSetCharCallback(window, [](GLFWwindow* w, unsigned codepoint) {
+        if (auto* m = static_cast<Mouse*>(glfwGetWindowUserPointer(w)); m->console)
+            m->console->onChar(codepoint);
+    });
+    glfwSetKeyCallback(window, [](GLFWwindow* w, int key, int, int action, int mods) {
+        auto* m = static_cast<Mouse*>(glfwGetWindowUserPointer(w));
+        if (!m->console)
+            return;
+        if (key == GLFW_KEY_GRAVE_ACCENT && action == GLFW_PRESS) { // ~ (key left of 1 on any layout)
+            m->console->toggle();
+            return;
+        }
+        m->console->onKey(key, action, mods);
+    });
     glfwSetCursorPosCallback(window, [](GLFWwindow* w, double x, double y) {
         auto* m = static_cast<Mouse*>(glfwGetWindowUserPointer(w));
         if (!m->first)
@@ -450,6 +529,10 @@ int main(int argc, char** argv)
         volatile int* nowhere = nullptr;
         *nowhere = 1;
     }
+    if (const char* line = std::getenv("FPS_ENGINE_CONSOLE")) { // run a console line and leave the console open (test hook)
+        console.toggle();
+        console.submitLine(line);
+    }
     if (const char* slot = std::getenv("FPS_ENGINE_SLOT")) { // weapon slot 1..9 to start with (test hook)
         const long n = std::strtol(slot, nullptr, 10);
         if (n >= 1 && static_cast<std::size_t>(n) <= weapons.size()) {
@@ -473,29 +556,40 @@ int main(int argc, char** argv)
         lastTime = now;
 
         glfwPollEvents();
-        const bool esc = glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS;
+        // While the console is open the game gets no input and the cursor is free.
+        static bool consoleWasOpen = false;
+        if (console.open() != consoleWasOpen) {
+            consoleWasOpen = console.open();
+            captured = !console.open();
+            setCaptured(window, captured);
+            mouse.first = true;
+            escHeld = true; // the Esc that closed the console does not also free the mouse
+        }
+        const bool esc = glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS && !console.open();
         if (esc && !escHeld) {
             captured = !captured;
             setCaptured(window, captured);
             mouse.first = true;
         }
         escHeld = esc;
-        const bool mKey = glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS;
+        const bool mKey = glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS && !console.open();
         if (mKey && !mapHeld)
             mapOpen = !mapOpen;
         mapHeld = mKey;
-        if (!captured && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+        if (!captured && !console.open() && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
             captured = true;
             setCaptured(window, captured);
             mouse.first = true;
         }
 
         // Look is applied every frame for responsiveness; movement runs at a fixed rate.
+        if (cvInvert.boolean())
+            mouse.delta.y = -mouse.delta.y;
         if (captured)
             camera.look(mouse.delta);
         mouse.delta = glm::vec2(0.0f);
         readInput(window, input);
-        if (!captured)
+        if (!captured || console.open())
             input = {};
 
         // Weapon selection: 1-9 or the mouse wheel.
@@ -640,8 +734,9 @@ int main(int argc, char** argv)
             {
                 const engine::Weapon& w = weapons[current];
                 const float zoom = w.canAim() ? smoothAim(w) : 0.0f;
-                camera.fovDegrees = glm::mix(hipFov, w.canAim() ? w.settings.aimFov : hipFov, zoom);
-                camera.sensitivity = hipSensitivity * camera.fovDegrees / hipFov;
+                const float hip = cvFov.number();
+                camera.fovDegrees = glm::mix(hip, w.canAim() ? w.settings.aimFov : hip, zoom);
+                camera.sensitivity = baseSensitivity * cvSensitivity.number() * camera.fovDegrees / hip;
             }
             engine::RenderView view;
             view.view = camera.view();
@@ -683,21 +778,34 @@ int main(int argc, char** argv)
             }
             renderer.renderOverlay(view, overlay);
             renderer.present();
-            if (screenshotFile && frameLimit > 0 && frame + 1 == frameLimit) {
-                const std::vector<std::uint8_t> rgb = renderer.readPixels(width, height);
-                std::ofstream shot(screenshotFile, std::ios::binary);
-                shot << "P6\n" << width << ' ' << height << "\n255\n";
-                shot.write(reinterpret_cast<const char*>(rgb.data()), static_cast<std::streamsize>(rgb.size()));
-            }
             // HUD: minimap in the corner, or the full map (M).
             ui.begin(width, height);
             if (mapOpen)
                 map.drawFullMap(ui, width, height, player.feet(), camera.flatForward());
             else
                 map.drawMinimap(ui, width, height, player.feet(), camera.flatForward());
+            if (cvShowFps.boolean()) {
+                char fps[32];
+                std::snprintf(fps, sizeof fps, "%.0f FPS", frameTime > 0.0 ? 1.0 / frameTime : 0.0);
+                ui.text(fps, {10.0f, 8.0f}, 18.0f, {0.95f, 0.9f, 0.6f, 1.0f}, true);
+            }
+            console.draw(ui, width, height, now);
             ui.end();
+            if (screenshotFile && frameLimit > 0 && frame + 1 == frameLimit) {
+                const std::vector<std::uint8_t> rgb = renderer.readPixels(width, height);
+                std::ofstream shot(screenshotFile, std::ios::binary);
+                shot << "P6\n" << width << ' ' << height << "\n255\n";
+                shot.write(reinterpret_cast<const char*>(rgb.data()), static_cast<std::streamsize>(rgb.size()));
+            }
         }
         glfwSwapBuffers(window);
+        if (const int maxFps = cvFpsMax.integer(); maxFps > 0) { // frame limiter (sleep, then spin the last bit)
+            const double target = now + 1.0 / maxFps;
+            while (glfwGetTime() < target - 0.0015)
+                std::this_thread::sleep_for(std::chrono::microseconds(500));
+            while (glfwGetTime() < target) {
+            }
+        }
 
         ++frame;
         ++fpsFrames;
@@ -731,6 +839,7 @@ int main(int argc, char** argv)
         }
     }
 
+    cvars.saveConfig((engine::userDirectory("config") / "game.cfg").string());
     navCancel = true;
     if (navBuilder.joinable())
         navBuilder.join();

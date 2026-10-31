@@ -1,5 +1,6 @@
 #include "engine/Log.h"
 #include "engine/Scripting.h"
+#include "engine/CVars.h"
 #include "engine/CharacterBody.h"
 #include "engine/NavMesh.h"
 #include "engine/Physics.h"
@@ -310,6 +311,15 @@ void ScriptSystem::Impl::bindApi()
         return nullptr;
     });
     game.set_function("log", [this](const std::string& msg) { log("[lua] " + msg); });
+    // Console variables: game.cvar("fov") returns the value as text (nil if unknown); set_cvar respects cheat / read-only flags.
+    game.set_function("cvar", [](const std::string& name) -> sol::optional<std::string> {
+        if (const CVar* v = CVarRegistry::global().find(name))
+            return v->value;
+        return sol::nullopt;
+    });
+    game.set_function("set_cvar", [](const std::string& name, const std::string& value) {
+        return CVarRegistry::global().set(name, value);
+    });
     lua.set_function("print", [this](sol::variadic_args args) {
         std::string line;
         for (auto a : args) {

@@ -28,6 +28,7 @@ add_library(engine STATIC
     src/Log.cpp
     src/Paths.cpp
     src/Crash.cpp
+    src/CVars.cpp
     src/Ui2D.cpp
     ${ENGINE_EMBEDDED_SHADERS}
 )

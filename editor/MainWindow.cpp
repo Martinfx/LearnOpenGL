@@ -30,6 +30,7 @@
 #include <QPointer>
 #include <engine/JobSystem.h>
 #include <engine/Log.h>
+#include <engine/CVars.h>
 #include <engine/Crash.h>
 #include <engine/Paths.h>
 #include <QUndoStack>
@@ -3304,7 +3305,8 @@ void MainWindow::runCommand(const QString& command)
     if (name == "help") {
         appendLog(tr("Commands: play, stop, pause, save, view perspective|top|front|side|quad, "
                      "shading lit|unlit|lighting|wireframe, quality 0-3, r.ssao|r.bloom|r.fxaa 0|1, select NAME, focus, "
-                     "tool select|move|rotate|scale, camspeed M/S, mode select|place|model, stat, reloadshaders, clear"),
+                     "tool select|move|rotate|scale, camspeed M/S, mode select|place|model, stat, reloadshaders, clear; "
+                     "engine variables: cvars [prefix], NAME [VALUE]"),
                   0);
     } else if (name == "play") {
         playLevel();
@@ -3386,7 +3388,13 @@ void MainWindow::runCommand(const QString& command)
     } else if (name == "reloadshaders") {
         applyShaders();
     } else {
-        appendLog(tr("Unknown command \"%1\" (type help)").arg(name), 1);
+        // Anything else goes to the engine's console variables and commands (shared with the game console).
+        std::string line = command.toStdString();
+        if (name == "cvars") // the editor has its own "help"; this lists the engine's
+            line = "help " + arg.toStdString();
+        const engine::ConsoleResult r = engine::CVarRegistry::global().execute(line);
+        if (!r.text.empty())
+            appendLog(QString::fromStdString(r.text), r.ok ? 0 : 1);
     }
 }
 
