@@ -82,6 +82,9 @@ struct RenderQuality {
     float textureStreamDistance = 40.0f;
     bool releaseCpuTextures = true; // drop CPU pixels once on the GPU (re-read from the cache if needed)
     bool instancing = true;         // copies of one model in one draw call per mesh part
+    // Shadows: the far cascades are re-rendered every 2nd / 4th frame (sooner when the
+    // camera leaves their margin or the sun moves); small casters are left out of them.
+    bool shadowCache = true;
 
     static RenderQuality preset(int level); // 0 low, 1 medium, 2 high, 3 ultra
 };
@@ -307,6 +310,20 @@ private:
     unsigned ldrFbo_ = 0, ldrTex_ = 0;
     unsigned shadowFbo_ = 0, shadowTex_ = 0;
     int shadowRes_ = 0;
+    // Cascade cache: what each layer of the shadow map currently holds.
+    struct ShadowCascade {
+        glm::mat4 matrix{1.0f};
+        glm::vec3 center{0.0f};
+        float radius = 0.0f;         // covered sphere (with the margin)
+        bool valid = false;
+    };
+    std::array<ShadowCascade, 3> cascades_{};
+    glm::vec3 cascadeLight_{0.0f};
+    int cascadeCount_ = 0, cascadeRes_ = 0;
+    unsigned cascadeUpdate_ = 0;     // bit per cascade rendered this frame
+    std::uint64_t frameNumber_ = 0;
+    int shadowCascade_ = -1;         // cascade being drawn (-1 = not the shadow pass)
+    float shadowMinCaster_ = 0.0f;   // casters with a smaller bounding box diagonal are skipped
     unsigned envRaw_ = 0, envMap_ = 0, brdfLut_ = 0, captureFbo_ = 0;
     std::size_t envHash_ = 0;
     unsigned whiteTex_ = 0;             // stand-in when SSAO is off

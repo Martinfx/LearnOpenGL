@@ -214,6 +214,37 @@ const char* textureFormatName(TextureFormat format)
     }
 }
 
+namespace {
+
+// Share of pixels whose alpha, multiplied by `scale`, is above `cutoff`.
+float alphaCoverageOf(const std::vector<std::uint8_t>& rgba, float cutoff, float scale)
+{
+    const std::size_t count = rgba.size() / 4;
+    if (count == 0)
+        return 0.0f;
+    std::size_t above = 0;
+    for (std::size_t i = 0; i < count; ++i)
+        above += static_cast<float>(rgba[i * 4 + 3]) / 255.0f * scale > cutoff ? 1 : 0;
+    return static_cast<float>(above) / static_cast<float>(count);
+}
+
+// Copy of a mip level with alpha scaled so its coverage matches `target` (Castaño 2010).
+std::vector<std::uint8_t> preserveCoverage(const std::vector<std::uint8_t>& level, float cutoff, float target)
+{
+    float lo = 0.0f, hi = 8.0f;
+    for (int i = 0; i < 12; ++i) {
+        const float mid = (lo + hi) * 0.5f;
+        (alphaCoverageOf(level, cutoff, mid) > target ? hi : lo) = mid;
+    }
+    const float scale = (lo + hi) * 0.5f;
+    std::vector<std::uint8_t> out = level;
+    for (std::size_t i = 3; i < out.size(); i += 4)
+        out[i] = static_cast<std::uint8_t>(std::clamp(static_cast<float>(out[i]) * scale + 0.5f, 0.0f, 255.0f));
+    return out;
+}
+
+} // namespace
+
 CookedTexture cookTexture(const std::uint8_t* rgba, int width, int height, const CookOptions& options)
 {
     CookedTexture result;
@@ -237,9 +268,16 @@ CookedTexture cookTexture(const std::uint8_t* rgba, int width, int height, const
     std::vector<std::uint8_t> level(rgba, rgba + static_cast<std::size_t>(width) * static_cast<std::size_t>(height) * 4);
     int w = width, h = height;
     bool first = true;
+    const bool coverage = options.alphaCoverage > 0.0f && options.alphaCoverage < 1.0f && options.usage == TextureUsage::Color;
+    const float targetCoverage = coverage ? alphaCoverageOf(level, options.alphaCoverage, 1.0f) : 0.0f;
     for (;;) {
         const bool fits = options.maxSize <= 0 || std::max(w, h) <= options.maxSize;
         if (fits) {
+            // Smaller levels keep the coverage of the source (the chain itself stays unscaled).
+            std::vector<std::uint8_t> scaled;
+            if (coverage && (w != width || h != height))
+                scaled = preserveCoverage(level, options.alphaCoverage, targetCoverage);
+            const std::vector<std::uint8_t>& out = scaled.empty() ? level : scaled;
             if (first) {
                 result.width = w;
                 result.height = h;
@@ -252,9 +290,9 @@ CookedTexture cookTexture(const std::uint8_t* rgba, int width, int height, const
             mip.height = h;
             result.data.resize(mip.offset + mip.size);
             if (format == TextureFormat::RGBA8)
-                std::memcpy(result.data.data() + mip.offset, level.data(), mip.size);
+                std::memcpy(result.data.data() + mip.offset, out.data(), mip.size);
             else
-                compressLevel(level.data(), w, h, format, result.data.data() + mip.offset);
+                compressLevel(out.data(), w, h, format, result.data.data() + mip.offset);
             result.mips.push_back(mip);
             if (!options.mipmaps)
                 break;
@@ -277,7 +315,8 @@ std::string textureCacheKey(const std::filesystem::path& source, const std::stri
     const std::u8string path = std::filesystem::absolute(source, ec).lexically_normal().generic_u8string();
     std::string key(path.begin(), path.end());
     key += '|' + std::to_string(static_cast<unsigned long long>(size)) + '|' + std::to_string(static_cast<long long>(time)) + '|' + extra + '|' + std::to_string(static_cast<int>(o.usage)) +
-           (o.srgb ? "s" : "l") + (o.compress ? "c" : "u") + (o.mipmaps ? "m" : "n") + std::to_string(o.maxSize) + "|v" +
+           (o.srgb ? "s" : "l") + (o.compress ? "c" : "u") + (o.mipmaps ? "m" : "n") + std::to_string(o.maxSize) +
+           (o.alphaCoverage > 0.0f ? "a" + std::to_string(static_cast<int>(o.alphaCoverage * 1000.0f + 0.5f)) : std::string()) + "|v" +
            std::to_string(kVersion);
     return key;
 }

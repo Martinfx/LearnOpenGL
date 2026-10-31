@@ -881,6 +881,27 @@ void testTextureCooking()
     const engine::CookedTexture small = engine::cookTexture(px.data(), 64, 32, o);
     check(small.width == 16 && small.height == 8 && small.mips.size() == 5, "cook: max size drops the top mips");
 
+    // Alpha-tested grass: a fifth of the pixels opaque, scattered. Plain averaging drops the
+    // 8x8 mip below the 0.5 cutoff everywhere; coverage-preserving mips keep ~20 %.
+    {
+        std::vector<std::uint8_t> grass(64 * 64 * 4, 200);
+        for (int i = 0; i < 64 * 64; ++i)
+            grass[i * 4 + 3] = (static_cast<unsigned>(i) * 2654435761u >> 16) % 5 == 0 ? 255 : 0;
+        engine::CookOptions g;
+        g.compress = false;
+        auto coverage8 = [&](const engine::CookedTexture& t) {
+            const engine::TextureMip& m = t.mips[3]; // 8x8
+            int above = 0;
+            for (std::size_t i = 0; i < m.size / 4; ++i)
+                above += t.data[m.offset + i * 4 + 3] > 127 ? 1 : 0;
+            return static_cast<float>(above) / static_cast<float>(m.size / 4);
+        };
+        const float plain = coverage8(engine::cookTexture(grass.data(), 64, 64, g));
+        g.alphaCoverage = 0.5f;
+        const float kept = coverage8(engine::cookTexture(grass.data(), 64, 64, g));
+        check(plain < 0.01f && kept > 0.1f && kept < 0.35f, "cook: coverage-preserving alpha mips");
+    }
+
     // Cache file round trip, also reading only the small mips (streaming).
     check(engine::writeCookedTexture("cooked_test.ctex", c), "cook: write cache file");
     engine::CookedTexture all, tail;

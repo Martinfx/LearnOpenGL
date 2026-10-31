@@ -37,12 +37,15 @@ std::atomic<std::uint64_t> nextPartId{1};
 // copy in the disk cache skips the PNG/JPEG decode and the compression.
 std::shared_ptr<const Texture> loadImage(const cgltf_image* image, const std::filesystem::path& gltfFile,
                                          const cgltf_data* data, TextureUsage usage,
-                                         std::map<std::pair<const cgltf_image*, int>, std::shared_ptr<const Texture>>& cache)
+                                         std::map<std::pair<const cgltf_image*, int>, std::shared_ptr<const Texture>>& cache,
+                                         float alphaCoverage = 0.0f)
 {
     if (!image)
         return nullptr;
     const bool srgb = usage == TextureUsage::Color;
-    if (auto it = cache.find({image, static_cast<int>(usage)}); it != cache.end())
+    // The same image alpha-tested with another cutoff is a different cooked texture.
+    const int cacheId = static_cast<int>(usage) + 8 * static_cast<int>(alphaCoverage * 1000.0f + 0.5f);
+    if (auto it = cache.find({image, cacheId}); it != cache.end())
         return it->second;
 
     // Source of the pixels: the .glb itself (embedded) or an image file next to the .gltf.
@@ -64,6 +67,7 @@ std::shared_ptr<const Texture> loadImage(const cgltf_image* image, const std::fi
     options.usage = usage;
     options.srgb = srgb;
     options.compress = config.compress;
+    options.alphaCoverage = usage == TextureUsage::Color ? alphaCoverage : 0.0f;
     const std::string key = textureCacheKey(source, extra, options);
     const std::filesystem::path cacheFile = config.diskCache ? textureCachePath(key) : std::filesystem::path();
 
@@ -75,7 +79,7 @@ std::shared_ptr<const Texture> loadImage(const cgltf_image* image, const std::fi
     // it first needs them, and only the mip levels it needs (streaming).
     if (!cacheFile.empty() && readCookedTextureInfo(cacheFile, cooked)) {
         tex->setCooked(std::move(cooked), cacheFile);
-        cache[{image, static_cast<int>(usage)}] = tex;
+        cache[{image, cacheId}] = tex;
         return tex;
     }
 
@@ -105,7 +109,7 @@ std::shared_ptr<const Texture> loadImage(const cgltf_image* image, const std::fi
         tex->setCooked(std::move(cooked), saved ? cacheFile : std::filesystem::path());
         result = std::move(tex);
     }
-    cache[{image, static_cast<int>(usage)}] = result;
+    cache[{image, cacheId}] = result;
     return result;
 }
 
@@ -198,10 +202,11 @@ bool loadPrimitive(const cgltf_primitive& prim, const glm::mat4& world, MeshPart
     if (prim.material && prim.material->name)
         part.materialName = prim.material->name;
     const cgltf_accessor* uv = findAttribute(prim, cgltf_attribute_type_texcoord);
+    float alphaCoverage = 0.0f; // MASK base colour: coverage-preserving alpha mips
     auto textureOf = [&](const cgltf_texture_view& view, TextureUsage usage) -> std::shared_ptr<const Texture> {
         if (!view.texture || !uv)
             return nullptr;
-        return loadImage(view.texture->image, ctx.file, ctx.data, usage, ctx.images);
+        return loadImage(view.texture->image, ctx.file, ctx.data, usage, ctx.images, alphaCoverage);
     };
     if (const cgltf_material* mat = prim.material) {
         if (mat->has_pbr_metallic_roughness) {
@@ -209,7 +214,10 @@ bool loadPrimitive(const cgltf_primitive& prim, const glm::mat4& world, MeshPart
             const float* c = pbr.base_color_factor; // linear
             part.color = {linearToSrgb(c[0]), linearToSrgb(c[1]), linearToSrgb(c[2])};
             part.opacity = c[3];
+            if (mat->alpha_mode == cgltf_alpha_mode_mask)
+                alphaCoverage = mat->alpha_cutoff;
             part.texture = textureOf(pbr.base_color_texture, TextureUsage::Color);
+            alphaCoverage = 0.0f;
             part.metalRoughTexture = textureOf(pbr.metallic_roughness_texture, TextureUsage::Data);
             part.metallic = pbr.metallic_factor;
             part.roughness = pbr.roughness_factor;

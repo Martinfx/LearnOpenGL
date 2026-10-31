@@ -41,6 +41,10 @@ struct CookOptions {
     bool compress = true;  // false = RGBA8 mip chain
     bool mipmaps = true;
     int maxSize = 0;       // longest side limit, halved until it fits (0 = none)
+    // Alpha-tested (MASK) textures: alpha of every mip level is rescaled so the share of
+    // pixels above this cutoff stays as in the full-size image; thin grass and leaves
+    // then do not fade away in the distance (0 = plain averaging).
+    float alphaCoverage = 0.0f;
 };
 
 // Process-wide switches. Compression is on by default; the renderer turns it

@@ -513,6 +513,7 @@ void Renderer::shutdown()
             *a = 0;
         }
     shadowRes_ = 0;
+    cascadeCount_ = 0; // cached cascades are gone with the texture
     envHash_ = 0;
 }
 
@@ -620,6 +621,13 @@ void Renderer::updateEnvironment(const Scene& scene, const RenderView& view)
     const glm::vec3 lightDir = glm::normalize(scene.sunDirection);
     const glm::mat4 invViewProj = b.invViewProj;
     float prev = nearPlane;
+    // A new sun direction, resolution or cascade count invalidates every cached cascade.
+    const bool sameSetup = cascadeCount_ == cascades && cascadeRes_ == quality_.shadowResolution &&
+                           glm::dot(cascadeLight_, lightDir) > 0.99999f;
+    cascadeCount_ = cascades;
+    cascadeRes_ = quality_.shadowResolution;
+    cascadeLight_ = lightDir;
+    cascadeUpdate_ = 0;
     for (int i = 0; i < cascades; ++i) {
         // Bounding sphere of the frustum slice: stable size while the camera turns.
         auto ndcDepth = [&](float d) {
@@ -638,6 +646,22 @@ void Renderer::updateEnvironment(const Scene& scene, const RenderView& view)
         for (const glm::vec3& c : corners)
             radius = std::max(radius, glm::length(c - center));
         radius = std::ceil(radius * 16.0f) / 16.0f;
+        // Far cascades are cached: drawn with a margin and re-rendered every 2nd (cascade 1)
+        // or 4th (cascade 2) frame, or as soon as the slice leaves the covered sphere.
+        ShadowCascade& cache = cascades_[i];
+        const bool cached = quality_.shadowCache && i > 0;
+        const bool scheduled = !cached || (i == 1 ? (frameNumber_ % 2) == 1 : (frameNumber_ % 4) == 2);
+        const bool inside = cache.valid && glm::distance(center, cache.center) + radius <= cache.radius;
+        if (!sameSetup || scheduled || !inside) {
+            cascadeUpdate_ |= 1u << i;
+            cache.center = center;
+            cache.radius = cached ? radius * 1.12f : radius;
+        } else {
+            b.shadowMatrices[i] = cache.matrix;
+            prev = splits[i];
+            continue;
+        }
+        radius = cache.radius;
         const glm::vec3 up = std::abs(lightDir.y) > 0.99f ? glm::vec3(0, 0, 1) : glm::vec3(0, 1, 0);
         const glm::mat4 lightView = glm::lookAt(center - lightDir * (radius + 80.0f), center, up);
         glm::mat4 lightProj = glm::ortho(-radius, radius, -radius, radius, 0.0f, 2.0f * radius + 160.0f);
@@ -651,6 +675,8 @@ void Renderer::updateEnvironment(const Scene& scene, const RenderView& view)
             lightProj[3][1] += offset.y;
         }
         b.shadowMatrices[i] = lightProj * lightView;
+        cache.matrix = b.shadowMatrices[i];
+        cache.valid = true;
         if (i == 0) // world size of one texel of the first cascade drives the biases
             b.shadowParams.z = 1.0f / static_cast<float>(std::max(1, quality_.shadowResolution));
         b.shadowParams.y = 2.0f * radius / static_cast<float>(std::max(1, quality_.shadowResolution)) * (i == 0 ? 1.5f : b.shadowParams.y);
@@ -796,8 +822,10 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
     for (std::size_t i = 0; i < scene.models.size(); ++i) {
         const Model& model = scene.models[i];
         drawDistance_ = distanceTo(view.cameraPosition, model.bounds());
+        const Aabb modelBounds = model.bounds();
         const bool tooFar = model.cullDistance > 0.0f && drawDistance_ > model.cullDistance;
-        if (tooFar || !visible(model.bounds())) {
+        const bool tinyCaster = shadowMinCaster_ > 0.0f && glm::length(modelBounds.max - modelBounds.min) < shadowMinCaster_;
+        if (tooFar || tinyCaster || !visible(modelBounds)) {
             keepAlive(model); // stays uploaded while out of view
             if (model.lod)
                 keepAlive(*model.lod);
@@ -809,7 +837,8 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         const Model* draw = &model;
         if (model.lod) {
             const Aabb b = model.bounds();
-            const bool far = glm::distance(view.cameraPosition, (b.min + b.max) * 0.5f) > model.lodDistance;
+            const bool far = shadowCascade_ > 0 || // far cascades: the simple copy is enough
+                             glm::distance(view.cameraPosition, (b.min + b.max) * 0.5f) > model.lodDistance;
             draw = far ? model.lod.get() : &model;
             keepAlive(far ? model : *model.lod);
         }
@@ -884,8 +913,8 @@ void Renderer::renderShadows(const Scene& scene, const RenderView& view)
     ensureShadowMap();
     if (!shadowTex_)
         return;
-    EnvironmentBlock b{};
-    glGetNamedBufferSubData(envBuffer_, 0, sizeof(b), &b);
+    if (cascadeUpdate_ == 0)
+        return; // every cascade is cached this frame
     useMeshProgram(programs_.depth);
     glViewport(0, 0, shadowRes_, shadowRes_);
     glBindFramebuffer(GL_FRAMEBUFFER, shadowFbo_);
@@ -894,15 +923,23 @@ void Renderer::renderShadows(const Scene& scene, const RenderView& view)
     glDisable(GL_CULL_FACE); // open meshes (foliage, planes) cast shadows too
     glEnable(GL_POLYGON_OFFSET_FILL);
     glPolygonOffset(1.5f, 2.0f);
-    const int cascades = static_cast<int>(b.cascadeSplits.w);
-    for (int i = 0; i < cascades; ++i) {
+    for (int i = 0; i < cascadeCount_; ++i) {
+        if (!(cascadeUpdate_ & (1u << i)))
+            continue;
+        const glm::mat4& matrix = cascades_[i].matrix;
         glNamedFramebufferTextureLayer(shadowFbo_, GL_DEPTH_ATTACHMENT, shadowTex_, 0, i);
         glClear(GL_DEPTH_BUFFER_BIT);
-        glUniformMatrix4fv(loc_.viewProj, 1, GL_FALSE, glm::value_ptr(b.shadowMatrices[i]));
+        glUniformMatrix4fv(loc_.viewProj, 1, GL_FALSE, glm::value_ptr(matrix));
         RenderView shadowView = view;
         shadowView.drawPlayerStart = false;
-        drawGeometry(scene, shadowView, true, b.shadowMatrices[i], true);
+        shadowCascade_ = i;
+        // Far cascades: casters below ~1.5 % of the cascade's diameter cover less than a
+        // few texels there, so their shadows are left out (grass, debris, small props).
+        shadowMinCaster_ = quality_.shadowCache && i > 0 ? cascades_[i].radius * 0.03f : 0.0f;
+        drawGeometry(scene, shadowView, true, matrix, true);
     }
+    shadowCascade_ = -1;
+    shadowMinCaster_ = 0.0f;
     glDisable(GL_POLYGON_OFFSET_FILL);
     glEnable(GL_CULL_FACE);
 }
@@ -944,6 +981,7 @@ void Renderer::render(const Scene& scene, const RenderView& view)
 {
     resetGlState();
     // Free GPU data nothing drew since the previous render() (removed models).
+    ++frameNumber_;
     lastDrawCalls_ = drawCalls_;
     lastInstanced_ = instanced_;
     building_.drawCalls = drawCalls_;
@@ -1266,6 +1304,12 @@ void Renderer::addFoliage(const Terrain& t, const RenderView& view)
             continue;
         drawDistance_ = 1e30f;
         keepAlive(*type.model);
+        if (shadowMinCaster_ > 0.0f) { // far shadow cascade: grass and small plants cast nothing there
+            const Aabb& lb = type.model->localBounds;
+            const float diagonal = glm::length(lb.max - lb.min);
+            if (diagonal > 0.0f && diagonal * type.maxScale < shadowMinCaster_)
+                continue;
+        }
         const std::uint64_t key = reinterpret_cast<std::uintptr_t>(&type.model->parts[0]);
         for (const FoliageCell& cell : c.types[ti]) {
             const float cellDistance = distanceTo(view.cameraPosition, cell.bounds);
