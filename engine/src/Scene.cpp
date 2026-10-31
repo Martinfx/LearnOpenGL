@@ -1,6 +1,7 @@
 #include "engine/Scene.h"
 #include <cmath>
 #include <fstream>
+#include <map>
 #include <glm/gtc/matrix_transform.hpp>
 #include <iomanip>
 #include <sstream>
@@ -69,6 +70,34 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
         const std::filesystem::path rel = std::filesystem::absolute(p).lexically_relative(levelDir);
         return pathToUtf8(rel.empty() ? std::filesystem::absolute(p) : rel);
     };
+    {
+        const Environment& e = scene.environment;
+        auto v3 = [&out](const char* key, glm::vec3 v) { out << "env " << key << ' ' << v.x << ' ' << v.y << ' ' << v.z << '\n'; };
+        auto f1 = [&out](const char* key, float v) { out << "env " << key << ' ' << v << '\n'; };
+        v3("sun_color", e.sunColor);
+        f1("sun_intensity", e.sunIntensity);
+        v3("sky_zenith", e.skyZenith);
+        v3("sky_horizon", e.skyHorizon);
+        v3("ground_color", e.groundColor);
+        f1("cloud_cover", e.cloudCover);
+        f1("ambient_intensity", e.ambientIntensity);
+        v3("fog_color", e.fogColor);
+        f1("fog_density", e.fogDensity);
+        f1("fog_height", e.fogHeight);
+        f1("fog_height_falloff", e.fogHeightFalloff);
+        f1("fog_sun_scatter", e.fogSunScatter);
+        f1("exposure", e.exposure);
+        f1("bloom_intensity", e.bloomIntensity);
+        f1("bloom_threshold", e.bloomThreshold);
+        f1("ssao_radius", e.ssaoRadius);
+        f1("ssao_intensity", e.ssaoIntensity);
+        f1("shadow_distance", e.shadowDistance);
+        f1("saturation", e.saturation);
+        f1("contrast", e.contrast);
+        v3("tint", e.tint);
+        f1("vignette", e.vignette);
+        f1("grain", e.grain);
+    }
     for (const Group& g : scene.groups)
         out << "group " << std::quoted(g.name) << ' ' << std::quoted(g.parent) << '\n';
     auto writeParent = [&out](const std::string& parent) {
@@ -151,6 +180,27 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
         if (key == "version") {
             int v = 0;
             ok = static_cast<bool>(ls >> v) && v >= 1 && v <= 5;
+        } else if (key == "env") {
+            // Unknown environment keys are skipped so older editors can open newer levels.
+            Environment& e = result.environment;
+            std::string name;
+            ok = static_cast<bool>(ls >> name);
+            const std::map<std::string, glm::vec3*> vectors = {
+                {"sun_color", &e.sunColor}, {"sky_zenith", &e.skyZenith}, {"sky_horizon", &e.skyHorizon},
+                {"ground_color", &e.groundColor}, {"fog_color", &e.fogColor}, {"tint", &e.tint}};
+            const std::map<std::string, float*> floats = {
+                {"sun_intensity", &e.sunIntensity}, {"cloud_cover", &e.cloudCover}, {"ambient_intensity", &e.ambientIntensity},
+                {"fog_density", &e.fogDensity}, {"fog_height", &e.fogHeight}, {"fog_height_falloff", &e.fogHeightFalloff},
+                {"fog_sun_scatter", &e.fogSunScatter}, {"exposure", &e.exposure}, {"bloom_intensity", &e.bloomIntensity},
+                {"bloom_threshold", &e.bloomThreshold}, {"ssao_radius", &e.ssaoRadius}, {"ssao_intensity", &e.ssaoIntensity},
+                {"shadow_distance", &e.shadowDistance}, {"saturation", &e.saturation}, {"contrast", &e.contrast},
+                {"vignette", &e.vignette}, {"grain", &e.grain}};
+            if (ok) {
+                if (auto it = vectors.find(name); it != vectors.end())
+                    ok = static_cast<bool>(ls >> it->second->x >> it->second->y >> it->second->z);
+                else if (auto f = floats.find(name); f != floats.end())
+                    ok = static_cast<bool>(ls >> *f->second);
+            }
         } else if (key == "group") {
             Group g;
             ok = static_cast<bool>(ls >> std::quoted(g.name) >> std::quoted(g.parent));

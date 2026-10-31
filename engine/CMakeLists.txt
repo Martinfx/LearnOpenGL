@@ -1,3 +1,4 @@
+include(cmake_embed_shaders.cmake)
 add_library(engine STATIC
     src/Animation.cpp
     src/Camera.cpp
@@ -14,6 +15,7 @@ add_library(engine STATIC
     src/Scene.cpp
     src/JobSystem.cpp
     src/SceneGraph.cpp
+    ${ENGINE_EMBEDDED_SHADERS}
 )
 target_include_directories(engine PUBLIC include)
 find_package(Threads REQUIRED)

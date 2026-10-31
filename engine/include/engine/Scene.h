@@ -151,6 +151,34 @@ struct PlayerSettings {
     float maxHealth = 100.0f;
 };
 
+// Look of the level: sun, sky, fog, ambient light and post-processing.
+// Stored in the level file (`env key values...`) and edited in the editor.
+struct Environment {
+    glm::vec3 sunColor{1.0f, 0.93f, 0.82f};     // sRGB
+    float sunIntensity = 3.0f;
+    glm::vec3 skyZenith{0.32f, 0.42f, 0.58f};   // sRGB
+    glm::vec3 skyHorizon{0.66f, 0.70f, 0.74f};  // sRGB
+    glm::vec3 groundColor{0.30f, 0.28f, 0.25f}; // sRGB, below the horizon
+    float cloudCover = 0.45f;                   // 0 clear .. 1 overcast
+    float ambientIntensity = 1.0f;              // sky light (image based lighting)
+    glm::vec3 fogColor{0.62f, 0.65f, 0.68f};    // sRGB
+    float fogDensity = 0.012f;
+    float fogHeight = 0.0f;                     // fog is densest below this height
+    float fogHeightFalloff = 0.08f;
+    float fogSunScatter = 1.0f;
+    float exposure = 1.0f;
+    float bloomIntensity = 0.06f;
+    float bloomThreshold = 1.2f;
+    float ssaoRadius = 0.6f;
+    float ssaoIntensity = 1.0f;
+    float shadowDistance = 60.0f;               // m covered by the cascades
+    float saturation = 1.0f;
+    float contrast = 1.05f;
+    glm::vec3 tint{1.0f};                       // multiplied after tone mapping
+    float vignette = 0.25f;
+    float grain = 0.02f;
+};
+
 // Folder in the scene hierarchy (no geometry), e.g. "Building A" or "Enemies".
 struct Group {
     std::string name = "Group";
@@ -166,6 +194,7 @@ struct Scene {
     PlayerSettings player; // player's .weapon files (absolute), slot 1, 2, ...
     glm::vec3 playerStart{0.0f, 0.0f, 0.0f}; // feet position
     glm::vec3 sunDirection{-0.4f, -1.0f, -0.3f};
+    Environment environment;
 
     // Objects are addressed by one index: boxes first, then models, then entities.
     int objectCount() const { return static_cast<int>(boxes.size() + models.size() + entities.size()); }

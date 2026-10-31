@@ -1,7 +1,30 @@
 # FPS engine level
 version 5
 player_start 0 0 8
-sun -0.4 -1 -0.3
+sun -0.45 -0.75 -0.3
+env sun_color 1 0.86 0.68
+env sun_intensity 2.4
+env sky_zenith 0.38 0.42 0.44
+env sky_horizon 0.68 0.66 0.58
+env ground_color 0.26 0.24 0.2
+env cloud_cover 0.72
+env ambient_intensity 0.8
+env fog_color 0.6 0.6 0.54
+env fog_density 0.018
+env fog_height 1
+env fog_height_falloff 0.12
+env fog_sun_scatter 1.2
+env exposure 1
+env bloom_intensity 0.05
+env bloom_threshold 1.3
+env ssao_radius 0.6
+env ssao_intensity 1.1
+env shadow_distance 60
+env saturation 0.72
+env contrast 1.1
+env tint 1.02 1 0.9
+env vignette 0.35
+env grain 0.035
 weapon "../weapons/knife.weapon"
 weapon "../weapons/pistol.weapon"
 weapon "../weapons/smg.weapon"

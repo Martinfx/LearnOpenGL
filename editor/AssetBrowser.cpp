@@ -108,6 +108,11 @@ bool ThumbnailRenderer::begin(int size)
             return false;
         }
         ready_ = renderer_.init(offscreenProc);
+        if (ready_) {
+            engine::RenderQuality quality = renderer_.quality();
+            quality.textureUploadsPerFrame = 0; // a thumbnail is a single frame: upload everything
+            renderer_.setQuality(quality);
+        }
         if (!ready_) {
             failed_ = true;
             return false;

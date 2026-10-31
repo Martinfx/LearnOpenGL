@@ -331,6 +331,8 @@ int main(int argc, char** argv)
             view.cameraPosition = camera.position;
             view.viewportWidth = width;
             view.viewportHeight = height;
+            view.time = static_cast<float>(now);
+            view.deferPresent = true; // the weapon layer is drawn before post-processing
             for (const Impact& impact : impacts)
                 view.worldBoxes.push_back({impact.point, glm::vec3(impact.onEnemy ? 0.12f : 0.06f),
                                            impact.onEnemy ? glm::vec3(1.0f, 0.2f, 0.1f) : glm::vec3(0.08f), impact.onEnemy});
@@ -358,6 +360,7 @@ int main(int argc, char** argv)
             overlay.boxes.push_back({{gap + len * 0.5f, 0, -1}, {len, thick, thick}, white, true});
             overlay.boxes.push_back({{-gap - len * 0.5f, 0, -1}, {len, thick, thick}, white, true});
             renderer.renderOverlay(view, overlay);
+            renderer.present();
         }
         glfwSwapBuffers(window);
 

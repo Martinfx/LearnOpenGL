@@ -7,202 +7,14 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <fstream>
+#include <functional>
+#include <sstream>
 #include <vector>
 
 namespace engine {
 
 namespace {
-
-const char* kVertexShader = R"(#version 450 core
-layout(location = 0) in vec3 aPosition;
-layout(location = 1) in vec3 aNormal;
-layout(location = 2) in vec2 aUV;
-layout(location = 3) in uvec4 aJoints;
-layout(location = 4) in vec4 aWeights;
-layout(std140, binding = 0) uniform Joints { mat4 uJoints[256]; };
-uniform bool uSkinned;
-uniform mat4 uModel;
-uniform mat4 uViewProj;
-out vec3 vWorldPos;
-out vec3 vNormal;
-out vec2 vUV;
-void main() {
-    mat4 skin = mat4(1.0);
-    if (uSkinned)
-        skin = aWeights.x * uJoints[aJoints.x] + aWeights.y * uJoints[aJoints.y]
-             + aWeights.z * uJoints[aJoints.z] + aWeights.w * uJoints[aJoints.w];
-    vec4 world = uModel * skin * vec4(aPosition, 1.0);
-    vWorldPos = world.xyz;
-    vNormal = mat3(uModel) * mat3(skin) * aNormal; // rotation + scale; renormalized in the fragment shader
-    vUV = aUV;
-    gl_Position = uViewProj * world;
-}
-)";
-
-// Physically based shading (metal/roughness, GGX) with one sun, a sky/ground
-// ambient term, normal maps (screen-space tangent frame, so no vertex tangents
-// are needed and world-projected textures work too), ACES tone mapping and fog.
-// Plain surfaces without a material get a 1 m grid to judge distance and speed.
-const char* kFragmentShader = R"(#version 450 core
-in vec3 vWorldPos;
-in vec3 vNormal;
-in vec2 vUV;
-layout(binding = 0) uniform sampler2D uAlbedoMap;
-layout(binding = 1) uniform sampler2D uNormalMap;
-layout(binding = 2) uniform sampler2D uRoughnessMap;
-layout(binding = 3) uniform sampler2D uMetallicMap;
-layout(binding = 4) uniform sampler2D uOcclusionMap;
-layout(binding = 5) uniform sampler2D uEmissiveMap;
-uniform bool uHasTexture;      // albedo
-uniform bool uHasNormalMap;
-uniform bool uHasRoughnessMap;
-uniform bool uHasMetallicMap;
-uniform bool uHasOcclusionMap;
-uniform bool uHasEmissiveMap;
-uniform int uRoughnessChannel; // 0 = R (separate map), 1 = G (glTF metal/rough)
-uniform int uMetallicChannel;  // 0 = R, 2 = B (glTF)
-uniform float uNormalStrength;
-uniform float uRoughness;
-uniform float uMetallic;
-uniform bool uEmissive;        // unlit, full color (effects)
-uniform float uFogDensity;
-uniform vec3 uColor;           // sRGB
-uniform vec3 uSunDir;
-uniform vec3 uCamera;
-uniform float uHighlight;
-uniform float uFlash;
-uniform vec2 uTiling;
-uniform bool uWorldUv;     // project the texture in world space (1 repeat per metre * tiling)
-uniform bool uGrid;
-uniform vec3 uEmissiveColor; // sRGB
-out vec4 fragColor;
-
-const vec3 kSunColor = vec3(1.0, 0.96, 0.88) * 3.0;
-const vec3 kSky = vec3(0.32, 0.38, 0.48);
-const vec3 kGround = vec3(0.20, 0.18, 0.16);
-const float PI = 3.14159265;
-
-float gridLines(vec3 p, vec3 n) {
-    vec2 uv = abs(n.y) > 0.5 ? p.xz : (abs(n.x) > 0.5 ? p.zy : p.xy);
-    vec2 g = abs(fract(uv - 0.5) - 0.5) / fwidth(uv);
-    return 1.0 - min(min(g.x, g.y), 1.0);
-}
-
-// Tangent frame from screen-space derivatives (Schueler, "Normal mapping without precomputed tangents").
-vec3 perturbNormal(vec3 n, vec3 p, vec2 uv, vec3 mapNormal) {
-    vec3 dp1 = dFdx(p), dp2 = dFdy(p);
-    vec2 duv1 = dFdx(uv), duv2 = dFdy(uv);
-    vec3 dp2perp = cross(dp2, n), dp1perp = cross(n, dp1);
-    vec3 t = dp2perp * duv1.x + dp1perp * duv2.x;
-    vec3 b = dp2perp * duv1.y + dp1perp * duv2.y;
-    float invmax = inversesqrt(max(dot(t, t), dot(b, b)));
-    if (isinf(invmax) || isnan(invmax))
-        return n;
-    mat3 tbn = mat3(t * invmax, b * invmax, n);
-    return normalize(tbn * mapNormal);
-}
-
-float distributionGGX(float nh, float a) {
-    float a2 = a * a;
-    float d = nh * nh * (a2 - 1.0) + 1.0;
-    return a2 / (PI * d * d);
-}
-
-float geometrySmith(float nv, float nl, float rough) {
-    float k = (rough + 1.0) * (rough + 1.0) / 8.0;
-    return nv / (nv * (1.0 - k) + k) * nl / (nl * (1.0 - k) + k);
-}
-
-vec3 aces(vec3 x) {
-    return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0);
-}
-
-void main() {
-    if (uEmissive) {
-        fragColor = vec4(uColor, 1.0);
-        return;
-    }
-    vec3 n = normalize(vNormal);
-    if (!gl_FrontFacing)
-        n = -n; // two-sided foliage and thin parts
-    vec2 uv = vUV;
-    if (uWorldUv) {
-        vec3 an = abs(n);
-        uv = an.y > 0.5 ? vWorldPos.xz : (an.x > 0.5 ? vec2(vWorldPos.z, -vWorldPos.y) : vec2(vWorldPos.x, -vWorldPos.y));
-    }
-    uv *= uTiling;
-
-    vec3 albedo = pow(uColor, vec3(2.2)); // colors are authored in sRGB
-    if (uHasTexture)
-        albedo *= texture(uAlbedoMap, uv).rgb; // sRGB textures are sampled as linear
-    else if (uGrid)
-        albedo *= 1.0 - 0.18 * gridLines(vWorldPos, n);
-    if (uHasNormalMap) {
-        vec3 m = texture(uNormalMap, uv).xyz * 2.0 - 1.0;
-        m.xy *= uNormalStrength;
-        n = perturbNormal(n, vWorldPos, uv, normalize(m));
-    }
-    float rough = uRoughness;
-    if (uHasRoughnessMap)
-        rough *= texture(uRoughnessMap, uv)[uRoughnessChannel];
-    rough = clamp(rough, 0.04, 1.0);
-    float metal = uMetallic;
-    if (uHasMetallicMap)
-        metal *= texture(uMetallicMap, uv)[uMetallicChannel];
-    float ao = uHasOcclusionMap ? texture(uOcclusionMap, uv).r : 1.0;
-
-    vec3 v = normalize(uCamera - vWorldPos);
-    vec3 l = normalize(-uSunDir);
-    vec3 h = normalize(l + v);
-    float nl = max(dot(n, l), 0.0);
-    float nv = max(dot(n, v), 1e-4);
-    float nh = max(dot(n, h), 0.0);
-    vec3 f0 = mix(vec3(0.04), albedo, metal);
-    vec3 fresnel = f0 + (1.0 - f0) * pow(1.0 - max(dot(h, v), 0.0), 5.0);
-    vec3 specular = distributionGGX(nh, rough * rough) * geometrySmith(nv, nl, rough) * fresnel / (4.0 * nv * max(nl, 1e-4));
-    vec3 diffuse = (1.0 - fresnel) * (1.0 - metal) * albedo / PI;
-    vec3 color = (diffuse + specular) * kSunColor * nl;
-
-    // Ambient: sky above, ground below; a rough reflection of the same for the specular part.
-    vec3 ambientDiffuse = mix(kGround, kSky, n.y * 0.5 + 0.5);
-    vec3 r = reflect(-v, n);
-    vec3 ambientSpecular = mix(kGround, kSky * 1.4, smoothstep(-0.2, 0.4, r.y));
-    vec3 fAmbient = f0 + (max(vec3(1.0 - rough), f0) - f0) * pow(1.0 - nv, 5.0);
-    color += ((1.0 - fAmbient) * (1.0 - metal) * albedo * ambientDiffuse
-              + fAmbient * ambientSpecular * (1.0 - rough * 0.7)) * ao;
-
-    vec3 emissive = pow(uEmissiveColor, vec3(2.2));
-    if (uHasEmissiveMap)
-        emissive *= texture(uEmissiveMap, uv).rgb;
-    color += emissive;
-
-    color = mix(color, vec3(1.0, 0.75, 0.2), uHighlight * 0.35);
-    color = mix(color, vec3(1.0), uFlash); // hit feedback
-
-    // Distance fog toward the sky color.
-    float fog = 1.0 - exp(-length(uCamera - vWorldPos) * uFogDensity);
-    color = mix(aces(color * 1.1), pow(vec3(0.55, 0.66, 0.80), vec3(2.2)), fog);
-    fragColor = vec4(pow(color, vec3(1.0 / 2.2)), 1.0);
-}
-)";
-
-unsigned compile(GLenum type, const char* source, std::string* error)
-{
-    const unsigned shader = glCreateShader(type);
-    glShaderSource(shader, 1, &source, nullptr);
-    glCompileShader(shader);
-    GLint ok = 0;
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &ok);
-    if (!ok) {
-        std::array<char, 2048> log{};
-        glGetShaderInfoLog(shader, static_cast<GLsizei>(log.size()), nullptr, log.data());
-        if (error)
-            *error = std::string("Shader compile failed: ") + log.data();
-        glDeleteShader(shader);
-        return 0;
-    }
-    return shader;
-}
 
 struct Vertex {
     glm::vec3 position{0.0f};
@@ -263,9 +75,271 @@ std::vector<Vertex> unitCube()
 
 } // namespace
 
+namespace {
+
+// Uniform block "Environment" (binding 1), std140 layout as in common.glsl.
+struct EnvironmentBlock {
+    glm::vec4 sunDir;
+    glm::vec4 sunColor;
+    glm::vec4 skyZenith;
+    glm::vec4 skyHorizon;
+    glm::vec4 groundColor;
+    glm::vec4 fogColor;
+    glm::vec4 fogParams;
+    glm::vec4 cameraPos;
+    glm::mat4 view;
+    glm::mat4 proj;
+    glm::mat4 invViewProj;
+    glm::mat4 shadowMatrices[3];
+    glm::vec4 cascadeSplits;
+    glm::vec4 viewport;
+    glm::vec4 shadowParams;
+};
+
+constexpr int kEnvSize = 128;  // environment cubemap face size
+constexpr int kEnvMips = 6;    // 128 .. 4, roughness 0 .. 1
+constexpr int kBloomLevels = 6;
+
+glm::vec3 linear(glm::vec3 srgb)
+{
+    return glm::pow(glm::max(srgb, glm::vec3(0.0f)), glm::vec3(2.2f));
+}
+
+std::string withIncludes(const std::string& source, const std::map<std::string, std::string>& files)
+{
+    // Minimal #include "file" support for shared GLSL code.
+    std::string out;
+    std::size_t pos = 0;
+    while (true) {
+        const std::size_t inc = source.find("#include \"", pos);
+        if (inc == std::string::npos) {
+            out += source.substr(pos);
+            return out;
+        }
+        out += source.substr(pos, inc - pos);
+        const std::size_t nameStart = inc + 10;
+        const std::size_t nameEnd = source.find('"', nameStart);
+        const std::string name = source.substr(nameStart, nameEnd - nameStart);
+        const auto it = files.find(name);
+        out += it != files.end() ? it->second : "#error missing include " + name + "\n";
+        out += "\n";
+        pos = source.find('\n', nameEnd);
+        if (pos == std::string::npos)
+            return out;
+    }
+}
+
+unsigned compileStage(GLenum type, const std::string& source, const std::string& name, std::string* error)
+{
+    const unsigned shader = glCreateShader(type);
+    const char* text = source.c_str();
+    glShaderSource(shader, 1, &text, nullptr);
+    glCompileShader(shader);
+    GLint ok = 0;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &ok);
+    if (!ok) {
+        std::array<char, 4096> log{};
+        glGetShaderInfoLog(shader, static_cast<GLsizei>(log.size()), nullptr, log.data());
+        if (error)
+            *error = name + ": " + log.data();
+        glDeleteShader(shader);
+        return 0;
+    }
+    return shader;
+}
+
+unsigned linkProgram(const std::map<std::string, std::string>& files, const std::string& vertName,
+                     const std::string& fragName, std::string* error)
+{
+    const auto vs = files.find(vertName), fs = files.find(fragName);
+    if (vs == files.end() || fs == files.end()) {
+        if (error)
+            *error = "Missing shader " + (vs == files.end() ? vertName : fragName);
+        return 0;
+    }
+    const unsigned v = compileStage(GL_VERTEX_SHADER, withIncludes(vs->second, files), vertName, error);
+    const unsigned f = v ? compileStage(GL_FRAGMENT_SHADER, withIncludes(fs->second, files), fragName, error) : 0;
+    if (!v || !f) {
+        glDeleteShader(v);
+        return 0;
+    }
+    const unsigned program = glCreateProgram();
+    glAttachShader(program, v);
+    glAttachShader(program, f);
+    glLinkProgram(program);
+    glDeleteShader(v);
+    glDeleteShader(f);
+    GLint linked = 0;
+    glGetProgramiv(program, GL_LINK_STATUS, &linked);
+    if (!linked) {
+        std::array<char, 4096> log{};
+        glGetProgramInfoLog(program, static_cast<GLsizei>(log.size()), nullptr, log.data());
+        if (error)
+            *error = vertName + " + " + fragName + ": " + log.data();
+        glDeleteProgram(program);
+        return 0;
+    }
+    return program;
+}
+
+unsigned makeTexture2D(GLenum format, int w, int h, GLint filter, int levels = 1)
+{
+    unsigned t = 0;
+    glCreateTextures(GL_TEXTURE_2D, 1, &t);
+    glTextureStorage2D(t, levels, format, w, h);
+    glTextureParameteri(t, GL_TEXTURE_MIN_FILTER, filter);
+    glTextureParameteri(t, GL_TEXTURE_MAG_FILTER, filter == GL_LINEAR_MIPMAP_LINEAR ? GL_LINEAR : filter);
+    glTextureParameteri(t, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTextureParameteri(t, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    return t;
+}
+
+unsigned makeFbo(unsigned color, unsigned depth = 0)
+{
+    unsigned f = 0;
+    glCreateFramebuffers(1, &f);
+    if (color)
+        glNamedFramebufferTexture(f, GL_COLOR_ATTACHMENT0, color, 0);
+    if (depth)
+        glNamedFramebufferTexture(f, GL_DEPTH_ATTACHMENT, depth, 0);
+    return f;
+}
+
+// Cubemap face orientation (right, up, forward) for GL's face order.
+glm::mat3 cubeFace(int face)
+{
+    switch (face) {
+    case 0: return {glm::vec3(0, 0, -1), glm::vec3(0, -1, 0), glm::vec3(1, 0, 0)};
+    case 1: return {glm::vec3(0, 0, 1), glm::vec3(0, -1, 0), glm::vec3(-1, 0, 0)};
+    case 2: return {glm::vec3(1, 0, 0), glm::vec3(0, 0, 1), glm::vec3(0, 1, 0)};
+    case 3: return {glm::vec3(1, 0, 0), glm::vec3(0, 0, -1), glm::vec3(0, -1, 0)};
+    case 4: return {glm::vec3(1, 0, 0), glm::vec3(0, -1, 0), glm::vec3(0, 0, 1)};
+    default: return {glm::vec3(-1, 0, 0), glm::vec3(0, -1, 0), glm::vec3(0, 0, -1)};
+    }
+}
+
+template <class T>
+void hashCombine(std::size_t& h, const T& v)
+{
+    h ^= std::hash<T>{}(v) + 0x9e3779b97f4a7c15ull + (h << 6) + (h >> 2);
+}
+
+} // namespace
+
+const std::map<std::string, std::string>& embeddedShaders(); // generated from engine/shaders/
+
+RenderQuality RenderQuality::preset(int level)
+{
+    RenderQuality q;
+    switch (level) {
+    case 0: q.shadowResolution = 1024; q.shadowCascades = 2; q.ssao = false; q.bloom = false; q.fxaa = true; break;
+    case 1: q.shadowResolution = 1024; q.shadowCascades = 3; q.ssao = true; q.bloom = true; break;
+    case 3: q.shadowResolution = 4096; q.shadowCascades = 3; break;
+    default: break; // high
+    }
+    return q;
+}
+
+int Renderer::Program::loc(const char* name) const
+{
+    auto it = locations.find(name);
+    if (it == locations.end())
+        it = locations.emplace(name, glGetUniformLocation(id, name)).first;
+    return it->second;
+}
+
+const std::map<std::string, std::string>& Renderer::builtinShaders()
+{
+    return embeddedShaders();
+}
+
 Renderer::~Renderer()
 {
     // GL objects must be freed with a current context; owners call shutdown().
+}
+
+bool Renderer::buildPrograms(const std::map<std::string, std::string>& src, Programs& p, std::string* error)
+{
+    struct Entry {
+        Program* program;
+        const char* vert;
+        const char* frag;
+    };
+    const Entry entries[] = {{&p.mesh, "mesh.vert", "pbr.frag"},          {&p.depth, "mesh.vert", "depth.frag"},
+                             {&p.sky, "fullscreen.vert", "sky.frag"},     {&p.envCapture, "fullscreen.vert", "envcapture.frag"},
+                             {&p.prefilter, "fullscreen.vert", "prefilter.frag"}, {&p.brdf, "fullscreen.vert", "brdf.frag"},
+                             {&p.ssao, "fullscreen.vert", "ssao.frag"},   {&p.blur, "fullscreen.vert", "blur.frag"},
+                             {&p.bloomDown, "fullscreen.vert", "bloom_down.frag"},
+                             {&p.bloomUp, "fullscreen.vert", "bloom_up.frag"}, {&p.post, "fullscreen.vert", "post.frag"},
+                             {&p.fxaa, "fullscreen.vert", "fxaa.frag"},   {&p.copy, "fullscreen.vert", "copy.frag"}};
+    for (const Entry& e : entries) {
+        e.program->id = linkProgram(src, e.vert, e.frag, error);
+        e.program->locations.clear();
+        if (!e.program->id) {
+            destroyPrograms(p);
+            return false;
+        }
+    }
+    return true;
+}
+
+void Renderer::destroyPrograms(Programs& p)
+{
+    for (Program* program : {&p.mesh, &p.depth, &p.sky, &p.envCapture, &p.prefilter, &p.brdf, &p.ssao, &p.blur, &p.bloomDown,
+                             &p.bloomUp, &p.post, &p.fxaa, &p.copy}) {
+        if (program->id)
+            glDeleteProgram(program->id);
+        program->id = 0;
+        program->locations.clear();
+    }
+}
+
+bool Renderer::reloadShaders(const std::filesystem::path& directory, std::string* error)
+{
+    std::map<std::string, std::string> files = embeddedShaders();
+    std::error_code ec;
+    for (const auto& entry : std::filesystem::directory_iterator(directory, ec)) {
+        if (!entry.is_regular_file())
+            continue;
+        std::ifstream in(entry.path(), std::ios::binary);
+        std::ostringstream text;
+        text << in.rdbuf();
+        files[entry.path().filename().string()] = text.str();
+    }
+    Programs fresh;
+    if (!buildPrograms(files, fresh, error))
+        return false;
+    destroyPrograms(programs_);
+    programs_ = fresh;
+    envHash_ = 0; // re-run the environment precomputation with the new shaders
+    return true;
+}
+
+void Renderer::useMeshProgram(const Program& p)
+{
+    glUseProgram(p.id);
+    loc_.model = p.loc("uModel");
+    loc_.viewProj = p.loc("uViewProj");
+    loc_.color = p.loc("uColor");
+    loc_.highlight = p.loc("uHighlight");
+    loc_.emissive = p.loc("uEmissive");
+    loc_.skinned = p.loc("uSkinned");
+    loc_.flash = p.loc("uFlash");
+    loc_.tiling = p.loc("uTiling");
+    loc_.worldUv = p.loc("uWorldUv");
+    loc_.grid = p.loc("uGrid");
+    loc_.emissiveColor = p.loc("uEmissiveColor");
+    loc_.roughness = p.loc("uRoughness");
+    loc_.metallic = p.loc("uMetallic");
+    loc_.normalStrength = p.loc("uNormalStrength");
+    loc_.roughnessChannel = p.loc("uRoughnessChannel");
+    loc_.metallicChannel = p.loc("uMetallicChannel");
+    loc_.overlay = p.loc("uOverlay");
+    loc_.envRotation = p.loc("uEnvRotation");
+    loc_.overlaySun = p.loc("uOverlaySunDir");
+    const char* names[6] = {"uHasTexture", "uHasNormalMap", "uHasRoughnessMap", "uHasMetallicMap", "uHasOcclusionMap", "uHasEmissiveMap"};
+    for (int i = 0; i < 6; ++i)
+        loc_.hasMap[i] = p.loc(names[i]);
 }
 
 bool Renderer::init(GlLoader loader, std::string* error)
@@ -278,56 +352,13 @@ bool Renderer::init(GlLoader loader, std::string* error)
     }
     glInfo_ = std::string(reinterpret_cast<const char*>(glGetString(GL_RENDERER))) + " / OpenGL "
             + reinterpret_cast<const char*>(glGetString(GL_VERSION));
+    if (!buildPrograms(embeddedShaders(), programs_, error))
+        return false;
 
-    const unsigned vs = compile(GL_VERTEX_SHADER, kVertexShader, error);
-    const unsigned fs = vs ? compile(GL_FRAGMENT_SHADER, kFragmentShader, error) : 0;
-    if (!vs || !fs) {
-        glDeleteShader(vs);
-        return false;
-    }
-    program_ = glCreateProgram();
-    glAttachShader(program_, vs);
-    glAttachShader(program_, fs);
-    glLinkProgram(program_);
-    glDeleteShader(vs);
-    glDeleteShader(fs);
-    GLint linked = 0;
-    glGetProgramiv(program_, GL_LINK_STATUS, &linked);
-    if (!linked) {
-        std::array<char, 2048> log{};
-        glGetProgramInfoLog(program_, static_cast<GLsizei>(log.size()), nullptr, log.data());
-        if (error)
-            *error = std::string("Shader link failed: ") + log.data();
-        shutdown();
-        return false;
-    }
-    locModel_ = glGetUniformLocation(program_, "uModel");
-    locViewProj_ = glGetUniformLocation(program_, "uViewProj");
-    locColor_ = glGetUniformLocation(program_, "uColor");
-    locSun_ = glGetUniformLocation(program_, "uSunDir");
-    locCamera_ = glGetUniformLocation(program_, "uCamera");
-    locHighlight_ = glGetUniformLocation(program_, "uHighlight");
-    locHasTexture_ = glGetUniformLocation(program_, "uHasTexture");
-    locEmissive_ = glGetUniformLocation(program_, "uEmissive");
-    locFog_ = glGetUniformLocation(program_, "uFogDensity");
-    locSkinned_ = glGetUniformLocation(program_, "uSkinned");
-    locFlash_ = glGetUniformLocation(program_, "uFlash");
-    locTiling_ = glGetUniformLocation(program_, "uTiling");
-    locWorldUv_ = glGetUniformLocation(program_, "uWorldUv");
-    locGrid_ = glGetUniformLocation(program_, "uGrid");
-    locRoughness_ = glGetUniformLocation(program_, "uRoughness");
-    locMetallic_ = glGetUniformLocation(program_, "uMetallic");
-    locNormalStrength_ = glGetUniformLocation(program_, "uNormalStrength");
-    locRoughnessChannel_ = glGetUniformLocation(program_, "uRoughnessChannel");
-    locMetallicChannel_ = glGetUniformLocation(program_, "uMetallicChannel");
-    {
-        const char* names[6] = {"uHasTexture", "uHasNormalMap", "uHasRoughnessMap", "uHasMetallicMap", "uHasOcclusionMap", "uHasEmissiveMap"};
-        for (int i = 0; i < 6; ++i)
-            locHasMap_[i] = glGetUniformLocation(program_, names[i]);
-    }
-    locEmissiveColor_ = glGetUniformLocation(program_, "uEmissiveColor");
     glCreateBuffers(1, &jointBuffer_);
     glNamedBufferData(jointBuffer_, kMaxJoints * sizeof(glm::mat4), nullptr, GL_DYNAMIC_DRAW);
+    glCreateBuffers(1, &envBuffer_);
+    glNamedBufferData(envBuffer_, sizeof(EnvironmentBlock), nullptr, GL_DYNAMIC_DRAW);
 
     const std::vector<Vertex> cube = unitCube();
     vertexCount_ = static_cast<int>(cube.size());
@@ -335,6 +366,38 @@ bool Renderer::init(GlLoader loader, std::string* error)
     glNamedBufferStorage(vbo_, static_cast<GLsizeiptr>(cube.size() * sizeof(Vertex)), cube.data(), 0);
     glCreateVertexArrays(1, &vao_);
     setupVertexArray(vao_, vbo_);
+    glCreateVertexArrays(1, &emptyVao_);
+
+    // 1x1 stand-ins so samplers are always valid.
+    whiteTex_ = makeTexture2D(GL_R8, 1, 1, GL_NEAREST);
+    const std::uint8_t white = 255;
+    glTextureSubImage2D(whiteTex_, 0, 0, 0, 1, 1, GL_RED, GL_UNSIGNED_BYTE, &white);
+    glCreateTextures(GL_TEXTURE_2D_ARRAY, 1, &shadowDummy_);
+    glTextureStorage3D(shadowDummy_, 1, GL_DEPTH_COMPONENT32F, 1, 1, 1);
+    glTextureParameteri(shadowDummy_, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+
+    // Split-sum BRDF table, computed once.
+    brdfLut_ = makeTexture2D(GL_RG16F, 128, 128, GL_LINEAR);
+    glCreateFramebuffers(1, &captureFbo_);
+    glNamedFramebufferTexture(captureFbo_, GL_COLOR_ATTACHMENT0, brdfLut_, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, captureFbo_);
+    glViewport(0, 0, 128, 128);
+    glDisable(GL_DEPTH_TEST);
+    glUseProgram(programs_.brdf.id);
+    glBindVertexArray(emptyVao_);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // Environment cubemaps (filled when the sky changes).
+    glCreateTextures(GL_TEXTURE_CUBE_MAP, 1, &envRaw_);
+    glTextureStorage2D(envRaw_, kEnvMips, GL_RGBA16F, kEnvSize, kEnvSize);
+    glTextureParameteri(envRaw_, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTextureParameteri(envRaw_, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glCreateTextures(GL_TEXTURE_CUBE_MAP, 1, &envMap_);
+    glTextureStorage2D(envMap_, kEnvMips, GL_RGBA16F, kEnvSize, kEnvSize);
+    glTextureParameteri(envMap_, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTextureParameteri(envMap_, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
     return true;
 }
 
@@ -349,11 +412,503 @@ void Renderer::shutdown()
     for (auto& [id, t] : textures_)
         glDeleteTextures(1, &t.handle);
     textures_.clear();
-    if (vao_) glDeleteVertexArrays(1, &vao_);
-    if (vbo_) glDeleteBuffers(1, &vbo_);
-    if (program_) glDeleteProgram(program_);
-    if (jointBuffer_) glDeleteBuffers(1, &jointBuffer_);
-    vao_ = vbo_ = program_ = jointBuffer_ = 0;
+    destroyTargets();
+    destroyPrograms(programs_);
+    for (unsigned* t : {&shadowTex_, &envRaw_, &envMap_, &brdfLut_, &whiteTex_, &shadowDummy_})
+        if (*t) {
+            glDeleteTextures(1, t);
+            *t = 0;
+        }
+    for (unsigned* f : {&shadowFbo_, &captureFbo_})
+        if (*f) {
+            glDeleteFramebuffers(1, f);
+            *f = 0;
+        }
+    for (unsigned* b : {&vbo_, &jointBuffer_, &envBuffer_})
+        if (*b) {
+            glDeleteBuffers(1, b);
+            *b = 0;
+        }
+    for (unsigned* a : {&vao_, &emptyVao_})
+        if (*a) {
+            glDeleteVertexArrays(1, a);
+            *a = 0;
+        }
+    shadowRes_ = 0;
+    envHash_ = 0;
+}
+
+void Renderer::destroyTargets()
+{
+    for (unsigned* t : {&hdrColor_, &depthTex_, &ssaoTex_, &ssaoBlurTex_, &ldrTex_})
+        if (*t) {
+            glDeleteTextures(1, t);
+            *t = 0;
+        }
+    for (unsigned* f : {&hdrFbo_, &ssaoFbo_, &ssaoBlurFbo_, &ldrFbo_})
+        if (*f) {
+            glDeleteFramebuffers(1, f);
+            *f = 0;
+        }
+    for (unsigned t : bloomTex_)
+        glDeleteTextures(1, &t);
+    for (unsigned f : bloomFbo_)
+        glDeleteFramebuffers(1, &f);
+    bloomTex_.clear();
+    bloomFbo_.clear();
+    bloomSize_.clear();
+    width_ = height_ = 0;
+}
+
+void Renderer::ensureTargets(int width, int height)
+{
+    if (width == width_ && height == height_ && hdrFbo_)
+        return;
+    destroyTargets();
+    width_ = width;
+    height_ = height;
+    hdrColor_ = makeTexture2D(GL_RGBA16F, width, height, GL_LINEAR);
+    depthTex_ = makeTexture2D(GL_DEPTH_COMPONENT32F, width, height, GL_NEAREST);
+    hdrFbo_ = makeFbo(hdrColor_, depthTex_);
+    ssaoTex_ = makeTexture2D(GL_R8, width, height, GL_LINEAR);
+    ssaoFbo_ = makeFbo(ssaoTex_);
+    ssaoBlurTex_ = makeTexture2D(GL_R8, width, height, GL_LINEAR);
+    ssaoBlurFbo_ = makeFbo(ssaoBlurTex_);
+    ldrTex_ = makeTexture2D(GL_RGBA8, width, height, GL_LINEAR);
+    ldrFbo_ = makeFbo(ldrTex_);
+    glm::ivec2 size(width, height);
+    for (int i = 0; i < kBloomLevels; ++i) {
+        size = glm::max(size / 2, glm::ivec2(1));
+        const unsigned t = makeTexture2D(GL_R11F_G11F_B10F, size.x, size.y, GL_LINEAR);
+        bloomTex_.push_back(t);
+        bloomFbo_.push_back(makeFbo(t));
+        bloomSize_.push_back(size);
+    }
+}
+
+void Renderer::ensureShadowMap()
+{
+    const int res = quality_.shadowResolution;
+    if (res == shadowRes_)
+        return;
+    if (shadowTex_)
+        glDeleteTextures(1, &shadowTex_);
+    if (shadowFbo_)
+        glDeleteFramebuffers(1, &shadowFbo_);
+    shadowTex_ = shadowFbo_ = 0;
+    shadowRes_ = res;
+    if (res <= 0)
+        return;
+    glCreateTextures(GL_TEXTURE_2D_ARRAY, 1, &shadowTex_);
+    glTextureStorage3D(shadowTex_, 1, GL_DEPTH_COMPONENT32F, res, res, 3);
+    glTextureParameteri(shadowTex_, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTextureParameteri(shadowTex_, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTextureParameteri(shadowTex_, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    glTextureParameteri(shadowTex_, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+    const float border[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+    glTextureParameterfv(shadowTex_, GL_TEXTURE_BORDER_COLOR, border);
+    glTextureParameteri(shadowTex_, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+    glTextureParameteri(shadowTex_, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+    glCreateFramebuffers(1, &shadowFbo_);
+}
+
+void Renderer::updateEnvironment(const Scene& scene, const RenderView& view)
+{
+    const Environment& e = scene.environment;
+    EnvironmentBlock b{};
+    b.sunDir = glm::vec4(glm::normalize(scene.sunDirection), e.sunIntensity);
+    b.sunColor = glm::vec4(linear(e.sunColor), quality_.shadowResolution > 0 ? 1.0f : 0.0f);
+    b.skyZenith = glm::vec4(linear(e.skyZenith), e.cloudCover);
+    b.skyHorizon = glm::vec4(linear(e.skyHorizon), time_);
+    b.groundColor = glm::vec4(linear(e.groundColor), e.ambientIntensity);
+    b.fogColor = glm::vec4(linear(e.fogColor), e.fogDensity);
+    b.fogParams = glm::vec4(e.fogHeight, e.fogHeightFalloff, e.fogSunScatter, e.ssaoIntensity);
+    b.cameraPos = glm::vec4(view.cameraPosition, quality_.ssao ? 1.0f : 0.0f);
+    b.view = view.view;
+    b.proj = view.projection;
+    b.invViewProj = glm::inverse(view.projection * view.view);
+
+    // Cascade splits: mix of uniform and logarithmic distribution.
+    const int cascades = std::clamp(quality_.shadowCascades, 1, 3);
+    const float nearPlane = 0.1f, farPlane = std::max(5.0f, e.shadowDistance);
+    float splits[3] = {farPlane, farPlane, farPlane};
+    for (int i = 0; i < cascades; ++i) {
+        const float f = static_cast<float>(i + 1) / static_cast<float>(cascades);
+        const float logSplit = nearPlane * std::pow(farPlane / nearPlane, f);
+        const float uniformSplit = nearPlane + (farPlane - nearPlane) * f;
+        splits[i] = glm::mix(uniformSplit, logSplit, 0.8f);
+    }
+    b.cascadeSplits = glm::vec4(splits[0], splits[1], splits[2], static_cast<float>(cascades));
+    const glm::vec3 lightDir = glm::normalize(scene.sunDirection);
+    const glm::mat4 invViewProj = b.invViewProj;
+    float prev = nearPlane;
+    for (int i = 0; i < cascades; ++i) {
+        // Bounding sphere of the frustum slice: stable size while the camera turns.
+        auto ndcDepth = [&](float d) {
+            const glm::vec4 clip = view.projection * glm::vec4(0.0f, 0.0f, -d, 1.0f);
+            return clip.z / clip.w;
+        };
+        const float z0 = ndcDepth(prev), z1 = ndcDepth(splits[i]);
+        glm::vec3 corners[8];
+        glm::vec3 center(0.0f);
+        for (int c = 0; c < 8; ++c) {
+            const glm::vec4 p = invViewProj * glm::vec4((c & 1) ? 1.0f : -1.0f, (c & 2) ? 1.0f : -1.0f, (c & 4) ? z1 : z0, 1.0f);
+            corners[c] = glm::vec3(p) / p.w;
+            center += corners[c] / 8.0f;
+        }
+        float radius = 0.0f;
+        for (const glm::vec3& c : corners)
+            radius = std::max(radius, glm::length(c - center));
+        radius = std::ceil(radius * 16.0f) / 16.0f;
+        const glm::vec3 up = std::abs(lightDir.y) > 0.99f ? glm::vec3(0, 0, 1) : glm::vec3(0, 1, 0);
+        const glm::mat4 lightView = glm::lookAt(center - lightDir * (radius + 80.0f), center, up);
+        glm::mat4 lightProj = glm::ortho(-radius, radius, -radius, radius, 0.0f, 2.0f * radius + 160.0f);
+        // Snap to shadow map texels so edges do not shimmer when the camera moves.
+        if (quality_.shadowResolution > 0) {
+            const glm::mat4 m = lightProj * lightView;
+            glm::vec4 origin = m * glm::vec4(0, 0, 0, 1) * (static_cast<float>(quality_.shadowResolution) * 0.5f);
+            const glm::vec4 rounded = glm::round(origin);
+            glm::vec4 offset = (rounded - origin) * (2.0f / static_cast<float>(quality_.shadowResolution));
+            lightProj[3][0] += offset.x;
+            lightProj[3][1] += offset.y;
+        }
+        b.shadowMatrices[i] = lightProj * lightView;
+        if (i == 0) // world size of one texel of the first cascade drives the biases
+            b.shadowParams.z = 1.0f / static_cast<float>(std::max(1, quality_.shadowResolution));
+        b.shadowParams.y = 2.0f * radius / static_cast<float>(std::max(1, quality_.shadowResolution)) * (i == 0 ? 1.5f : b.shadowParams.y);
+        prev = splits[i];
+    }
+    b.shadowParams.x = 0.0005f;
+    b.shadowParams.y = 2.0f * (splits[0]) / static_cast<float>(std::max(1, quality_.shadowResolution)) * 1.5f;
+    b.shadowParams.w = static_cast<float>(kEnvMips - 1);
+    b.viewport = glm::vec4(view.viewportWidth, view.viewportHeight, 1.0f / view.viewportWidth, 1.0f / view.viewportHeight);
+    glNamedBufferSubData(envBuffer_, 0, sizeof(b), &b);
+    glBindBufferBase(GL_UNIFORM_BUFFER, 1, envBuffer_);
+}
+
+void Renderer::updateEnvironmentMap(const Scene& scene)
+{
+    // Re-render the sky into the cubemap and prefilter it when the sky changed.
+    const Environment& e = scene.environment;
+    std::size_t h = 1;
+    for (float v : {e.sunColor.r, e.sunColor.g, e.sunColor.b, e.sunIntensity, e.skyZenith.r, e.skyZenith.g, e.skyZenith.b,
+                    e.skyHorizon.r, e.skyHorizon.g, e.skyHorizon.b, e.groundColor.r, e.groundColor.g, e.groundColor.b,
+                    e.cloudCover, scene.sunDirection.x, scene.sunDirection.y, scene.sunDirection.z})
+        hashCombine(h, v);
+    if (h == envHash_)
+        return;
+    envHash_ = h;
+    // Capture without cloud drift (time 0) so reflections do not need updates every frame.
+    EnvironmentBlock captureBlock{};
+    glGetNamedBufferSubData(envBuffer_, 0, sizeof(captureBlock), &captureBlock);
+    captureBlock.skyHorizon.w = 0.0f;
+    glNamedBufferSubData(envBuffer_, 0, sizeof(captureBlock), &captureBlock);
+
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_BLEND);
+    glBindVertexArray(emptyVao_);
+    glBindFramebuffer(GL_FRAMEBUFFER, captureFbo_);
+    glUseProgram(programs_.envCapture.id);
+    glViewport(0, 0, kEnvSize, kEnvSize);
+    for (int face = 0; face < 6; ++face) {
+        glNamedFramebufferTextureLayer(captureFbo_, GL_COLOR_ATTACHMENT0, envRaw_, 0, face);
+        const glm::mat3 m = cubeFace(face);
+        glUniformMatrix3fv(programs_.envCapture.loc("uFace"), 1, GL_FALSE, glm::value_ptr(m));
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+    }
+    glGenerateTextureMipmap(envRaw_);
+    glUseProgram(programs_.prefilter.id);
+    glBindTextureUnit(0, envRaw_);
+    for (int mip = 0; mip < kEnvMips; ++mip) {
+        const int size = std::max(1, kEnvSize >> mip);
+        glViewport(0, 0, size, size);
+        glUniform1f(programs_.prefilter.loc("uRoughness"), static_cast<float>(mip) / static_cast<float>(kEnvMips - 1));
+        for (int face = 0; face < 6; ++face) {
+            glNamedFramebufferTextureLayer(captureFbo_, GL_COLOR_ATTACHMENT0, envMap_, mip, face);
+            const glm::mat3 m = cubeFace(face);
+            glUniformMatrix3fv(programs_.prefilter.loc("uFace"), 1, GL_FALSE, glm::value_ptr(m));
+            glDrawArrays(GL_TRIANGLES, 0, 3);
+        }
+    }
+    captureBlock.skyHorizon.w = time_;
+    glNamedBufferSubData(envBuffer_, 0, sizeof(captureBlock), &captureBlock);
+}
+
+void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool depthOnly)
+{
+    depthOnly_ = depthOnly;
+    glUniform1i(loc_.emissive, 0);
+    glUniform1i(loc_.skinned, 0);
+    glUniform1f(loc_.flash, 0.0f);
+    glUniform1i(loc_.overlay, 0);
+    auto drawBox = [&](glm::vec3 center, glm::vec3 size, glm::vec3 color, float highlight, float yawDegrees = 0.0f,
+                       const Material* material = nullptr) {
+        glm::mat4 model = glm::translate(glm::mat4(1.0f), center);
+        if (yawDegrees != 0.0f)
+            model = glm::rotate(model, -glm::radians(yawDegrees), glm::vec3(0.0f, 1.0f, 0.0f));
+        model = glm::scale(model, size);
+        glUniformMatrix4fv(loc_.model, 1, GL_FALSE, glm::value_ptr(model));
+        applySurface(material, nullptr, color, true); // boxes have no UVs: world-space mapping
+        glUniform1f(loc_.highlight, highlight);
+        glBindVertexArray(vao_);
+        glDrawArrays(GL_TRIANGLES, 0, vertexCount_);
+    };
+    for (std::size_t i = 0; i < scene.boxes.size(); ++i) {
+        const Box& b = scene.boxes[i];
+        drawBox(b.position, b.size, b.color, static_cast<int>(i) == view.selectedObject ? 1.0f : 0.0f, 0.0f, b.material.get());
+    }
+    for (std::size_t i = 0; i < scene.models.size(); ++i) {
+        const Model& model = scene.models[i];
+        const bool selected = static_cast<int>(scene.boxes.size() + i) == view.selectedObject;
+        drawModel(model, model.transform(), selected ? 1.0f : 0.0f);
+    }
+    if (!depthOnly)
+        for (const OverlayBox& b : view.worldBoxes)
+            drawCube(glm::scale(glm::translate(glm::mat4(1.0f), b.center), b.size), b.color, 0.0f, b.emissive);
+    glBindVertexArray(vao_);
+    for (std::size_t i = 0; i < scene.entities.size(); ++i) {
+        const Entity& e = scene.entities[i];
+        const float highlight = static_cast<int>(scene.boxes.size() + scene.models.size() + i) == view.selectedObject ? 1.0f : 0.0f;
+        if (e.model) {
+            // Animated character; stays as a corpse after death.
+            glUniform1f(loc_.flash, std::min(1.0f, e.flash * 8.0f));
+            drawModel(*e.model, e.modelTransform(), highlight, &e.animator);
+            glUniform1f(loc_.flash, 0.0f);
+            glBindVertexArray(vao_);
+            continue;
+        }
+        if (!e.alive)
+            continue;
+        glUniform1f(loc_.flash, std::min(1.0f, e.flash * 8.0f));
+        drawBox(e.position + glm::vec3(0.0f, e.size.y * 0.5f, 0.0f), e.size, e.color, highlight, e.yawDegrees);
+        glUniform1f(loc_.flash, 0.0f);
+        // A small "nose" shows which way the entity faces.
+        const float yaw = glm::radians(e.yawDegrees);
+        const glm::vec3 facing(std::cos(yaw), 0.0f, std::sin(yaw));
+        const glm::vec3 nose = e.position + glm::vec3(0.0f, e.size.y * 0.8f, 0.0f) + facing * (e.size.x * 0.5f + 0.1f);
+        drawBox(nose, glm::vec3(0.2f, 0.12f, 0.2f), glm::vec3(0.95f, 0.9f, 0.3f), highlight, e.yawDegrees);
+    }
+    if (view.drawPlayerStart && !depthOnly) {
+        // Player-sized marker so level designers see the spawn and its scale.
+        drawBox(scene.playerStart + glm::vec3(0.0f, 0.9f, 0.0f), glm::vec3(0.6f, 1.8f, 0.6f), glm::vec3(0.2f, 0.8f, 0.3f), 0.0f);
+    }
+    depthOnly_ = false;
+}
+
+void Renderer::renderShadows(const Scene& scene, const RenderView& view)
+{
+    ensureShadowMap();
+    if (!shadowTex_)
+        return;
+    EnvironmentBlock b{};
+    glGetNamedBufferSubData(envBuffer_, 0, sizeof(b), &b);
+    useMeshProgram(programs_.depth);
+    glViewport(0, 0, shadowRes_, shadowRes_);
+    glBindFramebuffer(GL_FRAMEBUFFER, shadowFbo_);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+    glDisable(GL_CULL_FACE); // open meshes (foliage, planes) cast shadows too
+    glEnable(GL_POLYGON_OFFSET_FILL);
+    glPolygonOffset(1.5f, 2.0f);
+    const int cascades = static_cast<int>(b.cascadeSplits.w);
+    for (int i = 0; i < cascades; ++i) {
+        glNamedFramebufferTextureLayer(shadowFbo_, GL_DEPTH_ATTACHMENT, shadowTex_, 0, i);
+        glClear(GL_DEPTH_BUFFER_BIT);
+        glUniformMatrix4fv(loc_.viewProj, 1, GL_FALSE, glm::value_ptr(b.shadowMatrices[i]));
+        RenderView shadowView = view;
+        shadowView.drawPlayerStart = false;
+        drawGeometry(scene, shadowView, true);
+    }
+    glDisable(GL_POLYGON_OFFSET_FILL);
+    glEnable(GL_CULL_FACE);
+}
+
+void Renderer::renderSsao()
+{
+    glDisable(GL_DEPTH_TEST);
+    glBindVertexArray(emptyVao_);
+    glBindFramebuffer(GL_FRAMEBUFFER, ssaoFbo_);
+    glViewport(0, 0, width_, height_);
+    glUseProgram(programs_.ssao.id);
+    glUniform1f(programs_.ssao.loc("uRadius"), env_ ? env_->ssaoRadius : 0.6f);
+    glUniformMatrix4fv(programs_.ssao.loc("uInvProj"), 1, GL_FALSE, glm::value_ptr(glm::inverse(projection_)));
+    glBindTextureUnit(0, depthTex_);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    glBindFramebuffer(GL_FRAMEBUFFER, ssaoBlurFbo_);
+    glUseProgram(programs_.blur.id);
+    glBindTextureUnit(0, ssaoTex_);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+}
+
+void Renderer::render(const Scene& scene, const RenderView& view)
+{
+    // Free GPU data nothing drew since the previous render() (removed models).
+    releaseUnused();
+    texturesUploaded_ = 0;
+    GLint target = 0;
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &target);
+    targetFbo_ = target;
+    env_ = &scene.environment;
+    time_ = view.time;
+    view_ = view.view;
+    projection_ = view.projection;
+    ensureTargets(std::max(1, view.viewportWidth), std::max(1, view.viewportHeight));
+
+    glBindBufferBase(GL_UNIFORM_BUFFER, 0, jointBuffer_);
+    updateEnvironment(scene, view);
+    updateEnvironmentMap(scene);
+    renderShadows(scene, view);
+
+    // Depth pre-pass: SSAO needs depth, and the main pass then shades each pixel once.
+    glBindFramebuffer(GL_FRAMEBUFFER, hdrFbo_);
+    glViewport(0, 0, width_, height_);
+    glEnable(GL_DEPTH_TEST);
+    glDepthMask(GL_TRUE);
+    glDepthFunc(GL_LESS);
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glClear(GL_DEPTH_BUFFER_BIT);
+    const glm::mat4 viewProj = view.projection * view.view;
+    useMeshProgram(programs_.depth);
+    glUniformMatrix4fv(loc_.viewProj, 1, GL_FALSE, glm::value_ptr(viewProj));
+    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+    drawGeometry(scene, view, true);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+
+    if (quality_.ssao)
+        renderSsao();
+
+    // Main pass.
+    glBindFramebuffer(GL_FRAMEBUFFER, hdrFbo_);
+    glViewport(0, 0, width_, height_);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
+    const float clear[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+    glClearBufferfv(GL_COLOR, 0, clear);
+    useMeshProgram(programs_.mesh);
+    glUniformMatrix4fv(loc_.viewProj, 1, GL_FALSE, glm::value_ptr(viewProj));
+    glUniformMatrix3fv(loc_.envRotation, 1, GL_FALSE, glm::value_ptr(glm::mat3(1.0f)));
+    glBindTextureUnit(6, shadowTex_ ? shadowTex_ : shadowDummy_);
+    glBindTextureUnit(7, quality_.ssao ? ssaoBlurTex_ : whiteTex_);
+    glBindTextureUnit(8, envMap_);
+    glBindTextureUnit(9, brdfLut_);
+    drawGeometry(scene, view, false);
+
+    // Sky where nothing was drawn.
+    glDepthMask(GL_FALSE);
+    glUseProgram(programs_.sky.id);
+    glBindVertexArray(emptyVao_);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    glDepthMask(GL_TRUE);
+    glDepthFunc(GL_LESS);
+
+    if (!view.gizmoBoxes.empty()) {
+        glClear(GL_DEPTH_BUFFER_BIT); // handles stay visible through walls
+        useMeshProgram(programs_.mesh);
+        for (const OverlayBox& b : view.gizmoBoxes)
+            drawCube(glm::scale(glm::translate(glm::mat4(1.0f), b.center), b.size), b.color, 0.0f, b.emissive);
+    }
+    glBindVertexArray(0);
+    pendingPresent_ = true;
+    if (!view.deferPresent)
+        present();
+}
+
+void Renderer::renderOverlay(const RenderView& view, const OverlayPass& pass)
+{
+    // First-person layer: own depth range and projection, so the weapon never clips into walls.
+    glBindFramebuffer(GL_FRAMEBUFFER, hdrFbo_);
+    glViewport(0, 0, width_, height_);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+    glEnable(GL_CULL_FACE);
+    glClear(GL_DEPTH_BUFFER_BIT);
+    useMeshProgram(programs_.mesh);
+    glUniformMatrix4fv(loc_.viewProj, 1, GL_FALSE, glm::value_ptr(pass.projection));
+    glUniform1i(loc_.overlay, 1);
+    const glm::mat3 viewToWorld = glm::transpose(glm::mat3(view.view));
+    glUniformMatrix3fv(loc_.envRotation, 1, GL_FALSE, glm::value_ptr(viewToWorld));
+    glUniform3fv(loc_.overlaySun, 1, glm::value_ptr(glm::normalize(pass.sunDirectionViewSpace)));
+    glUniform1f(loc_.flash, 0.0f);
+    glUniform1i(loc_.skinned, 0);
+    glBindBufferBase(GL_UNIFORM_BUFFER, 0, jointBuffer_);
+    glBindTextureUnit(6, shadowDummy_);
+    glBindTextureUnit(7, whiteTex_);
+    glBindTextureUnit(8, envMap_);
+    glBindTextureUnit(9, brdfLut_);
+    if (pass.model)
+        drawModel(*pass.model, pass.modelTransform, 0.0f, pass.animator);
+    for (const OverlayBox& b : pass.boxes)
+        drawCube(glm::scale(glm::translate(glm::mat4(1.0f), b.center), b.size), b.color, 0.0f, b.emissive);
+    glUniform1i(loc_.overlay, 0);
+    glBindVertexArray(0);
+}
+
+void Renderer::renderBloom()
+{
+    glDisable(GL_DEPTH_TEST);
+    glBindVertexArray(emptyVao_);
+    glUseProgram(programs_.bloomDown.id);
+    glUniform1f(programs_.bloomDown.loc("uThreshold"), env_ ? env_->bloomThreshold : 1.2f);
+    for (std::size_t i = 0; i < bloomTex_.size(); ++i) {
+        glBindFramebuffer(GL_FRAMEBUFFER, bloomFbo_[i]);
+        glViewport(0, 0, bloomSize_[i].x, bloomSize_[i].y);
+        glUniform1i(programs_.bloomDown.loc("uFirst"), i == 0 ? 1 : 0);
+        glBindTextureUnit(0, i == 0 ? hdrColor_ : bloomTex_[i - 1]);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+    }
+    glUseProgram(programs_.bloomUp.id);
+    glUniform1f(programs_.bloomUp.loc("uRadius"), 1.0f);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_ONE, GL_ONE);
+    for (std::size_t i = bloomTex_.size() - 1; i > 0; --i) {
+        glBindFramebuffer(GL_FRAMEBUFFER, bloomFbo_[i - 1]);
+        glViewport(0, 0, bloomSize_[i - 1].x, bloomSize_[i - 1].y);
+        glBindTextureUnit(0, bloomTex_[i]);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+    }
+    glDisable(GL_BLEND);
+}
+
+void Renderer::present()
+{
+    if (!pendingPresent_)
+        return;
+    pendingPresent_ = false;
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
+    if (quality_.bloom)
+        renderBloom();
+    const Environment defaults;
+    const Environment& e = env_ ? *env_ : defaults;
+    glBindVertexArray(emptyVao_);
+    glBindFramebuffer(GL_FRAMEBUFFER, quality_.fxaa ? ldrFbo_ : static_cast<unsigned>(targetFbo_));
+    glViewport(0, 0, width_, height_);
+    const Program& post = programs_.post;
+    glUseProgram(post.id);
+    glUniform1f(post.loc("uExposure"), e.exposure);
+    glUniform1f(post.loc("uBloomIntensity"), quality_.bloom ? e.bloomIntensity : 0.0f);
+    glUniform1f(post.loc("uSaturation"), e.saturation);
+    glUniform1f(post.loc("uContrast"), e.contrast);
+    glUniform3fv(post.loc("uTint"), 1, glm::value_ptr(e.tint));
+    glUniform1f(post.loc("uVignette"), e.vignette);
+    glUniform1f(post.loc("uGrain"), e.grain);
+    glUniform1f(post.loc("uTime"), time_);
+    glBindTextureUnit(0, hdrColor_);
+    glBindTextureUnit(1, bloomTex_.empty() ? whiteTex_ : bloomTex_[0]);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    if (quality_.fxaa) {
+        glBindFramebuffer(GL_FRAMEBUFFER, static_cast<unsigned>(targetFbo_));
+        glUseProgram(programs_.fxaa.id);
+        glBindTextureUnit(0, ldrTex_);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+    }
+    // Leave depth of the scene in the target too, for tools that draw on top.
+    glBindFramebuffer(GL_FRAMEBUFFER, static_cast<unsigned>(targetFbo_));
+    glEnable(GL_DEPTH_TEST);
+    glBindVertexArray(0);
+    glUseProgram(0);
 }
 
 const Renderer::GpuMesh& Renderer::upload(const MeshPart& part)
@@ -394,6 +949,10 @@ unsigned Renderer::texture(const Texture& tex)
         it->second.used = true;
         return it->second.handle;
     }
+    // Uploading many 2K textures at once would stall a frame: spread them out
+    // (surfaces draw without the map until it is on the GPU).
+    if (quality_.textureUploadsPerFrame > 0 && ++texturesUploaded_ > quality_.textureUploadsPerFrame)
+        return 0;
     GpuTexture t;
     glCreateTextures(GL_TEXTURE_2D, 1, &t.handle);
     const int levels = tex.mipmaps ? 1 + static_cast<int>(std::floor(std::log2(std::max(tex.width, tex.height)))) : 1;
@@ -417,7 +976,7 @@ unsigned Renderer::texture(const Texture& tex)
 
 void Renderer::drawModel(const Model& model, const glm::mat4& transform, float highlight, const Animator* animator)
 {
-    glUniform1f(locHighlight_, highlight);
+    glUniform1f(loc_.highlight, highlight);
     const Skeleton* skeleton = model.skeleton.get();
     if (skeleton)
         evaluatePose(*skeleton, animator, pose_);
@@ -436,18 +995,20 @@ void Renderer::drawModel(const Model& model, const glm::mat4& transform, float h
         } else if (skeleton && part.node >= 0) {
             partTransform = transform * pose_[static_cast<std::size_t>(part.node)];
         }
-        glUniform1i(locSkinned_, skinned ? 1 : 0);
-        glUniformMatrix4fv(locModel_, 1, GL_FALSE, glm::value_ptr(partTransform));
+        glUniform1i(loc_.skinned, skinned ? 1 : 0);
+        glUniformMatrix4fv(loc_.model, 1, GL_FALSE, glm::value_ptr(partTransform));
         applySurface(model.materialFor(part), &part, part.color, false);
         glBindVertexArray(mesh.vao);
         glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, nullptr);
     }
     applySurface(nullptr, nullptr, glm::vec3(1.0f), false);
-    glUniform1i(locSkinned_, 0);
+    glUniform1i(loc_.skinned, 0);
 }
 
 void Renderer::applySurface(const Material* material, const MeshPart* part, glm::vec3 color, bool worldUv)
 {
+    if (depthOnly_)
+        return;
     // Texture units: 0 albedo, 1 normal, 2 roughness, 3 metallic, 4 occlusion, 5 emissive.
     const Texture* maps[6] = {};
     glm::vec2 tiling(1.0f);
@@ -481,55 +1042,34 @@ void Renderer::applySurface(const Material* material, const MeshPart* part, glm:
         emissive = part->emissive;
         grid = maps[0] == nullptr;
     }
-    glUniform3fv(locColor_, 1, glm::value_ptr(color));
-    glUniform2fv(locTiling_, 1, glm::value_ptr(tiling));
-    glUniform1f(locRoughness_, roughness);
-    glUniform1f(locMetallic_, metallic);
-    glUniform1f(locNormalStrength_, normalStrength);
-    glUniform1i(locRoughnessChannel_, roughnessChannel);
-    glUniform1i(locMetallicChannel_, metallicChannel);
-    glUniform3fv(locEmissiveColor_, 1, glm::value_ptr(emissive));
-    glUniform1i(locWorldUv_, worldUv ? 1 : 0);
-    glUniform1i(locGrid_, grid ? 1 : 0);
+    glUniform3fv(loc_.color, 1, glm::value_ptr(color));
+    glUniform2fv(loc_.tiling, 1, glm::value_ptr(tiling));
+    glUniform1f(loc_.roughness, roughness);
+    glUniform1f(loc_.metallic, metallic);
+    glUniform1f(loc_.normalStrength, normalStrength);
+    glUniform1i(loc_.roughnessChannel, roughnessChannel);
+    glUniform1i(loc_.metallicChannel, metallicChannel);
+    glUniform3fv(loc_.emissiveColor, 1, glm::value_ptr(emissive));
+    glUniform1i(loc_.worldUv, worldUv ? 1 : 0);
+    glUniform1i(loc_.grid, grid ? 1 : 0);
     for (int i = 0; i < 6; ++i) {
-        const bool has = maps[i] && !maps[i]->rgba.empty();
+        const unsigned handle = maps[i] && !maps[i]->rgba.empty() ? texture(*maps[i]) : 0u;
+        const bool has = handle != 0;
         if (has)
-            glBindTextureUnit(static_cast<unsigned>(i), texture(*maps[i]));
-        glUniform1i(locHasMap_[i], has ? 1 : 0);
+            glBindTextureUnit(static_cast<unsigned>(i), handle);
+        glUniform1i(loc_.hasMap[i], has ? 1 : 0);
     }
 }
 
 void Renderer::drawCube(const glm::mat4& transform, glm::vec3 color, float highlight, bool emissive)
 {
     glBindVertexArray(vao_);
-    glUniformMatrix4fv(locModel_, 1, GL_FALSE, glm::value_ptr(transform));
+    glUniformMatrix4fv(loc_.model, 1, GL_FALSE, glm::value_ptr(transform));
     applySurface(nullptr, nullptr, color, false);
-    glUniform1f(locHighlight_, highlight);
-    glUniform1i(locEmissive_, emissive ? 1 : 0);
+    glUniform1f(loc_.highlight, highlight);
+    glUniform1i(loc_.emissive, emissive ? 1 : 0);
     glDrawArrays(GL_TRIANGLES, 0, vertexCount_);
-    glUniform1i(locEmissive_, 0);
-}
-
-void Renderer::renderOverlay(const RenderView& view, const OverlayPass& pass)
-{
-    // First-person layer: own depth range and projection, so the weapon never clips into walls.
-    glClear(GL_DEPTH_BUFFER_BIT);
-    glUseProgram(program_);
-    const glm::mat4 viewProj = pass.projection; // geometry is already in view space
-    glUniformMatrix4fv(locViewProj_, 1, GL_FALSE, glm::value_ptr(viewProj));
-    glUniform3fv(locSun_, 1, glm::value_ptr(glm::normalize(pass.sunDirectionViewSpace)));
-    glUniform3fv(locCamera_, 1, glm::value_ptr(glm::vec3(0.0f)));
-    glUniform1f(locFog_, 0.0f);
-    glUniform1f(locFlash_, 0.0f);
-    glUniform1i(locSkinned_, 0);
-    glBindBufferBase(GL_UNIFORM_BUFFER, 0, jointBuffer_);
-    if (pass.model)
-        drawModel(*pass.model, pass.modelTransform, 0.0f, pass.animator);
-    for (const OverlayBox& b : pass.boxes)
-        drawCube(glm::scale(glm::translate(glm::mat4(1.0f), b.center), b.size), b.color, 0.0f, b.emissive);
-    (void)view;
-    glBindVertexArray(0);
-    glUseProgram(0);
+    glUniform1i(loc_.emissive, 0);
 }
 
 void Renderer::releaseUnused()
@@ -555,93 +1095,6 @@ void Renderer::releaseUnused()
             ++it;
         }
     }
-}
-
-void Renderer::render(const Scene& scene, const RenderView& view)
-{
-    // Free GPU data nothing drew since the previous render() (removed models).
-    releaseUnused();
-    glViewport(0, 0, view.viewportWidth, view.viewportHeight);
-    glClearColor(0.55f, 0.66f, 0.80f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
-
-    glUseProgram(program_);
-    const glm::mat4 viewProj = view.projection * view.view;
-    glUniformMatrix4fv(locViewProj_, 1, GL_FALSE, glm::value_ptr(viewProj));
-    glUniform3fv(locSun_, 1, glm::value_ptr(glm::normalize(scene.sunDirection)));
-    glUniform3fv(locCamera_, 1, glm::value_ptr(view.cameraPosition));
-    glUniform1f(locFog_, 0.012f);
-    glUniform1i(locHasTexture_, 0);
-    glUniform1i(locEmissive_, 0);
-    glUniform1i(locSkinned_, 0);
-    glUniform1f(locFlash_, 0.0f);
-    glBindBufferBase(GL_UNIFORM_BUFFER, 0, jointBuffer_);
-    glBindVertexArray(vao_);
-
-    auto drawBox = [&](glm::vec3 center, glm::vec3 size, glm::vec3 color, float highlight, float yawDegrees = 0.0f,
-                       const Material* material = nullptr) {
-        glm::mat4 model = glm::translate(glm::mat4(1.0f), center);
-        if (yawDegrees != 0.0f)
-            model = glm::rotate(model, -glm::radians(yawDegrees), glm::vec3(0.0f, 1.0f, 0.0f));
-        model = glm::scale(model, size);
-        glUniformMatrix4fv(locModel_, 1, GL_FALSE, glm::value_ptr(model));
-        applySurface(material, nullptr, color, true); // boxes have no UVs: world-space mapping
-        glUniform1f(locHighlight_, highlight);
-        glBindVertexArray(vao_);
-        glDrawArrays(GL_TRIANGLES, 0, vertexCount_);
-    };
-
-    for (std::size_t i = 0; i < scene.boxes.size(); ++i) {
-        const Box& b = scene.boxes[i];
-        drawBox(b.position, b.size, b.color, static_cast<int>(i) == view.selectedObject ? 1.0f : 0.0f, 0.0f, b.material.get());
-    }
-    for (std::size_t i = 0; i < scene.models.size(); ++i) {
-        const Model& model = scene.models[i];
-        const bool selected = static_cast<int>(scene.boxes.size() + i) == view.selectedObject;
-        drawModel(model, model.transform(), selected ? 1.0f : 0.0f);
-    }
-    for (const OverlayBox& b : view.worldBoxes)
-        drawCube(glm::scale(glm::translate(glm::mat4(1.0f), b.center), b.size), b.color, 0.0f, b.emissive);
-    glBindVertexArray(vao_);
-    for (std::size_t i = 0; i < scene.entities.size(); ++i) {
-        const Entity& e = scene.entities[i];
-        const float highlight = static_cast<int>(scene.boxes.size() + scene.models.size() + i) == view.selectedObject ? 1.0f : 0.0f;
-        if (e.model) {
-            // Animated character; stays as a corpse after death.
-            glUniform1f(locFlash_, std::min(1.0f, e.flash * 8.0f));
-            drawModel(*e.model, e.modelTransform(), highlight, &e.animator);
-            glUniform1f(locFlash_, 0.0f);
-            glBindVertexArray(vao_);
-            continue;
-        }
-        if (!e.alive)
-            continue;
-        glUniform1f(locFlash_, std::min(1.0f, e.flash * 8.0f));
-        drawBox(e.position + glm::vec3(0.0f, e.size.y * 0.5f, 0.0f), e.size, e.color, highlight, e.yawDegrees);
-        glUniform1f(locFlash_, 0.0f);
-        // A small "nose" shows which way the entity faces.
-        const float yaw = glm::radians(e.yawDegrees);
-        const glm::vec3 facing(std::cos(yaw), 0.0f, std::sin(yaw));
-        const glm::vec3 nose = e.position + glm::vec3(0.0f, e.size.y * 0.8f, 0.0f) + facing * (e.size.x * 0.5f + 0.1f);
-        drawBox(nose, glm::vec3(0.2f, 0.12f, 0.2f), glm::vec3(0.95f, 0.9f, 0.3f), highlight, e.yawDegrees);
-    }
-    if (view.drawPlayerStart) {
-        // Player-sized marker so level designers see the spawn and its scale.
-        drawBox(scene.playerStart + glm::vec3(0.0f, 0.9f, 0.0f), glm::vec3(0.6f, 1.8f, 0.6f),
-                glm::vec3(0.2f, 0.8f, 0.3f), 0.0f);
-    }
-    if (!view.gizmoBoxes.empty()) {
-        glClear(GL_DEPTH_BUFFER_BIT); // handles stay visible through walls
-        glUniform1f(locFog_, 0.0f);
-        for (const OverlayBox& b : view.gizmoBoxes)
-            drawCube(glm::scale(glm::translate(glm::mat4(1.0f), b.center), b.size), b.color, 0.0f, b.emissive);
-        glUniform1f(locFog_, 0.012f);
-    }
-    glBindVertexArray(0);
-    glUseProgram(0);
 }
 
 } // namespace engine
