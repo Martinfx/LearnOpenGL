@@ -5,8 +5,8 @@ file "smg_shot_3.wav"
 file "smg_shot_4.wav"
 file "smg_shot_5.wav"
 file "smg_shot_6.wav"
-volume 0.85
-pitch 1.0 1.05
+volume 1
+pitch 0.98 1.03
 distance 3 220
 rolloff 1
 loop 0

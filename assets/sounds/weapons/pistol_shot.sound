@@ -5,8 +5,8 @@ file "pistol_shot_3.wav"
 file "pistol_shot_4.wav"
 file "pistol_shot_5.wav"
 file "pistol_shot_6.wav"
-volume 0.8
-pitch 1.04 1.1
+volume 1
+pitch 0.98 1.03
 distance 3 200
 rolloff 1
 loop 0

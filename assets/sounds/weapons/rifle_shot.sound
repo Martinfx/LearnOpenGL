@@ -6,7 +6,7 @@ file "rifle_shot_4.wav"
 file "rifle_shot_5.wav"
 file "rifle_shot_6.wav"
 volume 1
-pitch 0.94 0.99
+pitch 0.97 1.0
 distance 4 300
 rolloff 1
 loop 0
