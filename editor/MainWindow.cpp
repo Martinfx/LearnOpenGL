@@ -2371,10 +2371,38 @@ void MainWindow::playLevel()
 
 void MainWindow::closeEvent(QCloseEvent* e)
 {
-    if (confirmCloseScripts() && confirmDiscard())
+    if (confirmCloseScripts() && confirmDiscard()) {
+        shutdownGame();
         e->accept();
-    else
+    } else {
         e->ignore();
+    }
+}
+
+MainWindow::~MainWindow()
+{
+    shutdownGame();
+}
+
+void MainWindow::shutdownGame()
+{
+    // ~QProcess kills a running child and emits finished(); its slots would then
+    // write to the Output Log of a window that is being destroyed (SIGSEGV).
+    QProcess* process = game_;
+    game_ = nullptr;
+    if (!process)
+        return;
+    process->disconnect();
+    if (process->state() != QProcess::NotRunning) {
+        if (gamePaused_)
+            ::kill(static_cast<pid_t>(process->processId()), SIGCONT);
+        process->terminate();
+        if (!process->waitForFinished(1500)) {
+            process->kill();
+            process->waitForFinished(1000);
+        }
+    }
+    delete process;
 }
 
 ScriptEditor* MainWindow::currentScript() const

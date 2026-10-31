@@ -53,6 +53,7 @@ class MainWindow : public QMainWindow {
     Q_OBJECT
 public:
     MainWindow();
+    ~MainWindow() override;
 
     bool openFile(const QString& path);   // loads in the background
 signals:
@@ -91,6 +92,7 @@ private:
     void hideLoading();
     void pauseGame();
     void stopGame();
+    void shutdownGame(); // editor closing: end the game child without signals into a dying window
     void updatePlayButtons();
     void saveAll();
     void updateDetailsVisibility();
