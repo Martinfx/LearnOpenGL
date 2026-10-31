@@ -42,12 +42,29 @@ struct AudioOptions {
     bool noDevice = false;    // mix in update() instead of on a device (tests, servers, no sound card)
     int maxVoices = 64;       // more sounds at once steal the oldest non-looping one
     std::uint32_t sampleRate = 48000;
+    int hrtf = -1;            // -1 = OpenAL decides (on for headphones), 0 = off, 1 = on
 };
 
-// Plays sounds on the audio device (miniaudio). Mixing runs on miniaudio's own
-// device thread and files decode on its job thread, so play() never blocks on
-// disk or decoding: a sound that is not decoded yet starts as soon as it is.
-// All member functions are called from one thread (the game or editor main thread).
+// Decoded audio file (16-bit, interleaved), e.g. for waveform views.
+struct AudioClipData {
+    std::vector<std::int16_t> samples;
+    int channels = 0;
+    int sampleRate = 0;
+    std::size_t frames() const { return channels > 0 ? samples.size() / static_cast<std::size_t>(channels) : 0; }
+};
+// Decodes WAV, Ogg Vorbis, MP3 or FLAC (miniaudio decoders).
+bool decodeAudioFile(const std::filesystem::path& file, AudioClipData& out, std::string* error = nullptr);
+
+// Environmental reverb presets (OpenAL EFX), by name: "none", "generic", "room", "hallway",
+// "stonecorridor", "alley", "forest", "city", "mountains", "plain", "parkinglot", "sewerpipe",
+// "factory_hall", "cave", "hangar", "outdoors_*"... See reverbPresetNames().
+const std::vector<std::string>& reverbPresetNames();
+
+// Plays sounds with OpenAL Soft: 3D sources, HRTF, EFX reverb. OpenAL mixes on
+// its own device thread; files decode on the job system and long sounds stream
+// from the audio thread, so play() never waits for disk or decoding: a sound that
+// is not decoded yet starts as soon as it is. Member functions are called from one
+// thread (the game or editor main thread).
 class AudioSystem {
 public:
     using Handle = std::uint32_t; // 0 = no sound
@@ -83,6 +100,12 @@ public:
 
     void setListener(glm::vec3 position, glm::vec3 forward, glm::vec3 up = {0.0f, 1.0f, 0.0f});
     glm::vec3 listenerPosition() const;
+
+    // Room reverb applied to every 3D and 2D sound (EFX). `amount` 0..1 blends it in.
+    void setReverb(const std::string& preset, float amount = 1.0f);
+    std::string reverb() const;
+    bool hrtf() const;              // HRTF active (binaural 3D for headphones)
+    std::string deviceName() const;
 
     void setMasterVolume(float volume);
     float masterVolume() const;

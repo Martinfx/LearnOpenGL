@@ -11,8 +11,9 @@ void GameAudio::init(const std::filesystem::path& assetDir)
     std::string error;
     if (!audio_.init(&error))
         std::fprintf(stderr, "%s\n", error.c_str());
-    else if (!audio_.hasDevice())
-        std::printf("Audio: no output device, running silent\n");
+    else
+        std::printf("Audio: OpenAL, %s, HRTF %s, sounds from %s\n", audio_.deviceName().c_str(), audio_.hrtf() ? "on" : "off",
+                    (assetDir / "sounds").string().c_str());
 }
 
 std::shared_ptr<const engine::SoundDef> GameAudio::get(const std::filesystem::path& sound)

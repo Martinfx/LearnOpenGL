@@ -106,6 +106,36 @@ target_include_directories(cgltf_headers SYSTEM INTERFACE ${ENGINE_3RDPARTY}/cgl
 add_library(stb_headers INTERFACE)
 target_include_directories(stb_headers SYSTEM INTERFACE ${ENGINE_3RDPARTY}/stb)
 
+# --- OpenAL Soft (audio output, 3D, HRTF, EFX reverb) -------------------------
+# LGPL: always a shared library (the system package or 3rdparty/openal-soft).
+if(ENGINE_USE_SYSTEM_DEPS)
+    find_package(OpenAL CONFIG QUIET)
+    if(NOT TARGET OpenAL::OpenAL)
+        find_package(OpenAL MODULE QUIET)
+        if(OPENAL_FOUND)
+            add_library(openal_system INTERFACE)
+            get_filename_component(OPENAL_PARENT_INCLUDE "${OPENAL_INCLUDE_DIR}" DIRECTORY)
+            target_include_directories(openal_system INTERFACE "${OPENAL_INCLUDE_DIR}" "${OPENAL_PARENT_INCLUDE}")
+            target_link_libraries(openal_system INTERFACE ${OPENAL_LIBRARY})
+            add_library(OpenAL::OpenAL ALIAS openal_system)
+        endif()
+    endif()
+endif()
+if(TARGET OpenAL::OpenAL)
+    message(STATUS "OpenAL: system package")
+else()
+    message(STATUS "OpenAL: 3rdparty/openal-soft (shared)")
+    set(LIBTYPE SHARED CACHE STRING "" FORCE)
+    foreach(opt ALSOFT_UTILS ALSOFT_EXAMPLES ALSOFT_TESTS ALSOFT_INSTALL ALSOFT_INSTALL_CONFIG ALSOFT_INSTALL_HRTF_DATA
+                ALSOFT_INSTALL_AMBDEC_PRESETS ALSOFT_INSTALL_EXAMPLES ALSOFT_INSTALL_UTILS ALSOFT_UPDATE_BUILD_VERSION)
+        set(${opt} OFF CACHE BOOL "" FORCE)
+    endforeach()
+    add_subdirectory(${ENGINE_3RDPARTY}/openal-soft ${CMAKE_BINARY_DIR}/3rdparty/openal-soft EXCLUDE_FROM_ALL)
+    # Next to the executables, which find it through their $ORIGIN rpath.
+    set_target_properties(OpenAL PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+                                            LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+endif()
+
 # Recast/Detour: navmesh building and path queries (static library, no warnings).
 file(GLOB RECAST_SOURCES ${ENGINE_3RDPARTY}/recastnavigation/Recast/Source/*.cpp
                          ${ENGINE_3RDPARTY}/recastnavigation/Detour/Source/*.cpp)

@@ -9,5 +9,9 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.26)
 else()
     set(ENGINE_COPY_DIR copy_directory)
 endif()
-add_custom_command(TARGET fps_game POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E ${ENGINE_COPY_DIR} ${PROJECT_SOURCE_DIR}/assets $<TARGET_FILE_DIR:fps_game>/assets)
+# A target that runs on every build, so changed assets (new sounds after a pull)
+# arrive even when the game itself did not relink.
+add_custom_target(fps_game_assets ALL
+    COMMAND ${CMAKE_COMMAND} -E ${ENGINE_COPY_DIR} ${PROJECT_SOURCE_DIR}/assets ${CMAKE_BINARY_DIR}/bin/assets
+    COMMENT "Copying changed assets")
+add_dependencies(fps_game_assets fps_game)
