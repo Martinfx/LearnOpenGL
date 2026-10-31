@@ -1,0 +1,14 @@
+# FPS engine material (physically based: metal/roughness)
+version 2
+name "Worn Mossy Plasterwall"
+color 1 1 1
+roughness 1
+metallic 0
+normal_strength 1
+emissive 0 0 0
+tiling 0.556 0.556
+world_uv 1
+albedo_map "../../textures/pbr/worn_mossy_plasterwall/albedo.jpg"
+normal_map "../../textures/pbr/worn_mossy_plasterwall/normal.jpg"
+roughness_map "../../textures/pbr/worn_mossy_plasterwall/roughness.jpg"
+occlusion_map "../../textures/pbr/worn_mossy_plasterwall/ao.jpg"

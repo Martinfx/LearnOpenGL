@@ -49,6 +49,10 @@ def write_glb(path, mesh, tex_rel_dir='textures', name='model'):
                 mat['occlusionTexture'] = {'index': tex_index(f'{t}_orm.jpg')}
             if 'emissive' in m:
                 mat['emissiveFactor'] = list(m['emissive'])
+            if 'alpha' in m:            # glass: blended, alpha in the base colour factor
+                col[3] = m['alpha']
+                mat['alphaMode'] = 'BLEND'
+                mat['doubleSided'] = True
             materials.append(mat)
             mat_index[mname] = len(materials) - 1
         pos = np.asarray(pr.pos, dtype=np.float32)

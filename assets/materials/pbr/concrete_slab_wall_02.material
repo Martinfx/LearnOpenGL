@@ -1,0 +1,14 @@
+# FPS engine material (physically based: metal/roughness)
+version 2
+name "Concrete Slab Wall 02"
+color 1 1 1
+roughness 1
+metallic 0
+normal_strength 1
+emissive 0 0 0
+tiling 0.476 0.476
+world_uv 1
+albedo_map "../../textures/pbr/concrete_slab_wall_02/albedo.jpg"
+normal_map "../../textures/pbr/concrete_slab_wall_02/normal.jpg"
+roughness_map "../../textures/pbr/concrete_slab_wall_02/roughness.jpg"
+occlusion_map "../../textures/pbr/concrete_slab_wall_02/ao.jpg"

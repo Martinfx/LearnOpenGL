@@ -17,3 +17,5 @@ assets/models/zone/rail/*.glb filter=lfs diff=lfs merge=lfs -text
 assets/models/zone/gen/*.glb filter=lfs diff=lfs merge=lfs -text
 assets/models/zone/textures/*.jpg filter=lfs diff=lfs merge=lfs -text
 assets/models/zone/postwar/*.glb filter=lfs diff=lfs merge=lfs -text
+assets/models/zone/skrunda/*.glb filter=lfs diff=lfs merge=lfs -text
+assets/models/zone/skrunda/terrain/*.glb filter=lfs diff=lfs merge=lfs -text

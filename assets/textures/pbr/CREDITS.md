@@ -98,3 +98,24 @@ A ready material for each set is in `assets/materials/pbr/<name>.material`.
 | `green_rough_planks` | Green Rough Planks | Rob Tuytel | 1.5 × 1.5 m | https://polyhaven.com/a/green_rough_planks |
 | `broken_brick_wall` | Broken Brick Wall | Amal Kumar | 1.8 × 1.8 m | https://polyhaven.com/a/broken_brick_wall |
 | `damaged_plaster` | Damaged Plaster | Amal Kumar | 1.85 × 1.85 m | https://polyhaven.com/a/damaged_plaster |
+| `whitewashed_brick` | Whitewashed Brick | Charlotte Baglioni | 2 × 2 m | https://polyhaven.com/a/whitewashed_brick |
+| `white_bricks` | White Bricks | Rob Tuytel | 1.5 × 1.5 m | https://polyhaven.com/a/white_bricks |
+| `concrete_slab_wall_02` | Concrete Slab Wall 02 | Amal Kumar | 2.10232 × 2.10232 m | https://polyhaven.com/a/concrete_slab_wall_02 |
+| `worn_mossy_plasterwall` | Worn Mossy Plasterwall | Amal Kumar | 1.8 × 1.8 m | https://polyhaven.com/a/worn_mossy_plasterwall |
+| `worn_plaster_wall` | Worn Plaster Wall | Dimitrios Savva | 1.8 × 1.8 m | https://polyhaven.com/a/worn_plaster_wall |
+| `decrepit_wallpaper` | Decrepit Wallpaper | Rob Tuytel | 2.5 × 2.5 m | https://polyhaven.com/a/decrepit_wallpaper |
+| `blue_plaster_weathered` | Blue Plaster Weathered | Amal Kumar | 2 × 2 m | https://polyhaven.com/a/blue_plaster_weathered |
+| `yellow_plaster` | Yellow Plaster | Rob Tuytel | 2 × 2 m | https://polyhaven.com/a/yellow_plaster |
+| `aerial_asphalt_01` | Aerial Asphalt 01 | Rob Tuytel | 30 × 30 m | https://polyhaven.com/a/aerial_asphalt_01 |
+| `asphalt_04` | Asphalt 04 | Jenelle van Heerden, Sergej Majboroda | 4.04 × 4.04 m | https://polyhaven.com/a/asphalt_04 |
+| `grass_ground` | Grass Ground | Charlotte Baglioni | 2.51 × 2.51 m | https://polyhaven.com/a/grass_ground |
+| `sparse_grass` | Sparse Grass | Amal Kumar | 2 × 2 m | https://polyhaven.com/a/sparse_grass |
+| `withered_grass` | Withered Grass | Charlotte Baglioni | 2 × 2 m | https://polyhaven.com/a/withered_grass |
+| `leaves_forest_ground` | Leaves Forest Ground | Dario Barresi, Dimitrios Savva | 1.26 × 1.26 m | https://polyhaven.com/a/leaves_forest_ground |
+| `forest_ground_05` | Forest Ground 05 | Charlotte Baglioni | 2 × 2 m | https://polyhaven.com/a/forest_ground_05 |
+| `stony_dirt_path` | Stony Dirt Path | eye-candy.xyz | 2.17 × 2.17 m | https://polyhaven.com/a/stony_dirt_path |
+| `aerial_mud_1` | Aerial Mud 1 | Rob Tuytel | 8 × 8 m | https://polyhaven.com/a/aerial_mud_1 |
+| `rusty_metal_shutter` | Rusty Metal Shutter | Charlotte Baglioni | 1.9 × 1.9 m | https://polyhaven.com/a/rusty_metal_shutter |
+| `rusty_corrugated_iron` | Rusty Corrugated Iron | Charlotte Baglioni | 2 × 2 m | https://polyhaven.com/a/rusty_corrugated_iron |
+| `concrete_debris` | Concrete Debris | Amal Kumar | 2 × 2 m | https://polyhaven.com/a/concrete_debris |
+| `rebar_reinforced_concrete` | Rebar Reinforced Concrete | Amal Kumar | 2 × 2 m | https://polyhaven.com/a/rebar_reinforced_concrete |

@@ -14,3 +14,4 @@ CMakeUserPresets.json
 /copy.material
 /materials.level
 hierarchy.level
+__pycache__/
