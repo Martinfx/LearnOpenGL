@@ -1,0 +1,486 @@
+{
+ "generated": {
+  "wooden_pallet": {
+   "path": "clutter/wooden_pallet.glb",
+   "size_m": [
+    1.2,
+    0.144,
+    0.8
+   ],
+   "tris": 240,
+   "physics": "dynamic",
+   "mass_kg": 22,
+   "collider": "box"
+  },
+  "wooden_pallet_broken": {
+   "path": "clutter/wooden_pallet_broken.glb",
+   "size_m": [
+    1.235,
+    0.155,
+    1.399
+   ],
+   "tris": 180,
+   "physics": "static",
+   "mass_kg": 18,
+   "collider": "mesh"
+  },
+  "cinder_block": {
+   "path": "clutter/cinder_block.glb",
+   "size_m": [
+    0.39,
+    0.19,
+    0.19
+   ],
+   "tris": 52,
+   "physics": "dynamic",
+   "mass_kg": 15,
+   "collider": "box"
+  },
+  "cinder_block_broken": {
+   "path": "clutter/cinder_block_broken.glb",
+   "size_m": [
+    0.39,
+    0.19,
+    0.19
+   ],
+   "tris": 76,
+   "physics": "dynamic",
+   "mass_kg": 11,
+   "collider": "box"
+  },
+  "brick": {
+   "path": "clutter/brick.glb",
+   "size_m": [
+    0.215,
+    0.065,
+    0.102
+   ],
+   "tris": 12,
+   "physics": "dynamic",
+   "mass_kg": 2.3,
+   "collider": "box"
+  },
+  "brick_pile": {
+   "path": "clutter/brick_pile.glb",
+   "size_m": [
+    0.924,
+    0.309,
+    0.795
+   ],
+   "tris": 312,
+   "physics": "static",
+   "mass_kg": null,
+   "collider": "mesh"
+  },
+  "rubble_pile_small": {
+   "path": "clutter/rubble_pile_small.glb",
+   "size_m": [
+    1.415,
+    0.249,
+    1.071
+   ],
+   "tris": 800,
+   "physics": "static",
+   "mass_kg": null,
+   "collider": "mesh"
+  },
+  "rubble_pile_large": {
+   "path": "clutter/rubble_pile_large.glb",
+   "size_m": [
+    4.162,
+    0.518,
+    4.456
+   ],
+   "tris": 2400,
+   "physics": "static",
+   "mass_kg": null,
+   "collider": "mesh"
+  },
+  "rag_a": {
+   "path": "clutter/rag_a.glb",
+   "size_m": [
+    0.548,
+    0.057,
+    0.445
+   ],
+   "tris": 1440,
+   "physics": "static",
+   "mass_kg": null,
+   "collider": "box"
+  },
+  "rag_b": {
+   "path": "clutter/rag_b.glb",
+   "size_m": [
+    0.793,
+    0.091,
+    0.496
+   ],
+   "tris": 1440,
+   "physics": "static",
+   "mass_kg": null,
+   "collider": "box"
+  },
+  "newspaper_sheet_a": {
+   "path": "clutter/newspaper_sheet_a.glb",
+   "size_m": [
+    0.575,
+    0.021,
+    0.397
+   ],
+   "tris": 1440,
+   "physics": "static",
+   "mass_kg": null,
+   "collider": "box"
+  },
+  "newspaper_sheet_b": {
+   "path": "clutter/newspaper_sheet_b.glb",
+   "size_m": [
+    0.397,
+    0.043,
+    0.289
+   ],
+   "tris": 1440,
+   "physics": "static",
+   "mass_kg": null,
+   "collider": "box"
+  },
+  "newspaper_stack": {
+   "path": "clutter/newspaper_stack.glb",
+   "size_m": [
+    0.428,
+    0.061,
+    0.326
+   ],
+   "tris": 192,
+   "physics": "dynamic",
+   "mass_kg": 3,
+   "collider": "box"
+  },
+  "cardboard_box_small": {
+   "path": "clutter/cardboard_box_small.glb",
+   "size_m": [
+    0.4,
+    0.25,
+    0.3
+   ],
+   "tris": 12,
+   "physics": "dynamic",
+   "mass_kg": 0.6,
+   "collider": "box"
+  },
+  "cardboard_box_large": {
+   "path": "clutter/cardboard_box_large.glb",
+   "size_m": [
+    0.6,
+    0.4,
+    0.4
+   ],
+   "tris": 12,
+   "physics": "dynamic",
+   "mass_kg": 1.2,
+   "collider": "box"
+  },
+  "cardboard_box_crushed": {
+   "path": "clutter/cardboard_box_crushed.glb",
+   "size_m": [
+    0.5,
+    0.312,
+    0.4
+   ],
+   "tris": 12,
+   "physics": "dynamic",
+   "mass_kg": 0.8,
+   "collider": "box"
+  },
+  "cardboard_box_open": {
+   "path": "clutter/cardboard_box_open.glb",
+   "size_m": [
+    0.45,
+    0.446,
+    0.415
+   ],
+   "tris": 36,
+   "physics": "dynamic",
+   "mass_kg": 0.7,
+   "collider": "box"
+  },
+  "cardboard_flattened": {
+   "path": "clutter/cardboard_flattened.glb",
+   "size_m": [
+    1.169,
+    0.006,
+    0.856
+   ],
+   "tris": 12,
+   "physics": "dynamic",
+   "mass_kg": 0.4,
+   "collider": "box"
+  },
+  "planks_scrap_pile": {
+   "path": "clutter/planks_scrap_pile.glb",
+   "size_m": [
+    1.779,
+    0.102,
+    1.026
+   ],
+   "tris": 60,
+   "physics": "static",
+   "mass_kg": null,
+   "collider": "mesh"
+  }
+ },
+ "polyhaven": {
+  "wooden_crate_01": {
+   "path": "wooden_crate_01/wooden_crate_01.gltf",
+   "physics": "dynamic",
+   "mass_kg": 18,
+   "collider": "box"
+  },
+  "wooden_crate_02": {
+   "path": "wooden_crate_02/wooden_crate_02.gltf",
+   "physics": "dynamic",
+   "mass_kg": 25,
+   "collider": "box"
+  },
+  "cardboard_box_01": {
+   "path": "cardboard_box_01/cardboard_box_01.gltf",
+   "physics": "dynamic",
+   "mass_kg": 1.0,
+   "collider": "box"
+  },
+  "plastic_crate_01": {
+   "path": "plastic_crate_01/plastic_crate_01.gltf",
+   "physics": "dynamic",
+   "mass_kg": 1.2,
+   "collider": "box"
+  },
+  "plastic_crate_02": {
+   "path": "plastic_crate_02/plastic_crate_02.gltf",
+   "physics": "dynamic",
+   "mass_kg": 1.8,
+   "collider": "box"
+  },
+  "plastic_crate_03": {
+   "path": "plastic_crate_03/plastic_crate_03.gltf",
+   "physics": "dynamic",
+   "mass_kg": 1.5,
+   "collider": "box"
+  },
+  "ammo_box": {
+   "path": "ammo_box/ammo_box.gltf",
+   "physics": "dynamic",
+   "mass_kg": 4,
+   "collider": "box"
+  },
+  "can_rusted": {
+   "path": "can_rusted/can_rusted.gltf",
+   "physics": "dynamic",
+   "mass_kg": 0.3,
+   "collider": "cylinder"
+  },
+  "russian_food_cans_01": {
+   "path": "russian_food_cans_01/russian_food_cans_01.gltf",
+   "physics": "dynamic",
+   "mass_kg": 0.9,
+   "collider": "box"
+  },
+  "wine_bottles_01": {
+   "path": "wine_bottles_01/wine_bottles_01.gltf",
+   "physics": "dynamic",
+   "mass_kg": 2.4,
+   "collider": "box"
+  },
+  "plastic_bottle_gallon": {
+   "path": "plastic_bottle_gallon/plastic_bottle_gallon.gltf",
+   "physics": "dynamic",
+   "mass_kg": 0.2,
+   "collider": "box"
+  },
+  "metal_jerrycan": {
+   "path": "metal_jerrycan/metal_jerrycan.gltf",
+   "physics": "dynamic",
+   "mass_kg": 4,
+   "collider": "box"
+  },
+  "metal_jerrycan_green": {
+   "path": "metal_jerrycan_green/metal_jerrycan_green.gltf",
+   "physics": "dynamic",
+   "mass_kg": 4,
+   "collider": "box"
+  },
+  "plastic_jerrycan": {
+   "path": "plastic_jerrycan/plastic_jerrycan.gltf",
+   "physics": "dynamic",
+   "mass_kg": 1.5,
+   "collider": "box"
+  },
+  "wooden_bucket_01": {
+   "path": "wooden_bucket_01/wooden_bucket_01.gltf",
+   "physics": "dynamic",
+   "mass_kg": 2,
+   "collider": "cylinder"
+  },
+  "wooden_bucket_02": {
+   "path": "wooden_bucket_02/wooden_bucket_02.gltf",
+   "physics": "dynamic",
+   "mass_kg": 3,
+   "collider": "cylinder"
+  },
+  "old_tyre": {
+   "path": "old_tyre/old_tyre.gltf",
+   "physics": "dynamic",
+   "mass_kg": 9,
+   "collider": "cylinder"
+  },
+  "trashbag": {
+   "path": "trashbag/trashbag.gltf",
+   "physics": "dynamic",
+   "mass_kg": 4,
+   "collider": "box"
+  },
+  "oil_tin": {
+   "path": "oil_tin/oil_tin.gltf",
+   "physics": "dynamic",
+   "mass_kg": 0.6,
+   "collider": "box"
+  },
+  "propane_tank": {
+   "path": "propane_tank/propane_tank.gltf",
+   "physics": "dynamic",
+   "mass_kg": 15,
+   "collider": "cylinder"
+  },
+  "small_lpg_tank": {
+   "path": "small_lpg_tank/small_lpg_tank.gltf",
+   "physics": "dynamic",
+   "mass_kg": 12,
+   "collider": "cylinder"
+  },
+  "Barrel_01": {
+   "path": "Barrel_01/Barrel_01.gltf",
+   "physics": "dynamic",
+   "mass_kg": 25,
+   "collider": "cylinder"
+  },
+  "Barrel_02": {
+   "path": "Barrel_02/Barrel_02.gltf",
+   "physics": "dynamic",
+   "mass_kg": 22,
+   "collider": "cylinder"
+  },
+  "barrel_03": {
+   "path": "barrel_03/barrel_03.gltf",
+   "physics": "dynamic",
+   "mass_kg": 28,
+   "collider": "cylinder"
+  },
+  "metal_toolbox": {
+   "path": "metal_toolbox/metal_toolbox.gltf",
+   "physics": "dynamic",
+   "mass_kg": 6,
+   "collider": "box"
+  },
+  "medical_box": {
+   "path": "medical_box/medical_box.gltf",
+   "physics": "dynamic",
+   "mass_kg": 1.5,
+   "collider": "box"
+  },
+  "long_life_food": {
+   "path": "long_life_food/long_life_food.gltf",
+   "physics": "dynamic",
+   "mass_kg": 2,
+   "collider": "box"
+  },
+  "multi_cleaner_5_litre": {
+   "path": "multi_cleaner_5_litre/multi_cleaner_5_litre.gltf",
+   "physics": "dynamic",
+   "mass_kg": 5,
+   "collider": "box"
+  },
+  "bleach_bottle": {
+   "path": "bleach_bottle/bleach_bottle.gltf",
+   "physics": "dynamic",
+   "mass_kg": 1,
+   "collider": "box"
+  },
+  "cleaner_tin_01": {
+   "path": "cleaner_tin_01/cleaner_tin_01.gltf",
+   "physics": "dynamic",
+   "mass_kg": 0.4,
+   "collider": "cylinder"
+  },
+  "cigarette_pack": {
+   "path": "cigarette_pack/cigarette_pack.gltf",
+   "physics": "dynamic",
+   "mass_kg": 0.05,
+   "collider": "box"
+  },
+  "binder_notebook": {
+   "path": "binder_notebook/binder_notebook.gltf",
+   "physics": "dynamic",
+   "mass_kg": 0.6,
+   "collider": "box"
+  },
+  "clipboard": {
+   "path": "clipboard/clipboard.gltf",
+   "physics": "dynamic",
+   "mass_kg": 0.3,
+   "collider": "box"
+  },
+  "dustpan": {
+   "path": "dustpan/dustpan.gltf",
+   "physics": "dynamic",
+   "mass_kg": 0.4,
+   "collider": "box"
+  },
+  "metal_stool_02": {
+   "path": "metal_stool_02/metal_stool_02.gltf",
+   "physics": "dynamic",
+   "mass_kg": 4,
+   "collider": "box"
+  },
+  "folding_wooden_stool": {
+   "path": "folding_wooden_stool/folding_wooden_stool.gltf",
+   "physics": "dynamic",
+   "mass_kg": 3,
+   "collider": "box"
+  },
+  "television_02": {
+   "path": "television_02/television_02.gltf",
+   "physics": "dynamic",
+   "mass_kg": 12,
+   "collider": "box"
+  },
+  "pot_enamel_01": {
+   "path": "pot_enamel_01/pot_enamel_01.gltf",
+   "physics": "dynamic",
+   "mass_kg": 0.8,
+   "collider": "cylinder"
+  },
+  "wicker_basket_02": {
+   "path": "wicker_basket_02/wicker_basket_02.gltf",
+   "physics": "dynamic",
+   "mass_kg": 0.8,
+   "collider": "box"
+  },
+  "cement_bag": {
+   "path": "cement_bag/cement_bag.gltf",
+   "physics": "dynamic",
+   "mass_kg": 25,
+   "collider": "box"
+  },
+  "compost_bag_02": {
+   "path": "compost_bag_02/compost_bag_02.gltf",
+   "physics": "dynamic",
+   "mass_kg": 15,
+   "collider": "box"
+  },
+  "industrial_pastic_container": {
+   "path": "industrial_pastic_container/industrial_pastic_container.gltf",
+   "physics": "dynamic",
+   "mass_kg": 3,
+   "collider": "box"
+  }
+ }
+}

@@ -142,3 +142,39 @@ Each folder is a glTF 2.0 file (`<name>.gltf` + `.bin` + `textures/`, 1K PBR tex
 | `old_gas_mask` | Old Gas Mask | Michał Wiśniewski | props, industrial, tools | https://polyhaven.com/a/old_gas_mask |
 | `shrub_01` | Shrub 01 | Rico Cilliers | nature, plants, ground cover, flowers | https://polyhaven.com/a/shrub_01 |
 | `shrub_04` | Shrub 04 | Rico Cilliers | nature, plants, ground cover | https://polyhaven.com/a/shrub_04 |
+| `plastic_crate_01` | Plastic Crate 01 | PierreB3D | props, containers | https://polyhaven.com/a/plastic_crate_01 |
+| `plastic_crate_02` | Plastic Crate 02 | Fabi_G | props, containers | https://polyhaven.com/a/plastic_crate_02 |
+| `plastic_crate_03` | Plastic Crate 03 | Pacific Penguin | containers, industrial | https://polyhaven.com/a/plastic_crate_03 |
+| `russian_food_cans_01` | Russian Food Cans 01 | Kosan Aziz | containers, props, food | https://polyhaven.com/a/russian_food_cans_01 |
+| `wine_bottles_01` | Wine Bottles 01 | Rico Cilliers, Jurita Burger | props, containers, dishes | https://polyhaven.com/a/wine_bottles_01 |
+| `plastic_bottle_gallon` | Plastic Bottle Gallon | Rahul Chaudhary | containers | https://polyhaven.com/a/plastic_bottle_gallon |
+| `compost_bag_02` | Compost Bag 02 | Satyaki Mandal | containers, industrial | https://polyhaven.com/a/compost_bag_02 |
+| `rubber_boots` | Rubber Boots | L | props | https://polyhaven.com/a/rubber_boots |
+| `metal_toolbox` | Metal Toolbox | Mateusz Sadek | containers, tools, industrial | https://polyhaven.com/a/metal_toolbox |
+| `medical_box` | Medical Box | Ulan Cabanilla | props, containers | https://polyhaven.com/a/medical_box |
+| `long_life_food` | Long Life Food | Mia Pecina Zorko | food, containers, props | https://polyhaven.com/a/long_life_food |
+| `industrial_pastic_container` | Industrial Plastic Container | Galo Benivegna | containers, office, industrial | https://polyhaven.com/a/industrial_pastic_container |
+| `plastic_container` | Plastic Container | PierreB3D | props, containers | https://polyhaven.com/a/plastic_container |
+| `multi_cleaner_5_litre` | Multi Cleaner 5 Litre | James Ray Cock | props, containers, industrial | https://polyhaven.com/a/multi_cleaner_5_litre |
+| `bleach_bottle` | Bleach Bottle | James Ray Cock | props, containers | https://polyhaven.com/a/bleach_bottle |
+| `cleaner_tin_01` | Cleaner Tin 01 | Tom Phillips | containers, tools, industrial | https://polyhaven.com/a/cleaner_tin_01 |
+| `cigarette_pack` | Cigarette Pack | Ulrich Büch | containers, props | https://polyhaven.com/a/cigarette_pack |
+| `office_notepads` | Office Notepads | Ulan Cabanilla | props, office | https://polyhaven.com/a/office_notepads |
+| `binder_notebook` | Binder Notebook | DaDrood | books, props | https://polyhaven.com/a/binder_notebook |
+| `clipboard` | Clipboard | ProgrammerOnCoffee | office, props | https://polyhaven.com/a/clipboard |
+| `dustpan` | Dustpan | Balen | props, tools | https://polyhaven.com/a/dustpan |
+| `garden_gloves_01` | Garden Gloves 01 | Satyaki Mandal | props | https://polyhaven.com/a/garden_gloves_01 |
+| `wooden_ladder_02` | Wooden Ladder 02 | JN_3DPRINTINGNERD | tools | https://polyhaven.com/a/wooden_ladder_02 |
+| `worn_metal_rack` | Worn Metal Rack | Luca B | furniture, shelves, industrial | https://polyhaven.com/a/worn_metal_rack |
+| `wine_barrel_01` | Wine Barrel 01 | James Ray Cock | containers | https://polyhaven.com/a/wine_barrel_01 |
+| `metal_stool_02` | Metal Stool 02 | Ulan Cabanilla | furniture, seating | https://polyhaven.com/a/metal_stool_02 |
+| `folding_wooden_stool` | Folding Wooden Stool | Ulan Cabanilla | seating, furniture | https://polyhaven.com/a/folding_wooden_stool |
+| `wooden_bookshelf_worn` | Wooden Bookshelf Worn | Ulan Cabanilla | furniture, shelves | https://polyhaven.com/a/wooden_bookshelf_worn |
+| `vintage_suitcase` | Vintage Suitcase | Maximilian Schuster | decorative, props | https://polyhaven.com/a/vintage_suitcase |
+| `television_02` | Television 02 | Benny Weimer | electronics | https://polyhaven.com/a/television_02 |
+| `pot_enamel_01` | Pot Enamel 01 | Kuutti Siitonen | props, decorative, dishes | https://polyhaven.com/a/pot_enamel_01 |
+| `wicker_basket_02` | Wicker Basket 02 | Kuutti Siitonen | containers, decorative | https://polyhaven.com/a/wicker_basket_02 |
+
+## Generated clutter (`clutter/`)
+
+`clutter/*.glb` (pallets, cinder blocks, bricks, rubble piles, rags, newspapers, cardboard boxes, scrap planks): modelled for this project by `clutter/source/clutter.py`, **CC0 1.0**. Textures: Poly Haven CC0 scans `rough_wood`, `red_brick`, `concrete_wall_007`, `concrete_debris`, `rusty_metal_02`, `hessian_230`, `rubble` (polyhaven.com); cardboard and newspaper textures are procedural (no real print).
