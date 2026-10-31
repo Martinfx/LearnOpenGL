@@ -240,6 +240,11 @@ výšková mlha se září ke slunci, bloom, ACES, barevné ladění (saturace, 
   okraj nebo se pohne slunce), kreslí LOD a vynechávají malé vrhače. *Details > Rendering > Shadows: Cast
   shadows* (v levelu `  cast_shadows 0`) vypne stín modelu, např. trávě; u vegetace poslední pole
   `foliage_type`. Alpha-test textury (MASK) mají mipmapy zachovávající pokrytí, tráva v dálce nemizí.
+- **Velké levely:** modely jsou v prostorové mřížce (32m buňky), culling testuje nejdřív buňky.
+  Occlusion culling přeskočí, co je schované za bližší geometrií (zmenšená hloubka z předchozího snímku,
+  čtená bez čekání na GPU). Nízké detaily s cull distance a bez kolize (tráva, plevel) ke konci
+  dosahu řídnou a stín vrhají jen zblízka. Presety Low/Medium zkracují LOD vzdálenosti.
+- **Build:** bez `-DCMAKE_BUILD_TYPE` se překládá Release; debug build je pro velké levely 10–50× pomalejší.
 - **Profilování:** dok *Frame* v editoru ukazuje CPU a GPU čas (timer queries) každého průchodu, draw
   cally, trojúhelníky a instancing; přepínače instancingu a cache stínů pro porovnání. Ve hře
   `FPS_ENGINE_STATS=1` vypisuje totéž do konzole.

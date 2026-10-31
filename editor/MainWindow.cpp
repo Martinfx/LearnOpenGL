@@ -1363,6 +1363,10 @@ void MainWindow::buildDocks()
     shadowCacheCheck->setChecked(viewport_->quality().shadowCache);
     frameOptions->addWidget(instancingCheck);
     frameOptions->addWidget(shadowCacheCheck);
+    auto* occlusionCheck = new QCheckBox(tr("Occlusion culling"), framePanel);
+    occlusionCheck->setToolTip(tr("Skip objects hidden behind nearer ones (depth of a recent frame, read back without stalls)"));
+    occlusionCheck->setChecked(viewport_->quality().occlusionCulling);
+    frameOptions->addWidget(occlusionCheck);
     frameOptions->addStretch();
     frameLayout->addLayout(frameOptions);
     auto* frameLabel = new QLabel(framePanel);
@@ -1370,14 +1374,16 @@ void MainWindow::buildDocks()
     frameLabel->setAlignment(Qt::AlignTop | Qt::AlignLeft);
     frameLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
     frameLayout->addWidget(frameLabel, 1);
-    auto applyFrameOption = [this, instancingCheck, shadowCacheCheck] {
+    auto applyFrameOption = [this, instancingCheck, shadowCacheCheck, occlusionCheck] {
         engine::RenderQuality q = viewport_->quality();
+        q.occlusionCulling = occlusionCheck->isChecked();
         q.instancing = instancingCheck->isChecked();
         q.shadowCache = shadowCacheCheck->isChecked();
         viewport_->setQuality(q);
     };
     connect(instancingCheck, &QCheckBox::toggled, this, applyFrameOption);
     connect(shadowCacheCheck, &QCheckBox::toggled, this, applyFrameOption);
+    connect(occlusionCheck, &QCheckBox::toggled, this, applyFrameOption);
     auto* frameScroll = new QScrollArea(this);
     frameScroll->setWidget(framePanel);
     frameScroll->setWidgetResizable(true);
@@ -1405,11 +1411,12 @@ void MainWindow::buildDocks()
                         .arg(QString::fromUtf8(engine::Renderer::passName(p)), ms(f.cpuMs[p]), f.gpuValid ? ms(f.gpuMs[p]) : QStringLiteral("-"));
         html += QString("<tr><td><b>%1</b></td><td align='right'><b>%2</b></td><td align='right'><b>%3</b></td></tr></table>")
                     .arg(tr("Total"), ms(f.cpuTotalMs), f.gpuValid ? ms(f.gpuTotalMs) : QStringLiteral("-"));
-        html += tr("<p>%1 draw calls, %2 triangles, %3 objects instanced, %4 culled, %5 GPU uploads</p>")
+        html += tr("<p>%1 draw calls, %2 triangles, %3 objects instanced, %4 culled, %5 hidden by occlusion, %6 GPU uploads</p>")
                     .arg(f.drawCalls)
                     .arg(QLocale().toString(f.triangles))
                     .arg(f.instanced)
                     .arg(f.culled)
+                    .arg(f.occluded)
                     .arg(f.uploads);
         if (!f.gpuValid)
             html += tr("<p>GPU timer queries are not available on this driver.</p>");

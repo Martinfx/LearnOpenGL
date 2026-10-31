@@ -94,6 +94,9 @@ struct RenderQuality {
     float detailDensityFar = 0.2f;
     float detailShadowDistance = 15.0f;
     float lodScale = 1.0f;          // multiplies every model's LOD distance
+    // Occlusion culling: objects hidden behind nearer geometry in a recent frame's depth
+    // (read back asynchronously, small screen copy) are skipped in the depth and main passes.
+    bool occlusionCulling = true;
 
     static RenderQuality preset(int level); // 0 low, 1 medium, 2 high, 3 ultra
 };
@@ -150,7 +153,8 @@ public:
         double cpuTotalMs = 0.0, gpuTotalMs = 0.0;
         int drawCalls = 0, instanced = 0, culled = 0;
         long long triangles = 0;
-        int uploads = 0;         // meshes and textures sent to the GPU (should be ~0 when standing still)
+        int uploads = 0;
+        int occluded = 0;        // hidden behind nearer geometry (main pass)         // meshes and textures sent to the GPU (should be ~0 when standing still)
         bool gpuValid = false;   // timer queries available on this driver
     };
     const FrameStats& frameStats() const { return stats_; }
@@ -198,7 +202,7 @@ private:
         int loc(const char* name) const;
     };
     struct Programs {
-        Program mesh, depth, sky, envCapture, prefilter, brdf, ssao, blur, bloomDown, bloomUp, post, fxaa, copy, grid;
+        Program mesh, depth, sky, envCapture, prefilter, brdf, ssao, blur, bloomDown, bloomUp, post, fxaa, copy, grid, hiz;
     };
     // Uniform locations of the program that draws geometry right now.
     struct MeshLocations {
@@ -254,6 +258,31 @@ private:
         int rebuilds = 0;
     };
     ModelGrid grid_;
+    // Occlusion culling (CPU test against a small max-depth copy read back without stalls).
+    struct OcclusionReadback {
+        unsigned pbo = 0;
+        void* fence = nullptr;     // GLsync
+        glm::mat4 viewProj{1.0f};
+        glm::vec3 eye{0.0f};
+    };
+    struct Occlusion {
+        unsigned fbo = 0, tex = 0;
+        int width = 0, height = 0;
+        std::array<OcclusionReadback, 3> ring{};
+        int next = 0;
+        std::vector<float> depth;  // latest finished copy, row 0 = bottom
+        glm::mat4 viewProj{1.0f};
+        glm::vec3 eye{0.0f};
+        bool valid = false;
+        bool testing = false;      // this pass uses it
+        float inflate = 0.0f;      // box growth for camera movement since the copy
+        int hidden = 0;            // objects skipped this frame
+    } occ_;
+    int lastOccluded_ = 0;
+    void captureOcclusion(const RenderView& view);
+    void pollOcclusion();
+    void releaseOcclusion();
+    bool occluded(const Aabb& box) const;
     void updateModelGrid(const Scene& scene);
     void keepTextureAlive(const Texture* tex);
     void updateStreaming();
@@ -381,6 +410,7 @@ public:
     int lastCulled() const { return culled_; } // objects skipped by frustum culling in the last render()
     int lastDrawCalls() const { return lastDrawCalls_; } // geometry draw calls of the last render(), all passes
     int lastInstanced() const { return lastInstanced_; } // model copies drawn through instancing (main pass)
+    int lastOccluded() const { return lastOccluded_; }   // objects skipped by occlusion culling (main pass)
 };
 
 } // namespace engine

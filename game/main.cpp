@@ -202,9 +202,11 @@ int main(int argc, char** argv)
         glfwTerminate();
         return 1;
     }
-    if (std::getenv("FPS_ENGINE_NO_INSTANCING")) { // for comparing (FPS_ENGINE_STATS=1)
+    // For comparing optimisations (with FPS_ENGINE_STATS=1).
+    if (std::getenv("FPS_ENGINE_NO_INSTANCING") || std::getenv("FPS_ENGINE_NO_OCCLUSION")) {
         engine::RenderQuality q = renderer.quality();
-        q.instancing = false;
+        q.instancing = !std::getenv("FPS_ENGINE_NO_INSTANCING");
+        q.occlusionCulling = !std::getenv("FPS_ENGINE_NO_OCCLUSION");
         renderer.setQuality(q);
     }
     std::printf("%s\n", renderer.glInfo().c_str());
@@ -554,8 +556,8 @@ int main(int argc, char** argv)
             // FPS_ENGINE_STATS=1 prints frame statistics (profiling, comparing optimizations).
             if (std::getenv("FPS_ENGINE_STATS")) {
                 const engine::Renderer::FrameStats& st = renderer.frameStats();
-                std::printf("stats: %.1f FPS, %.2f ms | %d draws, %lld tris, %d instanced, %d culled, %d uploads | CPU %.2f ms, GPU %.2f ms |",
-                            fpsFrames / fpsTimer, 1000.0 * fpsTimer / fpsFrames, st.drawCalls, st.triangles, st.instanced, st.culled, st.uploads,
+                std::printf("stats: %.1f FPS, %.2f ms | %d draws, %lld tris, %d instanced, %d culled, %d occluded, %d uploads | CPU %.2f ms, GPU %.2f ms |",
+                            fpsFrames / fpsTimer, 1000.0 * fpsTimer / fpsFrames, st.drawCalls, st.triangles, st.instanced, st.culled, st.occluded, st.uploads,
                             st.cpuTotalMs, st.gpuTotalMs);
                 for (int p = 0; p < engine::Renderer::PassCount; ++p)
                     std::printf(" %s %.2f/%.2f", engine::Renderer::passName(p), st.cpuMs[p], st.gpuMs[p]);

@@ -69,7 +69,11 @@ Podrobně ve výkonové roadmapě vlákna "Vytvořit 3D FPS engine"; tady jen sh
 - [ ] `glMultiDrawElementsIndirect`, setřídění podle materiálu
 - [x] Cache stínů vzdálených kaskád (2./4. snímek), LOD a vyřazení malých vrhačů ve vzdálených kaskádách, přepínač „Cast shadows“ u modelů a vegetace (hospital_street: stíny 236 → 93 ms GPU, snímek 621 → 510 ms na llvmpipe)
 - [x] Alpha mipmapy zachovávající pokrytí pro MASK (tráva a listí nemizí v dálce)
-- [ ] Occlusion culling (Hi-Z z depth pre-passu)
+- [x] Prostorová mřížka modelů (32m buňky se sjednocenými hranicemi, culling po buňkách), řídnutí trávy podle vzdálenosti, stíny detailů jen zblízka, lodScale v presetech (Skrunda-1: 7,9 → 4,4 M trojúhelníků)
+- [x] Release jako výchozí build type (build bez optimalizací je 10–50× pomalejší)
+- [x] Occlusion culling: max-depth kopie depth pre-passu (160 px), asynchronní readback přes PBO + fence, CPU test buněk a modelů; přepínač v doku Frame, `FPS_ENGINE_NO_OCCLUSION=1`
+- [ ] Víc LOD úrovní na model (`lod` víckrát), impostory pro vzdálené stromy
+- [ ] Data entit a modelů v souvislých polích (ECS-like: transformace, hranice a flagy v SoA), paralelní update přes JobSystem
 - [ ] Snímek jako graf úloh v JobSystemu (animace, culling, skripty paralelně), pak render vlákno
 
 Hotovo, když: zóna (`zone.level`) běží na střední kartě nad 60 FPS na High, editor ukazuje čas snímku a paměť, žádné záseky při chůzi.

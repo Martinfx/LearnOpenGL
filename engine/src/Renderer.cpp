@@ -317,7 +317,7 @@ bool Renderer::buildPrograms(const std::map<std::string, std::string>& src, Prog
                              {&p.bloomDown, "fullscreen.vert", "bloom_down.frag"},
                              {&p.bloomUp, "fullscreen.vert", "bloom_up.frag"}, {&p.post, "fullscreen.vert", "post.frag"},
                              {&p.fxaa, "fullscreen.vert", "fxaa.frag"},   {&p.copy, "fullscreen.vert", "copy.frag"},
-                             {&p.grid, "fullscreen.vert", "grid.frag"}};
+                             {&p.grid, "fullscreen.vert", "grid.frag"}, {&p.hiz, "fullscreen.vert", "hiz.frag"}};
     for (const Entry& e : entries) {
         e.program->id = linkProgram(src, e.vert, e.frag, error);
         e.program->locations.clear();
@@ -332,7 +332,7 @@ bool Renderer::buildPrograms(const std::map<std::string, std::string>& src, Prog
 void Renderer::destroyPrograms(Programs& p)
 {
     for (Program* program : {&p.mesh, &p.depth, &p.sky, &p.envCapture, &p.prefilter, &p.brdf, &p.ssao, &p.blur, &p.bloomDown,
-                             &p.bloomUp, &p.post, &p.fxaa, &p.copy, &p.grid}) {
+                             &p.bloomUp, &p.post, &p.fxaa, &p.copy, &p.grid, &p.hiz}) {
         if (program->id)
             glDeleteProgram(program->id);
         program->id = 0;
@@ -467,6 +467,7 @@ bool Renderer::init(GlLoader loader, std::string* error)
 
 void Renderer::shutdown()
 {
+    releaseOcclusion();
     for (auto& [id, m] : meshes_) {
         glDeleteVertexArrays(1, &m.vao);
         glDeleteBuffers(1, &m.vbo);
@@ -833,7 +834,7 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         const float cellDistance = distanceTo(view.cameraPosition, cell.bounds);
         const bool cellFar = cell.maxCull > 0.0f && cellDistance > cell.maxCull;
         const bool cellTiny = shadowMinCaster_ > 0.0f && cell.maxDiagonal < shadowMinCaster_;
-        if (cellFar || cellTiny || !visible(cell.bounds)) {
+        if (cellFar || cellTiny || !visible(cell.bounds) || occluded(cell.bounds)) {
             if (mainPass)
                 for (std::uint32_t i : cell.models) {
                     keepAliveOnce(scene.models[i]); // stays uploaded while out of view
@@ -856,7 +857,7 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
             const float keep = 1.0f - (1.0f - quality_.detailDensityFar) * glm::smoothstep(0.3f, 1.0f, d);
             skip = grid.random[i] > keep || (shadowPass && (shadowCascade_ > 0 || drawDistance_ > quality_.detailShadowDistance));
         }
-        if (skip || !visible(modelBounds)) {
+        if (skip || !visible(modelBounds) || occluded(modelBounds)) {
             if (mainPass) {
                 keepAliveOnce(model);
                 if (model.lod)
@@ -1024,6 +1025,7 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     building_.culled = culled_;
     building_.triangles = triangles_;
     building_.uploads = uploads_;
+    building_.occluded = lastOccluded_;
     uploads_ = 0;
     collectQueries(); // finishes building_ into stats_ and starts the next frame
     drawCalls_ = 0;
@@ -1042,6 +1044,7 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     time_ = view.time;
     keptAlive_.clear();
     updateModelGrid(scene);
+    pollOcclusion();
     view_ = view.view;
     projection_ = view.projection;
     ensureTargets(std::max(1, view.viewportWidth), std::max(1, view.viewportHeight));
@@ -1067,9 +1070,15 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     glUniformMatrix4fv(loc_.viewProj, 1, GL_FALSE, glm::value_ptr(viewProj));
     glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
     beginPass(PassDepth);
+    occ_.testing = occ_.valid && quality_.occlusionCulling && view.shading != Shading::Wireframe &&
+                   glm::distance(occ_.eye, view.cameraPosition) < 3.0f;
+    // Occlusion depends on where the eye is, not where it looks: grow boxes by the distance moved.
+    occ_.inflate = glm::distance(occ_.eye, view.cameraPosition) + 0.05f;
     drawGeometry(scene, view, true, viewProj);
     endPass();
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    if (quality_.occlusionCulling)
+        captureOcclusion(view);
 
     if (quality_.ssao) {
         beginPass(PassSsao);
@@ -1105,7 +1114,10 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     transparent_.clear();
     collectTransparent_ = !wireframe; // wireframe draws glass edges like everything else
     beginPass(PassOpaque);
+    occ_.hidden = 0;
     drawGeometry(scene, view, false, viewProj);
+    lastOccluded_ = occ_.hidden;
+    occ_.testing = false;
     collectTransparent_ = false;
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glEnable(GL_CULL_FACE);
@@ -1655,6 +1667,8 @@ void Renderer::collectQueries()
     stats_.instanced = building_.instanced;
     stats_.culled = building_.culled;
     stats_.triangles = building_.triangles;
+    stats_.uploads = building_.uploads;
+    stats_.occluded = building_.occluded;
     stats_.cpuTotalMs = 0.0;
     for (int p = 0; p < PassCount; ++p) {
         stats_.cpuMs[p] = building_.cpuMs[p];
@@ -2331,6 +2345,131 @@ void Renderer::releaseUnused()
             ++it;
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// Occlusion culling. After the depth pre-pass a small copy of the depth buffer
+// (farthest depth per block) is read back through a pixel buffer with a fence; a
+// frame or two later the CPU tests boxes against it in the view it was taken from.
+// Occlusion only depends on the eye position, so turning is safe; boxes grow by the
+// distance the eye moved since, and the test is off after a jump.
+
+void Renderer::captureOcclusion(const RenderView& view)
+{
+    const int w = 160, h = std::max(1, static_cast<int>(std::lround(160.0 * height_ / std::max(1, width_))));
+    if (occ_.width != w || occ_.height != h || !occ_.tex) {
+        releaseOcclusion();
+        glCreateTextures(GL_TEXTURE_2D, 1, &occ_.tex);
+        glTextureStorage2D(occ_.tex, 1, GL_R32F, w, h);
+        glCreateFramebuffers(1, &occ_.fbo);
+        glNamedFramebufferTexture(occ_.fbo, GL_COLOR_ATTACHMENT0, occ_.tex, 0);
+        for (OcclusionReadback& r : occ_.ring) {
+            glCreateBuffers(1, &r.pbo);
+            glNamedBufferStorage(r.pbo, static_cast<GLsizeiptr>(w) * h * sizeof(float), nullptr, GL_CLIENT_STORAGE_BIT);
+        }
+        occ_.width = w;
+        occ_.height = h;
+    }
+    OcclusionReadback& r = occ_.ring[static_cast<std::size_t>(occ_.next)];
+    if (r.fence)
+        return; // still in flight (GPU far behind): skip this frame's copy
+    glBindFramebuffer(GL_FRAMEBUFFER, occ_.fbo);
+    glViewport(0, 0, w, h);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
+    glUseProgram(programs_.hiz.id);
+    glUniform2i(programs_.hiz.loc("uSrcSize"), width_, height_);
+    glUniform2i(programs_.hiz.loc("uDstSize"), w, h);
+    glBindTextureUnit(0, depthTex_);
+    glBindVertexArray(emptyVao_);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, r.pbo);
+    glReadBuffer(GL_COLOR_ATTACHMENT0);
+    glReadPixels(0, 0, w, h, GL_RED, GL_FLOAT, nullptr);
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+    r.fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+    r.viewProj = view.projection * view.view;
+    r.eye = view.cameraPosition;
+    occ_.next = (occ_.next + 1) % static_cast<int>(occ_.ring.size());
+    glEnable(GL_DEPTH_TEST);
+    glBindFramebuffer(GL_FRAMEBUFFER, hdrFbo_);
+    glViewport(0, 0, width_, height_);
+}
+
+void Renderer::pollOcclusion()
+{
+    // Newest finished copy wins; nothing waits for the GPU.
+    for (int k = 0; k < static_cast<int>(occ_.ring.size()); ++k) {
+        OcclusionReadback& r = occ_.ring[static_cast<std::size_t>((occ_.next + k) % static_cast<int>(occ_.ring.size()))];
+        if (!r.fence)
+            continue;
+        const GLenum status = glClientWaitSync(static_cast<GLsync>(r.fence), 0, 0);
+        if (status != GL_ALREADY_SIGNALED && status != GL_CONDITION_SATISFIED)
+            continue;
+        glDeleteSync(static_cast<GLsync>(r.fence));
+        r.fence = nullptr;
+        occ_.depth.resize(static_cast<std::size_t>(occ_.width) * occ_.height);
+        glGetNamedBufferSubData(r.pbo, 0, static_cast<GLsizeiptr>(occ_.depth.size() * sizeof(float)), occ_.depth.data());
+        occ_.viewProj = r.viewProj;
+        occ_.eye = r.eye;
+        occ_.valid = true;
+    }
+}
+
+void Renderer::releaseOcclusion()
+{
+    for (OcclusionReadback& r : occ_.ring) {
+        if (r.fence)
+            glDeleteSync(static_cast<GLsync>(r.fence));
+        if (r.pbo)
+            glDeleteBuffers(1, &r.pbo);
+        r = {};
+    }
+    if (occ_.fbo)
+        glDeleteFramebuffers(1, &occ_.fbo);
+    if (occ_.tex)
+        glDeleteTextures(1, &occ_.tex);
+    occ_.fbo = occ_.tex = 0;
+    occ_.width = occ_.height = 0;
+    occ_.valid = false;
+    occ_.depth.clear();
+}
+
+bool Renderer::occluded(const Aabb& box) const
+{
+    if (!occ_.testing || shadowCascade_ >= 0)
+        return false;
+    const glm::vec3 lo = box.min - glm::vec3(occ_.inflate), hi = box.max + glm::vec3(occ_.inflate);
+    glm::vec2 mn(1e30f), mx(-1e30f);
+    float nearest = 1.0f;
+    for (int c = 0; c < 8; ++c) {
+        const glm::vec4 p = occ_.viewProj * glm::vec4((c & 1) ? hi.x : lo.x, (c & 2) ? hi.y : lo.y, (c & 4) ? hi.z : lo.z, 1.0f);
+        if (p.w <= 1e-3f)
+            return false; // crosses the eye plane
+        const glm::vec3 ndc = glm::vec3(p) / p.w;
+        mn = glm::min(mn, glm::vec2(ndc));
+        mx = glm::max(mx, glm::vec2(ndc));
+        nearest = std::min(nearest, ndc.z * 0.5f + 0.5f);
+    }
+    if (nearest <= 0.0f)
+        return false;
+    const int w = occ_.width, h = occ_.height;
+    const int x0 = std::max(0, static_cast<int>(std::floor((mn.x * 0.5f + 0.5f) * w)));
+    const int x1 = std::min(w - 1, static_cast<int>(std::floor((mx.x * 0.5f + 0.5f) * w)));
+    const int y0 = std::max(0, static_cast<int>(std::floor((mn.y * 0.5f + 0.5f) * h)));
+    const int y1 = std::min(h - 1, static_cast<int>(std::floor((mx.y * 0.5f + 0.5f) * h)));
+    if (x0 > x1 || y0 > y1)
+        return false; // outside that view: the frustum test decides
+    if ((x1 - x0 + 1) * (y1 - y0 + 1) > 2048)
+        return false; // big on screen: rarely hidden, not worth the test
+    for (int y = y0; y <= y1; ++y) {
+        const float* row = &occ_.depth[static_cast<std::size_t>(y) * w];
+        for (int x = x0; x <= x1; ++x)
+            if (row[x] >= nearest)
+                return false;
+    }
+    ++const_cast<Renderer*>(this)->occ_.hidden;
+    return true;
 }
 
 } // namespace engine
