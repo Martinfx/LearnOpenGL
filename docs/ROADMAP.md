@@ -63,11 +63,13 @@ Podrobně ve výkonové roadmapě vlákna "Vytvořit 3D FPS engine"; tady jen sh
 - [x] Komprese textur BC1/BC3/BC5 s mipmapami, disková cache, paralelně; komprese a max. velikost v Texture editoru, Render → Texture size (BC7 zatím ne)
 - [x] Uvolnění CPU kopií po nahrání, streamování textur podle vzdálenosti, deduplikace meshů (testovací level: načtení 21,0 s → 2,3 s, paměť 4,4 GB → 0,54 GB)
 - [x] Panel paměti (VRAM/RAM) v editoru (dok Memory)
-- [ ] Panel snímku v editoru; CPU zóny + GPU timer queries
+- [x] Panel snímku v editoru (dok Frame); CPU časy + GPU timer queries po průchodech, ve hře `FPS_ENGINE_STATS=1`
 - [x] Příznak bez kolize a cull distance u modelů (+ jeden Jolt mesh sdílený všemi kopiemi modelu)
 - [x] GPU instancing (kopie modelu jedním draw callem; hospital_street: 3391 → 1339 draw callů)
 - [ ] `glMultiDrawElementsIndirect`, setřídění podle materiálu
-- [ ] Occlusion culling (Hi-Z z depth pre-passu), cache stínů vzdálených kaskád
+- [x] Cache stínů vzdálených kaskád (2./4. snímek), LOD a vyřazení malých vrhačů ve vzdálených kaskádách, přepínač „Cast shadows“ u modelů a vegetace (hospital_street: stíny 236 → 93 ms GPU, snímek 621 → 510 ms na llvmpipe)
+- [x] Alpha mipmapy zachovávající pokrytí pro MASK (tráva a listí nemizí v dálce)
+- [ ] Occlusion culling (Hi-Z z depth pre-passu)
 - [ ] Snímek jako graf úloh v JobSystemu (animace, culling, skripty paralelně), pak render vlákno
 
 Hotovo, když: zóna (`zone.level`) běží na střední kartě nad 60 FPS na High, editor ukazuje čas snímku a paměť, žádné záseky při chůzi.

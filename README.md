@@ -226,6 +226,13 @@ výšková mlha se září ke slunci, bloom, ACES, barevné ladění (saturace, 
 - **Instancing:** viditelné kopie stejného modelu (stejné materiály) se kreslí jedním draw callem na díl
   meshe. Vybraný objekt a animované postavy jdou zvlášť. `FPS_ENGINE_STATS=1 fps_game` vypisuje FPS,
   draw cally a počet instancí; `FPS_ENGINE_NO_INSTANCING=1` ho vypne pro porovnání. V editoru příkaz `stat`.
+- **Stíny:** vzdálené kaskády se překreslují jen každý 2. / 4. snímek (dřív, když kamera opustí jejich
+  okraj nebo se pohne slunce), kreslí LOD a vynechávají malé vrhače. *Details > Rendering > Shadows: Cast
+  shadows* (v levelu `  cast_shadows 0`) vypne stín modelu, např. trávě; u vegetace poslední pole
+  `foliage_type`. Alpha-test textury (MASK) mají mipmapy zachovávající pokrytí, tráva v dálce nemizí.
+- **Profilování:** dok *Frame* v editoru ukazuje CPU a GPU čas (timer queries) každého průchodu, draw
+  cally, trojúhelníky a instancing; přepínače instancingu a cache stínů pro porovnání. Ve hře
+  `FPS_ENGINE_STATS=1` vypisuje totéž do konzole.
 - **Sdílené meshe:** kopie jednoho modelu (např. 18 dílů plotu) sdílí vrcholy v RAM i v historii undo.
 - Testovací level: načtení 21,0 s → 2,3 s (s teplou cache), paměť hry 4,4 GB → 0,54 GB (llvmpipe, kde je
   i „VRAM“ v RAM).
