@@ -1,0 +1,15 @@
+# FPS engine material (physically based: metal/roughness)
+# Skrunda-1 terrain layer: Poly Haven "forest_ground_05" (CC0) tinted like the zone ground textures.
+version 2
+name "Skrunda dirt"
+color 0.8 0.85 0.72
+roughness 1
+metallic 0
+normal_strength 1
+emissive 0 0 0
+tiling 0.5 0.5
+world_uv 1
+albedo_map "../../textures/pbr/forest_ground_05/albedo.jpg"
+normal_map "../../textures/pbr/forest_ground_05/normal.jpg"
+roughness_map "../../textures/pbr/forest_ground_05/roughness.jpg"
+occlusion_map "../../textures/pbr/forest_ground_05/ao.jpg"

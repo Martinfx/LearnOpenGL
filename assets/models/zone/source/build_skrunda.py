@@ -2,6 +2,7 @@
 """Builds the Skrunda-1 buildings (CC0) into assets/models/zone/skrunda/ from the real OSM footprints.
 
     python3 -I assets/models/zone/source/build_skrunda.py [name ...]
+    python3 -I assets/models/zone/source/build_skrunda.py overlays   (draped roads/paths over the engine terrain)
 
 Sizes come from assets/levels/source/osm/skrunda1.json (oriented bounding rectangle of each footprint).
 Textures are shared with the other zone models (assets/models/zone/textures/).
@@ -84,8 +85,9 @@ def build(name):
 
 
 
-def build_terrain(only=None):
-    """Terrain tiles (9 x 9 of 64 m) into assets/models/zone/skrunda/terrain/."""
+def build_overlays(only=None):
+    """Draped overlays for the engine terrain (asphalt, paths, ruts, aprons, leaf litter, ponds), 9 x 9 tiles
+    into assets/models/zone/skrunda/terrain/overlay_i_j.glb. Same 1 m grid and diagonals as the terrain."""
     from zonegen import skrunda_site as site
     t = site.terrain(BY_ID)
     out = os.path.join(OUT, 'terrain')
@@ -95,19 +97,20 @@ def build_terrain(only=None):
             if only and (i, j) not in only:
                 continue
             x0, z0 = site.X0 + i * site.TILE, site.Z0 + j * site.TILE
-            m = t.tile(x0, z0, site.TILE, 1.0, lod=0)
-            glb.write_glb(os.path.join(out, f'tile_{i}_{j}.glb'), m, tex_rel_dir='../../textures', name=f'tile_{i}_{j}')
-            m1 = t.tile(x0, z0, site.TILE, 4.0, lod=1)
-            glb.write_glb(os.path.join(out, f'tile_{i}_{j}_lod1.glb'), m1, tex_rel_dir='../../textures', name=f'tile_{i}_{j}_lod1')
-            print(f'tile_{i}_{j}: {m.triangles()} tris, lod1 {m1.triangles()}', flush=True)
+            m = t.tile(x0, z0, site.TILE, 1.0, lod=0, base=False, names=list(t.OVERLAYS))
+            glb.write_glb(os.path.join(out, f'overlay_{i}_{j}.glb'), m, tex_rel_dir='../../textures', name=f'overlay_{i}_{j}')
+            m1 = t.tile(x0, z0, site.TILE, 2.0, lod=1, base=False, names=['road', 'path', 'ruts', 'apron'], lift=4.0)
+            glb.write_glb(os.path.join(out, f'overlay_{i}_{j}_lod1.glb'), m1, tex_rel_dir='../../textures',
+                          name=f'overlay_{i}_{j}_lod1')
+            print(f'overlay_{i}_{j}: {m.triangles()} tris, lod1 {m1.triangles()}', flush=True)
 
 
 if __name__ == '__main__':
     mats.ensure_textures()
     skrunda.make_signs()
     args = sys.argv[1:]
-    if args[:1] == ['terrain']:
-        build_terrain()
+    if args[:1] == ['overlays']:
+        build_overlays()
     else:
         for n in args or list(MODELS):
             build(n)

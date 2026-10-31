@@ -210,23 +210,29 @@ class Terrain:
         return n / np.linalg.norm(n, axis=-1, keepdims=True)
 
     # ---------------------------------------------------------------- meshing
-    def tile(self, x0, z0, size, step=1.0, layers=True, lod=0):
+    OVERLAYS = ('leaves', 'path', 'ruts', 'apron', 'road')
+
+    def tile(self, x0, z0, size, step=1.0, layers=True, lod=0, base=True, names=None, lift=None):
         """Mesh of the square tile [x0, x0+size] x [z0, z0+size] in coordinates local to its centre
-        (place the model at the centre). UVs are world-based so textures continue across tiles."""
+        (place the model at the centre). UVs are world-based so textures continue across tiles.
+        base=False leaves out the ground grid (the engine terrain draws it) and keeps only the draped
+        overlays in `names` (default: all) and the ponds."""
         m = Mesh(PALETTE)
         cx, cz = x0 + size / 2, z0 + size / 2
         n = int(round(size / step))
         xs = x0 + np.arange(n + 1) * step
         zs = z0 + np.arange(n + 1) * step
         GX, GZ = np.meshgrid(xs, zs)
-        GY = self.height(GX, GZ)
-        N = self.normal(GX, GZ)
-        self._grid_prim(m, 'ground_lush', GX, GY, GZ, N, cx, cz)
+        if base:
+            GY = self.height(GX, GZ)
+            N = self.normal(GX, GZ)
+            self._grid_prim(m, 'ground_lush', GX, GY, GZ, N, cx, cz)
         offs = {'grass': 0.008, 'dry': 0.014, 'dirt': 0.02, 'leaves': 0.028, 'path': 0.036, 'ruts': 0.036, 'apron': 0.045, 'road': 0.05}
         mats = {'grass': 'ground_grass', 'dry': 'ground_dry', 'dirt': 'ground_dirt', 'leaves': 'ground_leaves', 'path': 'ground_path',
                 'ruts': 'ground_ruts', 'apron': 'concrete_floor', 'road': 'road'}
         if layers:
-            names = list(offs) if lod == 0 else ['grass', 'dirt', 'road', 'path', 'ruts', 'apron']
+            if names is None:
+                names = list(offs) if lod == 0 else ['grass', 'dirt', 'road', 'path', 'ruts', 'apron']
             fstep = step          # same grid and diagonals as the ground below, so overlays never dip under it
             nf = int(round(size / fstep))
             fx = x0 + np.arange(nf + 1) * fstep
@@ -235,7 +241,7 @@ class Terrain:
             for k in names:
                 F = self.field(k, FX, FZ)
                 if (F > 0).any():
-                    self._contour_prim(m, mats[k], FX, FZ, F, offs[k] * (1 if lod == 0 else 1.5), cx, cz)
+                    self._contour_prim(m, mats[k], FX, FZ, F, offs[k] * (lift or (1 if lod == 0 else 1.5)), cx, cz)
         # ponds: flat water inside the tile
         for poly, level in self.pond:
             px = [p[0] for p in poly]
@@ -259,6 +265,21 @@ class Terrain:
                     pr.uv.append(np.array([(u + cx) / 4, (v + cz) / 4]))
                 pr.idx += [base, base + 1, base + 2, base, base + 2, base + 3]
         return m
+
+    def splat(self, n):
+        """RGBA8 weights (n x n, row = Z) of the engine terrain layers 0..3: lush grass (base), meadow
+        grass, dry grass, dirt. Soft edges around the zero contour of each layer field."""
+        px = self.x0 + (np.arange(n) + 0.5) * (self.nx - 1) * self.res / n
+        pz = self.z0 + (np.arange(n) + 0.5) * (self.nz - 1) * self.res / n
+        PX, PZ = np.meshgrid(px, pz)
+        rest = np.ones_like(PX)
+        w = []
+        for k in ('dirt', 'dry', 'grass'):          # top layer first
+            a = np.clip(self._sample(self.layers[k], PX, PZ) * 6.0 + 0.5, 0.0, 1.0)
+            w.append(rest * a)
+            rest = rest * (1.0 - a)
+        W = np.stack([rest, w[2], w[1], w[0]], axis=-1)
+        return np.clip(np.round(W * 255), 0, 255).astype(np.uint8)
 
     def _grid_prim(self, m, mat, GX, GY, GZ, N, cx, cz):
         tile = PALETTE[mat]['tile']

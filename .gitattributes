@@ -20,3 +20,4 @@ assets/models/zone/postwar/*.glb filter=lfs diff=lfs merge=lfs -text
 assets/models/zone/skrunda/*.glb filter=lfs diff=lfs merge=lfs -text
 assets/models/zone/skrunda/terrain/*.glb filter=lfs diff=lfs merge=lfs -text
 assets/models/zone/skrunda/veg/*.glb filter=lfs diff=lfs merge=lfs -text
+assets/levels/*.terrain filter=lfs diff=lfs merge=lfs -text

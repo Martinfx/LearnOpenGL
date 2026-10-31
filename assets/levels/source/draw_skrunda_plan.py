@@ -9,6 +9,7 @@ import json
 import os
 import re
 import shlex
+import struct
 import sys
 
 from PIL import Image, ImageDraw, ImageFont
@@ -55,13 +56,19 @@ for line in open(LEVEL, encoding='utf-8'):
         objs.append({'kind': t[0], 't': t, 'parent': ''})
     elif line.startswith('  parent') and objs:
         objs[-1]['parent'] = shlex.split(line)[1]
-for o in objs:
-    t = o['t']
-    if o['kind'] == 'model' and o['parent'] in ('Trees', 'Forest'):
-        x, z = float(t[3]), float(t[5])
+# trees are painted foliage of the terrain (binary skrunda1.terrain, see engine/src/Terrain.cpp)
+ftypes = [shlex.split(line)[1] for line in open(LEVEL, encoding='utf-8') if line.startswith('foliage_type')]
+with open(os.path.join(HERE, '..', 'skrunda1.terrain'), 'rb') as tf:
+    _, _, res, sres, _, _, _, count = struct.unpack('<IIiifffI', tf.read(32))
+    tf.seek(32 + res * res * 4 + sres * sres * 4)
+    for _ in range(count):
+        x, _, z, _, _, _, _, ti = struct.unpack('<7fI', tf.read(32))
+        name = os.path.basename(ftypes[ti])
+        if not name.startswith(('birch', 'spruce', 'pine', 'broadleaf', 'dead')):
+            continue
         r = 2.2 * S
         a, b = P(x, z)
-        dr.ellipse([a - r, b - r, a + r, b + r], fill=(96, 122, 78) if o['parent'] == 'Trees' else (70, 98, 62))
+        dr.ellipse([a - r, b - r, a + r, b + r], fill=(70, 98, 62) if name.startswith(('spruce', 'pine')) else (96, 122, 78))
 for b in d['buildings']:
     o = b['obb']
     if X0 < o['cx'] < X1 and Z0 < o['cz'] < Z1:
@@ -139,6 +146,8 @@ legend = [
     '#Ovládání v editoru',
     'File > Open assets/levels/skrunda1.level',
     'F5 spustí level ve hře.',
+    'Zem a vegetace: režimy Landscape',
+    'a Foliage (štětce).',
 ]
 big = Image.new('RGB', (W + 330, H), (232, 230, 220))
 big.paste(im, (0, 0))

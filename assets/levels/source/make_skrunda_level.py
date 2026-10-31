@@ -88,11 +88,49 @@ FAR_LOD = {'grass_patch_tall': ('../models/zone/skrunda/veg/grass_patch_far.glb'
            'weed_patch': ('../models/zone/skrunda/veg/weed_patch_far.glb', 16)}
 
 
+FOLIAGE_TYPES = {}       # (file, lod_dist, cull, collision, shadows) -> type index
+FOLIAGE = []             # (x, y, z, yaw, scale, type)
+# brush density (instances / m2) and far density per kind, used when painting more in the editor
+FOLIAGE_KIND = {'Tree': (0.03, 1.0), 'Bush': (0.02, 0.8), 'Tall grass': (0.15, 0.6), 'Weeds': (0.1, 0.6),
+                'Grass tuft': (0.3, 0.5), 'Crack grass': (0.2, 0.5)}
+
+
 def veg(name, file, x, z, parent, lod_dist=25, cull=60, collision=False, yaw=None, scale=1.0, dy=-0.03, shadows=False):
-    """Vegetation: no collision; only trees and bushes cast shadows (ground cover is too small to matter)."""
-    model(name, V + file + '.glb', x, h(x, z) + dy, z, parent, rng.uniform(0, 360) if yaw is None else yaw, scale=scale,
-          lod=V + file + '_lod1.glb', lod_dist=lod_dist, collision=collision, cull=cull, shadows=shadows,
-          more_lods=[FAR_LOD[file]] if file in FAR_LOD else ())
+    """Vegetation becomes painted foliage of the engine terrain (instanced per 32 m cell); only trees and
+    bushes cast shadows (ground cover is too small to matter)."""
+    key = (name, file, lod_dist, cull, collision, shadows)
+    if key not in FOLIAGE_TYPES:
+        FOLIAGE_TYPES[key] = len(FOLIAGE_TYPES)
+    FOLIAGE.append((x, h(x, z) + dy, z, rng.uniform(0, 360) if yaw is None else yaw, scale, FOLIAGE_TYPES[key]))
+
+
+def foliage_lines():
+    out = []
+    for (name, file, lod_dist, cull, collision, shadows), _ in sorted(FOLIAGE_TYPES.items(), key=lambda kv: kv[1]):
+        dens, far = FOLIAGE_KIND.get(name, (0.1, 1.0))
+        out.append(f'foliage_type "{V}{file}.glb" {dens:g} 0.85 1.15 {cull:g} {int(collision)} 0 {int(shadows)} {far:g}')
+        out.append(f'foliage_lod "{V}{file}_lod1.glb" {lod_dist:g}')
+        if file in FAR_LOD:
+            out.append(f'foliage_lod "{FAR_LOD[file][0]}" {FAR_LOD[file][1]:g}')
+    return out
+
+
+def write_terrain(path):
+    """Binary terrain next to the level (engine/src/Terrain.cpp, version 1): header, heights (row = Z),
+    RGBA8 splat map, foliage instances."""
+    import struct
+    import numpy as np
+    H = np.asarray(T.H, dtype='<f4')
+    res = H.shape[0]
+    assert H.shape == (res, res) and abs((res - 1) * T.res - site.SIZE) < 1e-6
+    splat_n = 1024
+    S = T.splat(splat_n)
+    with open(path, 'wb') as f:
+        f.write(struct.pack('<IIiifffI', 0x52524554, 1, res, splat_n, site.X0, site.Z0, site.SIZE, len(FOLIAGE)))
+        f.write(H.tobytes())
+        f.write(S.tobytes())
+        for x, y, z, yaw, sc, t in FOLIAGE:
+            f.write(struct.pack('<7fI', x, y, z, yaw, sc, 0.0, 0.0, t))
 
 
 def prop(name, folder, x, y, z, parent, yaw=0.0, **kw):
@@ -155,6 +193,14 @@ L += [
     'version 5',
     f'player_start {px:.2f} {py + 0.1:.2f} {pz:.2f}',
     f'map_bounds {site.X0:g} {site.Z0:g} {site.SIZE:g}',
+    # engine terrain: heights, splat map and the painted vegetation are in skrunda1.terrain (Landscape and
+    # Foliage modes in the editor); roads, paths and ponds are the draped overlay models in group Terrain
+    'terrain "skrunda1.terrain"',
+    'terrain_layer 0 "../materials/skrunda/terrain_lush.material" 0.5',
+    'terrain_layer 1 "../materials/skrunda/terrain_meadow.material" 0.4',
+    'terrain_layer 2 "../materials/skrunda/terrain_dry.material" 0.5',
+    'terrain_layer 3 "../materials/skrunda/terrain_dirt.material" 0.5',
+    '@FOLIAGE_TYPES@',
     'sun 0.55 -0.42 -0.35',              # overcast late afternoon, sun low in the south-west
     'env sun_color 1 0.84 0.66',
     'env sun_intensity 1.9',
@@ -191,13 +237,13 @@ for g, p in (('Terrain', ''), ('Buildings', ''), ('Blocks', 'Buildings'), ('Publ
              ('NPC', ''), ('Stalkers', 'NPC'), ('Bandits', 'NPC')):
     group(g, p)
 
-# ---------------------------------------------------------------------------- terrain tiles
+# ---------------------------------------------------------------------------- road / path overlays on the terrain
 for j in range(site.NT):
     for i in range(site.NT):
         cx = site.X0 + (i + 0.5) * site.TILE
         cz = site.Z0 + (j + 0.5) * site.TILE
-        model(f'Terrain {i} {j}', f'{SK}terrain/tile_{i}_{j}.glb', cx, 0, cz, 'Terrain',
-              lod=f'{SK}terrain/tile_{i}_{j}_lod1.glb', lod_dist=110)
+        model(f'Roads {i} {j}', f'{SK}terrain/overlay_{i}_{j}.glb', cx, 0, cz, 'Terrain',
+              lod=f'{SK}terrain/overlay_{i}_{j}_lod1.glb', lod_dist=110, collision=False)
 
 # ---------------------------------------------------------------------------- buildings
 NAMES = {HOSP: 'Hospital (Госпиталь)', VENTA: 'Store Venta', HQ: 'HQ (Штаб)', TOWER: 'Water tower', CANTEEN: 'Canteen'}
@@ -376,6 +422,26 @@ def in_town(x, z):
     return TOWN[0] < x < TOWN[2] and TOWN[1] < z < TOWN[3]
 
 
+# the three planned routes (also drawn on the plan); trees keep 2 m off them so the way stays open
+ROUTES = {
+    'main': [(px, pz), to_world(HQ, hx - 3, 0, 0)[::2], to_world(HQ, hx + 4, 0, 0)[::2], (-20, 49), (-66, 62), (-70, 25), (-74, -30), (-100, -28), (-150, -36),
+             to_world(HOSP, 0, 0, BUILD[HOSP]['width'] / 2 + 3)[::2]],
+    'flank': [(-66, 62), (-70, 40), (-62, -30), (-57, -96), (-120, -96), (-150, -100), (-170, -104), (-187, -102),
+              to_world(HOSP, -BUILD[HOSP]['length'] / 2 + 8, 0, -BUILD[HOSP]['width'] / 2 - 2)[::2]],
+    'tower': [(-150, -36), (-215, -34), (BUILD[TOWER]['cx'] + 4, BUILD[TOWER]['cz'] + 3)],
+}
+
+
+def near_route(x, z, r=2.0):
+    for pts in ROUTES.values():
+        for (ax, az), (bx, bz) in zip(pts, pts[1:]):
+            vx, vz = bx - ax, bz - az
+            t = max(0.0, min(1.0, ((x - ax) * vx + (z - az) * vz) / max(vx * vx + vz * vz, 1e-9)))
+            if math.hypot(ax + vx * t - x, az + vz * t - z) < r:
+                return True
+    return False
+
+
 trees = []
 step = 4.2
 z = site.Z0 + 2
@@ -398,6 +464,17 @@ while z < site.Z0 + site.SIZE - 2:
         x += step
     z += step
 
+def in_hq_yard(x, z, margin=1.5):
+    """Inside the fenced stalker camp around the HQ (kept clear of trees by the stalkers)."""
+    b = BUILD[HQ]
+    a = math.radians(b['yaw'])
+    c, s = math.cos(a), math.sin(a)
+    dx, dz = x - b['cx'], z - b['cz']
+    lx, lz = dx * c - dz * s, dx * s + dz * c
+    return abs(lx) < b['length'] / 2 + 14 + margin and abs(lz) < b['width'] / 2 + 16 + margin
+
+
+trees = [t for t in trees if not in_hq_yard(t[0], t[1]) and not near_route(t[0], t[1])]
 for x, z, forest, grove in trees:
     r = rng.random()
     if forest:
@@ -408,7 +485,7 @@ for x, z, forest, grove in trees:
         f = ('birch_a' if r < 0.35 else 'birch_b' if r < 0.6 else 'birch_young' if r < 0.75 else 'broadleaf_a' if r < 0.85 else
              'broadleaf_b' if r < 0.93 else 'dead_a')
         parent = 'Trees'
-    veg('Tree', f, x, z, parent, lod_dist=30, cull=230, shadows=True, scale=rng.uniform(0.85, 1.15))
+    veg('Tree', f, x, z, parent, lod_dist=30, cull=230, shadows=True, collision=True, scale=rng.uniform(0.85, 1.15))
 
 # bushes along walls and fences, undergrowth at forest edges
 for k in range(2600):
@@ -524,18 +601,15 @@ entity('Bandit street patrol', 'enemy', x, h(x, z), z, 0, 'bandit', 'Bandits', p
 x, z = BUILD[TOWER]['cx'] + 5, BUILD[TOWER]['cz'] + 4
 entity('Bandit at the tower', 'enemy', x, h(x, z), z, 200, 'bandit', 'Bandits', props=patrol(4))
 
+i = L.index('@FOLIAGE_TYPES@')
+L[i:i + 1] = foliage_lines()
 with open(OUT, 'w', encoding='utf-8') as f:
     f.write('\n'.join(L) + '\n')
+write_terrain(os.path.join(HERE, '..', 'skrunda1.terrain'))
 
 hq = BUILD[HQ]
 plan = {
-    'routes': {
-        'main': [(px, pz), to_world(HQ, hx - 3, 0, 0)[::2], to_world(HQ, hx + 4, 0, 0)[::2], (-20, 49), (-66, 62), (-70, 25), (-74, -30), (-100, -28), (-150, -36),
-                 to_world(HOSP, 0, 0, BUILD[HOSP]['width'] / 2 + 3)[::2]],
-        'flank': [(-66, 62), (-70, 40), (-62, -30), (-57, -96), (-120, -96), (-150, -100), (-170, -104), (-187, -102),
-                  to_world(HOSP, -BUILD[HOSP]['length'] / 2 + 8, 0, -BUILD[HOSP]['width'] / 2 - 2)[::2]],
-        'tower': [(-150, -36), (-215, -34), (BUILD[TOWER]['cx'] + 4, BUILD[TOWER]['cz'] + 3)],
-    },
+    'routes': ROUTES,
     'labels': [(px + 4, pz + 6, 'START: tábor ve Štábu'), (ox - 70, oz - 10, 'CÍL: PDA, 3. patro'),
                (-250, -5, 'ТД «Вента» (bandité)'), (-300, -45, 'vodárna (skrýš)'), (sx + 6, sz, 'odstřelovač, 5. patro'),
                (-140, -130, 'boční cesta dvory'), (-300, -180, 'rybník a bažina')],
@@ -543,4 +617,4 @@ plan = {
 with open(PLAN, 'w') as f:
     json.dump(plan, f, indent=1)
 print('wrote', os.path.normpath(OUT), sum(1 for l in L if l.startswith('model')), 'models',
-      sum(1 for l in L if l.startswith('entity')), 'entities', len(trees), 'trees')
+      sum(1 for l in L if l.startswith('entity')), 'entities', len(FOLIAGE), 'foliage in', len(FOLIAGE_TYPES), 'types')
