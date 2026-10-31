@@ -20,6 +20,7 @@
 #include <QOpenGLFramebufferObject>
 #include <QPainter>
 #include <QPushButton>
+#include <QScrollBar>
 #include <QSlider>
 #include <QStandardPaths>
 #include <QUrl>
@@ -76,11 +77,12 @@ AssetType assetTypeOf(const QString& path)
 
 // ------------------------------------------------------------ thumbnails
 
+ThumbnailRenderer::ThumbnailRenderer(QOffscreenSurface* surface) : surface_(surface) {}
 ThumbnailRenderer::ThumbnailRenderer() = default;
 
 ThumbnailRenderer::~ThumbnailRenderer()
 {
-    if (ready_ && context_ && context_->makeCurrent(surface_.get())) {
+    if (ready_ && context_ && context_->makeCurrent(surface_)) {
         fbo_.reset();
         renderer_.shutdown();
         context_->doneCurrent();
@@ -95,10 +97,13 @@ bool ThumbnailRenderer::begin(int size)
         QSurfaceFormat format = QSurfaceFormat::defaultFormat();
         context_ = std::make_unique<QOpenGLContext>();
         context_->setFormat(format);
-        surface_ = std::make_unique<QOffscreenSurface>();
-        surface_->setFormat(format);
-        surface_->create();
-        if (!context_->create() || !context_->makeCurrent(surface_.get())) {
+        if (!surface_) {
+            ownSurface_ = std::make_unique<QOffscreenSurface>();
+            ownSurface_->setFormat(format);
+            ownSurface_->create();
+            surface_ = ownSurface_.get();
+        }
+        if (!context_->create() || !context_->makeCurrent(surface_)) {
             failed_ = true;
             return false;
         }
@@ -107,7 +112,7 @@ bool ThumbnailRenderer::begin(int size)
             failed_ = true;
             return false;
         }
-    } else if (!context_->makeCurrent(surface_.get())) {
+    } else if (!context_->makeCurrent(surface_)) {
         return false;
     }
     if (!fbo_ || fbo_->width() != size) {
@@ -168,6 +173,35 @@ QImage ThumbnailRenderer::renderMaterial(const QString& path, int size)
     sphere.overrideMaterials["preview"] = material;
     scene.models.push_back(std::move(sphere));
     return finish(scene, glm::vec3(0.0f), 1.05f);
+}
+
+// ------------------------------------------------------------ worker thread
+
+ThumbnailWorker::~ThumbnailWorker() = default; // GL objects are freed with the renderer on this thread
+
+void ThumbnailWorker::make(const QString& path, int typeValue, const QString& cacheFile)
+{
+    const auto type = static_cast<AssetType>(typeValue);
+    QImage image;
+    if (QFileInfo::exists(cacheFile))
+        image.load(cacheFile);
+    if (image.isNull()) {
+        if (type == AssetType::Texture) {
+            QImageReader reader(path);
+            const QSize s = reader.size();
+            if (s.isValid())
+                reader.setScaledSize(s.scaled(kThumbSize, kThumbSize, Qt::KeepAspectRatio));
+            image = reader.read();
+        } else if (type == AssetType::Model || type == AssetType::Material) {
+            if (!renderer_)
+                renderer_ = std::make_unique<ThumbnailRenderer>(surface_);
+            image = type == AssetType::Model ? renderer_->renderModel(path, kThumbSize)
+                                             : renderer_->renderMaterial(path, kThumbSize);
+        }
+        if (!image.isNull())
+            image.save(cacheFile);
+    }
+    emit ready(path, image);
 }
 
 // ------------------------------------------------------------ list
@@ -252,11 +286,39 @@ AssetBrowser::AssetBrowser(QWidget* parent) : QWidget(parent)
 
     cacheDir_ = QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + "/thumbnails";
     QDir().mkpath(cacheDir_);
-    connect(&thumbTimer_, &QTimer::timeout, this, &AssetBrowser::makeNextThumbnail);
+    // Thumbnails are made on a worker thread; the offscreen surface must be created here (GUI thread).
+    surface_ = std::make_unique<QOffscreenSurface>();
+    surface_->setFormat(QSurfaceFormat::defaultFormat());
+    surface_->create();
+    thread_ = new QThread(this);
+    thread_->setObjectName("Thumbnails");
+    worker_ = new ThumbnailWorker(surface_.get());
+    worker_->moveToThread(thread_);
+    connect(thread_, &QThread::finished, worker_, &QObject::deleteLater);
+    connect(worker_, &ThumbnailWorker::ready, this, [this](const QString& path, const QImage& image) {
+        requested_.remove(path);
+        for (int i = 0; i < list_->count(); ++i)
+            if (QListWidgetItem* item = list_->item(i); item->data(kPathRole).toString() == path) {
+                const QIcon icon = image.isNull() ? placeholderIcon(static_cast<AssetType>(item->data(kTypeRole).toInt()))
+                                                  : QIcon(QPixmap::fromImage(image));
+                icons_.insert(path, icon);
+                item->setIcon(icon);
+                break;
+            }
+        requestThumbnails();
+    });
+    thread_->start(QThread::LowPriority);
+    connect(&thumbTimer_, &QTimer::timeout, this, &AssetBrowser::requestThumbnails);
+    connect(list_->verticalScrollBar(), &QScrollBar::valueChanged, this, [this] { thumbTimer_.start(50); });
+    thumbTimer_.setSingleShot(true);
     QTimer::singleShot(0, this, &AssetBrowser::rescan);
 }
 
-AssetBrowser::~AssetBrowser() = default;
+AssetBrowser::~AssetBrowser()
+{
+    thread_->quit();
+    thread_->wait();
+}
 
 QIcon AssetBrowser::placeholderIcon(AssetType type) const
 {
@@ -311,7 +373,7 @@ void AssetBrowser::rescan()
         item->setIcon(icons_.contains(file) ? icons_[file] : placeholderIcon(type));
     }
     applyFilter();
-    thumbTimer_.start(1);
+    thumbTimer_.start(0);
 }
 
 void AssetBrowser::applyFilter()
@@ -329,54 +391,29 @@ void AssetBrowser::applyFilter()
         shown += visible ? 1 : 0;
     }
     status_->setText(tr("%n asset(s)", nullptr, shown));
-    thumbTimer_.start(1);
+    thumbTimer_.start(0);
 }
 
-// One thumbnail per timer tick, visible items first, so the editor stays responsive.
-void AssetBrowser::makeNextThumbnail()
+// Keeps a few thumbnail requests in flight, visible items first.
+void AssetBrowser::requestThumbnails()
 {
-    QListWidgetItem* next = nullptr;
+    constexpr int kInFlight = 3;
     const QRect viewRect = list_->viewport()->rect();
-    for (int pass = 0; pass < 2 && !next; ++pass)
-        for (int i = 0; i < list_->count(); ++i) {
+    for (int pass = 0; pass < 2 && requested_.size() < kInFlight; ++pass)
+        for (int i = 0; i < list_->count() && requested_.size() < kInFlight; ++i) {
             QListWidgetItem* item = list_->item(i);
-            if (item->isHidden() || icons_.contains(item->data(kPathRole).toString()))
+            const QString path = item->data(kPathRole).toString();
+            const auto type = static_cast<AssetType>(item->data(kTypeRole).toInt());
+            if (item->isHidden() || icons_.contains(path) || requested_.contains(path))
                 continue;
             if (pass == 0 && !viewRect.intersects(list_->visualItemRect(item)))
                 continue;
-            next = item;
-            break;
-        }
-    if (!next || !isVisible()) {
-        thumbTimer_.stop();
-        return;
-    }
-    const QString path = next->data(kPathRole).toString();
-    const auto type = static_cast<AssetType>(next->data(kTypeRole).toInt());
-    QImage image;
-    const QString cached = cacheFile(path);
-    if (type == AssetType::Model || type == AssetType::Material || type == AssetType::Texture) {
-        if (QFileInfo::exists(cached))
-            image.load(cached);
-        if (image.isNull()) {
-            if (!thumbs_)
-                thumbs_ = std::make_unique<ThumbnailRenderer>();
-            if (type == AssetType::Model)
-                image = thumbs_->renderModel(path, kThumbSize);
-            else if (type == AssetType::Material)
-                image = thumbs_->renderMaterial(path, kThumbSize);
-            else {
-                QImageReader reader(path);
-                const QSize s = reader.size();
-                if (s.isValid())
-                    reader.setScaledSize(s.scaled(kThumbSize, kThumbSize, Qt::KeepAspectRatio));
-                image = reader.read();
+            if (type != AssetType::Model && type != AssetType::Material && type != AssetType::Texture) {
+                icons_.insert(path, placeholderIcon(type));
+                continue;
             }
-            if (!image.isNull())
-                image.save(cached);
+            requested_.insert(path);
+            QMetaObject::invokeMethod(worker_, "make", Qt::QueuedConnection, Q_ARG(QString, path),
+                                      Q_ARG(int, static_cast<int>(type)), Q_ARG(QString, cacheFile(path)));
         }
-    }
-    const QIcon icon = image.isNull() ? placeholderIcon(type) : QIcon(QPixmap::fromImage(image));
-    icons_.insert(path, icon);
-    next->setIcon(icon);
 }

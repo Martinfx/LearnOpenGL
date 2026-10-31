@@ -13,6 +13,9 @@
 
 #include <QAction>
 #include <QApplication>
+#include <QPointer>
+#include <engine/JobSystem.h>
+#include <QUndoStack>
 #include <QCloseEvent>
 #include <QColorDialog>
 #include <QComboBox>
@@ -94,6 +97,7 @@ MainWindow::MainWindow()
     refreshOutliner();
     refreshLevelProperties();
     select(-1);
+    resetHistory();
     updateTitle();
     statusBar()->showMessage(tr("Right mouse + WASD/QE: fly · Left click: select · F: focus · F5: play"));
 }
@@ -110,6 +114,15 @@ void MainWindow::buildMenus()
     file->addAction(tr("&Quit"), QKeySequence::Quit, this, &QWidget::close);
 
     QMenu* edit = menuBar()->addMenu(tr("&Edit"));
+    history_ = new QUndoStack(this);
+    history_->setUndoLimit(200);
+    QAction* undo = history_->createUndoAction(this, tr("&Undo"));
+    undo->setShortcut(QKeySequence::Undo);
+    QAction* redo = history_->createRedoAction(this, tr("&Redo"));
+    redo->setShortcuts({QKeySequence::Redo, QKeySequence(Qt::CTRL | Qt::Key_Y)});
+    edit->addAction(undo);
+    edit->addAction(redo);
+    edit->addSeparator();
     QAction* add = edit->addAction(tr("&Add box"), QKeySequence(Qt::CTRL | Qt::Key_B), this, &MainWindow::addBox);
     QAction* import = edit->addAction(tr("&Import glTF model..."), QKeySequence(Qt::CTRL | Qt::Key_I), this, &MainWindow::importModel);
     QAction* enemy = edit->addAction(tr("Add &enemy"), QKeySequence(Qt::CTRL | Qt::Key_E), this, [this] { addEntity("enemy"); });
@@ -239,8 +252,29 @@ void MainWindow::buildDocks()
     form->addRow(tr("Name"), nameEdit_);
     form->addRow(tr("Entity type"), typeEdit_);
     form->addRow(tr("Position"), positionEdit_);
+    rotationEdit_ = new Vec3Editor(-360.0, 360.0, 15.0, boxPanel_);
+    rotationEdit_->setToolTip(tr("Degrees around X, Y and Z"));
+    scaleSpin_ = new QDoubleSpinBox(boxPanel_);
+    scaleSpin_->setRange(0.01, 100.0);
+    scaleSpin_->setSingleStep(0.1);
+    scaleSpin_->setDecimals(3);
+    scaleSpin_->setKeyboardTracking(false);
     form->addRow(tr("Yaw"), yawSpin_);
+    form->addRow(tr("Rotation"), rotationEdit_);
+    form->addRow(tr("Scale"), scaleSpin_);
     form->addRow(tr("Size"), sizeEdit_);
+    connect(rotationEdit_, &Vec3Editor::valueEdited, this, [this](glm::vec3 v) {
+        if (auto* m = selectedModel()) {
+            m->rotation = v;
+            markDirty();
+        }
+    });
+    connect(scaleSpin_, &QDoubleSpinBox::valueChanged, this, [this](double v) {
+        if (auto* m = selectedModel(); m && std::abs(m->scale - static_cast<float>(v)) > 1e-6f) {
+            m->scale = static_cast<float>(v);
+            markDirty();
+        }
+    });
     form->addRow(tr("Color"), colorButton_);
 
     // Box material (.material), and per-slot overrides of glTF materials for models.
@@ -634,6 +668,8 @@ void MainWindow::refreshProperties()
     const engine::Entity* e = selectedEntity();
     boxPanel_->setEnabled(b || m || e);
     sizeEdit_->setEnabled(b || e);
+    rotationEdit_->setEnabled(m != nullptr);
+    scaleSpin_->setEnabled(m != nullptr);
     materialRow_->setEnabled(b != nullptr);
     materialEdit_->setText(b && !b->materialPath.empty() ? QString::fromStdU16String(b->materialPath.stem().u16string()) : QString());
     materialEdit_->setToolTip(b ? QString::fromStdU16String(b->materialPath.u16string()) : QString());
@@ -662,6 +698,10 @@ void MainWindow::refreshProperties()
         kindLabel_->setText(tr("glTF model: %1").arg(QString::fromStdU16String(m->sourcePath.filename().u16string())));
         nameEdit_->setText(QString::fromStdString(m->name));
         positionEdit_->setValue(m->position);
+        rotationEdit_->setValue(m->rotation);
+        scaleSpin_->blockSignals(true);
+        scaleSpin_->setValue(m->scale);
+        scaleSpin_->blockSignals(false);
         colorButton_->setStyleSheet(QString());
     } else if (e) {
         kindLabel_->setText(tr("Entity"));
@@ -747,9 +787,40 @@ void MainWindow::refreshLevelProperties()
 
 void MainWindow::markDirty()
 {
+    if (!restoring_ && history_) {
+        auto after = std::make_shared<SceneSnapshot>(meshStore_.capture(scene_, selected_));
+        if (lastState_)
+            history_->push(new SceneEditCommand(tr("Edit"), lastState_, after,
+                                                [this](const SceneSnapshot& s) { applySnapshot(s); }));
+        lastState_ = after;
+    }
     dirty_ = true;
     viewport_->update();
     updateTitle();
+}
+
+void MainWindow::resetHistory()
+{
+    if (!history_)
+        return;
+    history_->clear();
+    lastState_ = std::make_shared<SceneSnapshot>(meshStore_.capture(scene_, selected_));
+}
+
+void MainWindow::applySnapshot(const SceneSnapshot& snapshot)
+{
+    restoring_ = true;
+    scene_ = meshStore_.restore(snapshot);
+    lastState_ = std::make_shared<SceneSnapshot>(snapshot);
+    weapons_->refresh();
+    selected_ = -1;
+    refreshOutliner();
+    refreshLevelProperties();
+    select(snapshot.selected < scene_.objectCount() ? snapshot.selected : -1);
+    dirty_ = true;
+    viewport_->update();
+    updateTitle();
+    restoring_ = false;
 }
 
 void MainWindow::updateTitle()
@@ -787,15 +858,29 @@ void MainWindow::importModel()
 
 bool MainWindow::placeModel(const QString& path, glm::vec3 point)
 {
-    engine::Model model;
-    std::string error;
-    QApplication::setOverrideCursor(Qt::WaitCursor);
-    const bool ok = engine::loadModelFile(model, std::filesystem::path(path.toStdU16String()), &error);
-    QApplication::restoreOverrideCursor();
-    if (!ok) {
-        QMessageBox::warning(this, tr("Place model"), QString::fromStdString(error));
-        return false;
-    }
+    // Parsing the glTF and decoding its textures happens on a worker thread;
+    // the model is added to the level when it is ready.
+    statusBar()->showMessage(tr("Loading %1...").arg(QFileInfo(path).fileName()));
+    QPointer<MainWindow> self(this);
+    engine::JobSystem::global().run([self, path, point] {
+        auto model = std::make_shared<engine::Model>();
+        std::string error;
+        const bool ok = engine::loadModelFile(*model, std::filesystem::path(path.toStdU16String()), &error);
+        QMetaObject::invokeMethod(qApp, [self, path, point, model, ok, error] {
+            if (!self)
+                return;
+            if (!ok) {
+                QMessageBox::warning(self, tr("Place model"), QString::fromStdString(error));
+                return;
+            }
+            self->insertModel(path, std::move(*model), point);
+        });
+    });
+    return true;
+}
+
+void MainWindow::insertModel(const QString& path, engine::Model model, glm::vec3 point)
+{
     QString name = QFileInfo(path).completeBaseName();
     if (name == "scene" || name == "model")
         name = QFileInfo(path).dir().dirName();
@@ -807,7 +892,7 @@ bool MainWindow::placeModel(const QString& path, glm::vec3 point)
     refreshOutliner();
     select(scene_.firstEntity() - 1);
     markDirty();
-    return true;
+    statusBar()->showMessage(tr("Placed %1").arg(QFileInfo(path).fileName()), 4000);
 }
 
 bool MainWindow::assignMaterial(const QString& path, int object)
@@ -1042,6 +1127,7 @@ void MainWindow::newLevel()
     refreshOutliner();
     refreshLevelProperties();
     select(-1);
+    resetHistory();
     updateTitle();
 }
 
@@ -1056,12 +1142,30 @@ void MainWindow::openLevel()
 
 bool MainWindow::openFile(const QString& path)
 {
-    engine::Scene loaded;
-    std::string error;
-    if (!engine::loadScene(loaded, std::filesystem::path(path.toStdU16String()), &error)) {
-        QMessageBox::warning(this, tr("Open level"), QString::fromStdString(error));
-        return false;
-    }
+    // Models, materials and textures of the level load on a worker thread.
+    statusBar()->showMessage(tr("Opening %1...").arg(QFileInfo(path).fileName()));
+    setEnabled(false);
+    QPointer<MainWindow> self(this);
+    engine::JobSystem::global().run([self, path] {
+        auto loaded = std::make_shared<engine::Scene>();
+        std::string error;
+        const bool ok = engine::loadScene(*loaded, std::filesystem::path(path.toStdU16String()), &error);
+        QMetaObject::invokeMethod(qApp, [self, path, loaded, ok, error] {
+            if (!self)
+                return;
+            self->setEnabled(true);
+            if (!ok) {
+                QMessageBox::warning(self, tr("Open level"), QString::fromStdString(error));
+                return;
+            }
+            self->applyLoadedLevel(path, std::move(*loaded));
+        });
+    });
+    return true;
+}
+
+void MainWindow::applyLoadedLevel(const QString& path, engine::Scene loaded)
+{
     scene_ = std::move(loaded);
     weapons_->refresh();
     currentFile_ = path;
@@ -1070,8 +1174,10 @@ bool MainWindow::openFile(const QString& path)
     refreshOutliner();
     refreshLevelProperties();
     select(-1);
+    resetHistory();
     updateTitle();
-    return true;
+    statusBar()->showMessage(tr("Opened %1").arg(QFileInfo(path).fileName()), 4000);
+    emit levelOpened();
 }
 
 bool MainWindow::save()

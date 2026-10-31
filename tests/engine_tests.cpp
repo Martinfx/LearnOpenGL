@@ -5,9 +5,12 @@
 #include <engine/PlayerController.h>
 #include <engine/Scene.h>
 #include <engine/Scripting.h>
+#include <engine/JobSystem.h>
+#include <engine/Material.h>
 #include <engine/SceneGraph.h>
 #include <engine/Weapon.h>
 
+#include <atomic>
 #include <fstream>
 #include <glm/geometric.hpp>
 
@@ -477,6 +480,41 @@ void testHierarchyAndDependencies()
     check(users.size() == 2, "both guards use enemy.lua (" + std::to_string(users.size()) + ")");
 }
 
+void testJobSystem()
+{
+    engine::JobSystem jobs(3);
+    auto f = jobs.submit([] { return 6 * 7; });
+    check(f.get() == 42, "job result comes back through the future");
+    std::vector<int> data(10000, 1);
+    std::atomic<long> sum{0};
+    jobs.parallelFor(data.size(), 128, [&](std::size_t b, std::size_t e) {
+        long local = 0;
+        for (std::size_t i = b; i < e; ++i)
+            local += data[i];
+        sum += local;
+    });
+    check(sum == 10000, "parallelFor covers every element once");
+    engine::MainThreadQueue main;
+    std::atomic<int> posted{0};
+    std::vector<std::future<void>> waits;
+    for (int i = 0; i < 8; ++i)
+        waits.push_back(jobs.submit([&] { main.post([&] { ++posted; }); }));
+    for (auto& w : waits)
+        w.get();
+    check(main.drain(100.0) == 8 && posted == 8, "results posted to the main thread run there");
+
+    // Loading assets in parallel from several threads (editor background loaders).
+    std::vector<std::future<bool>> loads;
+    for (int i = 0; i < 6; ++i)
+        loads.push_back(jobs.submit([] {
+            return engine::loadMaterial(ENGINE_TEST_ASSETS "/materials/bricks.material") != nullptr;
+        }));
+    bool all = true;
+    for (auto& l : loads)
+        all = all && l.get();
+    check(all, "materials load from several threads at once");
+}
+
 void testSemiAutomatic()
 {
     engine::WeaponSettings s;
@@ -708,6 +746,7 @@ int main()
     testSemiAutomatic();
     testKnifeAndGuns();
     testHierarchyAndDependencies();
+    testJobSystem();
     testScriptPropertiesFromEditor();
     testPick();
     testAnimatedCharacter();

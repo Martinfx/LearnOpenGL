@@ -601,7 +601,7 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     for (std::size_t i = 0; i < scene.models.size(); ++i) {
         const Model& model = scene.models[i];
         const bool selected = static_cast<int>(scene.boxes.size() + i) == view.selectedObject;
-        drawModel(model, glm::translate(glm::mat4(1.0f), model.position), selected ? 1.0f : 0.0f);
+        drawModel(model, model.transform(), selected ? 1.0f : 0.0f);
     }
     for (const OverlayBox& b : view.worldBoxes)
         drawCube(glm::scale(glm::translate(glm::mat4(1.0f), b.center), b.size), b.color, 0.0f, b.emissive);

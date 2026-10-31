@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <mutex>
 #include <cstdio>
 #include <string_view>
 #include <glm/common.hpp>
@@ -516,6 +517,8 @@ bool loadAnimatedModelFile(Model& model, const std::filesystem::path& file, std:
 
 std::shared_ptr<const Model> loadCharacterModel(const std::filesystem::path& file, std::string* error)
 {
+    static std::mutex mutex; // shared with the editor's background loaders
+    const std::lock_guard lock(mutex);
     static std::map<std::filesystem::path, std::weak_ptr<const Model>> cache;
     const std::filesystem::path key = std::filesystem::absolute(file).lexically_normal();
     if (auto it = cache.find(key); it != cache.end())

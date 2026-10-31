@@ -1,4 +1,6 @@
 #include "engine/Physics.h"
+
+#include <glm/gtc/matrix_transform.hpp>
 #include "PhysicsImpl.h"
 
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
@@ -108,8 +110,12 @@ void PhysicsWorld::setLevel(const Scene& scene)
         for (const MeshPart& part : m.parts) {
             JPH::VertexList vertices;
             vertices.reserve(part.positions.size());
-            for (const glm::vec3& p : part.positions)
+            // Rotation and scale are baked into the vertices; the body sits at the model position.
+            const glm::mat3 rotScale(m.transform());
+            for (const glm::vec3& p0 : part.positions) {
+                const glm::vec3 p = rotScale * p0;
                 vertices.push_back(JPH::Float3(p.x, p.y, p.z));
+            }
             JPH::IndexedTriangleList triangles;
             triangles.reserve(part.indices.size() / 3);
             for (std::size_t i = 0; i + 2 < part.indices.size(); i += 3)

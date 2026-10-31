@@ -1,4 +1,6 @@
 #include "engine/Material.h"
+
+#include <mutex>
 #include "engine/Scene.h"
 
 #include <stb_image.h> // implementation lives in GltfLoader.cpp
@@ -118,8 +120,18 @@ TextureSettings readTextureSettings(const std::filesystem::path& image, const Te
     return s;
 }
 
+namespace {
+// Asset caches are shared by the editor's background loaders and the UI thread.
+std::recursive_mutex& cacheMutex()
+{
+    static std::recursive_mutex m;
+    return m;
+}
+} // namespace
+
 std::shared_ptr<TextureAsset> loadTextureAsset(const std::filesystem::path& image, std::string* error, bool color)
 {
+    const std::lock_guard lock(cacheMutex());
     static std::map<std::filesystem::path, std::weak_ptr<TextureAsset>> cache;
     const std::filesystem::path key = normalized(image);
     if (auto it = cache.find(key); it != cache.end())
@@ -293,6 +305,7 @@ bool parseMaterial(Material& m, const std::filesystem::path& file, std::string* 
 
 std::shared_ptr<Material> loadMaterial(const std::filesystem::path& file, std::string* error)
 {
+    const std::lock_guard lock(cacheMutex());
     static std::map<std::filesystem::path, std::weak_ptr<Material>> cache;
     const std::filesystem::path key = normalized(file);
     if (auto it = cache.find(key); it != cache.end())

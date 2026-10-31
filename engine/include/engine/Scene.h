@@ -93,7 +93,11 @@ struct Model {
     }
     std::vector<std::string> materialSlots() const; // distinct glTF material names
 
-    Aabb bounds() const { return {localBounds.min + position, localBounds.max + position}; }
+    glm::vec3 rotation{0.0f};         // degrees around X, Y, Z (applied Z, then X, then Y)
+    float scale = 1.0f;               // uniform
+
+    glm::mat4 transform() const;      // model space -> world
+    Aabb bounds() const;              // world-space bounds of the rotated, scaled model
 };
 
 // Gameplay object (enemy, pickup, trigger...). Behaviour comes from its Lua script.

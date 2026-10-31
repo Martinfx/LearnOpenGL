@@ -1,6 +1,8 @@
 #pragma once
 #include <engine/Scene.h>
 
+#include "EditorHistory.h"
+
 #include <QMainWindow>
 #include <utility>
 #include <vector>
@@ -16,6 +18,7 @@ class QTableWidget;
 class QLineEdit;
 class QListWidget;
 class HierarchyTree;
+class QUndoStack;
 class AssetBrowser;
 class DependencyPanel;
 class QPushButton;
@@ -29,7 +32,10 @@ class MainWindow : public QMainWindow {
 public:
     MainWindow();
 
-    bool openFile(const QString& path);
+    bool openFile(const QString& path);   // loads in the background
+signals:
+    void levelOpened();
+public:
 
 protected:
     void closeEvent(QCloseEvent* e) override;
@@ -62,7 +68,9 @@ private:
 
     void addBox();
     void importModel();
-    bool placeModel(const QString& path, glm::vec3 point); // bottom of the model on `point`
+    bool placeModel(const QString& path, glm::vec3 point); // loads in the background, bottom of the model on `point`
+    void applyLoadedLevel(const QString& path, engine::Scene loaded);
+    void insertModel(const QString& path, engine::Model model, glm::vec3 point);
     bool assignMaterial(const QString& material, int object);
     void openAsset(const QString& path, int type);
     void addEntity(const QString& type);
@@ -78,6 +86,8 @@ private:
     void refreshLevelProperties();
     void refreshScriptParams();
     void markDirty();
+    void resetHistory();                 // after a level was opened or created
+    void applySnapshot(const SceneSnapshot& snapshot);
     void updateTitle();
     engine::Box* selectedBox();
     engine::Model* selectedModel();
@@ -98,6 +108,10 @@ private:
     HierarchyTree* outliner_ = nullptr;
     DependencyPanel* dependencies_ = nullptr;
     AssetBrowser* assets_ = nullptr;
+    QUndoStack* history_ = nullptr;
+    MeshStore meshStore_;
+    std::shared_ptr<SceneSnapshot> lastState_;
+    bool restoring_ = false;
     QWidget* boxPanel_ = nullptr;
     QLineEdit* nameEdit_ = nullptr;
     QLabel* kindLabel_ = nullptr;
@@ -115,6 +129,8 @@ private:
     std::vector<std::pair<QDoubleSpinBox*, float engine::PlayerSettings::*>> playerSpins_;
     Vec3Editor* positionEdit_ = nullptr;
     Vec3Editor* sizeEdit_ = nullptr;
+    Vec3Editor* rotationEdit_ = nullptr;   // glTF models
+    QDoubleSpinBox* scaleSpin_ = nullptr;  // glTF models
     QPushButton* colorButton_ = nullptr;
     Vec3Editor* playerStartEdit_ = nullptr;
     Vec3Editor* sunEdit_ = nullptr;

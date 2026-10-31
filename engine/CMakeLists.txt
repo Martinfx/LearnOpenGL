@@ -12,10 +12,12 @@ add_library(engine STATIC
     src/PlayerController.cpp
     src/Renderer.cpp
     src/Scene.cpp
+    src/JobSystem.cpp
     src/SceneGraph.cpp
 )
 target_include_directories(engine PUBLIC include)
-target_link_libraries(engine PUBLIC glm::glm PRIVATE glad Jolt::Jolt lua_static sol2::sol2 cgltf_headers stb_headers)
+find_package(Threads REQUIRED)
+target_link_libraries(engine PUBLIC glm::glm Threads::Threads PRIVATE glad Jolt::Jolt lua_static sol2::sol2 cgltf_headers stb_headers)
 target_compile_definitions(engine PRIVATE SOL_ALL_SAFETIES_ON=1)
 target_compile_definitions(engine PUBLIC GLM_FORCE_RADIANS GLM_ENABLE_EXPERIMENTAL)
 set_target_properties(engine PROPERTIES POSITION_INDEPENDENT_CODE ON)

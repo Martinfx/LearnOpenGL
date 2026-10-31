@@ -91,6 +91,8 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
         out << "model " << std::quoted(m.name) << ' ' << std::quoted(pathToUtf8(rel)) << ' '
             << m.position.x << ' ' << m.position.y << ' ' << m.position.z << '\n';
         writeParent(m.parent);
+        if (m.rotation != glm::vec3(0.0f) || m.scale != 1.0f)
+            out << "  transform " << m.rotation.x << ' ' << m.rotation.y << ' ' << m.rotation.z << ' ' << m.scale << '\n';
         for (const auto& [slot, path] : m.materialOverrides)
             out << "  material_slot " << std::quoted(slot) << ' ' << std::quoted(relative(path)) << '\n';
     }
@@ -154,6 +156,12 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
             ok = static_cast<bool>(ls >> std::quoted(g.name) >> std::quoted(g.parent));
             if (ok)
                 result.groups.push_back(std::move(g));
+        } else if (key == "transform") {
+            ok = lastObject == LastObject::Model;
+            if (ok) {
+                Model& m = result.models.back();
+                ok = static_cast<bool>(ls >> m.rotation.x >> m.rotation.y >> m.rotation.z >> m.scale);
+            }
         } else if (key == "parent") {
             // Hierarchy parent of the object on the line above.
             std::string parent;
@@ -286,6 +294,31 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
     }
     scene = std::move(result);
     return true;
+}
+
+glm::mat4 Model::transform() const
+{
+    glm::mat4 m = glm::translate(glm::mat4(1.0f), position);
+    m = glm::rotate(m, glm::radians(rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
+    m = glm::rotate(m, glm::radians(rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
+    m = glm::rotate(m, glm::radians(rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+    return glm::scale(m, glm::vec3(scale));
+}
+
+Aabb Model::bounds() const
+{
+    if (rotation == glm::vec3(0.0f) && scale == 1.0f)
+        return {localBounds.min + position, localBounds.max + position};
+    const glm::mat4 m = transform();
+    Aabb box{glm::vec3(1e30f), glm::vec3(-1e30f)};
+    for (int i = 0; i < 8; ++i) {
+        const glm::vec3 corner((i & 1) ? localBounds.max.x : localBounds.min.x, (i & 2) ? localBounds.max.y : localBounds.min.y,
+                               (i & 4) ? localBounds.max.z : localBounds.min.z);
+        const glm::vec3 p = glm::vec3(m * glm::vec4(corner, 1.0f));
+        box.min = glm::min(box.min, p);
+        box.max = glm::max(box.max, p);
+    }
+    return box;
 }
 
 glm::mat4 Entity::modelTransform() const
