@@ -4,9 +4,18 @@ Each file is one skinned glTF (GLB): realistic arms (dirty bare hands, dark gree
 
 | File | Weapon | Clips (name: length) |
 |---|---|---|
+| `fp_ak74.glb` | AK-74M, professional arms + animations by Cransh (CC-BY 4.0), gloves and jacket | `idle` 1.96 s loop, `fire` 0.29 s, `reload` 2.63 s, `reload_empty` 3.46 s (with bolt pull), `reload_alt` 2.79 s, `draw` 0.63 s, `walk` 0.96 s loop, `run` 0.38 s loop |
 | `fp_pistol.glb` | Service pistol (Walther P38-style) | `idle` 2.0 s loop, `fire` 0.27 s, `reload` 2.0 s, `draw` 0.5 s, `holster` 0.4 s |
 | `fp_smg.glb` | Compact SMG (olive drab) | `idle` 2.0 s loop, `fire` 0.13 s (repeat for full auto), `reload` 2.5 s, `draw` 0.5 s, `holster` 0.4 s |
 | `fp_knife.glb` | M9 combat knife | `idle` 2.0 s loop, `slash` 0.6 s, `stab` 0.5 s, `draw` 0.4 s, `holster` 0.33 s |
+
+`fp_ak74.glb` is the quality reference. `fp_pistol.glb`, `fp_smg.glb` and `fp_knife.glb` are hand-keyed placeholders
+until the matching Cransh rigs (Makarov PM, SMG) are added.
+
+`fp_ak74.glb` notes: converted with `source/convert_fps.py` (eye = the rig's `Head_Cam_014` bone at idle frame 0,
+scaled so the rifle is 0.943 m). The weapon is held almost centred (muzzle about `0.03 -0.06 -0.68`).
+Bones: `PBody_058` (weapon body), `Pmag_062` (magazine), `Pmag2_063` (spare magazine used in reloads),
+`Trigger_060`, `Hand_R_037` / `Hand_L_016`, `Head_Cam_014` (the animator's camera; its motion can drive camera shake).
 
 ## Conventions
 
