@@ -1,0 +1,15 @@
+# Sound: variations (one is picked at random per play) and playback settings
+file "casing_dirt_1.wav"
+file "casing_dirt_2.wav"
+file "casing_dirt_3.wav"
+file "casing_dirt_4.wav"
+file "casing_dirt_5.wav"
+volume 0.7
+pitch 0.92 1.08
+distance 1 10
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group sfx
+max_instances 12

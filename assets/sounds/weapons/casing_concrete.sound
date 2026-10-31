@@ -1,0 +1,16 @@
+# Sound: variations (one is picked at random per play) and playback settings
+file "casing_concrete_1.wav"
+file "casing_concrete_2.wav"
+file "casing_concrete_3.wav"
+file "casing_concrete_4.wav"
+file "casing_concrete_5.wav"
+file "casing_concrete_6.wav"
+volume 0.8
+pitch 0.92 1.08
+distance 1 15
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group sfx
+max_instances 12
