@@ -16,6 +16,7 @@ properties = {
     { "accuracy",        0.6,  "Hit chance at 10 m (falls off with distance)" },
     { "melee_range",     1.5,  "Hits with the fist instead when this close, m" },
     { "melee_damage",    15,   "Damage of a punch" },
+    { "sound_shot",      "sounds/weapons/pistol_shot.sound", "Sound of every shot (path in assets/, empty = silent)" },
     { "search_time",     5.0,  "Seconds spent searching the last known position" },
     { "patrol_radius",   4.0,  "Wanders this far from its start position, m" },
     -- Animation clips of the character model (Properties > Character model).
@@ -163,6 +164,10 @@ function on_update(self, dt)
                 -- Hit chance falls off with distance; misses still make noise and keep the player moving.
                 local chance = math.min(0.95, math.max(0.05, props.accuracy * 10 / math.max(dist, 1)))
                 if math.random() < chance then game.damage_player(props.shot_damage) end
+                if props.sound_shot ~= "" then
+                    local p = self.position
+                    game.play_sound(props.sound_shot, vec3(p.x, p.y + 1.4, p.z))
+                end
                 next_attack = game.time() + props.shot_interval * (0.8 + 0.4 * math.random())
                 self:play(props.anim_shoot, { loop = false, restart = true, fade = 0.05, speed = props.anim_speed })
             end

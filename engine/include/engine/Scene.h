@@ -219,6 +219,18 @@ struct Entity {
         const glm::vec3 half(size.x * 0.5f, 0.0f, size.z * 0.5f);
         return {position - half, position + half + glm::vec3(0.0f, size.y, 0.0f)};
     }
+
+    // Editor-only helpers (sound sources and zones, map markers): not drawn in the
+    // game and not hit by weapons.
+    bool helper() const { return type == "sound" || type == "map_marker"; }
+    // What the editor draws and picks: a sound zone can span the whole level, so
+    // it is shown as a small speaker cube at its position; the zone is its size.
+    Aabb markerBounds() const
+    {
+        if (type == "sound")
+            return {position, position + glm::vec3(0.6f)};
+        return bounds();
+    }
 };
 
 // Player movement and health, stored per level and edited in the editor.

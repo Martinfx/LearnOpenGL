@@ -11,7 +11,7 @@ a filmové nástroje (Sequencer/Timeline v plné šíři) sem nepatří.
 Pravidla, která platí pro každý bod:
 
 - **Editor první:** každá nová funkce má v téže změně i UI v editoru (data v souborech levelu/assetu).
-- **3rdparty beze změn:** nové knihovny (OpenAL Soft, Recast/Detour, …) jdou do `3rdparty/` v původní podobě.
+- **3rdparty beze změn:** nové knihovny (miniaudio, Recast/Detour, …) jdou do `3rdparty/` v původní podobě.
 - **Vícevláknově od začátku:** načítání, příprava snímku, audio a stavba navmeshe běží mimo hlavní vlákno, UI editoru se nikdy neblokuje.
 - **Měřítko 1 jednotka = 1 m**, člověk 1,8 m (`assets/SCALE.md`).
 - **Windows, Linux, FreeBSD:** CI musí být zelené na všech třech.
@@ -31,7 +31,7 @@ Odhady jsou v týdnech soustředěné práce (1 vývojář + Claude), hrubé.
 | Fyzika | Chaos (destrukce, vozidla, cloth) / PhysX | Jolt: statické kolize z meshů, character controller (schody, svahy), raycasty pro zbraně a AI | Dynamická tělesa v levelu (sudy, bedny), ragdolly, fyzikální materiály (zvuk/částice podle povrchu), triggery a kolizní vrstvy v editoru, příznak "bez kolize" | P1 | M1 / M3 |
 | Animace | Anim Blueprint, Control Rig, IK, retargeting / Mecanim, Animation Rigging | glTF skeletální animace, prolínání klipů, retargetované lidské animace, FP ruce se zbraněmi (Cransh rigy), přehrávání z Lua | Stavový automat a blend space (chůze/běh/míření podle rychlosti a směru), maskování vrstev (horní/dolní tělo), IK nohou a ruky na zbrani, události v klipech (kroky, výměna zásobníku), Animation editor | P1 | M3 |
 | AI a navigace | Behavior Trees, EQS, NavMesh, Perception / NavMesh, ML-Agents | Lua AI (hlídka, pronásledování, střelba, hledání), zorné pole + `can_see` přes raycast | Navmesh (Recast/Detour) se stavbou v editoru a na pozadí, hledání cesty, krytí (cover points), sluch, frakce, skupiny, vizuální debug v editoru | P0 | M1 |
-| Audio | MetaSounds, Sound Cues, atenuace, reverb zóny / AudioMixer | Nic (OpenAL Soft je plánovaný, zatím není ve `3rdparty`) | OpenAL Soft na vlastním vlákně, 3D zvuky, streamování hudby, mixér (kanály, ducking), zvuk zbraní a kroků podle povrchu, ambientní a reverb zóny, Sound editor | P0 | M1 |
+| Audio | MetaSounds, Sound Cues, atenuace, reverb zóny / AudioMixer | miniaudio (`3rdparty/miniaudio`): 3D zvuky, async dekódování, streamování, skupiny mixéru, `.sound` assety, Sound editor, zóny | Zbývá: ducking, zvuk kroků podle povrchu, reverb zóny, okluze zvuku; původně plán: zvuk na vlastním vlákně, 3D zvuky, streamování hudby, mixér (kanály, ducking), zvuk zbraní a kroků podle povrchu, ambientní a reverb zóny, Sound editor | P0 | M1 |
 | VFX | Niagara / VFX Graph, Shuriken | Záblesk u hlavně, procedurální atlas děr po kulkách a nábojnice (zatím nevykreslené ve hře) | CPU/GPU částice (prach, kouř, jiskry, krev, oheň), decaly, VFX editor s živým náhledem, anomálie jako efekt | P1 | M1 / M3 |
 | UI a HUD | UMG, Common UI / UI Toolkit, uGUI | `Ui2D` (text přes stb_truetype, obdélníky, obrázky), načítací obrazovka, minimapa a PDA mapa, zaměřovač | Hlavní menu, pauza, nastavení (grafika, ovládání, zvuk), HUD (zdraví, munice, výdrž), inventář, dialogy, credits (povinné kvůli CC-BY), UI editor/layout v souborech | P0 | M1 |
 | Skriptování a gameplay | Blueprints, C++ gameplay framework, Gameplay Ability System / C#, MonoBehaviour | Lua 5.4 + sol2, `on_start`/`on_update`, vlastnosti z editoru, Script editor s kontrolou syntaxe a doplňováním, zbraně v `.weapon` | Události a zprávy mezi entitami, triggery, časovače, uložení/načtení hry, inventář a předměty, úkoly, dialogy, frakce, debugger skriptů (breakpointy), hot reload | P0 | M1 / M4 |
@@ -83,7 +83,8 @@ Hotovo, když: zóna (`zone.level`) běží na střední kartě nad 60 FPS na Hi
 
 Jedna lokace zóny od menu po smrt/uložení, se zvukem a chytřejšími nepřáteli.
 
-- [ ] **Audio** (2 týdny): OpenAL Soft do `3rdparty/`, audio vlákno, 3D zdroje, streamovaná hudba, mixér; zvuky zbraní, kroků, zásahů; entita "sound" a ambientní zóny v editoru; Lua `play_sound`. Sound editor (náhled, hlasitost, dosah, náhodná variace).
+- [x] **Audio** (2 týdny): ~~OpenAL Soft~~ miniaudio do `3rdparty/` (public domain / MIT-0 místo LGPL, jeden header, backendy pro Windows/Linux/FreeBSD, vestavěné dekodéry), mixování na vlákně zařízení, dekódování na job vlákně, 3D zdroje, streamovaná hudba, skupiny mixéru (sfx, music, ambient, ui); zvuky zbraní (výstřel, přebití, tasení, dopad, zásah), kroků, dopadu a zranění; entita "sound" (3D smyčka nebo ambientní zóna s fade) v editoru; Lua `game.play_sound`. Sound editor (variace, náhled i ze vzdálenosti, hlasitost, náhodný pitch, dosah, loop/stream, skupina). Placeholder zvuky syntetizované (`assets/tools/make_sounds.py`).
+- [ ] Audio dál: hlasitosti skupin v menu hry, ducking, kroky podle povrchu (materiál), reverb zóny, okluze zvuku geometrií.
 - [ ] **Lokální světla** (1,5 týdne): bodová a reflektorová světla, clustered forward, stíny pro pár nejbližších; světla jako objekty v editoru s gizmem dosahu; blikající zářivky.
 - [ ] **Navigace** (2 týdny): Recast/Detour do `3rdparty/`, stavba navmeshe na pozadí z kolizí levelu, zobrazení a nastavení v editoru, `self:move_to()` v Lua, krycí body.
 - [ ] **UI hry** (1,5 týdne): hlavní menu, pauza, nastavení (grafika, myš, klávesy, hlasitost), HUD (zdraví, munice), credits s CC-BY autory, obrazovka smrti.

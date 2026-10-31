@@ -264,6 +264,6 @@ Model je zároveň statická kolize (Jolt MeshShape), takže po něm jde chodit.
 
 Hotovo: hráč (Jolt CharacterVirtual), glTF modely s texturami, entity s Lua skripty, AI nepřátel,
 zbraně se střelbou a zdravím nepřátel, animované postavy (skeletal animace, GPU skinning), script editor,
-PBR materiály a textury s editory, editor pro všechny parametry.
-Další: nové modely a textury, nůž/samopal/pistole, hierarchie scény, animation editor,
-zvuk (OpenAL), environment editor.
+PBR materiály a textury s editory, editor pro všechny parametry, zvuk (miniaudio: 3D zvuky,
+`.sound` assety, Sound editor, ambientní zóny, Lua `game.play_sound`).
+Další: nové modely a textury, nůž/samopal/pistole, hierarchie scény, animation editor, environment editor.

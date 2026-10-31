@@ -741,7 +741,7 @@ Aabb Scene::objectBounds(int object) const
     if (isModel(object))
         return model(object).bounds();
     if (isEntity(object))
-        return entity(object).bounds();
+        return entity(object).markerBounds();
     return {};
 }
 
@@ -779,6 +779,8 @@ void mapArea(const Scene& scene, glm::vec2& min, float& size)
     }
     glm::vec2 lo(1e30f), hi(-1e30f);
     for (int i = 0; i < scene.objectCount(); ++i) {
+        if (scene.isEntity(i) && scene.entity(i).helper())
+            continue; // sound zones and markers do not size the map
         const Aabb b = scene.objectBounds(i);
         lo = glm::min(lo, glm::vec2(b.min.x, b.min.z));
         hi = glm::max(hi, glm::vec2(b.max.x, b.max.z));

@@ -31,6 +31,10 @@ struct SoundDef {
     int maxInstances = 8;         // more plays at once steal the oldest one
 };
 
+// Volume of an ambient zone (a box) heard at `p`: 1 inside, falling smoothly to 0
+// at `fade` metres outside it.
+float zoneGain(glm::vec3 boxMin, glm::vec3 boxMax, float fade, glm::vec3 p);
+
 bool saveSoundFile(const SoundDef& sound, const std::filesystem::path& file, std::string* error = nullptr);
 bool loadSoundFile(SoundDef& sound, const std::filesystem::path& file, std::string* error = nullptr);
 

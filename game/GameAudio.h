@@ -1,0 +1,51 @@
+#pragma once
+#include <engine/Audio.h>
+#include <engine/Scene.h>
+
+#include <filesystem>
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
+
+// The game's sounds: one AudioSystem, sounds cached by path, the level's sound
+// entities (3D loops and ambient zones) and the player's footsteps.
+class GameAudio {
+public:
+    void init(const std::filesystem::path& assetDir);
+
+    // Empty or unreadable paths are silent (a missing file is reported once).
+    void play(const std::filesystem::path& sound, glm::vec3 position, float volume = 1.0f);
+    void play2D(const std::filesystem::path& sound, float volume = 1.0f);
+    // A path relative to assets/ (Lua scripts, entity properties).
+    void playAsset(const std::string& relative, const glm::vec3* position, float volume);
+    void preload(const std::filesystem::path& sound);
+
+    // Starts the loops of the level's "sound" entities.
+    void startLevel(const engine::Scene& scene);
+    // Listener, zone volumes, footsteps; once per frame.
+    void update(float dt, const engine::Scene& scene, glm::vec3 eye, glm::vec3 forward);
+    // Footsteps from the distance walked on the ground (call per fixed step).
+    void walk(const engine::PlayerSettings& player, glm::vec3 feet, glm::vec3 velocity, bool grounded, float dt);
+
+    engine::AudioSystem& system() { return audio_; }
+
+private:
+    std::shared_ptr<const engine::SoundDef> get(const std::filesystem::path& sound);
+
+    struct Source {
+        std::size_t entity = 0;
+        engine::AudioSystem::Handle handle = 0;
+        bool zone = false;
+        float fade = 10.0f;
+        float volume = 1.0f;
+    };
+
+    engine::AudioSystem audio_;
+    std::filesystem::path assetDir_;
+    std::map<std::filesystem::path, std::shared_ptr<const engine::SoundDef>> cache_;
+    std::vector<Source> sources_;
+    float stride_ = 0.0f;       // metres walked since the last footstep
+    bool wasGrounded_ = true;
+    float fallSpeed_ = 0.0f;    // fastest downward speed while airborne
+};

@@ -10,6 +10,7 @@
 #include <engine/Scene.h>
 #include <engine/Ui2D.h>
 
+#include "GameAudio.h"
 #include "MapHud.h"
 #include <engine/Scripting.h>
 #include <engine/Weapon.h>
@@ -339,8 +340,15 @@ int main(int argc, char** argv)
     player.settings = scene.player; // movement and health come from the level (editor: Level > Player)
     player.spawn(physics, scene.playerStart);
 
+    // Audio: mixing runs on miniaudio's device thread, files decode on its job thread.
+    GameAudio audio;
+    audio.init(std::filesystem::path(argv[0]).parent_path() / "assets");
+
     engine::ScriptSystem scripts(scene, physics, player);
     scripts.setPlayerHealth(scene.player.maxHealth);
+    scripts.setSoundHandler([&audio](const std::string& sound, const glm::vec3* position, float volume) {
+        audio.playAsset(sound, position, volume);
+    });
 
     // Weapons (credits of the models: CREDITS.md next to each model)
     std::vector<engine::Weapon> weapons = loadLoadout(scene, std::filesystem::path(argv[0]).parent_path());
@@ -350,6 +358,14 @@ int main(int argc, char** argv)
     std::array<bool, 9> slotHeld{};
     std::vector<Impact> impacts;
     int kills = 0;
+    for (const engine::Weapon& w : weapons)
+        for (const auto* s : {&w.settings.soundFire, &w.settings.soundReload, &w.settings.soundDraw, &w.settings.soundImpact,
+                              &w.settings.soundHit})
+            audio.preload(*s);
+    for (const auto* s : {&scene.player.footstepSound, &scene.player.landSound, &scene.player.hurtSound})
+        audio.preload(*s);
+    audio.startLevel(scene);
+    bool wasReloading = false;
     if (const int errors = scripts.start())
         std::fprintf(stderr, "%d script error(s), see above\n", errors);
     engine::FixedStepClock clock;
@@ -437,6 +453,8 @@ int main(int argc, char** argv)
                 if (lowered >= 1.0f) {
                     current = next;
                     weapons[current].drawn();
+                    audio.play(weapons[current].settings.soundDraw, player.eye(), 1.0f);
+                    wasReloading = weapons[current].reloading();
                 }
             } else {
                 lowered = std::max(0.0f, lowered - dt / 0.15f);
@@ -448,6 +466,11 @@ int main(int argc, char** argv)
             if (next != current)
                 weapon.aim(1.0f, false); // switching drops the aim
             weapon.aim(dt, ready && input.isDown(engine::Action::Aim));
+            if (shots > 0)
+                audio.play(weapon.settings.soundFire, player.eye() + camera.forward() * 0.5f);
+            if (weapon.reloading() && !wasReloading)
+                audio.play(weapon.settings.soundReload, player.eye());
+            wasReloading = weapon.reloading();
             const glm::vec3 moveVel = player.velocity();
             weapon.animate(dt, player.grounded() ? std::sqrt(moveVel.x * moveVel.x + moveVel.z * moveVel.z) : 0.0f);
             const int rays = weapon.settings.melee() ? shots : shots * weapon.settings.pellets;
@@ -462,6 +485,7 @@ int main(int argc, char** argv)
                 if (!hit.hit)
                     continue;
                 impacts.push_back({hit.point, 0.0f, hit.entity >= 0});
+                audio.play(hit.entity >= 0 ? weapon.settings.soundHit : weapon.settings.soundImpact, hit.point);
                 if (hit.entity >= 0) {
                     const bool wasAlive = scene.entities[static_cast<std::size_t>(hit.entity)].alive;
                     scripts.damageEntity(hit.entity, weapon.settings.damage);
@@ -473,7 +497,11 @@ int main(int argc, char** argv)
                 impact.age += dt;
             std::erase_if(impacts, [](const Impact& i) { return i.age > (i.onEnemy ? 0.15f : 6.0f); });
 
+            const float healthBefore = scripts.playerHealth();
             scripts.fixedUpdate(dt);
+            if (scripts.playerHealth() < healthBefore)
+                audio.play2D(scene.player.hurtSound);
+            audio.walk(scene.player, player.feet(), player.velocity(), player.grounded(), dt);
             physics.step(dt);
             if (scripts.playerHealth() <= 0.0f) {
                 std::printf("You died. Respawning.\n");
@@ -484,6 +512,7 @@ int main(int argc, char** argv)
 
         camera.position = player.interpolatedEye(static_cast<float>(clock.alpha()));
         engine::updateAnimations(scene, static_cast<float>(frameTime)); // per frame for smooth motion
+        audio.update(static_cast<float>(frameTime), scene, camera.position, camera.forward());
 
         int width = 0, height = 0;
         glfwGetFramebufferSize(window, &width, &height);

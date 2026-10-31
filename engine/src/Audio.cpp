@@ -2,6 +2,7 @@
 
 #include <miniaudio.h>
 
+#include <glm/common.hpp>
 #include <glm/geometric.hpp>
 
 #include <algorithm>
@@ -70,6 +71,18 @@ AudioGroup audioGroupFromName(const std::string& name)
         if (name == audioGroupName(static_cast<AudioGroup>(g)))
             return static_cast<AudioGroup>(g);
     return AudioGroup::Sfx;
+}
+
+float zoneGain(glm::vec3 boxMin, glm::vec3 boxMax, float fade, glm::vec3 p)
+{
+    const glm::vec3 outside = glm::max(glm::max(boxMin - p, p - boxMax), glm::vec3(0.0f));
+    const float d = glm::length(outside);
+    if (d <= 0.0f)
+        return 1.0f;
+    if (fade <= 0.0f || d >= fade)
+        return 0.0f;
+    const float t = 1.0f - d / fade;
+    return t * t * (3.0f - 2.0f * t);
 }
 
 // ------------------------------------------------------------------ .sound files

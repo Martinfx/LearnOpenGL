@@ -1,5 +1,6 @@
 #pragma once
 #include "engine/Scene.h"
+#include <glm/vec3.hpp>
 #include <functional>
 #include <memory>
 #include <string>
@@ -39,6 +40,11 @@ public:
     // Applies weapon damage: calls on_damage(self, amount); at 0 health the
     // entity dies (on_death(self), no longer drawn or simulated).
     void damageEntity(int entityIndex, float amount);
+
+    // game.play_sound(sound [, position] [, volume]): `sound` is a path relative to
+    // the assets folder; position nil = not positioned (2D). The game plays it.
+    using SoundFn = std::function<void(const std::string& sound, const glm::vec3* position, float volume)>;
+    void setSoundHandler(SoundFn handler);
 
     float playerHealth() const;
     void setPlayerHealth(float health);

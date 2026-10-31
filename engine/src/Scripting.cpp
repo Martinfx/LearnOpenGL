@@ -80,6 +80,7 @@ struct ScriptSystem::Impl {
     PhysicsWorld& physics;
     PlayerController& player;
     LogFn log;
+    SoundFn playSound;
     sol::state lua;
     std::vector<std::unique_ptr<ScriptEntity>> entities;
     float playerHealth = 100.0f;
@@ -204,6 +205,10 @@ void ScriptSystem::Impl::bindApi()
     game.set_function("player_position", [this] { return player.feet(); });
     game.set_function("player_eye", [this] { return player.eye(); });
     game.set_function("player_health", [this] { return playerHealth; });
+    game.set_function("play_sound", [this](const std::string& sound, sol::optional<glm::vec3> position, sol::optional<float> volume) {
+        if (playSound)
+            playSound(sound, position ? &*position : nullptr, volume.value_or(1.0f));
+    });
     game.set_function("damage_player", [this](float amount) { playerHealth = std::max(0.0f, playerHealth - amount); });
     game.set_function("time", [this] { return time; });
     game.set_function("can_see", [this](const glm::vec3& from, const glm::vec3& to) {
@@ -412,6 +417,7 @@ ScriptCheck checkScriptSyntax(const std::string& source, const std::string& chun
 }
 
 float ScriptSystem::playerHealth() const { return impl_->playerHealth; }
+void ScriptSystem::setSoundHandler(SoundFn handler) { impl_->playSound = std::move(handler); }
 void ScriptSystem::setPlayerHealth(float health) { impl_->playerHealth = health; }
 int ScriptSystem::errorCount() const { return impl_->errors; }
 

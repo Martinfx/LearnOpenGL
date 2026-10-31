@@ -65,6 +65,7 @@ methods `:length()`, `:normalized()`, `:flat()` (y = 0), `:dot(other)`.
 | `game.player_position()` / `game.player_eye()` | `vec3` |
 | `game.player_health()` | number 0..100 |
 | `game.damage_player(amount)` | |
+| `game.play_sound(sound, [position], [volume])` | Plays a `.sound` or audio file (path relative to `assets/`, e.g. `"sounds/weapons/pistol_shot.sound"`) at a `vec3` position, or not positioned when `position` is `nil` |
 | `game.time()` | Seconds since the level started |
 | `game.can_see(from, to)` | `true` when no level geometry is in between |
 | `game.raycast(origin, dir, max)` | `hit, point, distance` |

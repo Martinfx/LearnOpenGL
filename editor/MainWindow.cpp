@@ -1325,9 +1325,9 @@ void MainWindow::buildDocks()
     detailsTabs_->setDrawBase(false);
     detailsTabs_->setExpanding(false);
     detailsTabs_->setUsesScrollButtons(false);
-    for (const char* c : {"General", "Transform", "Rendering", "Character", "Script", "Level", "All"})
+    for (const char* c : {"General", "Transform", "Rendering", "Character", "Script", "Sound", "Level", "All"})
         detailsTabs_->addTab(tr(c));
-    detailsTabs_->setCurrentIndex(6);
+    detailsTabs_->setCurrentIndex(7);
     auto* tabRow = new QHBoxLayout();
     tabRow->setContentsMargins(6, 0, 6, 6);
     tabRow->addWidget(detailsTabs_);
@@ -3009,7 +3009,7 @@ void MainWindow::updateDetailsVisibility()
     const engine::Model* m = selectedModel();
     const engine::Entity* e = selectedEntity();
     const bool any = b || m || e;
-    const QString category = QStringList{"General", "Transform", "Rendering", "Character", "Script", "Level", "All"}.value(detailsTabs_->currentIndex());
+    const QString category = QStringList{"General", "Transform", "Rendering", "Character", "Script", "Sound", "Level", "All"}.value(detailsTabs_->currentIndex());
     const QStringList words = detailsSearch_->text().toLower().split(' ', Qt::SkipEmptyParts);
     for (const DetailSection& d : detailSections_) {
         bool relevant = true;
@@ -3019,6 +3019,8 @@ void MainWindow::updateDetailsVisibility()
             relevant = b || m || e;
         else if (d.category == "Character" || d.category == "Script")
             relevant = e != nullptr;
+        else if (d.category == "Sound")
+            relevant = e != nullptr && e->type == "sound";
         bool shown = relevant && (category == "All" || category == d.category);
         // Search: rows whose label contains every word (a matching section title shows all rows).
         const bool titleMatch = std::all_of(words.begin(), words.end(), [&](const QString& w) { return d.section->title().toLower().contains(w); });

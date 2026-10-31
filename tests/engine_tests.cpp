@@ -1,4 +1,7 @@
 // Headless tests for the engine core (no OpenGL needed).
+#include <engine/Audio.h>
+#include <chrono>
+#include <thread>
 #include <engine/Gizmo.h>
 #include <engine/Camera.h>
 #include <engine/FixedStepClock.h>
@@ -629,7 +632,7 @@ void testScriptPropertiesFromEditor()
     std::vector<engine::ScriptProperty> props;
     std::string err;
     check(engine::readScriptProperties(ENGINE_TEST_ASSETS "/scripts/enemy.lua", props, &err), "read enemy.lua properties: " + err);
-    check(props.size() == 23 && props[0].name == "health" && props[0].defaultValue == "100", "enemy.lua declares 23 tunables, health first");
+    check(props.size() == 24 && props[0].name == "health" && props[0].defaultValue == "100", "enemy.lua declares 24 tunables, health first");
 
     // An editor override changes the behaviour: 40 hp dies after two 20-damage hits.
     auto s = flatFloor();
@@ -1035,6 +1038,84 @@ void testSharedMeshes()
     check(shared > 0, "level instances of one file share meshes");
 }
 
+void testAudio()
+{
+    namespace fs = std::filesystem;
+    // .sound files: variations relative to the file, settings round trip.
+    const fs::path assets = ENGINE_TEST_ASSETS;
+    engine::SoundDef rifle;
+    std::string error;
+    check(engine::loadSoundFile(rifle, assets / "sounds/weapons/rifle_shot.sound", &error) && rifle.files.size() == 3 &&
+              fs::exists(rifle.files[0]) && rifle.spatial && !rifle.loop && rifle.group == engine::AudioGroup::Sfx,
+          "rifle_shot.sound loads three variations " + error);
+    engine::SoundDef wind;
+    check(engine::loadSoundFile(wind, assets / "sounds/ambient/wind.sound") && wind.loop && wind.stream && !wind.spatial &&
+              wind.group == engine::AudioGroup::Ambient,
+          "wind.sound is a streamed ambient loop");
+    const fs::path tmp = fs::temp_directory_path() / "fps_engine_test.sound";
+    engine::SoundDef copy = rifle;
+    copy.pitchMin = 0.8f;
+    copy.maxDistance = 123.0f;
+    copy.group = engine::AudioGroup::Music;
+    engine::SoundDef back;
+    check(engine::saveSoundFile(copy, tmp) && engine::loadSoundFile(back, tmp) && back.files == copy.files &&
+              back.pitchMin == 0.8f && back.maxDistance == 123.0f && back.group == engine::AudioGroup::Music,
+          ".sound save/load round trip");
+    fs::remove(tmp);
+
+    // Zones: full inside, smooth fade outside.
+    check(engine::zoneGain({0, 0, 0}, {10, 10, 10}, 5, {5, 5, 5}) == 1.0f &&
+              engine::zoneGain({0, 0, 0}, {10, 10, 10}, 5, {12.5f, 5, 5}) == 0.5f &&
+              engine::zoneGain({0, 0, 0}, {10, 10, 10}, 5, {16, 5, 5}) == 0.0f,
+          "ambient zone gain fades over the fade distance");
+
+    // Offline mixing: a sound plays, is heard, ends and frees its voice; 3D distance attenuates.
+    engine::AudioSystem audio;
+    engine::AudioOptions options;
+    options.noDevice = true;
+    check(audio.init(options, &error) && !audio.hasDevice(), "audio system starts without a device " + error);
+    audio.setListener({0, 0, 0}, {0, 0, -1});
+    auto shot = audio.loadSound(assets / "sounds/weapons/pistol_shot.sound", &error);
+    check(shot != nullptr, "pistol_shot.sound loads " + error);
+    if (!shot)
+        return;
+    audio.preload(*shot); // decodes in the background; a sound played before that misses its start
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    auto loudness = [&](glm::vec3 at) {
+        // Decoding is asynchronous: wait for the data (the mixer outputs silence until then).
+        float peak = 0.0f;
+        const auto handle = audio.play(*shot, at);
+        std::vector<float> buf(4800 * 2);
+        for (int i = 0; i < 400 && peak == 0.0f; ++i) {
+            audio.render(buf.data(), 4800);
+            for (float v : buf)
+                peak = std::max(peak, std::abs(v));
+            if (peak == 0.0f)
+                std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        }
+        for (int i = 0; i < 6; ++i) { // the attack and body of the shot
+            audio.render(buf.data(), 4800);
+            for (float v : buf)
+                peak = std::max(peak, std::abs(v));
+        }
+        audio.stop(handle);
+        std::printf("audio peak at %.0f m: %.3f\n", -at.z, peak);
+        return peak;
+    };
+    const float near = loudness({0, 0, -2}), far = loudness({0, 0, -150});
+    check(near > 0.2f, "a shot 2 m away is heard");
+    check(far > 0.0f && far < near * 0.2f, "a shot 150 m away is much quieter");
+    const auto h = audio.play2D(*shot);
+    check(audio.playing(h) && audio.activeVoices() == 1, "a playing sound holds a voice");
+    for (int i = 0; i < 40; ++i)
+        audio.update(0.1f); // 4 s mixed: the 0.8 s shot ends
+    check(!audio.playing(h) && audio.activeVoices() == 0, "a finished sound frees its voice");
+    for (int i = 0; i < 20; ++i)
+        audio.play2D(*shot);
+    check(audio.activeVoices() == shot->maxInstances, "max_instances caps the voices of one sound");
+    audio.shutdown();
+}
+
 int main()
 {
     // Hermetic cook cache for the tests.
@@ -1074,6 +1155,7 @@ int main()
     testEnemyAnimations();
     testScriptSyntaxCheck();
     testMaterialsAndTextures();
+    testAudio();
     std::printf(failures ? "%d test(s) failed\n" : "all tests passed\n", failures);
     return failures ? 1 : 0;
 }

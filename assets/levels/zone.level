@@ -4569,3 +4569,8 @@ entity "Soldier 4" "enemy" 180.00 0.00 -95.00 180 0.6 1.8 0.6 0.55 0.5 0.5 "../s
 entity "Soldier 5" "enemy" 172.00 0.00 -100.00 90 0.6 1.8 0.6 0.55 0.5 0.5 "../scripts/enemy.lua"
   parent "Soldiers"
   character "../models/characters/humans/soldier_heavy.glb" 1 0 "Idle_Loop"
+player_sounds "../sounds/player/step_gravel.sound" "../sounds/player/land.sound" "../sounds/player/hurt.sound"
+entity "Ambience wind" "sound" 0 -100 0 0 4000 400 4000 0.25 0.55 0.95 ""
+  prop "sound" "sounds/ambient/wind.sound"
+  prop "zone" "1"
+  prop "fade" "50"

@@ -899,8 +899,8 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
     glBindVertexArray(vao_);
     for (std::size_t i = 0; i < scene.entities.size(); ++i) {
         const Entity& e = scene.entities[i];
-        if (!view.editorHelpers && e.type == "map_marker")
-            continue; // only a point on the map in the game
+        if (!view.editorHelpers && e.helper())
+            continue; // map markers, sound sources: editor only
         const float highlight = static_cast<int>(scene.boxes.size() + scene.models.size() + i) == view.selectedObject ? 1.0f : 0.0f;
         // Generous box: animations reach outside the rest pose.
         const float reach = std::max({e.size.x, e.size.y, e.size.z}) * 1.5f;
@@ -921,6 +921,11 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         }
         if (!e.alive)
             continue;
+        if (e.type == "sound") { // speaker cube; the zone itself is the entity size
+            const Aabb m = e.markerBounds();
+            drawBox((m.min + m.max) * 0.5f, m.max - m.min, e.color, highlight, 0.0f);
+            continue;
+        }
         glUniform1f(loc_.flash, std::min(1.0f, e.flash * 8.0f));
         drawBox(e.position + glm::vec3(0.0f, e.size.y * 0.5f, 0.0f), e.size, e.color, highlight, e.yawDegrees);
         glUniform1f(loc_.flash, 0.0f);
@@ -2545,6 +2550,7 @@ void Renderer::releaseOcclusion()
     occ_.fbo = occ_.tex = 0;
     occ_.width = occ_.height = 0;
     occ_.valid = false;
+    occ_.testing = false; // a resize mid-frame (capture runs between the depth and opaque passes) drops the old copy
     occ_.depth.clear();
 }
 

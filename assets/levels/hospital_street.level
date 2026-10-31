@@ -1916,3 +1916,8 @@ entity "Bandit in the old town" "enemy" 97.00 0.00 12.00 180 0.6 1.8 0.6 0.55 0.
   parent "Bandits"
   character "../models/characters/humans/bandit.glb" 1 0 "Idle_Loop"
   prop "patrol_radius" "5"
+player_sounds "../sounds/player/step_gravel.sound" "../sounds/player/land.sound" "../sounds/player/hurt.sound"
+entity "Ambience wind" "sound" 0 -100 0 0 4000 400 4000 0.25 0.55 0.95 ""
+  prop "sound" "sounds/ambient/wind.sound"
+  prop "zone" "1"
+  prop "fade" "50"
