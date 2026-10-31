@@ -129,6 +129,8 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
             out << "  transform " << m.rotation.x << ' ' << m.rotation.y << ' ' << m.rotation.z << ' ' << m.scale << '\n';
         for (const auto& [slot, path] : m.materialOverrides)
             out << "  material_slot " << std::quoted(slot) << ' ' << std::quoted(relative(path)) << '\n';
+        if (!m.lodPath.empty())
+            out << "  lod " << std::quoted(relative(m.lodPath)) << ' ' << m.lodDistance << '\n';
     }
     const PlayerSettings& pl = scene.player;
     out << "player " << pl.walkSpeed << ' ' << pl.sprintSpeed << ' ' << pl.jumpSpeed << ' ' << pl.gravity << ' '
@@ -175,6 +177,22 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
     std::string line;
     int lineNo = 0;
     enum class LastObject { None, Box, Model, Entity } lastObject = LastObject::None;
+    // Files used several times (fence sections, crates) are parsed once.
+    std::map<std::filesystem::path, Model> loaded;
+    auto loadCached = [&loaded](Model& m, const std::filesystem::path& path, std::string* err) {
+        if (const auto it = loaded.find(path); it != loaded.end()) {
+            const std::string name = m.name;
+            const glm::vec3 position = m.position;
+            m = it->second;
+            m.name = name;
+            m.position = position;
+            return true;
+        }
+        if (!loadModelFile(m, path, err))
+            return false;
+        loaded.emplace(path, m);
+        return true;
+    };
     while (std::getline(in, line)) {
         ++lineNo;
         std::istringstream ls(line);
@@ -211,6 +229,25 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
             ok = static_cast<bool>(ls >> std::quoted(g.name) >> std::quoted(g.parent));
             if (ok)
                 result.groups.push_back(std::move(g));
+        } else if (key == "lod") {
+            // Distance LOD of the model on the line above.
+            std::string path;
+            ok = lastObject == LastObject::Model && static_cast<bool>(ls >> std::quoted(path));
+            if (ok) {
+                Model& m = result.models.back();
+                float distance = 80.0f;
+                if (ls >> distance)
+                    m.lodDistance = distance;
+                std::filesystem::path p = pathFromUtf8(path);
+                if (p.is_relative())
+                    p = std::filesystem::absolute(file).parent_path() / p;
+                auto lod = std::make_shared<Model>();
+                std::string modelError;
+                m.lodPath = p.lexically_normal();
+                if (loadCached(*lod, m.lodPath, &modelError))
+                    m.lod = std::move(lod);
+                // A missing LOD file is not fatal: the full model is drawn at every distance.
+            }
         } else if (key == "transform") {
             ok = lastObject == LastObject::Model;
             if (ok) {
@@ -267,7 +304,7 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                 if (p.is_relative())
                     p = std::filesystem::absolute(file).parent_path() / p;
                 std::string modelError;
-                if (!loadModelFile(m, p.lexically_normal(), &modelError)) {
+                if (!loadCached(m, p.lexically_normal(), &modelError)) {
                     setError(error, file.string() + ":" + std::to_string(lineNo) + ": " + modelError);
                     return false;
                 }
@@ -475,6 +512,14 @@ int pickObject(const Scene& scene, glm::vec3 origin, glm::vec3 dir)
         }
     }
     return best;
+}
+
+std::filesystem::path findLodFile(const std::filesystem::path& file)
+{
+    std::filesystem::path lod = file;
+    lod.replace_filename(file.stem().u8string() + u8"_lod1" + file.extension().u8string());
+    std::error_code ec;
+    return std::filesystem::exists(lod, ec) ? lod : std::filesystem::path();
 }
 
 } // namespace engine

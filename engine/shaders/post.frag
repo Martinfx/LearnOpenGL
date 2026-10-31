@@ -12,6 +12,7 @@ uniform vec3 uTint;
 uniform float uVignette;
 uniform float uGrain;
 uniform float uTime;
+uniform bool uLumaAlpha;   // luma in alpha for FXAA; opaque when drawing straight to the screen
 out vec4 fragColor;
 
 vec3 aces(vec3 x) {
@@ -41,6 +42,6 @@ void main() {
     // Contrast in display space, so dark colors are not crushed to black.
     color = clamp((color - 0.5) * uContrast + 0.5, 0.0, 1.0);
     color += (hash(gl_FragCoord.xy + fract(uTime) * 1000.0) - 0.5) * uGrain;
-    // Luma in alpha for FXAA.
-    fragColor = vec4(color, dot(color, vec3(0.299, 0.587, 0.114)));
+    // Luma in alpha for FXAA. The window must get alpha 1: Qt composites the editor view with it.
+    fragColor = vec4(color, uLumaAlpha ? dot(color, vec3(0.299, 0.587, 0.114)) : 1.0);
 }

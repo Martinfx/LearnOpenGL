@@ -277,7 +277,8 @@ bool Renderer::buildPrograms(const std::map<std::string, std::string>& src, Prog
                              {&p.ssao, "fullscreen.vert", "ssao.frag"},   {&p.blur, "fullscreen.vert", "blur.frag"},
                              {&p.bloomDown, "fullscreen.vert", "bloom_down.frag"},
                              {&p.bloomUp, "fullscreen.vert", "bloom_up.frag"}, {&p.post, "fullscreen.vert", "post.frag"},
-                             {&p.fxaa, "fullscreen.vert", "fxaa.frag"},   {&p.copy, "fullscreen.vert", "copy.frag"}};
+                             {&p.fxaa, "fullscreen.vert", "fxaa.frag"},   {&p.copy, "fullscreen.vert", "copy.frag"},
+                             {&p.grid, "fullscreen.vert", "grid.frag"}};
     for (const Entry& e : entries) {
         e.program->id = linkProgram(src, e.vert, e.frag, error);
         e.program->locations.clear();
@@ -292,7 +293,7 @@ bool Renderer::buildPrograms(const std::map<std::string, std::string>& src, Prog
 void Renderer::destroyPrograms(Programs& p)
 {
     for (Program* program : {&p.mesh, &p.depth, &p.sky, &p.envCapture, &p.prefilter, &p.brdf, &p.ssao, &p.blur, &p.bloomDown,
-                             &p.bloomUp, &p.post, &p.fxaa, &p.copy}) {
+                             &p.bloomUp, &p.post, &p.fxaa, &p.copy, &p.grid}) {
         if (program->id)
             glDeleteProgram(program->id);
         program->id = 0;
@@ -706,11 +707,21 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         const Model& model = scene.models[i];
         if (!visible(model.bounds())) {
             keepAlive(model); // stays uploaded while out of view
+            if (model.lod)
+                keepAlive(*model.lod);
             ++culled_;
             continue;
         }
         const bool selected = static_cast<int>(scene.boxes.size() + i) == view.selectedObject;
-        drawModel(model, model.transform(), selected ? 1.0f : 0.0f);
+        // Distance LOD: the simpler copy beyond lodDistance (the other one stays uploaded).
+        const Model* draw = &model;
+        if (model.lod) {
+            const Aabb b = model.bounds();
+            const bool far = glm::distance(view.cameraPosition, (b.min + b.max) * 0.5f) > model.lodDistance;
+            draw = far ? model.lod.get() : &model;
+            keepAlive(far ? model : *model.lod);
+        }
+        drawModel(*draw, model.transform(), selected ? 1.0f : 0.0f);
     }
     if (!depthOnly)
         for (const OverlayBox& b : view.worldBoxes)
@@ -798,8 +809,25 @@ void Renderer::renderSsao()
     glDrawArrays(GL_TRIANGLES, 0, 3);
 }
 
+namespace {
+// Host toolkits (Qt's QPainter over the editor viewport) leave blending, scissor
+// and masks enabled between frames; every pass here assumes the defaults.
+void resetGlState()
+{
+    glDisable(GL_BLEND);
+    glDisable(GL_SCISSOR_TEST);
+    glDisable(GL_STENCIL_TEST);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    glDepthMask(GL_TRUE);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);
+    glFrontFace(GL_CCW);
+}
+} // namespace
+
 void Renderer::render(const Scene& scene, const RenderView& view)
 {
+    resetGlState();
     // Free GPU data nothing drew since the previous render() (removed models).
     releaseUnused();
     texturesUploaded_ = 0;
@@ -880,6 +908,27 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     glDepthMask(GL_TRUE);
     glDepthFunc(GL_LESS);
 
+    if (view.grid) {
+        // Editor grid, blended over the scene and hidden by what stands above it.
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glDepthMask(GL_FALSE);
+        glDepthFunc(GL_LEQUAL);
+        if (wireframe)
+            glDisable(GL_DEPTH_TEST);
+        const Program& grid = programs_.grid;
+        glUseProgram(grid.id);
+        glUniform1i(grid.loc("uGridAxis"), std::clamp(view.gridAxis, 0, 2));
+        glUniform1f(grid.loc("uGridFade"), view.gridFade);
+        glUniformMatrix4fv(grid.loc("uGridViewProj"), 1, GL_FALSE, glm::value_ptr(viewProj));
+        glBindVertexArray(emptyVao_);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+        glEnable(GL_DEPTH_TEST);
+        glDepthMask(GL_TRUE);
+        glDepthFunc(GL_LESS);
+        glDisable(GL_BLEND);
+    }
+
     if (!view.gizmoBoxes.empty()) {
         glClear(GL_DEPTH_BUFFER_BIT); // handles stay visible through walls
         useMeshProgram(programs_.mesh);
@@ -953,6 +1002,7 @@ void Renderer::present()
     if (!pendingPresent_)
         return;
     pendingPresent_ = false;
+    resetGlState();
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
     if (quality_.bloom)
@@ -976,6 +1026,7 @@ void Renderer::present()
     glUniform1f(post.loc("uVignette"), e.vignette);
     glUniform1f(post.loc("uGrain"), e.grain);
     glUniform1f(post.loc("uTime"), time_);
+    glUniform1i(post.loc("uLumaAlpha"), fxaa ? 1 : 0);
     glBindTextureUnit(0, hdrColor_);
     glBindTextureUnit(1, bloomTex_.empty() ? whiteTex_ : bloomTex_[0]);
     glDrawArrays(GL_TRIANGLES, 0, 3);

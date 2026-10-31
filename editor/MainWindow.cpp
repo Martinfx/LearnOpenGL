@@ -405,7 +405,7 @@ void MainWindow::buildMenus()
         options->addAction(t);
     options->addSeparator();
     options->addAction(tr("Player start = camera position"), this, [this] {
-        scene_.playerStart = viewport_->camera().position - glm::vec3(0.0f, 1.65f, 0.0f);
+        scene_.playerStart = viewport_->camera().position - glm::vec3(0.0f, scene_.player.eyeHeight, 0.0f);
         refreshLevelProperties();
         markDirty();
     });
@@ -900,7 +900,7 @@ void MainWindow::buildDocks()
     });
     connect(fromCamera, &QPushButton::clicked, this, [this] {
         // Camera is the eye; the player start is the feet position.
-        scene_.playerStart = viewport_->camera().position - glm::vec3(0.0f, 1.65f, 0.0f);
+        scene_.playerStart = viewport_->camera().position - glm::vec3(0.0f, scene_.player.eyeHeight, 0.0f);
         refreshLevelProperties();
         markDirty();
     });

@@ -104,6 +104,11 @@ struct Model {
     glm::vec3 rotation{0.0f};         // degrees around X, Y, Z (applied Z, then X, then Y)
     float scale = 1.0f;               // uniform
 
+    // Simpler copy drawn when the camera is farther than lodDistance (e.g. foo_lod1.glb).
+    std::shared_ptr<const Model> lod;
+    std::filesystem::path lodPath;    // absolute, empty = no LOD
+    float lodDistance = 80.0f;        // metres from the camera to the model's center
+
     glm::mat4 transform() const;      // model space -> world
     Aabb bounds() const;              // world-space bounds of the rotated, scaled model
 };
@@ -152,7 +157,7 @@ struct PlayerSettings {
     float airControl = 0.15f;   // 0 = none, 1 = full
     float radius = 0.3f;
     float height = 1.8f;
-    float eyeHeight = 1.65f;
+    float eyeHeight = 1.7f;   // assets/SCALE.md: eye 1.7 m, character 1.8 m
     float stepHeight = 0.4f;    // stairs up to this height are climbed automatically
     float maxSlopeDegrees = 45.0f;
     float killY = -50.0f;       // respawn when falling below this
@@ -226,6 +231,8 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
 
 // Loads every mesh of a glTF 2.0 file (.gltf or .glb) into model.parts.
 bool loadModelFile(Model& model, const std::filesystem::path& file, std::string* error = nullptr);
+// "foo.glb" -> "foo_lod1.glb" next to it when that file exists, else empty.
+std::filesystem::path findLodFile(const std::filesystem::path& file);
 
 // Loads a glTF character with its skeleton, skins and animation clips.
 bool loadAnimatedModelFile(Model& model, const std::filesystem::path& file, std::string* error = nullptr);

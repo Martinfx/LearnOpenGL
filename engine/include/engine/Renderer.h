@@ -35,6 +35,11 @@ struct RenderView {
     int viewportX = 0, viewportY = 0; // lower-left corner in the target framebuffer (split views)
     bool fog = true;                  // off for the editor's orthographic views
     Shading shading = Shading::Lit;
+    bool grid = false;        // editor: metre grid (1 m minor, 10 m major lines)
+    int gridAxis = 1;         // normal of the grid plane: 0 X (side), 1 Y (ground), 2 Z (front)
+    float gridFade = 150.0f;  // m from the camera
+    // Extra models drawn with the scene (editor reference mannequin), not part of the level.
+    std::vector<std::pair<const Model*, glm::mat4>> extraModels;
     int selectedObject = -1;  // editor highlight (Scene object index), -1 = none
     bool drawPlayerStart = false;
     float time = 0.0f;        // seconds, animates clouds and film grain
@@ -113,7 +118,7 @@ private:
         int loc(const char* name) const;
     };
     struct Programs {
-        Program mesh, depth, sky, envCapture, prefilter, brdf, ssao, blur, bloomDown, bloomUp, post, fxaa, copy;
+        Program mesh, depth, sky, envCapture, prefilter, brdf, ssao, blur, bloomDown, bloomUp, post, fxaa, copy, grid;
     };
     // Uniform locations of the program that draws geometry right now.
     struct MeshLocations {

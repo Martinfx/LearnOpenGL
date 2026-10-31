@@ -7,7 +7,7 @@ namespace engine {
 
 class FpsCamera {
 public:
-    glm::vec3 position{0.0f, 1.65f, 0.0f};
+    glm::vec3 position{0.0f, 1.7f, 0.0f};
     float yawDegrees = -90.0f;   // -90 looks down -Z
     float pitchDegrees = 0.0f;   // clamped to +-89
     float fovDegrees = 90.0f;    // vertical FOV
