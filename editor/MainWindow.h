@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 
+class QDoubleSpinBox;
 class QLabel;
 class QLineEdit;
 class QListWidget;
@@ -35,6 +36,8 @@ private:
 
     void addBox();
     void importModel();
+    void addEntity(const QString& type);
+    void browseScript();
     void duplicateBox();
     void deleteBox();
     void select(int index);
@@ -46,6 +49,7 @@ private:
     void updateTitle();
     engine::Box* selectedBox();
     engine::Model* selectedModel();
+    engine::Entity* selectedEntity();
 
     engine::Scene scene_;
     int selected_ = -1;
@@ -57,6 +61,10 @@ private:
     QWidget* boxPanel_ = nullptr;
     QLineEdit* nameEdit_ = nullptr;
     QLabel* kindLabel_ = nullptr;
+    QLineEdit* typeEdit_ = nullptr;
+    QDoubleSpinBox* yawSpin_ = nullptr;
+    QLineEdit* scriptEdit_ = nullptr;
+    QWidget* scriptRow_ = nullptr;
     Vec3Editor* positionEdit_ = nullptr;
     Vec3Editor* sizeEdit_ = nullptr;
     QPushButton* colorButton_ = nullptr;

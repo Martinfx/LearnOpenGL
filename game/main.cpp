@@ -7,6 +7,7 @@
 #include <engine/PlayerController.h>
 #include <engine/Renderer.h>
 #include <engine/Scene.h>
+#include <engine/Scripting.h>
 
 #include <GLFW/glfw3.h>
 
@@ -97,6 +98,10 @@ int main(int argc, char** argv)
     physics.setLevel(scene);
     engine::PlayerController player;
     player.spawn(physics, scene.playerStart);
+
+    engine::ScriptSystem scripts(scene, physics, player);
+    if (const int errors = scripts.start())
+        std::fprintf(stderr, "%d script error(s), see above\n", errors);
     engine::FixedStepClock clock;
     engine::InputState input;
 
@@ -154,7 +159,13 @@ int main(int argc, char** argv)
         for (int i = 0; i < steps; ++i) {
             const float dt = static_cast<float>(clock.step());
             player.fixedUpdate(input, camera, dt);
+            scripts.fixedUpdate(dt);
             physics.step(dt);
+            if (scripts.playerHealth() <= 0.0f) {
+                std::printf("You died. Respawning.\n");
+                player.respawn();
+                scripts.setPlayerHealth(100.0f);
+            }
         }
 
         camera.position = player.interpolatedEye(static_cast<float>(clock.alpha()));
@@ -177,7 +188,8 @@ int main(int argc, char** argv)
         fpsTimer += frameTime;
         if (fpsTimer >= 0.5) {
             char title[160];
-            std::snprintf(title, sizeof title, "FPS Engine | %.0f FPS | %.2f ms | pos %.1f %.1f %.1f%s",
+            std::snprintf(title, sizeof title, "FPS Engine | HP %.0f | %.0f FPS | %.2f ms | pos %.1f %.1f %.1f%s",
+                          scripts.playerHealth(),
                           fpsFrames / fpsTimer, 1000.0 * fpsTimer / fpsFrames,
                           player.feet().x, player.feet().y, player.feet().z, player.grounded() ? "" : " (air)");
             glfwSetWindowTitle(window, title);

@@ -4,6 +4,9 @@
 #include <engine/Physics.h>
 #include <engine/PlayerController.h>
 #include <engine/Scene.h>
+#include <engine/Scripting.h>
+
+#include <fstream>
 
 #include <cmath>
 #include <cstdio>
@@ -166,6 +169,112 @@ void testRaycast()
     check(!world.raycast({0, 5, 0}, {0, 1, 0}, 100.0f), "raycast upward hits nothing");
 }
 
+engine::Entity enemyAt(glm::vec3 pos, float yaw)
+{
+    engine::Entity e;
+    e.name = "Guard";
+    e.type = "enemy";
+    e.position = pos;
+    e.yawDegrees = yaw;
+    e.scriptPath = ENGINE_TEST_ASSETS "/scripts/enemy.lua";
+    return e;
+}
+
+// Runs player (standing still) + scripts for `seconds`.
+float runAi(engine::Scene& s, float seconds, std::vector<std::string>* log = nullptr)
+{
+    engine::PhysicsWorld world;
+    world.setLevel(s);
+    engine::PlayerController player;
+    player.spawn(world, s.playerStart);
+    engine::ScriptSystem scripts(s, world, player, [log](const std::string& m) {
+        if (log)
+            log->push_back(m);
+    });
+    check(scripts.start() == 0, "enemy.lua starts without errors");
+    engine::FpsCamera cam;
+    engine::InputState idle;
+    for (int i = 0; i < static_cast<int>(seconds * 60.0f); ++i) {
+        player.fixedUpdate(idle, cam, 1.0f / 60.0f);
+        scripts.fixedUpdate(1.0f / 60.0f);
+    }
+    return scripts.playerHealth();
+}
+
+void testScriptApi()
+{
+    const char* path = "api_test.lua";
+    std::ofstream(path) << R"(
+        function on_start(self)
+            self:enable_character()
+            steps = 0
+        end
+        function on_update(self, dt)
+            steps = steps + 1
+            local to = game.player_position() - self.position
+            self:move(to, 3.0)
+            self:face(game.player_position())
+            assert(vec3(1, 2, 3):length() > 3.7)
+        end
+    )";
+    auto s = flatFloor();
+    s.playerStart = {0, 0, 0};
+    engine::Entity e;
+    e.position = {10, 0, 0};
+    e.scriptPath = std::filesystem::absolute(path);
+    s.entities.push_back(e);
+    runAi(s, 1.0f);
+    check(s.entities[0].position.x < 7.5f, "scripted entity walks toward the player");
+    check(std::abs(s.entities[0].yawDegrees - 180.0f) < 1.0f, "face() turns it toward the player");
+}
+
+void testScriptErrorIsReported()
+{
+    const char* path = "broken.lua";
+    std::ofstream(path) << "function on_update(self, dt) local x = nil + 1 end";
+    auto s = flatFloor();
+    engine::Entity e;
+    e.name = "Broken";
+    e.scriptPath = std::filesystem::absolute(path);
+    s.entities.push_back(e);
+    engine::PhysicsWorld world;
+    world.setLevel(s);
+    engine::PlayerController player;
+    player.spawn(world, {0, 0, 0});
+    std::vector<std::string> log;
+    engine::ScriptSystem scripts(s, world, player, [&](const std::string& m) { log.push_back(m); });
+    scripts.start();
+    for (int i = 0; i < 10; ++i)
+        scripts.fixedUpdate(1.0f / 60.0f);
+    check(scripts.errorCount() == 1, "a failing on_update is reported once, then disabled");
+    check(!log.empty() && log[0].find("Broken") != std::string::npos, "error names the entity");
+}
+
+void testEnemyChasesAndAttacks()
+{
+    auto s = flatFloor();
+    s.playerStart = {0, 0, 0};
+    s.entities.push_back(enemyAt({8, 0, 0}, 180.0f)); // facing the player, 8 m away
+    std::vector<std::string> log;
+    const float health = runAi(s, 4.0f, &log);
+    check(health < 100.0f, "enemy that sees the player chases and hits him");
+    bool chased = false;
+    for (const auto& l : log)
+        chased = chased || l.find("patrol -> chase") != std::string::npos;
+    check(chased, "enemy switches from patrol to chase");
+}
+
+void testEnemyBlockedBySight()
+{
+    auto s = flatFloor();
+    s.playerStart = {0, 0, 0};
+    // Tall wall between them, enemy facing away from where the player could be seen around it.
+    s.boxes.push_back({"Wall", {4, 2, 0}, {0.5f, 4, 30}, {1, 1, 1}});
+    s.entities.push_back(enemyAt({8, 0, 0}, 180.0f));
+    const float health = runAi(s, 2.0f);
+    check(health == 100.0f, "enemy behind a wall does not notice the player");
+}
+
 void testPick()
 {
     auto s = flatFloor();
@@ -186,6 +295,10 @@ int main()
     testGltfRamp();
     testLevelWithModel();
     testRaycast();
+    testScriptApi();
+    testScriptErrorIsReported();
+    testEnemyChasesAndAttacks();
+    testEnemyBlockedBySight();
     testPick();
     std::printf(failures ? "%d test(s) failed\n" : "all tests passed\n", failures);
     return failures ? 1 : 0;

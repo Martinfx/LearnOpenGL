@@ -86,6 +86,29 @@ else()
     endif()
 endif()
 
+# --- Lua 5.4 + sol2 (gameplay scripting) -------------------------------------
+# Lua is built from source so every platform runs the exact same version.
+FetchContent_Declare(lua
+    GIT_REPOSITORY https://github.com/lua/lua.git
+    GIT_TAG v5.4.7
+    GIT_SHALLOW TRUE)
+FetchContent_MakeAvailable(lua)
+file(GLOB LUA_SOURCES ${lua_SOURCE_DIR}/*.c)
+list(FILTER LUA_SOURCES EXCLUDE REGEX "/(lua|luac|onelua|ltests)\\.c$")
+add_library(lua_static STATIC ${LUA_SOURCES})
+target_include_directories(lua_static PUBLIC ${lua_SOURCE_DIR})
+set_target_properties(lua_static PROPERTIES LINKER_LANGUAGE C POSITION_INDEPENDENT_CODE ON)
+if(UNIX)
+    target_compile_definitions(lua_static PRIVATE LUA_USE_POSIX)
+    target_link_libraries(lua_static PRIVATE m)
+endif()
+
+FetchContent_Declare(sol2
+    GIT_REPOSITORY https://github.com/ThePhD/sol2.git
+    GIT_TAG v3.5.0
+    GIT_SHALLOW TRUE)
+FetchContent_MakeAvailable(sol2)
+
 # --- Qt 6 (editor) -- always a system/installer package ----------------------
 if(ENGINE_BUILD_EDITOR)
     find_package(Qt6 6.2 COMPONENTS Widgets OpenGLWidgets)

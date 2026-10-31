@@ -1,8 +1,8 @@
 #pragma once
 #include "engine/Camera.h"
+#include "engine/CharacterBody.h"
 #include "engine/Input.h"
 #include <glm/vec3.hpp>
-#include <memory>
 
 namespace engine {
 
@@ -27,30 +27,24 @@ class PlayerController {
 public:
     PlayerSettings settings;
 
-    PlayerController();
-    ~PlayerController();
-    PlayerController(const PlayerController&) = delete;
-    PlayerController& operator=(const PlayerController&) = delete;
-
     // Creates the character in the world; also the respawn point.
     void spawn(PhysicsWorld& world, glm::vec3 feet);
+    void respawn();
     void fixedUpdate(const InputState& input, const FpsCamera& camera, float dt);
 
     glm::vec3 feet() const { return feet_; }
-    bool grounded() const { return grounded_; }
-    glm::vec3 velocity() const { return velocity_; }
+    glm::vec3 eye() const { return feet_ + glm::vec3(0.0f, settings.eyeHeight, 0.0f); }
+    bool grounded() const { return body_.grounded(); }
+    glm::vec3 velocity() const { return body_.velocity(); }
 
     // Eye position blended between the last two simulation steps.
     glm::vec3 interpolatedEye(float alpha) const;
 
 private:
-    struct Impl;
-    std::unique_ptr<Impl> impl_;
+    CharacterBody body_;
     glm::vec3 spawnPoint_{0.0f};
     glm::vec3 feet_{0.0f};
     glm::vec3 previousFeet_{0.0f};
-    glm::vec3 velocity_{0.0f};
-    bool grounded_ = false;
     bool jumpHeld_ = false;
 };
 

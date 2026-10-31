@@ -4,6 +4,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <vector>
 
@@ -251,8 +252,11 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     glUniform3fv(locCamera_, 1, glm::value_ptr(view.cameraPosition));
     glBindVertexArray(vao_);
 
-    auto drawBox = [&](glm::vec3 center, glm::vec3 size, glm::vec3 color, float highlight) {
-        const glm::mat4 model = glm::scale(glm::translate(glm::mat4(1.0f), center), size);
+    auto drawBox = [&](glm::vec3 center, glm::vec3 size, glm::vec3 color, float highlight, float yawDegrees = 0.0f) {
+        glm::mat4 model = glm::translate(glm::mat4(1.0f), center);
+        if (yawDegrees != 0.0f)
+            model = glm::rotate(model, -glm::radians(yawDegrees), glm::vec3(0.0f, 1.0f, 0.0f));
+        model = glm::scale(model, size);
         glUniformMatrix4fv(locModel_, 1, GL_FALSE, glm::value_ptr(model));
         glUniform3fv(locColor_, 1, glm::value_ptr(color));
         glUniform1f(locHighlight_, highlight);
@@ -277,6 +281,16 @@ void Renderer::render(const Scene& scene, const RenderView& view)
         }
     }
     glBindVertexArray(vao_);
+    for (std::size_t i = 0; i < scene.entities.size(); ++i) {
+        const Entity& e = scene.entities[i];
+        const float highlight = static_cast<int>(scene.boxes.size() + scene.models.size() + i) == view.selectedObject ? 1.0f : 0.0f;
+        drawBox(e.position + glm::vec3(0.0f, e.size.y * 0.5f, 0.0f), e.size, e.color, highlight, e.yawDegrees);
+        // A small "nose" shows which way the entity faces.
+        const float yaw = glm::radians(e.yawDegrees);
+        const glm::vec3 facing(std::cos(yaw), 0.0f, std::sin(yaw));
+        const glm::vec3 nose = e.position + glm::vec3(0.0f, e.size.y * 0.8f, 0.0f) + facing * (e.size.x * 0.5f + 0.1f);
+        drawBox(nose, glm::vec3(0.2f, 0.12f, 0.2f), glm::vec3(0.95f, 0.9f, 0.3f), highlight, e.yawDegrees);
+    }
     releaseUnused();
     if (view.drawPlayerStart) {
         // Player-sized marker so level designers see the spawn and its scale.

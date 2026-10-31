@@ -76,6 +76,17 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
         out << "model " << std::quoted(m.name) << ' ' << std::quoted(pathToUtf8(rel)) << ' '
             << m.position.x << ' ' << m.position.y << ' ' << m.position.z << '\n';
     }
+    for (const Entity& e : scene.entities) {
+        std::string script;
+        if (!e.scriptPath.empty()) {
+            std::filesystem::path rel = std::filesystem::absolute(e.scriptPath).lexically_relative(levelDir);
+            script = pathToUtf8(rel.empty() ? std::filesystem::absolute(e.scriptPath) : rel);
+        }
+        out << "entity " << std::quoted(e.name) << ' ' << std::quoted(e.type) << ' '
+            << e.position.x << ' ' << e.position.y << ' ' << e.position.z << ' ' << e.yawDegrees << ' '
+            << e.size.x << ' ' << e.size.y << ' ' << e.size.z << ' '
+            << e.color.r << ' ' << e.color.g << ' ' << e.color.b << ' ' << std::quoted(script) << '\n';
+    }
     if (!out) {
         setError(error, "Write failed: " + file.string());
         return false;
@@ -131,6 +142,22 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                 }
                 result.models.push_back(std::move(m));
             }
+        } else if (key == "entity") {
+            Entity e;
+            std::string script;
+            ok = static_cast<bool>(ls >> std::quoted(e.name) >> std::quoted(e.type)
+                                      >> e.position.x >> e.position.y >> e.position.z >> e.yawDegrees
+                                      >> e.size.x >> e.size.y >> e.size.z
+                                      >> e.color.r >> e.color.g >> e.color.b >> std::quoted(script));
+            if (ok) {
+                if (!script.empty()) {
+                    std::filesystem::path p = pathFromUtf8(script);
+                    if (p.is_relative())
+                        p = std::filesystem::absolute(file).parent_path() / p;
+                    e.scriptPath = p.lexically_normal();
+                }
+                result.entities.push_back(std::move(e));
+            }
         } else {
             ok = false;
         }
@@ -143,13 +170,25 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
     return true;
 }
 
+Aabb Scene::objectBounds(int object) const
+{
+    if (isBox(object))
+        return boxes[static_cast<std::size_t>(object)].bounds();
+    if (isModel(object))
+        return model(object).bounds();
+    if (isEntity(object))
+        return entity(object).bounds();
+    return {};
+}
+
 int pickObject(const Scene& scene, glm::vec3 origin, glm::vec3 dir)
 {
     int best = -1;
     float bestT = 0.0f;
-    for (int i = 0; i < scene.objectCount(); ++i) {
-        const Aabb bounds = scene.isBox(i) ? scene.boxes[static_cast<std::size_t>(i)].bounds() : scene.model(i).bounds();
-        if (auto t = rayAabb(origin, dir, bounds); t && (best < 0 || *t < bestT)) {
+    // Entities first: they are small and usually stand inside larger geometry.
+    for (int i = scene.objectCount() - 1; i >= 0; --i) {
+        const Aabb bounds = scene.objectBounds(i);
+        if (auto t = rayAabb(origin, dir, bounds); t && (best < 0 || *t < bestT - 1e-4f)) {
             best = i;
             bestT = *t;
         }

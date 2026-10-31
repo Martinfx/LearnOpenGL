@@ -84,8 +84,7 @@ void Viewport::focusSelected()
 {
     if (selected_ < 0 || selected_ >= scene_->objectCount())
         return;
-    const engine::Aabb bounds = scene_->isBox(selected_) ? scene_->boxes[static_cast<std::size_t>(selected_)].bounds()
-                                                         : scene_->model(selected_).bounds();
+    const engine::Aabb bounds = scene_->objectBounds(selected_);
     const glm::vec3 center = (bounds.min + bounds.max) * 0.5f;
     const float distance = std::max(3.0f, glm::length(bounds.max - bounds.min) * 1.2f);
     camera_.position = center - camera_.forward() * distance;

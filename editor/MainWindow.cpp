@@ -8,6 +8,8 @@
 #include <QColorDialog>
 #include <QDir>
 #include <QDockWidget>
+#include <QDoubleSpinBox>
+#include <QHBoxLayout>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFormLayout>
@@ -72,6 +74,8 @@ void MainWindow::buildMenus()
     QMenu* edit = menuBar()->addMenu(tr("&Edit"));
     QAction* add = edit->addAction(tr("&Add box"), QKeySequence(Qt::CTRL | Qt::Key_B), this, &MainWindow::addBox);
     QAction* import = edit->addAction(tr("&Import glTF model..."), QKeySequence(Qt::CTRL | Qt::Key_I), this, &MainWindow::importModel);
+    QAction* enemy = edit->addAction(tr("Add &enemy"), QKeySequence(Qt::CTRL | Qt::Key_E), this, [this] { addEntity("enemy"); });
+    edit->addAction(tr("Add empty en&tity"), this, [this] { addEntity("empty"); });
     QAction* dup = edit->addAction(tr("&Duplicate"), QKeySequence(Qt::CTRL | Qt::Key_D), this, &MainWindow::duplicateBox);
     QAction* del = edit->addAction(tr("De&lete"), QKeySequence::Delete, this, &MainWindow::deleteBox);
 
@@ -82,6 +86,7 @@ void MainWindow::buildMenus()
     tools->setObjectName("tools");
     tools->addAction(add);
     tools->addAction(import);
+    tools->addAction(enemy);
     tools->addAction(dup);
     tools->addAction(del);
     tools->addSeparator();
@@ -110,13 +115,61 @@ void MainWindow::buildDocks()
     positionEdit_ = new Vec3Editor(-10000.0, 10000.0, 0.25, boxPanel_);
     sizeEdit_ = new Vec3Editor(0.01, 10000.0, 0.25, boxPanel_);
     colorButton_ = new QPushButton(boxPanel_);
+    typeEdit_ = new QLineEdit(boxPanel_);
+    typeEdit_->setPlaceholderText(tr("enemy, pickup, trigger..."));
+    yawSpin_ = new QDoubleSpinBox(boxPanel_);
+    yawSpin_->setRange(-360.0, 360.0);
+    yawSpin_->setSingleStep(15.0);
+    yawSpin_->setSuffix(QStringLiteral(" °"));
+    yawSpin_->setKeyboardTracking(false);
+    scriptRow_ = new QWidget(boxPanel_);
+    auto* scriptLayout = new QHBoxLayout(scriptRow_);
+    scriptLayout->setContentsMargins(0, 0, 0, 0);
+    scriptEdit_ = new QLineEdit(scriptRow_);
+    scriptEdit_->setReadOnly(true);
+    scriptEdit_->setPlaceholderText(tr("no script"));
+    auto* browse = new QPushButton(tr("..."), scriptRow_);
+    auto* clear = new QPushButton(tr("x"), scriptRow_);
+    browse->setFixedWidth(32);
+    clear->setFixedWidth(32);
+    scriptLayout->addWidget(scriptEdit_);
+    scriptLayout->addWidget(browse);
+    scriptLayout->addWidget(clear);
     form->addRow(tr("Name"), nameEdit_);
+    form->addRow(tr("Entity type"), typeEdit_);
     form->addRow(tr("Position"), positionEdit_);
+    form->addRow(tr("Yaw"), yawSpin_);
     form->addRow(tr("Size"), sizeEdit_);
     form->addRow(tr("Color"), colorButton_);
+    form->addRow(tr("Lua script"), scriptRow_);
+
+    connect(typeEdit_, &QLineEdit::editingFinished, this, [this] {
+        if (auto* e = selectedEntity(); e && e->type != typeEdit_->text().toStdString()) {
+            e->type = typeEdit_->text().toStdString();
+            refreshOutliner();
+            markDirty();
+        }
+    });
+    connect(yawSpin_, &QDoubleSpinBox::valueChanged, this, [this](double v) {
+        if (auto* e = selectedEntity(); e && e->yawDegrees != static_cast<float>(v)) {
+            e->yawDegrees = static_cast<float>(v);
+            markDirty();
+        }
+    });
+    connect(browse, &QPushButton::clicked, this, &MainWindow::browseScript);
+    connect(clear, &QPushButton::clicked, this, [this] {
+        if (auto* e = selectedEntity(); e && !e->scriptPath.empty()) {
+            e->scriptPath.clear();
+            refreshProperties();
+            markDirty();
+        }
+    });
 
     connect(nameEdit_, &QLineEdit::editingFinished, this, [this] {
-        std::string* name = selectedBox() ? &selectedBox()->name : (selectedModel() ? &selectedModel()->name : nullptr);
+        std::string* name = selectedBox()      ? &selectedBox()->name
+                          : selectedModel()  ? &selectedModel()->name
+                          : selectedEntity() ? &selectedEntity()->name
+                                             : nullptr;
         if (name && *name != nameEdit_->text().toStdString()) {
             *name = nameEdit_->text().toStdString();
             refreshOutliner();
@@ -128,26 +181,31 @@ void MainWindow::buildDocks()
             b->position = v;
         else if (auto* m = selectedModel())
             m->position = v;
+        else if (auto* e = selectedEntity())
+            e->position = v;
         else
             return;
         markDirty();
     });
     connect(sizeEdit_, &Vec3Editor::valueEdited, this, [this](glm::vec3 v) {
-        if (auto* b = selectedBox()) {
+        if (auto* b = selectedBox())
             b->size = v;
-            markDirty();
-        }
+        else if (auto* e = selectedEntity())
+            e->size = v;
+        else
+            return;
+        markDirty();
     });
     connect(colorButton_, &QPushButton::clicked, this, [this] {
-        auto* b = selectedBox();
-        if (!b)
+        glm::vec3* color = selectedBox() ? &selectedBox()->color : (selectedEntity() ? &selectedEntity()->color : nullptr);
+        if (!color)
             return;
-        const QColor initial = QColor::fromRgbF(b->color.r, b->color.g, b->color.b);
-        const QColor c = QColorDialog::getColor(initial, this, tr("Box color"));
+        const QColor initial = QColor::fromRgbF(color->r, color->g, color->b);
+        const QColor c = QColorDialog::getColor(initial, this, tr("Color"));
         if (!c.isValid())
             return;
-        b->color = {static_cast<float>(c.redF()), static_cast<float>(c.greenF()), static_cast<float>(c.blueF())};
-        colorButton_->setStyleSheet(colorStyle(b->color));
+        *color = {static_cast<float>(c.redF()), static_cast<float>(c.greenF()), static_cast<float>(c.blueF())};
+        colorButton_->setStyleSheet(colorStyle(*color));
         markDirty();
     });
 
@@ -204,6 +262,11 @@ engine::Model* MainWindow::selectedModel()
     return scene_.isModel(selected_) ? &scene_.model(selected_) : nullptr;
 }
 
+engine::Entity* MainWindow::selectedEntity()
+{
+    return scene_.isEntity(selected_) ? &scene_.entity(selected_) : nullptr;
+}
+
 void MainWindow::select(int index)
 {
     selected_ = (index >= 0 && index < scene_.objectCount()) ? index : -1;
@@ -222,6 +285,8 @@ void MainWindow::refreshOutliner()
         outliner_->addItem(QString::fromStdString(b.name));
     for (const engine::Model& m : scene_.models)
         outliner_->addItem(QString::fromStdString(m.name) + tr("  [glTF]"));
+    for (const engine::Entity& e : scene_.entities)
+        outliner_->addItem(QString::fromStdString(e.name) + QString("  [%1]").arg(QString::fromStdString(e.type)));
     outliner_->setCurrentRow(selected_);
     outliner_->blockSignals(false);
 }
@@ -230,9 +295,21 @@ void MainWindow::refreshProperties()
 {
     const engine::Box* b = selectedBox();
     const engine::Model* m = selectedModel();
-    boxPanel_->setEnabled(b || m);
-    sizeEdit_->setEnabled(b != nullptr);
-    colorButton_->setEnabled(b != nullptr);
+    const engine::Entity* e = selectedEntity();
+    boxPanel_->setEnabled(b || m || e);
+    sizeEdit_->setEnabled(b || e);
+    colorButton_->setEnabled(b || e);
+    typeEdit_->setEnabled(e != nullptr);
+    yawSpin_->setEnabled(e != nullptr);
+    scriptRow_->setEnabled(e != nullptr);
+
+    yawSpin_->blockSignals(true);
+    yawSpin_->setValue(e ? e->yawDegrees : 0.0);
+    yawSpin_->blockSignals(false);
+    typeEdit_->setText(e ? QString::fromStdString(e->type) : QString());
+    scriptEdit_->setText(e && !e->scriptPath.empty() ? QString::fromStdU16String(e->scriptPath.filename().u16string()) : QString());
+    scriptEdit_->setToolTip(e && !e->scriptPath.empty() ? QString::fromStdU16String(e->scriptPath.u16string()) : QString());
+
     if (b) {
         kindLabel_->setText(tr("Box"));
         nameEdit_->setText(QString::fromStdString(b->name));
@@ -244,6 +321,12 @@ void MainWindow::refreshProperties()
         nameEdit_->setText(QString::fromStdString(m->name));
         positionEdit_->setValue(m->position);
         colorButton_->setStyleSheet(QString());
+    } else if (e) {
+        kindLabel_->setText(tr("Entity"));
+        nameEdit_->setText(QString::fromStdString(e->name));
+        positionEdit_->setValue(e->position);
+        sizeEdit_->setValue(e->size);
+        colorButton_->setStyleSheet(colorStyle(e->color));
     } else {
         kindLabel_->clear();
         nameEdit_->clear();
@@ -304,7 +387,45 @@ void MainWindow::importModel()
     model.position = {std::round(p.x), 0.0f, std::round(p.z)};
     scene_.models.push_back(std::move(model));
     refreshOutliner();
+    select(scene_.firstEntity() - 1);
+    markDirty();
+}
+
+void MainWindow::addEntity(const QString& type)
+{
+    const auto& cam = viewport_->camera();
+    const glm::vec3 p = cam.position + cam.flatForward() * 6.0f;
+    engine::Entity e;
+    e.type = type.toStdString();
+    e.name = (type == "enemy" ? "Enemy " : "Entity ") + std::to_string(scene_.entities.size() + 1);
+    e.position = {std::round(p.x * 2.0f) * 0.5f, 0.0f, std::round(p.z * 2.0f) * 0.5f};
+    if (type == "enemy") {
+        e.color = {0.55f, 0.5f, 0.5f};
+        // Default AI script shipped next to the editor (copied by the game build).
+        const QString script = QDir(QCoreApplication::applicationDirPath()).filePath("assets/scripts/enemy.lua");
+        if (QFileInfo::exists(script))
+            e.scriptPath = std::filesystem::path(script.toStdU16String());
+    } else {
+        e.size = {0.5f, 0.5f, 0.5f};
+        e.color = {0.3f, 0.6f, 0.9f};
+    }
+    scene_.entities.push_back(std::move(e));
+    refreshOutliner();
     select(scene_.objectCount() - 1);
+    markDirty();
+}
+
+void MainWindow::browseScript()
+{
+    auto* e = selectedEntity();
+    if (!e)
+        return;
+    const QString start = e->scriptPath.empty() ? QString() : QString::fromStdU16String(e->scriptPath.u16string());
+    const QString path = QFileDialog::getOpenFileName(this, tr("Lua script"), start, tr("Lua scripts (*.lua);;All files (*)"));
+    if (path.isEmpty())
+        return;
+    e->scriptPath = std::filesystem::path(path.toStdU16String());
+    refreshProperties();
     markDirty();
 }
 
@@ -323,6 +444,13 @@ void MainWindow::duplicateBox()
         copy.position.x += copy.localBounds.max.x - copy.localBounds.min.x + 1.0f;
         scene_.models.push_back(std::move(copy));
         refreshOutliner();
+        select(scene_.firstEntity() - 1);
+    } else if (const engine::Entity* en = selectedEntity()) {
+        engine::Entity copy = *en;
+        copy.name += " copy";
+        copy.position.x += 1.0f;
+        scene_.entities.push_back(std::move(copy));
+        refreshOutliner();
         select(scene_.objectCount() - 1);
     } else {
         return;
@@ -335,7 +463,9 @@ void MainWindow::deleteBox()
     if (selectedBox())
         scene_.boxes.erase(scene_.boxes.begin() + selected_);
     else if (selectedModel())
-        scene_.models.erase(scene_.models.begin() + (selected_ - static_cast<int>(scene_.boxes.size())));
+        scene_.models.erase(scene_.models.begin() + (selected_ - scene_.firstModel()));
+    else if (selectedEntity())
+        scene_.entities.erase(scene_.entities.begin() + (selected_ - scene_.firstEntity()));
     else
         return;
     const int next = std::min(selected_, scene_.objectCount() - 1);

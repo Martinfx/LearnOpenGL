@@ -1,0 +1,244 @@
+#include "engine/Scripting.h"
+#include "engine/CharacterBody.h"
+#include "engine/Physics.h"
+#include "engine/PlayerController.h"
+
+#include <sol/sol.hpp>
+
+#include <cmath>
+#include <cstdio>
+#include <glm/geometric.hpp>
+#include <glm/trigonometric.hpp>
+#include <optional>
+#include <vector>
+
+namespace engine {
+
+namespace {
+
+// Handle given to Lua as `self`. Refers to the entity by index, so it stays
+// valid while the scene's entity vector is not resized during play.
+struct ScriptEntity {
+    ScriptSystem::LogFn* log = nullptr;
+    Scene* scene = nullptr;
+    PhysicsWorld* physics = nullptr;
+    std::size_t index = 0;
+    std::optional<CharacterBody> body;
+    glm::vec3 desiredVelocity{0.0f};
+    float jumpRequest = 0.0f;
+    sol::environment env;
+    sol::protected_function onUpdate;
+    bool failed = false;
+
+    Entity& e() const { return scene->entities[index]; }
+};
+
+} // namespace
+
+struct ScriptSystem::Impl {
+    Scene& scene;
+    PhysicsWorld& physics;
+    PlayerController& player;
+    LogFn log;
+    sol::state lua;
+    std::vector<std::unique_ptr<ScriptEntity>> entities;
+    float playerHealth = 100.0f;
+    double time = 0.0;
+    int errors = 0;
+
+    Impl(Scene& s, PhysicsWorld& p, PlayerController& pl, LogFn l)
+        : scene(s), physics(p), player(pl), log(std::move(l))
+    {
+        if (!log)
+            log = [](const std::string& m) { std::printf("%s\n", m.c_str()); };
+    }
+
+    void report(const ScriptEntity& se, const std::string& what)
+    {
+        ++errors;
+        log("[script] " + se.e().name + ": " + what);
+    }
+
+    void bindApi();
+};
+
+void ScriptSystem::Impl::bindApi()
+{
+    lua.open_libraries(sol::lib::base, sol::lib::math, sol::lib::string, sol::lib::table, sol::lib::coroutine);
+
+    // vec3 value type
+    lua.new_usertype<glm::vec3>("vec3",
+        sol::call_constructor, sol::constructors<glm::vec3(), glm::vec3(float, float, float)>(),
+        "x", &glm::vec3::x, "y", &glm::vec3::y, "z", &glm::vec3::z,
+        sol::meta_function::addition, [](const glm::vec3& a, const glm::vec3& b) { return a + b; },
+        sol::meta_function::subtraction, [](const glm::vec3& a, const glm::vec3& b) { return a - b; },
+        sol::meta_function::multiplication, [](const glm::vec3& a, float k) { return a * k; },
+        sol::meta_function::unary_minus, [](const glm::vec3& a) { return -a; },
+        sol::meta_function::to_string, [](const glm::vec3& a) {
+            char buf[96];
+            std::snprintf(buf, sizeof buf, "vec3(%.2f, %.2f, %.2f)", a.x, a.y, a.z);
+            return std::string(buf);
+        },
+        "length", [](const glm::vec3& a) { return glm::length(a); },
+        "normalized", [](const glm::vec3& a) { return glm::dot(a, a) > 0.0f ? glm::normalize(a) : a; },
+        "flat", [](const glm::vec3& a) { return glm::vec3(a.x, 0.0f, a.z); },
+        "dot", [](const glm::vec3& a, const glm::vec3& b) { return glm::dot(a, b); });
+
+    lua.new_usertype<ScriptEntity>("Entity", sol::no_constructor,
+        "name", sol::property([](ScriptEntity& s) { return s.e().name; }),
+        "type", sol::property([](ScriptEntity& s) { return s.e().type; }),
+        "position", sol::property(
+            [](ScriptEntity& s) { return s.e().position; },
+            [](ScriptEntity& s, const glm::vec3& p) {
+                s.e().position = p;
+                if (s.body)
+                    s.body->teleport(p);
+            }),
+        "yaw", sol::property([](ScriptEntity& s) { return s.e().yawDegrees; },
+                             [](ScriptEntity& s, float y) { s.e().yawDegrees = y; }),
+        "color", sol::property([](ScriptEntity& s) { return s.e().color; },
+                               [](ScriptEntity& s, const glm::vec3& c) { s.e().color = c; }),
+        "height", sol::property([](ScriptEntity& s) { return s.e().size.y; }),
+        "grounded", sol::property([](ScriptEntity& s) { return s.body && s.body->grounded(); }),
+        "eye", [](ScriptEntity& s) { return s.e().position + glm::vec3(0.0f, s.e().size.y * 0.9f, 0.0f); },
+        "forward", [](ScriptEntity& s) {
+            const float yaw = glm::radians(s.e().yawDegrees);
+            return glm::vec3(std::cos(yaw), 0.0f, std::sin(yaw));
+        },
+        "enable_character", [](ScriptEntity& s) {
+            if (s.body)
+                return;
+            CharacterShape shape;
+            shape.radius = std::max(0.1f, std::min(s.e().size.x, s.e().size.z) * 0.5f);
+            shape.height = std::max(shape.radius * 2.0f + 0.1f, s.e().size.y);
+            s.body.emplace();
+            s.body->create(*s.physics, shape, s.e().position);
+        },
+        "move", [](ScriptEntity& s, const glm::vec3& direction, float speed) {
+            glm::vec3 d(direction.x, 0.0f, direction.z);
+            s.desiredVelocity = glm::dot(d, d) > 1e-8f ? glm::normalize(d) * speed : glm::vec3(0.0f);
+        },
+        "jump", [](ScriptEntity& s, float speed) { s.jumpRequest = speed; },
+        "face", [](ScriptEntity& s, const glm::vec3& point) {
+            const glm::vec3 d = point - s.e().position;
+            if (d.x * d.x + d.z * d.z > 1e-6f)
+                s.e().yawDegrees = glm::degrees(std::atan2(d.z, d.x));
+        },
+        "log", [](ScriptEntity& s, const std::string& msg) { (*s.log)("[" + s.e().name + "] " + msg); });
+
+    sol::table game = lua.create_named_table("game");
+    game.set_function("player_position", [this] { return player.feet(); });
+    game.set_function("player_eye", [this] { return player.eye(); });
+    game.set_function("player_health", [this] { return playerHealth; });
+    game.set_function("damage_player", [this](float amount) { playerHealth = std::max(0.0f, playerHealth - amount); });
+    game.set_function("time", [this] { return time; });
+    game.set_function("can_see", [this](const glm::vec3& from, const glm::vec3& to) {
+        const glm::vec3 d = to - from;
+        const float dist = glm::length(d);
+        if (dist < 1e-4f)
+            return true;
+        const auto hit = physics.raycast(from, d, dist);
+        return !hit || hit->distance >= dist - 0.05f;
+    });
+    game.set_function("raycast", [this](const glm::vec3& origin, const glm::vec3& dir, float maxDistance)
+                                     -> std::tuple<bool, glm::vec3, float> {
+        if (auto hit = physics.raycast(origin, dir, maxDistance))
+            return {true, hit->point, hit->distance};
+        return {false, origin, maxDistance};
+    });
+    game.set_function("find", [this](const std::string& name) -> ScriptEntity* {
+        for (auto& se : entities)
+            if (se->e().name == name)
+                return se.get();
+        return nullptr;
+    });
+    game.set_function("log", [this](const std::string& msg) { log("[lua] " + msg); });
+    lua.set_function("print", [this](sol::variadic_args args) {
+        std::string line;
+        for (auto a : args) {
+            if (!line.empty())
+                line += ' ';
+            line += lua["tostring"](a.get<sol::object>()).get<std::string>();
+        }
+        log("[lua] " + line);
+    });
+}
+
+ScriptSystem::ScriptSystem(Scene& scene, PhysicsWorld& physics, PlayerController& player, LogFn log)
+    : impl_(std::make_unique<Impl>(scene, physics, player, std::move(log)))
+{
+    impl_->bindApi();
+}
+
+ScriptSystem::~ScriptSystem() = default;
+
+int ScriptSystem::start()
+{
+    Impl& d = *impl_;
+    d.entities.clear();
+    for (std::size_t i = 0; i < d.scene.entities.size(); ++i) {
+        auto se = std::make_unique<ScriptEntity>();
+        se->log = &d.log;
+        se->scene = &d.scene;
+        se->physics = &d.physics;
+        se->index = i;
+        d.entities.push_back(std::move(se));
+    }
+    for (auto& se : d.entities) {
+        const Entity& e = se->e();
+        if (e.scriptPath.empty())
+            continue;
+        // Each entity gets its own globals, falling back to the shared ones.
+        se->env = sol::environment(d.lua, sol::create, d.lua.globals());
+        const std::u8string u8 = e.scriptPath.u8string();
+        sol::protected_function_result loaded =
+            d.lua.safe_script_file(std::string(u8.begin(), u8.end()), se->env, sol::script_pass_on_error);
+        if (!loaded.valid()) {
+            sol::error err = loaded;
+            d.report(*se, err.what());
+            se->failed = true;
+            continue;
+        }
+        if (sol::protected_function onStart = se->env["on_start"]; onStart.valid()) {
+            auto r = onStart(se.get());
+            if (!r.valid()) {
+                sol::error err = r;
+                d.report(*se, std::string("on_start: ") + err.what());
+                se->failed = true;
+                continue;
+            }
+        }
+        se->onUpdate = se->env["on_update"];
+    }
+    return d.errors;
+}
+
+void ScriptSystem::fixedUpdate(float dt)
+{
+    Impl& d = *impl_;
+    d.time += dt;
+    for (auto& se : d.entities) {
+        if (se->failed || !se->onUpdate.valid())
+            continue;
+        auto r = se->onUpdate(se.get(), dt);
+        if (!r.valid()) {
+            sol::error err = r;
+            d.report(*se, std::string("on_update: ") + err.what());
+            se->failed = true; // stop calling a broken script every frame
+        }
+    }
+    for (auto& se : d.entities) {
+        if (!se->body)
+            continue;
+        se->body->step(se->desiredVelocity, se->jumpRequest, 18.0f, 0.2f, dt);
+        se->e().position = se->body->feet();
+        se->desiredVelocity = glm::vec3(0.0f);
+        se->jumpRequest = 0.0f;
+    }
+}
+
+float ScriptSystem::playerHealth() const { return impl_->playerHealth; }
+void ScriptSystem::setPlayerHealth(float health) { impl_->playerHealth = health; }
+int ScriptSystem::errorCount() const { return impl_->errors; }
+
+} // namespace engine

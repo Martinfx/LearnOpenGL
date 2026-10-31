@@ -13,11 +13,11 @@ Návrh architektury a milníků: https://claude.ai/artifact/LzheekHA7ScTb93AKpf7
 | `game/` | Spustitelná hra (`fps_game`), okno a vstup přes GLFW |
 | `editor/` | Level editor (`fps_editor`) v Qt 6 Widgets, viewport používá stejný renderer jako hra |
 | `tests/` | Testy jádra bez OpenGL (CTest) |
-| `assets/` | Ukázková úroveň `levels/test.level` a model `models/ramp.gltf` |
+| `assets/` | Ukázková úroveň `levels/test.level`, model `models/ramp.gltf`, AI skript `scripts/enemy.lua` |
 
 ## Závislosti
 
-Build bere knihovny nejdřív ze systému a chybějící si stáhne sám (GLM, GLFW, Jolt Physics).
+Build bere knihovny nejdřív ze systému a chybějící si stáhne sám (GLM, GLFW, Jolt Physics, Lua 5.4, sol2).
 glad a cgltf jsou přímo v repozitáři.
 Qt 6 se nestahuje, musí být nainstalované.
 
@@ -53,6 +53,17 @@ Výstupy jsou v `build/bin/`.
 levé tlačítko výběr, F zaměří výběr, Ctrl+B přidá box, Ctrl+I importuje glTF model, Ctrl+D duplikuje, Del smaže,
 **F5 spustí úroveň ve hře**.
 
+## Skriptování a AI (Lua)
+
+Entity (nepřátelé, pickupy, triggery…) se přidávají v editoru (Ctrl+E přidá nepřítele) a každá může mít
+Lua skript. Skript definuje `on_start(self)` a `on_update(self, dt)`; API je popsané v
+[`assets/scripts/API.md`](assets/scripts/API.md).
+
+Ukázková AI nepřítele [`assets/scripts/enemy.lua`](assets/scripts/enemy.lua) hlídkuje kolem místa,
+kde stojí, hráče vidí v zorném úhlu (a neprojde přes zdi), pronásleduje ho, útočí, a když ho ztratí,
+hledá ho na posledním známém místě a vrací se zpět. Parametry jsou na začátku skriptu. Chyba ve skriptu
+vypne jen danou entitu a vypíše se do konzole hry.
+
 ## Modely z Blenderu
 
 File > Export > glTF 2.0 (`.glb` nebo `.gltf`), Y nahoru (výchozí). V editoru Ctrl+I.
@@ -60,5 +71,5 @@ Model je zároveň statická kolize (Jolt MeshShape), takže po něm jde chodit.
 
 ## Stav
 
-Milník 1 hotový: hráč (Jolt CharacterVirtual) chodí po úrovni z boxů a glTF modelů, schody, svahy, skok.
-Další je editor pro celou hru: entity a komponenty, gizmo, undo/redo (viz plán v dokumentu).
+Hotovo: hráč (Jolt CharacterVirtual) na úrovni z boxů a glTF modelů, entity s Lua skripty, AI nepřátel.
+Další: navmesh (Recast/Detour) pro hledání cesty, zbraně a zdraví nepřátel, gizmo a undo/redo v editoru.
