@@ -73,6 +73,7 @@ private:
     float gizmoSize() const;
     std::vector<engine::OverlayBox> gizmoBoxes() const;
     std::vector<Handle> gizmoHandles() const;
+    int handleAt(QPointF pos, float* distance = nullptr) const; // gizmo axis under the cursor, -1 = none
     void dragTo(QPointF pos);
     void cleanup();
 
@@ -105,7 +106,12 @@ private:
         float startParam = 0.0f;        // position along the axis
         glm::vec3 applied{0.0f};        // move already sent
         float appliedAngle = 0.0f;
+        float lastAngle = 0.0f;         // rotate ring: last angle under the cursor (radians)
+        bool haveAngle = false;
+        float totalAngle = 0.0f;        // rotate ring: unwrapped angle since the start (radians)
+        QPointF lastMouse;
         float appliedScale = 1.0f;
     } drag_;
     bool panning_ = false;
+    int hoverAxis_ = -1; // gizmo handle under the cursor (highlighted)
 };

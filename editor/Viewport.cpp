@@ -3,6 +3,7 @@
 #include <filesystem>
 
 #include <engine/Geometry.h>
+#include <engine/Gizmo.h>
 
 #include <QDragEnterEvent>
 #include <QGuiApplication>
@@ -17,6 +18,7 @@
 #include <QWheelEvent>
 
 #include <algorithm>
+#include <optional>
 #include <cmath>
 #include <glm/geometric.hpp>
 #include <glm/mat4x4.hpp>
@@ -33,7 +35,7 @@ Viewport::Viewport(engine::Scene* scene, QWidget* parent)
 {
     setFocusPolicy(Qt::StrongFocus);
     setAcceptDrops(true);
-    setMouseTracking(false);
+    setMouseTracking(true); // gizmo handles light up under the cursor
     camera_.position = {0.0f, 12.0f, 22.0f};
     camera_.yawDegrees = -90.0f;
     camera_.pitchDegrees = -28.0f;
@@ -171,14 +173,7 @@ void Viewport::mousePressEvent(QMouseEvent* e)
         glm::vec3 origin, dir;
         rayAt(e->position(), origin, dir);
         // 1) A gizmo handle of the selected object.
-        int axis = -1;
-        float best = 1e30f;
-        if (tool_ != Tool::Select && selected_ >= 0)
-            for (const Handle& h : gizmoHandles())
-                if (auto t = engine::rayAabb(origin, dir, h.pick); t && *t < best) {
-                    best = *t;
-                    axis = h.axis;
-                }
+        int axis = handleAt(e->position());
         const int hit = engine::pickObject(*scene_, origin, dir);
         // 2) The selected object itself: free move on the ground plane / yaw / uniform scale.
         if (axis < 0 && tool_ != Tool::Select && hit >= 0 && hit == selected_)
@@ -188,6 +183,7 @@ void Viewport::mousePressEvent(QMouseEvent* e)
             drag_.active = true;
             drag_.axis = axis;
             drag_.startMouse = e->position();
+            drag_.lastMouse = e->position();
             const engine::Aabb b = scene_->objectBounds(selected_);
             drag_.startPosition = tool_ == Tool::Move ? (b.min + b.max) * 0.5f : gizmoCenter();
             drag_.startPosition = gizmoCenter();
@@ -195,7 +191,11 @@ void Viewport::mousePressEvent(QMouseEvent* e)
                 drag_.anchor = origin + dir * *t;
             else
                 drag_.anchor = gizmoCenter();
-            if (axis < 3) {
+            if (tool_ == Tool::Rotate && axis < 3) {
+                const auto a = engine::ringAngle(origin, dir, drag_.startPosition, engine::gizmoAxis(axis));
+                drag_.haveAngle = a.has_value();
+                drag_.lastAngle = a.value_or(0.0f);
+            } else if (axis < 3) {
                 glm::vec3 e3(0.0f);
                 e3[axis] = 1.0f;
                 const glm::vec3 c = gizmoCenter();
@@ -226,8 +226,17 @@ void Viewport::mouseMoveEvent(QMouseEvent* e)
         update();
         return;
     }
-    if (!flying_)
+    if (!flying_) {
+        if (tool_ != Tool::Select && selected_ >= 0) {
+            const int axis = handleAt(e->position());
+            if (axis != hoverAxis_) {
+                hoverAxis_ = axis;
+                setCursor(axis >= 0 ? Qt::OpenHandCursor : Qt::ArrowCursor);
+                update();
+            }
+        }
         return;
+    }
     camera_.look({static_cast<float>(delta.x()), static_cast<float>(delta.y())});
     update();
 }
@@ -403,14 +412,16 @@ std::vector<engine::OverlayBox> Viewport::gizmoBoxes() const
     const float len = gizmoSize(), t = len * 0.035f;
     const glm::vec3 colors[3] = {{0.95f, 0.25f, 0.25f}, {0.35f, 0.9f, 0.3f}, {0.3f, 0.5f, 1.0f}};
     const bool active = drag_.active;
-    auto col = [&](int axis) { return active && drag_.axis == axis ? glm::vec3(1.0f, 0.9f, 0.2f) : colors[axis]; };
+    const int lit = active ? drag_.axis : hoverAxis_; // grabbed or under the cursor
+    auto col = [&](int axis) { return lit == axis ? glm::vec3(1.0f, 0.9f, 0.2f) : colors[axis]; };
     if (tool_ == Tool::Rotate) {
-        // Yaw ring around Y.
-        for (int i = 0; i < 32; ++i) {
-            const float a = static_cast<float>(i) / 32.0f * 6.2831853f;
-            boxes.push_back({c + glm::vec3(std::cos(a), 0.0f, std::sin(a)) * len, glm::vec3(t * 2.2f),
-                             active ? glm::vec3(1.0f, 0.9f, 0.2f) : colors[1], true});
+        // One ring per axis (X red, Y green, Z blue); grab a ring and drag around it.
+        for (int axis = 0; axis < 3; ++axis) {
+            const float thick = t * (lit == axis ? 2.6f : 2.0f);
+            for (const glm::vec3& p : engine::ringPoints(c, engine::gizmoAxis(axis), len, 80))
+                boxes.push_back({p, glm::vec3(thick), col(axis), true});
         }
+        boxes.push_back({c, glm::vec3(t * 3.0f), lit == 3 ? glm::vec3(1.0f, 0.9f, 0.2f) : glm::vec3(0.9f), true});
         return boxes;
     }
     for (int axis = 0; axis < 3; ++axis) {
@@ -424,8 +435,36 @@ std::vector<engine::OverlayBox> Viewport::gizmoBoxes() const
             tipSize[axis] = tip * 2.0f; // arrow head
         boxes.push_back({c + e * len, tipSize, col(axis), true});
     }
-    boxes.push_back({c, glm::vec3(t * 4.0f), active && drag_.axis == 3 ? glm::vec3(1.0f, 0.9f, 0.2f) : glm::vec3(0.9f), true});
+    boxes.push_back({c, glm::vec3(t * 4.0f), lit == 3 ? glm::vec3(1.0f, 0.9f, 0.2f) : glm::vec3(0.9f), true});
     return boxes;
+}
+
+int Viewport::handleAt(QPointF pos, float* distance) const
+{
+    if (tool_ == Tool::Select || selected_ < 0 || selected_ >= scene_->objectCount())
+        return -1;
+    glm::vec3 origin, dir;
+    rayAt(pos, origin, dir);
+    int axis = -1;
+    float best = 1e30f;
+    if (tool_ == Tool::Rotate) {
+        const glm::vec3 c = gizmoCenter();
+        const float len = gizmoSize();
+        for (int a = 0; a < 3; ++a)
+            if (auto t = engine::pickRing(origin, dir, c, engine::gizmoAxis(a), len, len * 0.1f); t && *t < best) {
+                best = *t;
+                axis = a;
+            }
+    } else {
+        for (const Handle& h : gizmoHandles())
+            if (auto t = engine::rayAabb(origin, dir, h.pick); t && *t < best) {
+                best = *t;
+                axis = h.axis;
+            }
+    }
+    if (distance)
+        *distance = best;
+    return axis;
 }
 
 std::vector<Viewport::Handle> Viewport::gizmoHandles() const
@@ -489,9 +528,27 @@ void Viewport::dragTo(QPointF pos)
             emit moveRequested(selected_, step);
         }
     } else if (tool_ == Tool::Rotate) {
-        const float angle = snapTo(static_cast<float>(pos.x() - drag_.startMouse.x()) * 0.5f, angleSnap_);
+        // A ring follows the cursor around its axis; the object itself (or a ring
+        // seen edge-on) turns with the horizontal mouse movement.
+        const int axis = drag_.axis < 3 ? drag_.axis : 1;
+        std::optional<float> a;
+        if (drag_.axis < 3) {
+            glm::vec3 origin, dir;
+            rayAt(pos, origin, dir);
+            a = engine::ringAngle(origin, dir, drag_.startPosition, engine::gizmoAxis(axis));
+        }
+        if (a && drag_.haveAngle)
+            drag_.totalAngle += engine::wrapAngle(*a - drag_.lastAngle);
+        else if (!a)
+            drag_.totalAngle += glm::radians(static_cast<float>(pos.x() - drag_.lastMouse.x()) * 0.5f);
+        drag_.haveAngle = a.has_value();
+        drag_.lastAngle = a.value_or(0.0f);
+        drag_.lastMouse = pos;
+        const float angle = snapTo(glm::degrees(drag_.totalAngle), angleSnap_);
         if (angle != drag_.appliedAngle) {
-            emit rotateRequested(selected_, glm::vec3(0.0f, angle - drag_.appliedAngle, 0.0f));
+            glm::vec3 degrees(0.0f);
+            degrees[axis] = angle - drag_.appliedAngle;
+            emit rotateRequested(selected_, degrees);
             drag_.appliedAngle = angle;
         }
     } else if (tool_ == Tool::Scale) {

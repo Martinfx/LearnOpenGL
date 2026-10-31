@@ -1,4 +1,5 @@
 // Headless tests for the engine core (no OpenGL needed).
+#include <engine/Gizmo.h>
 #include <engine/Camera.h>
 #include <engine/FixedStepClock.h>
 #include <engine/Physics.h>
@@ -750,6 +751,29 @@ void testMaterialsAndTextures()
 
 } // namespace
 
+void testRotateGizmo()
+{
+    const glm::vec3 c(2, 1, -3);
+    const float r = 1.5f;
+    // Ring around Y seen from above: a ray straight down onto the ring hits, the center misses.
+    auto hit = engine::pickRing(c + glm::vec3(r, 10, 0), {0, -1, 0}, c, engine::gizmoAxis(1), r, 0.1f);
+    check(hit && std::abs(*hit - 10.0f) < 0.05f, "ray onto the Y ring hits it");
+    check(!engine::pickRing(c + glm::vec3(0, 10, 0), {0, -1, 0}, c, engine::gizmoAxis(1), r, 0.1f), "center of the ring is not the ring");
+    // Seen exactly edge-on (from the side) the ring is still grabbable.
+    check(engine::pickRing(c + glm::vec3(0, 0.05f, 10), {0, 0, -1}, c, engine::gizmoAxis(1), r, 0.1f).has_value(),
+          "edge-on ring can be grabbed");
+    check(!engine::pickRing(c + glm::vec3(0, 0.5f, 10), {0, 0, -1}, c, engine::gizmoAxis(1), r, 0.1f), "above the edge-on ring misses");
+    // Angle around Z seen from the front: quarter turn from +X to +Y is +90 degrees (right-handed).
+    const auto a0 = engine::ringAngle(c + glm::vec3(r, 0, 10), {0, 0, -1}, c, engine::gizmoAxis(2));
+    const auto a1 = engine::ringAngle(c + glm::vec3(0, r, 10), {0, 0, -1}, c, engine::gizmoAxis(2));
+    check(a0 && a1 && std::abs(glm::degrees(engine::wrapAngle(*a1 - *a0)) - 90.0f) < 0.01f, "ring angle follows the cursor");
+    check(!engine::ringAngle(c + glm::vec3(0, 0, 10), {0, 0, -1}, c, engine::gizmoAxis(1)), "edge-on plane gives no angle");
+    check(std::abs(engine::wrapAngle(glm::radians(350.0f)) - glm::radians(-10.0f)) < 1e-4f, "angles wrap across 180 degrees");
+    for (int axis = 0; axis < 3; ++axis)
+        for (const glm::vec3& p : engine::ringPoints(c, engine::gizmoAxis(axis), r, 16))
+            check(std::abs(glm::length(p - c) - r) < 1e-4f && std::abs((p - c)[axis]) < 1e-4f, "ring points lie on the circle");
+}
+
 int main()
 {
     testFixedStep();
@@ -774,6 +798,7 @@ int main()
     testKnifeAndGuns();
     testHierarchyAndDependencies();
     testJobSystem();
+    testRotateGizmo();
     testScriptPropertiesFromEditor();
     testPick();
     testAnimatedCharacter();

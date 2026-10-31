@@ -44,6 +44,7 @@
 #include <QPushButton>
 #include <QStandardPaths>
 #include <QStatusBar>
+#include <QRandomGenerator>
 #include <QSettings>
 #include <QShortcut>
 #include <QTabBar>
@@ -1176,8 +1177,11 @@ void MainWindow::addEntity(const QString& type)
         const QString script = assetPath("scripts/enemy.lua");
         if (QFileInfo::exists(script))
             e.scriptPath = std::filesystem::path(script.toStdU16String());
-        // Default animated character shipped with the engine.
-        const QString human = assetPath("models/characters/library/ual_mannequin.glb");
+        // A random human from the bundled characters (stalker, soldier, bandit, ...).
+        QStringList humans = QDir(assetPath("models/characters/humans")).entryList({"*.glb"}, QDir::Files);
+        const QString human = humans.isEmpty()
+                                  ? assetPath("models/characters/library/ual_mannequin.glb")
+                                  : assetPath("models/characters/humans/" + humans.at(QRandomGenerator::global()->bounded(humans.size())));
         if (QFileInfo::exists(human)) {
             e.modelPath = std::filesystem::path(human.toStdU16String());
             e.model = engine::loadCharacterModel(e.modelPath);

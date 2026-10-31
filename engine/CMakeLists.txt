@@ -4,6 +4,7 @@ add_library(engine STATIC
     src/Camera.cpp
     src/FixedStepClock.cpp
     src/Geometry.cpp
+    src/Gizmo.cpp
     src/GltfLoader.cpp
     src/Material.cpp
     src/CharacterBody.cpp
