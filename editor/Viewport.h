@@ -22,6 +22,8 @@ public:
 
 signals:
     void boxPicked(int index);
+    // A file was dropped into the view: world point under the cursor and the object there (-1 = none).
+    void assetDropped(const QString& path, glm::vec3 point, int object);
     void rendererReady(const QString& info);
     void rendererFailed(const QString& error);
 
@@ -36,6 +38,15 @@ protected:
     void keyReleaseEvent(QKeyEvent* e) override;
     void wheelEvent(QWheelEvent* e) override;
     void focusOutEvent(QFocusEvent* e) override;
+    void dragEnterEvent(QDragEnterEvent* e) override;
+    void dragMoveEvent(QDragMoveEvent* e) override;
+    void dropEvent(QDropEvent* e) override;
+
+public:
+    // World-space ray through a widget position.
+    void rayAt(QPointF pos, glm::vec3& origin, glm::vec3& dir) const;
+    // Point under the cursor on the scene (or the ground plane) and the object hit.
+    glm::vec3 pointAt(QPointF pos, int* object = nullptr) const;
 
 private:
     void tick();

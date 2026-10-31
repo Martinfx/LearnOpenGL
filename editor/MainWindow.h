@@ -16,6 +16,7 @@ class QTableWidget;
 class QLineEdit;
 class QListWidget;
 class HierarchyTree;
+class AssetBrowser;
 class DependencyPanel;
 class QPushButton;
 class QWidget;
@@ -61,6 +62,9 @@ private:
 
     void addBox();
     void importModel();
+    bool placeModel(const QString& path, glm::vec3 point); // bottom of the model on `point`
+    bool assignMaterial(const QString& material, int object);
+    void openAsset(const QString& path, int type);
     void addEntity(const QString& type);
     void browseScript();
     void browseCharacter();
@@ -93,6 +97,7 @@ private:
     WeaponPanel* weapons_ = nullptr;
     HierarchyTree* outliner_ = nullptr;
     DependencyPanel* dependencies_ = nullptr;
+    AssetBrowser* assets_ = nullptr;
     QWidget* boxPanel_ = nullptr;
     QLineEdit* nameEdit_ = nullptr;
     QLabel* kindLabel_ = nullptr;

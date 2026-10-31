@@ -1,5 +1,12 @@
 #include "Viewport.h"
 
+#include <engine/Geometry.h>
+
+#include <QDragEnterEvent>
+#include <QDropEvent>
+#include <QMimeData>
+#include <QUrl>
+
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QOpenGLContext>
@@ -21,6 +28,7 @@ Viewport::Viewport(engine::Scene* scene, QWidget* parent)
     : QOpenGLWidget(parent), scene_(scene)
 {
     setFocusPolicy(Qt::StrongFocus);
+    setAcceptDrops(true);
     setMouseTracking(false);
     camera_.position = {0.0f, 12.0f, 22.0f};
     camera_.yawDegrees = -90.0f;
@@ -114,14 +122,8 @@ void Viewport::mousePressEvent(QMouseEvent* e)
         clock_.start();
         timer_.start(16);
     } else if (e->button() == Qt::LeftButton) {
-        // Unproject the click into a world-space ray.
-        const float x = static_cast<float>(2.0 * e->position().x() / width() - 1.0);
-        const float y = static_cast<float>(1.0 - 2.0 * e->position().y() / height());
-        const glm::mat4 inv = glm::inverse(camera_.projection(static_cast<float>(width()) / static_cast<float>(height())) * camera_.view());
-        glm::vec4 nearPt = inv * glm::vec4(x, y, -1.0f, 1.0f);
-        glm::vec4 farPt = inv * glm::vec4(x, y, 1.0f, 1.0f);
-        const glm::vec3 origin = glm::vec3(nearPt) / nearPt.w;
-        const glm::vec3 dir = glm::normalize(glm::vec3(farPt) / farPt.w - origin);
+        glm::vec3 origin, dir;
+        rayAt(e->position(), origin, dir);
         const int hit = engine::pickObject(*scene_, origin, dir);
         setSelected(hit);
         emit boxPicked(hit);
@@ -199,4 +201,58 @@ void Viewport::tick()
         camera_.position += glm::normalize(move) * flySpeed_ * boost * dt;
         update();
     }
+}
+
+void Viewport::rayAt(QPointF pos, glm::vec3& origin, glm::vec3& dir) const
+{
+    // Unproject the position into a world-space ray.
+    const float x = static_cast<float>(2.0 * pos.x() / width() - 1.0);
+    const float y = static_cast<float>(1.0 - 2.0 * pos.y() / height());
+    const glm::mat4 inv = glm::inverse(camera_.projection(static_cast<float>(width()) / static_cast<float>(height())) * camera_.view());
+    const glm::vec4 nearPt = inv * glm::vec4(x, y, -1.0f, 1.0f);
+    const glm::vec4 farPt = inv * glm::vec4(x, y, 1.0f, 1.0f);
+    origin = glm::vec3(nearPt) / nearPt.w;
+    dir = glm::normalize(glm::vec3(farPt) / farPt.w - origin);
+}
+
+glm::vec3 Viewport::pointAt(QPointF pos, int* object) const
+{
+    glm::vec3 origin, dir;
+    rayAt(pos, origin, dir);
+    const int hit = engine::pickObject(*scene_, origin, dir);
+    if (object)
+        *object = hit;
+    if (hit >= 0)
+        if (auto t = engine::rayAabb(origin, dir, scene_->objectBounds(hit)))
+            return origin + dir * *t;
+    // Ground plane y = 0, or 10 m ahead when looking up.
+    if (dir.y < -1e-3f)
+        return origin + dir * (-origin.y / dir.y);
+    return origin + dir * 10.0f;
+}
+
+void Viewport::dragEnterEvent(QDragEnterEvent* e)
+{
+    if (e->mimeData()->hasUrls())
+        e->acceptProposedAction();
+}
+
+void Viewport::dragMoveEvent(QDragMoveEvent* e)
+{
+    // Highlight the object a material would be assigned to.
+    int object = -1;
+    pointAt(e->position(), &object);
+    setSelected(object);
+    e->acceptProposedAction();
+}
+
+void Viewport::dropEvent(QDropEvent* e)
+{
+    int object = -1;
+    const glm::vec3 point = pointAt(e->position(), &object);
+    for (const QUrl& url : e->mimeData()->urls())
+        if (url.isLocalFile())
+            emit assetDropped(url.toLocalFile(), point, object);
+    e->acceptProposedAction();
+    setFocus();
 }

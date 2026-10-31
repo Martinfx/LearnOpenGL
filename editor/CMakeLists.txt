@@ -5,6 +5,7 @@ add_executable(fps_editor
     AssetPaths.h
     MainWindow.cpp
     HierarchyPanel.cpp
+    AssetBrowser.cpp
     MainWindow.h
     MaterialEditor.cpp
     MaterialEditor.h

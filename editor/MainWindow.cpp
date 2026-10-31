@@ -1,5 +1,6 @@
 #include "MainWindow.h"
 #include "HierarchyPanel.h"
+#include "AssetBrowser.h"
 
 #include <engine/SceneGraph.h>
 #include "AssetPaths.h"
@@ -72,6 +73,16 @@ MainWindow::MainWindow()
     connect(tabs_, &QTabWidget::tabCloseRequested, this, [this](int index) { closeScriptTab(index); });
     setCentralWidget(tabs_);
     connect(viewport_, &Viewport::boxPicked, this, &MainWindow::select);
+    connect(viewport_, &Viewport::assetDropped, this, [this](const QString& path, glm::vec3 point, int object) {
+        switch (assetTypeOf(path)) {
+        case AssetType::Model: placeModel(path, point); break;
+        case AssetType::Material:
+            if (!assignMaterial(path, object))
+                statusBar()->showMessage(tr("Drop a material onto a box or a model."), 5000);
+            break;
+        default: openAsset(path, static_cast<int>(assetTypeOf(path))); break;
+        }
+    });
     connect(viewport_, &Viewport::rendererReady, this,
             [this](const QString& info) { statusBar()->showMessage(info, 8000); });
     connect(viewport_, &Viewport::rendererFailed, this, [this](const QString& error) {
@@ -561,6 +572,16 @@ void MainWindow::buildDocks()
     propsDock->setWidget(scroll);
     addDockWidget(Qt::RightDockWidgetArea, propsDock);
 
+    // Asset browser: thumbnails of everything under assets/.
+    assets_ = new AssetBrowser(this);
+    connect(assets_, &AssetBrowser::assetActivated, this, [this](const QString& path, AssetType type) {
+        openAsset(path, static_cast<int>(type));
+    });
+    auto* assetsDock = new QDockWidget(tr("Assets"), this);
+    assetsDock->setObjectName("assets");
+    assetsDock->setWidget(assets_);
+    addDockWidget(Qt::BottomDockWidgetArea, assetsDock);
+
     // Weapons: the level's player loadout and the .weapon files it uses.
     weapons_ = new WeaponPanel(&scene_, this);
     connect(weapons_, &WeaponPanel::loadoutChanged, this, &MainWindow::markDirty);
@@ -758,21 +779,85 @@ void MainWindow::importModel()
                                                       tr("glTF 2.0 (*.gltf *.glb);;All files (*)"));
     if (path.isEmpty())
         return;
-    engine::Model model;
-    std::string error;
-    if (!engine::loadModelFile(model, std::filesystem::path(path.toStdU16String()), &error)) {
-        QMessageBox::warning(this, tr("Import glTF"), QString::fromStdString(error));
-        return;
-    }
-    model.name = engine::uniqueNodeName(scene_, QFileInfo(path).completeBaseName().toStdString());
     // Place it on the ground in front of the camera.
     const auto& cam = viewport_->camera();
     const glm::vec3 p = cam.position + cam.flatForward() * 8.0f;
-    model.position = {std::round(p.x), 0.0f, std::round(p.z)};
+    placeModel(path, {std::round(p.x), 0.0f, std::round(p.z)});
+}
+
+bool MainWindow::placeModel(const QString& path, glm::vec3 point)
+{
+    engine::Model model;
+    std::string error;
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    const bool ok = engine::loadModelFile(model, std::filesystem::path(path.toStdU16String()), &error);
+    QApplication::restoreOverrideCursor();
+    if (!ok) {
+        QMessageBox::warning(this, tr("Place model"), QString::fromStdString(error));
+        return false;
+    }
+    QString name = QFileInfo(path).completeBaseName();
+    if (name == "scene" || name == "model")
+        name = QFileInfo(path).dir().dirName();
+    model.name = engine::uniqueNodeName(scene_, name.toStdString());
+    // Snap to 0.25 m and stand the model on the point (its lowest vertex touches it).
+    const glm::vec3 snapped = glm::round(point * 4.0f) / 4.0f;
+    model.position = {snapped.x, point.y - model.localBounds.min.y, snapped.z};
     scene_.models.push_back(std::move(model));
     refreshOutliner();
     select(scene_.firstEntity() - 1);
     markDirty();
+    return true;
+}
+
+bool MainWindow::assignMaterial(const QString& path, int object)
+{
+    std::string error;
+    const std::filesystem::path file(path.toStdU16String());
+    auto material = engine::loadMaterial(file, &error);
+    if (!material) {
+        QMessageBox::warning(this, tr("Assign material"), QString::fromStdString(error));
+        return false;
+    }
+    if (scene_.isBox(object)) {
+        engine::Box& b = scene_.boxes[static_cast<std::size_t>(object)];
+        b.materialPath = file;
+        b.material = material;
+    } else if (scene_.isModel(object)) {
+        // Every glTF material slot of the model gets the new material.
+        engine::Model& m = scene_.model(object);
+        for (const std::string& slot : m.materialSlots()) {
+            m.materialOverrides[slot] = file;
+            m.overrideMaterials[slot] = material;
+        }
+    } else {
+        return false;
+    }
+    select(object);
+    markDirty();
+    statusBar()->showMessage(tr("Material %1 assigned to %2").arg(QFileInfo(path).completeBaseName(),
+                                                                  QString::fromStdString(engine::objectName(scene_, object))), 5000);
+    return true;
+}
+
+void MainWindow::openAsset(const QString& path, int type)
+{
+    switch (static_cast<AssetType>(type)) {
+    case AssetType::Model: {
+        const auto& cam = viewport_->camera();
+        const glm::vec3 p = cam.position + cam.flatForward() * 8.0f;
+        placeModel(path, {p.x, 0.0f, p.z});
+        break;
+    }
+    case AssetType::Material: openMaterialEditor(path); break;
+    case AssetType::Texture: openTexture(path); break;
+    case AssetType::Script: openScript(path); break;
+    case AssetType::Level:
+        if (confirmDiscard())
+            openFile(path);
+        break;
+    default: statusBar()->showMessage(path, 5000); break;
+    }
 }
 
 void MainWindow::addEntity(const QString& type)

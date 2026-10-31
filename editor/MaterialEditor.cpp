@@ -46,8 +46,10 @@ QString fromPath(const std::filesystem::path& p)
     return QString::fromStdU16String(p.u16string());
 }
 
+} // namespace
+
 // UV sphere with texture coordinates (2 x 1 repeats around / top to bottom).
-engine::MeshPart makeSphere(float radius)
+engine::MeshPart makePreviewSphere(float radius)
 {
     engine::MeshPart part;
     const int rings = 32, segments = 48;
@@ -74,8 +76,6 @@ engine::MeshPart makeSphere(float radius)
     return part;
 }
 
-} // namespace
-
 // ---------------------------------------------------------------- preview
 
 MaterialPreview::MaterialPreview(QWidget* parent)
@@ -84,7 +84,7 @@ MaterialPreview::MaterialPreview(QWidget* parent)
     setMinimumSize(260, 220);
     engine::Model sphere;
     sphere.name = "Sphere";
-    sphere.parts.push_back(makeSphere(0.9f));
+    sphere.parts.push_back(makePreviewSphere(0.9f));
     sphere.position = {-1.1f, 1.0f, 0.0f};
     scene_.models.push_back(std::move(sphere));
     scene_.boxes.emplace_back("Cube", glm::vec3(1.1f, 1.0f, 0.0f), glm::vec3(1.5f), glm::vec3(1.0f));

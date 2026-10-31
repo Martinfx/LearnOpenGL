@@ -17,6 +17,9 @@ class QListWidget;
 class QPushButton;
 
 // Spinning sphere and cube drawn with the engine renderer, for material previews.
+// UV sphere for material previews and thumbnails (material slot "preview").
+engine::MeshPart makePreviewSphere(float radius);
+
 class MaterialPreview : public QOpenGLWidget {
     Q_OBJECT
 public:
