@@ -223,13 +223,13 @@ struct Entity {
 
     // Editor-only helpers (sound sources and zones, map markers): not drawn in the
     // game and not hit by weapons.
-    bool helper() const { return type == "sound" || type == "map_marker"; }
+    bool helper() const { return type == "sound" || type == "map_marker" || type == "particle"; }
     // What the editor draws and picks: a sound zone can span the whole level, so
     // it is shown as a small speaker cube at its position; the zone is its size.
     Aabb markerBounds() const
     {
-        if (type == "sound")
-            return {position, position + glm::vec3(0.6f)};
+        if (type == "sound" || type == "particle")
+            return {position, position + glm::vec3(type == "sound" ? 0.6f : 0.4f)};
         return bounds();
     }
 };
@@ -286,6 +286,7 @@ struct Environment {
     // Weather loops (absolute .sound), empty = sounds/ambient/rain.sound and wind_storm.sound.
     std::filesystem::path rainSound;
     std::filesystem::path windSound;
+    std::filesystem::path rainEffect;  // rain particles around the camera, empty = particles/rain.particle
 };
 
 // Folder in the scene hierarchy (no geometry), e.g. "Building A" or "Enemies".

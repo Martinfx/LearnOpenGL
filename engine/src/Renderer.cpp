@@ -317,7 +317,8 @@ bool Renderer::buildPrograms(const std::map<std::string, std::string>& src, Prog
                              {&p.bloomDown, "fullscreen.vert", "bloom_down.frag"},
                              {&p.bloomUp, "fullscreen.vert", "bloom_up.frag"}, {&p.post, "fullscreen.vert", "post.frag"},
                              {&p.fxaa, "fullscreen.vert", "fxaa.frag"},   {&p.copy, "fullscreen.vert", "copy.frag"},
-                             {&p.grid, "fullscreen.vert", "grid.frag"}, {&p.hiz, "fullscreen.vert", "hiz.frag"}};
+                             {&p.grid, "fullscreen.vert", "grid.frag"}, {&p.hiz, "fullscreen.vert", "hiz.frag"},
+                             {&p.sprite, "sprite.vert", "sprite.frag"}};
     for (const Entry& e : entries) {
         e.program->id = linkProgram(src, e.vert, e.frag, error);
         e.program->locations.clear();
@@ -332,7 +333,7 @@ bool Renderer::buildPrograms(const std::map<std::string, std::string>& src, Prog
 void Renderer::destroyPrograms(Programs& p)
 {
     for (Program* program : {&p.mesh, &p.depth, &p.sky, &p.envCapture, &p.prefilter, &p.brdf, &p.ssao, &p.blur, &p.bloomDown,
-                             &p.bloomUp, &p.post, &p.fxaa, &p.copy, &p.grid, &p.hiz}) {
+                             &p.bloomUp, &p.post, &p.fxaa, &p.copy, &p.grid, &p.hiz, &p.sprite}) {
         if (program->id)
             glDeleteProgram(program->id);
         program->id = 0;
@@ -508,6 +509,10 @@ void Renderer::shutdown()
             glDeleteFramebuffers(1, f);
             *f = 0;
         }
+    if (spriteBuffer_)
+        glDeleteBuffers(1, &spriteBuffer_);
+    spriteBuffer_ = 0;
+    spriteCapacity_ = 0;
     for (unsigned* b : {&vbo_, &jointBuffer_, &envBuffer_})
         if (*b) {
             glDeleteBuffers(1, b);
@@ -921,7 +926,7 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         }
         if (!e.alive)
             continue;
-        if (e.type == "sound") { // speaker cube; the zone itself is the entity size
+        if (e.type == "sound" || e.type == "particle") { // marker cube; a sound zone itself is the entity size
             const Aabb m = e.markerBounds();
             drawBox((m.min + m.max) * 0.5f, m.max - m.min, e.color, highlight, 0.0f);
             continue;
@@ -1140,6 +1145,12 @@ void Renderer::render(const Scene& scene, const RenderView& view)
         glUniform1i(loc_.shading, static_cast<int>(view.shading));
         drawTransparent(view);
         glUniform1i(loc_.shading, 0);
+        endPass();
+    }
+
+    if (!view.sprites.empty() && !wireframe) {
+        beginPass(PassTransparent);
+        drawSprites(view.sprites, viewProj, view.shading, false);
         endPass();
     }
 
@@ -1608,6 +1619,99 @@ void Renderer::drawTransparent(const RenderView& view)
     (void)view;
 }
 
+std::vector<std::uint8_t> Renderer::readPixels(int width, int height) const
+{
+    std::vector<std::uint8_t> rgb(static_cast<std::size_t>(std::max(0, width)) * static_cast<std::size_t>(std::max(0, height)) * 3);
+    if (rgb.empty())
+        return rgb;
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, rgb.data());
+    // OpenGL rows start at the bottom.
+    const std::size_t row = static_cast<std::size_t>(width) * 3;
+    for (int y = 0; y < height / 2; ++y)
+        std::swap_ranges(rgb.begin() + static_cast<std::ptrdiff_t>(y * row), rgb.begin() + static_cast<std::ptrdiff_t>((y + 1) * row),
+                         rgb.begin() + static_cast<std::ptrdiff_t>((height - 1 - y) * row));
+    return rgb;
+}
+
+void Renderer::drawSprites(const std::vector<SpriteBatch>& batches, const glm::mat4& viewProj, Shading shading, bool overlay)
+{
+    // Decals first (they lie on surfaces), then particles back to front.
+    std::vector<const SpriteBatch*> order;
+    order.reserve(batches.size());
+    std::size_t total = 0;
+    for (const SpriteBatch& b : batches)
+        if (!b.instances.empty()) {
+            order.push_back(&b);
+            total += b.instances.size();
+        }
+    if (order.empty())
+        return;
+    std::stable_sort(order.begin(), order.end(), [](const SpriteBatch* a, const SpriteBatch* b) {
+        if (a->decal != b->decal)
+            return a->decal;
+        return a->distance > b->distance;
+    });
+    if (!spriteBuffer_ || total > spriteCapacity_) {
+        if (spriteBuffer_)
+            glDeleteBuffers(1, &spriteBuffer_);
+        spriteCapacity_ = std::max<std::size_t>(total * 3 / 2, 1024);
+        glCreateBuffers(1, &spriteBuffer_);
+        glNamedBufferData(spriteBuffer_, static_cast<GLsizeiptr>(spriteCapacity_ * sizeof(SpriteInstance)), nullptr, GL_DYNAMIC_DRAW);
+    }
+    std::vector<SpriteInstance> all;
+    all.reserve(total);
+    std::vector<int> bases;
+    bases.reserve(order.size());
+    for (const SpriteBatch* b : order) {
+        bases.push_back(static_cast<int>(all.size()));
+        all.insert(all.end(), b->instances.begin(), b->instances.end());
+    }
+    glNamedBufferSubData(spriteBuffer_, 0, static_cast<GLsizeiptr>(all.size() * sizeof(SpriteInstance)), all.data());
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, spriteBuffer_);
+
+    const Program& p = programs_.sprite;
+    glUseProgram(p.id);
+    glUniformMatrix4fv(p.loc("uSpriteViewProj"), 1, GL_FALSE, glm::value_ptr(viewProj));
+    glBindVertexArray(emptyVao_);
+    glEnable(GL_BLEND);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
+    glDepthMask(GL_FALSE);
+    glDisable(GL_CULL_FACE);
+    const bool budget = ignoreUploadBudget_;
+    ignoreUploadBudget_ = true; // a particle texture shows on its first frame
+    for (std::size_t i = 0; i < order.size(); ++i) {
+        const SpriteBatch& b = *order[i];
+        unsigned tex = 0;
+        if (b.texture && b.texture->texture && b.texture->texture->valid()) {
+            drawDistance_ = b.distance;
+            tex = texture(*b.texture->texture);
+        }
+        glBindTextureUnit(0, tex ? tex : whiteTex_);
+        glUniform1i(p.loc("uSpriteHasTexture"), tex ? 1 : 0);
+        glUniform2i(p.loc("uSpriteGrid"), std::max(1, b.columns), std::max(1, b.rows));
+        glUniform1i(p.loc("uSpriteLit"), b.lit && !overlay && shading != Shading::Unlit ? 1 : 0);
+        glUniform1i(p.loc("uSpriteNoFog"), overlay ? 1 : 0);
+        glUniform1i(p.loc("uSpriteDecal"), b.decal ? 1 : 0);
+        glUniform1i(p.loc("uSpriteAdditive"), b.blend == SpriteBlend::Additive ? 1 : 0);
+        glUniform1f(p.loc("uDecalLift"), b.decal ? 0.004f : 0.0f);
+        glUniform1i(p.loc("uSpriteBase"), bases[i]);
+        if (b.blend == SpriteBlend::Additive)
+            glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_ZERO, GL_ONE);
+        else
+            glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE);
+        glDrawArraysInstanced(GL_TRIANGLES, 0, 6, static_cast<GLsizei>(b.instances.size()));
+        ++drawCalls_;
+    }
+    ignoreUploadBudget_ = budget;
+    glDisable(GL_BLEND);
+    glDepthMask(GL_TRUE);
+    glDepthFunc(GL_LESS);
+    glEnable(GL_CULL_FACE);
+    glBindVertexArray(0);
+}
+
 void Renderer::renderOverlay(const RenderView& view, const OverlayPass& pass)
 {
     // First-person layer: own depth range and projection, so the weapon never clips into walls.
@@ -1636,6 +1740,8 @@ void Renderer::renderOverlay(const RenderView& view, const OverlayPass& pass)
     for (const OverlayBox& b : pass.boxes)
         drawCube(glm::scale(glm::translate(glm::mat4(1.0f), b.center), b.size), b.color, 0.0f, b.emissive);
     glUniform1i(loc_.overlay, 0);
+    if (!pass.sprites.empty())
+        drawSprites(pass.sprites, pass.projection, view.shading, true);
     glBindVertexArray(0);
     endPass();
 }

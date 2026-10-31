@@ -1,0 +1,15 @@
+# Bullet hitting water: a splash column.
+emitter "Splash"
+lit 1
+burst 20
+rate 0
+life 0.4 0.8
+shape disc 0.04 0 0
+direction 0 1 0
+spread 12
+speed 2 4.5
+gravity 1
+size 0.02 0.05
+color 0.75 0.8 0.85
+color_key 0 1 1 1 0.8
+color_key 1 1 1 1 0

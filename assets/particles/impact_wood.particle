@@ -1,0 +1,35 @@
+# Bullet hitting wood: splinters and fine sawdust.
+emitter "Splinters"
+texture "../textures/particles/debris_4x4.png"
+flipbook 4 4 0 1
+lit 1
+burst 9
+rate 0
+life 0.5 1
+direction 0 1 0
+spread 45
+speed 1.5 4
+gravity 1
+size 0.015 0.04
+color 0.62 0.46 0.28
+rotation 0 360
+spin -900 900
+emitter "Dust"
+texture "../textures/particles/smoke_8x8.png"
+flipbook 8 8 0 0
+lit 1
+burst 4
+rate 0
+life 0.6 1.2
+direction 0 1 0
+spread 30
+speed 0.5 1.2
+gravity 0.05
+drag 2.5
+size 0.08 0.16
+size_key 0 0.6
+size_key 1 2
+color 0.6 0.5 0.38
+color_key 0 1 1 1 0.45
+color_key 1 1 1 1 0
+rotation 0 360

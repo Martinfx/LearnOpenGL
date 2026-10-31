@@ -1,0 +1,18 @@
+# Rain around the camera (the game moves it with the player; Environment > Weather > Rain scales the rate).
+emitter "Drops"
+texture "../textures/particles/raindrop.png"
+blend alpha
+lit 1
+stretch 1 0.02
+rate 1600
+max 2500
+life 0.9 1.1
+shape box 14 0.5 14
+direction 0 -1 0
+spread 3
+speed 9 11
+wind 0.6 0 0.2
+size 0.006 0.009
+color 0.75 0.78 0.82
+color_key 0 1 1 1 0.35
+color_key 1 1 1 1 0.35

@@ -50,6 +50,13 @@ struct WeaponSettings {
     std::filesystem::path soundHit;     // hitting a character
     std::filesystem::path soundReloadEmpty; // reload from an empty magazine (mag out, in, bolt/slide); empty = soundReload
     std::filesystem::path soundDryFire;     // trigger pulled on an empty magazine
+    // Effects (absolute .particle / .glb paths, empty = none). Directions in view space:
+    // x right, y up, -z forward.
+    std::filesystem::path effectFlash;      // muzzle flash, drawn with the first-person weapon (+Y = barrel)
+    std::filesystem::path effectSmoke;      // gun smoke left in the world at the muzzle (+Y = barrel)
+    std::filesystem::path casingModel;      // spent case thrown out per shot (assets/models/weapons/casings/)
+    glm::vec3 casingOffset{0.08f, -0.06f, -0.3f};  // ejection port, view space (m)
+    glm::vec3 casingVelocity{1.6f, 1.2f, 0.3f};    // m/s, view space (right, up, back)
 
     bool melee() const { return type == Type::Melee; }
 };

@@ -17,6 +17,8 @@ add_library(engine STATIC
     src/Physics.cpp
     src/Scripting.cpp
     src/Weapon.cpp
+    src/Decals.cpp
+    src/Particles.cpp
     src/PlayerController.cpp
     src/Renderer.cpp
     src/Scene.cpp

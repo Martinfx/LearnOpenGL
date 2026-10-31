@@ -11,6 +11,7 @@
 #include <engine/Ui2D.h>
 
 #include "GameAudio.h"
+#include "GameEffects.h"
 #include "MapHud.h"
 #include <engine/Scripting.h>
 #include <engine/NavMesh.h>
@@ -383,6 +384,9 @@ int main(int argc, char** argv)
     for (const auto* s : {&scene.player.footstepSound, &scene.player.landSound, &scene.player.hurtSound})
         audio.preload(*s);
     audio.startLevel(scene);
+    GameEffects effects;
+    effects.init(std::filesystem::path(argv[0]).parent_path() / "assets", audio.surfaces());
+    effects.startLevel(scene);
     bool wasReloading = false;
     if (const int errors = scripts.start())
         std::fprintf(stderr, "%d script error(s), see above\n", errors);
@@ -408,6 +412,11 @@ int main(int argc, char** argv)
     // FPS_ENGINE_FRAMES=N quits after N frames (used for smoke tests in CI).
     const char* frameLimitEnv = std::getenv("FPS_ENGINE_FRAMES");
     const long frameLimit = frameLimitEnv ? std::strtol(frameLimitEnv, nullptr, 10) : -1;
+    // Test helpers: FPS_ENGINE_AUTOFIRE=1 holds the trigger, FPS_ENGINE_SCREENSHOT=file.ppm saves the last frame.
+    const bool autoFire = std::getenv("FPS_ENGINE_AUTOFIRE") != nullptr;
+    const char* screenshotFile = std::getenv("FPS_ENGINE_SCREENSHOT");
+    if (const char* look = std::getenv("FPS_ENGINE_LOOK")) // "yaw pitch" in degrees
+        std::sscanf(look, "%f %f", &camera.yawDegrees, &camera.pitchDegrees);
 
     double lastTime = glfwGetTime();
     double fpsTimer = 0.0;
@@ -479,13 +488,22 @@ int main(int argc, char** argv)
             }
             engine::Weapon& weapon = weapons[current];
             const bool ready = next == current && lowered <= 0.0f;
-            const int shots = weapon.update(dt, ready && input.isDown(engine::Action::Fire),
+            const int shots = weapon.update(dt, ready && (autoFire || input.isDown(engine::Action::Fire)),
                                             ready && input.isDown(engine::Action::Reload));
             if (next != current)
                 weapon.aim(1.0f, false); // switching drops the aim
             weapon.aim(dt, ready && input.isDown(engine::Action::Aim));
-            if (shots > 0)
+            if (shots > 0) {
                 audio.play(weapon.settings.soundFire, player.eye() + camera.forward() * 0.5f);
+                if (!weapon.settings.melee()) {
+                    const glm::vec3 v = player.velocity();
+                    const float speed = player.grounded() ? std::sqrt(v.x * v.x + v.z * v.z) : 0.0f;
+                    const glm::vec3 muzzleView =
+                        glm::vec3(weaponTransform(weapon, static_cast<float>(now), speed, lowered) * glm::vec4(weapon.settings.muzzle, 1.0f));
+                    for (int s = 0; s < shots; ++s)
+                        effects.shot(weapon.settings, camera.view(), muzzleView, v);
+                }
+            }
             if (weapon.reloading() && !wasReloading) {
                 if (weapon.reloadingFromEmpty()) {
                     if (input.isDown(engine::Action::Fire))
@@ -512,6 +530,7 @@ int main(int argc, char** argv)
                 if (!hit.hit)
                     continue;
                 impacts.push_back({hit.point, 0.0f, hit.entity >= 0});
+                effects.impact(hit.point, hit.normal, hit.surface, hit.entity >= 0);
                 if (hit.entity >= 0)
                     audio.play(weapon.settings.soundHit, hit.point);
                 else if (weapon.settings.melee())
@@ -551,6 +570,7 @@ int main(int argc, char** argv)
         camera.position = player.interpolatedEye(static_cast<float>(clock.alpha()));
         engine::updateAnimations(scene, static_cast<float>(frameTime)); // per frame for smooth motion
         audio.update(static_cast<float>(frameTime), scene, camera.position, camera.forward());
+        effects.update(static_cast<float>(frameTime), scene, physics, camera.position, audio);
 
         int width = 0, height = 0;
         glfwGetFramebufferSize(window, &width, &height);
@@ -570,9 +590,8 @@ int main(int argc, char** argv)
             view.viewportHeight = height;
             view.time = static_cast<float>(now);
             view.deferPresent = true; // the weapon layer is drawn before post-processing
-            for (const Impact& impact : impacts)
-                view.worldBoxes.push_back({impact.point, glm::vec3(impact.onEnemy ? 0.12f : 0.06f),
-                                           impact.onEnemy ? glm::vec3(1.0f, 0.2f, 0.1f) : glm::vec3(0.08f), impact.onEnemy});
+            engine::OverlayPass effectsOverlay; // muzzle flashes, drawn with the weapon below
+            effects.fill(view, view.view, effectsOverlay);
             renderer.render(scene, view);
 
             // First-person layer: weapon, muzzle flash and crosshair.
@@ -587,7 +606,8 @@ int main(int argc, char** argv)
             const float moveSpeed = player.grounded() ? std::sqrt(vel.x * vel.x + vel.z * vel.z) : 0.0f;
             overlay.modelTransform = weaponTransform(weapon, static_cast<float>(now), moveSpeed, lowered);
             overlay.animator = &weapon.animator;
-            if (weapon.flash() && !weapon.settings.melee()) {
+            overlay.sprites = std::move(effectsOverlay.sprites);
+            if (weapon.flash() && !weapon.settings.melee() && weapon.settings.effectFlash.empty()) {
                 const glm::vec3 muzzle = glm::vec3(overlay.modelTransform * glm::vec4(weapon.settings.muzzle, 1.0f));
                 overlay.boxes.push_back({muzzle, glm::vec3(0.05f), glm::vec3(1.0f, 0.85f, 0.35f), true});
             }
@@ -602,6 +622,12 @@ int main(int argc, char** argv)
             }
             renderer.renderOverlay(view, overlay);
             renderer.present();
+            if (screenshotFile && frameLimit > 0 && frame + 1 == frameLimit) {
+                const std::vector<std::uint8_t> rgb = renderer.readPixels(width, height);
+                std::ofstream shot(screenshotFile, std::ios::binary);
+                shot << "P6\n" << width << ' ' << height << "\n255\n";
+                shot.write(reinterpret_cast<const char*>(rgb.data()), static_cast<std::streamsize>(rgb.size()));
+            }
             // HUD: minimap in the corner, or the full map (M).
             ui.begin(width, height);
             if (mapOpen)
@@ -647,6 +673,8 @@ int main(int argc, char** argv)
     navCancel = true;
     if (navBuilder.joinable())
         navBuilder.join();
+    map.release(); // GL objects go while the context exists
+    ui.shutdown();
     renderer.shutdown();
     glfwDestroyWindow(window);
     glfwTerminate();

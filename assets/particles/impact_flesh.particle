@@ -1,0 +1,30 @@
+# Hitting a character: a short red mist.
+emitter "Mist"
+texture "../textures/particles/smoke_8x8.png"
+flipbook 8 8 0 0
+lit 1
+burst 5
+rate 0
+life 0.25 0.5
+direction 0 1 0
+spread 40
+speed 0.8 2
+drag 3
+size 0.08 0.14
+size_key 0 0.6
+size_key 1 2
+color 0.4 0.02 0.02
+color_key 0 1 1 1 0.8
+color_key 1 1 1 1 0
+rotation 0 360
+emitter "Drops"
+lit 1
+burst 8
+rate 0
+life 0.3 0.6
+direction 0 1 0
+spread 50
+speed 1.5 3.5
+gravity 1
+size 0.01 0.02
+color 0.3 0.01 0.01

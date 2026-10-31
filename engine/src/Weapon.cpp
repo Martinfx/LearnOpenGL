@@ -138,7 +138,12 @@ bool saveWeaponFile(const WeaponSettings& w, const std::filesystem::path& file, 
         << "sound_impact " << std::quoted(relative(w.soundImpact)) << '\n'
         << "sound_hit " << std::quoted(relative(w.soundHit)) << '\n'
         << "sound_reload_empty " << std::quoted(relative(w.soundReloadEmpty)) << '\n'
-        << "sound_dry_fire " << std::quoted(relative(w.soundDryFire)) << '\n';
+        << "sound_dry_fire " << std::quoted(relative(w.soundDryFire)) << '\n'
+        << "effect_flash " << std::quoted(relative(w.effectFlash)) << '\n'
+        << "effect_smoke " << std::quoted(relative(w.effectSmoke)) << '\n'
+        << "casing " << std::quoted(relative(w.casingModel)) << '\n'
+        << "casing_offset " << w.casingOffset.x << ' ' << w.casingOffset.y << ' ' << w.casingOffset.z << '\n'
+        << "casing_velocity " << w.casingVelocity.x << ' ' << w.casingVelocity.y << ' ' << w.casingVelocity.z << '\n';
     return static_cast<bool>(out);
 }
 
@@ -198,6 +203,19 @@ bool loadWeaponFile(WeaponSettings& weapon, const std::filesystem::path& file, s
         else if (key == "aim_offset") ok = static_cast<bool>(ls >> w.aimOffset.x >> w.aimOffset.y >> w.aimOffset.z);
         else if (key == "aim_rotation") ok = static_cast<bool>(ls >> w.aimRotation.x >> w.aimRotation.y >> w.aimRotation.z);
         else if (key == "aim_fov") ok = static_cast<bool>(ls >> w.aimFov);
+        else if (key == "effect_flash" || key == "effect_smoke" || key == "casing") {
+            std::string m;
+            ok = static_cast<bool>(ls >> std::quoted(m));
+            std::filesystem::path* target = key == "effect_flash" ? &w.effectFlash : key == "effect_smoke" ? &w.effectSmoke : &w.casingModel;
+            if (ok && !m.empty()) {
+                std::filesystem::path p = pathFromUtf8(m);
+                if (p.is_relative())
+                    p = std::filesystem::absolute(file).parent_path() / p;
+                *target = p.lexically_normal();
+            }
+        }
+        else if (key == "casing_offset") ok = static_cast<bool>(ls >> w.casingOffset.x >> w.casingOffset.y >> w.casingOffset.z);
+        else if (key == "casing_velocity") ok = static_cast<bool>(ls >> w.casingVelocity.x >> w.casingVelocity.y >> w.casingVelocity.z);
         else if (key == "aim_time") ok = static_cast<bool>(ls >> w.aimTime);
         else if (key == "aim_spread") ok = static_cast<bool>(ls >> w.aimSpread);
         else if (key.rfind("sound_", 0) == 0) {

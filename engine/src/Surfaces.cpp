@@ -139,6 +139,14 @@ bool loadSurfaces(SurfaceTable& table, const std::filesystem::path& file, std::s
                 t.impact = path(value);
             else if (k == "decal" && ls >> std::quoted(value))
                 t.decal = path(value);
+            else if (k == "casing" && ls >> std::quoted(value))
+                t.casing = path(value);
+            else if (k == "effect" && ls >> std::quoted(value))
+                t.effect = path(value);
+            else if (k == "decal_grid")
+                ls >> t.decalColumns >> t.decalRows;
+            else if (k == "decal_row")
+                ls >> t.decalRow;
             else if (k == "decal_size")
                 ls >> t.decalSize;
             else if (k == "step_volume")
@@ -170,8 +178,13 @@ bool saveSurfaces(const SurfaceTable& table, const std::filesystem::path& file, 
             out << " step " << std::quoted(rel(t.footstep));
         if (!t.impact.empty())
             out << " impact " << std::quoted(rel(t.impact));
+        if (!t.casing.empty())
+            out << " casing " << std::quoted(rel(t.casing));
+        if (!t.effect.empty())
+            out << " effect " << std::quoted(rel(t.effect));
         if (!t.decal.empty())
-            out << " decal " << std::quoted(rel(t.decal));
+            out << " decal " << std::quoted(rel(t.decal)) << " decal_grid " << t.decalColumns << ' ' << t.decalRows
+                << " decal_row " << t.decalRow;
         out << " decal_size " << t.decalSize << " step_volume " << t.stepVolume << '\n';
     }
     if (!out) {

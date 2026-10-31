@@ -1,0 +1,16 @@
+# Floating dust in a room or a sunbeam. Loops until stopped.
+emitter "Motes"
+lit 1
+rate 8
+max 120
+life 6 10
+shape box 2 1 2
+direction 0 1 0
+spread 180
+speed 0.02 0.06
+size 0.006 0.012
+color 1 0.95 0.85
+color_key 0 1 1 1 0
+color_key 0.2 1 1 1 0.6
+color_key 0.8 1 1 1 0.6
+color_key 1 1 1 1 0

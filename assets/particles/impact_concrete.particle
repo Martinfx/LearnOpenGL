@@ -1,0 +1,56 @@
+# Bullet hitting concrete / stone: a dust puff, chips and a few sparks. +Y = surface normal.
+emitter "Dust"
+texture "../textures/particles/smoke_8x8.png"
+flipbook 8 8 0 0
+blend alpha
+lit 1
+burst 6
+rate 0
+life 0.8 1.6
+shape sphere 0.03 0.03 0.03
+direction 0 1 0
+spread 35
+speed 0.6 1.6
+gravity 0.05
+drag 2.5
+size 0.18 0.3
+size_key 0 0.6
+size_key 1 2.6
+color 0.62 0.6 0.56
+color_key 0 1 1 1 0.7
+color_key 1 1 1 1 0
+rotation 0 360
+spin -40 40
+emitter "Chips"
+texture "../textures/particles/debris_4x4.png"
+flipbook 4 4 0 1
+blend alpha
+lit 1
+burst 7
+rate 0
+life 0.5 0.9
+direction 0 1 0
+spread 50
+speed 2 4.5
+gravity 1
+size 0.015 0.035
+color 0.55 0.53 0.5
+rotation 0 360
+spin -720 720
+emitter "Sparks"
+texture "../textures/particles/spark.png"
+blend additive
+lit 0
+stretch 1 0.04
+burst 3
+rate 0
+life 0.08 0.18
+direction 0 1 0
+spread 60
+speed 4 9
+gravity 0.5
+size 0.01 0.018
+color 1 0.75 0.4
+intensity 6
+color_key 0 1 1 1 1
+color_key 1 1 0.5 0.2 0

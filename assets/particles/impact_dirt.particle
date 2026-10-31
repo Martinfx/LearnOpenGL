@@ -1,0 +1,36 @@
+# Bullet hitting soil, grass or gravel: a spray of dirt and a brown puff.
+emitter "Clods"
+texture "../textures/particles/debris_4x4.png"
+flipbook 4 4 0 1
+lit 1
+burst 12
+rate 0
+life 0.5 1
+direction 0 1 0
+spread 25
+speed 2 5
+gravity 1
+size 0.015 0.04
+color 0.33 0.27 0.2
+rotation 0 360
+spin -500 500
+emitter "Dust"
+texture "../textures/particles/smoke_8x8.png"
+flipbook 8 8 0 0
+lit 1
+burst 6
+rate 0
+life 0.8 1.8
+direction 0 1 0
+spread 20
+speed 0.8 2.2
+gravity 0.1
+drag 2
+size 0.15 0.3
+size_key 0 0.5
+size_key 1 2.5
+color 0.45 0.38 0.3
+color_key 0 1 1 1 0.6
+color_key 1 1 1 1 0
+rotation 0 360
+spin -30 30

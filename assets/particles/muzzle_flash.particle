@@ -1,0 +1,43 @@
+# Muzzle flash, drawn with the first-person weapon (view space). +Y = where the barrel points.
+emitter "Flash"
+texture "../textures/particles/muzzle_flash_2x2.png"
+flipbook 2 2 0 1
+blend additive
+lit 0
+burst 1
+rate 0
+life 0.04 0.06
+size 0.09 0.13
+rotation 0 360
+color 1 0.8 0.5
+intensity 3
+color_key 0 1 1 1 1
+color_key 1 1 0.7 0.4 0
+emitter "Core"
+blend additive
+lit 0
+burst 2
+rate 0
+life 0.03 0.05
+direction 0 1 0
+spread 5
+speed 0.5 1.5
+size 0.03 0.05
+color 1 0.9 0.7
+intensity 4
+color_key 0 1 1 1 1
+color_key 1 1 1 1 0
+emitter "Sparks"
+texture "../textures/particles/spark.png"
+blend additive
+lit 0
+stretch 1 0.02
+burst 4
+rate 0
+life 0.04 0.09
+direction 0 1 0
+spread 18
+speed 6 12
+size 0.004 0.008
+color 1 0.75 0.4
+intensity 8

@@ -15,6 +15,7 @@
 class MapHud {
 public:
     ~MapHud();
+    void release(); // frees the GPU image; call while the GL context is current
     void init(engine::Renderer& renderer, const engine::Scene& scene);
     void drawMinimap(engine::Ui2D& ui, int width, int height, glm::vec3 player, glm::vec3 forward) const;
     void drawFullMap(engine::Ui2D& ui, int width, int height, glm::vec3 player, glm::vec3 forward) const;

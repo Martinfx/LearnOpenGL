@@ -1,4 +1,5 @@
 #pragma once
+#include "engine/Particles.h"
 #include "engine/Scene.h"
 #include <glm/mat4x4.hpp>
 #include <array>
@@ -54,6 +55,7 @@ struct RenderView {
     // calls renderOverlay() and then present().
     bool deferPresent = false;
     std::vector<OverlayBox> worldBoxes; // e.g. bullet impacts
+    std::vector<SpriteBatch> sprites;   // particles and decals (ParticleSystem::appendSprites, decal pools)
     std::vector<OverlayBox> gizmoBoxes; // editor handles, drawn on top of everything (world space)
 };
 
@@ -66,6 +68,7 @@ struct OverlayPass {
     const Animator* animator = nullptr; // pose of an animated view model (arms)
     glm::mat4 modelTransform{1.0f};
     std::vector<OverlayBox> boxes;
+    std::vector<SpriteBatch> sprites; // muzzle flashes (view space)
 };
 
 // Graphics options of the machine (not of the level): set from the editor's
@@ -118,6 +121,8 @@ public:
     void render(const Scene& scene, const RenderView& view);
     void renderOverlay(const RenderView& view, const OverlayPass& pass); // after render(), before present()
     void present(); // post-processing into the framebuffer that was bound when render() was called
+    // Reads the bound framebuffer (after present()) as RGB8 rows from the top; for screenshots and tests.
+    std::vector<std::uint8_t> readPixels(int width, int height) const;
 
     // Sends the meshes and textures of the scene to the GPU before the first frame
     // (loading screen), so walking toward new models does not stall on uploads.
@@ -202,7 +207,7 @@ private:
         int loc(const char* name) const;
     };
     struct Programs {
-        Program mesh, depth, sky, envCapture, prefilter, brdf, ssao, blur, bloomDown, bloomUp, post, fxaa, copy, grid, hiz;
+        Program mesh, depth, sky, envCapture, prefilter, brdf, ssao, blur, bloomDown, bloomUp, post, fxaa, copy, grid, hiz, sprite;
     };
     // Uniform locations of the program that draws geometry right now.
     struct MeshLocations {
@@ -365,9 +370,12 @@ private:
     void drawModelInstanced(const Model& model, int base, int count);
     bool collectTransparent_ = false;   // main pass: Blend parts go to transparent_
     void drawTransparent(const RenderView& view);
+    void drawSprites(const std::vector<SpriteBatch>& batches, const glm::mat4& viewProj, Shading shading, bool overlay);
     bool s3tc_ = true, s3tcSrgb_ = true;
     unsigned vao_ = 0, vbo_ = 0, emptyVao_ = 0;
     int vertexCount_ = 0;
+    unsigned spriteBuffer_ = 0;          // shader storage with sprite instances (binding 3)
+    std::size_t spriteCapacity_ = 0;
     unsigned jointBuffer_ = 0;          // uniform block with skinning matrices (binding 0)
     unsigned envBuffer_ = 0;            // Environment uniform block (binding 1)
     std::vector<glm::mat4> pose_;       // scratch: node matrices of the model being drawn

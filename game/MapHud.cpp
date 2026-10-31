@@ -28,7 +28,14 @@ void arrow(engine::Ui2D& ui, glm::vec2 at, glm::vec2 dir, float size, glm::vec4 
 }
 } // namespace
 
-MapHud::~MapHud() { engine::Renderer::deleteTexture(texture_); }
+MapHud::~MapHud() { release(); }
+
+void MapHud::release()
+{
+    if (texture_)
+        engine::Renderer::deleteTexture(texture_);
+    texture_ = 0;
+}
 
 void MapHud::init(engine::Renderer& renderer, const engine::Scene& scene)
 {

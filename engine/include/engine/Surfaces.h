@@ -16,14 +16,19 @@ struct SurfaceType {
     std::string name = "concrete";
     std::filesystem::path footstep; // absolute .sound, empty = the player's default step
     std::filesystem::path impact;   // absolute .sound, empty = the weapon's impact sound
-    std::filesystem::path decal;    // absolute image of the bullet hole, empty = none
+    std::filesystem::path decal;    // absolute image (atlas) of the bullet hole, empty = none
+    int decalColumns = 4, decalRows = 4; // atlas layout
+    int decalRow = -1;              // atlas row of this surface, -1 = any
     float decalSize = 0.12f;        // m, bullet hole diameter
+    std::filesystem::path effect;   // absolute .particle played at a bullet impact (dust, sparks, splinters)
+    std::filesystem::path casing;   // absolute .sound of a spent case landing on it
     float stepVolume = 1.0f;
 };
 
 // The project's surface list, stored as assets/surfaces.cfg and edited in the
 // editor (Tools > Surfaces). Lines:
-//   surface <name> step "<file>" impact "<file>" decal "<file>" decal_size <m> step_volume <v>
+//   surface <name> step "<file>" impact "<file>" effect "<file>" decal "<file>" decal_grid <cols> <rows>
+//           decal_row <row> decal_size <m> step_volume <v>
 // (keys after the name are optional; paths are relative to the file).
 struct SurfaceTable {
     std::vector<SurfaceType> types;

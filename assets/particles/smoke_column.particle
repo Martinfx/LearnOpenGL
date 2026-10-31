@@ -1,0 +1,23 @@
+# Distant smoke column (a burning wreck on the horizon). Loops until stopped.
+emitter "Smoke"
+texture "../textures/particles/smoke_8x8.png"
+flipbook 8 8 0 0
+lit 1
+rate 3
+max 80
+life 10 16
+shape disc 0.8 0 0
+direction 0 1 0
+spread 6
+speed 1.5 2.5
+gravity -0.01
+wind 1.2 0 0.3
+size 2 3
+size_key 0 0.5
+size_key 1 5
+color 0.15 0.15 0.15
+color_key 0 1 1 1 0
+color_key 0.08 1 1 1 0.7
+color_key 1 1 1 1 0
+rotation 0 360
+spin -6 6
