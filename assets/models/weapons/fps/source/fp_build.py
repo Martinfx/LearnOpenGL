@@ -64,3 +64,36 @@ def export(path):
     bpy.ops.export_scene.gltf(filepath=path,export_format='GLB',export_animations=True,export_animation_mode='ACTIONS',
         export_force_sampling=True,export_frame_range=False,export_def_bones=False,export_cameras=False,export_lights=False,
         export_image_format='JPEG',export_jpeg_quality=90,export_apply=False,export_yup=True,export_skins=True,export_optimize_animation_size=False)
+import bmesh
+def dress(arm,body,sleeve_wrist_gap=0.035):
+    # dirty hands texture
+    for m in body.data.materials:
+        img=[n for n in m.node_tree.nodes if n.type=='TEX_IMAGE'][0]
+        img.image=bpy.data.images.load('/tmp/out/hands_dirty.jpg'); img.image.pack()
+    # sleeve: duplicate arm mesh, keep faces far enough from the wrists, push out along normals
+    me=body.data.copy(); sl=bpy.data.objects.new('Sleeves',me); bpy.context.scene.collection.objects.link(sl)
+    sl.parent=arm; sl.matrix_parent_inverse=Matrix.Identity(4)
+    for mo in body.modifiers:
+        if mo.type=='ARMATURE': m2=sl.modifiers.new('Armature','ARMATURE'); m2.object=arm
+    wr={s:arm.data.bones[f'hand.{s}'].head_local.copy() for s in 'RL'}
+    fa={s:arm.data.bones[f'forearm.{s}'] for s in 'RL'}
+    bm=bmesh.new(); bm.from_mesh(me)
+    def keep(v):
+        co=v.co; s='R' if co.x>0 else 'L'
+        b=fa[s]; axis=(b.tail_local-b.head_local).normalized()
+        return (wr[s]-co).dot(axis)>sleeve_wrist_gap
+    kill=[f for f in bm.faces if not all(keep(v) for v in f.verts)]
+    bmesh.ops.delete(bm,geom=kill,context='FACES')
+    bm.normal_update()
+    for v in bm.verts: v.co+=v.normal*0.006
+    bm.to_mesh(me); bm.free()
+    mat=bpy.data.materials.new('Sleeve_Knit'); mat.use_nodes=True; nt=mat.node_tree; p=nt.nodes['Principled BSDF']
+    t=nt.nodes.new('ShaderNodeTexImage'); t.image=bpy.data.images.load('/tmp/out/sleeve_knit.jpg'); t.image.pack()
+    nt.links.new(t.outputs[0],p.inputs['Base Color']); p.inputs['Roughness'].default_value=0.95
+    tn=nt.nodes.new('ShaderNodeTexImage'); tn.image=bpy.data.images.load('/tmp/out/sleeve_knit_normal.png'); tn.image.colorspace_settings.name='Non-Color'; tn.image.pack()
+    nm=nt.nodes.new('ShaderNodeNormalMap'); nt.links.new(tn.outputs[0],nm.inputs['Color']); nt.links.new(nm.outputs[0],p.inputs['Normal'])
+    # tile the knit 4x over the arm UVs
+    tc=nt.nodes.new('ShaderNodeTexCoord'); mp=nt.nodes.new('ShaderNodeMapping'); mp.inputs['Scale'].default_value=(4,4,1)
+    nt.links.new(tc.outputs['UV'],mp.inputs['Vector']); nt.links.new(mp.outputs[0],t.inputs['Vector']); nt.links.new(mp.outputs[0],tn.inputs['Vector'])
+    me.materials.clear(); me.materials.append(mat)
+    return sl

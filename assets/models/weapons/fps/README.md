@@ -1,6 +1,6 @@
 # First-person view models (arms + weapon)
 
-Each file is one skinned glTF (GLB): realistic bare arms and the weapon share one skeleton.
+Each file is one skinned glTF (GLB): realistic arms (dirty bare hands, dark green knitted sweater sleeves, S.T.A.L.K.E.R.-style look) and the weapon share one skeleton.
 
 | File | Weapon | Clips (name: length) |
 |---|---|---|
@@ -15,13 +15,16 @@ Each file is one skinned glTF (GLB): realistic bare arms and the weapon share on
 - Bones: `weapon` (the weapon root, pivot at the grip), `magazine` (pistol, SMG), `slide`
   (pistol), `hand.R` / `hand.L` (wrists), `hand.R.control` / `hand.L.control` (former IK targets,
   baked). Attach muzzle flashes or sockets to `weapon`.
-- Muzzle position in the rest pose (idle frame 0), eye space: pistol about `0.09 -0.07 -0.53`,
-  SMG about `0.13 -0.20 -0.71`.
-- The arms are bare skin; the reload hides the dropped magazine by moving it 2 m below the eye.
+- Weapon placement (idle frame 0, eye space): pistol grip at `0.10 -0.12 -0.30` (muzzle about 0.5 m ahead),
+  SMG grip at `0.14 -0.27 -0.42`, knife grip at `0.17 -0.13 -0.36`.
+- Grip: right hand closed around the grip with the index finger at the trigger; pistol is held with two hands
+  (left hand wraps the right), SMG left hand on the vertical foregrip, knife in a full-hand grip.
+- The reload hides the dropped magazine by moving it 2 m below the eye.
+- Preview renders (eye camera, FOV 60°, 16:9) are produced with `source/` scripts; see the project files.
 
 ## Source and rebuilding
 
 The animations are keyframed procedurally in Blender (bpy) by the scripts in `source/`
-(`fp_pistol.py`, `smg_cfg.py`, `fp_knife.py`; `fp_base.py`, `fp_build.py`, `fp_gun.py` are shared
-helpers). They expect the original downloads listed in `CREDITS.md` and are kept as a reference
+(`pistol_cfg.py`, `smg_cfg.py`, `fp_knife.py`; `fp_base.py`, `fp_build.py`, `fp_gun.py` are shared
+helpers, `textures.py` makes the dirty hand and knit sleeve textures). They expect the original downloads listed in `CREDITS.md` and are kept as a reference
 for tweaking poses and timings; the GLB files are the result.

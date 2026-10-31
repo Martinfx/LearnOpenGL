@@ -21,9 +21,9 @@ def load():
     M=Matrix.Rotation(math.radians(-40),4,'Y')@Matrix.Scale(S,4)@Matrix.Translation((3.3,0,-0.4))
     o.matrix_world=M@o.matrix_world
     bpy.context.view_layer.update(); return [o]
-C=dict(wpos=[0.17,0.36,-0.14],grip=[0,0,0],rofs=[0.035,-0.055,-0.0],rfwd=[-0.25,1,-0.3],rup=[-1,0,0],rcurl=1.55,rthumb=0.6,rindex=1.45)
+C=dict(wpos=[0.17,0.36,-0.13],grip=[0,0,0],rofs=[0.035,-0.04,0.05],rfwd=[-0.1,0.64,-0.77],rup=[-1,0,0],rcurl=1.55,rthumb=0.7,rindex=1.5)
 def build_knife(out,preview=None):
-    arm,body=base(); fix_arm_material(body)
+    arm,body=base(); fix_arm_material(body); dress(arm,body)
     objs=load(); W=weapon_world(C['wpos'])
     for o in objs: o.matrix_world=W@o.matrix_world
     bpy.context.view_layer.update()
@@ -49,7 +49,7 @@ def build_knife(out,preview=None):
     def stab(f,t):
         a=seg(t,0,0.1); b=seg(t,0.1,0.2); c=seg(t,0.25,0.5)
         back=a*(1-b); fwd=b*(1-c)
-        pose(wdelta((-0.03*fwd,-0.05*back+0.22*fwd,0.01*back+0.04*fwd),pitch=-5*back-55*fwd,yaw=10*fwd,roll=-10*fwd))
+        pose(wdelta((-0.04*fwd,-0.05*back+0.18*fwd,0.01*back+0.05*fwd),pitch=-5*back-25*fwd,yaw=5*fwd,roll=0))
     A.action('stab',15,stab)
     def draw(f,t):
         k=1-seg(t,0,0.4); pose(wdelta((0.03*k,-0.05*k,-0.3*k),pitch=-60*k,roll=-30*k))
@@ -59,9 +59,11 @@ def build_knife(out,preview=None):
     A.action('holster',10,holster)
     arm.animation_data.action=bpy.data.actions['idle']; bpy.context.scene.frame_set(0)
     if preview:
-        camera(); bpy.context.scene.render.resolution_x=960; bpy.context.scene.render.resolution_y=540; outs=[]
+        cam=camera(60); bpy.context.scene.render.resolution_x=960; bpy.context.scene.render.resolution_y=540; outs=[]
         for spec in preview:
-            an,fr=spec.split(':'); arm.animation_data.action=bpy.data.actions[an]; p=f'/tmp/prev/k_{an}{fr}.png'; render(p,int(fr)); outs.append(p)
+            an,fr,v=(spec.split(':')+['eye'])[:3]; arm.animation_data.action=bpy.data.actions[an]
+            loc,rot=VIEWS[v]; cam.location=loc; cam.rotation_euler=[math.radians(r) for r in rot]
+            p=f'/tmp/prev/k_{an}{fr}_{v}.png'; render(p,int(fr)); outs.append(p)
         print('OUT',' '.join(outs)); return
     for o in list(bpy.data.objects):
         if o.type in('CAMERA','LIGHT'): bpy.data.objects.remove(o)

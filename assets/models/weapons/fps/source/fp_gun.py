@@ -16,8 +16,9 @@ def append_blend(path):
 def mlerp(A,B,k):
     t=A.translation.lerp(B.translation,k); q=A.to_quaternion().slerp(B.to_quaternion(),k); m=q.to_matrix().to_4x4(); m.translation=t; return m
 def wdelta(pos=(0,0,0),pitch=0,yaw=0,roll=0): return Matrix.Translation(pos)@eul(pitch,yaw,roll)
+VIEWS={'eye':((0,0,0),(90,0,0)),'right':((0.5,0.30,-0.12),(90,0,90)),'left':((-0.4,0.30,-0.12),(90,0,-90)),'below':((0.08,0.3,-0.5),(0,0,0)),'front':((0.08,0.85,-0.1),(90,0,180))}
 def build(C,out,preview=None):
-    arm,body=base(); fix_arm_material(body)
+    arm,body=base(); fix_arm_material(body); dress(arm,body)
     objs=C['load']()
     # objs are in weapon-local frame (barrel +X, up +Z, metres)
     W=weapon_world(C['wpos'])
@@ -81,10 +82,12 @@ def build(C,out,preview=None):
     A.action('holster',12,holster)
     arm.animation_data.action=bpy.data.actions['idle']; bpy.context.scene.frame_set(0)
     if preview:
-        camera(); bpy.context.scene.render.resolution_x=960; bpy.context.scene.render.resolution_y=540
+        cam=camera(60); bpy.context.scene.render.resolution_x=960; bpy.context.scene.render.resolution_y=540
         outs=[]
         for spec in preview:
-            an,fr=spec.split(':'); arm.animation_data.action=bpy.data.actions[an]; p=f'/tmp/prev/g_{an}{fr}.png'; render(p,int(fr)); outs.append(p)
+            an,fr,v=(spec.split(':')+['eye'])[:3]; arm.animation_data.action=bpy.data.actions[an]
+            loc,rot=VIEWS[v]; cam.location=loc; cam.rotation_euler=[math.radians(r) for r in rot]
+            p=f'/tmp/prev/g_{an}{fr}_{v}.png'; render(p,int(fr)); outs.append(p)
         print('OUT',' '.join(outs)); return
     for o in list(bpy.data.objects):
         if o.type in('CAMERA','LIGHT'): bpy.data.objects.remove(o)
