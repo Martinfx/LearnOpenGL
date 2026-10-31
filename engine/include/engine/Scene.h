@@ -3,6 +3,7 @@
 #include "engine/Geometry.h"
 #include "engine/Material.h"
 #include "engine/TextureCook.h"
+#include "engine/Terrain.h"
 #include <cstdint>
 #include <filesystem>
 #include <glm/gtc/type_precision.hpp>
@@ -309,6 +310,9 @@ struct Scene {
     Environment environment;
     LoadingScreen loading;
     MapSettings map;
+    // Heightfield ground with painted layers and foliage, null = none. Shared between
+    // copies of the scene (undo history); the editor copies it before each brush stroke.
+    std::shared_ptr<Terrain> terrain;
 
     // Objects are addressed by one index: boxes first, then models, then entities.
     int objectCount() const { return static_cast<int>(boxes.size() + models.size() + entities.size()); }

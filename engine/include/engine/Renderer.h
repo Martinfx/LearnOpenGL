@@ -239,6 +239,27 @@ private:
     std::size_t instanceCapacity_ = 0;
     int drawCalls_ = 0, lastDrawCalls_ = 0, instanced_ = 0, lastInstanced_ = 0;
     void flushInstances();
+    // Terrain mesh and splat map on the GPU, rebuilt when the terrain's versions change.
+    struct GpuTerrain {
+        unsigned vao = 0, vbo = 0, ibo = 0, splat = 0;
+        int indexCount = 0, resolution = 0, splatResolution = 0;
+        std::uint64_t meshVersion = 0, splatVersion = 0;
+    };
+    GpuTerrain terrain_;
+    void drawTerrain(const Terrain& terrain, const RenderView& view);
+    // Foliage instances sorted into 32 m cells per type, for culling.
+    struct FoliageCell {
+        Aabb bounds;
+        std::vector<std::uint32_t> instances;
+    };
+    struct FoliageCache {
+        const Terrain* terrain = nullptr;
+        std::uint64_t version = 0;
+        std::vector<std::vector<FoliageCell>> types;
+        std::vector<glm::mat4> transforms;
+    };
+    FoliageCache foliageCache_;
+    void addFoliage(const Terrain& terrain, const RenderView& view);
     void drawModelInstanced(const Model& model, int base, int count);
     bool collectTransparent_ = false;   // main pass: Blend parts go to transparent_
     void drawTransparent(const RenderView& view);

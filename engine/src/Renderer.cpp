@@ -468,6 +468,15 @@ void Renderer::shutdown()
         glDeleteBuffers(1, &m.ibo);
     }
     meshes_.clear();
+    if (terrain_.vao) {
+        glDeleteVertexArrays(1, &terrain_.vao);
+        glDeleteBuffers(1, &terrain_.vbo);
+        glDeleteBuffers(1, &terrain_.ibo);
+    }
+    if (terrain_.splat)
+        glDeleteTextures(1, &terrain_.splat);
+    terrain_ = GpuTerrain{};
+    foliageCache_ = FoliageCache{};
     if (instanceBuffer_)
         glDeleteBuffers(1, &instanceBuffer_);
     instanceBuffer_ = 0;
@@ -738,6 +747,8 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         glBindVertexArray(vao_);
         glDrawArrays(GL_TRIANGLES, 0, vertexCount_);
     };
+    if (scene.terrain && scene.terrain->valid())
+        drawTerrain(*scene.terrain, view);
     for (std::size_t i = 0; i < scene.boxes.size(); ++i) {
         const Box& b = scene.boxes[i];
         if (!visible(b.bounds())) {
@@ -811,6 +822,8 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         batch.transforms.push_back(model.transform());
         batch.distance = std::min(batch.distance, drawDistance_);
     }
+    if (scene.terrain && !scene.terrain->foliage.empty())
+        addFoliage(*scene.terrain, view);
     flushInstances();
     drawDistance_ = 0.0f; // weapon in hand, previews
     for (const auto& [extra, transform] : view.extraModels)
@@ -1051,6 +1064,204 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     pendingPresent_ = true;
     if (!view.deferPresent)
         present();
+}
+
+void Renderer::drawTerrain(const Terrain& t, const RenderView& view)
+{
+    const int res = t.resolution;
+    if (terrain_.meshVersion != t.meshVersion || terrain_.resolution != res) {
+        std::vector<Vertex> vertices(static_cast<std::size_t>(res) * res);
+        const float d = t.spacing();
+        auto h = [&](int x, int z) {
+            return t.heights[static_cast<std::size_t>(std::clamp(z, 0, res - 1)) * res + std::clamp(x, 0, res - 1)];
+        };
+        for (int z = 0; z < res; ++z)
+            for (int x = 0; x < res; ++x) {
+                Vertex& v = vertices[static_cast<std::size_t>(z) * res + x];
+                v.position = {t.origin.x + x * d, h(x, z), t.origin.y + z * d};
+                v.normal = glm::normalize(glm::vec3(h(x - 1, z) - h(x + 1, z), 2.0f * d, h(x, z - 1) - h(x, z + 1)));
+                v.uv = {static_cast<float>(x) / (res - 1), static_cast<float>(z) / (res - 1)};
+            }
+        if (!terrain_.vao) {
+            glCreateVertexArrays(1, &terrain_.vao);
+            glCreateBuffers(1, &terrain_.vbo);
+            glCreateBuffers(1, &terrain_.ibo);
+        }
+        glNamedBufferData(terrain_.vbo, static_cast<GLsizeiptr>(vertices.size() * sizeof(Vertex)), vertices.data(), GL_DYNAMIC_DRAW);
+        if (terrain_.resolution != res) {
+            std::vector<std::uint32_t> indices;
+            indices.reserve(static_cast<std::size_t>(res - 1) * (res - 1) * 6);
+            for (int z = 0; z + 1 < res; ++z)
+                for (int x = 0; x + 1 < res; ++x) {
+                    const std::uint32_t i = static_cast<std::uint32_t>(z * res + x);
+                    const std::uint32_t r = static_cast<std::uint32_t>(res);
+                    // Counter-clockwise seen from above.
+                    indices.insert(indices.end(), {i, i + r, i + 1, i + 1, i + r, i + r + 1});
+                }
+            glNamedBufferData(terrain_.ibo, static_cast<GLsizeiptr>(indices.size() * sizeof(std::uint32_t)), indices.data(), GL_STATIC_DRAW);
+            terrain_.indexCount = static_cast<int>(indices.size());
+            setupVertexArray(terrain_.vao, terrain_.vbo);
+            glVertexArrayElementBuffer(terrain_.vao, terrain_.ibo);
+        }
+        terrain_.resolution = res;
+        terrain_.meshVersion = t.meshVersion;
+    }
+    if (terrain_.splatVersion != t.splatVersion || terrain_.splatResolution != t.splatResolution) {
+        if (terrain_.splat && terrain_.splatResolution != t.splatResolution) {
+            glDeleteTextures(1, &terrain_.splat);
+            terrain_.splat = 0;
+        }
+        if (!terrain_.splat) {
+            glCreateTextures(GL_TEXTURE_2D, 1, &terrain_.splat);
+            glTextureStorage2D(terrain_.splat, 1, GL_RGBA8, t.splatResolution, t.splatResolution);
+            glTextureParameteri(terrain_.splat, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTextureParameteri(terrain_.splat, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTextureParameteri(terrain_.splat, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTextureParameteri(terrain_.splat, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        }
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        glTextureSubImage2D(terrain_.splat, 0, 0, 0, t.splatResolution, t.splatResolution, GL_RGBA, GL_UNSIGNED_BYTE, t.splat.data());
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+        terrain_.splatResolution = t.splatResolution;
+        terrain_.splatVersion = t.splatVersion;
+    }
+    const Aabb bounds = t.bounds();
+    drawDistance_ = distanceTo(view.cameraPosition, bounds);
+    for (const TerrainLayer& layer : t.layers) // layer maps stay resident like everything near the camera
+        if (layer.material)
+            for (const auto& asset : layer.material->maps)
+                if (asset)
+                    keepTextureAlive(asset->texture.get());
+    if (!visible(bounds))
+        return;
+    glUniformMatrix4fv(loc_.model, 1, GL_FALSE, glm::value_ptr(glm::mat4(1.0f)));
+    glUniform1f(loc_.highlight, 0.0f);
+    if (!depthOnly_) {
+        applySurface(nullptr, nullptr, glm::vec3(1.0f), true); // resets every map flag
+        const Program& mesh = programs_.mesh;
+        glUniform1i(loc_.grid, 0);
+        glUniform1i(mesh.loc("uTerrain"), 1);
+        glUniform2fv(mesh.loc("uTerrainOrigin"), 1, glm::value_ptr(t.origin));
+        glUniform1f(mesh.loc("uTerrainSize"), t.size);
+        glm::vec4 tiling(0.25f), roughness(0.9f), normalStrength(1.0f);
+        glm::ivec4 hasAlbedo(0), hasNormal(0);
+        glm::vec3 colors[4] = {glm::vec3(0.45f, 0.42f, 0.36f), glm::vec3(0.38f, 0.42f, 0.25f), glm::vec3(0.32f, 0.3f, 0.27f),
+                               glm::vec3(0.5f)};
+        const unsigned albedoUnits[4] = {0, 10, 11, 12}, normalUnits[4] = {1, 2, 3, 5};
+        for (int i = 0; i < Terrain::kLayers; ++i) {
+            const TerrainLayer& layer = t.layers[static_cast<std::size_t>(i)];
+            tiling[i] = layer.tiling;
+            const Material* m = layer.material.get();
+            if (!m)
+                continue;
+            colors[i] = m->color;
+            roughness[i] = m->roughness;
+            normalStrength[i] = m->normalStrength;
+            auto bind = [&](MapKind kind, unsigned unit) {
+                const auto& asset = m->map(kind);
+                const Texture* tex = asset ? asset->texture.get() : nullptr;
+                const unsigned handle = tex && tex->valid() ? texture(*tex) : 0u;
+                if (handle)
+                    glBindTextureUnit(unit, handle);
+                return handle != 0 ? 1 : 0;
+            };
+            hasAlbedo[i] = bind(MapKind::Albedo, albedoUnits[i]);
+            hasNormal[i] = bind(MapKind::Normal, normalUnits[i]);
+        }
+        glBindTextureUnit(4, terrain_.splat);
+        glUniform4fv(mesh.loc("uLayerTiling"), 1, glm::value_ptr(tiling));
+        glUniform3fv(mesh.loc("uLayerColor"), 4, glm::value_ptr(colors[0]));
+        glUniform4iv(mesh.loc("uLayerHasAlbedo"), 1, glm::value_ptr(hasAlbedo));
+        glUniform4iv(mesh.loc("uLayerHasNormal"), 1, glm::value_ptr(hasNormal));
+        glUniform4fv(mesh.loc("uLayerRoughness"), 1, glm::value_ptr(roughness));
+        glUniform4fv(mesh.loc("uLayerNormalStrength"), 1, glm::value_ptr(normalStrength));
+    } else {
+        glUniform1i(loc_.alphaMode, 0);
+    }
+    glBindVertexArray(terrain_.vao);
+    glDrawElements(GL_TRIANGLES, terrain_.indexCount, GL_UNSIGNED_INT, nullptr);
+    ++drawCalls_;
+    if (!depthOnly_)
+        glUniform1i(programs_.mesh.loc("uTerrain"), 0);
+}
+
+void Renderer::addFoliage(const Terrain& t, const RenderView& view)
+{
+    constexpr float kCell = 32.0f;
+    FoliageCache& c = foliageCache_;
+    if (c.terrain != &t || c.version != t.foliageVersion) {
+        c.terrain = &t;
+        c.version = t.foliageVersion;
+        c.types.assign(t.foliageTypes.size(), {});
+        c.transforms.resize(t.foliage.size());
+        std::vector<std::unordered_map<std::uint64_t, std::size_t>> cellIndex(t.foliageTypes.size());
+        for (std::size_t i = 0; i < t.foliage.size(); ++i) {
+            const FoliageInstance& f = t.foliage[i];
+            if (f.type >= t.foliageTypes.size())
+                continue;
+            glm::mat4 m = glm::translate(glm::mat4(1.0f), f.position);
+            if (f.tiltX != 0.0f || f.tiltZ != 0.0f) {
+                m = glm::rotate(m, f.tiltX, glm::vec3(1.0f, 0.0f, 0.0f));
+                m = glm::rotate(m, f.tiltZ, glm::vec3(0.0f, 0.0f, 1.0f));
+            }
+            m = glm::rotate(m, glm::radians(f.yawDegrees), glm::vec3(0.0f, 1.0f, 0.0f));
+            m = glm::scale(m, glm::vec3(f.scale));
+            c.transforms[i] = m;
+            const FoliageType& type = t.foliageTypes[f.type];
+            const auto cx = static_cast<std::int64_t>(std::floor(f.position.x / kCell));
+            const auto cz = static_cast<std::int64_t>(std::floor(f.position.z / kCell));
+            const std::uint64_t key = (static_cast<std::uint64_t>(cx) << 32) ^ static_cast<std::uint32_t>(cz);
+            auto [it, added] = cellIndex[f.type].emplace(key, c.types[f.type].size());
+            if (added)
+                c.types[f.type].push_back({Aabb{f.position, f.position}, {}});
+            FoliageCell& cell = c.types[f.type][it->second];
+            cell.instances.push_back(static_cast<std::uint32_t>(i));
+            // Instance bounds: the model's box, scaled, around the position (rotation-safe radius).
+            glm::vec3 reach(1.0f);
+            if (type.model && !type.model->parts.empty()) {
+                const Aabb mb = type.model->localBounds.min != type.model->localBounds.max ? type.model->localBounds : Aabb{};
+                reach = glm::vec3(glm::max(glm::length(mb.min), glm::length(mb.max)));
+                if (reach.x <= 0.0f) {
+                    Aabb pb{type.model->parts[0].positions.empty() ? glm::vec3(0.0f) : type.model->parts[0].positions[0],
+                            type.model->parts[0].positions.empty() ? glm::vec3(0.0f) : type.model->parts[0].positions[0]};
+                    for (const MeshPart& part : type.model->parts)
+                        for (const glm::vec3& p : part.positions) {
+                            pb.min = glm::min(pb.min, p);
+                            pb.max = glm::max(pb.max, p);
+                        }
+                    reach = glm::vec3(glm::max(glm::length(pb.min), glm::length(pb.max)));
+                }
+            }
+            cell.bounds.min = glm::min(cell.bounds.min, f.position - reach * f.scale);
+            cell.bounds.max = glm::max(cell.bounds.max, f.position + reach * f.scale);
+        }
+    }
+    for (std::size_t ti = 0; ti < t.foliageTypes.size() && ti < c.types.size(); ++ti) {
+        const FoliageType& type = t.foliageTypes[ti];
+        if (!type.model || type.model->parts.empty())
+            continue;
+        drawDistance_ = 1e30f;
+        keepAlive(*type.model);
+        const std::uint64_t key = reinterpret_cast<std::uintptr_t>(&type.model->parts[0]);
+        for (const FoliageCell& cell : c.types[ti]) {
+            const float cellDistance = distanceTo(view.cameraPosition, cell.bounds);
+            if ((type.cullDistance > 0.0f && cellDistance > type.cullDistance) || !visible(cell.bounds)) {
+                culled_ += static_cast<int>(cell.instances.size());
+                continue;
+            }
+            auto [it, added] = batchIndex_.emplace(key, batches_.size());
+            if (added)
+                batches_.push_back({type.model.get(), {}, cellDistance});
+            InstanceBatch& batch = batches_[it->second];
+            batch.distance = std::min(batch.distance, cellDistance);
+            for (std::uint32_t i : cell.instances) {
+                if (type.cullDistance > 0.0f &&
+                    glm::distance(view.cameraPosition, t.foliage[i].position) > type.cullDistance + 2.0f)
+                    continue;
+                batch.transforms.push_back(c.transforms[i]);
+            }
+        }
+    }
 }
 
 void Renderer::flushInstances()

@@ -105,6 +105,26 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
         out << "map_image " << std::quoted(relative(scene.map.image)) << '\n';
     if (scene.map.size > 0.0f)
         out << "map_bounds " << scene.map.min.x << ' ' << scene.map.min.y << ' ' << scene.map.size << '\n';
+    if (scene.terrain && scene.terrain->valid()) {
+        // Heights, splat map and foliage go to a binary file next to the level.
+        std::filesystem::path data = file;
+        data.replace_extension(".terrain");
+        std::string terrainError;
+        if (!saveTerrainData(*scene.terrain, data, &terrainError)) {
+            setError(error, terrainError);
+            return false;
+        }
+        out << "terrain " << std::quoted(pathToUtf8(data.filename())) << '\n';
+        for (int i = 0; i < Terrain::kLayers; ++i) {
+            const TerrainLayer& l = scene.terrain->layers[static_cast<std::size_t>(i)];
+            if (!l.materialPath.empty() || i == 0)
+                out << "terrain_layer " << i << ' ' << std::quoted(l.materialPath.empty() ? std::string() : relative(l.materialPath))
+                    << ' ' << l.tiling << '\n';
+        }
+        for (const FoliageType& f : scene.terrain->foliageTypes)
+            out << "foliage_type " << std::quoted(f.modelPath.empty() ? std::string() : relative(f.modelPath)) << ' ' << f.density << ' ' << f.minScale << ' '
+                << f.maxScale << ' ' << f.cullDistance << ' ' << f.collision << ' ' << f.alignToSlope << '\n';
+    }
     if (!scene.loading.image.empty())
         out << "loading_image " << std::quoted(relative(scene.loading.image)) << '\n';
     if (!scene.loading.title.empty())
@@ -233,6 +253,8 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                 ls >> std::quoted(name) >> std::quoted(path);
             else if (key == "lod")
                 ls >> std::quoted(path);
+            else if (key == "foliage_type")
+                ls >> std::quoted(path);
             if (path.empty())
                 continue;
             std::filesystem::path p = pathFromUtf8(path);
@@ -318,6 +340,56 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
             ok = static_cast<bool>(ls >> std::quoted(value));
             std::filesystem::path p = pathFromUtf8(value);
             result.map.image = p.is_relative() ? (std::filesystem::absolute(file).parent_path() / p).lexically_normal() : p;
+        } else if (key == "terrain") {
+            std::string path;
+            ok = static_cast<bool>(ls >> std::quoted(path));
+            if (ok) {
+                std::filesystem::path p = pathFromUtf8(path);
+                if (p.is_relative())
+                    p = std::filesystem::absolute(file).parent_path() / p;
+                if (!result.terrain)
+                    result.terrain = std::make_shared<Terrain>();
+                std::string terrainError;
+                ok = loadTerrainData(*result.terrain, p.lexically_normal(), &terrainError);
+                if (!ok) {
+                    setError(error, terrainError);
+                    return false;
+                }
+            }
+        } else if (key == "terrain_layer") {
+            int index = -1;
+            std::string path;
+            float tiling = 0.25f;
+            ok = result.terrain && static_cast<bool>(ls >> index >> std::quoted(path) >> tiling) && index >= 0 &&
+                 index < Terrain::kLayers;
+            if (ok) {
+                TerrainLayer& layer = result.terrain->layers[static_cast<std::size_t>(index)];
+                layer.tiling = tiling;
+                if (!path.empty()) {
+                    std::filesystem::path p = pathFromUtf8(path);
+                    if (p.is_relative())
+                        p = std::filesystem::absolute(file).parent_path() / p;
+                    layer.materialPath = p.lexically_normal();
+                    layer.material = loadMaterial(layer.materialPath); // missing material: plain layer
+                }
+            }
+        } else if (key == "foliage_type") {
+            FoliageType ft;
+            std::string path;
+            ok = result.terrain && static_cast<bool>(ls >> std::quoted(path) >> ft.density >> ft.minScale >> ft.maxScale >>
+                                                     ft.cullDistance >> ft.collision >> ft.alignToSlope);
+            if (ok) {
+                std::filesystem::path p = pathFromUtf8(path);
+                if (p.is_relative())
+                    p = std::filesystem::absolute(file).parent_path() / p;
+                if (!path.empty()) {
+                    ft.modelPath = p.lexically_normal();
+                    auto model = std::make_shared<Model>();
+                    if (loadCached(*model, ft.modelPath, nullptr))
+                        ft.model = std::move(model);
+                }
+                result.terrain->foliageTypes.push_back(std::move(ft));
+            }
         } else if (key == "map_bounds") {
             ok = static_cast<bool>(ls >> result.map.min.x >> result.map.min.y >> result.map.size);
         } else if (key == "loading_image" || key == "loading_title" || key == "loading_hint") {

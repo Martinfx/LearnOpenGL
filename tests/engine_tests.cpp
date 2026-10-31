@@ -891,6 +891,38 @@ void testTextureCooking()
           "cook: read from mip 2");
 }
 
+void testTerrain()
+{
+    auto t = std::make_shared<engine::Terrain>();
+    t->create({-32.0f, -32.0f}, 64.0f, 65, 64);
+    check(t->valid() && std::abs(t->heightAt(3.0f, 4.0f)) < 1e-6f && t->layerWeight(0, 0.0f, 0.0f) > 0.99f, "terrain: flat, layer 0");
+    for (int i = 0; i < 4; ++i)
+        t->sculpt({0, 0, 0}, 8.0f, 1.0f, engine::Terrain::Sculpt::Raise);
+    check(t->heightAt(0.0f, 0.0f) > 1.9f && std::abs(t->heightAt(20.0f, 20.0f)) < 1e-6f, "terrain: raise brush");
+    float hit = 0.0f;
+    check(t->raycast({0, 10, 0}, {0, -1, 0}, 50.0f, hit) && std::abs(10.0f - hit - t->heightAt(0, 0)) < 0.01f, "terrain: raycast");
+    for (int i = 0; i < 10; ++i)
+        t->paintLayer({10, 0, 10}, 4.0f, 0.5f, 2);
+    check(t->layerWeight(2, 10.0f, 10.0f) > 0.9f && t->layerWeight(0, -20.0f, -20.0f) > 0.99f, "terrain: paint layer 2");
+    engine::FoliageType grass;
+    grass.density = 2.0f;
+    t->foliageTypes.push_back(grass);
+    std::mt19937 rng(1);
+    const int added = t->paintFoliage({-10, 0, -10}, 3.0f, 0, rng);
+    check(added > 20 && t->paintFoliage({-10, 0, -10}, 3.0f, 0, rng) < added / 4, "terrain: foliage fills to its density");
+    engine::Scene s;
+    s.terrain = t;
+    std::string err;
+    check(engine::saveScene(s, "terrain_test.level", &err), "terrain: save " + err);
+    engine::Scene again;
+    check(engine::loadScene(again, "terrain_test.level", &err) && again.terrain &&
+              std::abs(again.terrain->heightAt(0, 0) - t->heightAt(0, 0)) < 1e-5f &&
+              again.terrain->foliage.size() == t->foliage.size() && again.terrain->foliageTypes.size() == 1 &&
+              again.terrain->layerWeight(2, 10.0f, 10.0f) > 0.9f,
+          "terrain: level round trip " + err);
+    check(t->eraseFoliage({-10, 0, -10}, 5.0f) == static_cast<int>(t->foliage.size() + 0) || t->foliage.empty(), "terrain: erase foliage");
+}
+
 void testSharedMeshes()
 {
     // Copies of a model share their vertices; editing a copy detaches it.
@@ -923,6 +955,7 @@ int main()
     std::filesystem::remove_all(engine::textureCookConfig().cacheDir);
     testTextureCooking();
     testSharedMeshes();
+    testTerrain();
     testFixedStep();
     testFallsAndLands();
     testWallBlocks();

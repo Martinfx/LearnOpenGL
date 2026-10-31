@@ -9,6 +9,7 @@ add_library(engine STATIC
     src/Material.cpp
     src/TextureCook.cpp
     src/Memory.cpp
+    src/Terrain.cpp
     src/CharacterBody.cpp
     src/Physics.cpp
     src/Scripting.cpp
