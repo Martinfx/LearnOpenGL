@@ -5,6 +5,7 @@
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -92,6 +93,11 @@ struct Material {
     std::string surface;                       // footsteps / impacts / bullet holes (engine/Surfaces.h), empty = guessed
     std::array<std::filesystem::path, kMapCount> mapPaths;       // absolute, empty = none
     std::array<std::shared_ptr<TextureAsset>, kMapCount> maps;   // runtime, loaded from mapPaths
+    // Material instance (`parent "base.material"`): every value not in `overrides` (keys of the
+    // .material file, e.g. "color", "normal_map") comes from the parent and follows its edits.
+    std::filesystem::path parentPath;         // absolute, empty = a standalone material
+    std::shared_ptr<Material> parent;         // runtime, loaded from parentPath
+    std::set<std::string> overrides;
 
     const std::shared_ptr<TextureAsset>& map(MapKind kind) const { return maps[static_cast<std::size_t>(kind)]; }
     const std::filesystem::path& mapPath(MapKind kind) const { return mapPaths[static_cast<std::size_t>(kind)]; }
@@ -105,6 +111,19 @@ bool saveMaterial(const Material& material, const std::filesystem::path& file, s
 bool setMaterialMap(Material& material, MapKind kind, const std::filesystem::path& image, std::string* error = nullptr);
 // Re-reads a material file into the cached object (e.g. "Revert" in the editor).
 bool reloadMaterial(Material& material, std::string* error = nullptr);
+
+// Material instances. Keys of the values a material file can set (color, roughness, ...,
+// the map keys), the keys whose values differ between two materials, copying one value.
+const std::vector<std::string>& materialValueKeys();
+std::vector<std::string> materialDifferences(const Material& a, const Material& b);
+void copyMaterialValue(Material& to, const Material& from, const std::string& key);
+// Values not overridden come from the parent again (after the parent was edited in place).
+void applyMaterialParent(Material& material);
+// Every loaded instance takes its parent's current values (the editor calls it after an edit).
+void refreshMaterialInstances();
+// Makes `material` an instance of `parentFile` with no overrides (its values become the parent's),
+// or with an empty path a standalone material that keeps its current values.
+bool setMaterialParent(Material& material, const std::filesystem::path& parentFile, std::string* error = nullptr);
 
 // Hot reload (engine/HotReload.h): the cached objects in use, or null when nothing uses the file.
 std::shared_ptr<TextureAsset> findTextureAsset(const std::filesystem::path& image);

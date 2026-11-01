@@ -2598,6 +2598,47 @@ void testProbes()
     check(engine::probeFile("a/b.level") == std::filesystem::path("a/b.probes"), "probe file sits next to the level");
 }
 
+void testMaterialInstances()
+{
+    const std::filesystem::path dir = std::filesystem::temp_directory_path() / "engine_tests_materials";
+    std::filesystem::create_directories(dir);
+    {
+        std::ofstream base(dir / "base.material");
+        base << "version 2\nname \"Base\"\ncolor 0.5 0.4 0.3\nroughness 0.8\nmetallic 0\ntiling 2 2\n";
+        std::ofstream inst(dir / "rusty.material");
+        inst << "version 2\nname \"Rusty\"\nparent \"base.material\"\nroughness 0.3\n";
+    }
+    std::string error;
+    auto instance = engine::loadMaterial(dir / "rusty.material", &error);
+    check(instance != nullptr, "material instance loads");
+    if (!instance)
+        return;
+    auto base = engine::loadMaterial(dir / "base.material");
+    check(instance->parent == base && instance->color == glm::vec3(0.5f, 0.4f, 0.3f) && instance->tiling == glm::vec2(2.0f),
+          "an instance takes the parent's values");
+    check(instance->roughness == 0.3f && instance->overrides.count("roughness") == 1 && instance->overrides.size() == 1,
+          "an instance keeps its own values");
+    base->color = glm::vec3(1.0f, 0.0f, 0.0f);
+    base->roughness = 0.9f;
+    engine::refreshMaterialInstances();
+    check(instance->color == glm::vec3(1.0f, 0.0f, 0.0f) && instance->roughness == 0.3f, "an instance follows the edited parent");
+    engine::Material before = *instance;
+    instance->metallic = 1.0f;
+    const auto diff = engine::materialDifferences(before, *instance);
+    check(diff.size() == 1 && diff[0] == "metallic", "material differences name the changed value");
+    instance->overrides.insert("metallic");
+    check(engine::saveMaterial(*instance, dir / "rusty.material", &error), "an instance saves");
+    std::ifstream in(dir / "rusty.material");
+    const std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    check(text.find("parent") != std::string::npos && text.find("metallic 1") != std::string::npos &&
+              text.find("roughness 0.3") != std::string::npos && text.find("color") == std::string::npos,
+          "an instance file holds only its overrides");
+    check(!engine::setMaterialParent(*base, dir / "rusty.material"), "a material cannot be its own ancestor");
+    instance.reset();
+    base.reset();
+    std::filesystem::remove_all(dir);
+}
+
 void testInteriorVolumes()
 {
     engine::Scene scene;
@@ -2742,6 +2783,7 @@ int main()
     testVolumetricFogSettings();
     testInteriorVolumes();
     testProbes();
+    testMaterialInstances();
     testDistortParticles();
     testTaskGraph();
     testWorldStreaming();

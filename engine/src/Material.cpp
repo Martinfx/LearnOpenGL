@@ -11,6 +11,7 @@
 #include <fstream>
 #include <iomanip>
 #include <map>
+#include <set>
 #include <sstream>
 
 namespace engine {
@@ -363,6 +364,8 @@ bool parseMaterial(Material& m, const std::filesystem::path& file, std::string* 
     result.sourcePath = normalized(file);
     result.name = file.stem().string();
     std::array<std::string, kMapCount> maps;
+    std::string parentFile;
+    std::set<std::string> keys; // values set in this file (an instance's overrides)
     std::string line;
     int lineNo = 0;
     while (std::getline(in, line)) {
@@ -377,6 +380,8 @@ bool parseMaterial(Material& m, const std::filesystem::path& file, std::string* 
             ok = static_cast<bool>(ls >> v) && v >= 1 && v <= 2;
         } else if (k == "name") {
             ok = static_cast<bool>(ls >> std::quoted(result.name));
+        } else if (k == "parent") {
+            ok = static_cast<bool>(ls >> std::quoted(parentFile));
         } else if (k == "color") {
             ok = static_cast<bool>(ls >> result.color.r >> result.color.g >> result.color.b);
         } else if (k == "texture") { // version 1 name of the albedo map
@@ -415,6 +420,8 @@ bool parseMaterial(Material& m, const std::filesystem::path& file, std::string* 
             setError(error, file.string() + ":" + std::to_string(lineNo) + ": invalid line: " + line);
             return false;
         }
+        if (k != "version" && k != "name" && k != "parent")
+            keys.insert(k == "texture" ? std::string(mapKey(MapKind::Albedo)) : k);
     }
     for (int i = 0; i < kMapCount; ++i) {
         const std::string& texture = maps[static_cast<std::size_t>(i)];
@@ -426,8 +433,67 @@ bool parseMaterial(Material& m, const std::filesystem::path& file, std::string* 
         if (!setMaterialMap(result, static_cast<MapKind>(i), p, error))
             return false;
     }
+    if (!parentFile.empty()) {
+        // Instance: the parent's values, then the ones set here.
+        static thread_local int depth = 0;
+        if (depth > 8) {
+            setError(error, file.string() + ": material parents form a loop");
+            return false;
+        }
+        std::filesystem::path p = fromUtf8(parentFile);
+        if (p.is_relative())
+            p = result.sourcePath.parent_path() / p;
+        ++depth;
+        std::string parentError;
+        result.parent = loadMaterial(p, &parentError);
+        --depth;
+        if (!result.parent) {
+            setError(error, file.string() + ": parent: " + parentError);
+            return false;
+        }
+        result.parentPath = result.parent->sourcePath;
+        result.overrides = keys;
+        applyMaterialParent(result);
+    }
     m = std::move(result);
     return true;
+}
+
+void writeMaterialValue(std::ostream& out, const Material& m, const std::string& key, const std::filesystem::path& dir)
+{
+    if (key == "color")
+        out << "color " << m.color.r << ' ' << m.color.g << ' ' << m.color.b << '\n';
+    else if (key == "roughness")
+        out << "roughness " << m.roughness << '\n';
+    else if (key == "metallic")
+        out << "metallic " << m.metallic << '\n';
+    else if (key == "normal_strength")
+        out << "normal_strength " << m.normalStrength << '\n';
+    else if (key == "emissive")
+        out << "emissive " << m.emissive.r << ' ' << m.emissive.g << ' ' << m.emissive.b << '\n';
+    else if (key == "tiling")
+        out << "tiling " << m.tiling.x << ' ' << m.tiling.y << '\n';
+    else if (key == "world_uv")
+        out << "world_uv " << m.worldUv << '\n';
+    else if (key == "alpha_mode")
+        out << "alpha_mode " << alphaModeName(m.alphaMode) << '\n';
+    else if (key == "alpha_cutoff")
+        out << "alpha_cutoff " << m.alphaCutoff << '\n';
+    else if (key == "opacity")
+        out << "opacity " << m.opacity << '\n';
+    else if (key == "double_sided")
+        out << "double_sided " << m.doubleSided << '\n';
+    else if (key == "surface") {
+        if (!m.surface.empty())
+            out << "surface " << m.surface << '\n';
+    } else {
+        for (int i = 0; i < kMapCount; ++i)
+            if (key == mapKey(static_cast<MapKind>(i))) {
+                const std::filesystem::path& p = m.mapPaths[static_cast<std::size_t>(i)];
+                // An instance may override a map with none: an empty path.
+                out << key << ' ' << std::quoted(p.empty() ? std::string() : toUtf8(relativeTo(p, dir))) << '\n';
+            }
+    }
 }
 
 } // namespace
@@ -466,24 +532,23 @@ bool saveMaterial(const Material& m, const std::filesystem::path& file, std::str
     out << std::setprecision(6);
     out << "# FPS engine material (physically based: metal/roughness)\nversion 2\n";
     out << "name " << std::quoted(m.name) << '\n';
-    out << "color " << m.color.r << ' ' << m.color.g << ' ' << m.color.b << '\n';
-    out << "roughness " << m.roughness << '\n';
-    out << "metallic " << m.metallic << '\n';
-    out << "normal_strength " << m.normalStrength << '\n';
-    out << "emissive " << m.emissive.r << ' ' << m.emissive.g << ' ' << m.emissive.b << '\n';
-    out << "tiling " << m.tiling.x << ' ' << m.tiling.y << '\n';
-    out << "world_uv " << m.worldUv << '\n';
-    out << "alpha_mode " << alphaModeName(m.alphaMode) << '\n';
-    out << "alpha_cutoff " << m.alphaCutoff << '\n';
-    out << "opacity " << m.opacity << '\n';
-    out << "double_sided " << m.doubleSided << '\n';
-    if (!m.surface.empty())
-        out << "surface " << m.surface << '\n';
     const std::filesystem::path dir = normalized(file).parent_path();
-    for (int i = 0; i < kMapCount; ++i) {
-        const std::filesystem::path& p = m.mapPaths[static_cast<std::size_t>(i)];
-        if (!p.empty())
-            out << mapKey(static_cast<MapKind>(i)) << ' ' << std::quoted(toUtf8(relativeTo(p, dir))) << '\n';
+    if (!m.parentPath.empty()) {
+        // Instance: the parent and only the values set on it.
+        out << "parent " << std::quoted(toUtf8(relativeTo(m.parentPath, dir))) << '\n';
+        for (const std::string& key : materialValueKeys())
+            if (m.overrides.count(key))
+                writeMaterialValue(out, m, key, dir);
+    } else {
+        for (const std::string& key : materialValueKeys()) {
+            const bool map = key.size() > 4 && key.compare(key.size() - 4, 4, "_map") == 0;
+            bool empty = false;
+            for (int i = 0; i < kMapCount && map; ++i)
+                if (key == mapKey(static_cast<MapKind>(i)))
+                    empty = m.mapPaths[static_cast<std::size_t>(i)].empty();
+            if (!empty)
+                writeMaterialValue(out, m, key, dir);
+        }
     }
     if (!out) {
         setError(error, "Write failed: " + file.string());
@@ -574,3 +639,133 @@ bool reloadTexture(const std::filesystem::path& image, std::string* error)
 
 } // namespace engine
 
+
+namespace engine {
+
+const std::vector<std::string>& materialValueKeys()
+{
+    static const std::vector<std::string> keys = [] {
+        std::vector<std::string> k = {"color",      "roughness",    "metallic", "normal_strength", "emissive",     "tiling",
+                                      "world_uv",   "alpha_mode",   "alpha_cutoff", "opacity",     "double_sided", "surface"};
+        for (int i = 0; i < kMapCount; ++i)
+            k.emplace_back(mapKey(static_cast<MapKind>(i)));
+        return k;
+    }();
+    return keys;
+}
+
+void copyMaterialValue(Material& to, const Material& from, const std::string& key)
+{
+    if (key == "color")
+        to.color = from.color;
+    else if (key == "roughness")
+        to.roughness = from.roughness;
+    else if (key == "metallic")
+        to.metallic = from.metallic;
+    else if (key == "normal_strength")
+        to.normalStrength = from.normalStrength;
+    else if (key == "emissive")
+        to.emissive = from.emissive;
+    else if (key == "tiling")
+        to.tiling = from.tiling;
+    else if (key == "world_uv")
+        to.worldUv = from.worldUv;
+    else if (key == "alpha_mode")
+        to.alphaMode = from.alphaMode;
+    else if (key == "alpha_cutoff")
+        to.alphaCutoff = from.alphaCutoff;
+    else if (key == "opacity")
+        to.opacity = from.opacity;
+    else if (key == "double_sided")
+        to.doubleSided = from.doubleSided;
+    else if (key == "surface")
+        to.surface = from.surface;
+    else
+        for (int i = 0; i < kMapCount; ++i)
+            if (key == mapKey(static_cast<MapKind>(i))) {
+                to.mapPaths[static_cast<std::size_t>(i)] = from.mapPaths[static_cast<std::size_t>(i)];
+                to.maps[static_cast<std::size_t>(i)] = from.maps[static_cast<std::size_t>(i)];
+            }
+}
+
+std::vector<std::string> materialDifferences(const Material& a, const Material& b)
+{
+    std::vector<std::string> out;
+    for (const std::string& key : materialValueKeys()) {
+        bool same = true;
+        if (key == "color")
+            same = a.color == b.color;
+        else if (key == "roughness")
+            same = a.roughness == b.roughness;
+        else if (key == "metallic")
+            same = a.metallic == b.metallic;
+        else if (key == "normal_strength")
+            same = a.normalStrength == b.normalStrength;
+        else if (key == "emissive")
+            same = a.emissive == b.emissive;
+        else if (key == "tiling")
+            same = a.tiling == b.tiling;
+        else if (key == "world_uv")
+            same = a.worldUv == b.worldUv;
+        else if (key == "alpha_mode")
+            same = a.alphaMode == b.alphaMode;
+        else if (key == "alpha_cutoff")
+            same = a.alphaCutoff == b.alphaCutoff;
+        else if (key == "opacity")
+            same = a.opacity == b.opacity;
+        else if (key == "double_sided")
+            same = a.doubleSided == b.doubleSided;
+        else if (key == "surface")
+            same = a.surface == b.surface;
+        else
+            for (int i = 0; i < kMapCount; ++i)
+                if (key == mapKey(static_cast<MapKind>(i)))
+                    same = a.mapPaths[static_cast<std::size_t>(i)] == b.mapPaths[static_cast<std::size_t>(i)];
+        if (!same)
+            out.push_back(key);
+    }
+    return out;
+}
+
+void applyMaterialParent(Material& material)
+{
+    if (!material.parent)
+        return;
+    applyMaterialParent(*material.parent); // a parent may be an instance too
+    for (const std::string& key : materialValueKeys())
+        if (!material.overrides.count(key))
+            copyMaterialValue(material, *material.parent, key);
+}
+
+void refreshMaterialInstances()
+{
+    const std::lock_guard lock(cacheMutex());
+    for (auto& [path, weak] : materialCache())
+        if (auto m = weak.lock())
+            applyMaterialParent(*m);
+}
+
+bool setMaterialParent(Material& material, const std::filesystem::path& parentFile, std::string* error)
+{
+    if (parentFile.empty()) {
+        material.parent.reset();
+        material.parentPath.clear();
+        material.overrides.clear();
+        return true;
+    }
+    auto parent = loadMaterial(parentFile, error);
+    if (!parent)
+        return false;
+    for (const Material* p = parent.get(); p; p = p->parent.get())
+        if (p == &material || p->sourcePath == material.sourcePath) {
+            setError(error, "A material cannot be its own parent");
+            return false;
+        }
+    material.parent = std::move(parent);
+    material.parentPath = material.parent->sourcePath;
+    material.overrides.clear();
+    applyMaterialParent(material);
+    return true;
+}
+
+} // namespace engine

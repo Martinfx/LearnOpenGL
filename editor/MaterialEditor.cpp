@@ -157,8 +157,12 @@ MaterialEditor::MaterialEditor(QWidget* parent)
     auto* newButton = new QPushButton(tr("New"), left);
     auto* dupButton = new QPushButton(tr("Duplicate"), left);
     auto* openButton = new QPushButton(tr("Open..."), left);
+    auto* instanceButton = new QPushButton(tr("New instance"), left);
+    instanceButton->setToolTip(tr("A material that takes every value from the selected one except those you change on it "
+                                  "(rust variants of one metal, colours of one paint)"));
     buttons->addWidget(newButton);
     buttons->addWidget(dupButton);
+    buttons->addWidget(instanceButton);
     buttons->addWidget(openButton);
     leftLayout->addWidget(new QLabel(tr("Materials (%1)").arg(QDir::toNativeSeparators(assetPath("materials"))), left));
     leftLayout->addWidget(list_, 1);
@@ -201,21 +205,19 @@ MaterialEditor::MaterialEditor(QWidget* parent)
             if (path.isEmpty())
                 return;
             std::string error;
+            const engine::Material before = *material_;
             if (!engine::setMaterialMap(*material_, kind, toPath(path), &error)) {
                 QMessageBox::warning(this, tr("Texture"), QString::fromStdString(error));
                 return;
             }
-            modified_.insert(currentPath());
-            refreshForm();
-            emit materialChanged();
+            afterEdit(before);
         });
         connect(clear, &QPushButton::clicked, this, [this, kind] {
             if (!material_ || material_->mapPath(kind).empty())
                 return;
+            const engine::Material before = *material_;
             engine::setMaterialMap(*material_, kind, {});
-            modified_.insert(currentPath());
-            refreshForm();
-            emit materialChanged();
+            afterEdit(before);
         });
         connect(editButton, &QPushButton::clicked, this, [this, kind] {
             if (material_ && !material_->mapPath(kind).empty())
@@ -267,7 +269,63 @@ MaterialEditor::MaterialEditor(QWidget* parent)
     saveRow->addWidget(saveButton);
     saveRow->addWidget(revertButton);
 
+    // Instance: the parent material, and a way back to its values.
+    auto* parentRow = new QWidget(form_);
+    auto* parentLayout = new QHBoxLayout(parentRow);
+    parentLayout->setContentsMargins(0, 0, 0, 0);
+    parentEdit_ = new QLineEdit(parentRow);
+    parentEdit_->setReadOnly(true);
+    parentEdit_->setPlaceholderText(tr("none (standalone material)"));
+    auto* parentBrowse = new QPushButton(tr("..."), parentRow);
+    auto* parentClear = new QPushButton(tr("x"), parentRow);
+    parentBrowse->setFixedWidth(32);
+    parentClear->setFixedWidth(32);
+    parentBrowse->setToolTip(tr("Make this an instance of another material (its values are replaced by the parent's)"));
+    parentClear->setToolTip(tr("Detach from the parent: keeps the current values as its own"));
+    resetOverrides_ = new QPushButton(tr("Reset to parent"), parentRow);
+    resetOverrides_->setToolTip(tr("Drop every value changed on this instance (bold labels)"));
+    parentLayout->addWidget(parentEdit_, 1);
+    parentLayout->addWidget(parentBrowse);
+    parentLayout->addWidget(parentClear);
+    parentLayout->addWidget(resetOverrides_);
+    connect(parentBrowse, &QPushButton::clicked, this, [this] {
+        if (!material_)
+            return;
+        const QString path = QFileDialog::getOpenFileName(this, tr("Parent material"), assetPath("materials"), tr("Materials (*.material)"));
+        if (path.isEmpty())
+            return;
+        std::string error;
+        if (!engine::setMaterialParent(*material_, toPath(path), &error)) {
+            QMessageBox::warning(this, tr("Parent material"), QString::fromStdString(error));
+            return;
+        }
+        modified_.insert(currentPath());
+        refreshForm();
+        emit materialChanged();
+    });
+    connect(parentClear, &QPushButton::clicked, this, [this] {
+        if (!material_ || !material_->parent)
+            return;
+        engine::setMaterialParent(*material_, {});
+        modified_.insert(currentPath());
+        refreshForm();
+        emit materialChanged();
+    });
+    connect(resetOverrides_, &QPushButton::clicked, this, [this] {
+        if (!material_ || !material_->parent || material_->overrides.empty())
+            return;
+        material_->overrides.clear();
+        engine::applyMaterialParent(*material_);
+        engine::refreshMaterialInstances();
+        modified_.insert(currentPath());
+        refreshForm();
+        emit materialChanged();
+    });
+    connect(instanceButton, &QPushButton::clicked, this, &MaterialEditor::newInstance);
+
+    formLayout_ = form;
     form->addRow(tr("Name"), nameEdit_);
+    form->addRow(tr("Parent"), parentRow);
     form->addRow(tr("Color"), colorButton_);
     form->addRow(tr("Roughness"), roughness_);
     form->addRow(tr("Metallic"), metallic_);
@@ -284,6 +342,12 @@ MaterialEditor::MaterialEditor(QWidget* parent)
     form->addRow(tr("Surface"), surface_);
     form->addRow(saveRow);
     form->addRow(pathLabel_);
+    keyWidgets_ = {{"color", colorButton_},       {"roughness", roughness_},       {"metallic", metallic_},
+                   {"normal_strength", normalStrength_}, {"tiling", tilingRow},   {"emissive", emissiveButton_},
+                   {"world_uv", worldUv_},          {"alpha_mode", alphaMode_},     {"alpha_cutoff", alphaCutoff_},
+                   {"opacity", opacity_},           {"double_sided", doubleSided_}, {"surface", surface_}};
+    for (int i = 0; i < engine::kMapCount; ++i)
+        keyWidgets_[engine::mapKey(static_cast<engine::MapKind>(i))] = mapRows[static_cast<std::size_t>(i)];
     tilingX_->setToolTip(tr("Repeats per UV unit; with world mapping (boxes) per metre: 0.25 = one image every 4 m"));
     roughness_->setToolTip(tr("0 = mirror-like, 1 = completely matte (multiplies the roughness map)"));
     metallic_->setToolTip(tr("0 = paint, stone, wood...; 1 = bare metal (multiplies the metallic map)"));
@@ -331,10 +395,9 @@ MaterialEditor::MaterialEditor(QWidget* parent)
         const QColor picked = QColorDialog::getColor(QColor::fromRgbF(c.r, c.g, c.b), this, title);
         if (!picked.isValid())
             return;
+        const engine::Material before = *material_;
         c = {static_cast<float>(picked.redF()), static_cast<float>(picked.greenF()), static_cast<float>(picked.blueF())};
-        modified_.insert(currentPath());
-        refreshForm();
-        emit materialChanged();
+        afterEdit(before);
     };
     connect(colorButton_, &QPushButton::clicked, this, [=] { pickColor(&engine::Material::color, tr("Color")); });
     connect(emissiveButton_, &QPushButton::clicked, this, [=] { pickColor(&engine::Material::emissive, tr("Emissive")); });
@@ -432,6 +495,21 @@ void MaterialEditor::refreshForm()
             }
             surface_->setCurrentIndex(index);
         }
+        parentEdit_->setText(m.parentPath.empty() ? QString() : fromPath(m.parentPath.filename()));
+        parentEdit_->setToolTip(fromPath(m.parentPath));
+        resetOverrides_->setEnabled(m.parent && !m.overrides.empty());
+        for (const auto& [key, widget] : keyWidgets_) {
+            // Bold: set on this instance; normal: the parent's value.
+            const bool own = m.parent && m.overrides.count(key);
+            QWidget* label = formLayout_->labelForField(widget);
+            for (QWidget* w : {label, widget}) {
+                if (!w || (w == widget && !qobject_cast<QCheckBox*>(w)))
+                    continue;
+                QFont f = w->font();
+                f.setBold(own);
+                w->setFont(f);
+            }
+        }
         pathLabel_->setText(QDir::toNativeSeparators(currentPath()) + (modified_.contains(currentPath()) ? tr("  (unsaved)") : QString()));
     }
     loading_ = false;
@@ -442,10 +520,22 @@ void MaterialEditor::refreshForm()
     }
 }
 
+void MaterialEditor::afterEdit(const engine::Material& before)
+{
+    if (material_->parent)
+        for (const std::string& key : engine::materialDifferences(before, *material_))
+            material_->overrides.insert(key); // changed here: no longer follows the parent
+    engine::refreshMaterialInstances();       // instances of this material follow it
+    modified_.insert(currentPath());
+    refreshForm();
+    emit materialChanged();
+}
+
 void MaterialEditor::edited()
 {
     if (loading_ || !material_)
         return;
+    const engine::Material before = *material_;
     engine::Material& m = *material_;
     m.name = nameEdit_->text().toStdString();
     m.tiling = {static_cast<float>(tilingX_->value()), static_cast<float>(tilingY_->value())};
@@ -458,9 +548,7 @@ void MaterialEditor::edited()
     m.opacity = static_cast<float>(opacity_->value());
     m.doubleSided = doubleSided_->isChecked();
     m.surface = surface_->currentData().toString().toStdString();
-    modified_.insert(currentPath());
-    refreshForm();
-    emit materialChanged();
+    afterEdit(before);
 }
 
 bool MaterialEditor::saveCurrent()
@@ -539,6 +627,26 @@ void MaterialEditor::duplicateMaterial()
     std::string error;
     if (!engine::saveMaterial(copy, toPath(path), &error)) {
         QMessageBox::warning(this, tr("Duplicate material"), QString::fromStdString(error));
+        return;
+    }
+    open(path);
+    emit createdMaterial(QFileInfo(path).absoluteFilePath());
+}
+
+void MaterialEditor::newInstance()
+{
+    if (!material_)
+        return;
+    const QString start = QFileInfo(currentPath()).dir().filePath(QFileInfo(currentPath()).completeBaseName() + "_variant.material");
+    const QString path = QFileDialog::getSaveFileName(this, tr("New material instance"), start, tr("Materials (*.material)"));
+    if (path.isEmpty())
+        return;
+    engine::Material instance;
+    instance.name = QFileInfo(path).completeBaseName().toStdString();
+    instance.sourcePath = toPath(path);
+    std::string error;
+    if (!engine::setMaterialParent(instance, material_->sourcePath, &error) || !engine::saveMaterial(instance, toPath(path), &error)) {
+        QMessageBox::warning(this, tr("New material instance"), QString::fromStdString(error));
         return;
     }
     open(path);

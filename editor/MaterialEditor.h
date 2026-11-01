@@ -1,4 +1,7 @@
 #pragma once
+class QFormLayout;
+#include <map>
+#include <string>
 #include <engine/Renderer.h>
 #include <engine/Scene.h>
 
@@ -66,6 +69,8 @@ private:
     void edited();
     void newMaterial();
     void duplicateMaterial();
+    void newInstance();                                   // child of the current material
+    void afterEdit(const engine::Material& before);       // instance overrides, children follow, repaint
     bool saveCurrent();
     void revertCurrent();
 
@@ -90,6 +95,10 @@ private:
     QCheckBox* doubleSided_;
     QComboBox* surface_;
     QLabel* pathLabel_;
+    QLineEdit* parentEdit_ = nullptr;
+    QPushButton* resetOverrides_ = nullptr;
+    QFormLayout* formLayout_ = nullptr;
+    std::map<std::string, QWidget*> keyWidgets_; // .material key -> its field (bold label = overridden)
     MaterialPreview* preview_;
     bool loading_ = false;
 };
