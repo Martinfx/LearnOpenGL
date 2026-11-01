@@ -7,6 +7,7 @@
 #include "engine/TextureCook.h"
 #include "engine/Terrain.h"
 #include "engine/TimeOfDay.h"
+#include "engine/VertexPaint.h"
 #include <cstdint>
 #include <filesystem>
 #include <iosfwd>
@@ -208,6 +209,9 @@ struct Model {
     bool dynamic = false;
     float massKg = 10.0f;
     std::string collider = "box";     // "box", "cylinder" (upright) or "sphere"
+    // Colours painted on this copy's vertices in the editor: blend layers of its materials.
+    // Shared with undo snapshots; the editor copies it before a stroke.
+    std::shared_ptr<VertexPaint> paint;
 
     glm::mat4 transform() const;      // model space -> world
     Aabb bounds() const;              // world-space bounds of the rotated, scaled model

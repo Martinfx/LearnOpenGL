@@ -490,7 +490,19 @@ void Viewport::paintGL()
             view.debug.push_back(debug_);
         if (overlay_)
             view.debug.push_back(overlay_);
-        if (brush_ && brushHover_ && scene_->terrain) {
+        if (brush_ && brushHover_ && brushModel_ >= 0) {
+            // Mesh paint: a ring facing the camera around the cursor on the model.
+            const glm::vec3 forward = glm::normalize(brushPoint_ - view.cameraPosition);
+            const glm::vec3 side = glm::normalize(glm::cross(forward, std::abs(forward.y) > 0.95f ? glm::vec3(1, 0, 0) : glm::vec3(0, 1, 0)));
+            const glm::vec3 up = glm::cross(side, forward);
+            const float s = std::clamp(brushRadius_ * 0.03f, 0.01f, 0.3f);
+            for (int k = 0; k < 40; ++k) {
+                const float a = 6.2831853f * static_cast<float>(k) / 40.0f;
+                const glm::vec3 p = brushPoint_ - forward * 0.02f + (side * std::cos(a) + up * std::sin(a)) * brushRadius_;
+                view.worldBoxes.push_back({p, glm::vec3(s), brushColor_, true});
+            }
+            view.worldBoxes.push_back({brushPoint_ - forward * 0.02f, glm::vec3(s * 1.5f), brushColor_, true});
+        } else if (brush_ && brushHover_ && scene_->terrain) {
             // Brush ring: small markers on the ground around the cursor.
             const int n = 48;
             const float s = std::clamp(brushRadius_ * 0.03f, 0.06f, 0.6f);
@@ -642,6 +654,11 @@ void Viewport::mousePressEvent(QMouseEvent* e)
             painting_ = true;
             emit brushStroke(p, e->modifiers(), true);
             brushTimer_.start(33);
+        } else if (brushModel_ >= 0) {
+            // Mesh paint: a click beside the painted model selects another one.
+            glm::vec3 origin, dir;
+            rayAt(e->position(), origin, dir);
+            emit boxPicked(engine::pickObject(*scene_, origin, dir));
         }
     } else if (e->button() == Qt::LeftButton) {
         glm::vec3 origin, dir;
@@ -1106,6 +1123,17 @@ void Viewport::setBrush(bool on, float radius, glm::vec3 color)
 
 bool Viewport::brushHit(QPointF pos, glm::vec3& point) const
 {
+    if (brushModel_ >= 0) {
+        if (!scene_->isModel(brushModel_))
+            return false;
+        glm::vec3 origin, dir;
+        rayAt(pos, origin, dir);
+        float t = 0.0f;
+        if (!engine::raycastModel(scene_->model(brushModel_), origin, dir, 5000.0f, t))
+            return false;
+        point = origin + dir * t;
+        return true;
+    }
     if (!scene_->terrain || !scene_->terrain->valid())
         return false;
     glm::vec3 origin, dir;

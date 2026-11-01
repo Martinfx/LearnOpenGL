@@ -365,6 +365,7 @@ bool parseMaterial(Material& m, const std::filesystem::path& file, std::string* 
     result.name = file.stem().string();
     std::array<std::string, kMapCount> maps;
     std::string parentFile;
+    std::array<std::string, Material::kBlendLayers> layerFiles;
     std::set<std::string> keys; // values set in this file (an instance's overrides)
     std::string line;
     int lineNo = 0;
@@ -416,6 +417,10 @@ bool parseMaterial(Material& m, const std::filesystem::path& file, std::string* 
             ok = static_cast<bool>(ls >> result.detailStrength);
         } else if (k == "detail_distance") {
             ok = static_cast<bool>(ls >> result.detailDistance);
+        } else if (k == "blend_sharpness") {
+            ok = static_cast<bool>(ls >> result.blendSharpness);
+        } else if (k == layerKey(0) || k == layerKey(1)) {
+            ok = static_cast<bool>(ls >> std::quoted(layerFiles[k == layerKey(0) ? 0 : 1]));
         } else {
             for (int i = 0; i < kMapCount; ++i)
                 if (k == mapKey(static_cast<MapKind>(i)))
@@ -439,9 +444,23 @@ bool parseMaterial(Material& m, const std::filesystem::path& file, std::string* 
         if (!setMaterialMap(result, static_cast<MapKind>(i), p, error))
             return false;
     }
+    static thread_local int depth = 0; // parents and layers referring back in a loop
+    for (int i = 0; i < Material::kBlendLayers; ++i) {
+        if (layerFiles[static_cast<std::size_t>(i)].empty())
+            continue;
+        std::filesystem::path p = fromUtf8(layerFiles[static_cast<std::size_t>(i)]);
+        if (p.is_relative())
+            p = result.sourcePath.parent_path() / p;
+        p = normalized(p);
+        result.layerPaths[static_cast<std::size_t>(i)] = p;
+        if (depth > 8 || p == result.sourcePath)
+            continue; // drawn without the layer rather than failing the material
+        ++depth;
+        result.layers[static_cast<std::size_t>(i)] = loadMaterial(p); // missing file: no layer, the path is kept
+        --depth;
+    }
     if (!parentFile.empty()) {
         // Instance: the parent's values, then the ones set here.
-        static thread_local int depth = 0;
         if (depth > 8) {
             setError(error, file.string() + ": material parents form a loop");
             return false;
@@ -495,7 +514,12 @@ void writeMaterialValue(std::ostream& out, const Material& m, const std::string&
         out << "detail_strength " << m.detailStrength << '\n';
     else if (key == "detail_distance")
         out << "detail_distance " << m.detailDistance << '\n';
-    else if (key == "surface") {
+    else if (key == "blend_sharpness")
+        out << "blend_sharpness " << m.blendSharpness << '\n';
+    else if (key == layerKey(0) || key == layerKey(1)) {
+        const std::filesystem::path& p = m.layerPaths[key == layerKey(0) ? 0 : 1];
+        out << key << ' ' << std::quoted(p.empty() ? std::string() : toUtf8(relativeTo(p, dir))) << '\n';
+    } else if (key == "surface") {
         if (!m.surface.empty())
             out << "surface " << m.surface << '\n';
     } else {
@@ -562,6 +586,10 @@ bool saveMaterial(const Material& m, const std::filesystem::path& file, std::str
                                   m.mapPaths[static_cast<std::size_t>(MapKind::DetailNormal)].empty();
             if (noDetail && key.rfind("detail_", 0) == 0)
                 empty = true; // no detail maps: their settings stay out of the file
+            const bool noLayers = m.layerPaths[0].empty() && m.layerPaths[1].empty();
+            if ((key == layerKey(0) && m.layerPaths[0].empty()) || (key == layerKey(1) && m.layerPaths[1].empty()) ||
+                (key == "blend_sharpness" && noLayers))
+                empty = true;
             if (!empty)
                 writeMaterialValue(out, m, key, dir);
         }
@@ -570,6 +598,33 @@ bool saveMaterial(const Material& m, const std::filesystem::path& file, std::str
         setError(error, "Write failed: " + file.string());
         return false;
     }
+    return true;
+}
+
+const char* layerKey(int layer)
+{
+    return layer == 0 ? "layer1_material" : "layer2_material";
+}
+
+bool setMaterialLayer(Material& material, int layer, const std::filesystem::path& file, std::string* error)
+{
+    if (layer < 0 || layer >= Material::kBlendLayers)
+        return false;
+    const auto i = static_cast<std::size_t>(layer);
+    if (file.empty()) {
+        material.layerPaths[i].clear();
+        material.layers[i].reset();
+        return true;
+    }
+    auto loaded = loadMaterial(file, error);
+    if (!loaded)
+        return false;
+    if (loaded.get() == &material || loaded->sourcePath == material.sourcePath) {
+        setError(error, "A material cannot be its own layer");
+        return false;
+    }
+    material.layerPaths[i] = loaded->sourcePath;
+    material.layers[i] = std::move(loaded);
     return true;
 }
 
@@ -667,7 +722,8 @@ const std::vector<std::string>& materialValueKeys()
     static const std::vector<std::string> keys = [] {
         std::vector<std::string> k = {"color",      "roughness",    "metallic", "normal_strength", "emissive",     "tiling",
                                       "world_uv",   "alpha_mode",   "alpha_cutoff", "opacity",     "double_sided", "surface",
-                                      "detail_tiling", "detail_strength", "detail_distance"};
+                                      "detail_tiling", "detail_strength", "detail_distance", "layer1_material",
+                                      "layer2_material", "blend_sharpness"};
         for (int i = 0; i < kMapCount; ++i)
             k.emplace_back(mapKey(static_cast<MapKind>(i)));
         return k;
@@ -707,7 +763,13 @@ void copyMaterialValue(Material& to, const Material& from, const std::string& ke
         to.detailStrength = from.detailStrength;
     else if (key == "detail_distance")
         to.detailDistance = from.detailDistance;
-    else
+    else if (key == "blend_sharpness")
+        to.blendSharpness = from.blendSharpness;
+    else if (key == layerKey(0) || key == layerKey(1)) {
+        const std::size_t i = key == layerKey(0) ? 0 : 1;
+        to.layerPaths[i] = from.layerPaths[i];
+        to.layers[i] = from.layers[i];
+    } else
         for (int i = 0; i < kMapCount; ++i)
             if (key == mapKey(static_cast<MapKind>(i))) {
                 to.mapPaths[static_cast<std::size_t>(i)] = from.mapPaths[static_cast<std::size_t>(i)];
@@ -750,6 +812,10 @@ std::vector<std::string> materialDifferences(const Material& a, const Material& 
             same = a.detailStrength == b.detailStrength;
         else if (key == "detail_distance")
             same = a.detailDistance == b.detailDistance;
+        else if (key == "blend_sharpness")
+            same = a.blendSharpness == b.blendSharpness;
+        else if (key == layerKey(0) || key == layerKey(1))
+            same = a.layerPaths[key == layerKey(0) ? 0 : 1] == b.layerPaths[key == layerKey(0) ? 0 : 1];
         else
             for (int i = 0; i < kMapCount; ++i)
                 if (key == mapKey(static_cast<MapKind>(i)))

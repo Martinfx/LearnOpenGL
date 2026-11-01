@@ -779,6 +779,11 @@ void MainWindow::updateTerrainBrush()
         return;
     const TerrainUi& ui = *terrainUi_;
     const int mode = modePages_->currentIndex();
+    viewport_->setBrushModel(mode == 5 && selectedModel() ? selected_ : -1);
+    if (mode == 5) {
+        updateMeshPaintBrush();
+        return;
+    }
     const bool on = (mode == 3 || mode == 4) && scene_.terrain && scene_.terrain->valid();
     if (mode == 4) {
         viewport_->setBrush(on, static_cast<float>(ui.foliageRadius->value()),
@@ -795,6 +800,10 @@ void MainWindow::updateTerrainBrush()
 
 void MainWindow::terrainStroke(glm::vec3 point, Qt::KeyboardModifiers modifiers, bool first)
 {
+    if (modePages_ && modePages_->currentIndex() == 5) {
+        meshPaintStroke(point, modifiers, first);
+        return;
+    }
     if (!scene_.terrain || !terrainUi_)
         return;
     TerrainUi& ui = *terrainUi_;
@@ -855,6 +864,10 @@ void MainWindow::terrainStroke(glm::vec3 point, Qt::KeyboardModifiers modifiers,
 
 void MainWindow::terrainStrokeFinished()
 {
+    if (modePages_ && modePages_->currentIndex() == 5) {
+        meshPaintFinished();
+        return;
+    }
     if (!terrainUi_ || !terrainUi_->stroke)
         return;
     terrainUi_->stroke = false;

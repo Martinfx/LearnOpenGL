@@ -59,6 +59,8 @@ public:
     // terrain; holding the left button sends brushStroke() about 30 times a second.
     void setBrush(bool on, float radius, glm::vec3 color);
     bool brushActive() const { return brush_; }
+    // Mesh paint mode: the brush follows this model's surface (object index) instead of the terrain.
+    void setBrushModel(int objectIndex) { brushModel_ = objectIndex; }
     const engine::RenderQuality& quality() const { return quality_; }
     // Recompiles the shaders from `directory` (over the built-in ones); false + compiler log on error.
     bool reloadShaders(const QString& directory, QString* error);
@@ -192,6 +194,7 @@ private:
     const engine::DebugGeometry* overlay_ = nullptr;
     bool showReference_ = false;
     bool brush_ = false, brushHover_ = false, painting_ = false;
+    int brushModel_ = -1;
     float brushRadius_ = 5.0f;
     glm::vec3 brushColor_{0.3f, 0.8f, 1.0f};
     glm::vec3 brushPoint_{0.0f};

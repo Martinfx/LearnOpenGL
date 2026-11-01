@@ -170,6 +170,11 @@ void drawIcon(QPainter& p, const QString& n, QColor c)
         const QPointF hills[] = {{1.5, 13}, {5.5, 6}, {8, 9.5}, {10.5, 4}, {14.5, 13}};
         p.drawPolyline(hills, 5);
         line(1.5, 14, 14.5, 14);
+    } else if (n == "brush") {
+        const QPointF bristles[] = {{2, 14.5}, {2.5, 11}, {5, 9}, {7, 11}, {5.5, 13.5}};
+        p.drawPolygon(bristles, 5);
+        line(6, 10, 13.5, 2.5);
+        line(7.5, 11.5, 14.5, 4.5);
     } else if (n == "foliage") {
         const QPointF tree[] = {{8, 1.5}, {12.5, 10}, {3.5, 10}};
         p.drawPolygon(tree, 3);

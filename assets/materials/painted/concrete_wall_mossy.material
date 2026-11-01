@@ -1,0 +1,7 @@
+# FPS engine material (physically based: metal/roughness)
+version 2
+name "Concrete wall (paint moss / mud)"
+parent "../pbr/concrete_wall_007.material"
+layer1_material "../pbr/mossy_rock.material"
+layer2_material "../pbr/brown_mud_03.material"
+blend_sharpness 4

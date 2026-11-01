@@ -2598,6 +2598,40 @@ void testProbes()
     check(engine::probeFile("a/b.level") == std::filesystem::path("a/b.probes"), "probe file sits next to the level");
 }
 
+void testVertexPaint()
+{
+    // A 2 x 2 m quad of 3 x 3 vertices facing +Y, placed at (10, 0, 0).
+    engine::Model model;
+    engine::MeshPart part;
+    for (int z = 0; z < 3; ++z)
+        for (int x = 0; x < 3; ++x)
+            part.positions.push_back({x - 1.0f, 0.0f, z - 1.0f});
+    for (std::uint32_t z = 0; z < 2; ++z)
+        for (std::uint32_t x = 0; x < 2; ++x) {
+            const std::uint32_t a = z * 3 + x;
+            part.indices.insert(part.indices.end(), {a, a + 3, a + 1, a + 1, a + 3, a + 4});
+        }
+    model.parts.push_back(part);
+    model.position = {10.0f, 0.0f, 0.0f};
+    float t = 0.0f;
+    check(engine::raycastModel(model, {10.5f, 5.0f, 0.5f}, {0.0f, -1.0f, 0.0f}, 100.0f, t) && std::abs(t - 5.0f) < 1e-4f,
+          "a ray hits the model's triangles");
+    check(!engine::raycastModel(model, {13.0f, 5.0f, 0.0f}, {0.0f, -1.0f, 0.0f}, 100.0f, t), "a ray beside the model misses");
+    engine::VertexPaint paint;
+    const std::uint64_t v0 = paint.version;
+    check(engine::paintVertices(paint, model, {10.0f, 0.0f, 0.0f}, 0.9f, 0, 1.0f, false), "a dab paints vertices");
+    check(paint.parts.size() == 1 && paint.parts[0].size() == 9 && paint.parts[0][4].r == 255 && paint.parts[0][0].r == 0 &&
+              paint.parts[0][4].g == 0 && paint.version != v0,
+          "paint reaches the vertices within the radius, in its channel");
+    engine::paintVertices(paint, model, {10.0f, 0.0f, 0.0f}, 0.9f, 0, 0.5f, true);
+    check(paint.parts[0][4].r > 0 && paint.parts[0][4].r < 255, "erasing takes paint away gradually");
+    paint.parts[0][8] = {1, 2, 3, 4};
+    std::vector<glm::u8vec4> back;
+    check(engine::decodeVertexPaint(engine::encodeVertexPaint(paint.parts[0]), back) && back == paint.parts[0],
+          "vertex paint survives the level file encoding");
+    check(!engine::decodeVertexPaint("@@@", back), "bad vertex paint text is refused");
+}
+
 void testMaterialInstances()
 {
     const std::filesystem::path dir = std::filesystem::temp_directory_path() / "engine_tests_materials";
@@ -2656,6 +2690,26 @@ void testMaterialInstances()
         check(ddiff.size() == 1 && ddiff[0] == "detail_strength", "detail strength is a material value");
     }
     detail.reset();
+
+    // Blend layers: another material by path, saved relative; a material cannot be its own layer.
+    {
+        std::ofstream moss(dir / "moss.material");
+        moss << "version 2\nname \"Moss\"\ncolor 0.2 0.5 0.1\n";
+        std::ofstream wall(dir / "wall.material");
+        wall << "version 2\nname \"Wall\"\nlayer1_material \"moss.material\"\nblend_sharpness 6\n";
+    }
+    auto wall = engine::loadMaterial(dir / "wall.material", &error);
+    check(wall && wall->layers[0] && wall->layers[0]->name == "Moss" && !wall->layers[1] && wall->blendSharpness == 6.0f,
+          "a material loads its blend layer");
+    if (wall) {
+        check(!engine::setMaterialLayer(*wall, 1, dir / "wall.material"), "a material cannot be its own layer");
+        check(engine::saveMaterial(*wall, dir / "wall.material", &error), "a layered material saves");
+        std::ifstream win(dir / "wall.material");
+        const std::string wtext((std::istreambuf_iterator<char>(win)), std::istreambuf_iterator<char>());
+        check(wtext.find("layer1_material \"moss.material\"") != std::string::npos && wtext.find("layer2_material") == std::string::npos,
+              "blend layers are saved relative, unset ones left out");
+    }
+    wall.reset();
     std::filesystem::remove_all(dir);
 }
 
@@ -2804,6 +2858,7 @@ int main()
     testInteriorVolumes();
     testProbes();
     testMaterialInstances();
+    testVertexPaint();
     testDistortParticles();
     testTaskGraph();
     testWorldStreaming();

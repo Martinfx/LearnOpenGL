@@ -10,6 +10,7 @@ add_library(engine STATIC
     src/Gizmo.cpp
     src/GltfLoader.cpp
     src/Material.cpp
+    src/VertexPaint.cpp
     src/TextureCook.cpp
     src/Memory.cpp
     src/NavMesh.cpp

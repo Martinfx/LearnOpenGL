@@ -5,6 +5,7 @@
 #include "engine/JobSystem.h"
 #include "engine/Log.h"
 #include "engine/Prefab.h"
+#include "engine/VertexPaint.h"
 
 #include <algorithm>
 #include <map>
@@ -126,6 +127,9 @@ void writeModel(std::ostream& out, const Model& m, const std::filesystem::path& 
         out << "  impostor " << m.impostorDistance << '\n';
     if (m.dynamic)
         out << "  physics " << m.massKg << ' ' << std::quoted(m.collider) << '\n';
+    if (m.paint && !m.paint->empty())
+        for (std::size_t i = 0; i < m.paint->parts.size(); ++i)
+            out << "  paint " << i << ' ' << encodeVertexPaint(m.paint->parts[i]) << '\n';
     if (withBounds && m.localBounds.min != m.localBounds.max) // lets the game defer far models
         out << "  bounds " << m.localBounds.min.x << ' ' << m.localBounds.min.y << ' ' << m.localBounds.min.z << ' '
             << m.localBounds.max.x << ' ' << m.localBounds.max.y << ' ' << m.localBounds.max.z << '\n';
@@ -829,6 +833,19 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
             }
         } else if (key == "sway") {
             ok = lastObject == LastObject::Model && static_cast<bool>(ls >> result.models.back().sway);
+        } else if (key == "paint") {
+            // Vertex paint of one mesh part of the model above (engine/VertexPaint.h).
+            std::size_t part = 0;
+            std::string text;
+            ok = lastObject == LastObject::Model && static_cast<bool>(ls >> part >> text) && part < 4096;
+            if (ok) {
+                Model& m = result.models.back();
+                if (!m.paint)
+                    m.paint = std::make_shared<VertexPaint>();
+                if (m.paint->parts.size() <= part)
+                    m.paint->parts.resize(part + 1);
+                ok = decodeVertexPaint(text, m.paint->parts[part]);
+            }
         } else if (key == "cast_shadows") {
             ok = lastObject == LastObject::Model && static_cast<bool>(ls >> result.models.back().castShadows);
         } else if (key == "collision") {

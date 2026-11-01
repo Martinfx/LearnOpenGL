@@ -330,6 +330,53 @@ MaterialEditor::MaterialEditor(QWidget* parent)
     });
     connect(instanceButton, &QPushButton::clicked, this, &MaterialEditor::newInstance);
 
+    // Blend layers: materials painted onto models in Mesh paint mode (red = layer 1, green = layer 2).
+    QWidget* layerRows[2] = {};
+    for (int i = 0; i < 2; ++i) {
+        auto* row = new QWidget(form_);
+        auto* rowLayout = new QHBoxLayout(row);
+        rowLayout->setContentsMargins(0, 0, 0, 0);
+        layerEdits_[i] = new QLineEdit(row);
+        layerEdits_[i]->setReadOnly(true);
+        layerEdits_[i]->setPlaceholderText(tr("none"));
+        auto* browse = new QPushButton(tr("..."), row);
+        auto* clear = new QPushButton(tr("x"), row);
+        browse->setFixedWidth(32);
+        clear->setFixedWidth(32);
+        browse->setToolTip(tr("Material painted over this one where models are painted %1 (Mesh paint mode)")
+                               .arg(i == 0 ? tr("red (layer 1)") : tr("green (layer 2)")));
+        clear->setToolTip(tr("No blend layer"));
+        rowLayout->addWidget(layerEdits_[i], 1);
+        rowLayout->addWidget(browse);
+        rowLayout->addWidget(clear);
+        layerRows[i] = row;
+        connect(browse, &QPushButton::clicked, this, [this, i] {
+            if (!material_)
+                return;
+            const QString path = QFileDialog::getOpenFileName(this, tr("Blend layer material"), assetPath("materials"), tr("Materials (*.material)"));
+            if (path.isEmpty())
+                return;
+            const engine::Material before = *material_;
+            std::string error;
+            if (!engine::setMaterialLayer(*material_, i, toPath(path), &error)) {
+                QMessageBox::warning(this, tr("Blend layer"), QString::fromStdString(error));
+                return;
+            }
+            afterEdit(before);
+            refreshForm();
+        });
+        connect(clear, &QPushButton::clicked, this, [this, i] {
+            if (!material_ || material_->layerPaths[static_cast<std::size_t>(i)].empty())
+                return;
+            const engine::Material before = *material_;
+            engine::setMaterialLayer(*material_, i, {});
+            afterEdit(before);
+            refreshForm();
+        });
+    }
+    blendSharpness_ = makeSpin(1.0, 32.0, 0.5, 1);
+    blendSharpness_->setToolTip(tr("Edge of the painted layers: 1 = soft gradient, 16 = hard edge following the layer's texture"));
+
     formLayout_ = form;
     form->addRow(tr("Name"), nameEdit_);
     form->addRow(tr("Parent"), parentRow);
@@ -350,12 +397,16 @@ MaterialEditor::MaterialEditor(QWidget* parent)
     form->addRow(tr("Opacity"), opacity_);
     form->addRow(QString(), doubleSided_);
     form->addRow(tr("Surface"), surface_);
+    form->addRow(tr("Blend layer 1 (red)"), layerRows[0]);
+    form->addRow(tr("Blend layer 2 (green)"), layerRows[1]);
+    form->addRow(tr("Blend sharpness"), blendSharpness_);
     form->addRow(saveRow);
     form->addRow(pathLabel_);
     keyWidgets_ = {{"color", colorButton_},       {"roughness", roughness_},       {"metallic", metallic_},
                    {"normal_strength", normalStrength_}, {"tiling", tilingRow},   {"emissive", emissiveButton_},
                    {"world_uv", worldUv_},          {"alpha_mode", alphaMode_},     {"alpha_cutoff", alphaCutoff_},
                    {"opacity", opacity_},           {"double_sided", doubleSided_}, {"surface", surface_},
+                   {"layer1_material", layerRows[0]}, {"layer2_material", layerRows[1]}, {"blend_sharpness", blendSharpness_},
                    {"detail_tiling", detailTiling_}, {"detail_strength", detailStrength_}, {"detail_distance", detailDistance_}};
     for (int i = 0; i < engine::kMapCount; ++i)
         keyWidgets_[engine::mapKey(static_cast<engine::MapKind>(i))] = mapRows[static_cast<std::size_t>(i)];
@@ -509,6 +560,12 @@ void MaterialEditor::refreshForm()
             }
             surface_->setCurrentIndex(index);
         }
+        for (int i = 0; i < 2; ++i) {
+            const auto& p = m.layerPaths[static_cast<std::size_t>(i)];
+            layerEdits_[i]->setText(p.empty() ? QString() : fromPath(p.filename()));
+            layerEdits_[i]->setToolTip(fromPath(p));
+        }
+        blendSharpness_->setValue(m.blendSharpness);
         parentEdit_->setText(m.parentPath.empty() ? QString() : fromPath(m.parentPath.filename()));
         parentEdit_->setToolTip(fromPath(m.parentPath));
         resetOverrides_->setEnabled(m.parent && !m.overrides.empty());
@@ -559,6 +616,7 @@ void MaterialEditor::edited()
     m.detailTiling = static_cast<float>(detailTiling_->value());
     m.detailStrength = static_cast<float>(detailStrength_->value());
     m.detailDistance = static_cast<float>(detailDistance_->value());
+    m.blendSharpness = static_cast<float>(blendSharpness_->value());
     m.worldUv = worldUv_->isChecked();
     m.alphaMode = static_cast<engine::AlphaMode>(alphaMode_->currentIndex());
     m.alphaCutoff = static_cast<float>(alphaCutoff_->value());

@@ -44,6 +44,17 @@ layout(binding = 23) uniform sampler2D uDetailNormal;
 uniform bool uHasDetailAlbedo;
 uniform bool uHasDetailNormal;
 uniform vec3 uDetail;
+// Blend layers painted on the vertices (vPaint: red = layer 0, green = layer 1, blue = wet).
+in vec4 vPaint;
+layout(binding = 24) uniform sampler2D uBlendAlbedo[2];
+layout(binding = 26) uniform sampler2D uBlendNormal[2];
+layout(binding = 28) uniform sampler2D uBlendRoughMap[2];
+uniform int uBlendLayers;        // bit i: layer i, 2+i: its albedo map, 4+i: normal map, 6+i: roughness map
+uniform vec3 uBlendColor[2];     // sRGB
+uniform vec2 uBlendTiling[2];
+uniform vec2 uBlendSurface[2];   // roughness, metallic
+uniform float uBlendNormalStrength[2];
+uniform float uBlendSharpness;
 uniform int uRoughnessChannel; // 0 = R (separate map), 1 = G (glTF metal/rough)
 uniform int uMetallicChannel;  // 0 = R, 2 = B (glTF)
 uniform float uNormalStrength;
@@ -204,6 +215,7 @@ void main() {
         float c = cos(uUvRotation), s = sin(uUvRotation);
         uv = mat2(c, s, -s, c) * uv;
     }
+    vec2 uv0 = uv;
     uv = uv * uTiling * uUvScale + uUvOffset;
 
     float terrainW[8];
@@ -237,6 +249,27 @@ void main() {
         vec4 texel = texture(uAlbedoMap, uv);
         albedo *= texel.rgb;
         alpha *= texel.a;
+    }
+    // Painted blend layers: the edge follows the layer's brightness (moss and rust fill the
+    // dark cracks first); full paint always shows the layer, none never does.
+    float blendW[2] = float[2](0.0, 0.0);
+    vec2 blendUv[2] = vec2[2](vec2(0.0), vec2(0.0));
+    if (uBlendLayers != 0) {
+        for (int i = 0; i < 2; ++i) {
+            if ((uBlendLayers & (1 << i)) == 0 || vPaint[i] <= 0.0)
+                continue;
+            blendUv[i] = uv0 * uBlendTiling[i];
+            vec3 c = pow(max(uBlendColor[i], vec3(0.0)), vec3(2.2));
+            float h = 0.5;
+            if ((uBlendLayers & (4 << i)) != 0) {
+                vec3 t = texture(uBlendAlbedo[i], blendUv[i]).rgb;
+                c *= t;
+                h = clamp(dot(sqrt(t), vec3(0.3, 0.59, 0.11)), 0.0, 1.0);
+            }
+            float x = vPaint[i] * 1.6 - 0.3 + (0.5 - h) * 0.6;
+            blendW[i] = clamp((x - 0.5) * uBlendSharpness + 0.5, 0.0, 1.0);
+            albedo = mix(albedo, c, blendW[i]);
+        }
     }
     // Detail maps, fading out with distance (the overlay layer is in view space).
     vec2 detailUv = uv * uDetail.x;
@@ -277,6 +310,21 @@ void main() {
         m.xy *= detailW;
         n = perturbNormal(n, vWorldPos, detailUv, normalize(m));
     }
+    if (blendW[0] > 0.0 || blendW[1] > 0.0) {
+        vec3 geo = normalize(vNormal) * (gl_FrontFacing ? 1.0 : -1.0);
+        for (int i = 0; i < 2; ++i) {
+            if (blendW[i] <= 0.0)
+                continue;
+            vec3 ln = geo;
+            if ((uBlendLayers & (16 << i)) != 0) {
+                vec3 m;
+                m.xy = (texture(uBlendNormal[i], blendUv[i]).xy * 2.0 - 1.0) * uBlendNormalStrength[i];
+                m.z = sqrt(max(1.0 - dot(m.xy, m.xy), 0.0));
+                ln = perturbNormal(geo, vWorldPos, blendUv[i], normalize(m));
+            }
+            n = normalize(mix(n, ln, blendW[i]));
+        }
+    }
     if (uTerrain) {
         // Blend the layers' tangent-space normals by weight (screen-space frame from world X/Z).
         vec2 p = vWorldPos.xz;
@@ -302,10 +350,23 @@ void main() {
     }
     if (uHasRoughnessMap)
         rough *= texture(uRoughnessMap, uv)[uRoughnessChannel];
-    rough = clamp(rough, 0.04, 1.0);
     float metal = uMetallic;
     if (uHasMetallicMap)
         metal *= texture(uMetallicMap, uv)[uMetallicChannel];
+    for (int i = 0; i < 2; ++i) {
+        if (blendW[i] <= 0.0)
+            continue;
+        float lr = uBlendSurface[i].x;
+        if ((uBlendLayers & (64 << i)) != 0)
+            lr *= texture(uBlendRoughMap[i], blendUv[i]).r;
+        rough = mix(rough, lr, blendW[i]);
+        metal = mix(metal, uBlendSurface[i].y, blendW[i]);
+    }
+    if (vPaint.b > 0.0) { // painted wetness: damp corners, leaks, puddles
+        albedo *= mix(1.0, 0.5, vPaint.b * (1.0 - metal));
+        rough = mix(rough, 0.12, vPaint.b * 0.9);
+    }
+    rough = clamp(rough, 0.04, 1.0);
     float ao = uHasOcclusionMap ? texture(uOcclusionMap, uv).r : 1.0;
 
     // Rain: surfaces open to the sky darken and turn glossy, flat ground collects puddles

@@ -99,6 +99,8 @@ private:
     QComboBox* surface_;
     QLabel* pathLabel_;
     QLineEdit* parentEdit_ = nullptr;
+    QLineEdit* layerEdits_[2] = {};
+    QDoubleSpinBox* blendSharpness_ = nullptr;
     QPushButton* resetOverrides_ = nullptr;
     QFormLayout* formLayout_ = nullptr;
     std::map<std::string, QWidget*> keyWidgets_; // .material key -> its field (bold label = overridden)

@@ -613,6 +613,16 @@ void Renderer::useMeshProgram(const Program& p)
     for (int i = 0; i < 8; ++i)
         loc_.hasMap[i] = p.loc(names[i]);
     loc_.detail = p.loc("uDetail");
+    loc_.paintBase = p.loc("uPaintBase");
+    loc_.paintBaseVertex = p.loc("uPaintBaseVertex");
+    loc_.blendLayers = p.loc("uBlendLayers");
+    loc_.blendColor = p.loc("uBlendColor");
+    loc_.blendTiling = p.loc("uBlendTiling");
+    loc_.blendSurface = p.loc("uBlendSurface");
+    loc_.blendNormalStrength = p.loc("uBlendNormalStrength");
+    loc_.blendSharpness = p.loc("uBlendSharpness");
+    glUniform1i(loc_.paintBase, -1);
+    glUniform1i(loc_.blendLayers, 0);
 }
 
 bool Renderer::init(GlLoader loader, std::string* error)
@@ -773,6 +783,9 @@ void Renderer::shutdown()
                 q = 0;
             }
     foliageCache_ = FoliageCache{};
+    for (auto& [owner, gpu] : paints_)
+        glDeleteBuffers(1, &gpu.buffer);
+    paints_.clear();
     if (instanceBuffer_)
         glDeleteBuffers(1, &instanceBuffer_);
     instanceBuffer_ = 0;
@@ -1264,10 +1277,11 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
                 draw = impostor;
         // Dissolve over the last 15 % before the cull distance instead of popping out.
         const glm::vec2 fade = model.cullDistance > 0.0f && !shadowPass ? glm::vec2(model.cullDistance * 0.85f, model.cullDistance) : glm::vec2(0.0f);
-        if (!quality_.instancing || selected || draw->skeleton || draw->parts.empty()) {
+        const VertexPaint* paint = draw == &model && model.paint && !depthOnly ? model.paint.get() : nullptr;
+        if (!quality_.instancing || selected || draw->skeleton || draw->parts.empty() || paint) {
             glUniform1f(loc_.sway, model.sway);
             glUniform2f(loc_.fade, fade.x, fade.y);
-            drawModel(*draw, grid.transforms[i], selected ? 1.0f : 0.0f);
+            drawModel(*draw, grid.transforms[i], selected ? 1.0f : 0.0f, nullptr, paint);
             glUniform1f(loc_.sway, 0.0f);
             glUniform2f(loc_.fade, 0.0f, 0.0f);
             continue;
@@ -2064,6 +2078,7 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     resetGlState();
     // Free GPU data nothing drew since the previous render() (removed models).
     ++frameNumber_;
+    releaseUnusedPaint();
     lastDrawCalls_ = drawCalls_;
     lastInstanced_ = instanced_;
     building_.drawCalls = drawCalls_;
@@ -4218,14 +4233,64 @@ Renderer::MemoryStats Renderer::memoryStats() const
     return m;
 }
 
-void Renderer::drawModel(const Model& model, const glm::mat4& transform, float highlight, const Animator* animator)
+const Renderer::GpuPaint* Renderer::uploadPaint(const VertexPaint& paint, const Model& model)
+{
+    GpuPaint& gpu = paints_[&paint];
+    gpu.lastFrame = frameNumber_;
+    if (gpu.buffer && gpu.version == paint.version && gpu.partOffsets.size() == model.parts.size())
+        return &gpu;
+    // One buffer for all parts; parts whose vertex count differs (the model file changed) get none.
+    std::vector<std::uint32_t> packed;
+    gpu.partOffsets.assign(model.parts.size(), -1);
+    for (std::size_t i = 0; i < model.parts.size() && i < paint.parts.size(); ++i) {
+        const auto& colors = paint.parts[i];
+        if (colors.empty() || colors.size() != model.parts[i].positions.size())
+            continue;
+        gpu.partOffsets[i] = static_cast<int>(packed.size());
+        for (const glm::u8vec4& c : colors)
+            packed.push_back(static_cast<std::uint32_t>(c.r) | static_cast<std::uint32_t>(c.g) << 8 |
+                             static_cast<std::uint32_t>(c.b) << 16 | static_cast<std::uint32_t>(c.a) << 24);
+    }
+    if (packed.empty())
+        packed.push_back(0);
+    const std::size_t bytes = packed.size() * sizeof(std::uint32_t);
+    if (!gpu.buffer || bytes > gpu.capacity) {
+        if (gpu.buffer)
+            glDeleteBuffers(1, &gpu.buffer);
+        glCreateBuffers(1, &gpu.buffer);
+        gpu.capacity = bytes;
+        glNamedBufferStorage(gpu.buffer, static_cast<GLsizeiptr>(bytes), nullptr, GL_DYNAMIC_STORAGE_BIT);
+    }
+    glNamedBufferSubData(gpu.buffer, 0, static_cast<GLsizeiptr>(bytes), packed.data());
+    gpu.version = paint.version;
+    return &gpu;
+}
+
+void Renderer::releaseUnusedPaint()
+{
+    // A painted model nothing drew for ten seconds or so (deleted, or a far cell): free its buffer.
+    for (auto it = paints_.begin(); it != paints_.end();)
+        if (frameNumber_ - it->second.lastFrame > 600) {
+            glDeleteBuffers(1, &it->second.buffer);
+            it = paints_.erase(it);
+        } else {
+            ++it;
+        }
+}
+
+void Renderer::drawModel(const Model& model, const glm::mat4& transform, float highlight, const Animator* animator,
+                         const VertexPaint* paint)
 {
     glUniform1f(loc_.highlight, highlight);
+    const GpuPaint* gpuPaint = paint && !depthOnly_ ? uploadPaint(*paint, model) : nullptr;
+    if (gpuPaint)
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, gpuPaint->buffer);
     const Skeleton* skeleton = model.skeleton.get();
     if (skeleton)
         evaluatePose(*skeleton, animator, pose_);
     int uploadedSkin = -1;
-    for (const MeshPart& part : model.parts) {
+    for (std::size_t partIndex = 0; partIndex < model.parts.size(); ++partIndex) {
+        const MeshPart& part = model.parts[partIndex];
         const GpuMesh& mesh = upload(part);
         glm::mat4 partTransform = transform;
         const bool skinned = skeleton && part.skin >= 0;
@@ -4252,6 +4317,11 @@ void Renderer::drawModel(const Model& model, const glm::mat4& transform, float h
         glUniform1i(loc_.skinned, skinned ? 1 : 0);
         glUniformMatrix4fv(loc_.model, 1, GL_FALSE, glm::value_ptr(partTransform));
         applySurface(material, &part, part.color, false);
+        const int paintOffset = gpuPaint && partIndex < gpuPaint->partOffsets.size() ? gpuPaint->partOffsets[partIndex] : -1;
+        if (gpuPaint) {
+            glUniform1i(loc_.paintBase, paintOffset);
+            glUniform1i(loc_.paintBaseVertex, mesh.baseVertex);
+        }
         glBindVertexArray(mesh.vao);
         const bool twoSided = alpha.doubleSided && glIsEnabled(GL_CULL_FACE);
         if (twoSided)
@@ -4264,6 +4334,8 @@ void Renderer::drawModel(const Model& model, const glm::mat4& transform, float h
         if (twoSided)
             glEnable(GL_CULL_FACE);
     }
+    if (gpuPaint)
+        glUniform1i(loc_.paintBase, -1);
     applySurface(nullptr, nullptr, glm::vec3(1.0f), false);
     glUniform1i(loc_.skinned, 0);
 }
@@ -4358,6 +4430,41 @@ void Renderer::applySurface(const Material* material, const MeshPart* part, glm:
             glBindTextureUnit(isDetail ? static_cast<unsigned>(22 + i - static_cast<int>(MapKind::DetailAlbedo)) : static_cast<unsigned>(i), handle);
         glUniform1i(loc_.hasMap[i], has ? 1 : 0);
     }
+    // Blend layers (vertex paint): units 24-25 albedo, 26-27 normal, 28-29 roughness.
+    int blendBits = 0;
+    if (material) {
+        glm::vec3 layerColor[2] = {glm::vec3(1.0f), glm::vec3(1.0f)};
+        glm::vec2 layerTiling[2] = {glm::vec2(1.0f), glm::vec2(1.0f)};
+        glm::vec2 layerSurface[2] = {glm::vec2(0.8f, 0.0f), glm::vec2(0.8f, 0.0f)};
+        float layerNormal[2] = {1.0f, 1.0f};
+        for (int i = 0; i < Material::kBlendLayers; ++i) {
+            const Material* layer = material->layers[static_cast<std::size_t>(i)].get();
+            if (!layer)
+                continue;
+            blendBits |= 1 << i;
+            layerColor[i] = layer->color;
+            layerTiling[i] = layer->tiling;
+            layerSurface[i] = {layer->roughness, layer->metallic};
+            layerNormal[i] = layer->normalStrength;
+            const MapKind kinds[3] = {MapKind::Albedo, MapKind::Normal, MapKind::Roughness};
+            for (int k = 0; k < 3; ++k) {
+                const auto& asset = layer->map(kinds[k]);
+                const unsigned handle = asset && asset->texture && asset->texture->valid() ? texture(*asset->texture) : 0u;
+                if (!handle)
+                    continue;
+                glBindTextureUnit(static_cast<unsigned>(24 + k * 2 + i), handle);
+                blendBits |= 4 << (k * 2 + i);
+            }
+        }
+        if (blendBits) {
+            glUniform3fv(loc_.blendColor, 2, glm::value_ptr(layerColor[0]));
+            glUniform2fv(loc_.blendTiling, 2, glm::value_ptr(layerTiling[0]));
+            glUniform2fv(loc_.blendSurface, 2, glm::value_ptr(layerSurface[0]));
+            glUniform1fv(loc_.blendNormalStrength, 2, layerNormal);
+            glUniform1f(loc_.blendSharpness, std::clamp(material->blendSharpness, 1.0f, 32.0f));
+        }
+    }
+    glUniform1i(loc_.blendLayers, blendBits);
 }
 
 void Renderer::drawCube(const glm::mat4& transform, glm::vec3 color, float highlight, bool emissive)

@@ -308,6 +308,8 @@ private:
         int alphaMode = -1, alphaCutoff = -1, opacity = -1, instanced = -1, instanceBase = -1, sway = -1, fade = -1;
         int hasMap[8] = {-1, -1, -1, -1, -1, -1, -1, -1}; // MapKind order
         int detail = -1;
+        int paintBase = -1, paintBaseVertex = -1;
+        int blendLayers = -1, blendColor = -1, blendTiling = -1, blendSurface = -1, blendNormalStrength = -1, blendSharpness = -1;
     };
 
     bool buildPrograms(const std::map<std::string, std::string>& sources, Programs& out, std::string* error);
@@ -337,7 +339,19 @@ private:
 
     const GpuMesh& upload(const MeshPart& part);
     unsigned texture(const Texture& tex);
-    void drawModel(const Model& model, const glm::mat4& transform, float highlight, const Animator* animator = nullptr);
+    void drawModel(const Model& model, const glm::mat4& transform, float highlight, const Animator* animator = nullptr,
+                   const VertexPaint* paint = nullptr);
+    // Vertex paint on the GPU: one buffer per painted model, uploaded again when its version changes.
+    struct GpuPaint {
+        unsigned buffer = 0;
+        std::size_t capacity = 0;      // bytes
+        std::uint64_t version = 0;
+        std::uint64_t lastFrame = 0;
+        std::vector<int> partOffsets;  // first entry of each part, -1 = does not fit the mesh
+    };
+    std::unordered_map<const VertexPaint*, GpuPaint> paints_;
+    const GpuPaint* uploadPaint(const VertexPaint& paint, const Model& model);
+    void releaseUnusedPaint();
     void applyUv(const Box& box); // texture placement of a box (after applySurface)
     void applySurface(const Material* material, const MeshPart* part, glm::vec3 color, bool worldUv);
     void drawCube(const glm::mat4& transform, glm::vec3 color, float highlight, bool emissive);

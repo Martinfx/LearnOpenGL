@@ -118,6 +118,15 @@ všechna nastavení a mapy a živý náhled na kouli a kostce. Změny se hned pr
 Box dostane materiál v Properties > Material; u glTF modelu jde v tabulce materiálových slotů každý
 materiál z Blenderu nahradit materiálem enginu (dvojklik).
 
+- **Instance materiálu** (tlačítko New instance): `parent "zaklad.material"` a jen změněné hodnoty
+  (tučné popisky); ostatní se řídí rodičem. Reset to parent vrátí změny.
+- **Detail mapy**: šedá detail mapa a detail normal mapa, jemně opakované (Detail tiling), slábnou se
+  vzdáleností (Detail distance). Zrno betonu, škrábance na kovu zblízka.
+- **Blend vrstvy a vertex paint**: materiál může mít Blend layer 1 a 2 (jiné materiály, např. mech a
+  bláto). V režimu **Paint** (Shift+6) se štětcem maluje na vybraný model: Layer 1 (červená), Layer 2
+  (zelená) a Wet (mokrý, tmavší a lesklý povrch). Okraj sleduje jas textury vrstvy (mech nejdřív v
+  prasklinách), ostrost nastaví Blend sharpness. Barvy vrcholů se ukládají do levelu u každé kopie modelu.
+
 Texture editor (Assets > Edit texture, nebo Edit u textury materiálu): opakování, filtrování,
 mipmapy, sRGB, jas, kontrast, sytost, tónování, převrácení, náhled 3 × 3 pro kontrolu švů. Obrázek
 se nemění, nastavení se ukládá vedle něj jako `obrazek.png.texture`.
@@ -176,6 +185,7 @@ Všechno, co hra používá, se mění v editoru a ukládá do souborů úrovně
 | Lua skripty | Záložky script editoru (Edit script, menu Script) | `scripts/*.lua` |
 | Materiály, materiály boxů a slotů modelů | Material editor (Ctrl+M), Properties > Material | `materials/*.material`, `.level` |
 | Nastavení a úpravy textur | Texture editor | `textures/*.png.texture` |
+| Vertex paint modelů (mech, bláto, vlhkost) | Režim Paint (Shift+6) | `.level` |
 | Parametry AI a dalších skriptů | Properties > Script parameters (deklaruje je skript v `properties`) | `.level` (po entitách) |
 | Pohyb a zdraví hráče, start, slunce | Properties > Level | `.level` |
 | Výzbroj hráče a parametry zbraní | Záložka Weapons | `.level` + `weapons/*.weapon` |

@@ -95,6 +95,13 @@ struct Material {
     float detailTiling = 8.0f;                 // detail maps repeat this many times per base map repeat
     float detailStrength = 1.0f;               // 0 = off .. 1 = full detail
     float detailDistance = 12.0f;              // m: gone beyond this distance from the camera
+    // Blend layers: other materials painted onto models in the editor (vertex paint: red =
+    // layer 1, green = layer 2). Their color, roughness, albedo, normal and roughness maps are used;
+    // the edge follows the layer's albedo brightness (moss in the cracks first), sharper with blendSharpness.
+    static constexpr int kBlendLayers = 2;
+    std::array<std::filesystem::path, kBlendLayers> layerPaths; // absolute, empty = none
+    std::array<std::shared_ptr<Material>, kBlendLayers> layers; // runtime
+    float blendSharpness = 4.0f;               // 1 = soft gradient .. 16 = hard edge
     std::string surface;                       // footsteps / impacts / bullet holes (engine/Surfaces.h), empty = guessed
     std::array<std::filesystem::path, kMapCount> mapPaths;       // absolute, empty = none
     std::array<std::shared_ptr<TextureAsset>, kMapCount> maps;   // runtime, loaded from mapPaths
@@ -114,6 +121,9 @@ std::shared_ptr<Material> loadMaterial(const std::filesystem::path& file, std::s
 bool saveMaterial(const Material& material, const std::filesystem::path& file, std::string* error = nullptr);
 // Sets one texture slot and loads the image (empty path clears it).
 bool setMaterialMap(Material& material, MapKind kind, const std::filesystem::path& image, std::string* error = nullptr);
+// Sets blend layer `layer` (0 or 1) to another material (empty path clears it).
+bool setMaterialLayer(Material& material, int layer, const std::filesystem::path& file, std::string* error = nullptr);
+const char* layerKey(int layer); // "layer1_material", "layer2_material"
 // Re-reads a material file into the cached object (e.g. "Revert" in the editor).
 bool reloadMaterial(Material& material, std::string* error = nullptr);
 

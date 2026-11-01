@@ -505,8 +505,8 @@ void MainWindow::buildMenus()
     modes->setMovable(false);
     auto* modeGroup = new QActionGroup(this);
     const std::pair<const char*, const char*> modeList[] = {
-        {"Select", "select"}, {"Place", "add"}, {"Model", "cube"}, {"Landscape", "landscape"}, {"Foliage", "foliage"}};
-    for (int i = 0; i < 5; ++i) {
+        {"Select", "select"}, {"Place", "add"}, {"Model", "cube"}, {"Landscape", "landscape"}, {"Foliage", "foliage"}, {"Paint", "brush"}};
+    for (int i = 0; i < 6; ++i) {
         QAction* a = modes->addAction(editorIcon(modeList[i].second), tr(modeList[i].first));
         a->setCheckable(true);
         a->setChecked(i == 2);
@@ -2509,6 +2509,10 @@ void MainWindow::select(int index)
     dependencies_->showObject(selected_);
     viewport_->setSelected(selected_);
     refreshProperties();
+    if (modePages_ && modePages_->currentIndex() == 5) {
+        refreshMeshPaintPanel();
+        updateTerrainBrush();
+    }
 }
 
 void MainWindow::refreshOutliner()
@@ -5079,12 +5083,14 @@ void MainWindow::setEditorMode(int mode)
     modePages_->setCurrentIndex(mode);
     if (mode >= 0 && mode < static_cast<int>(modeActions_.size()))
         modeActions_[static_cast<std::size_t>(mode)]->setChecked(true);
-    modesDock_->setWindowTitle(QStringList{tr("Select"), tr("Place"), tr("Model"), tr("Landscape"), tr("Foliage")}.value(mode));
+    modesDock_->setWindowTitle(QStringList{tr("Select"), tr("Place"), tr("Model"), tr("Landscape"), tr("Foliage"), tr("Mesh paint")}.value(mode));
     modesDock_->show();
     if (mode == 2)
         refreshMaterialList();
     if (mode == 3 || mode == 4)
         refreshTerrainPanel();
+    if (mode == 5)
+        refreshMeshPaintPanel();
     updateTerrainBrush();
 }
 
@@ -5357,6 +5363,7 @@ void MainWindow::buildModePanel()
     }
 
     buildTerrainPages();
+    buildMeshPaintPage();
 
     modesDock_ = new QDockWidget(tr("Model"), this);
     modesDock_->setObjectName("modes");

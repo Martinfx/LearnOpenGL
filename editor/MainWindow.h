@@ -77,7 +77,7 @@ private:
     void buildDocks();
     void buildStatusBar();
     void buildModePanel();          // left panel: Select / Place / Model modes
-    void setEditorMode(int mode);   // 0 select, 1 place, 2 model, 3 landscape, 4 foliage
+    void setEditorMode(int mode);   // 0 select, 1 place, 2 model, 3 landscape, 4 foliage, 5 mesh paint
     // Landscape / Foliage modes (TerrainTools.cpp).
     void buildTerrainPages();
     void refreshTerrainPanel();
@@ -88,6 +88,13 @@ private:
     void terrainStroke(glm::vec3 point, Qt::KeyboardModifiers modifiers, bool first);
     void terrainStrokeFinished();
     TerrainUi* terrainUi_ = nullptr;
+    // Mesh paint mode (MeshPaintTools.cpp): vertex colours of the selected model blend in its materials' layers.
+    void buildMeshPaintPage();
+    void refreshMeshPaintPanel();
+    void meshPaintStroke(glm::vec3 point, Qt::KeyboardModifiers modifiers, bool first);
+    void meshPaintFinished();
+    void updateMeshPaintBrush();
+    struct MeshPaintUi* meshPaintUi_ = nullptr;
 
 public:
     void notify(const QString& message, int timeoutMs = 0); // status line + output log

@@ -15,6 +15,11 @@ uniform bool uInstanced;
 uniform int uInstanceBase;
 layout(std430, binding = 2) readonly buffer Instances { mat4 uInstances[]; };
 uniform mat4 uViewProj;
+// Vertex paint of a placed model (engine/VertexPaint.h): RGBA8 per vertex of this mesh part.
+layout(std430, binding = 3) readonly buffer Paint { uint uPaint[]; };
+uniform int uPaintBase = -1;   // first entry of this part, -1 = no paint
+uniform int uPaintBaseVertex;  // the part's first vertex in the mesh pool
+out vec4 vPaint;
 out vec3 vWorldPos;
 out vec3 vNormal;
 out vec2 vUV;
@@ -43,5 +48,6 @@ void main() {
     vWorldPos = world.xyz;
     vNormal = mat3(model) * mat3(skin) * aNormal; // renormalized in the fragment shader
     vUV = aUV;
+    vPaint = uPaintBase >= 0 ? unpackUnorm4x8(uPaint[uPaintBase + gl_VertexID - uPaintBaseVertex]) : vec4(0.0);
     gl_Position = uViewProj * world;
 }
