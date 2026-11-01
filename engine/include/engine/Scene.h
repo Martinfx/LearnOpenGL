@@ -255,14 +255,14 @@ struct Entity {
     // Editor-only helpers (sound sources and zones, map markers): not drawn in the
     // game and not hit by weapons.
     bool helper() const { return type == "sound" || type == "map_marker" || type == "particle" || type == "anomaly" || type == "light" ||
-                                 type == "sit_point" || type == "trigger" || type == "relay" || type == "reverb"; }
+                                 type == "sit_point" || type == "trigger" || type == "relay" || type == "reverb" || type == "ambience"; }
     // What the editor draws and picks: a sound zone can span the whole level, so
     // it is shown as a small speaker cube at its position; the zone is its size.
     Aabb markerBounds() const
     {
         if (type == "sound" || type == "particle")
             return {position, position + glm::vec3(type == "sound" ? 0.6f : 0.4f)};
-        if (type == "relay" || type == "trigger" || type == "reverb") // a node; a volume (its size) is drawn as lines
+        if (type == "relay" || type == "trigger" || type == "reverb" || type == "ambience") // a node; a volume (its size) is drawn as lines
             return {position - glm::vec3(0.2f, 0.0f, 0.2f), position + glm::vec3(0.2f, 0.4f, 0.2f)};
         if (type == "light") // the light itself is at `position`
             return {position - glm::vec3(0.15f), position + glm::vec3(0.15f)};
@@ -356,6 +356,9 @@ struct Environment {
     // zones (entities of type "reverb") override it where the listener is.
     std::string reverb = "none";
     float reverbAmount = 0.6f;
+    // Ambience set of the whole level (.ambience: looping layers and random far sounds,
+    // engine/Ambience.h); "ambience" zone entities replace it where the listener is.
+    std::filesystem::path ambience;
 };
 
 // Folder in the scene hierarchy (no geometry), e.g. "Building A" or "Enemies".

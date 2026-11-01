@@ -56,6 +56,9 @@ public:
     // Text for the player's screen (ShowMessage input, game.message()).
     using MessageFn = std::function<void(const std::string& text)>;
     void setMessageHandler(MessageFn handler);
+    // game.duck_ambience(gain, seconds): the ambience steps back before a scripted event.
+    using DuckFn = std::function<void(float gain, float seconds)>;
+    void setDuckHandler(DuckFn handler);
 
     // Entity I/O (engine/EntityIO.h): fires `output` of an entity, i.e. queues the
     // inputs of its matching connections. `activator` = entity index, -1 = the player.

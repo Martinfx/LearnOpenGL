@@ -67,6 +67,7 @@ const char* typeName(AssetType t)
     case AssetType::Sound: return "Sound";
     case AssetType::Audio: return "Audio";
     case AssetType::Particle: return "Particle effect";
+    case AssetType::Ambience: return "Ambience set";
     case AssetType::Other: break;
     }
     return "File";
@@ -94,6 +95,8 @@ AssetType assetTypeOf(const QString& path)
         return AssetType::Audio;
     if (ext == "particle")
         return AssetType::Particle;
+    if (ext == "ambience")
+        return AssetType::Ambience;
     return AssetType::Other;
 }
 
@@ -255,7 +258,7 @@ AssetBrowser::AssetBrowser(QWidget* parent) : QWidget(parent)
     category_ = new QComboBox(this);
     category_->addItem(tr("All types"), -1);
     for (AssetType t : {AssetType::Model, AssetType::Material, AssetType::Texture, AssetType::Script, AssetType::Weapon,
-                        AssetType::Level, AssetType::Sound, AssetType::Audio, AssetType::Particle})
+                        AssetType::Level, AssetType::Sound, AssetType::Audio, AssetType::Particle, AssetType::Ambience})
         category_->addItem(tr(typeName(t)) + "s", static_cast<int>(t));
     category_->setCurrentIndex(0);
     search_ = new QLineEdit(this);
@@ -293,6 +296,7 @@ AssetBrowser::AssetBrowser(QWidget* parent) : QWidget(parent)
     addMenu->addAction(tr("New Lua script"), this, [this] { emit newAssetRequested(QStringLiteral("script"), currentFolderPath()); });
     addMenu->addAction(tr("New sound"), this, [this] { emit newAssetRequested(QStringLiteral("sound"), currentFolderPath()); });
     addMenu->addAction(tr("New particle effect"), this, [this] { emit newAssetRequested(QStringLiteral("particle"), currentFolderPath()); });
+    addMenu->addAction(tr("New ambience set"), this, [this] { emit newAssetRequested(QStringLiteral("ambience"), currentFolderPath()); });
     addMenu->addAction(tr("New level"), this, [this] { emit newAssetRequested(QStringLiteral("level"), currentFolderPath()); });
     addButton->setMenu(addMenu);
     auto* importButton = new QToolButton(this);
@@ -663,7 +667,7 @@ void AssetBrowser::importFiles()
 {
     const QStringList files = QFileDialog::getOpenFileNames(
         this, tr("Import into %1").arg(folder_.isEmpty() ? tr("assets") : folder_), QString(),
-        tr("Assets (*.glb *.gltf *.bin *.png *.jpg *.jpeg *.material *.lua *.weapon *.level *.sound *.wav *.ogg *.mp3 *.flac);;All files (*)"));
+        tr("Assets (*.glb *.gltf *.bin *.png *.jpg *.jpeg *.material *.lua *.weapon *.level *.sound *.ambience *.wav *.ogg *.mp3 *.flac);;All files (*)"));
     if (files.isEmpty())
         return;
     QStringList failed;

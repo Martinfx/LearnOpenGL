@@ -102,7 +102,7 @@ SoundPicker::SoundPicker(QWidget* parent) : QWidget(parent)
     auto* browse = new QToolButton(this);
     browse->setText(tr("..."));
     browse->setToolTip(tr("Choose a .sound or audio file"));
-    auto* play = new QToolButton(this);
+    auto* play = play_ = new QToolButton(this);
     play->setText(QStringLiteral("▶"));
     play->setToolTip(tr("Preview"));
     auto* clear = new QToolButton(this);
@@ -113,8 +113,8 @@ SoundPicker::SoundPicker(QWidget* parent) : QWidget(parent)
     row->addWidget(play);
     row->addWidget(clear);
     connect(browse, &QToolButton::clicked, this, [this] {
-        const QString start = path_.isEmpty() ? assetPath("sounds") : QFileInfo(path_).absolutePath();
-        const QString file = QFileDialog::getOpenFileName(this, tr("Sound"), start, kSoundFilter);
+        const QString start = path_.isEmpty() ? assetPath(folder_) : QFileInfo(path_).absolutePath();
+        const QString file = QFileDialog::getOpenFileName(this, tr("Sound"), start, filter_.isEmpty() ? kSoundFilter : filter_);
         if (file.isEmpty())
             return;
         path_ = QFileInfo(file).absoluteFilePath();
@@ -132,6 +132,13 @@ SoundPicker::SoundPicker(QWidget* parent) : QWidget(parent)
         updateText();
         emit pathChanged(path_);
     });
+}
+
+void SoundPicker::setFileKind(const QString& filter, const QString& assetFolder, bool preview)
+{
+    filter_ = filter;
+    folder_ = assetFolder;
+    play_->setVisible(preview);
 }
 
 void SoundPicker::setPath(const QString& absolutePath)

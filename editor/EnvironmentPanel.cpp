@@ -253,6 +253,13 @@ EnvironmentPanel::EnvironmentPanel(engine::Scene* scene, QWidget* parent)
         changed();
     });
     addFloat(form, tr("Reverb amount"), &E::reverbAmount, 0, 1, 0.05, 2, tr("How strongly the reverb is mixed in"));
+    ambience_ = new SoundPicker(this);
+    ambience_->setFileKind(tr("Ambience sets (*.ambience)"), QStringLiteral("sounds/ambience"), false);
+    ambience_->setToolTip(tr("Ambience set of the level: looping layers and random far sounds (edit .ambience files in the Content "
+                             "Browser); Ambience zones replace it where the player is"));
+    form->addRow(tr("Ambience"), ambience_);
+    connect(ambience_, &SoundPicker::pathChanged, this,
+            [soundEdited](const QString& p) { soundEdited(&engine::Environment::ambience, p); });
     layout->addStretch(1);
     refresh();
 }
@@ -341,6 +348,7 @@ void EnvironmentPanel::refresh()
     rainSound_->setPath(QString::fromStdU16String(scene_->environment.rainSound.u16string()));
     windSound_->setPath(QString::fromStdU16String(scene_->environment.windSound.u16string()));
     reverb_->setCurrentText(QString::fromStdString(scene_->environment.reverb));
+    ambience_->setPath(QString::fromStdU16String(scene_->environment.ambience.u16string()));
     updating_ = false;
 }
 
@@ -354,6 +362,7 @@ void EnvironmentPanel::applyPreset(int index)
     env.windSound = scene_->environment.windSound;
     env.lut = scene_->environment.lut;
     env.reverb = scene_->environment.reverb;
+    env.ambience = scene_->environment.ambience;
     env.reverbAmount = scene_->environment.reverbAmount;
     scene_->environment = env;
     scene_->sunDirection = list[static_cast<std::size_t>(index)].sun;

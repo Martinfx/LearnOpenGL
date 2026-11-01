@@ -84,6 +84,7 @@ methods `:length()`, `:normalized()`, `:flat()` (y = 0), `:dot(other)`.
 | `game.log(text)`, `print(...)` | Prints to the game console |
 | `game.fire(target, input, [parameter], [delay])` | Entity I/O: sends `input` to every entity named `target` (or `"!player"`) after `delay` seconds |
 | `game.message(text)` | Shows a short message on the player's screen |
+| `game.duck_ambience(gain, [seconds])` | Turns the ambience and music down to `gain` (0..1) for `seconds` (default 2), e.g. the moment before a scripted scare |
 | `game.change_level(file)` | Loads another level (file in `assets/levels/` or absolute); health, weapon and magazines come along |
 | `game.cvar(name)` | Console variable as text (`"1"`, `"0.5"`), nil if unknown |
 | `game.set_cvar(name, value)` | Sets a console variable; false if unknown, out of range or a locked cheat |

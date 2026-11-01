@@ -1,0 +1,6 @@
+# Ambience set: looping layers and random sounds around the listener (paths relative to this file)
+# layer "sound" volume [day night]
+# random "sound" min_interval max_interval min_distance max_distance day_chance night_chance height duck
+layer "../ambient/zone_drone_2.sound" 0.35 1 1
+random "../ambient/metal_creak.sound" 8 25 6 25 1 1 1.5 0
+random "../ambient/distant_gunfire.sound" 40 120 150 400 0.4 0.7 0 0.2

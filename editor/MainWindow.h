@@ -134,6 +134,8 @@ private:
     void openParticleEditor(const QString& path);
     void newParticleEffect(const QString& folder);
     void newSound(const QString& folder);
+    void newAmbience(const QString& folder);
+    void openAmbienceEditor(const QString& path);
     void browseBoxMaterial();
     void refreshMaterialSlots();
 
@@ -221,6 +223,10 @@ private:
     class OutputsPanel* outputsPanel_ = nullptr;  // entity I/O connections
     QFormLayout* outputsForm_ = nullptr;
     QFormLayout* reverbForm_ = nullptr;           // entity type "reverb"
+    QFormLayout* ambienceForm_ = nullptr;         // entity type "ambience"
+    SoundPicker* ambienceSet_ = nullptr;
+    QDoubleSpinBox* ambienceFade_ = nullptr;
+    QDoubleSpinBox* ambienceOutside_ = nullptr;
     QComboBox* reverbPreset_ = nullptr;
     QDoubleSpinBox* reverbAmount_ = nullptr;
     QDoubleSpinBox* reverbFade_ = nullptr;

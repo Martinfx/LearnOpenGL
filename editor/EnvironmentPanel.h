@@ -49,6 +49,7 @@ private:
     SoundPicker* rainSound_ = nullptr;
     SoundPicker* windSound_ = nullptr;
     class QComboBox* reverb_ = nullptr;
+    SoundPicker* ambience_ = nullptr;
     QComboBox* preset_ = nullptr;
     bool updating_ = false;
 };

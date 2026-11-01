@@ -131,6 +131,8 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
         if (!e.rainSound.empty() || !e.windSound.empty())
             out << "weather_sounds " << std::quoted(e.rainSound.empty() ? std::string() : relative(e.rainSound)) << ' '
                 << std::quoted(e.windSound.empty() ? std::string() : relative(e.windSound)) << '\n';
+        if (!e.ambience.empty())
+            out << "ambience " << std::quoted(relative(e.ambience)) << '\n';
         if (e.reverb != d.reverb || e.reverbAmount != d.reverbAmount)
             out << "reverb " << std::quoted(e.reverb) << ' ' << e.reverbAmount << '\n';
     }
@@ -410,6 +412,15 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                     ok = static_cast<bool>(ls >> it->second->x >> it->second->y >> it->second->z);
                 else if (auto f = floats.find(name); f != floats.end())
                     ok = static_cast<bool>(ls >> *f->second);
+            }
+        } else if (key == "ambience") {
+            std::string path;
+            ok = static_cast<bool>(ls >> std::quoted(path));
+            if (ok && !path.empty()) {
+                std::filesystem::path p = pathFromUtf8(path);
+                if (p.is_relative())
+                    p = std::filesystem::absolute(file).parent_path() / p;
+                result.environment.ambience = p.lexically_normal();
             }
         } else if (key == "reverb") {
             ok = static_cast<bool>(ls >> std::quoted(result.environment.reverb) >> result.environment.reverbAmount);

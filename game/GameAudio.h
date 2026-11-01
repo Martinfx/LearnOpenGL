@@ -1,10 +1,12 @@
 #pragma once
+#include <engine/Ambience.h>
 #include <engine/Audio.h>
 #include <engine/Scene.h>
 #include <engine/Surfaces.h>
 
 #include <filesystem>
 #include <map>
+#include <random>
 #include <memory>
 #include <string>
 #include <vector>
@@ -45,6 +47,18 @@ private:
     void step(const engine::PlayerSettings& player, glm::vec3 feet, float volume, const std::string& surface);
 
     void updateReverb(const engine::Scene& scene, glm::vec3 eye); // reverb zones + the level's reverb
+    // Ambience sets (the level's and its zones'): layers crossfaded by zone, random far sounds.
+    void startAmbience(const engine::Scene& scene);
+    void updateAmbience(float dt, const engine::Scene& scene, glm::vec3 eye);
+    struct Ambience {
+        std::filesystem::path file;
+        engine::AmbienceSet set;
+        std::vector<engine::AudioSystem::Handle> layers; // one loop per layer
+        std::vector<float> timers;                       // per random sound: seconds to the next try
+        float weight = 0.0f;
+    };
+    std::vector<Ambience> ambiences_;
+    std::mt19937 rng_{std::random_device{}()};
     struct Source {
         std::size_t entity = 0;
         engine::AudioSystem::Handle handle = 0;

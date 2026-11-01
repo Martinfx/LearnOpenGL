@@ -7,6 +7,7 @@
 #include "AnomalyPanel.h"
 #include "LightPanel.h"
 #include "OutputsPanel.h"
+#include "AmbienceEditor.h"
 #include <engine/Audio.h>
 #include <QFile>
 #include <QJsonObject>
@@ -213,6 +214,7 @@ void MainWindow::buildMenus()
     edit->addAction(tr("Add t&rigger volume"), this, [this] { addLogicEntity("trigger"); });
     edit->addAction(tr("Add rela&y (logic)"), this, [this] { addLogicEntity("relay"); });
     edit->addAction(tr("Add re&verb zone"), this, [this] { addEntity("reverb"); });
+    edit->addAction(tr("Add ambience &zone"), this, [this] { addEntity("ambience"); });
     edit->addAction(tr("Physics props from the catalogue (crates, barrels...)"), this, &MainWindow::applyPropCatalogueToLevel);
     {
         QMenu* anomaly = edit->addMenu(tr("Add a&nomaly"));
@@ -657,6 +659,7 @@ void MainWindow::buildDocks()
     lightForm_ = makeSection(tr("Light"), "Rendering");
     outputsForm_ = makeSection(tr("Outputs (entity I/O)"), "Script");
     reverbForm_ = makeSection(tr("Reverb zone"), "Sound");
+    ambienceForm_ = makeSection(tr("Ambience zone"), "Sound");
     nameEdit_ = new QLineEdit(boxPanel_);
     kindLabel_ = new QLabel(boxPanel_);
     generalForm->addRow(tr("Type"), kindLabel_);
@@ -1212,6 +1215,39 @@ void MainWindow::buildDocks()
         connect(reverbAmount_, &QDoubleSpinBox::valueChanged, this, [setProp](double v) { setProp("amount", QString::number(v, 'g', 4).toStdString()); });
         connect(reverbFade_, &QDoubleSpinBox::valueChanged, this, [setProp](double v) { setProp("fade", QString::number(v, 'g', 4).toStdString()); });
     }
+    {
+        // Ambience zone (type "ambience"): an .ambience set heard inside its volume.
+        ambienceSet_ = new SoundPicker(boxPanel_);
+        ambienceSet_->setFileKind(tr("Ambience sets (*.ambience)"), QStringLiteral("sounds/ambience"), false);
+        ambienceFade_ = new QDoubleSpinBox(boxPanel_);
+        ambienceFade_->setRange(0.0, 200.0);
+        ambienceFade_->setSingleStep(1.0);
+        ambienceFade_->setSuffix(tr(" m"));
+        ambienceFade_->setKeyboardTracking(false);
+        ambienceFade_->setToolTip(tr("Crossfades with the level's ambience over this distance outside the volume"));
+        ambienceOutside_ = new QDoubleSpinBox(boxPanel_);
+        ambienceOutside_->setRange(0.0, 1.0);
+        ambienceOutside_->setSingleStep(0.05);
+        ambienceOutside_->setKeyboardTracking(false);
+        ambienceOutside_->setToolTip(tr("How much of the level's (outdoor) ambience is still heard inside: 0 a closed room, 0.3 broken windows"));
+        ambienceForm_->addRow(tr("Set"), ambienceSet_);
+        ambienceForm_->addRow(tr("Blend distance"), ambienceFade_);
+        ambienceForm_->addRow(tr("Outside heard"), ambienceOutside_);
+        auto setProp = [this](const char* key, const std::string& value) {
+            engine::Entity* e = selectedEntity();
+            if (!e || e->type != "ambience" || e->properties[key] == value)
+                return;
+            e->properties[key] = value;
+            markDirty();
+        };
+        connect(ambienceSet_, &SoundPicker::pathChanged, this, [this, setProp](const QString& p) {
+            const QString rel = QDir(assetPath(QString())).relativeFilePath(p);
+            setProp("set", (rel.startsWith("..") ? p : rel).toStdString());
+        });
+        connect(ambienceFade_, &QDoubleSpinBox::valueChanged, this, [setProp](double v) { setProp("fade", QString::number(v, 'g', 4).toStdString()); });
+        connect(ambienceOutside_, &QDoubleSpinBox::valueChanged, this,
+                [setProp](double v) { setProp("outside", QString::number(v, 'g', 4).toStdString()); });
+    }
     outputsPanel_ = new OutputsPanel(boxPanel_);
     outputsForm_->addRow(outputsPanel_);
     connect(outputsPanel_, &OutputsPanel::edited, this, [this] {
@@ -1717,6 +1753,8 @@ void MainWindow::buildDocks()
             newSound(folder);
         else if (kind == "particle")
             newParticleEffect(folder);
+        else if (kind == "ambience")
+            newAmbience(folder);
     });
     assetsDock_ = new QDockWidget(tr("Content Browser"), this);
     auto* assetsDock = assetsDock_;
@@ -2096,6 +2134,17 @@ void MainWindow::refreshProperties()
     anomalyPanel_->setEntity(e && e->type == "anomaly" ? selectedEntity() : nullptr, &scene_);
     lightPanel_->setEntity(e && e->type == "light" ? selectedEntity() : nullptr);
     outputsPanel_->setEntity(selectedEntity(), &scene_);
+    if (e && e->type == "ambience") {
+        const QSignalBlocker b1(ambienceSet_), b2(ambienceFade_), b3(ambienceOutside_);
+        auto prop = [e](const char* key, const char* fallback) {
+            const auto it = e->properties.find(key);
+            return QString::fromStdString(it == e->properties.end() ? std::string(fallback) : it->second);
+        };
+        const QString set = prop("set", "");
+        ambienceSet_->setPath(set.isEmpty() ? QString() : QFileInfo(set).isAbsolute() ? set : assetPath(set));
+        ambienceFade_->setValue(prop("fade", "4").toDouble());
+        ambienceOutside_->setValue(prop("outside", "0").toDouble());
+    }
     if (e && e->type == "reverb") {
         const QSignalBlocker b1(reverbPreset_), b2(reverbAmount_), b3(reverbFade_);
         auto prop = [e](const char* key, const char* fallback) {
@@ -2443,6 +2492,7 @@ void MainWindow::openAsset(const QString& path, int type)
     case AssetType::Sound: openSoundEditor(path); break;
     case AssetType::Audio: previewSound(path); break;
     case AssetType::Particle: openParticleEditor(path); break;
+    case AssetType::Ambience: openAmbienceEditor(path); break;
     case AssetType::Level:
         if (confirmDiscard())
             openFile(path);
@@ -2614,7 +2664,7 @@ void MainWindow::addEntity(const QString& type)
     engine::Entity e;
     e.type = type.toStdString();
     e.name = engine::uniqueNodeName(scene_, (type == "enemy" ? "Enemy " : type == "sound" ? "Sound " : type == "particle" ? "Effect " : type == "light" ? "Light " :
-                                             type == "trigger" ? "Trigger " : type == "relay" ? "Relay " : type == "reverb" ? "Reverb " : "Entity ") +
+                                             type == "trigger" ? "Trigger " : type == "relay" ? "Relay " : type == "reverb" ? "Reverb " : type == "ambience" ? "Ambience " : "Entity ") +
                                                 std::to_string(scene_.entities.size() + 1));
     if (type == "sound") {
         e.size = {1.0f, 1.0f, 1.0f};
@@ -2658,6 +2708,10 @@ void MainWindow::addEntity(const QString& type)
     } else if (type == "relay") {
         e.size = {0.4f, 0.4f, 0.4f};
         e.color = {0.7f, 0.4f, 1.0f};
+    } else if (type == "ambience") {
+        e.size = {10.0f, 4.0f, 10.0f};
+        e.color = {0.4f, 0.85f, 0.5f};
+        e.properties["set"] = "sounds/ambience/interior.ambience";
     } else if (type == "reverb") {
         e.size = {8.0f, 4.0f, 8.0f};
         e.color = {0.3f, 0.75f, 0.9f};
@@ -3506,6 +3560,47 @@ void MainWindow::openSurfacesEditor()
     connect(se, &SurfacesEditor::openAsset, this, &MainWindow::openAssetFile);
 }
 
+void MainWindow::newAmbience(const QString& folder)
+{
+    const QString start = folder.isEmpty() ? assetPath("sounds/ambience") : folder;
+    const QString path = QFileDialog::getSaveFileName(this, tr("New ambience set"), QDir(start).filePath("new.ambience"),
+                                                      tr("Ambience sets (*.ambience)"));
+    if (path.isEmpty())
+        return;
+    engine::AmbienceSet set;
+    std::string error;
+    if (!engine::saveAmbienceFile(set, std::filesystem::path(path.toStdU16String()), &error)) {
+        QMessageBox::warning(this, tr("Ambience"), QString::fromStdString(error));
+        return;
+    }
+    assets_->rescan();
+    openAmbienceEditor(path);
+}
+
+void MainWindow::openAmbienceEditor(const QString& path)
+{
+    const QString absolute = QFileInfo(path).absoluteFilePath();
+    for (int i = 1; i < tabs_->count(); ++i)
+        if (auto* ae = qobject_cast<AmbienceEditor*>(tabs_->widget(i)); ae && ae->path() == absolute) {
+            tabs_->setCurrentIndex(i);
+            return;
+        }
+    auto* ae = new AmbienceEditor(tabs_);
+    QString error;
+    if (!ae->load(absolute, &error)) {
+        delete ae;
+        QMessageBox::warning(this, tr("Ambience"), error);
+        return;
+    }
+    const int index = tabs_->addTab(ae, ae->title());
+    tabs_->setTabToolTip(index, absolute);
+    tabs_->setCurrentIndex(index);
+    connect(ae, &AmbienceEditor::modificationChanged, this, [this, ae] {
+        if (const int i = tabs_->indexOf(ae); i >= 0)
+            tabs_->setTabText(i, ae->title());
+    });
+}
+
 SoundEditor* MainWindow::openSoundEditor(const QString& path)
 {
     const QString absolute = QFileInfo(path).absoluteFilePath();
@@ -3547,6 +3642,8 @@ void MainWindow::saveCurrent()
         ok = su->save(&error);
     else if (auto* pe = qobject_cast<ParticleEditor*>(tabs_->currentWidget()))
         ok = pe->save(&error);
+    else if (auto* ae = qobject_cast<AmbienceEditor*>(tabs_->currentWidget()))
+        ok = ae->save(&error);
     else {
         save();
         return;
@@ -3910,6 +4007,8 @@ void MainWindow::updateDetailsVisibility()
             relevant = e != nullptr;
         if (d.form == reverbForm_)
             relevant = e != nullptr && e->type == "reverb";
+        if (d.form == ambienceForm_)
+            relevant = e != nullptr && e->type == "ambience";
         bool shown = relevant && (category == "All" || category == d.category);
         // Search: rows whose label contains every word (a matching section title shows all rows).
         const bool titleMatch = std::all_of(words.begin(), words.end(), [&](const QString& w) { return d.section->title().toLower().contains(w); });
@@ -4089,8 +4188,10 @@ void MainWindow::buildModePanel()
         connect(relay, &QPushButton::clicked, this, [this] { addLogicEntity("relay"); });
         auto* reverbZone = toolButton("sound", tr("Reverb zone (room sound of a hall, corridor, cellar)"), page);
         connect(reverbZone, &QPushButton::clicked, this, [this] { addEntity("reverb"); });
+        auto* ambienceZone = toolButton("sound", tr("Ambience zone (the sound of a building, a forest, a cellar)"), page);
+        connect(ambienceZone, &QPushButton::clicked, this, [this] { addEntity("ambience"); });
         auto* model = toolButton("model", tr("glTF model..."), page);
-        for (QPushButton* b : {box, enemy, entity, sound, particles, anomaly, light, campfire, trigger, relay, reverbZone, model})
+        for (QPushButton* b : {box, enemy, entity, sound, particles, anomaly, light, campfire, trigger, relay, reverbZone, ambienceZone, model})
             layout->addWidget(b);
         auto* hint = new QLabel(tr("Or drag a model from the Content Browser into the view: it lands where you drop it."), page);
         hint->setObjectName("dim");

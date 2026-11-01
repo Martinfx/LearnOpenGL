@@ -629,6 +629,10 @@ int main(int argc, char** argv)
         audio.playAsset(sound, position, volume);
     });
     scripts.setMessageHandler([&hud](const std::string& text) { hud.notify(text); }); // ShowMessage input, game.message()
+    scripts.setDuckHandler([&audio](float gain, float seconds) {
+        audio.system().duck(engine::AudioGroup::Ambient, gain, seconds, 2.0f);
+        audio.system().duck(engine::AudioGroup::Music, gain, seconds, 2.0f);
+    });
     // Sound occlusion: three rays from the ear to the source (straight and 0.5 m to each side
     // of it); each one a wall stops counts a third. Props and characters do not block.
     audio.system().setOcclusionTest([&physics](glm::vec3 ear, glm::vec3 source) {

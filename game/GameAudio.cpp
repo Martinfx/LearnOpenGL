@@ -89,6 +89,7 @@ void GameAudio::startLevel(const engine::Scene& scene)
     audio_.stop(rain_);
     audio_.stop(wind_);
     rain_ = wind_ = 0;
+    startAmbience(scene);
     // Weather loops run all the time; update() sets their volume from the environment.
     const engine::Environment& env = scene.environment;
     auto weather = [&](const std::filesystem::path& custom, const char* standard) -> engine::AudioSystem::Handle {
@@ -161,6 +162,7 @@ void GameAudio::update(float dt, const engine::Scene& scene, glm::vec3 eye, glm:
         }
     }
     updateReverb(scene, eye);
+    updateAmbience(dt, scene, eye);
     // Weather: louder than linear at low intensity so a drizzle is still heard.
     audio_.setVolume(rain_, std::sqrt(std::clamp(scene.environment.rain, 0.0f, 1.0f)), 0.5f);
     audio_.setVolume(wind_, std::sqrt(std::clamp(scene.environment.wind, 0.0f, 1.0f)), 0.5f);
@@ -260,4 +262,120 @@ void GameAudio::updateReverb(const engine::Scene& scene, glm::vec3 eye)
     if (a != audio_.reverb(0) || b != audio_.reverb(1))
         LOG_INFO("audio", "reverb: %s %.2f + %s %.2f", a.c_str(), amountA, b.c_str(), amountB);
     audio_.setReverbMix(a, amountA, b, amountB);
+}
+
+namespace {
+
+std::string propertyOf(const engine::Entity& e, const char* key, const char* fallback)
+{
+    const auto it = e.properties.find(key);
+    return it == e.properties.end() || it->second.empty() ? std::string(fallback) : it->second;
+}
+
+} // namespace
+
+void GameAudio::startAmbience(const engine::Scene& scene)
+{
+    for (const Ambience& a : ambiences_)
+        for (engine::AudioSystem::Handle h : a.layers)
+            audio_.stop(h, 1.0f);
+    ambiences_.clear();
+    auto add = [this](std::filesystem::path file) {
+        if (file.empty())
+            return;
+        if (file.is_relative())
+            file = assetDir_ / file;
+        file = file.lexically_normal();
+        for (const Ambience& a : ambiences_)
+            if (a.file == file)
+                return;
+        Ambience a;
+        a.file = file;
+        std::string error;
+        if (!engine::loadAmbienceFile(a.set, file, &error)) {
+            LOG_WARN("audio", "%s", error.c_str());
+            return;
+        }
+        // Every layer loops from the start, silent until its set is heard (no gap when crossing a zone).
+        for (const engine::AmbienceLayer& l : a.set.layers) {
+            const engine::AudioSystem::Handle h = start(l.sound, nullptr, 1.0f);
+            audio_.setVolume(h, 0.0f);
+            a.layers.push_back(h);
+        }
+        for (const engine::AmbienceRandom& r : a.set.randoms) {
+            preload(r.sound);
+            // The first try comes sooner than the usual interval, so a level does not start mute.
+            a.timers.push_back(std::uniform_real_distribution<float>(0.3f, 1.0f)(rng_) * r.minInterval);
+        }
+        ambiences_.push_back(std::move(a));
+    };
+    add(scene.environment.ambience);
+    for (const engine::Entity& e : scene.entities)
+        if (e.type == "ambience") {
+            const std::string set = propertyOf(e, "set", "");
+            add(std::filesystem::path(std::u8string(set.begin(), set.end())));
+        }
+}
+
+void GameAudio::updateAmbience(float dt, const engine::Scene& scene, glm::vec3 eye)
+{
+    if (ambiences_.empty())
+        return;
+    // Weights: each zone 1 inside, fading to 0 at `fade` metres outside; the level's set
+    // fills what the zones leave (indoors a zone may still let `outside` of it through).
+    for (Ambience& a : ambiences_)
+        a.weight = 0.0f;
+    auto find = [this](std::filesystem::path file) -> Ambience* {
+        if (file.empty())
+            return nullptr;
+        if (file.is_relative())
+            file = assetDir_ / file;
+        file = file.lexically_normal();
+        for (Ambience& a : ambiences_)
+            if (a.file == file)
+                return &a;
+        return nullptr;
+    };
+    float covered = 0.0f;
+    for (const engine::Entity& e : scene.entities) {
+        if (e.type != "ambience" || !e.alive || !engine::entityEnabled(e))
+            continue;
+        const engine::Aabb box = e.bounds();
+        const float w = engine::zoneGain(box.min, box.max, std::strtof(propertyOf(e, "fade", "4").c_str(), nullptr), eye);
+        if (w <= 0.0f)
+            continue;
+        const float outside = std::clamp(std::strtof(propertyOf(e, "outside", "0").c_str(), nullptr), 0.0f, 1.0f);
+        covered = std::max(covered, w * (1.0f - outside));
+        const std::string set = propertyOf(e, "set", "");
+        if (Ambience* a = find(std::filesystem::path(std::u8string(set.begin(), set.end()))))
+            a->weight = std::max(a->weight, w);
+    }
+    if (Ambience* level = find(scene.environment.ambience))
+        level->weight = std::max(level->weight, 1.0f - covered);
+
+    const float night = engine::nightFactor(scene.sunDirection);
+    for (Ambience& a : ambiences_) {
+        for (std::size_t i = 0; i < a.layers.size(); ++i)
+            audio_.setVolume(a.layers[i], a.weight * engine::ambienceLayerVolume(a.set.layers[i], night), 0.3f);
+        if (a.weight < 0.05f)
+            continue;
+        for (std::size_t i = 0; i < a.set.randoms.size(); ++i) {
+            const engine::AmbienceRandom& r = a.set.randoms[i];
+            a.timers[i] -= dt;
+            if (a.timers[i] > 0.0f)
+                continue;
+            a.timers[i] = std::uniform_real_distribution<float>(r.minInterval, r.maxInterval)(rng_);
+            std::uniform_real_distribution<float> unit(0.0f, 1.0f);
+            if (unit(rng_) >= engine::ambienceChance(r, night) * std::min(1.0f, a.weight * 1.5f))
+                continue;
+            // Somewhere around the listener: a direction, a distance, a height.
+            const float angle = unit(rng_) * 6.2831853f;
+            const float distance = r.minDistance + (r.maxDistance - r.minDistance) * unit(rng_);
+            const float height = r.height * (0.5f + unit(rng_));
+            const glm::vec3 at = eye + glm::vec3(std::cos(angle) * distance, height, std::sin(angle) * distance);
+            play(r.sound, at, a.weight);
+            if (r.duck > 0.0f) // a far event the ambience makes room for
+                audio_.duck(engine::AudioGroup::Ambient, 1.0f - std::clamp(r.duck, 0.0f, 1.0f), 1.5f, 3.0f);
+        }
+    }
 }

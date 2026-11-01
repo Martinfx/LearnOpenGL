@@ -165,6 +165,7 @@ struct ScriptSystem::Impl {
     float playerHealth = 100.0f;
     std::string levelChange; // game.change_level()
     MessageFn message;
+    DuckFn duck;
     struct Queued {
         double at = 0.0;
         std::uint64_t order = 0; // same time: in the order they were sent
@@ -592,6 +593,10 @@ void ScriptSystem::Impl::bindApi()
     // Entity I/O: game.fire("Gate light", "TurnOn" [, parameter [, delay]]).
     game.set_function("fire", [this](const std::string& target, const std::string& input, sol::optional<std::string> parameter,
                                      sol::optional<float> delay) { sendInput(target, input, parameter.value_or(""), delay.value_or(0.0f), -1, -1); });
+    game.set_function("duck_ambience", [this](float gain, sol::optional<float> seconds) {
+        if (duck)
+            duck(std::clamp(gain, 0.0f, 1.0f), std::max(0.0f, seconds.value_or(2.0f)));
+    });
     game.set_function("message", [this](const std::string& text) {
         if (message)
             message(text);
@@ -876,6 +881,7 @@ float ScriptSystem::playerHealth() const { return impl_->playerHealth; }
 void ScriptSystem::setSoundHandler(SoundFn handler) { impl_->playSound = std::move(handler); }
 void ScriptSystem::setNavMesh(const NavMesh* nav) { impl_->nav = nav; }
 void ScriptSystem::setMessageHandler(MessageFn handler) { impl_->message = std::move(handler); }
+void ScriptSystem::setDuckHandler(DuckFn handler) { impl_->duck = std::move(handler); }
 void ScriptSystem::fireOutput(int entityIndex, const std::string& output, int activator) { impl_->fireOutput(entityIndex, output, activator); }
 void ScriptSystem::sendInput(const std::string& target, const std::string& input, const std::string& parameter, float delay, int activator,
                              int caller)

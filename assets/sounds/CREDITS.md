@@ -45,6 +45,7 @@ recordings with placeholders.
 | `ambient/rain_loop.ogg` | [AMB Rain Loop 1](https://opengameart.org/content/amb-rain-loop-1) | Kresiek the Furry | CC0 |
 | `ambient/campfire_loop.ogg` | Procedural (noise and crackle synthesis, `source/campfire_crackle.py`) | made for this project | CC0 |
 | `ambient/alarm_loop.ogg` | Procedural (two-tone horn synthesis, `source/alarm_siren.py`) | made for this project | CC0 |
+| `ambient/metal_creak_1..4.ogg` | Procedural (stick-slip friction through metal resonances, `source/metal_creak.py`) | made for this project | CC0 |
 
 CC-BY items: "This work is based on <title> by <author>, licensed under CC-BY (https://creativecommons.org/licenses/by/3.0/
 or /4.0/)". Changes: trimmed, converted to mono 48 kHz, normalised, and filtered; loops were crossfaded.

@@ -5,6 +5,7 @@
 #include <engine/Anomaly.h>
 #include <engine/Lights.h>
 #include <engine/EntityIO.h>
+#include <engine/Ambience.h>
 #include <engine/Audio.h>
 #include <engine/NavMesh.h>
 #include <engine/Surfaces.h>
@@ -1368,6 +1369,31 @@ void testAudio()
               back.pitchMin == 0.8f && back.maxDistance == 123.0f && back.group == engine::AudioGroup::Music,
           ".sound save/load round trip");
     fs::remove(tmp);
+
+    // Ambience sets: layers and random sounds, day / night.
+    {
+        engine::AmbienceSet set;
+        check(engine::loadAmbienceFile(set, assets / "sounds/ambience/zone_outdoor.ambience", &error) && set.layers.size() >= 2 &&
+                  set.randoms.size() >= 2 && fs::exists(set.layers[0].sound) && fs::exists(set.randoms[0].sound),
+              "zone_outdoor.ambience loads with existing sounds " + error);
+        const fs::path amb = fs::temp_directory_path() / "fps_engine_test.ambience";
+        engine::AmbienceSet back;
+        check(engine::saveAmbienceFile(set, amb) && engine::loadAmbienceFile(back, amb) && back.layers.size() == set.layers.size() &&
+                  back.randoms[1].sound == set.randoms[1].sound && back.randoms[1].duck == set.randoms[1].duck &&
+                  back.layers[2].night == set.layers[2].night,
+              ".ambience save/load round trip");
+        fs::remove(amb);
+        check(engine::nightFactor({0, -1, 0}) == 0.0f && engine::nightFactor({0, 1, 0}) == 1.0f &&
+                  std::abs(engine::nightFactor({1, 0, 0}) - 0.5f) < 1e-4f,
+              "night factor from the sun direction (twilight at the horizon)");
+        engine::AmbienceRandom r;
+        r.day = 0.2f;
+        r.night = 1.0f;
+        engine::AmbienceLayer birds;
+        birds.night = 0.0f;
+        check(std::abs(engine::ambienceChance(r, 0.5f) - 0.6f) < 1e-4f && engine::ambienceLayerVolume(birds, 1.0f) == 0.0f,
+              "day / night chance and layer volume blend");
+    }
 
     // Zones: full inside, smooth fade outside.
     check(engine::zoneGain({0, 0, 0}, {10, 10, 10}, 5, {5, 5, 5}) == 1.0f &&

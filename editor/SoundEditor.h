@@ -30,6 +30,8 @@ public:
     explicit SoundPicker(QWidget* parent = nullptr);
     void setPath(const QString& absolutePath); // no signal
     QString path() const { return path_; }
+    // Other files than sounds (e.g. .ambience sets): dialog filter, start folder under assets/, preview button.
+    void setFileKind(const QString& filter, const QString& assetFolder, bool preview);
 
 signals:
     void pathChanged(const QString& absolutePath);
@@ -38,6 +40,9 @@ private:
     void updateText();
     QString path_;
     QLineEdit* edit_ = nullptr;
+    QString filter_;
+    QString folder_ = QStringLiteral("sounds");
+    class QToolButton* play_ = nullptr;
 };
 
 // Editor tab for a .sound file: variations, volume, random pitch, 3D range,

@@ -1,0 +1,17 @@
+# Sound: variations (one is picked at random per play) and playback settings
+# A rifle shot far away in the zone (ambience random sound): the rifle recordings, lower and carrying far.
+file "../weapons/rifle_shot_1.wav"
+file "../weapons/rifle_shot_2.wav"
+file "../weapons/rifle_shot_3.wav"
+file "../weapons/rifle_shot_4.wav"
+file "../weapons/rifle_shot_5.wav"
+file "../weapons/rifle_shot_6.wav"
+volume 0.9
+pitch 0.82 0.94
+distance 6 800
+rolloff 0.7
+loop 0
+stream 0
+spatial 1
+group sfx
+max_instances 3
