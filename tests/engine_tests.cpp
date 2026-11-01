@@ -2636,6 +2636,26 @@ void testMaterialInstances()
     check(!engine::setMaterialParent(*base, dir / "rusty.material"), "a material cannot be its own ancestor");
     instance.reset();
     base.reset();
+
+    // Detail map settings: parsed, inherited like any value, left out of files without detail maps.
+    {
+        std::ofstream detail(dir / "detail.material");
+        detail << "version 2\nname \"Detail\"\ndetail_tiling 16\ndetail_strength 0.5\ndetail_distance 20\n";
+    }
+    auto detail = engine::loadMaterial(dir / "detail.material", &error);
+    check(detail && detail->detailTiling == 16.0f && detail->detailStrength == 0.5f && detail->detailDistance == 20.0f,
+          "detail map settings load");
+    if (detail) {
+        check(engine::saveMaterial(*detail, dir / "detail.material", &error), "a material with detail settings saves");
+        std::ifstream din(dir / "detail.material");
+        const std::string dtext((std::istreambuf_iterator<char>(din)), std::istreambuf_iterator<char>());
+        check(dtext.find("detail_") == std::string::npos, "detail settings are not written without detail maps");
+        engine::Material changed = *detail;
+        changed.detailStrength = 1.0f;
+        const auto ddiff = engine::materialDifferences(*detail, changed);
+        check(ddiff.size() == 1 && ddiff[0] == "detail_strength", "detail strength is a material value");
+    }
+    detail.reset();
     std::filesystem::remove_all(dir);
 }
 

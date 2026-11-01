@@ -38,6 +38,12 @@ uniform bool uHasRoughnessMap;
 uniform bool uHasMetallicMap;
 uniform bool uHasOcclusionMap;
 uniform bool uHasEmissiveMap;
+// Detail maps: x tiling (per base repeat), y strength, z fade-out distance (m).
+layout(binding = 22) uniform sampler2D uDetailAlbedo;
+layout(binding = 23) uniform sampler2D uDetailNormal;
+uniform bool uHasDetailAlbedo;
+uniform bool uHasDetailNormal;
+uniform vec3 uDetail;
 uniform int uRoughnessChannel; // 0 = R (separate map), 1 = G (glTF metal/rough)
 uniform int uMetallicChannel;  // 0 = R, 2 = B (glTF)
 uniform float uNormalStrength;
@@ -232,6 +238,15 @@ void main() {
         albedo *= texel.rgb;
         alpha *= texel.a;
     }
+    // Detail maps, fading out with distance (the overlay layer is in view space).
+    vec2 detailUv = uv * uDetail.x;
+    float detailW = 0.0;
+    if (uHasDetailAlbedo || uHasDetailNormal) {
+        float d = uOverlay ? length(vWorldPos) : distance(vWorldPos, uCameraPos.xyz);
+        detailW = uDetail.y * (1.0 - smoothstep(uDetail.z * 0.6, uDetail.z, d));
+    }
+    if (uHasDetailAlbedo && detailW > 0.0)
+        albedo *= mix(1.0, texture(uDetailAlbedo, detailUv).r * 2.0, detailW);
     if (uAlphaMode == 1 && alpha < uAlphaCutoff && uShading != 3)
         discard; // leaves, fences, grates
     else if (uGrid)
@@ -254,6 +269,13 @@ void main() {
         m.z = sqrt(max(1.0 - dot(m.xy, m.xy), 0.0));
         m.xy *= uNormalStrength;
         n = perturbNormal(n, vWorldPos, uv, normalize(m));
+    }
+    if (uHasDetailNormal && detailW > 0.0) {
+        vec3 m;
+        m.xy = texture(uDetailNormal, detailUv).xy * 2.0 - 1.0;
+        m.z = sqrt(max(1.0 - dot(m.xy, m.xy), 0.0));
+        m.xy *= detailW;
+        n = perturbNormal(n, vWorldPos, detailUv, normalize(m));
     }
     if (uTerrain) {
         // Blend the layers' tangent-space normals by weight (screen-space frame from world X/Z).

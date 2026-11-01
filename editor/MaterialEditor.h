@@ -87,6 +87,9 @@ private:
     QDoubleSpinBox* roughness_;
     QDoubleSpinBox* metallic_;
     QDoubleSpinBox* normalStrength_;
+    QDoubleSpinBox* detailTiling_;
+    QDoubleSpinBox* detailStrength_;
+    QDoubleSpinBox* detailDistance_;
     QPushButton* emissiveButton_;
     QCheckBox* worldUv_;
     QComboBox* alphaMode_;

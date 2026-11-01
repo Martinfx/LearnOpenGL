@@ -68,7 +68,9 @@ enum class AlphaMode : std::uint8_t { Opaque, Mask, Blend };
 const char* alphaModeName(AlphaMode mode); // "opaque", "mask", "blend"
 
 // Texture slots of a material. Roughness, metallic and occlusion read the red channel.
-enum class MapKind { Albedo, Normal, Roughness, Metallic, Occlusion, Emissive, Count };
+// Detail maps repeat much finer than the base maps and fade out with distance: grain of concrete,
+// scratches on metal close up. DetailAlbedo is grey (0.5 = no change), DetailNormal a normal map.
+enum class MapKind { Albedo, Normal, Roughness, Metallic, Occlusion, Emissive, DetailAlbedo, DetailNormal, Count };
 constexpr int kMapCount = static_cast<int>(MapKind::Count);
 const char* mapKey(MapKind kind);   // key in .material files, e.g. "normal_map"
 const char* mapLabel(MapKind kind); // for the editor, e.g. "Normal map"
@@ -90,6 +92,9 @@ struct Material {
     float alphaCutoff = 0.5f;                  // Mask: alpha below this is cut away
     float opacity = 1.0f;                      // multiplies the albedo map's alpha
     bool doubleSided = false;                  // draw back faces too (leaves, thin fences, cloth)
+    float detailTiling = 8.0f;                 // detail maps repeat this many times per base map repeat
+    float detailStrength = 1.0f;               // 0 = off .. 1 = full detail
+    float detailDistance = 12.0f;              // m: gone beyond this distance from the camera
     std::string surface;                       // footsteps / impacts / bullet holes (engine/Surfaces.h), empty = guessed
     std::array<std::filesystem::path, kMapCount> mapPaths;       // absolute, empty = none
     std::array<std::shared_ptr<TextureAsset>, kMapCount> maps;   // runtime, loaded from mapPaths

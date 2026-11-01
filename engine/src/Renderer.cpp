@@ -607,9 +607,12 @@ void Renderer::useMeshProgram(const Program& p)
     loc_.instanceBase = p.loc("uInstanceBase");
     loc_.alphaCutoff = p.loc("uAlphaCutoff");
     loc_.opacity = p.loc("uOpacity");
-    const char* names[6] = {"uHasTexture", "uHasNormalMap", "uHasRoughnessMap", "uHasMetallicMap", "uHasOcclusionMap", "uHasEmissiveMap"};
-    for (int i = 0; i < 6; ++i)
+    const char* names[8] = {"uHasTexture",      "uHasNormalMap",   "uHasRoughnessMap",  "uHasMetallicMap",
+                            "uHasOcclusionMap", "uHasEmissiveMap", "uHasDetailAlbedo", "uHasDetailNormal"};
+    static_assert(kMapCount == 8, "a texture slot per MapKind");
+    for (int i = 0; i < 8; ++i)
         loc_.hasMap[i] = p.loc(names[i]);
+    loc_.detail = p.loc("uDetail");
 }
 
 bool Renderer::init(GlLoader loader, std::string* error)
@@ -4297,8 +4300,10 @@ void Renderer::applySurface(const Material* material, const MeshPart* part, glm:
         }
         return;
     }
-    // Texture units: 0 albedo, 1 normal, 2 roughness, 3 metallic, 4 occlusion, 5 emissive.
-    const Texture* maps[6] = {};
+    // Texture units: 0 albedo, 1 normal, 2 roughness, 3 metallic, 4 occlusion, 5 emissive,
+    // 22 detail albedo, 23 detail normal.
+    const Texture* maps[kMapCount] = {};
+    glm::vec3 detail(8.0f, 0.0f, 12.0f);
     glm::vec2 tiling(1.0f);
     float roughness = 0.8f, metallic = 0.0f, normalStrength = 1.0f;
     glm::vec3 emissive(0.0f);
@@ -4314,6 +4319,7 @@ void Renderer::applySurface(const Material* material, const MeshPart* part, glm:
         metallic = material->metallic;
         normalStrength = material->normalStrength;
         emissive = material->emissive;
+        detail = {material->detailTiling, std::clamp(material->detailStrength, 0.0f, 1.0f), std::max(material->detailDistance, 0.1f)};
         worldUv = worldUv || material->worldUv;
         grid = false;
     } else if (part) {
@@ -4343,11 +4349,13 @@ void Renderer::applySurface(const Material* material, const MeshPart* part, glm:
     glUniform2f(loc_.uvScale, 1.0f, 1.0f);
     glUniform2f(loc_.uvOffset, 0.0f, 0.0f);
     glUniform1f(loc_.uvRotation, 0.0f);
-    for (int i = 0; i < 6; ++i) {
-        const unsigned handle = maps[i] && maps[i]->valid() ? texture(*maps[i]) : 0u;
+    glUniform3fv(loc_.detail, 1, glm::value_ptr(detail));
+    for (int i = 0; i < kMapCount; ++i) {
+        const bool isDetail = i >= static_cast<int>(MapKind::DetailAlbedo);
+        const unsigned handle = maps[i] && maps[i]->valid() && (!isDetail || detail.y > 0.0f) ? texture(*maps[i]) : 0u;
         const bool has = handle != 0;
         if (has)
-            glBindTextureUnit(static_cast<unsigned>(i), handle);
+            glBindTextureUnit(isDetail ? static_cast<unsigned>(22 + i - static_cast<int>(MapKind::DetailAlbedo)) : static_cast<unsigned>(i), handle);
         glUniform1i(loc_.hasMap[i], has ? 1 : 0);
     }
 }

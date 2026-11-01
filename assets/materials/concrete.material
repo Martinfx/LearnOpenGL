@@ -11,3 +11,8 @@ world_uv 0
 albedo_map "../textures/concrete.png"
 normal_map "../textures/concrete_normal.png"
 roughness_map "../textures/concrete_roughness.png"
+detail_albedo_map "../textures/detail_grain.png"
+detail_normal_map "../textures/detail_grain_normal.png"
+detail_tiling 6
+detail_strength 1
+detail_distance 10

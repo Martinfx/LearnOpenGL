@@ -410,6 +410,12 @@ bool parseMaterial(Material& m, const std::filesystem::path& file, std::string* 
             ok = static_cast<bool>(ls >> result.doubleSided);
         } else if (k == "surface") {
             ok = static_cast<bool>(ls >> result.surface);
+        } else if (k == "detail_tiling") {
+            ok = static_cast<bool>(ls >> result.detailTiling);
+        } else if (k == "detail_strength") {
+            ok = static_cast<bool>(ls >> result.detailStrength);
+        } else if (k == "detail_distance") {
+            ok = static_cast<bool>(ls >> result.detailDistance);
         } else {
             for (int i = 0; i < kMapCount; ++i)
                 if (k == mapKey(static_cast<MapKind>(i)))
@@ -483,6 +489,12 @@ void writeMaterialValue(std::ostream& out, const Material& m, const std::string&
         out << "opacity " << m.opacity << '\n';
     else if (key == "double_sided")
         out << "double_sided " << m.doubleSided << '\n';
+    else if (key == "detail_tiling")
+        out << "detail_tiling " << m.detailTiling << '\n';
+    else if (key == "detail_strength")
+        out << "detail_strength " << m.detailStrength << '\n';
+    else if (key == "detail_distance")
+        out << "detail_distance " << m.detailDistance << '\n';
     else if (key == "surface") {
         if (!m.surface.empty())
             out << "surface " << m.surface << '\n';
@@ -546,6 +558,10 @@ bool saveMaterial(const Material& m, const std::filesystem::path& file, std::str
             for (int i = 0; i < kMapCount && map; ++i)
                 if (key == mapKey(static_cast<MapKind>(i)))
                     empty = m.mapPaths[static_cast<std::size_t>(i)].empty();
+            const bool noDetail = m.mapPaths[static_cast<std::size_t>(MapKind::DetailAlbedo)].empty() &&
+                                  m.mapPaths[static_cast<std::size_t>(MapKind::DetailNormal)].empty();
+            if (noDetail && key.rfind("detail_", 0) == 0)
+                empty = true; // no detail maps: their settings stay out of the file
             if (!empty)
                 writeMaterialValue(out, m, key, dir);
         }
@@ -566,6 +582,8 @@ const char* mapKey(MapKind kind)
     case MapKind::Metallic: return "metallic_map";
     case MapKind::Occlusion: return "occlusion_map";
     case MapKind::Emissive: return "emissive_map";
+    case MapKind::DetailAlbedo: return "detail_albedo_map";
+    case MapKind::DetailNormal: return "detail_normal_map";
     default: return "";
     }
 }
@@ -579,6 +597,8 @@ const char* mapLabel(MapKind kind)
     case MapKind::Metallic: return "Metallic map";
     case MapKind::Occlusion: return "Ambient occlusion";
     case MapKind::Emissive: return "Emissive map";
+    case MapKind::DetailAlbedo: return "Detail albedo (grey)";
+    case MapKind::DetailNormal: return "Detail normal map";
     default: return "";
     }
 }
@@ -597,7 +617,7 @@ bool setMaterialMap(Material& material, MapKind kind, const std::filesystem::pat
         return true;
     }
     auto asset = loadTextureAsset(image, error, mapIsColor(kind),
-                                  kind == MapKind::Normal ? TextureUsage::Normal
+                                  kind == MapKind::Normal || kind == MapKind::DetailNormal ? TextureUsage::Normal
                                                           : (mapIsColor(kind) ? TextureUsage::Color : TextureUsage::Data));
     if (!asset)
         return false;
@@ -646,7 +666,8 @@ const std::vector<std::string>& materialValueKeys()
 {
     static const std::vector<std::string> keys = [] {
         std::vector<std::string> k = {"color",      "roughness",    "metallic", "normal_strength", "emissive",     "tiling",
-                                      "world_uv",   "alpha_mode",   "alpha_cutoff", "opacity",     "double_sided", "surface"};
+                                      "world_uv",   "alpha_mode",   "alpha_cutoff", "opacity",     "double_sided", "surface",
+                                      "detail_tiling", "detail_strength", "detail_distance"};
         for (int i = 0; i < kMapCount; ++i)
             k.emplace_back(mapKey(static_cast<MapKind>(i)));
         return k;
@@ -680,6 +701,12 @@ void copyMaterialValue(Material& to, const Material& from, const std::string& ke
         to.doubleSided = from.doubleSided;
     else if (key == "surface")
         to.surface = from.surface;
+    else if (key == "detail_tiling")
+        to.detailTiling = from.detailTiling;
+    else if (key == "detail_strength")
+        to.detailStrength = from.detailStrength;
+    else if (key == "detail_distance")
+        to.detailDistance = from.detailDistance;
     else
         for (int i = 0; i < kMapCount; ++i)
             if (key == mapKey(static_cast<MapKind>(i))) {
@@ -717,6 +744,12 @@ std::vector<std::string> materialDifferences(const Material& a, const Material& 
             same = a.doubleSided == b.doubleSided;
         else if (key == "surface")
             same = a.surface == b.surface;
+        else if (key == "detail_tiling")
+            same = a.detailTiling == b.detailTiling;
+        else if (key == "detail_strength")
+            same = a.detailStrength == b.detailStrength;
+        else if (key == "detail_distance")
+            same = a.detailDistance == b.detailDistance;
         else
             for (int i = 0; i < kMapCount; ++i)
                 if (key == mapKey(static_cast<MapKind>(i)))

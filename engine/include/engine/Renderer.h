@@ -306,7 +306,8 @@ private:
         int normalStrength = -1, roughnessChannel = -1, metallicChannel = -1, overlay = -1, envRotation = -1;
         int overlaySun = -1, uvScale = -1, uvOffset = -1, uvRotation = -1, shading = -1;
         int alphaMode = -1, alphaCutoff = -1, opacity = -1, instanced = -1, instanceBase = -1, sway = -1, fade = -1;
-        int hasMap[6] = {-1, -1, -1, -1, -1, -1};
+        int hasMap[8] = {-1, -1, -1, -1, -1, -1, -1, -1}; // MapKind order
+        int detail = -1;
     };
 
     bool buildPrograms(const std::map<std::string, std::string>& sources, Programs& out, std::string* error);

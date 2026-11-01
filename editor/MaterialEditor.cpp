@@ -245,6 +245,13 @@ MaterialEditor::MaterialEditor(QWidget* parent)
     roughness_ = makeSpin(0.0, 1.0, 0.05, 2);
     metallic_ = makeSpin(0.0, 1.0, 0.05, 2);
     normalStrength_ = makeSpin(0.0, 4.0, 0.1, 2);
+    detailTiling_ = makeSpin(0.5, 64.0, 0.5, 2);
+    detailStrength_ = makeSpin(0.0, 1.0, 0.05, 2);
+    detailDistance_ = makeSpin(1.0, 200.0, 1.0, 1);
+    detailDistance_->setSuffix(" m");
+    detailTiling_->setToolTip(tr("Detail map repeats per repeat of the base maps (close-up grain, scratches, pores)"));
+    detailStrength_->setToolTip(tr("How strongly the detail maps show (grey 0.5 = no change)"));
+    detailDistance_->setToolTip(tr("The detail fades out towards this distance from the camera"));
     emissiveButton_ = new QPushButton(form_);
     worldUv_ = new QCheckBox(tr("Project texture in world space (ignores model UVs)"), form_);
     alphaMode_ = new QComboBox(form_);
@@ -333,6 +340,9 @@ MaterialEditor::MaterialEditor(QWidget* parent)
         form->addRow(tr(engine::mapLabel(static_cast<engine::MapKind>(i))), mapRows[static_cast<std::size_t>(i)]);
     form->addRow(tr("Normal strength"), normalStrength_);
     form->addRow(tr("Tiling"), tilingRow);
+    form->addRow(tr("Detail tiling"), detailTiling_);
+    form->addRow(tr("Detail strength"), detailStrength_);
+    form->addRow(tr("Detail distance"), detailDistance_);
     form->addRow(tr("Emissive"), emissiveButton_);
     form->addRow(QString(), worldUv_);
     form->addRow(tr("Alpha"), alphaMode_);
@@ -345,7 +355,8 @@ MaterialEditor::MaterialEditor(QWidget* parent)
     keyWidgets_ = {{"color", colorButton_},       {"roughness", roughness_},       {"metallic", metallic_},
                    {"normal_strength", normalStrength_}, {"tiling", tilingRow},   {"emissive", emissiveButton_},
                    {"world_uv", worldUv_},          {"alpha_mode", alphaMode_},     {"alpha_cutoff", alphaCutoff_},
-                   {"opacity", opacity_},           {"double_sided", doubleSided_}, {"surface", surface_}};
+                   {"opacity", opacity_},           {"double_sided", doubleSided_}, {"surface", surface_},
+                   {"detail_tiling", detailTiling_}, {"detail_strength", detailStrength_}, {"detail_distance", detailDistance_}};
     for (int i = 0; i < engine::kMapCount; ++i)
         keyWidgets_[engine::mapKey(static_cast<engine::MapKind>(i))] = mapRows[static_cast<std::size_t>(i)];
     tilingX_->setToolTip(tr("Repeats per UV unit; with world mapping (boxes) per metre: 0.25 = one image every 4 m"));
@@ -477,6 +488,9 @@ void MaterialEditor::refreshForm()
         roughness_->setValue(m.roughness);
         metallic_->setValue(m.metallic);
         normalStrength_->setValue(m.normalStrength);
+        detailTiling_->setValue(m.detailTiling);
+        detailStrength_->setValue(m.detailStrength);
+        detailDistance_->setValue(m.detailDistance);
         worldUv_->setChecked(m.worldUv);
         alphaMode_->setCurrentIndex(static_cast<int>(m.alphaMode));
         alphaCutoff_->setValue(m.alphaCutoff);
@@ -542,6 +556,9 @@ void MaterialEditor::edited()
     m.roughness = static_cast<float>(roughness_->value());
     m.metallic = static_cast<float>(metallic_->value());
     m.normalStrength = static_cast<float>(normalStrength_->value());
+    m.detailTiling = static_cast<float>(detailTiling_->value());
+    m.detailStrength = static_cast<float>(detailStrength_->value());
+    m.detailDistance = static_cast<float>(detailDistance_->value());
     m.worldUv = worldUv_->isChecked();
     m.alphaMode = static_cast<engine::AlphaMode>(alphaMode_->currentIndex());
     m.alphaCutoff = static_cast<float>(alphaCutoff_->value());
