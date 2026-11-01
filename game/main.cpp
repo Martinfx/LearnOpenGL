@@ -25,6 +25,7 @@
 #include "GameSave.h"
 #include "Flashlight.h"
 #include "GameWeather.h"
+#include "Inventory.h"
 #include "KeyNames.h"
 #include "MapHud.h"
 #include <engine/Scripting.h>
@@ -73,7 +74,10 @@ struct LevelExit {
 struct Carry {
     float health = 100.0f;
     std::size_t weapon = 0;
-    std::vector<int> ammo;
+    std::vector<int> ammo;                          // magazines, parallel to weaponFiles
+    std::vector<std::filesystem::path> weaponFiles; // carried weapons (loadout and pickups)
+    std::map<std::string, int> stock;               // rounds by ammo type
+    int medkits = 0;
 };
 
 // Attribution required by CC-BY assets: print the CREDITS.md rows that name the
@@ -94,42 +98,49 @@ void printModelCredits(const std::vector<std::filesystem::path>&, const std::vec
     }
 }
 
-// Player's weapons from the level loadout (falls back to the AK-74M).
-std::vector<engine::Weapon> loadLoadout(const engine::Scene& scene, const std::filesystem::path& exeDir)
+// One weapon from a .weapon file with its view model; nullopt (and a warning) on error.
+std::optional<engine::Weapon> loadWeapon(const std::filesystem::path& file)
 {
-    std::vector<std::filesystem::path> files = scene.loadout;
-    if (files.empty())
-        files.push_back(exeDir / "assets/weapons/ak74.weapon");
-    std::vector<engine::Weapon> weapons;
-    std::vector<std::pair<std::filesystem::path, std::shared_ptr<const engine::Model>>> models;
-    for (const auto& file : files) {
-        engine::WeaponSettings settings;
-        std::string error;
-        if (!engine::loadWeaponFile(settings, file, &error)) {
-            LOG_WARN("weapon", "%s\n", error.c_str());
-            continue;
-        }
-        engine::Weapon weapon(settings);
-        auto cached = std::find_if(models.begin(), models.end(), [&](const auto& m) { return m.first == settings.modelPath; });
-        if (cached != models.end()) {
-            weapon.viewModel = cached->second;
-        } else if (!settings.modelPath.empty()) {
-            // Skinned arms + weapon keep their skeleton and clips; static guns are baked.
-            if (auto model = engine::loadCharacterModel(settings.modelPath, &error); model && model->skeleton) {
-                weapon.viewModel = model;
-                models.emplace_back(settings.modelPath, model);
-            } else if (auto baked = std::make_shared<engine::Model>(); engine::loadModelFile(*baked, settings.modelPath, &error)) {
-                weapon.viewModel = baked;
-                models.emplace_back(settings.modelPath, baked);
-            } else {
-                LOG_WARN("weapon", "%s\n", error.c_str());
-            }
-        }
-        weapons.push_back(std::move(weapon));
+    engine::WeaponSettings settings;
+    std::string error;
+    if (!engine::loadWeaponFile(settings, file, &error)) {
+        LOG_WARN("weapon", "%s\n", error.c_str());
+        return std::nullopt;
     }
-    printModelCredits(files, weapons);
-    if (weapons.empty())
+    engine::Weapon weapon(settings);
+    if (!settings.modelPath.empty()) {
+        // Skinned arms + weapon keep their skeleton and clips (cached); static guns are baked.
+        if (auto model = engine::loadCharacterModel(settings.modelPath, &error); model && model->skeleton) {
+            weapon.viewModel = model;
+        } else if (auto baked = std::make_shared<engine::Model>(); engine::loadModelFile(*baked, settings.modelPath, &error)) {
+            weapon.viewModel = baked;
+        } else {
+            LOG_WARN("weapon", "%s\n", error.c_str());
+        }
+    }
+    return weapon;
+}
+
+// Player's weapons from the level loadout (falls back to the AK-74M); `files` gets the
+// file of each weapon loaded (same order).
+std::vector<engine::Weapon> loadLoadout(const engine::Scene& scene, const std::filesystem::path& exeDir,
+                                        std::vector<std::filesystem::path>& files)
+{
+    std::vector<std::filesystem::path> wanted = scene.loadout;
+    if (wanted.empty())
+        wanted.push_back(exeDir / "assets/weapons/ak74.weapon");
+    std::vector<engine::Weapon> weapons;
+    files.clear();
+    for (const auto& file : wanted)
+        if (auto weapon = loadWeapon(file)) {
+            weapons.push_back(std::move(*weapon));
+            files.push_back(std::filesystem::absolute(file).lexically_normal());
+        }
+    printModelCredits(wanted, weapons);
+    if (weapons.empty()) {
         weapons.emplace_back(); // bare default so the game stays playable
+        files.emplace_back();
+    }
     return weapons;
 }
 
@@ -170,6 +181,7 @@ constexpr Binding kBindings[] = {
     {"in_bolt", "G", "Hodit šroub", -1},
     {"in_map", "M", "Mapa", -1},
     {"in_flashlight", "F", "Baterka", -1},
+    {"in_heal", "H", "Lékárnička", -1},
     {"in_quicksave", "F5", "Rychlé uložení", -1},
     {"in_quickload", "F9", "Rychlé načtení", -1},
 };
@@ -659,7 +671,41 @@ int main(int argc, char** argv)
     });
 
     // Weapons (credits of the models: CREDITS.md next to each model)
-    std::vector<engine::Weapon> weapons = loadLoadout(scene, std::filesystem::path(argv[0]).parent_path());
+    Inventory inventory; // rounds by type, medkits, weapon files
+    std::vector<engine::Weapon> weapons = loadLoadout(scene, std::filesystem::path(argv[0]).parent_path(), inventory.weaponFiles);
+    for (const engine::Weapon& w : weapons)
+        inventory.addStartingAmmo(w);
+    inventory.link(weapons);
+    const std::filesystem::path assetRoot = std::filesystem::path(argv[0]).parent_path() / "assets";
+    // Adds a carried weapon (pickup, save, level change) unless it is there already; returns its slot.
+    auto addWeapon = [&](const std::filesystem::path& file) -> std::optional<std::size_t> {
+        const std::filesystem::path key = std::filesystem::absolute(file).lexically_normal();
+        if (auto it = std::find(inventory.weaponFiles.begin(), inventory.weaponFiles.end(), key); it != inventory.weaponFiles.end())
+            return static_cast<std::size_t>(it - inventory.weaponFiles.begin());
+        auto weapon = loadWeapon(key);
+        if (!weapon)
+            return std::nullopt;
+        weapons.push_back(std::move(*weapon));
+        inventory.weaponFiles.push_back(key);
+        inventory.link(weapons);
+        return weapons.size() - 1;
+    };
+    // The weapons, stock and magazines of a save or the previous level.
+    auto restoreInventory = [&](const std::vector<std::filesystem::path>& files, const std::vector<int>& magazines,
+                                const std::map<std::string, int>& stock, int medkits) {
+        for (std::size_t i = 0; i < files.size(); ++i)
+            if (!files[i].empty())
+                if (auto slot = addWeapon(files[i]); slot && i < magazines.size())
+                    weapons[*slot].setAmmo(magazines[i]);
+        if (files.empty()) // older saves: magazines by slot
+            for (std::size_t w = 0; w < weapons.size() && w < magazines.size(); ++w)
+                weapons[w].setAmmo(magazines[w]);
+        if (!stock.empty() || medkits > 0 || !files.empty()) {
+            inventory.ammo = stock;
+            inventory.medkits = medkits;
+        }
+        inventory.link(weapons);
+    };
     std::size_t current = 0;
     std::size_t next = 0;     // weapon being switched to
     float lowered = 1.0f;     // 0 = ready, 1 = fully lowered (switch animation)
@@ -690,6 +736,7 @@ int main(int argc, char** argv)
     flashlight.reset(scene.player);
     renderer.resetExposure(); // auto-exposure starts from this level's view
     bool flashlightHeld = false;
+    bool healHeld = false;
     bool boltHeld = false;
     bool wasReloading = false;
     if (const int errors = scripts.start())
@@ -877,15 +924,21 @@ int main(int argc, char** argv)
                 flashlight.setOn(a[0] != "0");
             return engine::ConsoleResult{true, flashlight.on() ? "flashlight on" : "flashlight off"};
         });
-        cvars.addCommand("give", "give health|ammo|all", [&](const std::vector<std::string>& a) {
+        cvars.addCommand("give", "give health|ammo|medkit|all", [&](const std::vector<std::string>& a) {
             const std::string what = a.empty() ? "all" : a[0];
             if (what == "health" || what == "all")
                 scripts.setPlayerHealth(scene.player.maxHealth);
-            if (what == "ammo" || what == "all")
-                for (engine::Weapon& w : weapons)
+            if (what == "ammo" || what == "all") {
+                for (engine::Weapon& w : weapons) {
                     w.refill();
-            if (what != "health" && what != "ammo" && what != "all")
-                return engine::ConsoleResult{false, "usage: give health|ammo|all"};
+                    if (!w.settings.ammoType.empty())
+                        inventory.ammo[w.settings.ammoType] = std::max(inventory.ammo[w.settings.ammoType], w.settings.startReserve * 2);
+                }
+            }
+            if (what == "medkit" || what == "all")
+                inventory.medkits += 3;
+            if (what != "health" && what != "ammo" && what != "medkit" && what != "all")
+                return engine::ConsoleResult{false, "usage: give health|ammo|medkit|all"};
             return engine::ConsoleResult{true, "gave " + what};
         }, engine::CVarCheat);
         cvars.addCommand("teleport", "teleport X Y Z (feet), or teleport NAME (an entity or object), or teleport (to where you look)",
@@ -969,6 +1022,15 @@ int main(int argc, char** argv)
             if (m.dynamic)
                 save.props.push_back({m.id, m.position, m.rotation});
         save.flashlightCharge = flashlight.charge();
+        { // weapon files relative to the game folder too
+            const std::filesystem::path exeDir = std::filesystem::absolute(std::filesystem::path(argv[0]).parent_path()).lexically_normal();
+            for (const std::filesystem::path& f : inventory.weaponFiles) {
+                const std::filesystem::path rel = f.lexically_relative(exeDir);
+                save.weaponFiles.push_back(!f.empty() && !rel.empty() && *rel.begin() != ".." ? rel : f);
+            }
+        }
+        save.stock = inventory.ammo;
+        save.medkits = inventory.medkits;
         save.timeOfDay = scene.environment.time.hour;
         save.dayMinutes = scene.environment.time.dayMinutes;
         save.timeEnabled = scene.environment.time.enabled;
@@ -1014,8 +1076,10 @@ int main(int argc, char** argv)
             physics.resetDynamic(scene);
         }
         flashlight.setOn(loadFrom->flashlightOn);
-        for (std::size_t w = 0; w < weapons.size() && w < loadFrom->ammo.size(); ++w)
-            weapons[w].setAmmo(loadFrom->ammo[w]);
+        std::vector<std::filesystem::path> savedWeapons;
+        for (const std::filesystem::path& f : loadFrom->weaponFiles)
+            savedWeapons.push_back(f.is_relative() && !f.empty() ? std::filesystem::path(argv[0]).parent_path() / f : f);
+        restoreInventory(savedWeapons, loadFrom->ammo, loadFrom->stock, loadFrom->medkits);
         if (loadFrom->weapon < weapons.size()) {
             current = next = loadFrom->weapon;
             weapons[current].drawn();
@@ -1029,8 +1093,7 @@ int main(int argc, char** argv)
     // Carried over from the previous level (level change): health, weapon, magazines.
     if (carry) {
         scripts.setPlayerHealth(std::min(carry->health, scene.player.maxHealth));
-        for (std::size_t w = 0; w < weapons.size() && w < carry->ammo.size(); ++w)
-            weapons[w].setAmmo(carry->ammo[w]);
+        restoreInventory(carry->weaponFiles, carry->ammo, carry->stock, carry->medkits);
         if (carry->weapon < weapons.size()) {
             current = next = carry->weapon;
             weapons[current].drawn();
@@ -1154,6 +1217,21 @@ int main(int argc, char** argv)
             if (fKey && !flashlightHeld && !flashlight.toggle() && scene.player.flashlight)
                 hud.notify("Baterka je vybitá");
             flashlightHeld = fKey;
+            // Medkit (H): +50 health at once, not when full.
+            const bool hKey = captured && !console.open() && keyDown(window, boundKey("in_heal"));
+            if (hKey && !healHeld && scripts.playerHealth() > 0.0f) {
+                if (inventory.medkits <= 0)
+                    hud.notify("Žádná lékárnička");
+                else if (scripts.playerHealth() >= scene.player.maxHealth)
+                    hud.notify("Zdraví je plné");
+                else {
+                    --inventory.medkits;
+                    scripts.setPlayerHealth(std::min(scene.player.maxHealth, scripts.playerHealth() + 50.0f));
+                    audio.playAsset("sounds/items/heal.sound", nullptr, 1.0f);
+                    hud.notify("Lékárnička použita (zbývá " + std::to_string(inventory.medkits) + ")");
+                }
+            }
+            healHeld = hKey;
         }
 
         // Look is applied every frame for responsiveness; movement runs at a fixed rate.
@@ -1237,6 +1315,22 @@ int main(int argc, char** argv)
             // Debug shapes age per simulation step: "this frame" shapes from scripts stay until the next step redraws them.
             engine::DebugDraw::global().tick(dt);
             player.fixedUpdate(input, camera, dt);
+            // Pickups the player touches (ammo, medkits, weapons).
+            for (const PickupResult& r : collectPickups(scene, player.feet(), inventory, weapons, current, assetRoot)) {
+                if (!r.weapon.empty()) {
+                    const std::size_t before = weapons.size();
+                    if (auto slot = addWeapon(r.weapon)) {
+                        if (weapons.size() > before)
+                            inventory.addStartingAmmo(weapons[*slot]);
+                        if (!weapons[current].reloading())
+                            next = *slot; // take it in hand
+                    }
+                }
+                hud.notify(r.message);
+                const glm::vec3 at = scene.entities[r.entity].position;
+                audio.playAsset(r.sound, &at, 1.0f);
+                scripts.fireOutput(static_cast<int>(r.entity), "OnPickup", -1);
+            }
             // Day/night cycle: dayMinutes real minutes per game day.
             if (engine::TimeOfDay& tod = scene.environment.time; tod.enabled && tod.dayMinutes > 0.0f)
                 tod.hour = std::fmod(tod.hour + dt * 24.0f / (tod.dayMinutes * 60.0f), 24.0f);
@@ -1477,7 +1571,8 @@ int main(int argc, char** argv)
                 hs.maxHealth = scene.player.maxHealth;
                 hs.weapon = w.settings.name;
                 hs.ammo = w.ammo();
-                hs.magazine = w.settings.magazineSize;
+                hs.magazine = w.reserve() >= 0 ? w.reserve() : w.settings.magazineSize; // stock of the ammo type, else the magazine
+                hs.medkits = inventory.medkits;
                 hs.melee = w.settings.melee();
                 hs.reload = w.reloading() ? w.reloadProgress() : -1.0f;
                 hs.battery = flashlight.hasBattery() ? flashlight.charge() : -1.0f;
@@ -1606,6 +1701,9 @@ int main(int argc, char** argv)
         carryOut.ammo.clear();
         for (const engine::Weapon& w : weapons)
             carryOut.ammo.push_back(w.ammo());
+        carryOut.weaponFiles = inventory.weaponFiles;
+        carryOut.stock = inventory.ammo;
+        carryOut.medkits = inventory.medkits;
     }
     return exitRequest;
     };

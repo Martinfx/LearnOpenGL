@@ -1122,6 +1122,8 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         const Entity& e = scene.entities[i];
         if ((!view.editorHelpers || shadowCascade_ >= 0) && e.helper())
             continue; // map markers, sound sources, lights: editor only, never cast shadows
+        if (!e.alive && e.type == "pickup")
+            continue; // taken
         const float highlight = static_cast<int>(scene.boxes.size() + scene.models.size() + i) == view.selectedObject ? 1.0f : 0.0f;
         // Generous box: animations reach outside the rest pose.
         const float reach = std::max({e.size.x, e.size.y, e.size.z}) * 1.5f;

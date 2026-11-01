@@ -109,6 +109,15 @@ WeaponPanel::WeaponPanel(engine::Scene* scene, QWidget* parent) : QWidget(parent
     form->addRow(tr("Automatic"), automatic_);
     form->addRow(tr("Pellets"), pellets_);
     form->addRow(tr("Magazine"), magazine_);
+    ammoType_ = new QLineEdit(form_);
+    ammoType_->setPlaceholderText(tr("endless"));
+    ammoType_->setToolTip(tr("Ammo type, e.g. 5.45x39: reloads take rounds from the player's stock of it (ammo pickups add to it); "
+                             "empty = endless reserve"));
+    form->addRow(tr("Ammo type"), ammoType_);
+    startReserve_ = new QSpinBox(form_);
+    startReserve_->setRange(0, 10000);
+    startReserve_->setToolTip(tr("Rounds of the ammo type the player gets with this weapon (besides the full magazine)"));
+    form->addRow(tr("Start reserve"), startReserve_);
     form->addRow(tr("Reload time"), reload_);
     form->addRow(tr("Empty reload time"), reloadEmpty_);
     form->addRow(spreadLabel_, spread_);
@@ -163,6 +172,8 @@ WeaponPanel::WeaponPanel(engine::Scene* scene, QWidget* parent) : QWidget(parent
     firearmRows_[9] = aimRotation_;
     firearmRows_[10] = aimTime_;
     firearmRows_[11] = aimSpread_;
+    firearmRows_[12] = ammoType_;
+    firearmRows_[13] = startReserve_;
     formLayout_ = form;
     layout->addWidget(form_);
     layout->addStretch(1);
@@ -189,7 +200,8 @@ WeaponPanel::WeaponPanel(engine::Scene* scene, QWidget* parent) : QWidget(parent
     connect(name_, &QLineEdit::editingFinished, this, &WeaponPanel::edited);
     for (QDoubleSpinBox* s : {damage_, interval_, reload_, reloadEmpty_, aimFov_, aimTime_, aimSpread_, spread_, range_, viewScale_})
         connect(s, &QDoubleSpinBox::valueChanged, this, &WeaponPanel::edited);
-    for (QSpinBox* s : {pellets_, magazine_})
+    connect(ammoType_, &QLineEdit::editingFinished, this, &WeaponPanel::edited);
+    for (QSpinBox* s : {pellets_, magazine_, startReserve_})
         connect(s, &QSpinBox::valueChanged, this, &WeaponPanel::edited);
     connect(automatic_, &QCheckBox::toggled, this, &WeaponPanel::edited);
     connect(viewOffset_, &Vec3Editor::valueEdited, this, &WeaponPanel::edited);
@@ -255,6 +267,8 @@ void WeaponPanel::showCurrent()
     automatic_->setChecked(w->automatic);
     pellets_->setValue(w->pellets);
     magazine_->setValue(w->magazineSize);
+    ammoType_->setText(QString::fromStdString(w->ammoType));
+    startReserve_->setValue(w->startReserve);
     reload_->setValue(w->reloadTime);
     reloadEmpty_->setValue(w->reloadEmptyTime);
     aimFov_->setValue(w->aimFov);
@@ -334,6 +348,8 @@ void WeaponPanel::edited()
     w->automatic = automatic_->isChecked();
     w->pellets = pellets_->value();
     w->magazineSize = magazine_->value();
+    w->ammoType = ammoType_->text().trimmed().toStdString();
+    w->startReserve = startReserve_->value();
     w->reloadTime = static_cast<float>(reload_->value());
     w->reloadEmptyTime = static_cast<float>(reloadEmpty_->value());
     w->aimFov = static_cast<float>(aimFov_->value());

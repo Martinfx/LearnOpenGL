@@ -14,6 +14,7 @@
 #include <vector>
 
 class QComboBox;
+class QSpinBox;
 class QTabWidget;
 class ScriptEditor;
 class MaterialEditor;
@@ -223,6 +224,13 @@ private:
     class OutputsPanel* outputsPanel_ = nullptr;  // entity I/O connections
     QFormLayout* outputsForm_ = nullptr;
     QFormLayout* reverbForm_ = nullptr;           // entity type "reverb"
+    QFormLayout* pickupForm_ = nullptr;           // entity type "pickup"
+    QComboBox* pickupItem_ = nullptr;
+    QLineEdit* pickupAmmoType_ = nullptr;
+    QSpinBox* pickupAmount_ = nullptr;
+    QLineEdit* pickupWeapon_ = nullptr;
+    QLineEdit* pickupName_ = nullptr;
+    void addPickup(const QString& item, const QString& model);
     QFormLayout* ambienceForm_ = nullptr;         // entity type "ambience"
     SoundPicker* ambienceSet_ = nullptr;
     QDoubleSpinBox* ambienceFade_ = nullptr;

@@ -71,6 +71,11 @@ bool SaveGame::write(const std::filesystem::path& file, std::string* error) cons
         body << ' ' << a;
     body << "\n";
     body << "kills " << kills << "\n";
+    for (const std::filesystem::path& f : weaponFiles)
+        body << "weapon_file " << quote(f.generic_string()) << "\n";
+    for (const auto& [type, rounds] : stock)
+        body << "stock " << quote(type) << ' ' << rounds << "\n";
+    body << "medkits " << medkits << "\n";
     body << "flashlight " << (flashlightOn ? 1 : 0) << ' ' << flashlightCharge << "\n";
     if (timeOfDay >= 0.0f)
         body << "time_of_day " << timeOfDay << ' ' << dayMinutes << ' ' << (timeEnabled ? 1 : 0) << "\n";
@@ -156,6 +161,14 @@ bool SaveGame::read(const std::filesystem::path& file, std::string* error)
                 setError(error, "save version " + std::to_string(version) + " is not supported by this build");
                 return false;
             }
+        } else if (key == "weapon_file" && unquote(ls, str)) {
+            weaponFiles.emplace_back(str);
+        } else if (key == "stock" && unquote(ls, str)) {
+            int rounds = 0;
+            if (ls >> rounds)
+                stock[str] = rounds;
+        } else if (key == "medkits") {
+            ls >> medkits;
         } else if (key == "level" && unquote(ls, str)) {
             level = std::filesystem::path(str);
         } else if (key == "title" && unquote(ls, str)) {

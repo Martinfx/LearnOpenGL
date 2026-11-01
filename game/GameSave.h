@@ -4,6 +4,7 @@
 #include <glm/vec3.hpp>
 
 #include <filesystem>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -31,6 +32,9 @@ struct SaveGame {
     };
     std::vector<Prop> props;
     bool flashlightOn = false;
+    std::vector<std::filesystem::path> weaponFiles; // carried weapons, parallel to `ammo` (magazines)
+    std::map<std::string, int> stock;               // rounds by ammo type
+    int medkits = 0;
     float flashlightCharge = 1.0f;
     // Day/night cycle: time of day (< 0 = not saved, keep the level's), clock speed, cycle on.
     float timeOfDay = -1.0f;

@@ -8,6 +8,7 @@ fire_interval 0.14
 automatic 0
 pellets 1
 magazine 8
+ammo_type "9x18" 32
 reload_time 2.21
 spread 0.8
 range 120

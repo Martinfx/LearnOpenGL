@@ -55,6 +55,8 @@ private:
     QCheckBox* automatic_ = nullptr;
     QSpinBox* pellets_ = nullptr;
     QSpinBox* magazine_ = nullptr;
+    QLineEdit* ammoType_ = nullptr;   // empty = endless reserve
+    QSpinBox* startReserve_ = nullptr;
     QDoubleSpinBox* reload_ = nullptr;
     QDoubleSpinBox* reloadEmpty_ = nullptr;
     QLabel* aimLabel_ = nullptr;
@@ -72,7 +74,7 @@ private:
     std::array<SoundPicker*, 7> sounds_{}; // fire, reload, draw, impact, hit, reload empty, dry fire
     std::array<QComboBox*, 6> clips_{};  // idle, fire, reload, draw, reload empty, walk
     QLabel* clipInfo_ = nullptr;
-    std::array<QWidget*, 12> firearmRows_{}; // rows hidden for melee weapons
+    std::array<QWidget*, 14> firearmRows_{}; // rows hidden for melee weapons
     QFormLayout* formLayout_ = nullptr;
     QLabel* intervalLabel_ = nullptr;
     QLabel* spreadLabel_ = nullptr;

@@ -15,6 +15,8 @@ std::vector<IoName> entityOutputs(const std::string& type)
                                  {"OnEndTouch", "Every time it leaves the volume"}});
     } else if (type == "relay") {
         out.insert(out.begin(), {"OnTrigger", "When it receives Trigger (while enabled)"});
+    } else if (type == "pickup") {
+        out.insert(out.begin(), {"OnPickup", "When the player takes it"});
     }
     return out;
 }

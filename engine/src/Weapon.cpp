@@ -26,7 +26,7 @@ ShotHit traceShot(const Scene& scene, const PhysicsWorld& physics, glm::vec3 ori
     // Characters are not rigid bodies, so test entity bounds separately.
     for (std::size_t i = 0; i < scene.entities.size(); ++i) {
         const Entity& e = scene.entities[i];
-        if (!e.alive || e.helper())
+        if (!e.alive || e.helper() || e.type == "pickup")
             continue;
         if (auto t = rayAabb(origin, dir, e.bounds()); t && *t <= range && (!best.hit || *t < best.distance)) {
             best.hit = true;
@@ -109,6 +109,7 @@ bool saveWeaponFile(const WeaponSettings& w, const std::filesystem::path& file, 
         << "automatic " << (w.automatic ? 1 : 0) << '\n'
         << "pellets " << w.pellets << '\n'
         << "magazine " << w.magazineSize << '\n'
+        << "ammo_type " << std::quoted(w.ammoType) << ' ' << w.startReserve << '\n'
         << "reload_time " << w.reloadTime << '\n'
         << "spread " << w.spreadDegrees << '\n'
         << "range " << w.range << '\n'
@@ -189,6 +190,7 @@ bool loadWeaponFile(WeaponSettings& weapon, const std::filesystem::path& file, s
         else if (key == "automatic") { int a = 1; ok = static_cast<bool>(ls >> a); w.automatic = a != 0; }
         else if (key == "pellets") ok = static_cast<bool>(ls >> w.pellets);
         else if (key == "magazine") ok = static_cast<bool>(ls >> w.magazineSize);
+        else if (key == "ammo_type") ok = static_cast<bool>(ls >> std::quoted(w.ammoType) >> w.startReserve);
         else if (key == "reload_time") ok = static_cast<bool>(ls >> w.reloadTime);
         else if (key == "spread") ok = static_cast<bool>(ls >> w.spreadDegrees);
         else if (key == "range") ok = static_cast<bool>(ls >> w.range);
@@ -274,11 +276,17 @@ int Weapon::update(float dt, bool triggerHeld, bool reloadPressed)
         reloadTimer_ -= dt;
         if (reloadTimer_ <= 0.0f) {
             reloadTimer_ = 0.0f;
-            ammo_ = settings.magazineSize;
+            int take = settings.magazineSize - ammo_;
+            if (reserve_) { // rounds from the stock; what is left in the old magazine stays in it
+                take = std::min(take, std::max(0, *reserve_));
+                *reserve_ -= take;
+            }
+            ammo_ += take;
         }
         return 0;
     }
-    if ((reloadPressed && ammo_ < settings.magazineSize) || (triggerHeld && ammo_ == 0)) {
+    const bool canReload = !reserve_ || *reserve_ > 0;
+    if (canReload && ((reloadPressed && ammo_ < settings.magazineSize) || (triggerHeld && ammo_ == 0))) {
         triggerWasHeld_ = triggerHeld;
         reloadFromEmpty_ = ammo_ == 0;
         reloadEmpty_ = ammo_ == 0 && !settings.animReloadEmpty.empty();

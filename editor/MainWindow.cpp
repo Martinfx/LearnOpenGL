@@ -36,6 +36,7 @@
 #include <QApplication>
 #include <QActionGroup>
 #include <QComboBox>
+#include <QSpinBox>
 #include <QPointer>
 #include <engine/JobSystem.h>
 #include "PaletteDialog.h"
@@ -214,6 +215,13 @@ void MainWindow::buildMenus()
     edit->addAction(tr("Add &campfire"), this, &MainWindow::addCampfire);
     edit->addAction(tr("Add t&rigger volume"), this, [this] { addLogicEntity("trigger"); });
     edit->addAction(tr("Add rela&y (logic)"), this, [this] { addLogicEntity("relay"); });
+    {
+        QMenu* pickup = edit->addMenu(tr("Add pic&kup"));
+        pickup->addAction(tr("Rifle ammo (5.45x39)"), this, [this] { addPickup("ammo:5.45x39:30", "models/props/pickups/ammo_can_rifle.glb"); });
+        pickup->addAction(tr("Pistol ammo (9x18)"), this, [this] { addPickup("ammo:9x18:16", "models/props/pickups/ammo_box_pistol.glb"); });
+        pickup->addAction(tr("Medkit"), this, [this] { addPickup("medkit", "models/props/pickups/medkit_pouch.glb"); });
+        pickup->addAction(tr("Weapon (AK-74)"), this, [this] { addPickup("weapon", "models/weapons/world/ak47.glb"); });
+    }
     edit->addAction(tr("Add re&verb zone"), this, [this] { addEntity("reverb"); });
     edit->addAction(tr("Add ambience &zone"), this, [this] { addEntity("ambience"); });
     edit->addAction(tr("Physics props from the catalogue (crates, barrels...)"), this, &MainWindow::applyPropCatalogueToLevel);
@@ -673,6 +681,7 @@ void MainWindow::buildDocks()
     outputsForm_ = makeSection(tr("Outputs (entity I/O)"), "Script");
     reverbForm_ = makeSection(tr("Reverb zone"), "Sound");
     ambienceForm_ = makeSection(tr("Ambience zone"), "Sound");
+    pickupForm_ = makeSection(tr("Pickup"), "General");
     nameEdit_ = new QLineEdit(boxPanel_);
     kindLabel_ = new QLabel(boxPanel_);
     generalForm->addRow(tr("Type"), kindLabel_);
@@ -1277,6 +1286,43 @@ void MainWindow::buildDocks()
         connect(ambienceFade_, &QDoubleSpinBox::valueChanged, this, [setProp](double v) { setProp("fade", QString::number(v, 'g', 4).toStdString()); });
         connect(ambienceOutside_, &QDoubleSpinBox::valueChanged, this,
                 [setProp](double v) { setProp("outside", QString::number(v, 'g', 4).toStdString()); });
+    }
+    {
+        pickupItem_ = new QComboBox(boxPanel_);
+        pickupItem_->addItems({"ammo", "medkit", "weapon"});
+        pickupItem_->setToolTip(tr("What the player gets when walking over it"));
+        pickupAmmoType_ = new QLineEdit(boxPanel_);
+        pickupAmmoType_->setPlaceholderText(tr("empty: rounds of the weapon in hand"));
+        pickupAmmoType_->setToolTip(tr("Ammo type, as in the weapon's \"Ammo type\" (5.45x39, 9x18, ...)"));
+        pickupAmount_ = new QSpinBox(boxPanel_);
+        pickupAmount_->setRange(1, 999);
+        pickupAmount_->setToolTip(tr("Rounds, or medkits"));
+        pickupWeapon_ = new QLineEdit(boxPanel_);
+        pickupWeapon_->setPlaceholderText(QStringLiteral("weapons/ak74.weapon"));
+        pickupWeapon_->setToolTip(tr("Weapon file relative to the assets folder; a weapon already carried gives its rounds instead"));
+        pickupName_ = new QLineEdit(boxPanel_);
+        pickupName_->setToolTip(tr("Name shown in the pickup message (weapons)"));
+        pickupForm_->addRow(tr("Item"), pickupItem_);
+        pickupForm_->addRow(tr("Ammo type"), pickupAmmoType_);
+        pickupForm_->addRow(tr("Amount"), pickupAmount_);
+        pickupForm_->addRow(tr("Weapon file"), pickupWeapon_);
+        pickupForm_->addRow(tr("Display name"), pickupName_);
+        auto setProp = [this](const char* key, const std::string& value) {
+            engine::Entity* e = selectedEntity();
+            if (!e || e->type != "pickup" || e->properties[key] == value)
+                return;
+            if (value.empty())
+                e->properties.erase(key);
+            else
+                e->properties[key] = value;
+            markDirty();
+            refreshProperties();
+        };
+        connect(pickupItem_, &QComboBox::currentTextChanged, this, [setProp](const QString& t) { setProp("item", t.toStdString()); });
+        connect(pickupAmmoType_, &QLineEdit::editingFinished, this, [this, setProp] { setProp("ammo_type", pickupAmmoType_->text().trimmed().toStdString()); });
+        connect(pickupAmount_, &QSpinBox::valueChanged, this, [setProp](int v) { setProp("amount", std::to_string(v)); });
+        connect(pickupWeapon_, &QLineEdit::editingFinished, this, [this, setProp] { setProp("weapon", pickupWeapon_->text().trimmed().toStdString()); });
+        connect(pickupName_, &QLineEdit::editingFinished, this, [this, setProp] { setProp("name", pickupName_->text().trimmed().toStdString()); });
     }
     outputsPanel_ = new OutputsPanel(boxPanel_);
     outputsForm_->addRow(outputsPanel_);
@@ -2169,6 +2215,23 @@ void MainWindow::refreshProperties()
     anomalyPanel_->setEntity(e && e->type == "anomaly" ? selectedEntity() : nullptr, &scene_);
     lightPanel_->setEntity(e && e->type == "light" ? selectedEntity() : nullptr);
     outputsPanel_->setEntity(selectedEntity(), &scene_);
+    if (e && e->type == "pickup") {
+        const QSignalBlocker b1(pickupItem_), b2(pickupAmmoType_), b3(pickupAmount_), b4(pickupWeapon_), b5(pickupName_);
+        auto prop = [e](const char* key, const char* fallback) {
+            const auto it = e->properties.find(key);
+            return QString::fromStdString(it == e->properties.end() ? std::string(fallback) : it->second);
+        };
+        const QString item = prop("item", "ammo");
+        pickupItem_->setCurrentText(item);
+        pickupAmmoType_->setText(prop("ammo_type", ""));
+        pickupAmount_->setValue(prop("amount", item == "medkit" ? "1" : "30").toInt());
+        pickupWeapon_->setText(prop("weapon", ""));
+        pickupName_->setText(prop("name", ""));
+        pickupAmmoType_->setEnabled(item == "ammo");
+        pickupAmount_->setEnabled(item != "weapon");
+        pickupWeapon_->setEnabled(item == "weapon");
+        pickupName_->setEnabled(item == "weapon");
+    }
     if (e && e->type == "ambience") {
         const QSignalBlocker b1(ambienceSet_), b2(ambienceFade_), b3(ambienceOutside_);
         auto prop = [e](const char* key, const char* fallback) {
@@ -2754,6 +2817,44 @@ void MainWindow::addEntity(const QString& type)
     } else if (type != "sound" && type != "particle" && type != "anomaly" && type != "light") {
         e.size = {0.5f, 0.5f, 0.5f};
         e.color = {0.3f, 0.6f, 0.9f};
+    }
+    scene_.entities.push_back(std::move(e));
+    refreshOutliner();
+    select(scene_.objectCount() - 1);
+    markDirty();
+}
+
+void MainWindow::addPickup(const QString& item, const QString& model)
+{
+    const auto& cam = viewport_->camera();
+    const glm::vec3 p = cam.position + cam.flatForward() * 4.0f;
+    engine::Entity e;
+    e.type = "pickup";
+    const QStringList parts = item.split(':');
+    e.properties["item"] = parts.at(0).toStdString();
+    if (parts.size() > 2) {
+        e.properties["ammo_type"] = parts.at(1).toStdString();
+        e.properties["amount"] = parts.at(2).toStdString();
+    }
+    if (parts.at(0) == "weapon") {
+        e.properties["weapon"] = "weapons/ak74.weapon";
+        e.properties["name"] = "AK-74";
+    }
+    e.name = engine::uniqueNodeName(scene_, (parts.at(0) == "medkit" ? "Medkit " : parts.at(0) == "weapon" ? "Weapon pickup " : "Ammo ") +
+                                                std::to_string(scene_.entities.size() + 1));
+    e.size = {0.3f, 0.12f, 0.3f};
+    e.color = {0.9f, 0.8f, 0.3f};
+    e.position = {std::round(p.x * 4.0f) * 0.25f, 0.0f, std::round(p.z * 4.0f) * 0.25f};
+    const QString path = assetPath(model);
+    if (QFileInfo::exists(path)) {
+        e.modelPath = std::filesystem::path(path.toStdU16String());
+        e.model = engine::loadCharacterModel(e.modelPath);
+        if (e.model) { // true size: the entity box is the model's box (1 unit = 1 m)
+            const engine::Aabb& mb = e.model->localBounds;
+            e.size = glm::max(mb.max - mb.min, glm::vec3(0.02f));
+        } else {
+            e.modelPath.clear();
+        }
     }
     scene_.entities.push_back(std::move(e));
     refreshOutliner();
@@ -4044,6 +4145,8 @@ void MainWindow::updateDetailsVisibility()
             relevant = e != nullptr && e->type == "reverb";
         if (d.form == ambienceForm_)
             relevant = e != nullptr && e->type == "ambience";
+        if (d.form == pickupForm_)
+            relevant = e != nullptr && e->type == "pickup";
         bool shown = relevant && (category == "All" || category == d.category);
         // Search: rows whose label contains every word (a matching section title shows all rows).
         const bool titleMatch = std::all_of(words.begin(), words.end(), [&](const QString& w) { return d.section->title().toLower().contains(w); });

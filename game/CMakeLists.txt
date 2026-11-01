@@ -1,4 +1,4 @@
-add_executable(fps_game main.cpp MapHud.cpp MapHud.h GameAudio.cpp GameAudio.h GameEffects.cpp GameEffects.h GameWeather.cpp GameWeather.h GameConsole.cpp GameConsole.h GameAnomalies.cpp GameAnomalies.h
+add_executable(fps_game main.cpp MapHud.cpp MapHud.h GameAudio.cpp GameAudio.h GameEffects.cpp GameEffects.h GameWeather.cpp GameWeather.h Inventory.cpp Inventory.h GameConsole.cpp GameConsole.h GameAnomalies.cpp GameAnomalies.h
     GameMenu.cpp GameMenu.h GameHud.cpp GameHud.h KeyNames.cpp KeyNames.h GameSave.cpp GameSave.h Flashlight.cpp Flashlight.h)
 target_link_libraries(fps_game PRIVATE engine glfw)
 set_target_properties(fps_game PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)

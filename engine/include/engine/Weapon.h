@@ -21,6 +21,9 @@ struct WeaponSettings {
     bool automatic = true;       // false = one shot per trigger pull
     int pellets = 1;             // > 1 for shotguns
     int magazineSize = 30;
+    // Rounds come from the player's stock of this ammo type ("5.45x39"); empty = endless.
+    std::string ammoType;
+    int startReserve = 90;       // rounds of ammoType the player gets with the weapon
     float reloadTime = 1.5f;     // s
     float spreadDegrees = 1.0f;  // random cone half-angle
     float range = 200.0f;        // m
@@ -101,6 +104,9 @@ public:
     glm::vec3 spreadDirection(glm::vec3 aim);
 
     int ammo() const { return ammo_; }
+    // Shared stock of the weapon's ammo type (the player's inventory); null = endless reserve.
+    void setReserve(int* stock) { reserve_ = stock; }
+    int reserve() const { return reserve_ ? *reserve_ : -1; } // -1 = endless
     void refill() { ammo_ = settings.melee() ? 0 : settings.magazineSize; } // cheat `give ammo`
     void setAmmo(int ammo) { ammo_ = settings.melee() ? 0 : std::clamp(ammo, 0, settings.magazineSize); } // level change, saves
     bool reloadingFromEmpty() const { return reloadFromEmpty_; } // the current / last reload started on an empty magazine   // melee weapons always report 0
@@ -123,6 +129,7 @@ public:
 
 private:
     int ammo_ = 0;
+    int* reserve_ = nullptr;
     bool triggerWasHeld_ = false;
     float cooldown_ = 0.0f;
     float reloadTimer_ = 0.0f;

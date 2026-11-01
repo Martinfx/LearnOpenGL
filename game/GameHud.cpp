@@ -81,7 +81,13 @@ void GameHud::draw(engine::Ui2D& ui, int width, int height, const HudState& s) c
         ui.rect(bar, {barW * f, barH}, color);
         ui.text(hp, {x + innerW - ui.textWidth(hp, text, true), y}, text, bone, true);
     }
-    // Weapon and ammo: "AK-74   23 / 30", reload progress under it.
+    // Medkits: a small count above the panel when the player has any.
+    if (s.medkits > 0) {
+        const std::string kits = "LÉKÁRNIČKY " + std::to_string(s.medkits) + "  [H]";
+        const float small = std::round(text * 0.7f);
+        ui.text(kits, {x + innerW - ui.textWidth(kits, small, true), pos.y - small * 1.5f}, small, dim, true);
+    }
+    // Weapon and ammo: "AK-74   23 / 90" (magazine / rounds of its type left), reload progress under it.
     {
         const float y = pos.y + text * 2.2f;
         ui.text(s.weapon, {x, y + text * 0.15f}, std::round(text * 0.85f), dim, true);
