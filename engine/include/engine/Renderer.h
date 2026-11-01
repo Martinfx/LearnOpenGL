@@ -89,6 +89,9 @@ struct RenderView {
     std::vector<ScreenDistortion> distortions; // anomalies: heat haze, lens bends
     // Local lights besides the level's "light" entities (flashlight, muzzle flashes, fires).
     std::vector<LocalLight> lights;
+    // Probe bake (captureCube): HDR only (no post-processing), no volumetric fog, no probes,
+    // no occlusion culling, full resolution.
+    bool capture = false;
 };
 
 // First-person layer drawn on top of the world (weapon, muzzle flash, crosshair).
@@ -160,6 +163,11 @@ public:
     bool init(GlLoader loader, std::string* error = nullptr);
     void shutdown();
     void render(const Scene& scene, const RenderView& view);
+    // Probe bake: the scene around `position` as 6 HDR faces (GL cubemap order, rows from t = 0),
+    // size * size RGB floats each, appended to `faces`. Several full renders; context current.
+    void captureCube(const Scene& scene, glm::vec3 position, int size, std::vector<float>& faces, float time = 0.0f);
+    // Probe bake bounces: captures are lit by these probes (earlier bounce) instead of none.
+    void setCaptureProbes(std::shared_ptr<const ProbeSet> probes) { captureProbes_ = std::move(probes); }
     void renderOverlay(const RenderView& view, const OverlayPass& pass); // after render(), before present()
     void present(); // post-processing into the framebuffer that was bound when render() was called
     // Reads the bound framebuffer (after present()) as RGB8 rows from the top; for screenshots and tests.
@@ -307,6 +315,7 @@ private:
     void renderRainMap(const Scene& scene, const RenderView& view);
     void uploadLightClusters(const RenderView& view);
     void uploadInteriors(const Scene& scene);
+    void syncProbes(const Scene& scene, const std::shared_ptr<const ProbeSet>& probes); // -> cube array, irradiance atlas
     bool volumetricActive(const RenderView& view) const;
     void renderVolumetricFog(const RenderView& view);
     // Draws what intersects the frustum of `cull` (view-projection); skipNear keeps
@@ -517,6 +526,12 @@ private:
     // Volumetric fog: froxel light + density (ping-pong with the previous frame) and the
     // integrated result read by applyFog (unit 15).
     unsigned interiorBuffer_ = 0;       // interior volumes (binding 9)
+    // Baked probes (engine/Probes.h): reflection cubemaps (array, unit 19), irradiance atlas
+    // (r, g, b SH textures, units 16-18), shapes in SSBOs 10 and 11.
+    std::shared_ptr<const ProbeSet> probesHeld_, captureProbes_;
+    unsigned probeCubes_ = 0, probeIrradiance_[3] = {0, 0, 0}, probeBuffer_ = 0, probeVolumeBuffer_ = 0, probeDummyCube_ = 0,
+             probeDummy3d_ = 0;
+    int probeReflections_ = 0, probeVolumes_ = 0;
     unsigned volumeScatter_[2] = {0, 0}, volumeIntegrated_ = 0, volumeDummy_ = 0;
     glm::ivec3 volumeDims_{0};
     int volumeCurrent_ = 0;

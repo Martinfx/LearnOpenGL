@@ -25,3 +25,4 @@ assets/levels/*.terrain filter=lfs diff=lfs merge=lfs -text
 assets/**/*.sound -filter -diff -merge text
 # Sounds (small placeholders) are normal blobs; LFS is for big art.
 assets/models/zone/textures/*.png filter=lfs diff=lfs merge=lfs -text
+assets/levels/*.probes filter=lfs diff=lfs merge=lfs -text

@@ -1,4 +1,5 @@
 #include "engine/Scene.h"
+#include "engine/Probes.h"
 #include <cmath>
 #include <fstream>
 #include "engine/JobSystem.h"
@@ -1157,6 +1158,18 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
             LOG_WARN("level", "%s: prefab %s: %s", pathToUtf8(file.filename()).c_str(), p.name.c_str(), prefabError.c_str());
     }
     assignObjectIds(result); // levels before version 6, objects added by hand
+    {
+        const std::filesystem::path baked = probeFile(file);
+        std::error_code ec;
+        if (std::filesystem::exists(baked, ec)) {
+            auto probes = std::make_shared<ProbeSet>();
+            std::string probeError;
+            if (loadProbes(*probes, baked, &probeError))
+                result.probes = std::move(probes);
+            else
+                LOG_WARN("scene", "%s", probeError.c_str());
+        }
+    }
     scene = std::move(result);
     return true;
 }

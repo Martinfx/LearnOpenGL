@@ -23,6 +23,8 @@
 
 namespace engine {
 
+struct ProbeSet; // engine/Probes.h
+
 // Persistent 64-bit object ID: stays the same when the object is renamed, moved or
 // re-parented, so saved games, links between objects, streaming and prefabs can
 // refer to it. 0 = none yet (assignObjectIds gives one).
@@ -282,17 +284,20 @@ struct Entity {
     // game and not hit by weapons.
     bool helper() const { return type == "sound" || type == "map_marker" || type == "particle" || type == "anomaly" || type == "light" ||
                                  type == "sit_point" || type == "trigger" || type == "relay" || type == "reverb" || type == "ambience" ||
-                                 type == "water" || type == "interior"; }
+                                 type == "water" || type == "interior" || type == "reflection_probe" || type == "irradiance_volume"; }
     // What the editor draws and picks: a sound zone can span the whole level, so
     // it is shown as a small speaker cube at its position; the zone is its size.
     Aabb markerBounds() const
     {
         if (type == "sound" || type == "particle")
             return {position, position + glm::vec3(type == "sound" ? 0.6f : 0.4f)};
-        if (type == "relay" || type == "trigger" || type == "reverb" || type == "ambience" || type == "interior") // a node; a volume (its size) is drawn as lines
+        if (type == "relay" || type == "trigger" || type == "reverb" || type == "ambience" || type == "interior" ||
+            type == "irradiance_volume") // a node; a volume (its size) is drawn as lines
             return {position - glm::vec3(0.2f, 0.0f, 0.2f), position + glm::vec3(0.2f, 0.4f, 0.2f)};
         if (type == "water") // a node at the middle of the surface; the surface is drawn as water
             return {position + glm::vec3(-0.25f, size.y - 0.05f, -0.25f), position + glm::vec3(0.25f, size.y + 0.25f, 0.25f)};
+        if (type == "reflection_probe") // a ball at the capture point (the middle of the box)
+            return {position + glm::vec3(-0.25f, size.y * 0.5f - 0.25f, -0.25f), position + glm::vec3(0.25f, size.y * 0.5f + 0.25f, 0.25f)};
         if (type == "light") // the light itself is at `position`
             return {position - glm::vec3(0.15f), position + glm::vec3(0.15f)};
         if (type == "anomaly") // the field (size) is drawn as rings by the editor
@@ -495,6 +500,8 @@ struct Scene {
     // Heightfield ground with painted layers and foliage, null = none. Shared between
     // copies of the scene (undo history); the editor copies it before each brush stroke.
     std::shared_ptr<Terrain> terrain;
+    // Baked lighting probes (<level>.probes, engine/Probes.h), null when not baked.
+    std::shared_ptr<const ProbeSet> probes;
 
     // Objects are addressed by one index: boxes first, then models, then entities.
     int objectCount() const { return static_cast<int>(boxes.size() + models.size() + entities.size()); }

@@ -1,6 +1,7 @@
 // Game runtime: GLFW window, fixed 60 Hz simulation, first-person player.
 // Usage: fps_game [level-file]
 #include <engine/EntityIO.h>
+#include <engine/ProbeBaker.h>
 #include <engine/JobSystem.h>
 #include <engine/Log.h>
 #include <engine/CVars.h>
@@ -1301,6 +1302,18 @@ int main(int argc, char** argv)
         }
         if (const char* look = std::getenv("FPS_ENGINE_LOOK")) // "yaw pitch" in degrees
             std::sscanf(look, "%f %f", &camera.yawDegrees, &camera.pitchDegrees);
+    }
+    if (std::getenv("FPS_ENGINE_BAKE_PROBES")) { // test hook: bake the level's probes headless, then play
+        engine::ProbeBaker baker(scene);
+        while (!baker.finished())
+            baker.step(renderer, scene, 1000.0);
+        std::string bakeError;
+        if (engine::saveProbes(baker.result(), engine::probeFile(levelPath), &bakeError)) {
+            scene.probes = std::make_shared<engine::ProbeSet>(baker.result());
+            LOG_INFO("game", "baked %d probe captures into %s", baker.total(), engine::probeFile(levelPath).string().c_str());
+        } else {
+            LOG_ERROR("game", "probe bake: %s", bakeError.c_str());
+        }
     }
 
     double lastTime = glfwGetTime();

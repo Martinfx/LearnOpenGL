@@ -3,6 +3,7 @@
 
 #include <glad/gl.h>
 #include "engine/EntityIO.h"
+#include "engine/Probes.h"
 #include "engine/JobSystem.h"
 #include "engine/Log.h"
 #include "engine/Paths.h"
@@ -140,6 +141,7 @@ struct EnvironmentBlock {
     glm::vec4 weather;    // x: wetness, y: lightning flash, z: 1 = rain map valid, w: puddles
     glm::vec4 wind;       // xz: direction the wind blows, y: strength 0..1, w: gusts 0..1
     glm::vec4 volumetric; // x: 1 = on, y: near, z: 1 / log(far / near), w: far
+    glm::vec4 probes;     // x: 1 = baked probes on, y: reflection cube max mip
 };
 
 constexpr int kEnvSize = 128;  // environment cubemap face size
@@ -666,6 +668,17 @@ bool Renderer::init(GlLoader loader, std::string* error)
     const glm::ivec4 noInteriors(0);
     glNamedBufferData(interiorBuffer_, sizeof noInteriors, &noInteriors, GL_DYNAMIC_DRAW);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 9, interiorBuffer_);
+    // Baked probes: none until a level with a .probes file is drawn.
+    glCreateBuffers(1, &probeBuffer_);
+    glCreateBuffers(1, &probeVolumeBuffer_);
+    glNamedBufferData(probeBuffer_, sizeof noInteriors, &noInteriors, GL_DYNAMIC_DRAW);
+    glNamedBufferData(probeVolumeBuffer_, sizeof noInteriors, &noInteriors, GL_DYNAMIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 10, probeBuffer_);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 11, probeVolumeBuffer_);
+    glCreateTextures(GL_TEXTURE_CUBE_MAP_ARRAY, 1, &probeDummyCube_);
+    glTextureStorage3D(probeDummyCube_, 1, GL_RGBA16F, 1, 1, 6);
+    glCreateTextures(GL_TEXTURE_3D, 1, &probeDummy3d_);
+    glTextureStorage3D(probeDummy3d_, 1, GL_RGBA16F, 1, 1, 1);
     glCreateTextures(GL_TEXTURE_3D, 1, &volumeDummy_); // no volumetric fog: transmittance 1
     glTextureStorage3D(volumeDummy_, 1, GL_RGBA16F, 1, 1, 1);
     const float clearFog[4] = {0.0f, 0.0f, 0.0f, 1.0f};
@@ -711,6 +724,8 @@ void Renderer::shutdown()
         if (*b)
             glDeleteBuffers(1, b);
     poolVao_ = poolVbo_ = poolIbo_ = iotaBuffer_ = indirectBuffer_ = 0;
+    probesHeld_.reset();
+    probeReflections_ = probeVolumes_ = 0;
     poolVertices_ = RangeAllocator();
     poolIndices_ = RangeAllocator();
     iotaCount_ = indirectCapacity_ = 0;
@@ -742,7 +757,8 @@ void Renderer::shutdown()
     destroyTargets();
     destroyPrograms(programs_);
     for (unsigned* t : {&shadowTex_, &envRaw_, &envMap_, &brdfLut_, &whiteTex_, &shadowDummy_, &localShadowTex_, &lumTex_, &adaptTex_[0],
-                        &adaptTex_[1], &lutTex_, &volumeScatter_[0], &volumeScatter_[1], &volumeIntegrated_, &volumeDummy_})
+                        &adaptTex_[1], &lutTex_, &volumeScatter_[0], &volumeScatter_[1], &volumeIntegrated_, &volumeDummy_, &probeCubes_,
+                        &probeIrradiance_[0], &probeIrradiance_[1], &probeIrradiance_[2], &probeDummyCube_, &probeDummy3d_})
         if (*t) {
             glDeleteTextures(1, t);
             *t = 0;
@@ -760,7 +776,7 @@ void Renderer::shutdown()
     debugBuffer_ = 0;
     debugCapacity_ = 0;
     spriteCapacity_ = 0;
-    for (unsigned* b : {&vbo_, &jointBuffer_, &envBuffer_, &lightBuffer_, &lightGridBuffer_, &lightIndexBuffer_, &lightShadowBuffer_, &interiorBuffer_})
+    for (unsigned* b : {&vbo_, &jointBuffer_, &envBuffer_, &lightBuffer_, &lightGridBuffer_, &lightIndexBuffer_, &lightShadowBuffer_, &interiorBuffer_, &probeBuffer_, &probeVolumeBuffer_})
         if (*b) {
             glDeleteBuffers(1, b);
             *b = 0;
@@ -895,6 +911,7 @@ void Renderer::updateEnvironment(const Scene& scene, const RenderView& view)
     b.view = view.view;
     b.proj = view.projection;
     b.invViewProj = glm::inverse(view.projection * view.view);
+    b.probes = glm::vec4(view.capture && !captureProbes_ ? 0.0f : 1.0f, static_cast<float>(kEnvMips - 1), 0.0f, 0.0f);
     if (volumetricActive(view)) {
         const float nearDepth = 0.5f, farDepth = std::clamp(e.fogVolumetricRange, 8.0f, 256.0f);
         b.volumetric = glm::vec4(1.0f, nearDepth, 1.0f / std::log(farDepth / nearDepth), farDepth);
@@ -1253,7 +1270,8 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         if (!e.alive)
             continue;
         if (e.type == "sound" || e.type == "particle" || e.type == "anomaly" || e.type == "light" || e.type == "trigger" ||
-            e.type == "relay" || e.type == "reverb" || e.type == "ambience" || e.type == "water" || e.type == "interior") { // marker cube; a sound zone itself is the entity size
+            e.type == "relay" || e.type == "reverb" || e.type == "ambience" || e.type == "water" || e.type == "interior" ||
+            e.type == "reflection_probe" || e.type == "irradiance_volume") { // marker cube; a sound zone itself is the entity size
             const Aabb m = e.markerBounds();
             const bool glow = e.type == "light" && !depthOnly; // a bulb: unlit, in the light's color
             if (glow)
@@ -1725,9 +1743,168 @@ void Renderer::uploadInteriors(const Scene& scene)
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 9, interiorBuffer_);
 }
 
+void Renderer::syncProbes(const Scene& scene, const std::shared_ptr<const ProbeSet>& probes)
+{
+    (void)scene;
+    if (probes == probesHeld_)
+        return;
+    probesHeld_ = probes;
+    for (unsigned* t : {&probeCubes_, &probeIrradiance_[0], &probeIrradiance_[1], &probeIrradiance_[2]})
+        if (*t) {
+            glDeleteTextures(1, t);
+            *t = 0;
+        }
+    probeReflections_ = probeVolumes_ = 0;
+    struct GpuProbe {
+        glm::vec4 centerFade, halfLayer, rotation;
+    };
+    struct GpuVolume {
+        glm::vec4 centerFade, halfZ0, rotation, dims;
+    };
+    std::vector<std::uint8_t> reflBytes(sizeof(glm::ivec4), 0), volBytes(sizeof(glm::ivec4), 0);
+    auto rotationOf = [](const ProbeShape& s, float extra, float intensity) {
+        const float yaw = glm::radians(s.yawDegrees);
+        return glm::vec4(std::cos(yaw), std::sin(yaw), extra, intensity);
+    };
+    const ProbeSet* set = probesHeld_.get();
+    if (set) {
+        // Reflection probes: each baked face set goes through a temporary cubemap and the GGX
+        // prefilter into its layer of the array (same mips as the sky's environment map).
+        std::vector<const ReflectionProbe*> probes;
+        for (const ReflectionProbe& p : set->reflections)
+            if (p.size > 0 && p.faces.size() == 6u * static_cast<std::size_t>(p.size * p.size) && probes.size() < 64)
+                probes.push_back(&p);
+        if (!probes.empty()) {
+            glCreateTextures(GL_TEXTURE_CUBE_MAP_ARRAY, 1, &probeCubes_);
+            glTextureStorage3D(probeCubes_, kEnvMips, GL_RGBA16F, kEnvSize, kEnvSize, static_cast<GLsizei>(probes.size() * 6));
+            glTextureParameteri(probeCubes_, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+            glTextureParameteri(probeCubes_, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            label(GL_TEXTURE, probeCubes_, "reflection probes");
+            GLint previousFbo = 0;
+            glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &previousFbo);
+            glDisable(GL_DEPTH_TEST);
+            glDisable(GL_CULL_FACE);
+            glDisable(GL_BLEND);
+            glBindVertexArray(emptyVao_);
+            glBindFramebuffer(GL_FRAMEBUFFER, captureFbo_);
+            for (std::size_t i = 0; i < probes.size(); ++i) {
+                const ReflectionProbe& p = *probes[i];
+                unsigned raw = 0;
+                glCreateTextures(GL_TEXTURE_CUBE_MAP, 1, &raw);
+                const int levels = 1 + static_cast<int>(std::floor(std::log2(static_cast<float>(p.size))));
+                glTextureStorage2D(raw, levels, GL_RGBA16F, p.size, p.size);
+                glTextureParameteri(raw, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+                glTextureParameteri(raw, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                glTextureSubImage3D(raw, 0, 0, 0, 0, p.size, p.size, 6, GL_RGB, GL_UNSIGNED_INT_5_9_9_9_REV, p.faces.data());
+                glGenerateTextureMipmap(raw);
+                glUseProgram(programs_.prefilter.id);
+                glBindTextureUnit(0, raw);
+                for (int mip = 0; mip < kEnvMips; ++mip) {
+                    const int size = std::max(1, kEnvSize >> mip);
+                    glViewport(0, 0, size, size);
+                    glUniform1f(programs_.prefilter.loc("uRoughness"), static_cast<float>(mip) / static_cast<float>(kEnvMips - 1));
+                    for (int face = 0; face < 6; ++face) {
+                        glNamedFramebufferTextureLayer(captureFbo_, GL_COLOR_ATTACHMENT0, probeCubes_, mip, static_cast<int>(i) * 6 + face);
+                        glUniformMatrix3fv(programs_.prefilter.loc("uFace"), 1, GL_FALSE, glm::value_ptr(cubeFace(face)));
+                        glDrawArrays(GL_TRIANGLES, 0, 3);
+                    }
+                }
+                glDeleteTextures(1, &raw);
+                const GpuProbe g{glm::vec4(p.shape.center, std::max(p.shape.fade, 0.01f)), glm::vec4(p.shape.half, static_cast<float>(i)),
+                                 rotationOf(p.shape, p.parallax ? 1.0f : 0.0f, p.intensity)};
+                const auto* b = reinterpret_cast<const std::uint8_t*>(&g);
+                reflBytes.insert(reflBytes.end(), b, b + sizeof g);
+            }
+            glBindFramebuffer(GL_FRAMEBUFFER, static_cast<unsigned>(previousFbo));
+            probeReflections_ = static_cast<int>(probes.size());
+        }
+        // Irradiance volumes: one atlas (volumes stacked along z), SH r/g/b in three textures.
+        std::vector<const IrradianceVolume*> volumes;
+        glm::ivec3 atlas(1, 1, 0);
+        for (const IrradianceVolume& v : set->volumes)
+            if (v.sh.size() == 3u * static_cast<std::size_t>(v.dims.x * v.dims.y * v.dims.z) && volumes.size() < 64) {
+                volumes.push_back(&v);
+                atlas.x = std::max(atlas.x, v.dims.x);
+                atlas.y = std::max(atlas.y, v.dims.y);
+                atlas.z += v.dims.z;
+            }
+        if (!volumes.empty()) {
+            std::vector<glm::vec4> channel[3];
+            for (auto& c : channel)
+                c.assign(static_cast<std::size_t>(atlas.x * atlas.y * atlas.z), glm::vec4(0.0f));
+            int z0 = 0;
+            for (const IrradianceVolume* v : volumes) {
+                for (int z = 0; z < v->dims.z; ++z)
+                    for (int y = 0; y < v->dims.y; ++y)
+                        for (int x = 0; x < v->dims.x; ++x) {
+                            const std::size_t src = 3u * static_cast<std::size_t>(x + v->dims.x * (y + v->dims.y * z));
+                            const std::size_t dst = static_cast<std::size_t>(x + atlas.x * (y + atlas.y * (z0 + z)));
+                            for (int c = 0; c < 3; ++c)
+                                channel[c][dst] = v->sh[src + static_cast<std::size_t>(c)];
+                        }
+                const GpuVolume g{glm::vec4(v->shape.center, std::max(v->shape.fade, 0.01f)), glm::vec4(v->shape.half, static_cast<float>(z0)),
+                                  rotationOf(v->shape, 0.0f, v->intensity), glm::vec4(glm::vec3(v->dims), 0.0f)};
+                const auto* b = reinterpret_cast<const std::uint8_t*>(&g);
+                volBytes.insert(volBytes.end(), b, b + sizeof g);
+                z0 += v->dims.z;
+            }
+            for (int c = 0; c < 3; ++c) {
+                glCreateTextures(GL_TEXTURE_3D, 1, &probeIrradiance_[c]);
+                glTextureStorage3D(probeIrradiance_[c], 1, GL_RGBA16F, atlas.x, atlas.y, atlas.z);
+                glTextureParameteri(probeIrradiance_[c], GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                glTextureParameteri(probeIrradiance_[c], GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                for (GLenum wrap : {GL_TEXTURE_WRAP_S, GL_TEXTURE_WRAP_T, GL_TEXTURE_WRAP_R})
+                    glTextureParameteri(probeIrradiance_[c], wrap, GL_CLAMP_TO_EDGE);
+                glTextureSubImage3D(probeIrradiance_[c], 0, 0, 0, 0, atlas.x, atlas.y, atlas.z, GL_RGBA, GL_FLOAT, channel[c].data());
+            }
+            probeVolumes_ = static_cast<int>(volumes.size());
+            // Atlas size for the shader in the header's yzw.
+            const glm::ivec4 header(probeVolumes_, atlas.x, atlas.y, atlas.z);
+            std::memcpy(volBytes.data(), &header, sizeof header);
+        }
+    }
+    const glm::ivec4 reflHeader(probeReflections_, 0, 0, 0);
+    std::memcpy(reflBytes.data(), &reflHeader, sizeof reflHeader);
+    if (probeVolumes_ == 0) {
+        const glm::ivec4 none(0);
+        std::memcpy(volBytes.data(), &none, sizeof none);
+    }
+    glNamedBufferData(probeBuffer_, static_cast<GLsizeiptr>(reflBytes.size()), reflBytes.data(), GL_DYNAMIC_DRAW);
+    glNamedBufferData(probeVolumeBuffer_, static_cast<GLsizeiptr>(volBytes.size()), volBytes.data(), GL_DYNAMIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 10, probeBuffer_);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 11, probeVolumeBuffer_);
+    LOG_INFO("render", "baked probes: %d reflection, %d irradiance volumes", probeReflections_, probeVolumes_);
+}
+
+void Renderer::captureCube(const Scene& scene, glm::vec3 position, int size, std::vector<float>& faces, float time)
+{
+    // GL cube face order: +X, -X, +Y, -Y, +Z, -Z (view direction and up as the GL spec expects).
+    static const glm::vec3 dirs[6] = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
+    static const glm::vec3 ups[6] = {{0, -1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}, {0, -1, 0}, {0, -1, 0}};
+    GLint previousFbo = 0;
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &previousFbo);
+    const std::size_t faceFloats = static_cast<std::size_t>(size) * static_cast<std::size_t>(size) * 3;
+    for (int face = 0; face < 6; ++face) {
+        RenderView v;
+        v.view = glm::lookAt(position, position + dirs[face], ups[face]);
+        v.projection = glm::perspective(glm::radians(90.0f), 1.0f, 0.05f, 2000.0f);
+        v.cameraPosition = position;
+        v.viewportWidth = v.viewportHeight = size;
+        v.time = time;
+        v.deferPresent = true;
+        v.capture = true;
+        render(scene, v);
+        pendingPresent_ = false;
+        const std::size_t start = faces.size();
+        faces.resize(start + faceFloats);
+        glGetTextureImage(hdrColor_, 0, GL_RGB, GL_FLOAT, static_cast<GLsizei>(faceFloats * sizeof(float)), faces.data() + start);
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, static_cast<unsigned>(previousFbo));
+}
+
 bool Renderer::volumetricActive(const RenderView& view) const
 {
-    return quality_.volumetricFog > 0 && view.fog && env_ && env_->fogDensity > 0.0f && env_->fogVolumetricRange > 0.0f &&
+    return quality_.volumetricFog > 0 && view.fog && !view.capture && env_ && env_->fogDensity > 0.0f && env_->fogVolumetricRange > 0.0f &&
            view.projection[3][3] == 0.0f && programs_.volumeInject.id && programs_.volumeIntegrate.id;
 }
 
@@ -1868,7 +2045,7 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     // final pass (post / FXAA), for slow GPUs; menus and HUD stay sharp.
     outWidth_ = std::max(1, view.viewportWidth);
     outHeight_ = std::max(1, view.viewportHeight);
-    const float scale = std::clamp(quality_.renderScale, 0.25f, 1.0f);
+    const float scale = view.capture ? 1.0f : std::clamp(quality_.renderScale, 0.25f, 1.0f);
     ensureTargets(std::max(1, static_cast<int>(std::lround(outWidth_ * scale))), std::max(1, static_cast<int>(std::lround(outHeight_ * scale))));
 
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, jointBuffer_);
@@ -1881,6 +2058,12 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     updateEnvironmentMap(scene);
     collectLights(scene, view);
     uploadInteriors(scene);
+    // While a bake runs, every view shows the last bounce (no re-upload between captures and the
+    // editor viewport); the first bounce's captures render without probes, whatever is held.
+    if (captureProbes_)
+        syncProbes(scene, captureProbes_);
+    else if (!view.capture)
+        syncProbes(scene, scene.probes);
     beginPass(PassShadows);
     renderShadows(scene, view);
     renderLocalShadows(scene, view);
@@ -1904,14 +2087,14 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     glUniformMatrix4fv(loc_.viewProj, 1, GL_FALSE, glm::value_ptr(viewProj));
     glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
     beginPass(PassDepth);
-    occ_.testing = occ_.valid && quality_.occlusionCulling && view.shading != Shading::Wireframe &&
+    occ_.testing = occ_.valid && quality_.occlusionCulling && view.shading != Shading::Wireframe && !view.capture &&
                    glm::distance(occ_.eye, view.cameraPosition) < 3.0f;
     // Occlusion depends on where the eye is, not where it looks: grow boxes by the distance moved.
     occ_.inflate = glm::distance(occ_.eye, view.cameraPosition) + 0.05f;
     drawGeometry(scene, view, true, viewProj);
     endPass();
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-    if (quality_.occlusionCulling)
+    if (quality_.occlusionCulling && !view.capture)
         captureOcclusion(view);
 
     if (quality_.ssao) {
@@ -1937,6 +2120,9 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     glBindTextureUnit(13, localShadowTex_ ? localShadowTex_ : shadowDummy_);
     glBindTextureUnit(14, rainTex_ ? rainTex_ : whiteTex_);
     glBindTextureUnit(15, volumetricActive(view) && volumeIntegrated_ ? volumeIntegrated_ : volumeDummy_);
+    for (int i = 0; i < 3; ++i)
+        glBindTextureUnit(16 + i, probeIrradiance_[i] ? probeIrradiance_[i] : probeDummy3d_);
+    glBindTextureUnit(19, probeCubes_ ? probeCubes_ : probeDummyCube_);
     glUniform1i(loc_.shading, static_cast<int>(view.shading));
     const bool wireframe = view.shading == Shading::Wireframe;
     wireframe_ = wireframe;
@@ -1992,7 +2178,7 @@ void Renderer::render(const Scene& scene, const RenderView& view)
 
     if (!wireframe)
         drawUnderwater(scene, view);
-    if (!wireframe) {
+    if (!wireframe && !view.capture) {
         beginPass(PassTransparent);
         renderDistortion(view, viewProj); // after everything that writes scene depth
         endPass();

@@ -1,6 +1,7 @@
 #pragma once
 #include <engine/Camera.h>
 #include <engine/Particles.h>
+#include <engine/ProbeBaker.h>
 #include <engine/Renderer.h>
 #include <engine/Scene.h>
 
@@ -31,6 +32,9 @@ public:
     void focusSelected();
     const engine::FpsCamera& camera() const { return camera_; }
     void setShading(engine::Shading shading) { shading_ = shading; update(); }
+    // Probe bake: runs `baker` with the GL context current for about `budgetMs`.
+    void bakeStep(engine::ProbeBaker& baker, double budgetMs);
+    void bakeStop(engine::ProbeBaker& baker); // cancelled: back to the level's own probes
     engine::Shading shading() const { return shading_; }
     void setShowGrid(bool on) { showGrid_ = on; update(); }
     // Helper geometry drawn over the level (navmesh), not owned; null = none.

@@ -159,6 +159,8 @@ private:
     void renameAsset(const QString& from, const QString& to);
     void showAssetReferences(const QString& path);
     void addEntity(const QString& type);
+    void bakeProbes(); // Render > Bake lighting probes: <level>.probes
+    void applyProbeIntensity(const std::string& name, float intensity); // live, without a new bake
     void addAnomaly(int kind); // engine::AnomalyKind
     void addLight(bool spot);
     void addCampfire(); // group: fire pit model, flames, flickering light, crackle, sit points
@@ -234,6 +236,16 @@ private:
     QFormLayout* outputsForm_ = nullptr;
     QFormLayout* reverbForm_ = nullptr;           // entity type "reverb"
     QFormLayout* interiorForm_ = nullptr;         // entity type "interior"
+    QFormLayout* reflectionForm_ = nullptr;       // entity type "reflection_probe"
+    QFormLayout* irradianceForm_ = nullptr;       // entity type "irradiance_volume"
+    QDoubleSpinBox* reflFade_ = nullptr;
+    QDoubleSpinBox* reflIntensity_ = nullptr;
+    QCheckBox* reflParallax_ = nullptr;
+    QComboBox* reflResolution_ = nullptr;
+    QDoubleSpinBox* irrSpacing_ = nullptr;
+    QDoubleSpinBox* irrFade_ = nullptr;
+    QDoubleSpinBox* irrIntensity_ = nullptr;
+    QLabel* irrPoints_ = nullptr;
     QDoubleSpinBox* interiorSky_ = nullptr;
     QDoubleSpinBox* interiorFog_ = nullptr;
     QDoubleSpinBox* interiorFade_ = nullptr;

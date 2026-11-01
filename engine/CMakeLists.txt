@@ -24,6 +24,8 @@ add_library(engine STATIC
     src/Renderer.cpp
     src/Lights.cpp
     src/EntityIO.cpp
+    src/Probes.cpp
+    src/ProbeBaker.cpp
     src/Ambience.cpp
     src/TimeOfDay.cpp
     src/Water.cpp

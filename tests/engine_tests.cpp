@@ -20,6 +20,7 @@
 #include <engine/FixedStepClock.h>
 #include <engine/Physics.h>
 #include <engine/PlayerController.h>
+#include <engine/Probes.h>
 #include <engine/Renderer.h>
 #include <engine/Scene.h>
 #include <engine/Scripting.h>
@@ -2537,6 +2538,66 @@ void testVolumetricFogSettings()
     fs::remove(file);
 }
 
+void testProbes()
+{
+    // Constant radiance 1 from every direction: irradiance / pi = 1 for every normal.
+    const int size = 8;
+    std::vector<float> faces(6 * size * size * 3, 1.0f);
+    glm::vec4 sh[3];
+    engine::projectIrradiance(faces, size, sh);
+    const glm::vec3 up = engine::evalIrradiance(sh, {0.0f, 1.0f, 0.0f});
+    const glm::vec3 side = engine::evalIrradiance(sh, {1.0f, 0.0f, 0.0f});
+    check(std::abs(up.x - 1.0f) < 0.02f && std::abs(side.z - 1.0f) < 0.02f, "SH of constant radiance is flat");
+    // Light only from above (+Y face, GL face 2): brighter up than down.
+    std::vector<float> top(6 * size * size * 3, 0.0f);
+    for (int i = 2 * size * size * 3; i < 3 * size * size * 3; ++i)
+        top[i] = 1.0f;
+    engine::projectIrradiance(top, size, sh);
+    check(engine::evalIrradiance(sh, {0.0f, 1.0f, 0.0f}).x > engine::evalIrradiance(sh, {0.0f, -1.0f, 0.0f}).x + 0.2f,
+          "SH keeps the direction of the light");
+    check(engine::cubeTexelDirection(0, 0.5f, 0.5f).x > 0.99f, "cube face 0 looks along +X");
+
+    engine::Scene scene;
+    engine::Entity e;
+    e.type = "irradiance_volume";
+    e.name = "Room";
+    e.position = {0.0f, 0.0f, 0.0f};
+    e.size = {8.0f, 3.0f, 4.0f};
+    e.properties["spacing"] = "2";
+    scene.entities.push_back(e);
+    engine::Entity r;
+    r.type = "reflection_probe";
+    r.name = "Mirror";
+    r.size = {4.0f, 3.0f, 4.0f};
+    r.properties["resolution"] = "64";
+    r.properties["parallax"] = "0";
+    scene.entities.push_back(r);
+    auto volumes = engine::irradianceVolumesToBake(scene);
+    auto refl = engine::reflectionProbesToBake(scene);
+    check(volumes.size() == 1 && refl.size() == 1, "probes come from their entities");
+    check(volumes[0].dims.x == 5 && volumes[0].dims.z == 3, "irradiance grid follows the spacing");
+    check(refl[0].size == 64 && !refl[0].parallax && std::abs(refl[0].shape.center.y - 1.5f) < 1e-4f,
+          "reflection probe settings and box middle");
+    const glm::vec3 corner = engine::irradiancePoint(volumes[0], {0, 0, 0});
+    check(corner.x > -4.0f && corner.x < -3.5f && corner.y > 0.0f, "irradiance points stay inside the box");
+
+    engine::ProbeSet set;
+    volumes[0].sh.assign(static_cast<size_t>(volumes[0].dims.x * volumes[0].dims.y * volumes[0].dims.z) * 3, glm::vec4(0.5f));
+    volumes[0].intensity = 2.0f;
+    refl[0].faces.assign(6 * 64 * 64, 0x12345678u);
+    set.volumes = volumes;
+    set.reflections = refl;
+    const std::filesystem::path file = std::filesystem::temp_directory_path() / "engine_tests.probes";
+    engine::ProbeSet back;
+    check(engine::saveProbes(set, file) && engine::loadProbes(back, file), "probes save and load");
+    check(back.volumes.size() == 1 && back.volumes[0].sh == set.volumes[0].sh && back.volumes[0].intensity == 2.0f &&
+              back.reflections.size() == 1 && back.reflections[0].faces == set.reflections[0].faces &&
+              back.reflections[0].shape.name == "Mirror",
+          "probe file round trip");
+    std::filesystem::remove(file);
+    check(engine::probeFile("a/b.level") == std::filesystem::path("a/b.probes"), "probe file sits next to the level");
+}
+
 void testInteriorVolumes()
 {
     engine::Scene scene;
@@ -2680,6 +2741,7 @@ int main()
     testImpostorSettings();
     testVolumetricFogSettings();
     testInteriorVolumes();
+    testProbes();
     testDistortParticles();
     testTaskGraph();
     testWorldStreaming();

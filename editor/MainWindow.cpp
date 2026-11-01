@@ -76,6 +76,10 @@
 #include <QListWidget>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QElapsedTimer>
+#include <QProgressDialog>
+#include <QTimer>
+#include <engine/ProbeBaker.h>
 #include <QProcess>
 #include <QPushButton>
 #include <QStandardPaths>
@@ -236,6 +240,8 @@ void MainWindow::buildMenus()
     edit->addAction(tr("Add re&verb zone"), this, [this] { addEntity("reverb"); });
     edit->addAction(tr("Add ambience &zone"), this, [this] { addEntity("ambience"); });
     edit->addAction(tr("Add &interior volume (dark building)"), this, [this] { addEntity("interior"); });
+    edit->addAction(tr("Add reflection &probe"), this, [this] { addEntity("reflection_probe"); });
+    edit->addAction(tr("Add irradiance volume (baked light in rooms)"), this, [this] { addEntity("irradiance_volume"); });
     edit->addAction(tr("Physics props from the catalogue (crates, barrels...)"), this, &MainWindow::applyPropCatalogueToLevel);
     {
         QMenu* anomaly = edit->addMenu(tr("Add a&nomaly"));
@@ -362,6 +368,8 @@ void MainWindow::buildMenus()
     quality.ssao = settings.value("render/ssao", quality.ssao).toBool();
     quality.bloom = settings.value("render/bloom", quality.bloom).toBool();
     quality.fxaa = settings.value("render/fxaa", quality.fxaa).toBool();
+    render->addAction(tr("&Bake lighting probes"), this, &MainWindow::bakeProbes);
+    render->addSeparator();
     QMenu* qualityMenu = render->addMenu(tr("&Quality"));
     auto toggles = std::make_shared<std::array<QAction*, 3>>(); // SSAO, bloom, FXAA
     for (int i = 0; i < 4; ++i) {
@@ -707,6 +715,8 @@ void MainWindow::buildDocks()
     outputsForm_ = makeSection(tr("Outputs (entity I/O)"), "Script");
     reverbForm_ = makeSection(tr("Reverb zone"), "Sound");
     interiorForm_ = makeSection(tr("Interior"), "Rendering");
+    reflectionForm_ = makeSection(tr("Reflection probe"), "Rendering");
+    irradianceForm_ = makeSection(tr("Irradiance volume"), "Rendering");
     ambienceForm_ = makeSection(tr("Ambience zone"), "Sound");
     pickupForm_ = makeSection(tr("Pickup"), "General");
     waterForm_ = makeSection(tr("Water"), "Rendering");
@@ -1379,6 +1389,68 @@ void MainWindow::buildDocks()
         connect(interiorFade_, &QDoubleSpinBox::valueChanged, this, [setProp, number](double v) { setProp("fade", number(v)); });
         connect(interiorPreset_, &QComboBox::currentTextChanged, this, [setProp](const QString& t) { setProp("preset", t.toStdString()); });
         connect(interiorAmount_, &QDoubleSpinBox::valueChanged, this, [setProp, number](double v) { setProp("amount", number(v)); });
+    }
+    {
+        // Baked lighting probes (engine/Probes.h): reflection probes and irradiance volumes.
+        auto spin = [this](double lo, double hi, double step, int decimals, const QString& suffix, const QString& tip) {
+            auto* box = new QDoubleSpinBox(boxPanel_);
+            box->setRange(lo, hi);
+            box->setSingleStep(step);
+            box->setDecimals(decimals);
+            box->setSuffix(suffix);
+            box->setKeyboardTracking(false);
+            box->setToolTip(tip);
+            return box;
+        };
+        auto setProp = [this](const char* type, const char* key, const std::string& value) {
+            engine::Entity* e = selectedEntity();
+            if (!e || e->type != type || e->properties[key] == value)
+                return false;
+            e->properties[key] = value;
+            markDirty();
+            return true;
+        };
+        auto number = [](double v) { return QString::number(v, 'g', 4).toStdString(); };
+        reflFade_ = spin(0.0, 20.0, 0.25, 2, tr(" m"), tr("Blends in over this distance inside the box edges"));
+        reflIntensity_ = spin(0.0, 10.0, 0.05, 2, QString(), tr("Brightness of the reflections (applies at once)"));
+        reflParallax_ = new QCheckBox(tr("Box projection"), boxPanel_);
+        reflParallax_->setToolTip(tr("Reflections fit the box (rooms); off for open areas"));
+        reflResolution_ = new QComboBox(boxPanel_);
+        reflResolution_->addItems({"64", "128", "256"});
+        reflResolution_->setToolTip(tr("Captured face size in pixels"));
+        reflectionForm_->addRow(tr("Blend distance"), reflFade_);
+        reflectionForm_->addRow(tr("Intensity"), reflIntensity_);
+        reflectionForm_->addRow(QString(), reflParallax_);
+        reflectionForm_->addRow(tr("Resolution"), reflResolution_);
+        reflectionForm_->addRow(QString(), new QLabel(tr("Captured at the middle of the box: Render > Bake lighting probes"), boxPanel_));
+        connect(reflFade_, &QDoubleSpinBox::valueChanged, this, [setProp, number](double v) { setProp("reflection_probe", "fade", number(v)); });
+        connect(reflParallax_, &QCheckBox::toggled, this, [setProp](bool on) { setProp("reflection_probe", "parallax", on ? "1" : "0"); });
+        connect(reflResolution_, &QComboBox::currentTextChanged, this,
+                [setProp](const QString& t) { setProp("reflection_probe", "resolution", t.toStdString()); });
+        connect(reflIntensity_, &QDoubleSpinBox::valueChanged, this, [this, setProp, number](double v) {
+            if (setProp("reflection_probe", "intensity", number(v)))
+                if (engine::Entity* e = selectedEntity())
+                    applyProbeIntensity(e->name, static_cast<float>(v));
+        });
+        irrSpacing_ = spin(0.25, 50.0, 0.25, 2, tr(" m"), tr("Distance between the light samples (finer = longer bake)"));
+        irrFade_ = spin(0.0, 20.0, 0.25, 2, tr(" m"), tr("Blends in over this distance inside the box edges"));
+        irrIntensity_ = spin(0.0, 10.0, 0.05, 2, QString(), tr("Brightness of the baked light (applies at once)"));
+        irrPoints_ = new QLabel(boxPanel_);
+        irrPoints_->setObjectName("dim");
+        irradianceForm_->addRow(tr("Spacing"), irrSpacing_);
+        irradianceForm_->addRow(tr("Blend distance"), irrFade_);
+        irradianceForm_->addRow(tr("Intensity"), irrIntensity_);
+        irradianceForm_->addRow(QString(), irrPoints_);
+        connect(irrSpacing_, &QDoubleSpinBox::valueChanged, this, [this, setProp, number](double v) {
+            if (setProp("irradiance_volume", "spacing", number(v)))
+                refreshProperties();
+        });
+        connect(irrFade_, &QDoubleSpinBox::valueChanged, this, [setProp, number](double v) { setProp("irradiance_volume", "fade", number(v)); });
+        connect(irrIntensity_, &QDoubleSpinBox::valueChanged, this, [this, setProp, number](double v) {
+            if (setProp("irradiance_volume", "intensity", number(v)))
+                if (engine::Entity* e = selectedEntity())
+                    applyProbeIntensity(e->name, static_cast<float>(v));
+        });
     }
     {
         // Ambience zone (type "ambience"): an .ambience set heard inside its volume.
@@ -2629,6 +2701,31 @@ void MainWindow::refreshProperties()
         ambienceFade_->setValue(prop("fade", "4").toDouble());
         ambienceOutside_->setValue(prop("outside", "0").toDouble());
     }
+    if (e && (e->type == "reflection_probe" || e->type == "irradiance_volume")) {
+        const QSignalBlocker b1(reflFade_), b2(reflIntensity_), b3(reflParallax_), b4(reflResolution_), b5(irrSpacing_), b6(irrFade_),
+            b7(irrIntensity_);
+        auto prop = [e](const char* key, const char* fallback) {
+            const auto it = e->properties.find(key);
+            return QString::fromStdString(it == e->properties.end() || it->second.empty() ? std::string(fallback) : it->second);
+        };
+        reflFade_->setValue(prop("fade", "0.5").toDouble());
+        reflIntensity_->setValue(prop("intensity", "1").toDouble());
+        reflParallax_->setChecked(prop("parallax", "1") != "0");
+        reflResolution_->setCurrentText(prop("resolution", "128"));
+        irrSpacing_->setValue(prop("spacing", "2").toDouble());
+        irrFade_->setValue(prop("fade", "0.5").toDouble());
+        irrIntensity_->setValue(prop("intensity", "1").toDouble());
+        if (e->type == "irradiance_volume") {
+            engine::Scene one;
+            one.entities.push_back(*e);
+            const auto volumes = engine::irradianceVolumesToBake(one);
+            if (!volumes.empty()) {
+                const glm::ivec3 d = volumes[0].dims;
+                irrPoints_->setText(tr("%1 x %2 x %3 = %4 light samples (6 renders each, x2 bounces)")
+                                        .arg(d.x).arg(d.y).arg(d.z).arg(d.x * d.y * d.z));
+            }
+        }
+    }
     if (e && e->type == "interior") {
         const QSignalBlocker b1(interiorSky_), b2(interiorFog_), b3(interiorFade_), b4(interiorPreset_), b5(interiorAmount_);
         auto prop = [e](const char* key, const char* fallback) {
@@ -3366,7 +3463,8 @@ void MainWindow::addEntity(const QString& type)
     engine::Entity e;
     e.type = type.toStdString();
     e.name = engine::uniqueNodeName(scene_, (type == "enemy" ? "Enemy " : type == "sound" ? "Sound " : type == "particle" ? "Effect " : type == "light" ? "Light " :
-                                             type == "trigger" ? "Trigger " : type == "relay" ? "Relay " : type == "reverb" ? "Reverb " : type == "ambience" ? "Ambience " : type == "interior" ? "Interior " :
+                                             type == "trigger" ? "Trigger " : type == "relay" ? "Relay " : type == "reverb" ? "Reverb " : type == "ambience" ? "Ambience " : type == "interior" ? "Interior " : type == "reflection_probe" ? "Reflection probe " :
+                                             type == "irradiance_volume" ? "Irradiance volume " :
                                              type == "water" ? "Water " : "Entity ") +
                                                 std::to_string(scene_.entities.size() + 1));
     if (type == "sound") {
@@ -3419,6 +3517,17 @@ void MainWindow::addEntity(const QString& type)
         e.size = {12.0f, 1.5f, 6.0f};
         e.color = {0.16f, 0.2f, 0.17f}; // murky green-brown
         e.position.y = -1.4f;           // surface 10 cm above the ground plane; lower it into a dug bed
+    } else if (type == "reflection_probe") {
+        e.size = {8.0f, 3.0f, 8.0f};
+        e.color = {0.4f, 0.9f, 1.0f};
+        e.properties["fade"] = "0.5";
+        e.properties["parallax"] = "1";
+        e.properties["resolution"] = "128";
+    } else if (type == "irradiance_volume") {
+        e.size = {8.0f, 3.0f, 8.0f};
+        e.color = {1.0f, 0.85f, 0.35f};
+        e.properties["spacing"] = "2";
+        e.properties["fade"] = "0.5";
     } else if (type == "interior") {
         e.size = {8.0f, 3.0f, 8.0f};
         e.color = {0.85f, 0.55f, 0.25f};
@@ -4846,6 +4955,10 @@ void MainWindow::updateDetailsVisibility()
             relevant = e != nullptr && e->type == "reverb";
         if (d.form == interiorForm_)
             relevant = e != nullptr && e->type == "interior";
+        if (d.form == reflectionForm_)
+            relevant = e != nullptr && e->type == "reflection_probe";
+        if (d.form == irradianceForm_)
+            relevant = e != nullptr && e->type == "irradiance_volume";
         if (d.form == ambienceForm_)
             relevant = e != nullptr && e->type == "ambience";
         if (d.form == waterForm_)
@@ -5308,4 +5421,70 @@ void MainWindow::refreshTexturePanel()
         uvSpins_[i]->setEnabled(b != nullptr);
         uvSpins_[i]->blockSignals(false);
     }
+}
+
+void MainWindow::applyProbeIntensity(const std::string& name, float intensity)
+{
+    if (!scene_.probes)
+        return;
+    auto copy = std::make_shared<engine::ProbeSet>(*scene_.probes);
+    for (engine::ReflectionProbe& p : copy->reflections)
+        if (p.shape.name == name)
+            p.intensity = intensity;
+    for (engine::IrradianceVolume& v : copy->volumes)
+        if (v.shape.name == name)
+            v.intensity = intensity;
+    scene_.probes = copy;
+    viewport_->update();
+}
+
+void MainWindow::bakeProbes()
+{
+    if (currentFile_.isEmpty()) {
+        QMessageBox::information(this, tr("Bake lighting probes"), tr("Save the level first: the probes are stored next to it (level.probes)."));
+        return;
+    }
+    auto baker = std::make_shared<engine::ProbeBaker>(scene_);
+    if (baker->finished()) {
+        QMessageBox::information(this, tr("Bake lighting probes"),
+                                 tr("The level has no reflection probes or irradiance volumes (Edit > Add reflection probe / Add irradiance volume)."));
+        return;
+    }
+    auto* progress = new QProgressDialog(tr("Baking lighting probes (%1 captures)...").arg(baker->total()), tr("Cancel"), 0, baker->total(), this);
+    progress->setWindowModality(Qt::WindowModal); // the scene must not change while it is captured
+    progress->setMinimumDuration(0);
+    progress->setAttribute(Qt::WA_DeleteOnClose);
+    auto* timer = new QTimer(progress);
+    const QString level = currentFile_;
+    const auto started = std::make_shared<QElapsedTimer>();
+    started->start();
+    connect(timer, &QTimer::timeout, this, [this, timer, progress, baker, level, started] {
+        if (progress->wasCanceled()) {
+            timer->stop();
+            viewport_->bakeStop(*baker);
+            appendLog(tr("Probe bake cancelled"), 1);
+            progress->close();
+            return;
+        }
+        viewport_->bakeStep(*baker, 80.0); // short slices: the window keeps repainting
+        progress->setValue(baker->done());
+        if (!baker->finished())
+            return;
+        timer->stop();
+        const std::filesystem::path file = engine::probeFile(level.toStdWString());
+        std::string error;
+        if (engine::saveProbes(baker->result(), file, &error)) {
+            scene_.probes = std::make_shared<engine::ProbeSet>(baker->result());
+            appendLog(tr("Baked %1 probe captures in %2 s into %3")
+                          .arg(baker->total())
+                          .arg(static_cast<double>(started->elapsed()) / 1000.0, 0, 'f', 1)
+                          .arg(QString::fromStdWString(file.wstring())),
+                      0);
+        } else {
+            QMessageBox::warning(this, tr("Bake lighting probes"), QString::fromStdString(error));
+        }
+        progress->close();
+        viewport_->update();
+    });
+    timer->start(0);
 }

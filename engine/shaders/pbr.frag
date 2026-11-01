@@ -64,6 +64,7 @@ uniform vec3 uOverlaySunDir;   // overlay: sun direction in view space
 out vec4 fragColor;
 
 #include "lights.glsl"
+#include "probes.glsl"
 
 float gridLines(vec3 p, vec3 n) {
     vec2 uv = abs(n.y) > 0.5 ? p.xz : (abs(n.x) > 0.5 ? p.zy : p.xy);
@@ -349,8 +350,17 @@ void main() {
     vec3 nWorld = uOverlay ? uEnvRotation * n : n;
     vec3 rWorld = uOverlay ? uEnvRotation * reflect(-v, n) : reflect(-v, n);
     float maxMip = uShadowParams.w;
-    vec3 irradiance = textureLod(uEnvMap, nWorld, maxMip).rgb;
-    vec3 prefiltered = textureLod(uEnvMap, rWorld, rough * maxMip).rgb;
+    // Sky light (dimmed inside interiors), replaced by baked probes where there are any.
+    vec3 irradiance = textureLod(uEnvMap, nWorld, maxMip).rgb * uGroundColor.w * interiorSky;
+    vec3 prefiltered = textureLod(uEnvMap, rWorld, rough * maxMip).rgb * uGroundColor.w * interiorSky;
+    {
+        vec3 probePos = uOverlay ? uCameraPos.xyz : vWorldPos;
+        float w;
+        vec3 probeDiffuse = probeIrradiance(probePos, nWorld, w);
+        irradiance = mix(irradiance, probeDiffuse, w);
+        vec3 probeSpecular = probeReflection(probePos, rWorld, rough, w);
+        prefiltered = mix(prefiltered, probeSpecular, w);
+    }
     vec2 brdf = texture(uBrdfLut, vec2(nv, rough)).rg;
     vec3 Fa = fresnelRoughness(nv, f0, rough);
     float occlusion = ao;
@@ -359,7 +369,7 @@ void main() {
     // Direct light leaks less into crevices than sky light: soften AO on the sun term.
     color *= mix(1.0, occlusion, 0.3);
     vec3 ambient = ((1.0 - Fa) * (1.0 - metal) * albedo * irradiance + prefiltered * (Fa * brdf.x + brdf.y)) * occlusion;
-    color += ambient * uGroundColor.w * interiorSky;
+    color += ambient;
     color += albedo * (1.0 - metal) * vec3(0.7, 0.75, 0.9) * uWeather.y * 0.45 * skyOpen * interiorSky * (0.4 + 0.6 * max(nWorld.y, 0.0)); // lightning
 
     vec3 emissive = pow(max(uEmissiveColor, vec3(0.0)), vec3(2.2));
