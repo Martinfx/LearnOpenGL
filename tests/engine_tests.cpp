@@ -1837,6 +1837,78 @@ void testEntityIO()
     check(engine::renameNode(s, "Lamp", "Hall lamp") && s.entities[1].outputs[0].target == "Hall lamp", "rename updates I/O targets");
 }
 
+void testTimeOfDay()
+{
+    engine::TimeOfDay t;
+    t.latitude = 50.0f;
+    t.dayOfYear = 172;
+    // Summer solstice at 50 N: the sun culminates at 90 - 50 + 23.44 = 63.4 degrees, in the south (+Z).
+    const glm::vec3 noon = engine::sunPosition(t, 12.0f);
+    check(std::abs(std::asin(noon.y) * 57.2958f - 63.44f) < 0.5f, "noon altitude " + std::to_string(std::asin(noon.y) * 57.2958f));
+    check(noon.z > 0.1f && std::abs(noon.x) < 1e-3f, "noon sun in the south");
+    check(engine::sunPosition(t, 0.0f).y < 0.0f, "sun below the horizon at midnight");
+    check(engine::sunPosition(t, 6.0f).x > 0.5f, "morning sun in the east");
+    check(engine::sunPosition(t, 18.0f).x < -0.5f, "evening sun in the west");
+    t.dayOfYear = 355; // winter: lower noon sun, sunrise after 07:00
+    check(engine::sunPosition(t, 12.0f).y < noon.y - 0.4f, "winter noon lower");
+    check(engine::sunPosition(t, 7.0f).y < 0.0f, "winter: dark at 07:00");
+    t.moonPhase = 0.5f; // full moon is up at midnight, opposite the sun
+    check(engine::moonPosition(t, 0.0f).y > 0.3f, "full moon high at midnight in winter");
+    check(glm::dot(engine::moonPosition(t, 0.0f), engine::sunPosition(t, 0.0f)) < -0.9f, "full moon opposite the sun");
+
+    // Weather keys interpolate and wrap around midnight.
+    std::vector<engine::WeatherKey> keys(2);
+    keys[0].hour = 22.0f;
+    keys[0].rain = 1.0f;
+    keys[1].hour = 6.0f;
+    keys[1].rain = 0.0f;
+    check(std::abs(engine::weatherAt(keys, 2.0f).rain - 0.5f) < 1e-3f, "weather wraps midnight");
+    check(engine::weatherAt(keys, 6.0f).rain < 1e-4f && engine::weatherAt(keys, 22.0f).rain > 0.999f, "weather at keys");
+    check(engine::weatherAt(keys, 14.0f).rain > 0.4f && engine::weatherAt(keys, 14.0f).rain < 0.6f, "weather between keys");
+
+    // Lighting: authored at noon, red sunset, dark night lit by the moon; off = untouched.
+    engine::Environment env;
+    env.time.enabled = true;
+    env.time.dayOfYear = 172;
+    env.time.hour = 13.0f;
+    engine::SkyState sky;
+    const engine::Environment day = engine::environmentAt(env, {0, -1, 0}, &sky);
+    check(sky.night < 0.01f && sky.lightDirection.y < -0.7f, "day light from above");
+    check(day.sunIntensity > env.sunIntensity * 0.8f, "noon sun nearly full");
+    env.time.hour = 19.6f;
+    const engine::Environment dusk = engine::environmentAt(env, {0, -1, 0}, &sky);
+    check(dusk.sunColor.b < dusk.sunColor.r * 0.8f && sky.twilight > 0.3f, "sunset is red");
+    env.time.hour = 0.5f;
+    const engine::Environment night = engine::environmentAt(env, {0, -1, 0}, &sky);
+    check(sky.night > 0.99f && sky.stars > 0.9f, "night with stars");
+    check(night.skyZenith.b < day.skyZenith.b * 0.5f && night.sunIntensity < 0.2f, "night is dark");
+    env.time.keys = keys;
+    check(std::abs(engine::environmentAt(env, {0, -1, 0}).rain - 0.768f) < 0.01f, "weather keys drive rain");
+    env.time.enabled = false;
+    check(engine::environmentAt(env, {1, -1, 0}, &sky).sunIntensity == env.sunIntensity &&
+              std::abs(sky.lightDirection.x - 0.7071f) < 1e-3f, "cycle off: authored sun");
+
+    // Saved with the level.
+    engine::Scene s = flatFloor();
+    s.environment.time.enabled = true;
+    s.environment.time.hour = 21.25f;
+    s.environment.time.dayMinutes = 30.0f;
+    s.environment.time.latitude = 56.0f;
+    s.environment.time.dayOfYear = 280;
+    s.environment.time.moonPhase = 0.25f;
+    s.environment.time.keys = keys;
+    std::string err;
+    check(engine::saveScene(s, "time_of_day.level", &err), "save time: " + err);
+    engine::Scene l;
+    check(engine::loadScene(l, "time_of_day.level", &err), "load time: " + err);
+    const engine::TimeOfDay& r = l.environment.time;
+    check(r.enabled && r.hour == 21.25f && r.dayMinutes == 30.0f && r.latitude == 56.0f && r.dayOfYear == 280 && r.moonPhase == 0.25f,
+          "time of day round trip");
+    check(r.keys.size() == 2 && r.keys[0].hour == 22.0f && r.keys[0].rain == 1.0f, "weather keys round trip");
+    char text[8];
+    check(std::string(engine::formatHour(21.25f, text)) == "21:15" && std::string(engine::formatHour(24.5f, text)) == "00:30", "format hour");
+}
+
 int main()
 {
     // Hermetic cook cache for the tests.
@@ -1888,6 +1960,7 @@ int main()
     testAnomalies();
     testPhysicsProps();
     testEntityIO();
+    testTimeOfDay();
     std::printf(failures ? "%d test(s) failed\n" : "all tests passed\n", failures);
     return failures ? 1 : 0;
 }

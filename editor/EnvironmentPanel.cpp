@@ -4,7 +4,15 @@
 #include "Vec3Editor.h"
 #include "AssetPaths.h"
 
+#include <QCheckBox>
 #include <QColorDialog>
+#include <QElapsedTimer>
+#include <QHeaderView>
+#include <QSlider>
+#include <QSpinBox>
+#include <QTableWidget>
+#include <QTimer>
+#include <QToolButton>
 #include <QComboBox>
 #include <QDoubleSpinBox>
 #include <QFileDialog>
@@ -17,6 +25,9 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <glm/geometric.hpp>
+
+#include <algorithm>
+#include <cmath>
 
 namespace {
 
@@ -148,6 +159,8 @@ EnvironmentPanel::EnvironmentPanel(engine::Scene* scene, QWidget* parent)
     });
     addColor(form, tr("Color"), &E::sunColor);
     addFloat(form, tr("Intensity"), &E::sunIntensity, 0, 20, 0.1, 2);
+    section(tr("Time of day"));
+    buildTimeOfDay(form);
     section(tr("Sky"));
     addColor(form, tr("Zenith"), &E::skyZenith);
     addColor(form, tr("Horizon"), &E::skyHorizon);
@@ -349,6 +362,7 @@ void EnvironmentPanel::refresh()
     windSound_->setPath(QString::fromStdU16String(scene_->environment.windSound.u16string()));
     reverb_->setCurrentText(QString::fromStdString(scene_->environment.reverb));
     ambience_->setPath(QString::fromStdU16String(scene_->environment.ambience.u16string()));
+    refreshTimeOfDay();
     updating_ = false;
 }
 
@@ -364,6 +378,7 @@ void EnvironmentPanel::applyPreset(int index)
     env.reverb = scene_->environment.reverb;
     env.ambience = scene_->environment.ambience;
     env.reverbAmount = scene_->environment.reverbAmount;
+    env.time = scene_->environment.time; // and not the day/night cycle
     scene_->environment = env;
     scene_->sunDirection = list[static_cast<std::size_t>(index)].sun;
     refresh();
@@ -373,4 +388,215 @@ void EnvironmentPanel::applyPreset(int index)
 void EnvironmentPanel::changed()
 {
     emit edited();
+}
+
+void EnvironmentPanel::buildTimeOfDay(QFormLayout* form)
+{
+    using T = engine::TimeOfDay;
+    timeEnabled_ = new QCheckBox(tr("Day/night cycle"), this);
+    timeEnabled_->setToolTip(tr("The sun and moon follow their real path for the latitude and date; sky, light, fog and "
+                                "exposure follow the time. The colors above are the look of noon on a clear day. "
+                                "Off: the sun stays at Direction."));
+    form->addRow(QString(), timeEnabled_);
+    connect(timeEnabled_, &QCheckBox::toggled, this, [this](bool on) {
+        if (updating_)
+            return;
+        scene_->environment.time.enabled = on;
+        changed();
+    });
+
+    // Time: slider (start time of the level) and a play button that runs the cycle in the viewport.
+    auto* row = new QWidget(this);
+    auto* rowLayout = new QHBoxLayout(row);
+    rowLayout->setContentsMargins(0, 0, 0, 0);
+    hourSlider_ = new QSlider(Qt::Horizontal, row);
+    hourSlider_->setRange(0, 24 * 60 - 1);
+    hourSlider_->setPageStep(60);
+    hourSlider_->setToolTip(tr("Time of day when the level starts"));
+    hourLabel_ = new QLabel(QStringLiteral("12:00"), row);
+    hourLabel_->setMinimumWidth(40);
+    play_ = new QToolButton(row);
+    play_->setText(QStringLiteral("▶"));
+    play_->setCheckable(true);
+    play_->setToolTip(tr("Preview: runs a whole day in 24 seconds in the viewport (the start time is kept)"));
+    rowLayout->addWidget(hourSlider_, 1);
+    rowLayout->addWidget(hourLabel_);
+    rowLayout->addWidget(play_);
+    form->addRow(tr("Time"), row);
+    connect(hourSlider_, &QSlider::valueChanged, this, [this](int minutes) {
+        if (updating_)
+            return;
+        setHourPreview(static_cast<float>(minutes) / 60.0f);
+        if (!hourSlider_->isSliderDown() && !play_->isChecked())
+            changed(); // keyboard / click: one undo step
+    });
+    connect(hourSlider_, &QSlider::sliderReleased, this, [this] {
+        if (!play_->isChecked())
+            changed();
+    });
+    playTimer_ = new QTimer(this);
+    playTimer_->setInterval(33);
+    auto* elapsed = new QElapsedTimer();
+    connect(this, &QObject::destroyed, this, [elapsed] { delete elapsed; });
+    connect(playTimer_, &QTimer::timeout, this, [this, elapsed] {
+        const float seconds = static_cast<float>(elapsed->restart()) / 1000.0f;
+        float hour = std::fmod(scene_->environment.time.hour + seconds, 24.0f); // 1 game hour per second
+        setHourPreview(hour);
+        updating_ = true;
+        hourSlider_->setValue(static_cast<int>(hour * 60.0f));
+        updating_ = false;
+    });
+    connect(play_, &QToolButton::toggled, this, [this, elapsed](bool on) {
+        play_->setText(on ? QStringLiteral("■") : QStringLiteral("▶"));
+        if (on) {
+            playStartHour_ = scene_->environment.time.hour;
+            if (!scene_->environment.time.enabled) {
+                scene_->environment.time.enabled = true; // preview only; restored on stop
+                timeEnabled_->setProperty("previewEnabled", true);
+            }
+            elapsed->start();
+            playTimer_->start();
+        } else {
+            playTimer_->stop();
+            if (timeEnabled_->property("previewEnabled").toBool()) {
+                scene_->environment.time.enabled = false;
+                timeEnabled_->setProperty("previewEnabled", false);
+            }
+            setHourPreview(playStartHour_);
+            updating_ = true;
+            hourSlider_->setValue(static_cast<int>(playStartHour_ * 60.0f));
+            updating_ = false;
+        }
+    });
+
+    auto addTime = [&](const QString& label, float T::*member, double min, double max, double step, int decimals, const QString& tip) {
+        auto* spin = new QDoubleSpinBox(this);
+        spin->setRange(min, max);
+        spin->setSingleStep(step);
+        spin->setDecimals(decimals);
+        spin->setToolTip(tip);
+        spin->setKeyboardTracking(false);
+        form->addRow(label, spin);
+        timeFloats_.emplace_back(spin, member);
+        connect(spin, &QDoubleSpinBox::valueChanged, this, [this, member](double v) {
+            if (updating_)
+                return;
+            scene_->environment.time.*member = static_cast<float>(v);
+            changed();
+        });
+    };
+    addTime(tr("Day length"), &T::dayMinutes, 0, 1440, 1, 0, tr("Real minutes per game day in the game; 0 = the time stands still"));
+    addTime(tr("Latitude"), &T::latitude, -89, 89, 1, 1, tr("Degrees north: how high the sun climbs and how long days are"));
+    dayOfYear_ = new QSpinBox(this);
+    dayOfYear_->setRange(1, 365);
+    dayOfYear_->setToolTip(tr("Day of the year (172 = summer solstice, 355 = winter): season and day length"));
+    dayOfYear_->setKeyboardTracking(false);
+    form->addRow(tr("Day of year"), dayOfYear_);
+    connect(dayOfYear_, &QSpinBox::valueChanged, this, [this](int v) {
+        if (updating_)
+            return;
+        scene_->environment.time.dayOfYear = v;
+        changed();
+    });
+    addTime(tr("North"), &T::north, -180, 180, 5, 0, tr("Turns the compass: where the sun rises in the level (0 = north is -Z)"));
+    addTime(tr("Moon phase"), &T::moonPhase, 0, 1, 0.05, 2, tr("0 new moon, 0.5 full moon: the moon's shape, position and light"));
+    addTime(tr("Night brightness"), &T::nightBrightness, 0, 3, 0.05, 2, tr("Moonlight and night sky; 0 = pitch black nights"));
+    addTime(tr("Cloud shadows"), &T::cloudShadows, 0, 1, 0.05, 2, tr("How dark the shadows of drifting clouds are on the ground"));
+
+    // Weather by hour: interpolated keys (wrap around midnight).
+    weather_ = new QTableWidget(0, 6, this);
+    weather_->setHorizontalHeaderLabels({tr("Hour"), tr("Clouds"), tr("Fog"), tr("Rain"), tr("Wind"), tr("Exposure")});
+    weather_->verticalHeader()->setVisible(false);
+    weather_->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    weather_->setMinimumHeight(110);
+    weather_->setToolTip(tr("Weather keys by hour (with the day/night cycle): clouds, fog density, rain, wind and exposure "
+                            "blend from key to key. No keys = the values below all day."));
+    form->addRow(tr("Weather"), weather_);
+    connect(weather_, &QTableWidget::cellChanged, this, [this] {
+        if (!updating_)
+            readWeatherTable();
+    });
+    auto* buttons = new QWidget(this);
+    auto* buttonsLayout = new QHBoxLayout(buttons);
+    buttonsLayout->setContentsMargins(0, 0, 0, 0);
+    auto* addKey = new QPushButton(tr("Add key at this time"), buttons);
+    auto* removeKey = new QPushButton(tr("Remove"), buttons);
+    buttonsLayout->addWidget(addKey);
+    buttonsLayout->addWidget(removeKey);
+    form->addRow(QString(), buttons);
+    connect(addKey, &QPushButton::clicked, this, [this] {
+        const engine::Environment current = engine::environmentAt(scene_->environment, scene_->sunDirection);
+        engine::WeatherKey k;
+        k.hour = std::round(scene_->environment.time.hour * 4.0f) / 4.0f;
+        k.cloudCover = current.cloudCover;
+        k.fogDensity = current.fogDensity;
+        k.rain = current.rain;
+        k.wind = current.wind;
+        k.exposure = scene_->environment.time.keys.empty() ? scene_->environment.exposure
+                                                           : engine::weatherAt(scene_->environment.time.keys, k.hour).exposure;
+        scene_->environment.time.keys.push_back(k);
+        std::sort(scene_->environment.time.keys.begin(), scene_->environment.time.keys.end(),
+                  [](const engine::WeatherKey& a, const engine::WeatherKey& b) { return a.hour < b.hour; });
+        refresh();
+        changed();
+    });
+    connect(removeKey, &QPushButton::clicked, this, [this] {
+        const int row = weather_->currentRow();
+        auto& keys = scene_->environment.time.keys;
+        if (row < 0 || row >= static_cast<int>(keys.size()))
+            return;
+        keys.erase(keys.begin() + row);
+        refresh();
+        changed();
+    });
+}
+
+void EnvironmentPanel::setHourPreview(float hour)
+{
+    scene_->environment.time.hour = hour;
+    char text[8];
+    hourLabel_->setText(QString::fromLatin1(engine::formatHour(hour, text)));
+    emit previewed();
+}
+
+void EnvironmentPanel::readWeatherTable()
+{
+    std::vector<engine::WeatherKey> keys;
+    for (int r = 0; r < weather_->rowCount(); ++r) {
+        auto value = [&](int c, float fallback) {
+            const QTableWidgetItem* item = weather_->item(r, c);
+            bool ok = false;
+            const float v = item ? item->text().toFloat(&ok) : 0.0f;
+            return ok ? v : fallback;
+        };
+        engine::WeatherKey k;
+        k.hour = std::clamp(value(0, k.hour), 0.0f, 24.0f);
+        k.cloudCover = std::clamp(value(1, k.cloudCover), 0.0f, 1.0f);
+        k.fogDensity = std::clamp(value(2, k.fogDensity), 0.0f, 0.5f);
+        k.rain = std::clamp(value(3, k.rain), 0.0f, 1.0f);
+        k.wind = std::clamp(value(4, k.wind), 0.0f, 1.0f);
+        k.exposure = std::clamp(value(5, k.exposure), 0.05f, 10.0f);
+        keys.push_back(k);
+    }
+    scene_->environment.time.keys = keys;
+    changed();
+}
+
+void EnvironmentPanel::refreshTimeOfDay()
+{
+    const engine::TimeOfDay& t = scene_->environment.time;
+    timeEnabled_->setChecked(t.enabled);
+    hourSlider_->setValue(static_cast<int>(t.hour * 60.0f));
+    char text[8];
+    hourLabel_->setText(QString::fromLatin1(engine::formatHour(t.hour, text)));
+    for (auto& [spin, member] : timeFloats_)
+        spin->setValue(t.*member);
+    dayOfYear_->setValue(t.dayOfYear);
+    weather_->setRowCount(static_cast<int>(t.keys.size()));
+    for (int r = 0; r < static_cast<int>(t.keys.size()); ++r) {
+        const engine::WeatherKey& k = t.keys[static_cast<std::size_t>(r)];
+        const float values[6] = {k.hour, k.cloudCover, k.fogDensity, k.rain, k.wind, k.exposure};
+        for (int c = 0; c < 6; ++c)
+            weather_->setItem(r, c, new QTableWidgetItem(QString::number(static_cast<double>(values[c]), 'g', 4)));
+    }
 }

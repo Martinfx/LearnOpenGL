@@ -485,7 +485,9 @@ private:
     std::filesystem::path lutPath_;
 
     RenderQuality quality_;
-    const Environment* env_ = nullptr;  // of the scene being rendered
+    const Environment* env_ = nullptr;  // of the scene being rendered (resolvedEnv_ during render())
+    Environment resolvedEnv_;           // the scene's environment at its time of day
+    SkyState sky_;                      // light direction, moon, stars of resolvedEnv_
     float time_ = 0.0f;
     std::vector<glm::vec4> distortions_;  // this frame: uv center, radius (uv height), signed strength (<0 lens)
     float aspect_ = 1.0f;

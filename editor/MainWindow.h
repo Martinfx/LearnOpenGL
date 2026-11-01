@@ -285,7 +285,7 @@ private:
     std::vector<engine::ScriptProperty> scriptProps_;
     std::vector<std::pair<QDoubleSpinBox*, float engine::PlayerSettings::*>> playerSpins_;
     QCheckBox* flashlightCheck_ = nullptr;
-    QCheckBox* characterFlashlight_ = nullptr;  // entity property "flashlight"
+    QComboBox* characterFlashlight_ = nullptr;  // entity property "flashlight": none / "1" / "night"
     QCheckBox* flashlightShadowsCheck_ = nullptr;
     QPushButton* flashlightColor_ = nullptr;
     // Navigation (Level details): settings, build on the job system, viewport overlay.

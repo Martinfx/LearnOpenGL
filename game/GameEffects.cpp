@@ -149,7 +149,7 @@ void GameEffects::update(float dt, const engine::Scene& scene, const engine::Phy
 {
     if (rain_) {
         world_.setTransform(rain_, eye + glm::vec3(0.0f, 9.0f, 0.0f));
-        world_.setRateScale(rain_, scene.environment.rain);
+        world_.setRateScale(rain_, engine::environmentAt(scene.environment, scene.sunDirection).rain);
     }
     for (const auto& [entity, handle] : entityEffects_) // switched by Enable / Disable: no new particles while off
         if (entity < scene.entities.size())

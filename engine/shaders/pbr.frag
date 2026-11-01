@@ -318,6 +318,8 @@ void main() {
     vec3 diffuse = (1.0 - F) * (1.0 - metal) * albedo / PI;
     // Facing away from the sun: nothing to shadow (the sun term is zero anyway).
     float shadow = uOverlay || nl <= 0.0 ? 1.0 : sunShadow(vWorldPos, normalize(vNormal), nl);
+    if (!uOverlay && nl > 0.0)
+        shadow *= cloudShadow(vWorldPos);
     vec3 color = (diffuse + specular) * uSunColor.rgb * uSunDir.w * nl * shadow;
     if (uOverlay) // view space -> world
         color += localLights(uEnvRotation * vWorldPos + uCameraPos.xyz, uEnvRotation * n, uEnvRotation * normalize(vNormal), uEnvRotation * v,

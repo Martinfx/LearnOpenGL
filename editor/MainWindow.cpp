@@ -1050,15 +1050,19 @@ void MainWindow::buildDocks()
     characterForm->addRow(tr("Model scale"), modelScaleSpin_);
     characterForm->addRow(tr("Model yaw"), modelYawSpin_);
     characterForm->addRow(tr("Animation"), animationCombo_);
-    characterFlashlight_ = new QCheckBox(tr("Carries a lit flashlight"), boxPanel_);
-    characterFlashlight_->setToolTip(tr("A spot light from the eyes along the facing while the character lives (property flashlight = 1)"));
-    characterForm->addRow(QString(), characterFlashlight_);
-    connect(characterFlashlight_, &QCheckBox::toggled, this, [this](bool on) {
+    characterFlashlight_ = new QComboBox(boxPanel_);
+    characterFlashlight_->addItems({tr("None"), tr("Always on"), tr("On at night")});
+    characterFlashlight_->setToolTip(tr("A spot light from the eyes along the facing while the character lives "
+                                        "(property flashlight = 1, or \"night\": only after dusk with the day/night cycle)"));
+    characterForm->addRow(tr("Flashlight"), characterFlashlight_);
+    connect(characterFlashlight_, &QComboBox::currentIndexChanged, this, [this](int index) {
         engine::Entity* e = selectedEntity();
         if (!e)
             return;
-        if (on)
+        if (index == 1)
             e->properties["flashlight"] = "1";
+        else if (index == 2)
+            e->properties["flashlight"] = "night";
         else
             e->properties.erase("flashlight");
         markDirty();
@@ -1779,6 +1783,7 @@ void MainWindow::buildDocks()
         sunEdit_->setValue(scene_.sunDirection);
         markDirty();
     });
+    connect(environment_, &EnvironmentPanel::previewed, this, [this] { viewport_->update(); });
     auto* environmentDock = new QDockWidget(tr("Environment"), this);
     environmentDock->setObjectName("environment");
     auto* environmentScroll = new QScrollArea(environmentDock);
@@ -2801,11 +2806,11 @@ void MainWindow::refreshCharacter()
     animationCombo_->blockSignals(false);
     {
         const QSignalBlocker block(characterFlashlight_);
-        bool lit = false;
+        int lit = 0;
         if (e)
             if (const auto it = e->properties.find("flashlight"); it != e->properties.end())
-                lit = it->second == "1";
-        characterFlashlight_->setChecked(lit);
+                lit = it->second == "1" ? 1 : it->second == "night" ? 2 : 0;
+        characterFlashlight_->setCurrentIndex(lit);
         characterFlashlight_->setEnabled(e != nullptr);
     }
 }

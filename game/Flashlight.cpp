@@ -106,11 +106,15 @@ void Flashlight::fill(engine::RenderView& view) const
 
 void addCharacterFlashlights(const engine::Scene& scene, engine::RenderView& view)
 {
+    engine::SkyState sky;
+    engine::environmentAt(scene.environment, scene.sunDirection, &sky);
+    const bool dark = sky.night > 0.35f;
     for (const engine::Entity& e : scene.entities) {
         if (!e.alive)
             continue;
+        // "1" always on, "night" only after dusk (day/night cycle).
         const auto it = e.properties.find("flashlight");
-        if (it == e.properties.end() || it->second != "1")
+        if (it == e.properties.end() || !(it->second == "1" || (it->second == "night" && dark)))
             continue;
         const float yaw = glm::radians(e.yawDegrees);
         engine::LocalLight l;

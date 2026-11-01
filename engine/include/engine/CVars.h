@@ -65,7 +65,8 @@ public:
     // Names starting with `prefix` (variables and commands), for Tab completion.
     std::vector<std::string> complete(const std::string& prefix) const;
 
-    // `+name value` pairs from the command line (other arguments are left alone).
+    // `+name value` pairs from the command line (other arguments are left alone);
+    // `+command "args"` runs a console command.
     // Returns the arguments that were not consumed.
     std::vector<std::string> applyCommandLine(const std::vector<std::string>& args);
     // User config: `name "value"` lines of the CVarConfig variables.

@@ -164,8 +164,9 @@ void GameAudio::update(float dt, const engine::Scene& scene, glm::vec3 eye, glm:
     updateReverb(scene, eye);
     updateAmbience(dt, scene, eye);
     // Weather: louder than linear at low intensity so a drizzle is still heard.
-    audio_.setVolume(rain_, std::sqrt(std::clamp(scene.environment.rain, 0.0f, 1.0f)), 0.5f);
-    audio_.setVolume(wind_, std::sqrt(std::clamp(scene.environment.wind, 0.0f, 1.0f)), 0.5f);
+    const engine::Environment env = engine::environmentAt(scene.environment, scene.sunDirection); // weather keys by hour
+    audio_.setVolume(rain_, std::sqrt(std::clamp(env.rain, 0.0f, 1.0f)), 0.5f);
+    audio_.setVolume(wind_, std::sqrt(std::clamp(env.wind, 0.0f, 1.0f)), 0.5f);
     audio_.update(dt);
 }
 
@@ -353,7 +354,9 @@ void GameAudio::updateAmbience(float dt, const engine::Scene& scene, glm::vec3 e
     if (Ambience* level = find(scene.environment.ambience))
         level->weight = std::max(level->weight, 1.0f - covered);
 
-    const float night = engine::nightFactor(scene.sunDirection);
+    engine::SkyState sky;
+    engine::environmentAt(scene.environment, scene.sunDirection, &sky);
+    const float night = scene.environment.time.enabled ? sky.night : engine::nightFactor(scene.sunDirection);
     for (Ambience& a : ambiences_) {
         for (std::size_t i = 0; i < a.layers.size(); ++i)
             audio_.setVolume(a.layers[i], a.weight * engine::ambienceLayerVolume(a.set.layers[i], night), 0.3f);

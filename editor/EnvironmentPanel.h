@@ -21,6 +21,7 @@ public:
 
 signals:
     void edited();
+    void previewed(); // time of day playback: redraw only, nothing to save
 
 private:
     struct FloatField {
@@ -37,6 +38,10 @@ private:
     void addVec3(class QFormLayout* form, const QString& label, glm::vec3 engine::Environment::*member, double min, double max,
                  double step, const QString& tip);
     void exportNeutralLut();
+    void buildTimeOfDay(class QFormLayout* form);
+    void refreshTimeOfDay();
+    void setHourPreview(float hour); // slider label + viewport, no undo step
+    void readWeatherTable();
     void applyPreset(int index);
     void changed();
 
@@ -52,4 +57,14 @@ private:
     SoundPicker* ambience_ = nullptr;
     QComboBox* preset_ = nullptr;
     bool updating_ = false;
+    // Day/night cycle (Environment::time).
+    class QCheckBox* timeEnabled_ = nullptr;
+    class QSlider* hourSlider_ = nullptr;
+    class QLabel* hourLabel_ = nullptr;
+    class QToolButton* play_ = nullptr;
+    class QTimer* playTimer_ = nullptr;
+    float playStartHour_ = 12.0f;
+    std::vector<std::pair<QDoubleSpinBox*, float engine::TimeOfDay::*>> timeFloats_;
+    class QSpinBox* dayOfYear_ = nullptr;
+    class QTableWidget* weather_ = nullptr;
 };

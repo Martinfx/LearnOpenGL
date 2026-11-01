@@ -244,7 +244,12 @@ std::vector<std::string> CVarRegistry::applyCommandLine(const std::vector<std::s
     for (std::size_t i = 0; i < args.size(); ++i) {
         if (args[i].size() > 1 && args[i][0] == '+' && i + 1 < args.size()) {
             std::string error;
-            if (!set(args[i].substr(1), args[i + 1], &error, true))
+            const std::string name = args[i].substr(1);
+            if (!find(name) && commands_.count(name)) { // "+time 21:30" runs the console command
+                const ConsoleResult r = commands_[name].command(splitConsoleLine(args[i + 1]));
+                if (!r.ok)
+                    LOG_WARN("cvar", "Command line: %s", r.text.c_str());
+            } else if (!set(name, args[i + 1], &error, true))
                 LOG_WARN("cvar", "Command line: %s", error.c_str());
             ++i;
         } else {

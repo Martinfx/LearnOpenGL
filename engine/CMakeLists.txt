@@ -25,6 +25,7 @@ add_library(engine STATIC
     src/Lights.cpp
     src/EntityIO.cpp
     src/Ambience.cpp
+    src/TimeOfDay.cpp
     src/Scene.cpp
     src/JobSystem.cpp
     src/SceneGraph.cpp

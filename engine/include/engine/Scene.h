@@ -5,6 +5,7 @@
 #include "engine/NavMesh.h"
 #include "engine/TextureCook.h"
 #include "engine/Terrain.h"
+#include "engine/TimeOfDay.h"
 #include <cstdint>
 #include <filesystem>
 #include <glm/gtc/type_precision.hpp>
@@ -359,6 +360,8 @@ struct Environment {
     // Ambience set of the whole level (.ambience: looping layers and random far sounds,
     // engine/Ambience.h); "ambience" zone entities replace it where the listener is.
     std::filesystem::path ambience;
+    // Day/night cycle (engine/TimeOfDay.h); off = static sun (Scene::sunDirection).
+    TimeOfDay time;
 };
 
 // Folder in the scene hierarchy (no geometry), e.g. "Building A" or "Enemies".

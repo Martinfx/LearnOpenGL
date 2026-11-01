@@ -597,6 +597,20 @@ void ScriptSystem::Impl::bindApi()
         if (duck)
             duck(std::clamp(gain, 0.0f, 1.0f), std::max(0.0f, seconds.value_or(2.0f)));
     });
+    // Day/night cycle: game.time_of_day() -> hour 0..24, game.set_time(hour [, minutesPerDay]).
+    game.set_function("time_of_day", [this] { return scene.environment.time.hour; });
+    game.set_function("set_time", [this](float hour, sol::optional<float> dayMinutes) {
+        TimeOfDay& t = scene.environment.time;
+        t.hour = std::fmod(std::fmod(hour, 24.0f) + 24.0f, 24.0f);
+        if (dayMinutes)
+            t.dayMinutes = std::max(0.0f, *dayMinutes);
+        t.enabled = true;
+    });
+    game.set_function("is_night", [this] {
+        SkyState sky;
+        environmentAt(scene.environment, scene.sunDirection, &sky);
+        return sky.night > 0.5f;
+    });
     game.set_function("message", [this](const std::string& text) {
         if (message)
             message(text);

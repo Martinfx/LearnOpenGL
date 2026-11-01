@@ -32,6 +32,10 @@ struct SaveGame {
     std::vector<Prop> props;
     bool flashlightOn = false;
     float flashlightCharge = 1.0f;
+    // Day/night cycle: time of day (< 0 = not saved, keep the level's), clock speed, cycle on.
+    float timeOfDay = -1.0f;
+    float dayMinutes = 0.0f;
+    bool timeEnabled = false;
     std::vector<engine::ScriptSystem::EntityState> entities;
     std::vector<engine::ScriptSystem::PendingInput> pendingInputs; // entity I/O waiting for its delay
 

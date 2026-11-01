@@ -135,6 +135,14 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
             out << "ambience " << std::quoted(relative(e.ambience)) << '\n';
         if (e.reverb != d.reverb || e.reverbAmount != d.reverbAmount)
             out << "reverb " << std::quoted(e.reverb) << ' ' << e.reverbAmount << '\n';
+        const TimeOfDay& t = e.time;
+        const TimeOfDay dt;
+        if (t.enabled || t.cloudShadows != dt.cloudShadows || !t.keys.empty() || t.hour != dt.hour || t.dayMinutes != dt.dayMinutes)
+            out << "time_of_day " << (t.enabled ? 1 : 0) << ' ' << t.hour << ' ' << t.dayMinutes << ' ' << t.latitude << ' '
+                << t.dayOfYear << ' ' << t.north << ' ' << t.moonPhase << ' ' << t.nightBrightness << ' ' << t.cloudShadows << '\n';
+        for (const WeatherKey& k : t.keys)
+            out << "weather_key " << k.hour << ' ' << k.cloudCover << ' ' << k.fogDensity << ' ' << k.rain << ' ' << k.wind << ' '
+                << k.exposure << '\n';
     }
     if (!scene.map.image.empty())
         out << "map_image " << std::quoted(relative(scene.map.image)) << '\n';
@@ -422,6 +430,17 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                     p = std::filesystem::absolute(file).parent_path() / p;
                 result.environment.ambience = p.lexically_normal();
             }
+        } else if (key == "time_of_day") {
+            TimeOfDay& t = result.environment.time;
+            int enabled = 0;
+            ok = static_cast<bool>(ls >> enabled >> t.hour >> t.dayMinutes >> t.latitude >> t.dayOfYear >> t.north >> t.moonPhase >>
+                                   t.nightBrightness >> t.cloudShadows);
+            t.enabled = enabled != 0;
+        } else if (key == "weather_key") {
+            WeatherKey k;
+            ok = static_cast<bool>(ls >> k.hour >> k.cloudCover >> k.fogDensity >> k.rain >> k.wind >> k.exposure);
+            if (ok)
+                result.environment.time.keys.push_back(k);
         } else if (key == "reverb") {
             ok = static_cast<bool>(ls >> std::quoted(result.environment.reverb) >> result.environment.reverbAmount);
         } else if (key == "color_lut") {

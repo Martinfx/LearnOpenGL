@@ -15,6 +15,9 @@ layout(std140, binding = 1) uniform Environment {
     vec4 uCascadeSplits;   // view distances of the cascade ends, w: cascade count
     vec4 uViewport;        // width, height, 1/width, 1/height
     vec4 uShadowParams;    // x: depth bias, y: normal bias, z: texel size, w: env max mip
+    vec4 uMoonDir;         // xyz toward the moon, w: moon brightness 0..1
+    vec4 uSkyParams;       // x: stars 0..1, y: twilight glow, z: cloud shadows, w: 1 = time of day on
+    vec4 uSunPos;          // xyz toward the sun (the main light is the moon at night)
 };
 
 const float PI = 3.14159265;
@@ -60,30 +63,106 @@ float fbm(vec2 p) {
     return v;
 }
 
+// Stars: one random point per cell of a grid around the camera, twinkling a little.
+vec3 starField(vec3 dir) {
+    vec3 p = dir * 260.0;
+    vec3 cell = floor(p);
+    float h = hash12(cell.xy + cell.z * 17.31);
+    if (h < 0.985)
+        return vec3(0.0);
+    vec3 center = cell + vec3(hash12(cell.yz + 3.1), hash12(cell.zx + 7.7), hash12(cell.xy + 1.3));
+    float d = length(p - center);
+    float size = 0.10 + 0.25 * (h - 0.985) / 0.015;
+    float twinkle = 0.75 + 0.25 * sin(uSkyHorizon.w * 3.0 + h * 400.0);
+    vec3 tint = mix(vec3(0.75, 0.82, 1.0), vec3(1.0, 0.88, 0.75), hash12(cell.xz + 5.5));
+    return tint * smoothstep(size, 0.0, d) * twinkle * 0.6 * smoothstep(0.0, 0.15, dir.y);
+}
+
+// Moon disk lit from the sun's side (phases), with darker "seas".
+vec3 moonDisk(vec3 dir) {
+    vec3 m = normalize(uMoonDir.xyz);
+    float c = dot(dir, m);
+    const float radius = 0.018;
+    if (c < cos(radius * 1.6) || m.y < -0.05)
+        return vec3(0.0);
+    vec3 offset = (dir - m * c) / radius;
+    float r2 = dot(offset, offset);
+    vec3 glow = vec3(0.6, 0.7, 0.9) * 0.02 * uMoonDir.w * smoothstep(2.56, 0.0, r2);
+    if (r2 > 1.0)
+        return glow;
+    vec3 n = offset - m * sqrt(1.0 - r2);
+    float lit = smoothstep(-0.05, 0.1, dot(n, normalize(uSunPos.xyz)));
+    vec3 a = normalize(cross(m, vec3(0.0, 1.0, 0.0)) + 1e-4);
+    vec3 b = cross(a, m);
+    float seas = valueNoise(vec2(dot(offset, a), dot(offset, b)) * 2.5 + 3.0);
+    vec3 surface = vec3(0.95, 0.93, 0.88) * mix(0.55, 1.0, smoothstep(0.35, 0.6, seas));
+    return surface * (0.03 + 0.9 * lit) * smoothstep(1.0, 0.92, r2) + glow;
+}
+
 // Procedural sky: zenith/horizon gradient, ground below the horizon, sun disk
-// and glow, and a layer of clouds whose cover darkens the whole sky (overcast).
+// and glow, sunrise/sunset glow, stars and moon at night, and a layer of clouds
+// whose cover darkens the whole sky (overcast).
 vec3 skyColor(vec3 dir, bool withSun) {
     dir = normalize(dir);
-    vec3 sunDir = -normalize(uSunDir.xyz);
+    bool cycle = uSkyParams.w > 0.5;
+    vec3 sunDir = cycle ? normalize(uSunPos.xyz) : -normalize(uSunDir.xyz);
+    bool sunIsLight = !cycle || dot(sunDir, -normalize(uSunDir.xyz)) > 0.999;
     float cover = uSkyZenith.w;
     float up = dir.y;
     vec3 sky = mix(uSkyHorizon.rgb, uSkyZenith.rgb, pow(clamp(up, 0.0, 1.0), 0.45));
     vec3 ground = mix(uSkyHorizon.rgb, uGroundColor.rgb, clamp(-up * 4.0, 0.0, 1.0));
     vec3 color = up >= 0.0 ? sky : ground;
     float sunAmount = max(dot(dir, sunDir), 0.0);
-    vec3 sunLight = uSunColor.rgb * uSunDir.w;
+    vec3 sunLight = sunIsLight ? uSunColor.rgb * uSunDir.w : vec3(0.0);
     color += sunLight * 0.06 * pow(sunAmount, 8.0) * (1.0 - cover * 0.7);
-    if (withSun && up > 0.0)
+    // Sunrise / sunset: warm band along the horizon, strongest toward the sun.
+    float twilight = uSkyParams.y;
+    if (twilight > 0.0) {
+        vec2 flatDir = normalize(dir.xz + 1e-5), flatSun = normalize(sunDir.xz + 1e-5);
+        float toward = 0.5 + 0.5 * dot(flatDir, flatSun);
+        float band = exp(-abs(up - max(sunDir.y, -0.05) * 0.3) * 7.0);
+        vec3 glow = mix(vec3(0.55, 0.22, 0.30), vec3(1.0, 0.42, 0.12), toward) * band * (0.15 + 0.85 * toward * toward);
+        color += glow * twilight * 0.55 * (1.0 - cover * 0.6);
+    }
+    if (withSun && up > 0.0 && sunIsLight)
         color += sunLight * 8.0 * smoothstep(0.9993, 0.9997, sunAmount) * (1.0 - cover * 0.9);
+    if (up > 0.0 && cycle) {
+        float clear = 1.0 - cover * 0.95;
+        color += starField(dir) * uSkyParams.x * clear;
+        color += moonDisk(dir) * clamp(uMoonDir.w + 0.15, 0.0, 1.0) * mix(0.25, 1.0, uSkyParams.x) * clear;
+    }
     if (up > 0.0 && cover > 0.0) {
         vec2 uv = dir.xz / (up + 0.12) * 0.6 + vec2(uSkyHorizon.w * 0.004, uSkyHorizon.w * 0.002);
         float n = fbm(uv * 2.0);
         float clouds = smoothstep(1.0 - cover, 1.0 - cover + 0.35, n) * smoothstep(0.0, 0.12, up);
-        vec3 cloudColor = mix(uSkyHorizon.rgb * 1.05, sunLight * 0.12 + uSkyHorizon.rgb * 0.6, pow(sunAmount, 4.0) * 0.5);
+        vec3 lit = uSunColor.rgb * uSunDir.w;
+        vec3 cloudColor = mix(uSkyHorizon.rgb * 1.05, lit * 0.12 + uSkyHorizon.rgb * 0.6, pow(max(dot(dir, -normalize(uSunDir.xyz)), 0.0), 4.0) * 0.5);
         cloudColor *= mix(1.0, 0.7, n);
         color = mix(color, cloudColor, clouds * 0.9);
     }
     return color;
+}
+
+// Shadow of the cloud layer on the ground (1 = no cloud), matching the sky's clouds
+// drifting with the wind. Three noise octaves are enough at ground scale.
+float cloudShadow(vec3 worldPos) {
+    float strength = uSkyParams.z;
+    float cover = uSkyZenith.w;
+    vec3 l = -normalize(uSunDir.xyz);
+    if (strength <= 0.0 || cover <= 0.0 || l.y < 0.02)
+        return 1.0;
+    vec3 q = worldPos + l * ((800.0 - worldPos.y) / l.y);
+    vec2 uv = q.xz / 800.0 * 0.6 + vec2(uSkyHorizon.w * 0.004, uSkyHorizon.w * 0.002);
+    vec2 p = uv * 2.0;
+    float v = 0.0, a = 0.5;
+    for (int i = 0; i < 3; ++i) {
+        v += a * valueNoise(p);
+        p = p * 2.03 + vec2(17.1, 9.2);
+        a *= 0.5;
+    }
+    v += 0.06; // the missing octaves' average
+    float clouds = smoothstep(1.0 - cover, 1.0 - cover + 0.35, v);
+    return 1.0 - strength * clouds * 0.85;
 }
 
 // Exponential height fog along the view ray, tinted toward the sun.

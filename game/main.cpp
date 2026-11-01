@@ -748,6 +748,22 @@ int main(int argc, char** argv)
             std::snprintf(buf, sizeof buf, "feet %.2f %.2f %.2f, yaw %.1f, pitch %.1f", p.x, p.y, p.z, camera.yawDegrees, camera.pitchDegrees);
             return engine::ConsoleResult{true, buf};
         });
+        cvars.addCommand("time", "time [HH[:MM] [minutes per day]]: shows or sets the time of day (turns the day/night cycle on)",
+                         [&](const std::vector<std::string>& a) {
+            engine::TimeOfDay& t = scene.environment.time;
+            if (!a.empty()) {
+                float hour = 0.0f, minute = 0.0f;
+                if (std::sscanf(a[0].c_str(), "%f:%f", &hour, &minute) < 1)
+                    return engine::ConsoleResult{false, "usage: time HH[:MM] [minutes per day]"};
+                t.hour = std::fmod(std::fmod(hour + minute / 60.0f, 24.0f) + 24.0f, 24.0f);
+                t.enabled = true;
+                if (a.size() > 1)
+                    t.dayMinutes = std::max(0.0f, static_cast<float>(std::atof(a[1].c_str())));
+            }
+            char text[8];
+            return engine::ConsoleResult{true, std::string(t.enabled ? "time " : "time (cycle off) ") + engine::formatHour(t.hour, text) +
+                                                   (t.dayMinutes > 0.0f ? ", day = " + std::to_string(static_cast<int>(t.dayMinutes)) + " min" : ", stopped")};
+        });
         cvars.addCommand("config_save", "Saves the settings now (also done on exit)", [&cvars](const std::vector<std::string>&) {
             const std::string file = (engine::userDirectory("config") / "game.cfg").string();
             const bool ok = cvars.saveConfig(file);
@@ -924,6 +940,9 @@ int main(int argc, char** argv)
             if (m.dynamic)
                 save.props.push_back({m.id, m.position, m.rotation});
         save.flashlightCharge = flashlight.charge();
+        save.timeOfDay = scene.environment.time.hour;
+        save.dayMinutes = scene.environment.time.dayMinutes;
+        save.timeEnabled = scene.environment.time.enabled;
         save.entities = scripts.saveEntities();
         save.pendingInputs = scripts.savePendingInputs();
         return save;
@@ -950,6 +969,11 @@ int main(int argc, char** argv)
         scripts.setPlayerHealth(loadFrom->health);
         anomalies.setDose(loadFrom->dose);
         flashlight.setCharge(loadFrom->flashlightCharge);
+        if (loadFrom->timeOfDay >= 0.0f) {
+            scene.environment.time.hour = loadFrom->timeOfDay;
+            scene.environment.time.dayMinutes = loadFrom->dayMinutes;
+            scene.environment.time.enabled = loadFrom->timeEnabled;
+        }
         if (!loadFrom->props.empty()) { // physics props where they were left
             for (const SaveGame::Prop& p : loadFrom->props)
                 if (const int object = engine::findObjectById(scene, p.id); scene.isModel(object)) {
@@ -1182,6 +1206,9 @@ int main(int argc, char** argv)
             // Debug shapes age per simulation step: "this frame" shapes from scripts stay until the next step redraws them.
             engine::DebugDraw::global().tick(dt);
             player.fixedUpdate(input, camera, dt);
+            // Day/night cycle: dayMinutes real minutes per game day.
+            if (engine::TimeOfDay& tod = scene.environment.time; tod.enabled && tod.dayMinutes > 0.0f)
+                tod.hour = std::fmod(tod.hour + dt * 24.0f / (tod.dayMinutes * 60.0f), 24.0f);
 
             // Lower the current weapon, swap, raise the new one (0.15 s each way).
             if (next != current) {
@@ -1368,7 +1395,9 @@ int main(int argc, char** argv)
             const float aspect = static_cast<float>(width) / static_cast<float>(height);
             const float aimed = smoothAim(weapons[current]);
             overlay.projection = glm::perspective(glm::radians(glm::mix(60.0f, 50.0f, aimed)), aspect, 0.01f, 10.0f);
-            overlay.sunDirectionViewSpace = glm::mat3(view.view) * scene.sunDirection;
+            engine::SkyState sky; // the moon lights the weapon at night
+            engine::environmentAt(scene.environment, scene.sunDirection, &sky);
+            overlay.sunDirectionViewSpace = glm::mat3(view.view) * sky.lightDirection;
             const engine::Weapon& weapon = weapons[current];
             overlay.model = weapon.viewModel.get();
             const glm::vec3 vel = player.velocity();

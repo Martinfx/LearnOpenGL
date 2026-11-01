@@ -131,6 +131,9 @@ struct EnvironmentBlock {
     glm::vec4 cascadeSplits;
     glm::vec4 viewport;
     glm::vec4 shadowParams;
+    glm::vec4 moonDir;    // xyz toward the moon, w: moon brightness 0..1
+    glm::vec4 skyParams;  // x: stars, y: twilight glow, z: cloud shadows, w: 1 = time of day on
+    glm::vec4 sunPos;     // xyz toward the sun (the main light may be the moon)
 };
 
 constexpr int kEnvSize = 128;  // environment cubemap face size
@@ -790,9 +793,13 @@ void Renderer::ensureShadowMap()
 
 void Renderer::updateEnvironment(const Scene& scene, const RenderView& view)
 {
-    const Environment& e = scene.environment;
+    (void)scene;
+    const Environment& e = *env_;
     EnvironmentBlock b{};
-    b.sunDir = glm::vec4(glm::normalize(scene.sunDirection), e.sunIntensity);
+    b.sunDir = glm::vec4(sky_.lightDirection, e.sunIntensity);
+    b.moonDir = glm::vec4(sky_.moon, sky_.moonLight * std::max(0.0f, e.time.nightBrightness));
+    b.skyParams = glm::vec4(sky_.stars, sky_.twilight, sky_.cloudShadows, e.time.enabled ? 1.0f : 0.0f);
+    b.sunPos = glm::vec4(e.time.enabled ? sunPosition(e.time, e.time.hour) : -sky_.lightDirection, 0.0f);
     b.sunColor = glm::vec4(linear(e.sunColor), quality_.shadowResolution > 0 ? 1.0f : 0.0f);
     b.skyZenith = glm::vec4(linear(e.skyZenith), e.cloudCover);
     b.skyHorizon = glm::vec4(linear(e.skyHorizon), time_);
@@ -815,7 +822,7 @@ void Renderer::updateEnvironment(const Scene& scene, const RenderView& view)
         splits[i] = glm::mix(uniformSplit, logSplit, 0.8f);
     }
     b.cascadeSplits = glm::vec4(splits[0], splits[1], splits[2], static_cast<float>(cascades));
-    const glm::vec3 lightDir = glm::normalize(scene.sunDirection);
+    const glm::vec3 lightDir = sky_.lightDirection;
     const glm::mat4 invViewProj = b.invViewProj;
     float prev = nearPlane;
     // A new sun direction, resolution or cascade count invalidates every cached cascade.
@@ -890,12 +897,18 @@ void Renderer::updateEnvironment(const Scene& scene, const RenderView& view)
 void Renderer::updateEnvironmentMap(const Scene& scene)
 {
     // Re-render the sky into the cubemap and prefilter it when the sky changed.
-    const Environment& e = scene.environment;
+    (void)scene;
+    const Environment& e = *env_;
     std::size_t h = 1;
+    // A running day/night cycle changes the sky every frame: quantize so the cubemap
+    // is captured again only when the change becomes visible (every few game minutes).
+    const float q = e.time.enabled ? 48.0f : 0.0f;
+    auto quant = [q](float v) { return q > 0.0f ? std::round(v * q) / q : v; };
     for (float v : {e.sunColor.r, e.sunColor.g, e.sunColor.b, e.sunIntensity, e.skyZenith.r, e.skyZenith.g, e.skyZenith.b,
                     e.skyHorizon.r, e.skyHorizon.g, e.skyHorizon.b, e.groundColor.r, e.groundColor.g, e.groundColor.b,
-                    e.cloudCover, scene.sunDirection.x, scene.sunDirection.y, scene.sunDirection.z})
-        hashCombine(h, v);
+                    e.cloudCover, sky_.lightDirection.x, sky_.lightDirection.y, sky_.lightDirection.z, sky_.stars, sky_.twilight,
+                    sky_.moon.x, sky_.moon.y, sky_.moon.z})
+        hashCombine(h, quant(v));
     if (h == envHash_)
         return;
     envHash_ = h;
@@ -1505,7 +1518,8 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     targetFbo_ = target;
     targetX_ = view.viewportX;
     targetY_ = view.viewportY;
-    env_ = &scene.environment;
+    resolvedEnv_ = environmentAt(scene.environment, scene.sunDirection, &sky_);
+    env_ = &resolvedEnv_;
     time_ = view.time;
     collectDistortions(view);
     keptAlive_.clear();
