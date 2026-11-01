@@ -248,6 +248,21 @@ void ScriptSystem::Impl::bindApi()
                 s.e().yawDegrees = glm::degrees(std::atan2(d.z, d.x));
         },
         "log", [](ScriptEntity& s, const std::string& msg) { (*s.log)("[" + s.e().name + "] " + msg); },
+        // Entity properties (set in the editor: light "enabled", sit point "occupied"...), as text; nil if unset.
+        "get_property", [](ScriptEntity& s, const std::string& key) -> sol::optional<std::string> {
+            const auto it = s.e().properties.find(key);
+            if (it == s.e().properties.end())
+                return sol::nullopt;
+            return it->second;
+        },
+        "set_property", [](ScriptEntity& s, const std::string& key, sol::object value) {
+            if (!value.valid() || value.get_type() == sol::type::lua_nil)
+                s.e().properties.erase(key);
+            else if (value.get_type() == sol::type::boolean)
+                s.e().properties[key] = value.as<bool>() ? "1" : "0";
+            else
+                s.e().properties[key] = value.get_type() == sol::type::number ? std::to_string(value.as<double>()) : value.as<std::string>();
+        },
         // Animation (entities with a character model; see Properties > Character model in the editor).
         "has_model", sol::property([](ScriptEntity& s) { return s.e().model && s.e().model->skeleton; }),
         "flash", sol::property([](ScriptEntity& s) { return s.e().flash; },
@@ -282,6 +297,27 @@ void ScriptSystem::Impl::bindApi()
 
     sol::table game = lua.create_named_table("game");
     game.set_function("player_position", [this] { return player.feet(); });
+    // Nearest entity of a type within max_distance (any distance when omitted); `free_key` skips
+    // entities whose property of that name is set (e.g. "occupied" sit points).
+    game.set_function("find_nearest", [this](const std::string& type, const glm::vec3& from, sol::optional<float> maxDistance,
+                                             sol::optional<std::string> freeKey) -> ScriptEntity* {
+        ScriptEntity* best = nullptr;
+        float bestDistance = maxDistance.value_or(1e30f);
+        for (auto& se : entities) {
+            const Entity& e = se->e();
+            if (e.type != type || !e.alive)
+                continue;
+            if (freeKey)
+                if (const auto it = e.properties.find(*freeKey); it != e.properties.end() && !it->second.empty() && it->second != "0")
+                    continue;
+            const float d = glm::distance(e.position, from);
+            if (d <= bestDistance) {
+                bestDistance = d;
+                best = se.get();
+            }
+        }
+        return best;
+    });
     game.set_function("player_eye", [this] { return player.eye(); });
     game.set_function("player_health", [this] { return playerHealth; });
     game.set_function("play_sound", [this](const std::string& sound, sol::optional<glm::vec3> position, sol::optional<float> volume) {

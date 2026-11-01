@@ -234,7 +234,8 @@ struct Entity {
 
     // Editor-only helpers (sound sources and zones, map markers): not drawn in the
     // game and not hit by weapons.
-    bool helper() const { return type == "sound" || type == "map_marker" || type == "particle" || type == "anomaly" || type == "light"; }
+    bool helper() const { return type == "sound" || type == "map_marker" || type == "particle" || type == "anomaly" || type == "light" ||
+                                 type == "sit_point"; }
     // What the editor draws and picks: a sound zone can span the whole level, so
     // it is shown as a small speaker cube at its position; the zone is its size.
     Aabb markerBounds() const

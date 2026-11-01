@@ -1,0 +1,12 @@
+# Sound: variations (one is picked at random per play) and playback settings
+# Campfire: flames and crackling wood (loop, heard up to ~18 m).
+file "campfire_loop.ogg"
+volume 0.8
+pitch 0.95 1.05
+distance 1.5 18
+rolloff 1
+loop 1
+stream 1
+spatial 1
+group ambient
+max_instances 6

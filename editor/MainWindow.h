@@ -139,15 +139,17 @@ private:
 
     void addBox();
     void importModel();
-    bool placeModel(const QString& path, glm::vec3 point); // loads in the background, bottom of the model on `point`
+    // Loads in the background, bottom of the model on `point`; `parent` = group to put it in.
+    bool placeModel(const QString& path, glm::vec3 point, const std::string& parent = {});
     void applyLoadedLevel(const QString& path, engine::Scene loaded);
     void dropToFloor();
-    void insertModel(const QString& path, engine::Model model, glm::vec3 point);
+    void insertModel(const QString& path, engine::Model model, glm::vec3 point, const std::string& parent = {});
     bool assignMaterial(const QString& material, int object);
     void openAsset(const QString& path, int type);
     void addEntity(const QString& type);
     void addAnomaly(int kind); // engine::AnomalyKind
     void addLight(bool spot);
+    void addCampfire(); // group: fire pit model, flames, flickering light, crackle, sit points
     void browseScript();
     void browseCharacter();
     void refreshCharacter();

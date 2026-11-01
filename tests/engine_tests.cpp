@@ -681,7 +681,7 @@ void testScriptPropertiesFromEditor()
     std::vector<engine::ScriptProperty> props;
     std::string err;
     check(engine::readScriptProperties(ENGINE_TEST_ASSETS "/scripts/enemy.lua", props, &err), "read enemy.lua properties: " + err);
-    check(props.size() == 24 && props[0].name == "health" && props[0].defaultValue == "100", "enemy.lua declares 24 tunables, health first");
+    check(props.size() == 27 && props[0].name == "health" && props[0].defaultValue == "100", "enemy.lua declares 27 tunables, health first");
 
     // An editor override changes the behaviour: 40 hp dies after two 20-damage hits.
     auto s = flatFloor();

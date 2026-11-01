@@ -193,6 +193,7 @@ void MainWindow::buildMenus()
         light->addAction(tr("Point light (bulb, fire)"), this, [this] { addLight(false); });
         light->addAction(tr("Spot light (lamp, reflector)"), this, [this] { addLight(true); });
     }
+    edit->addAction(tr("Add &campfire"), this, &MainWindow::addCampfire);
     {
         QMenu* anomaly = edit->addMenu(tr("Add a&nomaly"));
         for (int k = 0; k < static_cast<int>(engine::AnomalyKind::Count); ++k)
@@ -2195,13 +2196,13 @@ void MainWindow::importModel()
     placeModel(path, {std::round(p.x), 0.0f, std::round(p.z)});
 }
 
-bool MainWindow::placeModel(const QString& path, glm::vec3 point)
+bool MainWindow::placeModel(const QString& path, glm::vec3 point, const std::string& parent)
 {
     // Parsing the glTF and decoding its textures happens on a worker thread;
     // the model is added to the level when it is ready.
     notify(tr("Loading %1...").arg(QFileInfo(path).fileName()));
     QPointer<MainWindow> self(this);
-    engine::JobSystem::global().run([self, path, point] {
+    engine::JobSystem::global().run([self, path, point, parent] {
         auto model = std::make_shared<engine::Model>();
         std::string error;
         const std::filesystem::path file(path.toStdU16String());
@@ -2215,20 +2216,20 @@ bool MainWindow::placeModel(const QString& path, glm::vec3 point)
                     model->lod = lod;
                 }
             }
-        QMetaObject::invokeMethod(qApp, [self, path, point, model, ok, error] {
+        QMetaObject::invokeMethod(qApp, [self, path, point, parent, model, ok, error] {
             if (!self)
                 return;
             if (!ok) {
                 QMessageBox::warning(self, tr("Place model"), QString::fromStdString(error));
                 return;
             }
-            self->insertModel(path, std::move(*model), point);
+            self->insertModel(path, std::move(*model), point, parent);
         });
     });
     return true;
 }
 
-void MainWindow::insertModel(const QString& path, engine::Model model, glm::vec3 point)
+void MainWindow::insertModel(const QString& path, engine::Model model, glm::vec3 point, const std::string& parent)
 {
     QString name = QFileInfo(path).completeBaseName();
     if (name == "scene" || name == "model")
@@ -2237,6 +2238,8 @@ void MainWindow::insertModel(const QString& path, engine::Model model, glm::vec3
     // Snap to 0.25 m and stand the model on the point (its lowest vertex touches it).
     const glm::vec3 snapped = glm::round(point * 4.0f) / 4.0f;
     model.position = {snapped.x, point.y - model.localBounds.min.y, snapped.z};
+    if (!parent.empty() && std::any_of(scene_.groups.begin(), scene_.groups.end(), [&](const engine::Group& g) { return g.name == parent; }))
+        model.parent = parent;
     scene_.models.push_back(std::move(model));
     refreshOutliner();
     select(scene_.firstEntity() - 1);
@@ -2309,6 +2312,57 @@ void MainWindow::openAsset(const QString& path, int type)
             notify(path, 5000);
         break;
     }
+}
+
+void MainWindow::addCampfire()
+{
+    const auto& cam = viewport_->camera();
+    glm::vec3 p = cam.position + cam.flatForward() * 6.0f;
+    p = {std::round(p.x * 2.0f) * 0.5f, 0.0f, std::round(p.z * 2.0f) * 0.5f};
+    if (scene_.terrain && scene_.terrain->valid())
+        p.y = scene_.terrain->heightAt(p.x, p.z);
+    const std::string group = engine::uniqueNodeName(scene_, "Campfire");
+    scene_.groups.push_back({group, ""});
+    auto add = [&](const char* type, const std::string& name, glm::vec3 position, glm::vec3 size, glm::vec3 color) -> engine::Entity& {
+        engine::Entity e;
+        e.type = type;
+        e.name = engine::uniqueNodeName(scene_, group + " " + name);
+        e.parent = group;
+        e.position = position;
+        e.size = size;
+        e.color = color;
+        scene_.entities.push_back(std::move(e));
+        return scene_.entities.back();
+    };
+    {
+        engine::Entity& light = add("light", "light", p + glm::vec3(0.0f, 0.6f, 0.0f), glm::vec3(0.3f), {1.0f, 0.55f, 0.25f});
+        engine::LightSettings s;
+        s.intensity = 22.0f;
+        s.range = 10.0f;
+        s.castShadows = true;
+        s.flicker = engine::LightFlicker::Fire;
+        engine::setLightSettings(light, s);
+    }
+    add("particle", "flames", p + glm::vec3(0.0f, 0.15f, 0.0f), glm::vec3(0.4f), {0.95f, 0.55f, 0.2f}).properties["effect"] =
+        "particles/fire.particle";
+    add("sound", "crackle", p + glm::vec3(0.0f, 0.3f, 0.0f), glm::vec3(1.0f), {0.25f, 0.55f, 0.95f}).properties["sound"] =
+        "sounds/ambient/campfire.sound";
+    // Sit points around the fire, facing it (NPCs rest here; scripts find them by type "sit_point").
+    for (int k = 0; k < 4; ++k) {
+        const float a = 6.2831853f * (static_cast<float>(k) + 0.5f) / 4.0f;
+        glm::vec3 seat = p + glm::vec3(std::cos(a), 0.0f, std::sin(a)) * 1.7f;
+        if (scene_.terrain && scene_.terrain->valid())
+            seat.y = scene_.terrain->heightAt(seat.x, seat.z);
+        add("sit_point", "seat " + std::to_string(k + 1), seat, {0.5f, 0.45f, 0.5f}, {0.35f, 0.7f, 0.4f}).yawDegrees =
+            glm::degrees(std::atan2(-std::sin(a), -std::cos(a)));
+    }
+    refreshOutliner();
+    select(scene_.objectCount() - 7); // the light
+    markDirty();
+    // The stone ring loads in the background and joins the group.
+    const QString pit = assetPath("models/props/stone_fire_pit/stone_fire_pit.gltf");
+    if (QFileInfo::exists(pit))
+        placeModel(pit, p, group);
 }
 
 void MainWindow::addLight(bool spot)
@@ -3806,8 +3860,10 @@ void MainWindow::buildModePanel()
             menu->addAction(tr("Spot light (lamp, reflector)"), this, [this] { addLight(true); });
             light->setMenu(menu);
         }
+        auto* campfire = toolButton("particles", tr("Campfire (fire pit, flames, light, crackle, seats)"), page);
+        connect(campfire, &QPushButton::clicked, this, &MainWindow::addCampfire);
         auto* model = toolButton("model", tr("glTF model..."), page);
-        for (QPushButton* b : {box, enemy, entity, sound, particles, anomaly, light, model})
+        for (QPushButton* b : {box, enemy, entity, sound, particles, anomaly, light, campfire, model})
             layout->addWidget(b);
         auto* hint = new QLabel(tr("Or drag a model from the Content Browser into the view: it lands where you drop it."), page);
         hint->setObjectName("dim");

@@ -1,4 +1,5 @@
 -- Enemy AI (armed human): patrol -> chase -> shoot -> search -> return home.
+-- While patrolling it sometimes rests at a free sit point nearby (campfire seats).
 -- Attach to an entity of type "enemy" in the editor.
 
 -- Tunables: shown in the editor (Properties > Script parameters) for every
@@ -19,8 +20,11 @@ properties = {
     { "sound_shot",      "sounds/weapons/pistol_shot.sound", "Sound of every shot (path in assets/, empty = silent)" },
     { "search_time",     5.0,  "Seconds spent searching the last known position" },
     { "patrol_radius",   4.0,  "Wanders this far from its start position, m" },
+    { "rest_chance",     0.25, "Chance per patrol leg to sit at a free sit point within 3x the patrol radius" },
+    { "rest_time",       30.0, "Seconds sitting before patrolling again" },
     -- Animation clips of the character model (Properties > Character model).
     { "anim_idle",       "Idle_Loop",          "Clip while standing" },
+    { "anim_sit",        "Sitting_Idle_Loop",  "Clip while resting at a sit point" },
     { "anim_walk",       "Walk_Loop",          "Clip while patrolling, searching, returning" },
     { "anim_run",        "Jog_Fwd_Loop",       "Clip while chasing" },
     { "anim_aim",        "Pistol_Aim_Neutral", "Clip while aiming at the player" },
@@ -35,6 +39,8 @@ local state, timer, home, last_seen, patrol_target, next_attack
 local hurt_flash = 0
 local reacting = 0      -- seconds left of the hit reaction clip
 local moving = false   -- set by walk_to, picks walk/run vs. idle animation
+local seat, seated      -- sit point entity while resting, true once sitting on it
+local rest_for = 0      -- seconds this rest lasts
 
 local function distance(a, b) return (b - a):flat():length() end
 
@@ -84,9 +90,25 @@ local function pick_patrol_target()
     return home + vec3(math.cos(a) * r, 0, math.sin(a) * r)
 end
 
+local function release_seat(self)
+    if seat then seat:set_property("occupied", nil) end
+    seat, seated = nil, false
+end
+
 local function set_state(self, s)
     if state ~= s then self:log(state and (state .. " -> " .. s) or s) end
+    if state == "rest" and s ~= "rest" then release_seat(self) end
     state, timer = s, 0
+end
+
+-- A free sit point near home, claimed for this entity (nil if none).
+local function claim_seat(self)
+    local s = game.find_nearest("sit_point", self.position, props.patrol_radius * 3, "occupied")
+    if s then
+        s:set_property("occupied", self.name)
+        seat, seated = s, false
+    end
+    return s
 end
 
 function on_start(self)
@@ -100,7 +122,8 @@ end
 
 -- Saved games: what the AI was doing (the engine keeps health, place and facing).
 function on_save(self)
-    return { state = state, timer = timer, home = home, last_seen = last_seen, patrol_target = patrol_target }
+    return { state = state, timer = timer, home = home, last_seen = last_seen, patrol_target = patrol_target,
+             seat = seat and seat.name, seated = seated, rest_for = rest_for }
 end
 
 function on_load(self, d)
@@ -108,6 +131,8 @@ function on_load(self, d)
     state, timer = d.state or "patrol", d.timer or 0
     home = d.home or home
     last_seen, patrol_target = d.last_seen, d.patrol_target or patrol_target
+    seat, seated, rest_for = d.seat and game.find(d.seat), d.seated, d.rest_for or props.rest_time
+    if seat then seat:set_property("occupied", self.name) elseif state == "rest" then state = "patrol" end
     next_attack = game.time() + 0.5 -- no shot in the first instant after loading
 end
 
@@ -124,6 +149,7 @@ end
 
 function on_death(self)
     self:log("destroyed")
+    release_seat(self)
     self:play(props.anim_death, { loop = false, fade = 0.1, speed = props.anim_speed })
 end
 
@@ -138,6 +164,8 @@ local function animate(self)
         end
     elseif moving then
         self:play(state == "chase" and props.anim_run or props.anim_walk, { speed = speed })
+    elseif state == "rest" and seated then
+        if not self:play(props.anim_sit, { speed = speed }) then self:play(props.anim_idle, { speed = speed }) end
     else
         self:play(props.anim_idle, { speed = speed })
     end
@@ -161,6 +189,20 @@ function on_update(self, dt)
         if walk_to(self, patrol_target, props.walk_speed) or timer > 6 then
             patrol_target = pick_patrol_target()
             timer = 0
+            if math.random() < props.rest_chance and claim_seat(self) then set_state(self, "rest") end
+        end
+    elseif state == "rest" then
+        if not seated then
+            if walk_to(self, seat.position, props.walk_speed) then
+                seated, timer = true, 0
+                rest_for = props.rest_time * (0.7 + 0.6 * math.random())
+                self.position = seat.position
+                self.yaw = seat.yaw
+            elseif timer > 20 then -- cannot get there
+                set_state(self, "patrol")
+            end
+        elseif timer > rest_for then
+            set_state(self, "patrol")
         end
     elseif state == "chase" then
         if distance(self.position, player) <= props.shoot_range then

@@ -52,6 +52,8 @@ methods `:length()`, `:normalized()`, `:flat()` (y = 0), `:dot(other)`.
 | `:jump(speed)` | Jump if grounded (characters) |
 | `:face(point)` | Turn toward a point |
 | `:log(text)` | Print with the entity name |
+| `:get_property(key)` | Entity property as text (set in the editor, e.g. a light's `enabled`), `nil` if unset |
+| `:set_property(key, value)` | Sets a property (`nil` removes it); a light with `enabled` = `"0"` goes dark, sit points use `occupied` |
 | `has_model` | Entity has an animated character model (Properties > Character model) |
 | `:play(clip, opts)` | Play an animation clip; `opts` = `{ loop = true, speed = 1, fade = 0.2, restart = false }`. Calling it with the clip that already plays only updates loop/speed, so it is safe every update. Returns `false` if the model has no such clip |
 | `animation` | Name of the clip playing now |
@@ -76,6 +78,7 @@ methods `:length()`, `:normalized()`, `:flat()` (y = 0), `:dot(other)`.
 | `game.can_see(from, to)` | `true` when no level geometry is in between |
 | `game.raycast(origin, dir, max)` | `hit, point, distance` |
 | `game.find(name)` | Entity or `nil` |
+| `game.find_nearest(type, position, max_distance, free_key)` | Nearest living entity of a type (e.g. `"sit_point"`) within `max_distance` (optional); with `free_key` it skips entities whose property of that name is set |
 | `game.log(text)`, `print(...)` | Prints to the game console |
 | `game.change_level(file)` | Loads another level (file in `assets/levels/` or absolute); health, weapon and magazines come along |
 | `game.cvar(name)` | Console variable as text (`"1"`, `"0.5"`), nil if unknown |

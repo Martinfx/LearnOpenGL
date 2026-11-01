@@ -43,6 +43,7 @@ recordings with placeholders.
 | `ambient/zone_drone_loop.ogg`, `zone_drone_2_loop.ogg`, `zone_drone_3_loop.ogg` | [Droning Sound Effects](https://opengameart.org/content/droning-sound-effects) (drone60, drone70, drone53) | Bret Bernhoft | CC0 |
 | `ambient/birds_loop.ogg` | [Park ambiences](https://opengameart.org/content/park-ambiences) | Thimras | CC0 |
 | `ambient/rain_loop.ogg` | [AMB Rain Loop 1](https://opengameart.org/content/amb-rain-loop-1) | Kresiek the Furry | CC0 |
+| `ambient/campfire_loop.ogg` | Procedural (noise and crackle synthesis, `source/campfire_crackle.py`) | made for this project | CC0 |
 
 CC-BY items: "This work is based on <title> by <author>, licensed under CC-BY (https://creativecommons.org/licenses/by/3.0/
 or /4.0/)". Changes: trimmed, converted to mono 48 kHz, normalised, and filtered; loops were crossfaded.
