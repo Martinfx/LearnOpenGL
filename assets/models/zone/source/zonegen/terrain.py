@@ -102,7 +102,63 @@ class Terrain:
         cdist = np.sqrt((X + 80.0) ** 2 + (Z + 80.0) ** 2)
         amp = 1.4 + 3.5 * smoothstep(170.0, 330.0, cdist)
         low = amp * (nz.fbm(X, Z, 160.0, 2) - 0.5) + (0.5 + 0.8 * smoothstep(170.0, 330.0, cdist)) * (nz(X + 500, Z, 45.0) - 0.5)
-        H = low + 0.14 * (nz.fbm(X - 300, Z + 100, 9.0, 2) - 0.5)
+        # distance to the nearest building footprint (platforms below keep the buildings at `low`)
+        self.bmask = np.full(X.shape, 1e9)
+        for (cx, cz, L, W, yaw) in buildings:
+            a = math.radians(yaw)
+            c, s = math.cos(a), math.sin(a)
+            u = (X - cx) * c + (Z - cz) * s
+            v = -(X - cx) * s + (Z - cz) * c
+            du = np.maximum(np.abs(u) - L / 2, 0)
+            dv = np.maximum(np.abs(v) - W / 2, 0)
+            self.bmask = np.minimum(self.bmask, np.sqrt(du * du + dv * dv))
+        # Hills: broad swells in the town, real rises (up to ~5 m) towards the forest. They fade out within
+        # ~25 m of the buildings (a block sits in its own level hollow, as when it was built) and the roads
+        # ride on them. Ridged noise gives rounded tops and narrower valleys, like old moraine ground.
+        ridge = 1.0 - np.abs(2.0 * nz.fbm(X - 1700, Z + 450, 110.0, 3) - 1.0)
+        shape = 0.6 * ridge + 0.4 * nz.fbm(X + 260, Z + 1900, 45.0, 2)
+        shape = (shape - shape.mean()) / (shape.std() + 1e-9)        # unit spread whatever the noise does
+        hill_amp = 0.6 + 1.7 * smoothstep(110.0, 290.0, cdist)      # standard deviation, m (peaks ~2.5x)
+        hills = hill_amp * shape * smoothstep(6.0, 32.0, self.bmask)
+        # Micro relief: settled ground, swells and hollows of 0.3 - 0.6 m over 5 - 20 m, a little roughness
+        micro = 1.1 * (nz.fbm(X + 710, Z - 260, 14.0, 3) - 0.5) + 0.25 * (nz(X - 40, Z + 620, 4.0) - 0.5) + \
+            0.06 * (nz(X + 13, Z - 77, 1.3) - 0.5)
+        # Spoil heaps and rubble mounds left in the yards (own random stream: same mounds every run)
+        mrng = np.random.default_rng(seed + 101)
+        mounds = np.zeros(X.shape)
+        self.mounds = []
+        for _ in range(400):
+            if len(self.mounds) >= 46:
+                break
+            mx, mz = mrng.uniform(x0 + 20, x0 + size_x - 20), mrng.uniform(z0 + 20, z0 + size_z - 20)
+            r, hgt = mrng.uniform(3.0, 7.5), mrng.uniform(0.5, 1.8)
+            ii, jj = int((mx - x0) / res), int((mz - z0) / res)
+            if self.bmask[jj, ii] < r + 5.0:
+                continue
+            near_road = False
+            for rd in osm['roads']:
+                if rd['tags'].get('highway') not in ROAD_HALF:
+                    continue
+                for (ax, az), (bx, bz) in zip(rd['pts'][:-1], rd['pts'][1:]):
+                    if _seg_dist(np.array(mx), np.array(mz), ax, az, bx, bz) < r + 6.0:
+                        near_road = True
+                        break
+                if near_road:
+                    break
+            if near_road or any(_point_in_poly(np.array([mx]), np.array([mz]), p)[0] for p in pond_areas):
+                continue
+            k = int(r * 1.6) + 2
+            sl = (slice(max(jj - k, 0), jj + k + 1), slice(max(ii - k, 0), ii + k + 1))
+            dx, dz = X[sl] - mx, Z[sl] - mz
+            ang = np.arctan2(dz, dx)
+            rr = r * (1.0 + 0.25 * np.sin(2 * ang + mrng.uniform(0, 6.28)) + 0.12 * np.sin(3 * ang + mrng.uniform(0, 6.28)))
+            t = np.clip(1.0 - (dx * dx + dz * dz) / (rr * rr), 0.0, 1.0)
+            bump = hgt * t * t * (1.0 + 0.25 * (nz(X[sl] + 51, Z[sl], 1.7) - 0.5))
+            mounds[sl] = np.maximum(mounds[sl], bump)
+            self.mounds.append((mx, mz, r, hgt))
+        self.mound_h = mounds
+        low_road = low + hills
+        H = low_road + micro + mounds
         # roads: distance per class
         self.road_d = {k: np.full(X.shape, 1e9) for k in ROAD_HALF}
         for r in osm['roads']:
@@ -119,7 +175,7 @@ class Terrain:
                     continue
                 sub = _seg_dist(X[j0:j1, i0:i1], Z[j0:j1, i0:i1], ax, az, bx, bz)
                 d[j0:j1, i0:i1] = np.minimum(d[j0:j1, i0:i1], sub)
-        road_low = low
+        road_low = low_road
         for k, hw in ROAD_HALF.items():
             d = self.road_d[k]
             w = smoothstep(hw + 3.5, hw + 0.4, d) * (1.0 if k in PAVED else 0.6)
@@ -136,7 +192,6 @@ class Terrain:
             H = H - 1.8 * depth
             self.pond.append((poly, hmean - 0.65))
         # building platforms
-        self.bmask = np.full(X.shape, 1e9)
         self.platforms = []
         for (cx, cz, L, W, yaw) in buildings:
             a = math.radians(yaw)
@@ -150,7 +205,6 @@ class Terrain:
             hb = float(low[min(max(jj, 0), self.nz - 1), min(max(ii, 0), self.nx - 1)])
             w = smoothstep(9.0, 2.5, dist)
             H = H * (1 - w) + hb * w
-            self.bmask = np.minimum(self.bmask, dist)
             self.platforms.append(hb)
         self.H = H
         # ground layer fields (> 0 means covered)
@@ -162,20 +216,37 @@ class Terrain:
         potholes = smoothstep(0.78, 0.86, n(X + 211, Z - 53, 3.5)) * 1.6
         cracks = smoothstep(0.93, 0.97, n(X * 0.15 + 400, Z * 3.0, 1.0)) + smoothstep(0.94, 0.98, n(X * 3.0, Z * 0.15 - 90, 1.0))
         self.layers['road'] = -paved + edge - potholes - 0.9 * cracks
-        self.layers['ruts'] = (ROAD_HALF['track'] - self.road_d['track']) + 0.6 * (n(X + 5, Z, 2.0) - 0.5)
-        self.layers['path'] = (ROAD_HALF['footway'] - self.road_d['footway']) + 0.5 * (n(X, Z - 15, 1.6) - 0.5)
+        # dirt tracks: two muddy wheel ruts with grass between them, wider and wetter in the hollows
+        dt = self.road_d['track']
+        self.layers['ruts'] = 0.42 - np.abs(dt - 0.8) + 0.35 * (n(X + 5, Z, 2.0) - 0.5) - 0.25 * (n(X - 5, Z + 9, 6.0) - 0.5)
+        self.layers['track'] = (ROAD_HALF['track'] + 0.3 - dt) + 0.5 * (n(X + 15, Z - 4, 2.5) - 0.5)
+        foot = np.minimum(self.road_d['footway'] - ROAD_HALF['footway'], self.road_d['path'] - ROAD_HALF['path'])
+        self.layers['path'] = -foot + 0.5 * (n(X, Z - 15, 1.6) - 0.5)
         self.layers['apron'] = np.where(self.bmask > 0.05, 1.05 - self.bmask, -1.0) + 0.5 * (n(X + 33, Z, 1.3) - 0.5) - \
             smoothstep(0.7, 0.8, n(X - 70, Z, 2.5))
         verge = np.minimum(paved, self.road_d['track'] - ROAD_HALF['track'])
+        # gravel shoulder along the asphalt: crumbled edge, 0.4 - 1.6 m wide, wider at junctions and bends
+        self.layers['shoulder'] = 0.9 - paved + 0.9 * (n(X - 31, Z + 17, 3.0) - 0.5) + 0.4 * (n(X + 3, Z, 0.8) - 0.5)
+        # slope of the ground (|grad H|): steep banks and heaps are bare soil, heap tops rubble and gravel
+        gz, gx = np.gradient(H, res)
+        self.slope = np.sqrt(gx * gx + gz * gz)
         dirt = smoothstep(0.7, 0.78, n.fbm(X + 900, Z, 14.0, 2)) + smoothstep(1.6, 0.8, self.bmask) * 0.8 + \
             smoothstep(1.0, 0.2, verge) * 0.5 * n(X, Z + 3, 3.0)
+        dirt = dirt + smoothstep(0.28, 0.5, self.slope) * (0.6 + 0.6 * n(X - 8, Z + 41, 2.0)) + \
+            smoothstep(0.25, 0.9, self.mound_h) * 0.7
         self.layers['dirt'] = dirt - 0.5 + 0.25 * (n(X + 1, Z + 1, 1.2) - 0.5)
+        self.layers['rubble'] = smoothstep(0.7, 1.4, self.mound_h) - 0.55 + 0.5 * (n(X + 71, Z - 3, 1.5) - 0.5)
+        # wet mud: pond banks and the wettest hollows
+        wet = np.zeros(X.shape)
+        for poly, level in self.pond:
+            wet = np.maximum(wet, smoothstep(level + 0.6, level + 0.1, H) * smoothstep(5.0, 1.0, _poly_dist(X, Z, poly)))
+        self.layers['mud'] = wet - 0.5 + 0.4 * (n(X + 3, Z - 3, 1.8) - 0.5)
         self.layers['grass'] = smoothstep(0.45, 0.55, n.fbm(X + 60, Z - 900, 18.0, 2)) - 0.5 + 0.3 * (n(X, Z + 9, 2.0) - 0.5)
         self.layers['dry'] = smoothstep(0.6, 0.68, n.fbm(X - 400, Z + 250, 28.0, 2)) - 0.5 + 0.3 * (n(X, Z, 2.0) - 0.5)
         self.grove = n.fbm(X + 1300, Z - 700, 22.0, 2)
         self.layers['leaves'] = smoothstep(0.6, 0.68, self.grove) - 0.5 + 0.3 * (n(X + 7, Z - 7, 1.5) - 0.5)
         # nothing grows/lies on asphalt or under buildings
-        for k in ('grass', 'dirt', 'dry', 'leaves'):
+        for k in ('grass', 'dirt', 'dry', 'leaves', 'rubble', 'mud'):
             self.layers[k] = np.where(self.layers['road'] > 0, -1.0, self.layers[k])
         # 0.35 m margin: marching squares on the 1 m grid would otherwise cut a sliver into the building floor
         for k in self.layers:
@@ -211,7 +282,8 @@ class Terrain:
         return n / np.linalg.norm(n, axis=-1, keepdims=True)
 
     # ---------------------------------------------------------------- meshing
-    OVERLAYS = ('leaves', 'path', 'ruts', 'apron', 'road')
+    # Only the asphalt (and the ponds) are draped meshes; everything else is an engine terrain layer (splat).
+    OVERLAYS = ('road',)
 
     def tile(self, x0, z0, size, step=1.0, layers=True, lod=0, base=True, names=None, lift=None):
         """Mesh of the square tile [x0, x0+size] x [z0, z0+size] in coordinates local to its centre
@@ -267,20 +339,32 @@ class Terrain:
                 pr.idx += [base, base + 1, base + 2, base, base + 2, base + 3]
         return m
 
+    # Engine terrain layers in splat order (the level's terrain_layer lines use the same indices).
+    SPLAT = ('meadow', 'dry', 'lush', 'dirt', 'leaves', 'gravel', 'mud', 'path')
+
     def splat(self, n):
-        """RGBA8 weights (n x n, row = Z) of the engine terrain layers 0..3: lush grass (base), meadow
-        grass, dry grass, dirt. Soft edges around the zero contour of each layer field."""
+        """RGBA8 weights (n x n x 8, row = Z) of the engine terrain layers in SPLAT order. Each layer field is
+        turned into a soft cover (about a metre of transition; the shader then breaks the edge up by the
+        texture height and a noise warp) and stacked top first, so a path lies over the grass, gravel over
+        the path and so on. Base layer: meadow grass."""
         px = self.x0 + (np.arange(n) + 0.5) * (self.nx - 1) * self.res / n
         pz = self.z0 + (np.arange(n) + 0.5) * (self.nz - 1) * self.res / n
         PX, PZ = np.meshgrid(px, pz)
+
+        def cover(name, k):
+            return np.clip(self._sample(self.layers[name], PX, PZ) * k + 0.5, 0.0, 1.0)
+        gravel = np.maximum.reduce([cover('apron', 1.3), cover('shoulder', 1.0), cover('rubble', 1.6)])
+        top = [('gravel', gravel), ('path', cover('path', 1.2)), ('mud', np.maximum(cover('ruts', 1.4), cover('mud', 1.5))),
+               ('dirt', np.maximum(cover('dirt', 2.0), 0.8 * cover('track', 1.0))), ('leaves', cover('leaves', 2.2)),
+               ('dry', cover('dry', 2.0)), ('lush', cover('grass', 2.0))]
         rest = np.ones_like(PX)
-        w = []
-        for k in ('dirt', 'dry', 'grass'):          # top layer first
-            a = np.clip(self._sample(self.layers[k], PX, PZ) * 6.0 + 0.5, 0.0, 1.0)
-            w.append(rest * a)
+        W = {}
+        for name, a in top:
+            W[name] = rest * a
             rest = rest * (1.0 - a)
-        W = np.stack([rest, w[2], w[1], w[0]], axis=-1)
-        return np.clip(np.round(W * 255), 0, 255).astype(np.uint8)
+        W['meadow'] = rest
+        S = np.stack([W[k] for k in self.SPLAT], axis=-1)
+        return np.clip(np.round(S * 255), 0, 255).astype(np.uint8)
 
     def _grid_prim(self, m, mat, GX, GY, GZ, N, cx, cz):
         tile = PALETTE[mat]['tile']

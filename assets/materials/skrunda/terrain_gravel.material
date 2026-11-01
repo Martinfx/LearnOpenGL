@@ -1,0 +1,15 @@
+# FPS engine material (physically based: metal/roughness)
+# Skrunda-1 terrain layer, gravel and crushed concrete: road shoulders, aprons, rubble: Poly Haven "rocky_trail" (CC0).
+version 2
+name "Skrunda gravel"
+color 0.85 0.84 0.8
+roughness 1
+metallic 0
+normal_strength 1
+emissive 0 0 0
+tiling 0.5 0.5
+world_uv 1
+albedo_map "../../textures/pbr/rocky_trail/albedo.jpg"
+normal_map "../../textures/pbr/rocky_trail/normal.jpg"
+roughness_map "../../textures/pbr/rocky_trail/roughness.jpg"
+occlusion_map "../../textures/pbr/rocky_trail/ao.jpg"

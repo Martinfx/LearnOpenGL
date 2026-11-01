@@ -103,6 +103,17 @@ vec3 perturbNormal(vec3 n, vec3 p, vec2 uv, vec3 mapNormal) {
     return normalize(mat3(t * invmax, b * invmax, n) * mapNormal);
 }
 
+// Terrain anti-tiling: a second lookup of each layer, rotated and ~2.3x larger, offset per layer.
+// Returns its mix weight (a slow noise, more of it with distance) and both coordinates.
+const mat2 kTerrainRot = mat2(0.8, 0.6, -0.6, 0.8);
+const float kTerrainScale = 0.43;
+float terrainBomb(vec2 p, float tiling, float layer, float far, out vec2 uvA, out vec2 uvB) {
+    uvA = p * tiling;
+    uvB = kTerrainRot * (p * tiling * kTerrainScale) + vec2(0.37, 0.71) * (layer + 1.0);
+    float k = smoothstep(0.35, 0.65, valueNoise(p * 0.07 + layer * 3.1));
+    return mix(k, 0.5 + 0.5 * k, far);
+}
+
 // Cascaded shadow map lookup with a 3x3 PCF kernel and normal offset bias.
 float sunShadow(vec3 worldPos, vec3 n, float nl) {
     if (uSunColor.w < 0.5)
@@ -204,8 +215,14 @@ void main() {
         return;
     }
     vec3 n = normalize(vNormal);
-    if (!gl_FrontFacing)
-        n = -n; // two-sided foliage and thin parts
+    if (!gl_FrontFacing) {
+        // Two-sided thin parts see their back face. Alpha-masked foliage (grass, leaves) keeps the up
+        // component: blades lit with a bent-up normal stay lit from both sides like the ground under them.
+        if (uAlphaMode == 1)
+            n.xz = -n.xz;
+        else
+            n = -n;
+    }
     vec2 uv = vUV;
     if (uWorldUv) {
         vec3 an = abs(n);
@@ -219,8 +236,18 @@ void main() {
     uv = uv * uTiling * uUvScale + uUvOffset;
 
     float terrainW[8];
+    vec2 terrainDx = vec2(0.0), terrainDy = vec2(0.0);
+    float terrainFar = 0.0;
     if (uTerrain) {
-        vec2 st = (vWorldPos.xz - uTerrainOrigin) / uTerrainSize;
+        // The splat lookup is pushed around by noise (up to ~1.5 m), so layer borders wander
+        // organically instead of following the splat texels.
+        vec2 p = vWorldPos.xz;
+        terrainDx = dFdx(p);
+        terrainDy = dFdy(p);
+        terrainFar = smoothstep(12.0, 70.0, distance(vWorldPos, uCameraPos.xyz));
+        vec2 warp = vec2(fbm(p * 0.19), fbm(p * 0.19 + vec2(31.7, 11.3))) - 0.5;
+        warp += (vec2(valueNoise(p * 1.7), valueNoise(p * 1.7 + vec2(7.3, 3.1))) - 0.5) * 0.3;
+        vec2 st = (p + warp * 3.2 - uTerrainOrigin) / uTerrainSize;
         vec4 a = texture(uTerrainSplat, vec3(st, 0.0)), b = texture(uTerrainSplat, vec3(st, 1.0));
         float sum = max(dot(a, vec4(1.0)) + dot(b, vec4(1.0)), 1e-4);
         a /= sum;
@@ -232,17 +259,50 @@ void main() {
     }
     vec3 albedo = pow(max(uColor, vec3(0.0)), vec3(2.2));
     if (uTerrain) {
-        // Layers under ~0.5 % weight are skipped: most pixels sample one or two.
+        // Each layer is read twice, at its tiling and at a rotated, ~2.3x larger copy, mixed by a
+        // slow noise (more of the large copy far away), so no repeat shows. Layers then meet by
+        // their texture height (the albedo's brightness): stones and tufts poke through the
+        // neighbour first instead of a soft cross-fade. Layers under ~0.5 % weight are skipped.
         vec2 p = vWorldPos.xz;
-        albedo = vec3(0.0);
+        vec3 col[8];
+        float hmax = -1.0, hgt[8];
         for (int i = 0; i < 8; ++i) {
+            col[i] = vec3(0.0);
+            hgt[i] = -1.0;
             if (terrainW[i] < 0.004)
                 continue;
             vec3 c = pow(max(uLayerColor[i], vec3(0.0)), vec3(2.2));
-            if ((uLayerMaps & (1 << i)) != 0)
-                c *= texture(uLayerAlbedo, vec3(p * uLayerTiling[i], float(i))).rgb;
-            albedo += c * terrainW[i];
+            float h = 0.5;
+            if ((uLayerMaps & (1 << i)) != 0) {
+                vec2 uvA, uvB;
+                float k = terrainBomb(p, uLayerTiling[i], float(i), terrainFar, uvA, uvB);
+                vec3 tA = textureGrad(uLayerAlbedo, vec3(uvA, float(i)), terrainDx * uLayerTiling[i], terrainDy * uLayerTiling[i]).rgb;
+                vec3 tB = textureGrad(uLayerAlbedo, vec3(uvB, float(i)), kTerrainRot * terrainDx * uLayerTiling[i] * kTerrainScale,
+                                      kTerrainRot * terrainDy * uLayerTiling[i] * kTerrainScale).rgb;
+                vec3 t = mix(tA, tB, k);
+                c *= t;
+                h = dot(sqrt(t), vec3(0.3, 0.59, 0.11));
+            }
+            col[i] = c;
+            hgt[i] = terrainW[i] + h * 0.45;
+            hmax = max(hmax, hgt[i]);
         }
+        albedo = vec3(0.0);
+        float wsum = 0.0;
+        for (int i = 0; i < 8; ++i) {
+            float w = hgt[i] < 0.0 ? 0.0 : max(hgt[i] - hmax + 0.12, 0.0);
+            terrainW[i] = w;
+            wsum += w;
+        }
+        for (int i = 0; i < 8; ++i) {
+            terrainW[i] /= max(wsum, 1e-4);
+            albedo += col[i] * terrainW[i];
+        }
+        // Large-scale variation: patches of lighter and darker, greener and more yellow ground
+        // (tens of metres), so a meadow is not one flat colour to the horizon.
+        float m1 = fbm(p * 0.017 + vec2(3.7, 1.9)), m2 = fbm(p * 0.043 + vec2(11.0, 5.0));
+        albedo *= mix(0.78, 1.18, m1);
+        albedo *= mix(vec3(1.07, 1.0, 0.84), vec3(0.93, 1.02, 1.06), m2);
     }
     float alpha = uOpacity;
     if (uHasTexture) {
@@ -336,7 +396,12 @@ void main() {
                 m.z += terrainW[i];
                 continue;
             }
-            vec2 xy = texture(uLayerNormal, vec3(p * uLayerTiling[i], float(i))).xy * 2.0 - 1.0;
+            vec2 uvA, uvB;
+            float k = terrainBomb(p, uLayerTiling[i], float(i), terrainFar, uvA, uvB);
+            vec2 xyA = textureGrad(uLayerNormal, vec3(uvA, float(i)), terrainDx * uLayerTiling[i], terrainDy * uLayerTiling[i]).xy * 2.0 - 1.0;
+            vec2 xyB = textureGrad(uLayerNormal, vec3(uvB, float(i)), kTerrainRot * terrainDx * uLayerTiling[i] * kTerrainScale,
+                                   kTerrainRot * terrainDy * uLayerTiling[i] * kTerrainScale).xy * 2.0 - 1.0;
+            vec2 xy = mix(xyA, transpose(kTerrainRot) * xyB, k); // back from the rotated copy's frame
             m += terrainW[i] * vec3(xy * uLayerNormalStrength[i], sqrt(max(1.0 - dot(xy, xy), 0.0)));
         }
         m.z = max(m.z, 1e-3);

@@ -32,6 +32,8 @@ import build_skrunda                                  # noqa: E402
 from zonegen import skrunda_site as site              # noqa: E402
 from zonegen.skrunda import BASE                      # noqa: E402
 from zonegen.buildings import STOREY                  # noqa: E402
+from zonegen.terrain import _poly_dist, _point_in_poly  # noqa: E402
+import numpy as np                                    # noqa: E402
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import skrunda_probes                                 # noqa: E402
 
@@ -126,8 +128,8 @@ def foliage_lines():
 
 
 def write_terrain(path):
-    """Binary terrain next to the level (engine/src/Terrain.cpp, version 1): header, heights (row = Z),
-    RGBA8 splat map, foliage instances."""
+    """Binary terrain next to the level (engine/src/Terrain.cpp, version 2): header, heights (row = Z),
+    splat map (8 bytes per texel, one weight per layer), foliage instances."""
     import struct
     import numpy as np
     H = np.asarray(T.H, dtype='<f4')
@@ -136,7 +138,7 @@ def write_terrain(path):
     splat_n = 1024
     S = T.splat(splat_n)
     with open(path, 'wb') as f:
-        f.write(struct.pack('<IIiifffI', 0x52524554, 1, res, splat_n, site.X0, site.Z0, site.SIZE, len(FOLIAGE)))
+        f.write(struct.pack('<IIiifffI', 0x52524554, 2, res, splat_n, site.X0, site.Z0, site.SIZE, len(FOLIAGE)))
         f.write(H.tobytes())
         f.write(S.tobytes())
         for x, y, z, yaw, sc, t in FOLIAGE:
@@ -205,12 +207,18 @@ L += [
     f'player_start {px:.2f} {py + 0.1:.2f} {pz:.2f}',
     f'map_bounds {site.X0:g} {site.Z0:g} {site.SIZE:g}',
     # engine terrain: heights, splat map and the painted vegetation are in skrunda1.terrain (Landscape and
-    # Foliage modes in the editor); roads, paths and ponds are the draped overlay models in group Terrain
+    # Foliage modes in the editor); the asphalt and the ponds are the draped overlay models in group Terrain.
+    # Layers in zonegen Terrain.SPLAT order, tiling = 1 / the photo's real size (Poly Haven) so grass blades,
+    # leaves and pebbles keep their real scale.
     'terrain "skrunda1.terrain"',
     'terrain_layer 0 "../materials/skrunda/terrain_meadow.material" 0.4',
     'terrain_layer 1 "../materials/skrunda/terrain_dry.material" 0.5',
     'terrain_layer 2 "../materials/skrunda/terrain_lush.material" 0.5',
-    'terrain_layer 3 "../materials/skrunda/terrain_dirt.material" 0.5',
+    'terrain_layer 3 "../materials/skrunda/terrain_dirt.material" 0.77',
+    'terrain_layer 4 "../materials/skrunda/terrain_leaves.material" 0.33',
+    'terrain_layer 5 "../materials/skrunda/terrain_gravel.material" 0.5',
+    'terrain_layer 6 "../materials/skrunda/terrain_mud.material" 0.77',
+    'terrain_layer 7 "../materials/skrunda/terrain_path.material" 0.32',
     '@FOLIAGE_TYPES@',
     # early spring day after the photos of Skrunda-1 on Wikimedia Commons: bright sky with fair-weather
     # clouds, crisp sun shadows, almost no haze, last year's straw-coloured grass
@@ -260,6 +268,8 @@ for j in range(site.NT):
     for i in range(site.NT):
         cx = site.X0 + (i + 0.5) * site.TILE
         cz = site.Z0 + (j + 0.5) * site.TILE
+        if not os.path.exists(os.path.join(ROOT, 'assets', 'models', 'zone', 'skrunda', 'terrain', f'overlay_{i}_{j}.glb')):
+            continue                    # no asphalt or pond on this tile
         model(f'Roads {i} {j}', f'{SK}terrain/overlay_{i}_{j}.glb', cx, 0, cz, 'Terrain',
               lod=f'{SK}terrain/overlay_{i}_{j}_lod1.glb', lod_dist=110, collision=False)
 
@@ -282,8 +292,9 @@ def free(x, z, r=1.5):
     for k in ('unclassified', 'service', 'primary', 'secondary'):
         if T.field('road_' + k, x, z) < site.ROAD_HALF[k] + r:
             return False
-    for poly, level in T.pond:
-        if h(x, z) < level + 0.25:
+    for poly, level in T.pond:          # only near the pond: hollows elsewhere may lie lower and stay dry
+        if h(x, z) < level + 0.25 and (_poly_dist(np.array([x]), np.array([z]), poly)[0] < 12.0 or
+                                       _point_in_poly(np.array([x]), np.array([z]), poly)[0]):
             return False
     return True
 

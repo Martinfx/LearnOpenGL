@@ -1,8 +1,8 @@
 # FPS engine material (physically based: metal/roughness)
-# Skrunda-1 terrain layer: Poly Haven "grass_ground" (CC0) tinted like the zone ground textures.
+# Skrunda-1 terrain layer, last year's overgrown meadow (base layer): Poly Haven "grass_ground" (CC0).
 version 2
 name "Skrunda meadow"
-color 1.0 1.0 0.82
+color 0.96 0.97 0.8
 roughness 1
 metallic 0
 normal_strength 1

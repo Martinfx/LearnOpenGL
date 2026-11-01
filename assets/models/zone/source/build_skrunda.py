@@ -88,8 +88,9 @@ def build(name):
 
 
 def build_overlays(only=None):
-    """Draped overlays for the engine terrain (asphalt, paths, ruts, aprons, leaf litter, ponds), 9 x 9 tiles
-    into assets/models/zone/skrunda/terrain/overlay_i_j.glb. Same 1 m grid and diagonals as the terrain."""
+    """Draped overlays for the engine terrain (asphalt and ponds; paths, ruts, gravel and leaf litter are terrain
+    layers), 9 x 9 tiles into assets/models/zone/skrunda/terrain/overlay_i_j.glb (tiles with neither are left
+    out). Same 1 m grid and diagonals as the terrain."""
     from zonegen import skrunda_site as site
     t = site.terrain(BY_ID)
     out = os.path.join(OUT, 'terrain')
@@ -100,8 +101,13 @@ def build_overlays(only=None):
                 continue
             x0, z0 = site.X0 + i * site.TILE, site.Z0 + j * site.TILE
             m = t.tile(x0, z0, site.TILE, 1.0, lod=0, base=False, names=list(t.OVERLAYS))
+            if m.triangles() == 0:          # no asphalt or pond here: no model (the level script skips it)
+                for f in (f'overlay_{i}_{j}.glb', f'overlay_{i}_{j}_lod1.glb'):
+                    if os.path.exists(os.path.join(out, f)):
+                        os.remove(os.path.join(out, f))
+                continue
             glb.write_glb(os.path.join(out, f'overlay_{i}_{j}.glb'), m, tex_rel_dir='../../textures', name=f'overlay_{i}_{j}')
-            m1 = t.tile(x0, z0, site.TILE, 2.0, lod=1, base=False, names=['road', 'path', 'ruts', 'apron'], lift=4.0)
+            m1 = t.tile(x0, z0, site.TILE, 2.0, lod=1, base=False, names=list(t.OVERLAYS), lift=4.0)
             glb.write_glb(os.path.join(out, f'overlay_{i}_{j}_lod1.glb'), m1, tex_rel_dir='../../textures',
                           name=f'overlay_{i}_{j}_lod1')
             print(f'overlay_{i}_{j}: {m.triangles()} tris, lod1 {m1.triangles()}', flush=True)

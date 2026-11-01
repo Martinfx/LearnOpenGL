@@ -78,9 +78,10 @@ v Lotyšsku. Budovy, ulice a rybník jsou 1:1 podle OpenStreetMap (© OpenStreet
 Úkol: najít PDA stalkera Ljochy ve 3. patře nemocnice a vrátit se do Štábu, volitelně jeho skrýš ve vodárně.
 Trasy: hlavní po Nové ulici pod odstřelovačem, boční přes dvory k zadnímu vchodu nemocnice, třetí k vodárně.
 Plán s trasami: `assets/levels/source/skrunda1_plan.png` (`draw_skrunda_plan.py` ho překreslí z levelu).
-Zem je terén enginu (`skrunda1.terrain`, 577 × 577 výšek po 1 m, 4 vrstvy textur) a stromy, keře a tráva
-jsou jeho foliage, takže se upravují štětci v režimech Landscape a Foliage. Silnice, cesty a rybník jsou
-přehozené overlay modely ve skupině Terrain. Budovy: `python3 -I assets/models/zone/source/build_skrunda.py`,
+Zem je terén enginu (`skrunda1.terrain`, 577 × 577 výšek po 1 m: kopce k lesu, zvlnění, hromady hlíny a suti;
+8 vrstev textur: louka, suchá a zelená tráva, hlína, listí, štěrk, bláto, šlapaná cesta) a stromy, keře a tráva
+jsou jeho foliage, takže se upravují štětci v režimech Landscape a Foliage. Asfalt a rybník jsou přehozené
+overlay modely ve skupině Terrain. Budovy: `python3 -I assets/models/zone/source/build_skrunda.py`,
 overlaye `... build_skrunda.py overlays`, rozložení, terén a foliage `python3 -I assets/levels/source/make_skrunda_level.py`
 (přepíše i ruční úpravy terénu; objemy interiérů, nastavení streamingu a impostory zachová). Po vygenerování
 level otevři a ulož v editoru, doplní se tím `bounds` modelů pro streaming.
