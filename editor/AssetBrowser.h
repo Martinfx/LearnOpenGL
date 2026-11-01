@@ -90,6 +90,7 @@ public:
 
     QIcon iconFor(const QString& path) const { return icons_.value(path); } // thumbnail made so far, or null
     QString currentFolderPath() const; // absolute folder shown (assets root for "All")
+    void reveal(const QString& path);  // shows the file's folder and selects the file
 
 signals:
     void assetActivated(const QString& path, AssetType type);

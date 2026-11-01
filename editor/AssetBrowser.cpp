@@ -606,6 +606,18 @@ void AssetBrowser::rebuildFolders()
     updateBreadcrumb();
 }
 
+void AssetBrowser::reveal(const QString& path)
+{
+    search_->clear();
+    setFolder(QDir(assetRoot()).relativeFilePath(QFileInfo(path).absolutePath()));
+    for (int i = 0; i < list_->count(); ++i)
+        if (QListWidgetItem* item = list_->item(i); QFileInfo(item->data(kPathRole).toString()) == QFileInfo(path)) {
+            list_->setCurrentItem(item);
+            list_->scrollToItem(item);
+            break;
+        }
+}
+
 void AssetBrowser::setFolder(const QString& folder)
 {
     folder_ = folder;

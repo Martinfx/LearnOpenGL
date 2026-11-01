@@ -9,6 +9,7 @@ add_executable(fps_editor
     AssetBrowser.cpp
     EditorHistory.cpp
     EnvironmentPanel.cpp
+    PaletteDialog.cpp
     EnvironmentPanel.h
     MainWindow.h
     MaterialEditor.cpp

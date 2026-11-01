@@ -6,6 +6,7 @@
 #include <engine/Lights.h>
 #include <engine/EntityIO.h>
 #include <engine/Ambience.h>
+#include <engine/AssetPalette.h>
 #include <engine/Particles.h>
 #include <engine/Audio.h>
 #include <engine/NavMesh.h>
@@ -1937,6 +1938,44 @@ void testTimeOfDay()
     check(std::string(engine::formatHour(21.25f, text)) == "21:15" && std::string(engine::formatHour(24.5f, text)) == "00:30", "format hour");
 }
 
+void testAssetPalette()
+{
+    auto image = [](std::uint8_t r, std::uint8_t g, std::uint8_t b) {
+        std::vector<std::uint8_t> px(16 * 16 * 4);
+        for (std::size_t i = 0; i < px.size(); i += 4) {
+            px[i] = r;
+            px[i + 1] = g;
+            px[i + 2] = b;
+            px[i + 3] = 255;
+        }
+        return px;
+    };
+    const auto gray = image(128, 125, 120);
+    const engine::AlbedoStats ok = engine::albedoStats(gray.data(), 16, 16);
+    check(ok.pixels > 0 && engine::paletteProblems(ok).empty(), "mid gray albedo is fine");
+    const auto black = image(10, 10, 10);
+    const engine::AlbedoStats dark = engine::albedoStats(black.data(), 16, 16);
+    check(dark.tooDark > 0.99f && !engine::paletteProblems(dark).empty(), "black albedo too dark");
+    const auto white = image(250, 250, 252);
+    check(engine::albedoStats(white.data(), 16, 16).tooBright > 0.99f, "white albedo too bright");
+    const auto red = image(220, 20, 20);
+    const engine::AlbedoStats sat = engine::albedoStats(red.data(), 16, 16);
+    check(sat.meanSaturation > 0.7f && !engine::paletteProblems(sat).empty(), "pure red too saturated");
+    const auto rust = image(110, 62, 34);
+    check(engine::paletteProblems(engine::albedoStats(rust.data(), 16, 16)).empty(), "rust brown is fine");
+    // The material color tints the map (gray x dark tint = too dark); no map = the color alone.
+    check(engine::albedoStats(gray.data(), 16, 16, glm::vec3(0.1f)).tooDark > 0.99f, "tint darkens");
+    check(engine::albedoStats(nullptr, 0, 0, glm::vec3(0.5f)).pixels == 1, "color only");
+    // Cut-out pixels (alpha < 50 %) are ignored.
+    auto leaves = image(10, 10, 10);
+    for (std::size_t i = 3; i < leaves.size(); i += 4)
+        leaves[i] = 0;
+    check(engine::albedoStats(leaves.data(), 16, 16).pixels == 0, "transparent pixels skipped");
+    // Real assets: a material and a glTF model of the project.
+    const auto entries = engine::checkAssetPalette(ENGINE_TEST_ASSETS "/models/ramp.gltf");
+    check(!entries.empty() && entries[0].stats.pixels > 0, "glTF model palette");
+}
+
 int main()
 {
     // Hermetic cook cache for the tests.
@@ -1989,6 +2028,7 @@ int main()
     testPhysicsProps();
     testEntityIO();
     testTimeOfDay();
+    testAssetPalette();
     std::printf(failures ? "%d test(s) failed\n" : "all tests passed\n", failures);
     return failures ? 1 : 0;
 }

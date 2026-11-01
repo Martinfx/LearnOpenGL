@@ -38,6 +38,7 @@
 #include <QComboBox>
 #include <QPointer>
 #include <engine/JobSystem.h>
+#include "PaletteDialog.h"
 #include <engine/Log.h>
 #include <engine/CVars.h>
 #include <engine/Crash.h>
@@ -265,6 +266,18 @@ void MainWindow::buildMenus()
             openParticleEditor(path);
     });
     assets->addAction(tr("&New particle effect..."), this, [this] { newParticleEffect(QString()); });
+    assets->addAction(tr("Check albedo &palette..."), this, [this] {
+        auto* dialog = new PaletteDialog(
+            [this](const QString& path) {
+                if (path.endsWith(".material"))
+                    openMaterialEditor(path);
+                else
+                    assets_->reveal(path); // models: show them in the Content Browser
+            },
+            this);
+        dialog->setAttribute(Qt::WA_DeleteOnClose);
+        dialog->show();
+    });
     assets->addAction(tr("Edit &texture..."), this, [this] {
         const QString path = QFileDialog::getOpenFileName(this, tr("Edit texture"), assetPath("textures"),
                                                           tr("Images (*.png *.jpg *.jpeg)"));
