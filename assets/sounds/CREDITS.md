@@ -53,6 +53,7 @@ recordings with placeholders.
 | `ambient/dog_bark_far_*` (some barks) | [Dog barking mono](https://opengameart.org/content/dog-barking-mono) | HaelDB | CC0 |
 | `ambient/crow_1..6` | [Crows singing](https://opengameart.org/content/crows-singing) | IgnasD | CC0 |
 | `ambient/crow_7` | [Crow caw](https://opengameart.org/content/crow-caw) | zeroisnotnull | CC0 |
+| `items/pickup_ammo_*`, `pickup_medkit_*`, `pickup_weapon_*`, `heal_*`: layered inventory Foley (rounds rattle + small metal, canvas rustle, sling + rifle metal, bandage unwrap), see `source/build_items.py` | [RPG Sound Pack](https://opengameart.org/content/rpg-sound-pack) | artisticdude | CC0 |
 
 CC-BY items: "This work is based on <title> by <author>, licensed under CC-BY (https://creativecommons.org/licenses/by/3.0/
 or /4.0/)". Changes: trimmed, converted to mono 48 kHz, normalised, and filtered; loops were crossfaded.

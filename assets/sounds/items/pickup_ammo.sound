@@ -1,0 +1,13 @@
+# Sound: variations (one is picked at random per play) and playback settings
+file "pickup_ammo_1.wav"
+file "pickup_ammo_2.wav"
+file "pickup_ammo_3.wav"
+volume 0.7
+pitch 0.96 1.04
+distance 1 25
+rolloff 1
+loop 0
+stream 0
+spatial 0
+group sfx
+max_instances 2

@@ -1,0 +1,12 @@
+# Sound: variations (one is picked at random per play) and playback settings
+file "pickup_weapon_1.wav"
+file "pickup_weapon_2.wav"
+volume 0.75
+pitch 0.96 1.04
+distance 1 25
+rolloff 1
+loop 0
+stream 0
+spatial 0
+group sfx
+max_instances 2
