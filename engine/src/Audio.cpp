@@ -344,6 +344,7 @@ struct AudioSystem::Impl {
         std::atomic<int> state{Loading};
         AudioClipData data; // filled by the decode job, freed after the upload
         ALuint buffer = 0;
+        std::size_t bytes = 0; // PCM in the OpenAL buffer
     };
     struct Stream {
         ma_decoder decoder{};
@@ -449,6 +450,7 @@ struct AudioSystem::Impl {
             const AudioClipData& d = clip->data;
             alBufferData(clip->buffer, formatOf(d.channels), d.samples.data(),
                          static_cast<ALsizei>(d.samples.size() * sizeof(std::int16_t)), d.sampleRate);
+            clip->bytes = d.samples.size() * sizeof(std::int16_t);
             clip->data = {}; // the buffer holds it now
             clip->state = alGetError() == AL_NO_ERROR ? Ready : Failed;
         }
@@ -1205,6 +1207,14 @@ std::size_t AudioSystem::render(float* out, std::size_t frames)
     }
     m.renderSamples(m.device, out, static_cast<ALCsizei>(frames));
     return frames;
+}
+
+std::size_t AudioSystem::memoryBytes() const
+{
+    std::size_t bytes = 0;
+    for (const auto& [key, clip] : impl_->clips)
+        bytes += clip->state == Impl::Ready ? clip->bytes : (clip->state == Impl::Decoded ? clip->data.samples.size() * sizeof(std::int16_t) : 0);
+    return bytes;
 }
 
 int AudioSystem::activeVoices() const

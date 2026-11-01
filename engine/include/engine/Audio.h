@@ -137,6 +137,7 @@ public:
     std::size_t render(float* out, std::size_t frames);
 
     int activeVoices() const;
+    std::size_t memoryBytes() const; // decoded sound clips (in OpenAL buffers); call on the main thread
     std::uint32_t sampleRate() const;
 
 private:

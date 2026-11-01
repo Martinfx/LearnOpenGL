@@ -142,6 +142,12 @@ public:
 
     int instanceCount() const;
     int particleCount() const;
+    // Pool: finished effects keep their particle arrays for the next spawn, so effects in
+    // play do not allocate. The budget caps live particles of all effects (emitters wait
+    // while it is full); 0 = no cap.
+    void setParticleBudget(int maxParticles);
+    int particleBudget() const;
+    std::size_t memoryBytes() const; // particle arrays held (live and pooled)
 
 private:
     struct Impl;

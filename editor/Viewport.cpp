@@ -1082,3 +1082,5 @@ bool Viewport::brushHit(QPointF pos, glm::vec3& point) const
     point = origin + dir * t;
     return true;
 }
+
+std::size_t Viewport::particleMemoryBytes() const { return particles_.memoryBytes(); }

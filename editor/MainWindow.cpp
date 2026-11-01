@@ -2060,12 +2060,51 @@ void MainWindow::buildDocks()
     memoryLabel->setAlignment(Qt::AlignTop | Qt::AlignLeft);
     memoryLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
     memoryLabel->setContentsMargins(8, 6, 8, 6);
-    auto* memoryScroll = new QScrollArea(this);
+    // Budget of the level by category: limits are saved with the level, the game warns
+    // when a category goes over (console `memory`).
+    auto* memoryPanel = new QWidget(this);
+    auto* memoryLayout = new QHBoxLayout(memoryPanel);
+    memoryLayout->setContentsMargins(0, 0, 0, 0);
+    budgetTable_ = new QTableWidget(engine::kMemoryCategories, 3, memoryPanel);
+    budgetTable_->setHorizontalHeaderLabels({tr("Budget"), tr("In use"), tr("Limit")});
+    budgetTable_->verticalHeader()->setVisible(false);
+    budgetTable_->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    budgetTable_->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+    budgetTable_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    budgetTable_->setSelectionMode(QAbstractItemView::NoSelection);
+    budgetTable_->setMinimumWidth(380);
+    budgetTable_->setToolTip(tr("Memory budget of the level: the game logs a warning when a category goes over its limit "
+                                "(console: memory). Physics, Lua and audio are measured in the game."));
+    for (int i = 0; i < engine::kMemoryCategories; ++i) {
+        const auto c = static_cast<engine::MemoryCategory>(i);
+        budgetTable_->setItem(i, 0, new QTableWidgetItem(tr(engine::memoryCategoryName(c))));
+        budgetTable_->setItem(i, 1, new QTableWidgetItem(QStringLiteral("-")));
+        auto* spin = new QDoubleSpinBox(budgetTable_);
+        spin->setRange(0, 65536);
+        spin->setDecimals(0);
+        spin->setSingleStep(32);
+        spin->setSuffix(" MB");
+        spin->setSpecialValueText(tr("no limit"));
+        spin->setKeyboardTracking(false);
+        spin->setFrame(false);
+        budgetTable_->setCellWidget(i, 2, spin);
+        connect(spin, &QDoubleSpinBox::valueChanged, this, [this, i](double v) {
+            float& mb = scene_.memoryBudget.mb[static_cast<std::size_t>(i)];
+            if (mb != static_cast<float>(v)) {
+                mb = static_cast<float>(v);
+                markDirty();
+            }
+        });
+        budgetSpins_.push_back(spin);
+    }
+    auto* memoryScroll = new QScrollArea(memoryPanel);
     memoryScroll->setWidget(memoryLabel);
     memoryScroll->setWidgetResizable(true);
+    memoryLayout->addWidget(budgetTable_, 0);
+    memoryLayout->addWidget(memoryScroll, 1);
     auto* memoryDock = new QDockWidget(tr("Memory"), this);
     memoryDock->setObjectName("memory");
-    memoryDock->setWidget(memoryScroll);
+    memoryDock->setWidget(memoryPanel);
     addDockWidget(Qt::BottomDockWidgetArea, memoryDock);
     tabifyDockWidget(logDock_, memoryDock);
     auto* memoryTimer = new QTimer(this);
@@ -2076,6 +2115,28 @@ void MainWindow::buildDocks()
         const engine::Renderer::MemoryStats g = viewport_->memoryStats();
         const engine::SceneMemory c = engine::sceneMemory(scene_);
         const std::size_t process = engine::processMemoryBytes();
+        {
+            engine::MemoryUsage u; // what the editor can measure; the rest shows in the game
+            u.set(engine::MemoryCategory::GpuTextures, g.textureBytes);
+            u.set(engine::MemoryCategory::GpuMeshes, g.meshBytes);
+            u.set(engine::MemoryCategory::CpuMeshes, c.meshBytes);
+            u.set(engine::MemoryCategory::Particles, viewport_->particleMemoryBytes());
+            for (int i = 0; i < engine::kMemoryCategories; ++i) {
+                const long long used = u.bytes[static_cast<std::size_t>(i)];
+                const float limit = scene_.memoryBudget.mb[static_cast<std::size_t>(i)];
+                QTableWidgetItem* item = budgetTable_->item(i, 1);
+                if (used < 0) {
+                    item->setText(tr("in game"));
+                    item->setForeground(palette().color(QPalette::PlaceholderText));
+                    continue;
+                }
+                const double usedMb = static_cast<double>(used) / (1024.0 * 1024.0);
+                item->setText(limit > 0.0f ? QString("%1 MB (%2 %)").arg(usedMb, 0, 'f', 1).arg(int(usedMb * 100.0 / limit)) : mb(static_cast<std::size_t>(used)));
+                item->setForeground(limit > 0.0f && usedMb > limit          ? QColor(240, 90, 80)
+                                    : limit > 0.0f && usedMb > limit * 0.85 ? QColor(235, 190, 70)
+                                                                            : palette().color(QPalette::Text));
+            }
+        }
         const QString row = "<tr><td>%1</td><td align='right'>&nbsp;&nbsp;<b>%2</b></td><td>&nbsp;&nbsp;%3</td></tr>";
         QString html = "<table cellspacing='2'>";
         html += "<tr><td colspan='3'><b>GPU (3D view)</b></td></tr>";
@@ -2087,6 +2148,8 @@ void MainWindow::buildDocks()
                             .arg(g.streaming));
         html += row.arg(tr("Meshes"), mb(g.meshBytes), tr("%1 vertex/index buffers").arg(g.meshes));
         html += row.arg(tr("Render targets"), mb(g.targetBytes), tr("HDR, depth, SSAO, bloom, shadow maps"));
+        html += row.arg(tr("Frame scratch"), mb(g.frameArenaBytes),
+                        tr("CPU frame allocator (light clusters, sprites), peak %1 per frame").arg(mb(g.frameArenaPeak)));
         html += row.arg(tr("Total"), mb(g.textureBytes + g.meshBytes + g.targetBytes), QString());
         html += "<tr><td colspan='3'><br><b>CPU (level assets)</b></td></tr>";
         html += row.arg(tr("Meshes"), mb(c.meshBytes),
@@ -2504,6 +2567,10 @@ void MainWindow::refreshLevelProperties()
     for (auto& [spin, member] : streamSpins_) {
         QSignalBlocker block(spin);
         spin->setValue(scene_.streaming.*member);
+    }
+    for (std::size_t i = 0; i < budgetSpins_.size(); ++i) {
+        QSignalBlocker block(budgetSpins_[i]);
+        budgetSpins_[i]->setValue(scene_.memoryBudget.mb[i]);
     }
     refreshStreamingOverlay();
     // Another level or an undo step: the shown navmesh no longer matches.

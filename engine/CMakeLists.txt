@@ -28,6 +28,7 @@ add_library(engine STATIC
     src/TimeOfDay.cpp
     src/Water.cpp
     src/WorldStreaming.cpp
+    src/FrameArena.cpp
     src/AssetPalette.cpp
     src/Scene.cpp
     src/JobSystem.cpp

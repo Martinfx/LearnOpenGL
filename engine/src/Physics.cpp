@@ -26,6 +26,7 @@
 #include <mutex>
 #include <thread>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace engine {
 
@@ -466,6 +467,25 @@ std::optional<RayHit> PhysicsWorld::raycast(glm::vec3 origin, glm::vec3 directio
             result.surface = "dirt";
     }
     return result;
+}
+
+std::size_t PhysicsWorld::memoryBytes() const
+{
+    JPH::BodyIDVector ids;
+    impl_->system.GetBodies(ids);
+    std::size_t bytes = 16u * 1024u * 1024u; // TempAllocatorImpl
+    bytes += ids.size() * sizeof(JPH::Body);
+    std::unordered_set<const JPH::Shape*> seen;
+    const JPH::BodyLockInterfaceNoLock& locks = impl_->system.GetBodyLockInterfaceNoLock();
+    for (const JPH::BodyID& id : ids) {
+        JPH::BodyLockRead lock(locks, id);
+        if (!lock.Succeeded())
+            continue;
+        const JPH::Shape* shape = lock.GetBody().GetShape();
+        if (shape && seen.insert(shape).second)
+            bytes += shape->GetStats().mSizeBytes;
+    }
+    return bytes;
 }
 
 } // namespace engine

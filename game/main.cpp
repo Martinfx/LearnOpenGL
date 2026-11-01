@@ -27,6 +27,7 @@
 #include "GameWeather.h"
 #include "Inventory.h"
 #include <engine/Water.h>
+#include <engine/Memory.h>
 #include <engine/WorldStreaming.h>
 #include <limits>
 #include "KeyNames.h"
@@ -766,6 +767,22 @@ int main(int argc, char** argv)
     scripts.setLightningHandler([&weather](float distance) { weather.strikeNow(distance); });
     float shelterTimer = 0.0f;
     bool sheltered = false;
+    // Memory budget of the level (engine/Memory.h): measured every 2 s, a warning when a
+    // category goes over its limit (once until it drops below again), console `memory`.
+    std::array<bool, engine::kMemoryCategories> overBudgetWarned{};
+    float memoryTimer = 2.0f;
+    auto measureMemory = [&] {
+        engine::MemoryUsage u;
+        const engine::Renderer::MemoryStats g = renderer.memoryStats();
+        u.set(engine::MemoryCategory::GpuTextures, g.textureBytes);
+        u.set(engine::MemoryCategory::GpuMeshes, g.meshBytes);
+        u.set(engine::MemoryCategory::CpuMeshes, engine::sceneMemory(scene).meshBytes);
+        u.set(engine::MemoryCategory::Audio, audio.system().memoryBytes());
+        u.set(engine::MemoryCategory::Physics, physics.memoryBytes());
+        u.set(engine::MemoryCategory::Lua, scripts.memoryBytes());
+        u.set(engine::MemoryCategory::Particles, effects.memoryBytes());
+        return u;
+    };
     // Anomalies (gravity traps, discharges, vents, acid, rifts, radiation), detector and Geiger counter.
     GameAnomalies anomalies;
     anomalies.init(std::filesystem::path(argv[0]).parent_path() / "assets", audio);
@@ -833,6 +850,21 @@ int main(int argc, char** argv)
         cvars.addCommand("quit", "Leaves the game", [window](const std::vector<std::string>&) {
             glfwSetWindowShouldClose(window, GLFW_TRUE);
             return engine::ConsoleResult{true, "bye"};
+        });
+        cvars.addCommand("memory", "Memory in use by category against the level's budget (editor: Memory dock)",
+                         [&](const std::vector<std::string>&) {
+            const engine::MemoryUsage u = measureMemory();
+            std::string text;
+            for (int i = 0; i < engine::kMemoryCategories; ++i) {
+                const auto c = static_cast<engine::MemoryCategory>(i);
+                const double used = static_cast<double>(u.bytes[static_cast<std::size_t>(i)]) / (1024.0 * 1024.0);
+                const float limit = scene.memoryBudget.limit(c);
+                char line[128];
+                std::snprintf(line, sizeof line, "%s%s %.1f / %.0f MB%s", text.empty() ? "" : ", ", engine::memoryCategoryKey(c), used,
+                              static_cast<double>(limit), limit > 0.0f && used > static_cast<double>(limit) ? " OVER" : "");
+                text += line;
+            }
+            return engine::ConsoleResult{true, text};
         });
         cvars.addCommand("streaming", "World streaming: cells loaded, meshes in memory", [&](const std::vector<std::string>&) {
             const engine::WorldStreamer::Stats s = streamer.stats();
@@ -1559,6 +1591,17 @@ int main(int argc, char** argv)
             shelterTimer = 0.25f;
             sheltered = physics.raycast(camera.position + glm::vec3(0.0f, 0.3f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), 40.0f).has_value();
             audio.setSheltered(sheltered);
+        }
+        if ((memoryTimer -= static_cast<float>(frameTime)) <= 0.0f) {
+            memoryTimer = 2.0f;
+            std::array<bool, engine::kMemoryCategories> over{};
+            for (const engine::MemoryOver& o : engine::overBudget(measureMemory(), scene.memoryBudget)) {
+                const auto i = static_cast<std::size_t>(o.category);
+                over[i] = true;
+                if (!overBudgetWarned[i])
+                    LOG_WARN("memory", "%s over budget: %.1f MB of %.1f MB", engine::memoryCategoryName(o.category), o.usedMB, o.limitMB);
+            }
+            overBudgetWarned = over;
         }
         weatherDirector.update(scene.environment, static_cast<float>(simTime));
         weather.update(static_cast<float>(simTime), scene, camera.position, sheltered, audio);

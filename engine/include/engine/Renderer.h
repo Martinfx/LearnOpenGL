@@ -1,4 +1,5 @@
 #pragma once
+#include "engine/FrameArena.h"
 #include "engine/Particles.h"
 #include "engine/Lights.h"
 #include "engine/Scene.h"
@@ -179,6 +180,7 @@ public:
         int textures = 0, meshes = 0;
         int streamedLow = 0;   // textures with only their small mips resident
         int streaming = 0;     // reads from the cook cache in flight
+        std::size_t frameArenaBytes = 0, frameArenaPeak = 0; // CPU scratch memory of a frame
         std::size_t savedBytes = 0; // vs. uncompressed full-size RGBA8 with mipmaps
     };
     MemoryStats memoryStats() const;
@@ -216,6 +218,7 @@ public:
     void resetExposure() { exposureReset_ = true; }
 
 private:
+    FrameArena frameArena_{1024 * 1024}; // per-frame scratch arrays (light clusters, sprites)
     void collectDistortions(const RenderView& view); // anomaly warps of this frame into screen space
     struct GpuMesh {
         unsigned vao = 0, vbo = 0, ibo = 0;

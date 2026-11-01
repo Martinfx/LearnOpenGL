@@ -62,6 +62,7 @@ public:
     // game.lightning([distance]): a lightning strike (flash now, thunder later).
     using LightningFn = std::function<void(float distance)>;
     void setLightningHandler(LightningFn handler);
+    std::size_t memoryBytes() const; // Lua heap of all scripts
 
     // Entity I/O (engine/EntityIO.h): fires `output` of an entity, i.e. queues the
     // inputs of its matching connections. `activator` = entity index, -1 = the player.

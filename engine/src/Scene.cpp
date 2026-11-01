@@ -282,6 +282,12 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
             out << "player_sounds " << std::quoted(rel(pl.footstepSound)) << ' ' << std::quoted(rel(pl.landSound)) << ' '
                 << std::quoted(rel(pl.hurtSound)) << '\n';
     }
+    if (scene.memoryBudget != MemoryBudget{}) {
+        out << "memory_budget";
+        for (float mb : scene.memoryBudget.mb)
+            out << ' ' << mb;
+        out << '\n';
+    }
     if (scene.streaming != StreamingSettings{}) {
         const StreamingSettings& st = scene.streaming;
         out << "streaming " << (st.enabled ? 1 : 0) << ' ' << st.cellSize << ' ' << st.loadRadius << ' ' << st.unloadRadius << ' '
@@ -751,6 +757,15 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
             ok = static_cast<bool>(ls >> en >> st.cellSize >> st.loadRadius >> st.unloadRadius >> st.budgetMB >> keep);
             st.enabled = en != 0;
             st.keepFarLod = keep != 0;
+        } else if (key == "memory_budget") {
+            MemoryBudget& b = result.memoryBudget;
+            for (float& mb : b.mb) { // fewer values (older files): the rest keep their defaults
+                float v = 0.0f;
+                if (!(ls >> v))
+                    break;
+                mb = v;
+            }
+            ok = true;
         } else if (key == "transform") {
             ok = lastObject == LastObject::Model;
             if (ok) {

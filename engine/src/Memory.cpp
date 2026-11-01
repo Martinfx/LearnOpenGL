@@ -101,4 +101,46 @@ std::size_t processMemoryBytes()
 #endif
 }
 
+const char* memoryCategoryName(MemoryCategory c)
+{
+    switch (c) {
+    case MemoryCategory::GpuTextures: return "GPU textures";
+    case MemoryCategory::GpuMeshes: return "GPU meshes";
+    case MemoryCategory::CpuMeshes: return "CPU meshes";
+    case MemoryCategory::Audio: return "Audio";
+    case MemoryCategory::Physics: return "Physics";
+    case MemoryCategory::Lua: return "Lua";
+    case MemoryCategory::Particles: return "Particles and decals";
+    default: return "?";
+    }
+}
+
+const char* memoryCategoryKey(MemoryCategory c)
+{
+    switch (c) {
+    case MemoryCategory::GpuTextures: return "gpu_textures";
+    case MemoryCategory::GpuMeshes: return "gpu_meshes";
+    case MemoryCategory::CpuMeshes: return "cpu_meshes";
+    case MemoryCategory::Audio: return "audio";
+    case MemoryCategory::Physics: return "physics";
+    case MemoryCategory::Lua: return "lua";
+    case MemoryCategory::Particles: return "particles";
+    default: return "?";
+    }
+}
+
+std::vector<MemoryOver> overBudget(const MemoryUsage& usage, const MemoryBudget& budget)
+{
+    std::vector<MemoryOver> out;
+    for (int i = 0; i < kMemoryCategories; ++i) {
+        const long long used = usage.bytes[static_cast<std::size_t>(i)];
+        const float limit = budget.mb[static_cast<std::size_t>(i)];
+        const double usedMB = static_cast<double>(used) / (1024.0 * 1024.0);
+        if (used >= 0 && limit > 0.0f && usedMB > static_cast<double>(limit))
+            out.push_back({static_cast<MemoryCategory>(i), usedMB, static_cast<double>(limit)});
+    }
+    return out;
+}
+
 } // namespace engine
+

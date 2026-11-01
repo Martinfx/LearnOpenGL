@@ -2,6 +2,7 @@
 #include "engine/Animation.h"
 #include "engine/Geometry.h"
 #include "engine/Material.h"
+#include "engine/Memory.h"
 #include "engine/NavMesh.h"
 #include "engine/TextureCook.h"
 #include "engine/Terrain.h"
@@ -446,6 +447,7 @@ struct Scene {
     std::vector<std::filesystem::path> loadout;
     NavSettings nav;       // navmesh build settings (agent size, cell size)
     StreamingSettings streaming;
+    MemoryBudget memoryBudget; // engine/Memory.h, level line `memory_budget`
     PlayerSettings player; // player's .weapon files (absolute), slot 1, 2, ...
     glm::vec3 playerStart{0.0f, 0.0f, 0.0f}; // feet position
     glm::vec3 sunDirection{-0.4f, -1.0f, -0.3f};

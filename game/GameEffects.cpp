@@ -33,6 +33,8 @@ void GameEffects::init(const std::filesystem::path& assetDir, const engine::Surf
 {
     assetDir_ = assetDir;
     surfaces_ = &surfaces;
+    world_.setParticleBudget(20000); // a firefight in the rain stays bounded
+    overlay_.setParticleBudget(2000);
     for (const engine::SurfaceType& t : surfaces.types) {
         effect(t.effect); // load now: the first shot does not hitch
         if (!t.decal.empty() && !decalTextures_.count(t.decal))

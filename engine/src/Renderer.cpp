@@ -1503,11 +1503,11 @@ void Renderer::uploadLightClusters(const RenderView& view)
         label(GL_BUFFER, lightBuffer_, "local lights");
         label(GL_BUFFER, lightGridBuffer_, "light clusters");
     }
-    std::vector<GpuLight> lights;
+    std::pmr::vector<GpuLight> lights(&frameArena_); // scratch: frame arena, no heap allocation
     lights.reserve(std::max<std::size_t>(1, frameLights_.size()));
-    std::vector<glm::mat4> shadowMatrices;
-    std::vector<int> shadowLayer(frameLights_.size(), -1);
-    std::vector<float> shadowTexel(frameLights_.size(), 0.0f);
+    std::pmr::vector<glm::mat4> shadowMatrices(&frameArena_);
+    std::pmr::vector<int> shadowLayer(frameLights_.size(), -1, &frameArena_);
+    std::pmr::vector<float> shadowTexel(frameLights_.size(), 0.0f, &frameArena_);
     for (const LocalShadow& s : localShadows_) {
         shadowLayer[static_cast<std::size_t>(s.light)] = s.layer;
         shadowTexel[static_cast<std::size_t>(s.light)] = s.texelScale;
@@ -1540,7 +1540,7 @@ void Renderer::uploadLightClusters(const RenderView& view)
     const int cx = ortho ? 1 : kClusterX, cy = ortho ? 1 : kClusterY, cz = ortho ? 1 : kClusterZ;
     const float nearPlane = ortho ? 0.1f : std::max(0.01f, p[3][2] / (p[2][2] - 1.0f));
     float farPlane = nearPlane * 2.0f;
-    std::vector<glm::vec4> viewSpace(frameLights_.size());
+    std::pmr::vector<glm::vec4> viewSpace(frameLights_.size(), &frameArena_);
     for (std::size_t i = 0; i < frameLights_.size(); ++i) {
         viewSpace[i] = glm::vec4(glm::vec3(view.view * glm::vec4(frameLights_[i].position, 1.0f)), frameLights_[i].range);
         farPlane = std::max(farPlane, -viewSpace[i].z + viewSpace[i].w);
@@ -1548,7 +1548,7 @@ void Renderer::uploadLightClusters(const RenderView& view)
     const float sliceScale = static_cast<float>(cz) / std::log(farPlane / nearPlane);
     const float sliceBias = -std::log(nearPlane) * sliceScale;
     const int clusterCount = cx * cy * cz;
-    std::vector<std::pair<std::uint32_t, std::uint32_t>> pairs; // (cluster, light)
+    std::pmr::vector<std::pair<std::uint32_t, std::uint32_t>> pairs(&frameArena_); // (cluster, light)
     for (std::size_t i = 0; i < frameLights_.size(); ++i) {
         int x0 = 0, x1 = cx - 1, y0 = 0, y1 = cy - 1, z0 = 0, z1 = cz - 1;
         if (!ortho) {
@@ -1580,14 +1580,14 @@ void Renderer::uploadLightClusters(const RenderView& view)
                 for (int x = x0; x <= x1; ++x)
                     pairs.emplace_back(static_cast<std::uint32_t>(x + y * cx + z * cx * cy), static_cast<std::uint32_t>(i));
     }
-    std::vector<std::uint32_t> counts(static_cast<std::size_t>(clusterCount), 0);
+    std::pmr::vector<std::uint32_t> counts(static_cast<std::size_t>(clusterCount), 0, &frameArena_);
     for (const auto& pr : pairs)
         ++counts[pr.first];
     struct Header {
         glm::vec4 params; // x: slice scale, y: slice bias, z: near, w: unused
         glm::ivec4 dims;  // x, y, z cluster counts, w: light count
     };
-    std::vector<std::uint32_t> grid(sizeof(Header) / 4 + static_cast<std::size_t>(clusterCount) * 2, 0);
+    std::pmr::vector<std::uint32_t> grid(sizeof(Header) / 4 + static_cast<std::size_t>(clusterCount) * 2, 0, &frameArena_);
     Header header{glm::vec4(sliceScale, sliceBias, nearPlane, 0.0f), glm::ivec4(cx, cy, cz, static_cast<int>(frameLights_.size()))};
     std::memcpy(grid.data(), &header, sizeof header);
     std::uint32_t* clusters = grid.data() + sizeof(Header) / 4;
@@ -1597,7 +1597,7 @@ void Renderer::uploadLightClusters(const RenderView& view)
         clusters[c * 2 + 1] = 0;
         offset += counts[static_cast<std::size_t>(c)];
     }
-    std::vector<std::uint32_t> indices(std::max<std::size_t>(1, pairs.size()), 0);
+    std::pmr::vector<std::uint32_t> indices(std::max<std::size_t>(1, pairs.size()), 0, &frameArena_);
     for (const auto& pr : pairs) {
         std::uint32_t& n = clusters[pr.first * 2 + 1];
         indices[clusters[pr.first * 2] + n] = pr.second;
@@ -1649,6 +1649,7 @@ void resetGlState()
 
 void Renderer::render(const Scene& scene, const RenderView& view)
 {
+    frameArena_.reset(); // scratch arrays of the previous frame
     resetGlState();
     // Free GPU data nothing drew since the previous render() (removed models).
     ++frameNumber_;
@@ -2457,7 +2458,7 @@ std::vector<std::uint8_t> Renderer::readPixels(int width, int height) const
 void Renderer::drawSprites(const std::vector<SpriteBatch>& batches, const glm::mat4& viewProj, Shading shading, bool overlay)
 {
     // Decals first (they lie on surfaces), then particles back to front.
-    std::vector<const SpriteBatch*> order;
+    std::pmr::vector<const SpriteBatch*> order(&frameArena_);
     order.reserve(batches.size());
     std::size_t total = 0;
     for (const SpriteBatch& b : batches)
@@ -2479,9 +2480,9 @@ void Renderer::drawSprites(const std::vector<SpriteBatch>& batches, const glm::m
         glCreateBuffers(1, &spriteBuffer_);
         glNamedBufferData(spriteBuffer_, static_cast<GLsizeiptr>(spriteCapacity_ * sizeof(SpriteInstance)), nullptr, GL_DYNAMIC_DRAW);
     }
-    std::vector<SpriteInstance> all;
+    std::pmr::vector<SpriteInstance> all(&frameArena_);
     all.reserve(total);
-    std::vector<int> bases;
+    std::pmr::vector<int> bases(&frameArena_);
     bases.reserve(order.size());
     for (const SpriteBatch* b : order) {
         bases.push_back(static_cast<int>(all.size()));
@@ -3216,6 +3217,8 @@ void Renderer::setQuality(const RenderQuality& quality)
 Renderer::MemoryStats Renderer::memoryStats() const
 {
     MemoryStats m;
+    m.frameArenaBytes = frameArena_.capacity();
+    m.frameArenaPeak = frameArena_.peak();
     for (const auto& [id, g] : textures_) {
         m.textureBytes += g.bytes;
         m.savedBytes += g.fullBytes > g.bytes ? g.fullBytes - g.bytes : 0;

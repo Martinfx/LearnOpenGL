@@ -909,6 +909,7 @@ void ScriptSystem::setNavMesh(const NavMesh* nav) { impl_->nav = nav; }
 void ScriptSystem::setMessageHandler(MessageFn handler) { impl_->message = std::move(handler); }
 void ScriptSystem::setDuckHandler(DuckFn handler) { impl_->duck = std::move(handler); }
 void ScriptSystem::setLightningHandler(LightningFn handler) { impl_->lightning = std::move(handler); }
+std::size_t ScriptSystem::memoryBytes() const { return impl_->lua.memory_used(); }
 void ScriptSystem::fireOutput(int entityIndex, const std::string& output, int activator) { impl_->fireOutput(entityIndex, output, activator); }
 void ScriptSystem::sendInput(const std::string& target, const std::string& input, const std::string& parameter, float delay, int activator,
                              int caller)

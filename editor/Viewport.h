@@ -36,6 +36,7 @@ public:
     // Helper geometry drawn over the level (navmesh), not owned; null = none.
     void setDebugGeometry(const engine::DebugGeometry* geometry) { debug_ = geometry; update(); }
     // Second overlay (streaming cells), drawn with the navmesh.
+    std::size_t particleMemoryBytes() const;
     void setOverlayGeometry(const engine::DebugGeometry* geometry) { overlay_ = geometry; update(); }
     bool showGrid() const { return showGrid_; }
     void setShowReference(bool on); // 1.8 m human next to the player start

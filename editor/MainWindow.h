@@ -332,6 +332,9 @@ private:
     class QTimer* streamTimer_ = nullptr;
     std::vector<std::pair<QDoubleSpinBox*, float engine::StreamingSettings::*>> streamSpins_;
     engine::DebugGeometry streamDebug_;
+    // Memory dock: budget by category (Scene::memoryBudget).
+    class QTableWidget* budgetTable_ = nullptr;
+    std::vector<QDoubleSpinBox*> budgetSpins_;
     int logListener_ = 0; // engine log -> Output Log
     // Crash recovery: the edited level is saved to the user folder every 90 s while unsaved.
     void autosave();

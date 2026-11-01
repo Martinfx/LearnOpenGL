@@ -8,7 +8,9 @@
 
 namespace engine {
 
-DecalPool::DecalPool(std::size_t capacity) : capacity_(std::max<std::size_t>(1, capacity)) {}
+DecalPool::DecalPool(std::size_t capacity) : capacity_(std::max<std::size_t>(1, capacity)) { decals_.reserve(capacity_); }
+
+std::size_t DecalPool::memoryBytes() const { return decals_.capacity() * sizeof(Decal); }
 
 void DecalPool::setCapacity(std::size_t capacity)
 {

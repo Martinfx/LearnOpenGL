@@ -27,6 +27,8 @@ public:
     // Rebuilds all static collision (boxes and glTF meshes) and the dynamic props
     // (models with `dynamic`) from the scene.
     void setLevel(const Scene& scene);
+    // Collision shapes (each shared shape once) and bodies, plus the solver's scratch memory.
+    std::size_t memoryBytes() const;
     // Recreates only the dynamic props at their models' current transforms (after loading a save).
     void resetDynamic(const Scene& scene);
     // Copies the props' simulated transforms back to their models; returns how many moved.

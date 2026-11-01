@@ -317,6 +317,9 @@ struct ParticleSystem::Impl {
         std::mt19937 rng;
     };
     std::vector<Instance> instances;
+    std::vector<std::vector<EmitterState>> spare; // emitter arrays of finished effects (pool)
+    int budget = 0;                               // live particles of all effects, 0 = no cap
+    int live = 0;                                 // counted at the start of update()
     Handle nextId = 1;
     std::uint32_t seed = 12345;
     glm::vec3 wind{0.0f};
@@ -344,7 +347,18 @@ ParticleSystem::Handle ParticleSystem::spawn(std::shared_ptr<const ParticleEffec
     inst.effect = std::move(effect);
     inst.position = position;
     inst.rotation = rotation;
+    if (!impl_->spare.empty()) { // reuse the arrays of a finished effect
+        inst.emitters = std::move(impl_->spare.back());
+        impl_->spare.pop_back();
+        for (EmitterState& st : inst.emitters) {
+            st.particles.clear();
+            st.accumulator = 0.0f;
+            st.burstDone = false;
+        }
+    }
     inst.emitters.resize(inst.effect->emitters.size());
+    for (std::size_t k = 0; k < inst.emitters.size(); ++k) // room for the emitter's maximum: no growth while it plays
+        inst.emitters[k].particles.reserve(static_cast<std::size_t>(std::clamp(inst.effect->emitters[k].maxParticles, 0, 4096)));
     inst.rng.seed(impl_->seed = impl_->seed * 1664525u + 1013904223u);
     const Handle id = inst.id;
     impl_->instances.push_back(std::move(inst));
@@ -438,7 +452,10 @@ void ParticleSystem::update(float dt)
     if (dt <= 0.0f)
         return;
     const glm::vec3 levelWind = impl_->wind;
-    auto simulate = [dt, levelWind](Impl::Instance& inst) {
+    impl_->live = particleCount();
+    // Over the budget: no new particles this step (the live ones finish).
+    const bool full = impl_->budget > 0 && impl_->live >= impl_->budget;
+    auto simulate = [dt, levelWind, full](Impl::Instance& inst) {
         inst.time += dt;
         const ParticleEffect& fx = *inst.effect;
         if (inst.emitters.size() != fx.emitters.size())
@@ -472,6 +489,8 @@ void ParticleSystem::update(float dt)
             // Emit.
             const float t = inst.time - e.delay;
             if (t < 0.0f)
+                continue;
+            if (full) // the budget is used up: bursts and the rate wait
                 continue;
             const bool running = !inst.stopped && (e.duration <= 0.0f || t <= e.duration);
             int count = 0;
@@ -516,7 +535,8 @@ void ParticleSystem::update(float dt)
         for (auto& inst : list)
             simulate(inst);
     // Finished effects: stopped (or out of emission time) and no particles left.
-    std::erase_if(list, [](const Impl::Instance& inst) {
+    // Their arrays go back to the pool.
+    std::erase_if(list, [this](Impl::Instance& inst) {
         const ParticleEffect& fx = *inst.effect;
         for (std::size_t k = 0; k < fx.emitters.size() && k < inst.emitters.size(); ++k) {
             const ParticleEmitter& e = fx.emitters[k];
@@ -526,8 +546,28 @@ void ParticleSystem::update(float dt)
             if (emitting || (e.enabled && !inst.emitters[k].burstDone))
                 return false;
         }
+        if (impl_->spare.size() < 64)
+            impl_->spare.push_back(std::move(inst.emitters));
         return true;
     });
+}
+
+void ParticleSystem::setParticleBudget(int maxParticles) { impl_->budget = std::max(0, maxParticles); }
+int ParticleSystem::particleBudget() const { return impl_->budget; }
+
+std::size_t ParticleSystem::memoryBytes() const
+{
+    std::size_t bytes = impl_->instances.capacity() * sizeof(Impl::Instance);
+    auto add = [&](const std::vector<EmitterState>& emitters) {
+        bytes += emitters.capacity() * sizeof(EmitterState);
+        for (const EmitterState& st : emitters)
+            bytes += st.particles.capacity() * sizeof(Particle);
+    };
+    for (const Impl::Instance& inst : impl_->instances)
+        add(inst.emitters);
+    for (const auto& emitters : impl_->spare)
+        add(emitters);
+    return bytes;
 }
 
 void ParticleSystem::appendSprites(glm::vec3 eye, const glm::mat3& camera, std::vector<SpriteBatch>& out) const

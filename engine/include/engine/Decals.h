@@ -26,6 +26,7 @@ public:
     void clear();
     void update(float dt);
     std::size_t count() const { return decals_.size(); }
+    std::size_t memoryBytes() const; // the ring of decals (fixed by the capacity)
     void appendSprites(glm::vec3 cameraPosition, float maxDistance, std::vector<SpriteBatch>& out) const;
 
 private:

@@ -40,6 +40,7 @@ public:
     void fill(engine::RenderView& view, const glm::mat4& viewMatrix, engine::OverlayPass& overlay) const;
 
     int particleCount() const { return world_.particleCount() + overlay_.particleCount(); }
+    std::size_t memoryBytes() const { return world_.memoryBytes() + overlay_.memoryBytes() + decals_.memoryBytes(); }
 
 private:
     std::shared_ptr<const engine::ParticleEffect> effect(const std::filesystem::path& file);

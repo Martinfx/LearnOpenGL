@@ -38,6 +38,8 @@
 #include <engine/CVars.h>
 #include <engine/Water.h>
 #include <engine/WorldStreaming.h>
+#include <engine/FrameArena.h>
+#include <engine/Memory.h>
 #include <engine/PlayerController.h>
 
 #include <functional>
@@ -2023,6 +2025,63 @@ void testAssetPalette()
     check(!entries.empty() && entries[0].stats.pixels > 0, "glTF model palette");
 }
 
+void testMemoryBudgets()
+{
+    // Frame arena: aligned bump allocations, one block again after a big frame.
+    engine::FrameArena arena(4096);
+    {
+        std::pmr::vector<double> a(100, 1.0, &arena);
+        std::pmr::vector<char> b(5000, 'x', &arena); // more than a block
+        a.push_back(2.0);
+        check(reinterpret_cast<std::uintptr_t>(a.data()) % alignof(double) == 0 && a.back() == 2.0 && b[4999] == 'x',
+              "frame arena allocations");
+        check(arena.overflowBlocks() >= 1, "frame arena grows past its block");
+    }
+    const std::size_t used = arena.used();
+    arena.reset();
+    check(arena.overflowBlocks() == 0 && arena.capacity() >= used && arena.used() == 0 && arena.peak() == used,
+          "frame arena reset keeps one block big enough");
+
+    // Budgets: over / under, unmeasured categories ignored.
+    engine::MemoryBudget budget;
+    budget.mb[static_cast<std::size_t>(engine::MemoryCategory::Lua)] = 1.0f;
+    engine::MemoryUsage usage;
+    usage.set(engine::MemoryCategory::Lua, 3u * 1024u * 1024u);
+    usage.set(engine::MemoryCategory::Audio, 1024u);
+    const auto over = engine::overBudget(usage, budget);
+    check(over.size() == 1 && over[0].category == engine::MemoryCategory::Lua && over[0].usedMB > 2.9, "Lua over its budget");
+    engine::Scene s;
+    s.memoryBudget = budget;
+    std::string err;
+    check(engine::saveScene(s, "budget.level", &err), "save budget: " + err);
+    engine::Scene t;
+    check(engine::loadScene(t, "budget.level", &err) && t.memoryBudget == budget, "memory budget round trip");
+
+    // Particle pool and budget: a finished effect leaves its arrays for the next one.
+    auto fx = std::make_shared<engine::ParticleEffect>();
+    fx->emitters.emplace_back();
+    fx->emitters[0].burst = 50;
+    fx->emitters[0].rate = 0.0f;
+    fx->emitters[0].maxParticles = 100;
+    fx->emitters[0].lifeMin = fx->emitters[0].lifeMax = 0.1f;
+    engine::ParticleSystem ps;
+    ps.setParticleBudget(60);
+    ps.spawn(fx, glm::vec3(0.0f));
+    ps.spawn(fx, glm::vec3(0.0f));
+    ps.update(0.01f);
+    check(ps.particleCount() == 100, "two bursts of 50");
+    ps.spawn(fx, glm::vec3(0.0f));
+    ps.update(0.01f);
+    check(ps.particleCount() == 100, "budget full: the third burst waits");
+    for (int i = 0; i < 20; ++i)
+        ps.update(0.05f);
+    check(ps.instanceCount() == 0, "the waiting burst ran once there was room, then everything finished");
+    const std::size_t pooled = ps.memoryBytes();
+    check(pooled > 0, "finished effects stay pooled");
+    ps.spawn(fx, glm::vec3(0.0f));
+    check(ps.memoryBytes() <= pooled + 4096, "a new effect reuses pooled arrays");
+}
+
 void testWeatherCycle()
 {
     engine::Environment env;
@@ -2227,6 +2286,7 @@ int main()
     testAssetPalette();
     testWater();
     testWeatherCycle();
+    testMemoryBudgets();
     testWorldStreaming();
     std::printf(failures ? "%d test(s) failed\n" : "all tests passed\n", failures);
     return failures ? 1 : 0;
