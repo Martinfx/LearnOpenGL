@@ -46,7 +46,9 @@ recordings with placeholders.
 | `ambient/campfire_loop.ogg` | Procedural (noise and crackle synthesis, `source/campfire_crackle.py`) | made for this project | CC0 |
 | `ambient/alarm_loop.ogg` | Procedural (two-tone horn synthesis, `source/alarm_siren.py`) | made for this project | CC0 |
 | `ambient/metal_creak_1..4.ogg` | Procedural (stick-slip friction through metal resonances, `source/metal_creak.py`) | made for this project | CC0 |
-| `ambient/thunder_near_1..2.ogg`, `ambient/thunder_far_1..3.ogg` | Procedural (noise crack and rolling brown-noise rumble, `source/thunder.py`) | made for this project | CC0 |
+| `ambient/thunder_near_1..3.ogg`, `ambient/thunder_far_1..5.ogg` (cut by `source/build_thunder.py`) | [Thunder / Lightning Ambience - Field Recording](https://opengameart.org/content/thunder-lightning-ambience-field-recording) | Gregor Quendel | CC-BY 4.0 |
+| `ambient/thunder_near_4.ogg` | [Thunder, Very Close, Rain, 01](https://opengameart.org/content/thunder-very-close-rain-01) ("Thunder, Very Close, Rain, 01.wav" by InspectorJ, www.jshaw.co.uk) | InspectorJ | CC-BY 3.0 |
+| `ambient/rain_roof_loop.ogg` | [Rain in the Gutter Loop](https://opengameart.org/content/rain-gutter-loop) | Ogrebane | CC0 |
 | `ambient/dog_bark_far_*`, `ambient/dog_whine_far_*` (barks laid out in runs and pushed far away by `source/build_animals.py`) | [Dog sounds](https://opengameart.org/content/dog-sounds) | pauliuw | CC0 |
 | `ambient/dog_bark_far_*` (some barks) | [Dog barking mono](https://opengameart.org/content/dog-barking-mono) | HaelDB | CC0 |
 | `ambient/crow_1..6` | [Crows singing](https://opengameart.org/content/crows-singing) | IgnasD | CC0 |
