@@ -62,6 +62,24 @@ uniform mat3 uEnvRotation;     // overlay: view -> world for environment lookups
 uniform vec3 uOverlaySunDir;   // overlay: sun direction in view space
 out vec4 fragColor;
 
+// Local lights, clustered: the screen is split into tiles and depth slices; each
+// cluster lists the lights whose range reaches it (built on the CPU every frame).
+struct LocalLight {
+    vec4 posRange;   // xyz, w: range
+    vec4 colorType;  // rgb linear * intensity, w: 0 point, 1 spot
+    vec4 dirShadow;  // xyz spot axis, w: first shadow layer (-1 = none)
+    vec4 cone;       // x: cos outer, y: 1 / (cos inner - cos outer), z: shadow normal offset per m
+};
+layout(std430, binding = 5) readonly buffer LocalLights { LocalLight uLights[]; };
+layout(std430, binding = 6) readonly buffer LightGrid {
+    vec4 uClusterParams;  // x: slice scale, y: slice bias (slice = log(depth) * x + y), z: near
+    ivec4 uClusterDims;   // x, y, z, w: light count
+    uvec2 uClusters[];    // offset into uLightIndices, count
+};
+layout(std430, binding = 7) readonly buffer LightIndices { uint uLightIndices[]; };
+layout(std430, binding = 8) readonly buffer LightShadows { mat4 uLightShadowMatrices[]; };
+layout(binding = 13) uniform sampler2DArrayShadow uLocalShadowMap;
+
 float gridLines(vec3 p, vec3 n) {
     vec2 uv = abs(n.y) > 0.5 ? p.xz : (abs(n.x) > 0.5 ? p.zy : p.xy);
     vec2 g = abs(fract(uv - 0.5) - 0.5) / fwidth(uv);
@@ -117,6 +135,81 @@ float sunShadow(vec3 worldPos, vec3 n, float nl) {
     // Fade out at the far end of the last cascade.
     float fade = smoothstep(uCascadeSplits[count - 1] * 0.85, uCascadeSplits[count - 1], viewDepth);
     return mix(shadow, 1.0, fade);
+}
+
+// Shadow of a local light (spot: one layer, point: the cube face the fragment is on).
+float localShadow(LocalLight light, vec3 worldPos, vec3 geomNormal, float dist) {
+    int layer = int(light.dirShadow.w);
+    if (light.colorType.w < 0.5) {
+        vec3 d = worldPos - light.posRange.xyz;
+        vec3 a = abs(d);
+        if (a.x >= a.y && a.x >= a.z)
+            layer += d.x > 0.0 ? 0 : 1;
+        else if (a.y >= a.z)
+            layer += d.y > 0.0 ? 2 : 3;
+        else
+            layer += d.z > 0.0 ? 4 : 5;
+    }
+    vec3 offsetPos = worldPos + geomNormal * dist * light.cone.z * 1.5;
+    vec4 p = uLightShadowMatrices[layer] * vec4(offsetPos, 1.0);
+    vec3 c = p.xyz / p.w * 0.5 + 0.5;
+    if (any(lessThan(c, vec3(0.0))) || any(greaterThan(c, vec3(1.0))))
+        return 1.0;
+    vec2 size = vec2(textureSize(uLocalShadowMap, 0).xy);
+    float sum = 0.0;
+    for (int y = 0; y < 2; ++y)
+        for (int x = 0; x < 2; ++x)
+            sum += texture(uLocalShadowMap, vec4(c.xy + (vec2(x, y) - 0.5) / size, float(layer), c.z - 0.00005));
+    return sum * 0.25;
+}
+
+// Sum of the local lights reaching this fragment (GGX like the sun).
+// `everyLight`: the first-person layer (own projection, right at the eye) skips the clusters.
+vec3 localLights(vec3 worldPos, vec3 n, vec3 geomNormal, vec3 v, vec3 albedo, float rough, float metal, vec3 f0, bool everyLight) {
+    if (uClusterDims.w == 0)
+        return vec3(0.0);
+    uvec2 cluster = uvec2(0u, uint(uClusterDims.w));
+    if (!everyLight) {
+        float depth = -(uView * vec4(worldPos, 1.0)).z;
+        ivec3 cell;
+        cell.xy = clamp(ivec2(gl_FragCoord.xy * uViewport.zw * vec2(uClusterDims.xy)), ivec2(0), uClusterDims.xy - 1);
+        cell.z = clamp(int(floor(log(max(depth, uClusterParams.z)) * uClusterParams.x + uClusterParams.y)), 0, uClusterDims.z - 1);
+        cluster = uClusters[cell.x + cell.y * uClusterDims.x + cell.z * uClusterDims.x * uClusterDims.y];
+    }
+    vec3 sum = vec3(0.0);
+    float nv = max(dot(n, v), 1e-4);
+    for (uint i = 0u; i < cluster.y; ++i) {
+        LocalLight light = uLights[everyLight ? i : uLightIndices[cluster.x + i]];
+        vec3 toLight = light.posRange.xyz - worldPos;
+        float d2 = dot(toLight, toLight);
+        float r2 = light.posRange.w * light.posRange.w;
+        if (d2 >= r2)
+            continue;
+        float dist = sqrt(d2);
+        vec3 l = toLight / max(dist, 1e-4);
+        float nl = dot(n, l);
+        if (nl <= 0.0)
+            continue;
+        // Inverse square with a smooth window to zero at the range.
+        float window = clamp(1.0 - (d2 / r2) * (d2 / r2), 0.0, 1.0);
+        float atten = window * window / (d2 + 1.0);
+        if (light.colorType.w > 0.5) {
+            float cd = dot(-l, light.dirShadow.xyz);
+            float cone = clamp((cd - light.cone.x) * light.cone.y, 0.0, 1.0);
+            atten *= cone * cone;
+        }
+        if (atten <= 0.0)
+            continue;
+        if (light.dirShadow.w >= 0.0)
+            atten *= localShadow(light, worldPos, geomNormal, dist);
+        vec3 h = normalize(l + v);
+        float nh = max(dot(n, h), 0.0);
+        vec3 F = fresnelSchlick(max(dot(h, v), 0.0), f0);
+        vec3 spec = distributionGGX(nh, rough * rough) * geometrySmith(nv, nl, rough) * F / (4.0 * nv * max(nl, 1e-4));
+        vec3 diff = (1.0 - F) * (1.0 - metal) * albedo / PI;
+        sum += (diff + spec) * light.colorType.rgb * nl * atten;
+    }
+    return sum;
 }
 
 void main() {
@@ -221,6 +314,11 @@ void main() {
     // Facing away from the sun: nothing to shadow (the sun term is zero anyway).
     float shadow = uOverlay || nl <= 0.0 ? 1.0 : sunShadow(vWorldPos, normalize(vNormal), nl);
     vec3 color = (diffuse + specular) * uSunColor.rgb * uSunDir.w * nl * shadow;
+    if (uOverlay) // view space -> world
+        color += localLights(uEnvRotation * vWorldPos + uCameraPos.xyz, uEnvRotation * n, uEnvRotation * normalize(vNormal), uEnvRotation * v,
+                             albedo, rough, metal, f0, true);
+    else
+        color += localLights(vWorldPos, n, normalize(vNormal) * (gl_FrontFacing ? 1.0 : -1.0), v, albedo, rough, metal, f0, false);
 
     // Sky light: prefiltered environment for reflections, its blurriest level for diffuse.
     vec3 nWorld = uOverlay ? uEnvRotation * n : n;

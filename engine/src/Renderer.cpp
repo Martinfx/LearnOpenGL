@@ -6,6 +6,7 @@
 #include "engine/Paths.h"
 #include <chrono>
 #include <glm/gtc/matrix_transform.hpp>
+#include <cstring>
 #include <glm/gtc/packing.hpp>
 #include <glm/packing.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -403,15 +404,18 @@ RenderQuality RenderQuality::preset(int level)
         q.shadowResolution = 1024; q.shadowCascades = 2; q.ssao = false; q.bloom = false; q.fxaa = true;
         q.textureMaxSize = 1024; q.textureStreamDistance = 20.0f;
         q.lodScale = 0.5f; q.detailDensityFar = 0.1f; q.detailShadowDistance = 0.0f;
+        q.localShadowResolution = 512; q.localShadowLayers = 6;
         break;
     case 1:
         q.shadowResolution = 1024; q.shadowCascades = 3; q.ssao = true; q.bloom = true;
         q.textureMaxSize = 2048; q.textureStreamDistance = 30.0f;
         q.lodScale = 0.75f; q.detailDensityFar = 0.15f; q.detailShadowDistance = 10.0f;
+        q.localShadowResolution = 512;
         break;
     case 3:
         q.shadowResolution = 4096; q.shadowCascades = 3; q.textureStreamDistance = 80.0f;
         q.lodScale = 1.5f; q.detailDensityFar = 0.35f; q.detailShadowDistance = 25.0f;
+        q.localShadowLayers = 18;
         break;
     default: break; // high
     }
@@ -659,12 +663,12 @@ void Renderer::shutdown()
     textures_.clear();
     destroyTargets();
     destroyPrograms(programs_);
-    for (unsigned* t : {&shadowTex_, &envRaw_, &envMap_, &brdfLut_, &whiteTex_, &shadowDummy_})
+    for (unsigned* t : {&shadowTex_, &envRaw_, &envMap_, &brdfLut_, &whiteTex_, &shadowDummy_, &localShadowTex_})
         if (*t) {
             glDeleteTextures(1, t);
             *t = 0;
         }
-    for (unsigned* f : {&shadowFbo_, &captureFbo_})
+    for (unsigned* f : {&shadowFbo_, &captureFbo_, &localShadowFbo_})
         if (*f) {
             glDeleteFramebuffers(1, f);
             *f = 0;
@@ -677,7 +681,7 @@ void Renderer::shutdown()
     debugBuffer_ = 0;
     debugCapacity_ = 0;
     spriteCapacity_ = 0;
-    for (unsigned* b : {&vbo_, &jointBuffer_, &envBuffer_})
+    for (unsigned* b : {&vbo_, &jointBuffer_, &envBuffer_, &lightBuffer_, &lightGridBuffer_, &lightIndexBuffer_, &lightShadowBuffer_})
         if (*b) {
             glDeleteBuffers(1, b);
             *b = 0;
@@ -688,6 +692,7 @@ void Renderer::shutdown()
             *a = 0;
         }
     shadowRes_ = 0;
+    localShadowRes_ = 0;
     cascadeCount_ = 0; // cached cascades are gone with the texture
     envHash_ = 0;
 }
@@ -1078,8 +1083,8 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
     glBindVertexArray(vao_);
     for (std::size_t i = 0; i < scene.entities.size(); ++i) {
         const Entity& e = scene.entities[i];
-        if (!view.editorHelpers && e.helper())
-            continue; // map markers, sound sources: editor only
+        if ((!view.editorHelpers || shadowCascade_ >= 0) && e.helper())
+            continue; // map markers, sound sources, lights: editor only, never cast shadows
         const float highlight = static_cast<int>(scene.boxes.size() + scene.models.size() + i) == view.selectedObject ? 1.0f : 0.0f;
         // Generous box: animations reach outside the rest pose.
         const float reach = std::max({e.size.x, e.size.y, e.size.z}) * 1.5f;
@@ -1100,9 +1105,15 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         }
         if (!e.alive)
             continue;
-        if (e.type == "sound" || e.type == "particle" || e.type == "anomaly") { // marker cube; a sound zone itself is the entity size
+        if (e.type == "sound" || e.type == "particle" || e.type == "anomaly" || e.type == "light") { // marker cube; a sound zone itself is the entity size
             const Aabb m = e.markerBounds();
-            drawBox((m.min + m.max) * 0.5f, m.max - m.min, e.color, highlight, 0.0f);
+            const bool glow = e.type == "light" && !depthOnly; // a bulb: unlit, in the light's color
+            if (glow)
+                glUniform1i(loc_.emissive, 1);
+            drawBox((m.min + m.max) * 0.5f, m.max - m.min, glow ? glm::mix(e.color, glm::vec3(1.0f, 0.75f, 0.2f), highlight) : e.color,
+                    highlight, 0.0f);
+            if (glow)
+                glUniform1i(loc_.emissive, 0);
             continue;
         }
         glUniform1f(loc_.flash, std::min(1.0f, e.flash * 8.0f));
@@ -1157,6 +1168,272 @@ void Renderer::renderShadows(const Scene& scene, const RenderView& view)
     glEnable(GL_CULL_FACE);
 }
 
+namespace {
+constexpr int kClusterX = 16, kClusterY = 9, kClusterZ = 24;
+constexpr std::size_t kMaxLights = 512;
+
+// std430 layout of one light in shader storage (pbr.frag `LocalLight`).
+struct GpuLight {
+    glm::vec4 posRange;  // xyz, w: range
+    glm::vec4 colorType; // rgb linear * intensity, w: 0 point, 1 spot
+    glm::vec4 dirShadow; // xyz spot axis, w: first shadow layer (-1 = none)
+    glm::vec4 cone;      // x: cos outer, y: 1 / (cos inner - cos outer), z: shadow normal offset per m, w: 0
+};
+} // namespace
+
+void Renderer::ensureLocalShadowMap()
+{
+    const int res = std::max(0, quality_.localShadowResolution);
+    const int layers = std::clamp(quality_.localShadowLayers, 1, 64);
+    if (res == localShadowRes_ && (res == 0 || layers == localShadowLayers_))
+        return;
+    if (localShadowTex_)
+        glDeleteTextures(1, &localShadowTex_);
+    if (localShadowFbo_)
+        glDeleteFramebuffers(1, &localShadowFbo_);
+    localShadowTex_ = localShadowFbo_ = 0;
+    localShadowRes_ = res;
+    localShadowLayers_ = layers;
+    if (res <= 0)
+        return;
+    glCreateTextures(GL_TEXTURE_2D_ARRAY, 1, &localShadowTex_);
+    glTextureStorage3D(localShadowTex_, 1, GL_DEPTH_COMPONENT24, res, res, layers);
+    glTextureParameteri(localShadowTex_, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTextureParameteri(localShadowTex_, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTextureParameteri(localShadowTex_, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTextureParameteri(localShadowTex_, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTextureParameteri(localShadowTex_, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+    glTextureParameteri(localShadowTex_, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+    label(GL_TEXTURE, localShadowTex_, "local light shadows");
+    glCreateFramebuffers(1, &localShadowFbo_);
+}
+
+void Renderer::collectLights(const Scene& scene, const RenderView& view)
+{
+    frameLights_.clear();
+    localShadows_.clear();
+    if (view.shading == Shading::Unlit || view.shading == Shading::Wireframe)
+        return;
+    const glm::mat4 viewProj = view.projection * view.view;
+    const glm::mat4 t = glm::transpose(viewProj);
+    const glm::vec4 planes[6] = {t[3] + t[0], t[3] - t[0], t[3] + t[1], t[3] - t[1], t[3] + t[2], t[3] - t[2]};
+    auto inView = [&](const LocalLight& l) {
+        for (const glm::vec4& p : planes)
+            if (glm::dot(glm::vec3(p), l.position) + p.w < -l.range * glm::length(glm::vec3(p)))
+                return false;
+        return true;
+    };
+    auto add = [&](const LocalLight& l) {
+        if (l.range > 0.0f && glm::dot(l.color, glm::vec3(1.0f)) > 0.0f && inView(l))
+            frameLights_.push_back(l);
+    };
+    for (const Entity& e : scene.entities) {
+        if (e.type != "light")
+            continue;
+        LocalLight l;
+        if (evaluateLight(e, static_cast<double>(view.time), l))
+            add(l);
+    }
+    for (const LocalLight& l : view.lights)
+        add(l);
+    auto distance = [&](const LocalLight& l) { return std::max(0.0f, glm::distance(l.position, view.cameraPosition) - l.range); };
+    if (frameLights_.size() > kMaxLights) {
+        std::nth_element(frameLights_.begin(), frameLights_.begin() + kMaxLights, frameLights_.end(),
+                         [&](const LocalLight& a, const LocalLight& b) { return distance(a) < distance(b); });
+        frameLights_.resize(kMaxLights);
+    }
+
+    // Shadows: the nearest casters get layers while they last (point lights take six).
+    ensureLocalShadowMap();
+    if (!localShadowTex_)
+        return;
+    std::vector<int> order;
+    for (std::size_t i = 0; i < frameLights_.size(); ++i)
+        if (frameLights_[i].castShadows)
+            order.push_back(static_cast<int>(i));
+    std::sort(order.begin(), order.end(), [&](int a, int b) {
+        return glm::distance(frameLights_[a].position, view.cameraPosition) < glm::distance(frameLights_[b].position, view.cameraPosition);
+    });
+    int layer = 0;
+    for (int index : order) {
+        const LocalLight& l = frameLights_[static_cast<std::size_t>(index)];
+        const int faces = l.type == LightType::Spot ? 1 : 6;
+        if (layer + faces > localShadowLayers_)
+            continue;
+        LocalShadow s;
+        s.light = index;
+        s.layer = layer;
+        s.faces = faces;
+        const float nearPlane = std::clamp(l.range * 0.005f, 0.02f, 0.1f);
+        if (l.type == LightType::Spot) {
+            const float fov = std::min(glm::radians(170.0f), 2.0f * glm::radians(l.outerAngle) + glm::radians(4.0f));
+            const glm::vec3 up = std::abs(l.direction.y) > 0.99f ? glm::vec3(1.0f, 0.0f, 0.0f) : glm::vec3(0.0f, 1.0f, 0.0f);
+            s.matrices[0] = glm::perspective(fov, 1.0f, nearPlane, l.range) * glm::lookAt(l.position, l.position + l.direction, up);
+            s.texelScale = 2.0f * std::tan(fov * 0.5f) / static_cast<float>(localShadowRes_);
+        } else {
+            // Cube faces +X -X +Y -Y +Z -Z, a little wider than 90 degrees so filtering does not seam.
+            const float fov = 2.0f * std::atan(1.0f + 4.0f / static_cast<float>(localShadowRes_));
+            const glm::mat4 proj = glm::perspective(fov, 1.0f, nearPlane, l.range);
+            const glm::vec3 dirs[6] = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
+            const glm::vec3 ups[6] = {{0, -1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}, {0, -1, 0}, {0, -1, 0}};
+            for (int f = 0; f < 6; ++f)
+                s.matrices[f] = proj * glm::lookAt(l.position, l.position + dirs[f], ups[f]);
+            s.texelScale = 2.0f * std::tan(fov * 0.5f) / static_cast<float>(localShadowRes_);
+        }
+        localShadows_.push_back(s);
+        layer += faces;
+    }
+}
+
+void Renderer::renderLocalShadows(const Scene& scene, const RenderView& view)
+{
+    if (localShadows_.empty())
+        return;
+    useMeshProgram(programs_.depth);
+    glViewport(0, 0, localShadowRes_, localShadowRes_);
+    glBindFramebuffer(GL_FRAMEBUFFER, localShadowFbo_);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+    glDepthMask(GL_TRUE);
+    glDisable(GL_CULL_FACE);
+    glEnable(GL_POLYGON_OFFSET_FILL);
+    glPolygonOffset(1.5f, 3.0f);
+    RenderView shadowView = view;
+    shadowView.drawPlayerStart = false;
+    shadowCascade_ = 0; // level of detail and detail objects as in the nearest sun cascade
+    shadowMinCaster_ = 0.0f;
+    for (const LocalShadow& s : localShadows_)
+        for (int f = 0; f < s.faces; ++f) {
+            glNamedFramebufferTextureLayer(localShadowFbo_, GL_DEPTH_ATTACHMENT, localShadowTex_, 0, s.layer + f);
+            glClear(GL_DEPTH_BUFFER_BIT);
+            glUniformMatrix4fv(loc_.viewProj, 1, GL_FALSE, glm::value_ptr(s.matrices[f]));
+            drawGeometry(scene, shadowView, true, s.matrices[f], false);
+        }
+    shadowCascade_ = -1;
+    glDisable(GL_POLYGON_OFFSET_FILL);
+    glEnable(GL_CULL_FACE);
+}
+
+void Renderer::uploadLightClusters(const RenderView& view)
+{
+    if (!lightBuffer_) {
+        glCreateBuffers(1, &lightBuffer_);
+        glCreateBuffers(1, &lightGridBuffer_);
+        glCreateBuffers(1, &lightIndexBuffer_);
+        glCreateBuffers(1, &lightShadowBuffer_);
+        label(GL_BUFFER, lightBuffer_, "local lights");
+        label(GL_BUFFER, lightGridBuffer_, "light clusters");
+    }
+    std::vector<GpuLight> lights;
+    lights.reserve(std::max<std::size_t>(1, frameLights_.size()));
+    std::vector<glm::mat4> shadowMatrices;
+    std::vector<int> shadowLayer(frameLights_.size(), -1);
+    std::vector<float> shadowTexel(frameLights_.size(), 0.0f);
+    for (const LocalShadow& s : localShadows_) {
+        shadowLayer[static_cast<std::size_t>(s.light)] = s.layer;
+        shadowTexel[static_cast<std::size_t>(s.light)] = s.texelScale;
+        if (shadowMatrices.size() < static_cast<std::size_t>(s.layer + s.faces))
+            shadowMatrices.resize(static_cast<std::size_t>(s.layer + s.faces));
+        for (int f = 0; f < s.faces; ++f)
+            shadowMatrices[static_cast<std::size_t>(s.layer + f)] = s.matrices[f];
+    }
+    for (std::size_t i = 0; i < frameLights_.size(); ++i) {
+        const LocalLight& l = frameLights_[i];
+        GpuLight g;
+        g.posRange = glm::vec4(l.position, l.range);
+        g.colorType = glm::vec4(l.color, l.type == LightType::Spot ? 1.0f : 0.0f);
+        g.dirShadow = glm::vec4(glm::normalize(l.direction), static_cast<float>(shadowLayer[i]));
+        const float cosOuter = std::cos(glm::radians(l.outerAngle));
+        const float cosInner = std::cos(glm::radians(std::min(l.innerAngle, l.outerAngle)));
+        g.cone = glm::vec4(cosOuter, 1.0f / std::max(cosInner - cosOuter, 1e-4f), shadowTexel[i], 0.0f);
+        lights.push_back(g);
+    }
+    if (lights.empty())
+        lights.push_back(GpuLight{});
+    if (shadowMatrices.empty())
+        shadowMatrices.emplace_back(1.0f);
+
+    // Clusters: a screen grid of tiles, sliced in depth logarithmically between the
+    // near plane and the farthest light. Orthographic views use one cluster.
+    const glm::mat4& p = view.projection;
+    const bool ortho = p[3][3] == 1.0f;
+    const int cx = ortho ? 1 : kClusterX, cy = ortho ? 1 : kClusterY, cz = ortho ? 1 : kClusterZ;
+    const float nearPlane = ortho ? 0.1f : std::max(0.01f, p[3][2] / (p[2][2] - 1.0f));
+    float farPlane = nearPlane * 2.0f;
+    std::vector<glm::vec4> viewSpace(frameLights_.size());
+    for (std::size_t i = 0; i < frameLights_.size(); ++i) {
+        viewSpace[i] = glm::vec4(glm::vec3(view.view * glm::vec4(frameLights_[i].position, 1.0f)), frameLights_[i].range);
+        farPlane = std::max(farPlane, -viewSpace[i].z + viewSpace[i].w);
+    }
+    const float sliceScale = static_cast<float>(cz) / std::log(farPlane / nearPlane);
+    const float sliceBias = -std::log(nearPlane) * sliceScale;
+    const int clusterCount = cx * cy * cz;
+    std::vector<std::pair<std::uint32_t, std::uint32_t>> pairs; // (cluster, light)
+    for (std::size_t i = 0; i < frameLights_.size(); ++i) {
+        int x0 = 0, x1 = cx - 1, y0 = 0, y1 = cy - 1, z0 = 0, z1 = cz - 1;
+        if (!ortho) {
+            const glm::vec4 c = viewSpace[i];
+            const float r = c.w;
+            const float d0 = -c.z - r, d1 = -c.z + r; // depth range (positive in front)
+            if (d1 <= nearPlane)
+                continue;
+            auto slice = [&](float d) {
+                return std::clamp(static_cast<int>(std::floor(std::log(std::max(d, nearPlane)) * sliceScale + sliceBias)), 0, cz - 1);
+            };
+            z0 = slice(d0);
+            z1 = slice(d1);
+            if (d0 > nearPlane) {
+                // Screen rectangle of the sphere's view-space box (conservative).
+                auto range = [&](float lo, float hi, float scale, int cells, int& a, int& b) {
+                    const float mn = scale * (lo < 0.0f ? lo / d0 : lo / d1);
+                    const float mx = scale * (hi > 0.0f ? hi / d0 : hi / d1);
+                    a = std::clamp(static_cast<int>(std::floor((mn * 0.5f + 0.5f) * static_cast<float>(cells))), 0, cells - 1);
+                    b = std::clamp(static_cast<int>(std::floor((mx * 0.5f + 0.5f) * static_cast<float>(cells))), 0, cells - 1);
+                    return mx >= -1.0f && mn <= 1.0f;
+                };
+                if (!range(c.x - r, c.x + r, p[0][0], cx, x0, x1) || !range(c.y - r, c.y + r, p[1][1], cy, y0, y1))
+                    continue;
+            }
+        }
+        for (int z = z0; z <= z1; ++z)
+            for (int y = y0; y <= y1; ++y)
+                for (int x = x0; x <= x1; ++x)
+                    pairs.emplace_back(static_cast<std::uint32_t>(x + y * cx + z * cx * cy), static_cast<std::uint32_t>(i));
+    }
+    std::vector<std::uint32_t> counts(static_cast<std::size_t>(clusterCount), 0);
+    for (const auto& pr : pairs)
+        ++counts[pr.first];
+    struct Header {
+        glm::vec4 params; // x: slice scale, y: slice bias, z: near, w: unused
+        glm::ivec4 dims;  // x, y, z cluster counts, w: light count
+    };
+    std::vector<std::uint32_t> grid(sizeof(Header) / 4 + static_cast<std::size_t>(clusterCount) * 2, 0);
+    Header header{glm::vec4(sliceScale, sliceBias, nearPlane, 0.0f), glm::ivec4(cx, cy, cz, static_cast<int>(frameLights_.size()))};
+    std::memcpy(grid.data(), &header, sizeof header);
+    std::uint32_t* clusters = grid.data() + sizeof(Header) / 4;
+    std::uint32_t offset = 0;
+    for (int c = 0; c < clusterCount; ++c) {
+        clusters[c * 2] = offset;
+        clusters[c * 2 + 1] = 0;
+        offset += counts[static_cast<std::size_t>(c)];
+    }
+    std::vector<std::uint32_t> indices(std::max<std::size_t>(1, pairs.size()), 0);
+    for (const auto& pr : pairs) {
+        std::uint32_t& n = clusters[pr.first * 2 + 1];
+        indices[clusters[pr.first * 2] + n] = pr.second;
+        ++n;
+    }
+    glNamedBufferData(lightBuffer_, static_cast<GLsizeiptr>(lights.size() * sizeof(GpuLight)), lights.data(), GL_STREAM_DRAW);
+    glNamedBufferData(lightGridBuffer_, static_cast<GLsizeiptr>(grid.size() * 4), grid.data(), GL_STREAM_DRAW);
+    glNamedBufferData(lightIndexBuffer_, static_cast<GLsizeiptr>(indices.size() * 4), indices.data(), GL_STREAM_DRAW);
+    glNamedBufferData(lightShadowBuffer_, static_cast<GLsizeiptr>(shadowMatrices.size() * sizeof(glm::mat4)), shadowMatrices.data(),
+                      GL_STREAM_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, lightBuffer_);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, lightGridBuffer_);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, lightIndexBuffer_);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 8, lightShadowBuffer_);
+}
+
 void Renderer::renderSsao()
 {
     glDisable(GL_DEPTH_TEST);
@@ -1203,6 +1480,8 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     building_.triangles = triangles_;
     building_.uploads = uploads_;
     building_.occluded = lastOccluded_;
+    building_.lights = static_cast<int>(frameLights_.size());
+    building_.lightShadows = static_cast<int>(localShadows_.size());
     uploads_ = 0;
     collectQueries(); // finishes building_ into stats_ and starts the next frame
     drawCalls_ = 0;
@@ -1235,9 +1514,12 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, jointBuffer_);
     updateEnvironment(scene, view);
     updateEnvironmentMap(scene);
+    collectLights(scene, view);
     beginPass(PassShadows);
     renderShadows(scene, view);
+    renderLocalShadows(scene, view);
     endPass();
+    uploadLightClusters(view);
 
     // Depth pre-pass: SSAO needs depth, and the main pass then shades each pixel once.
     glBindFramebuffer(GL_FRAMEBUFFER, hdrFbo_);
@@ -1283,6 +1565,7 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     glBindTextureUnit(7, quality_.ssao ? ssaoBlurTex_ : whiteTex_);
     glBindTextureUnit(8, envMap_);
     glBindTextureUnit(9, brdfLut_);
+    glBindTextureUnit(13, localShadowTex_ ? localShadowTex_ : shadowDummy_);
     glUniform1i(loc_.shading, static_cast<int>(view.shading));
     const bool wireframe = view.shading == Shading::Wireframe;
     wireframe_ = wireframe;

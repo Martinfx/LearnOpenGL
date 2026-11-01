@@ -3,6 +3,7 @@
 #include <set>
 #include <engine/Assert.h>
 #include <engine/Anomaly.h>
+#include <engine/Lights.h>
 #include <engine/Audio.h>
 #include <engine/NavMesh.h>
 #include <engine/Surfaces.h>
@@ -1119,6 +1120,43 @@ void testObjectIds()
           "version 5 level migrates to IDs");
 }
 
+void testLights()
+{
+    engine::Entity e;
+    e.type = "light";
+    e.id = 42;
+    check(e.helper(), "lights are editor helpers (not drawn or hit in the game)");
+    engine::LocalLight l;
+    check(engine::evaluateLight(e, 0.0, l) && l.type == engine::LightType::Point, "a new light is a lit point light");
+    check(e.properties.empty(), "defaults need no properties");
+    engine::LightSettings s;
+    s.type = engine::LightType::Spot;
+    s.range = 5.0f;
+    s.pitch = 0.0f;
+    s.flicker = engine::LightFlicker::Fluorescent;
+    s.castShadows = true;
+    engine::setLightSettings(e, s);
+    const engine::LightSettings back = engine::lightSettings(e);
+    check(back.type == engine::LightType::Spot && back.range == 5.0f && back.castShadows &&
+              back.flicker == engine::LightFlicker::Fluorescent && !e.properties.count("intensity"),
+          "light settings round-trip through properties, defaults left out");
+    e.yawDegrees = 90.0f;
+    engine::setLightSettings(e, engine::LightSettings{});
+    e.properties["light"] = "spot";
+    e.properties["pitch"] = "0";
+    check(engine::evaluateLight(e, 0.0, l) && glm::length(l.direction - glm::vec3(0.0f, 0.0f, 1.0f)) < 1e-4f, "spot axis follows yaw 90 = +Z");
+    e.properties["enabled"] = "0";
+    check(!engine::evaluateLight(e, 0.0, l), "a switched-off light gives no light");
+    for (int f = 0; f <= static_cast<int>(engine::LightFlicker::Pulse); ++f)
+        for (int i = 0; i < 2000; ++i) {
+            const float v = engine::lightFlickerFactor(static_cast<engine::LightFlicker>(f), 1.0f, i * 0.013, 7);
+            if (v < 0.0f || v > 1.0f) {
+                check(false, "flicker stays within 0..1");
+                return;
+            }
+        }
+}
+
 void testCVars()
 {
     engine::CVarRegistry r;
@@ -1639,6 +1677,7 @@ int main()
     testNavMesh();
     testObjectIds();
     testCVars();
+    testLights();
     testScriptSaveRestore();
     testLog();
     testEnsure();

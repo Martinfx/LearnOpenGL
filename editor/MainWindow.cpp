@@ -5,6 +5,7 @@
 #include <QCheckBox>
 #include <engine/TextureCook.h>
 #include "AnomalyPanel.h"
+#include "LightPanel.h"
 #include "HierarchyPanel.h"
 #include "AssetBrowser.h"
 
@@ -187,6 +188,11 @@ void MainWindow::buildMenus()
     edit->addAction(tr("Add empty en&tity"), this, [this] { addEntity("empty"); });
     edit->addAction(tr("Add &sound source"), this, [this] { addEntity("sound"); });
     edit->addAction(tr("Add &particle effect"), this, [this] { addEntity("particle"); });
+    {
+        QMenu* light = edit->addMenu(tr("Add &light"));
+        light->addAction(tr("Point light (bulb, fire)"), this, [this] { addLight(false); });
+        light->addAction(tr("Spot light (lamp, reflector)"), this, [this] { addLight(true); });
+    }
     {
         QMenu* anomaly = edit->addMenu(tr("Add a&nomaly"));
         for (int k = 0; k < static_cast<int>(engine::AnomalyKind::Count); ++k)
@@ -627,6 +633,7 @@ void MainWindow::buildDocks()
     QFormLayout* soundForm = makeSection(tr("Sound"), "Sound");
     effectForm_ = makeSection(tr("Particle effect"), "Rendering");
     anomalyForm_ = makeSection(tr("Anomaly"), "General");
+    lightForm_ = makeSection(tr("Light"), "Rendering");
     nameEdit_ = new QLineEdit(boxPanel_);
     kindLabel_ = new QLabel(boxPanel_);
     generalForm->addRow(tr("Type"), kindLabel_);
@@ -1080,6 +1087,11 @@ void MainWindow::buildDocks()
     anomalyForm_->addRow(anomalyPanel_);
     connect(anomalyPanel_, &AnomalyPanel::edited, this, &MainWindow::markDirty);
     connect(anomalyPanel_, &AnomalyPanel::kindChanged, this, &MainWindow::refreshProperties);
+
+    // Light (entity type "light"): point / spot, intensity, range, cone, shadows, flicker.
+    lightPanel_ = new LightPanel(boxPanel_);
+    lightForm_->addRow(lightPanel_);
+    connect(lightPanel_, &LightPanel::edited, this, &MainWindow::markDirty);
 
     // Tunables the script declares in `properties`; values are saved per entity.
     scriptParams_ = new QTableWidget(0, 2, boxPanel_);
@@ -1834,7 +1846,7 @@ void MainWindow::refreshProperties()
         scaleSpin_->blockSignals(false);
         colorButton_->setStyleSheet(QString());
     } else if (e) {
-        kindLabel_->setText(tr("Entity"));
+        kindLabel_->setText(e->type == "light" ? tr("Light") : tr("Entity"));
         nameEdit_->setText(QString::fromStdString(e->name));
         positionEdit_->setValue(e->position);
         sizeEdit_->setValue(e->size);
@@ -1904,6 +1916,7 @@ void MainWindow::refreshProperties()
         entityEffect_->setEnabled(particle);
     }
     anomalyPanel_->setEntity(e && e->type == "anomaly" ? selectedEntity() : nullptr, &scene_);
+    lightPanel_->setEntity(e && e->type == "light" ? selectedEntity() : nullptr);
     detailsIcon_->setPixmap(editorIcon(b ? "cube" : m ? "model" : e ? "person" : "select").pixmap(18, 18));
     updateDetailsVisibility();
     refreshTransformBox();
@@ -2245,6 +2258,28 @@ void MainWindow::openAsset(const QString& path, int type)
     }
 }
 
+void MainWindow::addLight(bool spot)
+{
+    addEntity("light");
+    if (engine::Entity* e = selectedEntity(); e && e->type == "light") {
+        // Hung at ceiling height in front of the camera; a spot light points down at the floor.
+        e->position.y = 2.6f;
+        if (spot) {
+            engine::LightSettings s = engine::lightSettings(*e);
+            s.type = engine::LightType::Spot;
+            s.intensity = 40.0f;
+            s.range = 12.0f;
+            s.castShadows = true;
+            e->color = {0.85f, 0.9f, 1.0f};
+            engine::setLightSettings(*e, s);
+            e->name = engine::uniqueNodeName(scene_, "Spot light " + std::to_string(scene_.entities.size()));
+        }
+        refreshOutliner();
+        refreshProperties();
+        markDirty();
+    }
+}
+
 void MainWindow::addAnomaly(int kind)
 {
     addEntity("anomaly");
@@ -2265,7 +2300,7 @@ void MainWindow::addEntity(const QString& type)
     const glm::vec3 p = cam.position + cam.flatForward() * 6.0f;
     engine::Entity e;
     e.type = type.toStdString();
-    e.name = engine::uniqueNodeName(scene_, (type == "enemy" ? "Enemy " : type == "sound" ? "Sound " : type == "particle" ? "Effect " : "Entity ") +
+    e.name = engine::uniqueNodeName(scene_, (type == "enemy" ? "Enemy " : type == "sound" ? "Sound " : type == "particle" ? "Effect " : type == "light" ? "Light " : "Entity ") +
                                                 std::to_string(scene_.entities.size() + 1));
     if (type == "sound") {
         e.size = {1.0f, 1.0f, 1.0f};
@@ -2274,6 +2309,10 @@ void MainWindow::addEntity(const QString& type)
     }
     if (type == "anomaly")
         engine::initAnomalyEntity(e, engine::AnomalyKind::Crusher);
+    if (type == "light") {
+        e.size = {0.3f, 0.3f, 0.3f};
+        e.color = {1.0f, 0.78f, 0.52f}; // warm bulb
+    }
     if (type == "particle") {
         e.size = {0.4f, 0.4f, 0.4f};
         e.color = {0.95f, 0.55f, 0.2f};
@@ -2299,7 +2338,7 @@ void MainWindow::addEntity(const QString& type)
             else
                 e.modelPath.clear();
         }
-    } else if (type != "sound" && type != "particle" && type != "anomaly") {
+    } else if (type != "sound" && type != "particle" && type != "anomaly" && type != "light") {
         e.size = {0.5f, 0.5f, 0.5f};
         e.color = {0.3f, 0.6f, 0.9f};
     }
@@ -3522,7 +3561,9 @@ void MainWindow::updateDetailsVisibility()
             relevant = any;
         else if (d.category == "Rendering")
             relevant = b || m || e;
-        else if (d.category == "Character" || d.category == "Script")
+        else if (d.category == "Character")
+            relevant = e != nullptr && e->type != "light";
+        else if (d.category == "Script")
             relevant = e != nullptr;
         else if (d.category == "Sound")
             relevant = e != nullptr && e->type == "sound";
@@ -3530,6 +3571,8 @@ void MainWindow::updateDetailsVisibility()
             relevant = e != nullptr && e->type == "particle";
         if (d.form == anomalyForm_)
             relevant = e != nullptr && e->type == "anomaly";
+        if (d.form == lightForm_)
+            relevant = e != nullptr && e->type == "light";
         bool shown = relevant && (category == "All" || category == d.category);
         // Search: rows whose label contains every word (a matching section title shows all rows).
         const bool titleMatch = std::all_of(words.begin(), words.end(), [&](const QString& w) { return d.section->title().toLower().contains(w); });
@@ -3694,8 +3737,15 @@ void MainWindow::buildModePanel()
                                 [this, k] { addAnomaly(k); });
             anomaly->setMenu(menu);
         }
+        auto* light = toolButton("lit", tr("Light (point, spot)"), page);
+        {
+            auto* menu = new QMenu(light);
+            menu->addAction(tr("Point light (bulb, fire)"), this, [this] { addLight(false); });
+            menu->addAction(tr("Spot light (lamp, reflector)"), this, [this] { addLight(true); });
+            light->setMenu(menu);
+        }
         auto* model = toolButton("model", tr("glTF model..."), page);
-        for (QPushButton* b : {box, enemy, entity, sound, particles, anomaly, model})
+        for (QPushButton* b : {box, enemy, entity, sound, particles, anomaly, light, model})
             layout->addWidget(b);
         auto* hint = new QLabel(tr("Or drag a model from the Content Browser into the view: it lands where you drop it."), page);
         hint->setObjectName("dim");

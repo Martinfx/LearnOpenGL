@@ -22,6 +22,7 @@ add_library(engine STATIC
     src/Particles.cpp
     src/PlayerController.cpp
     src/Renderer.cpp
+    src/Lights.cpp
     src/Scene.cpp
     src/JobSystem.cpp
     src/SceneGraph.cpp

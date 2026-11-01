@@ -1,5 +1,6 @@
 #pragma once
 #include "engine/Particles.h"
+#include "engine/Lights.h"
 #include "engine/Scene.h"
 #include <glm/mat4x4.hpp>
 #include <array>
@@ -80,6 +81,8 @@ struct RenderView {
     std::vector<const DebugGeometry*> debug; // editor helpers (navmesh), not owned
     std::vector<OverlayBox> gizmoBoxes; // editor handles, drawn on top of everything (world space)
     std::vector<ScreenDistortion> distortions; // anomalies: heat haze, lens bends
+    // Local lights besides the level's "light" entities (flashlight, muzzle flashes, fires).
+    std::vector<LocalLight> lights;
 };
 
 // First-person layer drawn on top of the world (weapon, muzzle flash, crosshair).
@@ -124,6 +127,10 @@ struct RenderQuality {
     // (read back asynchronously, small screen copy) are skipped in the depth and main passes.
     bool occlusionCulling = true;
     float renderScale = 1.0f; // scene resolution relative to the window (0.5 = half), HUD stays sharp
+    // Shadows of local lights: the nearest shadow-casting lights get layers of one map
+    // (a spot light 1, a point light 6), 0 = no local shadows.
+    int localShadowResolution = 1024;
+    int localShadowLayers = 12;
 
     static RenderQuality preset(int level); // 0 low, 1 medium, 2 high, 3 ultra
 };
@@ -183,7 +190,9 @@ public:
         int drawCalls = 0, instanced = 0, culled = 0;
         long long triangles = 0;
         int uploads = 0;
-        int occluded = 0;        // hidden behind nearer geometry (main pass)         // meshes and textures sent to the GPU (should be ~0 when standing still)
+        int occluded = 0;        // hidden behind nearer geometry (main pass)
+        int lights = 0;          // local lights in view
+        int lightShadows = 0;    // of those, with shadows
         bool gpuValid = false;   // timer queries available on this driver
     };
     const FrameStats& frameStats() const { return stats_; }
@@ -253,6 +262,10 @@ private:
     void updateEnvironment(const Scene& scene, const RenderView& view);
     void updateEnvironmentMap(const Scene& scene);
     void renderShadows(const Scene& scene, const RenderView& view);
+    // Local lights: visible ones into frameLights_, shadow layers chosen, clusters built and uploaded.
+    void collectLights(const Scene& scene, const RenderView& view);
+    void renderLocalShadows(const Scene& scene, const RenderView& view);
+    void uploadLightClusters(const RenderView& view);
     // Draws what intersects the frustum of `cull` (view-projection); skipNear keeps
     // shadow casters between the light and the cascade.
     void drawGeometry(const Scene& scene, const RenderView& view, bool depthOnly, const glm::mat4& cull, bool skipNear = false);
@@ -437,6 +450,20 @@ private:
     std::size_t envHash_ = 0;
     unsigned whiteTex_ = 0;             // stand-in when SSAO is off
     unsigned shadowDummy_ = 0;          // stand-in when shadows are off
+
+    // Clustered local lights (shader storage: 5 lights, 6 cluster grid, 7 light indices, 8 shadow matrices).
+    unsigned lightBuffer_ = 0, lightGridBuffer_ = 0, lightIndexBuffer_ = 0, lightShadowBuffer_ = 0;
+    std::vector<LocalLight> frameLights_;       // in view this frame
+    struct LocalShadow {
+        int light = -1;                         // index in frameLights_
+        int layer = 0, faces = 1;               // first layer of localShadowTex_
+        glm::mat4 matrices[6];
+        float texelScale = 0.0f;                // normal offset per metre of distance
+    };
+    std::vector<LocalShadow> localShadows_;
+    unsigned localShadowTex_ = 0, localShadowFbo_ = 0;
+    int localShadowRes_ = 0, localShadowLayers_ = 0;
+    void ensureLocalShadowMap();
 
     RenderQuality quality_;
     const Environment* env_ = nullptr;  // of the scene being rendered

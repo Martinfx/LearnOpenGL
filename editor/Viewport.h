@@ -105,6 +105,8 @@ private:
     };
     std::vector<LiveEffect> liveEffects_;
     void addAnomalyHelpers(engine::RenderView& view, bool warp) const;
+    void addLightHelpers(engine::RenderView& view) const;
+    mutable engine::DebugGeometry lightHelpers_; // filled per pane in addLightHelpers
     engine::ParticleSystem::Handle rain_ = 0;
     QTimer particleTimer_;
     QElapsedTimer particleClock_;

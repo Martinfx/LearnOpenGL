@@ -1,6 +1,7 @@
 #include "Viewport.h"
 
 #include <engine/Anomaly.h>
+#include <engine/Lights.h>
 
 #include <filesystem>
 
@@ -56,7 +57,10 @@ Viewport::Viewport(engine::Scene* scene, QWidget* parent)
     connect(&particleTimer_, &QTimer::timeout, this, [this] {
         if (isVisible() && (!liveEffects_.empty() || scene_->environment.rain > 0.0f ||
                             std::any_of(scene_->entities.begin(), scene_->entities.end(),
-                                        [](const engine::Entity& e) { return e.type == "particle" || e.type == "anomaly"; })))
+                                        [](const engine::Entity& e) {
+                                            return e.type == "particle" || e.type == "anomaly" ||
+                                                   (e.type == "light" && e.properties.count("flicker"));
+                                        })))
             update();
     });
     particleTimer_.start(33);
@@ -159,6 +163,61 @@ void Viewport::setShowReference(bool on)
         });
     }
     update();
+}
+
+// Lights: the selected light's reach (point: three circles of its range; spot:
+// the cone out to its range) and a short axis line on every spot light.
+void Viewport::addLightHelpers(engine::RenderView& view) const
+{
+    lightHelpers_ = engine::DebugGeometry{};
+    lightHelpers_.lineColors.clear();
+    auto line = [this](glm::vec3 a, glm::vec3 b, glm::vec4 c) {
+        lightHelpers_.lines.push_back(a);
+        lightHelpers_.lines.push_back(b);
+        lightHelpers_.lineColors.push_back(c);
+        lightHelpers_.lineColors.push_back(c);
+    };
+    auto circle = [&](glm::vec3 center, glm::vec3 u, glm::vec3 v, float r, glm::vec4 c) {
+        const int n = 48;
+        for (int k = 0; k < n; ++k) {
+            const float a0 = 6.2831853f * static_cast<float>(k) / n, a1 = 6.2831853f * static_cast<float>(k + 1) / n;
+            line(center + (u * std::cos(a0) + v * std::sin(a0)) * r, center + (u * std::cos(a1) + v * std::sin(a1)) * r, c);
+        }
+    };
+    for (std::size_t i = 0; i < scene_->entities.size(); ++i) {
+        const engine::Entity& e = scene_->entities[i];
+        if (e.type != "light")
+            continue;
+        const engine::LightSettings s = engine::lightSettings(e);
+        const bool selected = selected_ == scene_->firstEntity() + static_cast<int>(i);
+        const glm::vec4 color(glm::mix(e.color, glm::vec3(1.0f), 0.3f), selected ? 0.9f : 0.5f);
+        const float yaw = glm::radians(e.yawDegrees), pitch = glm::radians(s.pitch);
+        const glm::vec3 dir(std::cos(yaw) * std::cos(pitch), std::sin(pitch), std::sin(yaw) * std::cos(pitch));
+        if (s.type == engine::LightType::Spot)
+            line(e.position, e.position + dir * std::min(1.0f, s.range), color);
+        if (!selected)
+            continue;
+        if (s.type == engine::LightType::Point) {
+            circle(e.position, {1, 0, 0}, {0, 0, 1}, s.range, color);
+            circle(e.position, {1, 0, 0}, {0, 1, 0}, s.range, color);
+            circle(e.position, {0, 1, 0}, {0, 0, 1}, s.range, color);
+        } else {
+            const glm::vec3 u = glm::normalize(glm::cross(dir, std::abs(dir.y) > 0.99f ? glm::vec3(1, 0, 0) : glm::vec3(0, 1, 0)));
+            const glm::vec3 v = glm::cross(dir, u);
+            for (float angle : {s.outerAngle, s.innerAngle}) {
+                const float a = glm::radians(angle);
+                const float r = s.range * std::sin(a), d = s.range * std::cos(a);
+                const glm::vec4 c = angle == s.outerAngle ? color : glm::vec4(glm::vec3(color), color.a * 0.45f);
+                circle(e.position + dir * d, u, v, r, c);
+                for (int k = 0; k < 4; ++k) {
+                    const float t = 1.5707963f * static_cast<float>(k);
+                    line(e.position, e.position + dir * d + (u * std::cos(t) + v * std::sin(t)) * r, c);
+                }
+            }
+        }
+    }
+    if (!lightHelpers_.lines.empty())
+        view.debug.push_back(&lightHelpers_);
 }
 
 // Anomaly fields: rings at the bottom and top of the field (and the vent's fire
@@ -286,6 +345,7 @@ void Viewport::paintGL()
         view.viewportWidth = std::max(1, static_cast<int>(pane.rect.width() * dpr));
         view.viewportHeight = std::max(1, static_cast<int>(pane.rect.height() * dpr));
         view.viewportX = static_cast<int>(pane.rect.x() * dpr);
+        view.time = static_cast<float>(particleClock_.elapsed()) / 1000.0f; // light flicker, clouds
         view.viewportY = static_cast<int>((height() - pane.rect.bottom()) * dpr); // GL origin is bottom left
         const float aspect = static_cast<float>(view.viewportWidth) / static_cast<float>(view.viewportHeight);
         view.view = paneView(pane.mode);
@@ -324,6 +384,7 @@ void Viewport::paintGL()
         if (pane.mode == ViewMode::Perspective && shading_ != engine::Shading::Wireframe)
             particles_.appendSprites(view.cameraPosition, glm::mat3(glm::inverse(view.view)), view.sprites);
         addAnomalyHelpers(view, pane.mode == ViewMode::Perspective && shading_ != engine::Shading::Wireframe);
+        addLightHelpers(view);
         renderer_.render(*scene_, view);
     }
     // Report driver errors instead of silently showing a broken view.

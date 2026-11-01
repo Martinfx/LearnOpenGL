@@ -1,0 +1,86 @@
+# FPS engine level
+version 6
+player_start 0 0 7
+sun -0.45 -0.75 -0.3
+env sun_color 0.6 0.7 1
+env sun_intensity 0.03
+env sky_zenith 0.02 0.025 0.04
+env sky_horizon 0.04 0.045 0.06
+env ground_color 0.02 0.02 0.02
+env cloud_cover 0.8
+env ambient_intensity 0.15
+env fog_color 0.03 0.035 0.045
+env fog_density 0.01
+env fog_height 1
+env fog_height_falloff 0.12
+env fog_sun_scatter 0
+env exposure 1
+env bloom_intensity 0.08
+env bloom_threshold 1.2
+env ssao_radius 0.6
+env ssao_intensity 1.1
+env shadow_distance 60
+env saturation 0.8
+env contrast 1.1
+env tint 1 1 1
+env vignette 0.35
+env grain 0.035
+loading_title "Test: lokální světla"
+loading_hint "Bodová a reflektorová světla, stíny, blikající zářivka."
+weapon "../weapons/pistol.weapon"
+group "Room" ""
+group "Lights" ""
+box "Floor" 0 -0.5 0 16 1 20 0.62 0.6 0.56
+  parent "Room"
+  material "../materials/concrete.material"
+box "Ceiling" 0 4.5 0 16 1 20 0.5 0.5 0.5
+  parent "Room"
+  material "../materials/concrete.material"
+box "Wall North" 0 2 -10 16 4 1 0.48 0.52 0.58
+  parent "Room"
+  material "../materials/bricks.material"
+box "Wall South" 0 2 10 16 4 1 0.48 0.52 0.58
+  parent "Room"
+  material "../materials/bricks.material"
+box "Wall West" -8 2 0 1 4 20 0.48 0.52 0.58
+  parent "Room"
+  material "../materials/bricks.material"
+box "Wall East" 8 2 0 1 4 20 0.48 0.52 0.58
+  parent "Room"
+  material "../materials/bricks.material"
+box "Pillar" -2.5 2 -3 0.8 4 0.8 0.6 0.6 0.6
+  parent "Room"
+  material "../materials/concrete.material"
+box "Crate A" 2 0.5 -4 1 1 1 0.55 0.42 0.28
+  parent "Room"
+  material "../materials/metal_plate.material"
+box "Crate B" 2.6 0.4 -2.8 0.8 0.8 0.8 0.55 0.42 0.28
+  parent "Room"
+  rotation 0 25 0
+box "Shelf" -6.5 1 -6 1 2 3 0.4 0.4 0.42
+  parent "Room"
+  material "../materials/metal_plate.material"
+entity "Bulb" "light" -2.5 2.6 -0.5 0 0.3 0.3 0.3 1 0.72 0.42 ""
+  parent "Lights"
+  prop "intensity" "18"
+  prop "range" "9"
+  prop "shadows" "1"
+entity "Spot" "light" 4 3.8 -6 135 0.3 0.3 0.3 0.75 0.85 1 ""
+  parent "Lights"
+  prop "light" "spot"
+  prop "intensity" "60"
+  prop "range" "12"
+  prop "pitch" "-55"
+  prop "inner" "18"
+  prop "outer" "30"
+  prop "shadows" "1"
+entity "Tube" "light" -5 3.8 5 0 0.3 0.3 0.3 0.8 1 0.85 ""
+  parent "Lights"
+  prop "intensity" "10"
+  prop "range" "7"
+  prop "flicker" "fluorescent"
+entity "Barrel fire" "light" 5.5 0.8 5 0 0.3 0.3 0.3 1 0.5 0.15 ""
+  parent "Lights"
+  prop "intensity" "14"
+  prop "range" "7"
+  prop "flicker" "fire"
