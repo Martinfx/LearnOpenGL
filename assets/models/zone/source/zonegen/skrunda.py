@@ -240,12 +240,11 @@ def _junk(m, rng, x0, x1, z0, z1, y, n):
         x, z = rng.uniform(x0 + mx, x1 - mx), rng.uniform(z0 + mz, z1 - mz)
         k = rng.random()
         m.push((x, y, z), rot_y(rng.uniform(0, 180)))
-        if k < 0.3:
-            m.box('wood_dark', (-0.5, 0, -0.25), (0.5, rng.uniform(0.8, 1.9), 0.25))          # cupboard
-        elif k < 0.5:
-            m.box('wood_dark', (-0.9, 0, -0.3), (0.9, 0.35, 0.3))                             # fallen cupboard
+        if k < 0.5:                 # was a plank-box cupboard (read as fake); the level places scanned furniture
+            if k < 0.3:
+                rng.uniform(0.8, 1.9)
         elif k < 0.7:
-            m.box('paint_cream', (-0.45, 0, -0.95), (0.45, 0.15, 0.95))                       # mattress
+            pass                    # was a mattress box in rusty cream paint (read as camouflage)
         elif k < 0.85:
             m.box('wood', (-0.4, 0.42, -0.35), (0.4, 0.46, 0.35))                              # table
             for lx in (-0.35, 0.35):

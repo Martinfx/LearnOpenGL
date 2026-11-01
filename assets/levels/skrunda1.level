@@ -115,6 +115,7 @@ group "Lamps" "Street"
 group "Camp" ""
 group "Bandit base" ""
 group "Clutter" ""
+group "Flats" "Clutter"
 group "Vegetation" ""
 group "Forest" "Vegetation"
 group "Trees" "Vegetation"
@@ -1491,6 +1492,210 @@ model "Newspaper sheet b 9" "../models/props/clutter/newspaper_sheet_b.glb" -164
   collision 0
   cull_distance 45
   cast_shadows 0
+model "Flat table" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -162.42 3.55 -268.27
+  parent "Flats"
+  transform 0.0 454.3 0.0 1
+  cull_distance 25
+model "Flat plastic" "../models/props/plastic_monobloc_chair_01/plastic_monobloc_chair_01.gltf" -162.50 3.55 -269.37
+  parent "Flats"
+  transform 0.0 67.4 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat folding" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -162.33 3.55 -267.07
+  parent "Flats"
+  transform 0.0 78.9 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 2" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -162.37 6.55 -261.72
+  parent "Flats"
+  transform 0.0 437.5 0.0 1
+  cull_distance 25
+model "Flat bookshelf" "../models/props/wooden_bookshelf_worn/wooden_bookshelf_worn.gltf" -159.84 6.55 -261.66
+  parent "Flats"
+  transform 0.0 357.5 0.0 1
+  cull_distance 25
+model "Flat plastic 2" "../models/props/plastic_monobloc_chair_01/plastic_monobloc_chair_01.gltf" -162.13 6.55 -262.80
+  parent "Flats"
+  transform 0.0 136.8 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat folding 2" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -162.63 6.55 -260.55
+  parent "Flats"
+  transform 0.0 259.6 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 3" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -161.50 12.55 -267.52
+  parent "Flats"
+  transform 0.0 358.9 0.0 1
+  cull_distance 25
+model "Flat folding 3" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -160.40 12.55 -267.50
+  parent "Flats"
+  transform 0.0 15.9 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television" "../models/props/Television_01/Television_01.gltf" -162.70 12.55 -267.55
+  parent "Flats"
+  transform 0.0 242.6 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 4" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -162.53 0.55 -253.30
+  parent "Flats"
+  transform 0.0 446.5 0.0 1
+  cull_distance 25
+model "Flat plastic 3" "../models/props/plastic_monobloc_chair_01/plastic_monobloc_chair_01.gltf" -162.47 0.55 -254.40
+  parent "Flats"
+  transform 0.0 114.8 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat folding 4" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -162.61 0.55 -252.11
+  parent "Flats"
+  transform 0.0 11.3 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 5" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -162.90 3.55 -246.88
+  parent "Flats"
+  transform 0.0 443.1 0.0 1
+  cull_distance 25
+model "Flat folding 5" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -162.77 3.55 -247.97
+  parent "Flats"
+  transform 0.0 214.9 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 2" "../models/props/Television_01/Television_01.gltf" -163.05 3.55 -245.69
+  parent "Flats"
+  transform 0.0 205.1 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 6" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -162.53 9.55 -253.18
+  parent "Flats"
+  transform 0.0 450.9 0.0 1
+  cull_distance 25
+model "Flat folding 6" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -162.54 9.55 -254.28
+  parent "Flats"
+  transform 0.0 130.6 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 3" "../models/props/Television_01/Television_01.gltf" -162.51 9.55 -251.98
+  parent "Flats"
+  transform 0.0 132.2 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 7" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -162.92 0.55 -239.87
+  parent "Flats"
+  transform 0.0 448.9 0.0 1
+  cull_distance 25
+model "Flat folding 7" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -162.90 0.55 -240.97
+  parent "Flats"
+  transform 0.0 349.3 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat folding 8" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -162.94 0.55 -238.67
+  parent "Flats"
+  transform 0.0 303.6 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 8" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -164.15 3.55 -233.32
+  parent "Flats"
+  transform 0.0 349.3 0.0 1
+  cull_distance 25
+model "Flat bookshelf 2" "../models/props/wooden_bookshelf_worn/wooden_bookshelf_worn.gltf" -161.06 3.55 -233.87
+  parent "Flats"
+  transform 0.0 357.5 0.0 1
+  cull_distance 25
+model "Flat folding 9" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -163.07 3.55 -233.12
+  parent "Flats"
+  transform 0.0 297.3 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 4" "../models/props/Television_01/Television_01.gltf" -165.33 3.55 -233.55
+  parent "Flats"
+  transform 0.0 42.1 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 9" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -164.40 0.55 -207.77
+  parent "Flats"
+  transform 0.0 262.0 0.0 1
+  cull_distance 25
+model "Flat bookshelf 3" "../models/props/wooden_bookshelf_worn/wooden_bookshelf_worn.gltf" -162.24 0.55 -206.98
+  parent "Flats"
+  transform 0.0 357.5 0.0 1
+  cull_distance 25
+model "Flat folding 10" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -164.56 0.55 -206.68
+  parent "Flats"
+  transform 0.0 239.0 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 5" "../models/props/Television_01/Television_01.gltf" -164.24 0.55 -208.96
+  parent "Flats"
+  transform 0.0 29.6 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 10" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -164.94 3.55 -206.87
+  parent "Flats"
+  transform 0.0 437.7 0.0 1
+  cull_distance 25
+model "Flat schoolchair" "../models/props/SchoolChair_01/SchoolChair_01.gltf" -164.70 3.55 -207.94
+  parent "Flats"
+  transform 0.0 186.0 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat folding 11" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -165.19 3.55 -205.70
+  parent "Flats"
+  transform 0.0 323.7 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 11" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -164.40 6.55 -205.94
+  parent "Flats"
+  transform 0.0 536.1 0.0 1
+  cull_distance 25
+model "Flat plastic 4" "../models/props/plastic_monobloc_chair_01/plastic_monobloc_chair_01.gltf" -165.50 6.55 -206.02
+  parent "Flats"
+  transform 0.0 354.1 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 6" "../models/props/Television_01/Television_01.gltf" -163.20 6.55 -205.86
+  parent "Flats"
+  transform 0.0 144.6 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 12" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -164.90 12.55 -199.70
+  parent "Flats"
+  transform 0.0 271.3 0.0 1
+  cull_distance 25
+model "Flat plastic 5" "../models/props/plastic_monobloc_chair_01/plastic_monobloc_chair_01.gltf" -164.88 12.55 -198.60
+  parent "Flats"
+  transform 0.0 168.3 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat folding 12" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -164.93 12.55 -200.90
+  parent "Flats"
+  transform 0.0 188.5 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
 model "Rubble 16" "../models/props/clutter/rubble_pile_large.glb" -157.49 -0.11 -259.27
   parent "Debris"
   transform 0.0 136.2 0.0 1
@@ -1838,6 +2043,146 @@ model "Newspaper sheet a 11" "../models/props/clutter/newspaper_sheet_a.glb" -12
   transform 0.0 196.4 0.0 1
   collision 0
   cull_distance 45
+  cast_shadows 0
+model "Flat table 13" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -126.19 3.83 -78.72
+  parent "Flats"
+  transform 0.0 268.6 0.0 1
+  cull_distance 25
+model "Flat bookshelf 4" "../models/props/wooden_bookshelf_worn/wooden_bookshelf_worn.gltf" -124.18 3.83 -78.80
+  parent "Flats"
+  transform 0.0 355.4 0.0 1
+  cull_distance 25
+model "Flat schoolchair 2" "../models/props/SchoolChair_01/SchoolChair_01.gltf" -126.21 3.83 -77.62
+  parent "Flats"
+  transform 0.0 266.3 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat folding 13" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -126.16 3.83 -79.91
+  parent "Flats"
+  transform 0.0 191.1 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 14" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -128.02 0.83 -67.55
+  parent "Flats"
+  transform 0.0 366.8 0.0 1
+  cull_distance 25
+model "Flat bookshelf 5" "../models/props/wooden_bookshelf_worn/wooden_bookshelf_worn.gltf" -125.16 0.83 -66.62
+  parent "Flats"
+  transform 0.0 355.4 0.0 1
+  cull_distance 25
+model "Flat folding 14" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -126.93 0.83 -67.68
+  parent "Flats"
+  transform 0.0 313.5 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 7" "../models/props/Television_01/Television_01.gltf" -129.21 0.83 -67.41
+  parent "Flats"
+  transform 0.0 230.6 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 15" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -127.07 9.83 -66.65
+  parent "Flats"
+  transform 0.0 359.0 0.0 1
+  cull_distance 25
+model "Flat plastic 6" "../models/props/plastic_monobloc_chair_01/plastic_monobloc_chair_01.gltf" -125.97 9.83 -66.63
+  parent "Flats"
+  transform 0.0 10.5 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 8" "../models/props/Television_01/Television_01.gltf" -128.27 9.83 -66.67
+  parent "Flats"
+  transform 0.0 110.6 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 16" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -128.19 12.83 -67.14
+  parent "Flats"
+  transform 0.0 264.0 0.0 1
+  cull_distance 25
+model "Flat folding 15" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -128.30 12.83 -66.04
+  parent "Flats"
+  transform 0.0 59.5 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 9" "../models/props/Television_01/Television_01.gltf" -128.07 12.83 -68.33
+  parent "Flats"
+  transform 0.0 244.1 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 17" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -128.15 3.83 -60.78
+  parent "Flats"
+  transform 0.0 436.4 0.0 1
+  cull_distance 25
+model "Flat folding 16" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -127.89 3.83 -61.85
+  parent "Flats"
+  transform 0.0 331.1 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 10" "../models/props/Television_01/Television_01.gltf" -128.43 3.83 -59.61
+  parent "Flats"
+  transform 0.0 172.5 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 18" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -129.36 0.83 -48.56
+  parent "Flats"
+  transform 0.0 347.1 0.0 1
+  cull_distance 25
+model "Flat plastic 7" "../models/props/plastic_monobloc_chair_01/plastic_monobloc_chair_01.gltf" -128.29 0.83 -48.32
+  parent "Flats"
+  transform 0.0 113.4 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 11" "../models/props/television_02/television_02.gltf" -130.53 0.83 -48.83
+  parent "Flats"
+  transform 0.0 354.7 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 19" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -128.98 6.83 -43.27
+  parent "Flats"
+  transform 0.0 262.5 0.0 1
+  cull_distance 25
+model "Flat bookshelf 6" "../models/props/wooden_bookshelf_worn/wooden_bookshelf_worn.gltf" -127.06 6.83 -43.02
+  parent "Flats"
+  transform 0.0 355.4 0.0 1
+  cull_distance 25
+model "Flat plastic 8" "../models/props/plastic_monobloc_chair_01/plastic_monobloc_chair_01.gltf" -129.12 6.83 -42.18
+  parent "Flats"
+  transform 0.0 24.1 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 12" "../models/props/television_02/television_02.gltf" -128.82 6.83 -44.46
+  parent "Flats"
+  transform 0.0 286.5 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 20" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -129.67 12.83 -48.97
+  parent "Flats"
+  transform 0.0 355.3 0.0 1
+  cull_distance 25
+model "Flat plastic 9" "../models/props/plastic_monobloc_chair_01/plastic_monobloc_chair_01.gltf" -128.57 12.83 -48.88
+  parent "Flats"
+  transform 0.0 131.4 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 13" "../models/props/Television_01/Television_01.gltf" -130.86 12.83 -49.06
+  parent "Flats"
+  transform 0.0 328.0 0.0 1
+  collision 0
+  cull_distance 25
   cast_shadows 0
 model "Rubble 26" "../models/props/clutter/rubble_pile_small.glb" -122.42 0.17 -69.78
   parent "Debris"
@@ -2219,6 +2564,178 @@ model "Newspaper sheet b 25" "../models/props/clutter/newspaper_sheet_b.glb" -46
   collision 0
   cull_distance 45
   cast_shadows 0
+model "Flat table 21" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -41.84 12.62 -86.74
+  parent "Flats"
+  transform 0.0 260.7 0.0 1
+  cull_distance 25
+model "Flat folding 17" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -42.02 12.62 -85.66
+  parent "Flats"
+  transform 0.0 176.3 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 14" "../models/props/television_02/television_02.gltf" -41.65 12.62 -87.93
+  parent "Flats"
+  transform 0.0 10.8 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 22" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -41.65 0.62 -79.44
+  parent "Flats"
+  transform 0.0 269.8 0.0 1
+  cull_distance 25
+model "Flat bookshelf 7" "../models/props/wooden_bookshelf_worn/wooden_bookshelf_worn.gltf" -38.74 0.62 -80.66
+  parent "Flats"
+  transform 0.0 355.1 0.0 1
+  cull_distance 25
+model "Flat plastic 10" "../models/props/plastic_monobloc_chair_01/plastic_monobloc_chair_01.gltf" -41.66 0.62 -78.34
+  parent "Flats"
+  transform 0.0 273.9 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 15" "../models/props/television_02/television_02.gltf" -41.65 0.62 -80.64
+  parent "Flats"
+  transform 0.0 107.8 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 23" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -41.84 12.62 -73.42
+  parent "Flats"
+  transform 0.0 358.1 0.0 1
+  cull_distance 25
+model "Flat schoolchair 3" "../models/props/SchoolChair_01/SchoolChair_01.gltf" -40.75 12.62 -73.39
+  parent "Flats"
+  transform 0.0 344.0 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 16" "../models/props/television_02/television_02.gltf" -43.04 12.62 -73.46
+  parent "Flats"
+  transform 0.0 245.3 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 24" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -42.67 6.62 -68.26
+  parent "Flats"
+  transform 0.0 361.5 0.0 1
+  cull_distance 25
+model "Flat plastic 11" "../models/props/plastic_monobloc_chair_01/plastic_monobloc_chair_01.gltf" -41.57 6.62 -68.28
+  parent "Flats"
+  transform 0.0 92.6 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat folding 18" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -43.86 6.62 -68.22
+  parent "Flats"
+  transform 0.0 323.9 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 25" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -44.60 6.62 -48.15
+  parent "Flats"
+  transform 0.0 273.5 0.0 1
+  cull_distance 25
+model "Flat bookshelf 8" "../models/props/wooden_bookshelf_worn/wooden_bookshelf_worn.gltf" -41.49 6.62 -48.58
+  parent "Flats"
+  transform 0.0 355.1 0.0 1
+  cull_distance 25
+model "Flat folding 19" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -44.53 6.62 -47.06
+  parent "Flats"
+  transform 0.0 219.6 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 17" "../models/props/television_02/television_02.gltf" -44.67 6.62 -49.35
+  parent "Flats"
+  transform 0.0 65.3 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 26" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -44.20 9.62 -54.60
+  parent "Flats"
+  transform 0.0 361.6 0.0 1
+  cull_distance 25
+model "Flat folding 20" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -43.11 9.62 -54.63
+  parent "Flats"
+  transform 0.0 219.8 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat folding 21" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -45.40 9.62 -54.56
+  parent "Flats"
+  transform 0.0 232.0 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 27" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -44.11 0.62 -42.69
+  parent "Flats"
+  transform 0.0 442.0 0.0 1
+  cull_distance 25
+model "Flat folding 22" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -43.95 0.62 -43.78
+  parent "Flats"
+  transform 0.0 17.1 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat folding 23" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -44.27 0.62 -41.50
+  parent "Flats"
+  transform 0.0 58.4 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 28" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -45.73 6.62 -42.27
+  parent "Flats"
+  transform 0.0 542.9 0.0 1
+  cull_distance 25
+model "Flat plastic 12" "../models/props/plastic_monobloc_chair_01/plastic_monobloc_chair_01.gltf" -46.83 6.62 -42.22
+  parent "Flats"
+  transform 0.0 12.4 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 18" "../models/props/Television_01/Television_01.gltf" -44.53 6.62 -42.33
+  parent "Flats"
+  transform 0.0 209.9 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 29" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -44.33 9.62 -36.67
+  parent "Flats"
+  transform 0.0 439.0 0.0 1
+  cull_distance 25
+model "Flat bookshelf 9" "../models/props/wooden_bookshelf_worn/wooden_bookshelf_worn.gltf" -42.57 9.62 -35.92
+  parent "Flats"
+  transform 0.0 355.1 0.0 1
+  cull_distance 25
+model "Flat schoolchair 4" "../models/props/SchoolChair_01/SchoolChair_01.gltf" -44.12 9.87 -37.75
+  parent "Flats"
+  transform 0.0 76.8 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 19" "../models/props/Television_01/Television_01.gltf" -44.56 9.62 -35.49
+  parent "Flats"
+  transform 0.0 138.3 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 30" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -45.53 12.62 -36.48
+  parent "Flats"
+  transform 0.0 455.2 0.0 1
+  cull_distance 25
+model "Flat plastic 13" "../models/props/plastic_monobloc_chair_01/plastic_monobloc_chair_01.gltf" -45.63 12.62 -37.58
+  parent "Flats"
+  transform 0.0 222.2 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 20" "../models/props/television_02/television_02.gltf" -45.42 12.62 -35.29
+  parent "Flats"
+  transform 0.0 136.2 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
 model "Rubble 33" "../models/props/clutter/rubble_pile_small.glb" -40.27 -0.04 -39.84
   parent "Debris"
   transform 0.0 354.4 0.0 1
@@ -2508,6 +3025,126 @@ model "Cardboard flattened 36" "../models/props/clutter/cardboard_flattened.glb"
   transform 0.0 60.5 0.0 1
   collision 0
   cull_distance 45
+  cast_shadows 0
+model "Flat table 31" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -135.17 6.76 -197.69
+  parent "Flats"
+  transform 0.0 168.4 0.0 1
+  cull_distance 25
+model "Flat bookshelf 10" "../models/props/wooden_bookshelf_worn/wooden_bookshelf_worn.gltf" -134.77 6.76 -200.75
+  parent "Flats"
+  transform 0.0 85.9 0.0 1
+  cull_distance 25
+model "Flat folding 24" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -136.25 6.76 -197.91
+  parent "Flats"
+  transform 0.0 292.7 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 21" "../models/props/Television_01/Television_01.gltf" -134.00 6.76 -197.45
+  parent "Flats"
+  transform 0.0 309.8 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 32" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -129.12 12.76 -197.95
+  parent "Flats"
+  transform 0.0 95.7 0.0 1
+  cull_distance 25
+model "Flat schoolchair 5" "../models/props/SchoolChair_01/SchoolChair_01.gltf" -129.23 12.76 -199.05
+  parent "Flats"
+  transform 0.0 220.4 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 22" "../models/props/television_02/television_02.gltf" -129.00 12.76 -196.76
+  parent "Flats"
+  transform 0.0 215.7 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 33" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -124.12 3.76 -197.80
+  parent "Flats"
+  transform 0.0 166.8 0.0 1
+  cull_distance 25
+model "Flat plastic 14" "../models/props/plastic_monobloc_chair_01/plastic_monobloc_chair_01.gltf" -125.19 3.76 -198.05
+  parent "Flats"
+  transform 0.0 191.1 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat folding 25" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -122.95 3.76 -197.52
+  parent "Flats"
+  transform 0.0 287.6 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 34" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -118.15 9.76 -197.30
+  parent "Flats"
+  transform 0.0 267.1 0.0 1
+  cull_distance 25
+model "Flat schoolchair 6" "../models/props/SchoolChair_01/SchoolChair_01.gltf" -118.20 10.01 -196.20
+  parent "Flats"
+  transform 0.0 244.4 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 23" "../models/props/Television_01/Television_01.gltf" -118.09 9.76 -198.50
+  parent "Flats"
+  transform 0.0 170.2 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 35" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -106.26 0.76 -196.37
+  parent "Flats"
+  transform 0.0 97.1 0.0 1
+  cull_distance 25
+model "Flat plastic 15" "../models/props/plastic_monobloc_chair_01/plastic_monobloc_chair_01.gltf" -106.40 0.76 -197.46
+  parent "Flats"
+  transform 0.0 232.6 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat folding 26" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -106.11 0.76 -195.18
+  parent "Flats"
+  transform 0.0 204.3 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 36" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -99.48 3.76 -195.30
+  parent "Flats"
+  transform 0.0 91.9 0.0 1
+  cull_distance 25
+model "Flat folding 27" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -99.52 3.76 -196.40
+  parent "Flats"
+  transform 0.0 340.9 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat folding 28" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -99.44 3.76 -194.10
+  parent "Flats"
+  transform 0.0 336.0 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 37" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -93.27 12.76 -195.68
+  parent "Flats"
+  transform 0.0 258.6 0.0 1
+  cull_distance 25
+model "Flat bookshelf 11" "../models/props/wooden_bookshelf_worn/wooden_bookshelf_worn.gltf" -93.69 12.76 -197.79
+  parent "Flats"
+  transform 0.0 85.9 0.0 1
+  cull_distance 25
+model "Flat folding 29" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -93.49 12.76 -194.60
+  parent "Flats"
+  transform 0.0 134.8 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat folding 30" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -93.03 12.76 -196.86
+  parent "Flats"
+  transform 0.0 325.0 80.0 1
+  collision 0
+  cull_distance 25
   cast_shadows 0
 model "Rubble 41" "../models/props/clutter/rubble_pile_large.glb" -98.59 0.10 -200.52
   parent "Debris"
@@ -2814,6 +3451,134 @@ model "Newspaper sheet b 37" "../models/props/clutter/newspaper_sheet_b.glb" -97
   transform 0.0 308.3 0.0 1
   collision 0
   cull_distance 45
+  cast_shadows 0
+model "Flat table 38" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -98.09 1.07 27.61
+  parent "Flats"
+  transform 0.0 263.0 0.0 1
+  cull_distance 25
+model "Flat plastic 16" "../models/props/plastic_monobloc_chair_01/plastic_monobloc_chair_01.gltf" -98.22 1.07 28.70
+  parent "Flats"
+  transform 0.0 295.2 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 24" "../models/props/television_02/television_02.gltf" -97.94 1.07 26.42
+  parent "Flats"
+  transform 0.0 58.6 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 39" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -98.05 1.07 14.71
+  parent "Flats"
+  transform 0.0 77.0 0.0 1
+  cull_distance 25
+model "Flat schoolchair 7" "../models/props/SchoolChair_01/SchoolChair_01.gltf" -97.80 1.07 13.64
+  parent "Flats"
+  transform 0.0 170.9 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 25" "../models/props/television_02/television_02.gltf" -98.32 1.07 15.88
+  parent "Flats"
+  transform 0.0 181.8 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 40" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -96.88 13.07 9.08
+  parent "Flats"
+  transform 0.0 74.4 0.0 1
+  cull_distance 25
+model "Flat bookshelf 12" "../models/props/wooden_bookshelf_worn/wooden_bookshelf_worn.gltf" -99.65 13.07 9.35
+  parent "Flats"
+  transform 0.0 175.4 0.0 1
+  cull_distance 25
+model "Flat plastic 17" "../models/props/plastic_monobloc_chair_01/plastic_monobloc_chair_01.gltf" -96.58 13.07 8.02
+  parent "Flats"
+  transform 0.0 214.5 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 26" "../models/props/television_02/television_02.gltf" -97.20 13.07 10.23
+  parent "Flats"
+  transform 0.0 343.3 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 41" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -97.35 1.07 3.15
+  parent "Flats"
+  transform 0.0 93.4 0.0 1
+  cull_distance 25
+model "Flat bookshelf 13" "../models/props/wooden_bookshelf_worn/wooden_bookshelf_worn.gltf" -99.16 1.07 3.23
+  parent "Flats"
+  transform 0.0 175.4 0.0 1
+  cull_distance 25
+model "Flat plastic 18" "../models/props/plastic_monobloc_chair_01/plastic_monobloc_chair_01.gltf" -97.42 1.07 2.05
+  parent "Flats"
+  transform 0.0 332.6 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 27" "../models/props/Television_01/Television_01.gltf" -97.28 1.07 4.34
+  parent "Flats"
+  transform 0.0 151.2 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 42" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -96.37 10.07 2.71
+  parent "Flats"
+  transform 0.0 361.7 0.0 1
+  cull_distance 25
+model "Flat folding 31" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -95.27 10.07 2.68
+  parent "Flats"
+  transform 0.0 309.8 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat folding 32" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -97.57 10.07 2.74
+  parent "Flats"
+  transform 0.0 85.1 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 43" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -96.76 13.07 -2.80
+  parent "Flats"
+  transform 0.0 262.6 0.0 1
+  cull_distance 25
+model "Flat bookshelf 14" "../models/props/wooden_bookshelf_worn/wooden_bookshelf_worn.gltf" -98.69 13.07 -2.66
+  parent "Flats"
+  transform 0.0 175.4 0.0 1
+  cull_distance 25
+model "Flat schoolchair 8" "../models/props/SchoolChair_01/SchoolChair_01.gltf" -96.90 13.07 -1.71
+  parent "Flats"
+  transform 0.0 72.8 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat folding 33" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -96.61 13.07 -3.99
+  parent "Flats"
+  transform 0.0 260.4 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 44" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -95.43 7.07 -8.16
+  parent "Flats"
+  transform 0.0 349.4 0.0 1
+  cull_distance 25
+model "Flat bookshelf 15" "../models/props/wooden_bookshelf_worn/wooden_bookshelf_worn.gltf" -98.23 7.07 -8.26
+  parent "Flats"
+  transform 0.0 175.4 0.0 1
+  cull_distance 25
+model "Flat plastic 19" "../models/props/plastic_monobloc_chair_01/plastic_monobloc_chair_01.gltf" -94.35 7.07 -7.96
+  parent "Flats"
+  transform 0.0 267.9 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat folding 34" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -96.61 7.07 -8.38
+  parent "Flats"
+  transform 0.0 298.4 0.0 1
+  collision 0
+  cull_distance 25
   cast_shadows 0
 model "Rubble 48" "../models/props/clutter/brick_pile.glb" -103.52 0.41 23.40
   parent "Debris"
@@ -3179,6 +3944,126 @@ model "Cardboard flattened 55" "../models/props/clutter/cardboard_flattened.glb"
   collision 0
   cull_distance 45
   cast_shadows 0
+model "Flat table 45" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -130.27 13.37 -16.30
+  parent "Flats"
+  transform 0.0 343.6 0.0 1
+  cull_distance 25
+model "Flat bookshelf 16" "../models/props/wooden_bookshelf_worn/wooden_bookshelf_worn.gltf" -128.04 13.37 -15.86
+  parent "Flats"
+  transform 0.0 355.4 0.0 1
+  cull_distance 25
+model "Flat folding 35" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -129.22 13.37 -15.99
+  parent "Flats"
+  transform 0.0 156.8 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 28" "../models/props/Television_01/Television_01.gltf" -131.42 13.37 -16.64
+  parent "Flats"
+  transform 0.0 275.0 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 46" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -131.95 10.37 6.49
+  parent "Flats"
+  transform 0.0 253.4 0.0 1
+  cull_distance 25
+model "Flat plastic 20" "../models/props/plastic_monobloc_chair_01/plastic_monobloc_chair_01.gltf" -132.26 10.37 7.54
+  parent "Flats"
+  transform 0.0 97.6 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 29" "../models/props/Television_01/Television_01.gltf" -131.60 10.37 5.34
+  parent "Flats"
+  transform 0.0 29.2 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 47" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -133.06 13.37 12.67
+  parent "Flats"
+  transform 0.0 454.2 0.0 1
+  cull_distance 25
+model "Flat plastic 21" "../models/props/plastic_monobloc_chair_01/plastic_monobloc_chair_01.gltf" -133.14 13.37 11.58
+  parent "Flats"
+  transform 0.0 87.8 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 30" "../models/props/television_02/television_02.gltf" -132.97 13.37 13.87
+  parent "Flats"
+  transform 0.0 299.6 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 48" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -132.84 1.37 18.82
+  parent "Flats"
+  transform 0.0 351.7 0.0 1
+  cull_distance 25
+model "Flat folding 36" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -131.76 1.37 18.98
+  parent "Flats"
+  transform 0.0 184.4 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 31" "../models/props/television_02/television_02.gltf" -134.03 1.37 18.64
+  parent "Flats"
+  transform 0.0 294.3 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 49" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -134.02 4.37 19.28
+  parent "Flats"
+  transform 0.0 352.4 0.0 1
+  cull_distance 25
+model "Flat bookshelf 17" "../models/props/wooden_bookshelf_worn/wooden_bookshelf_worn.gltf" -130.83 4.37 18.87
+  parent "Flats"
+  transform 0.0 355.4 0.0 1
+  cull_distance 25
+model "Flat folding 37" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -132.93 4.37 19.43
+  parent "Flats"
+  transform 0.0 151.3 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 32" "../models/props/television_02/television_02.gltf" -135.21 4.37 19.12
+  parent "Flats"
+  transform 0.0 345.8 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 50" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -132.64 7.37 19.43
+  parent "Flats"
+  transform 0.0 451.2 0.0 1
+  cull_distance 25
+model "Flat folding 38" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -132.66 7.37 18.33
+  parent "Flats"
+  transform 0.0 289.0 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 33" "../models/props/television_02/television_02.gltf" -132.61 7.37 20.63
+  parent "Flats"
+  transform 0.0 22.4 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 51" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -134.36 13.37 25.03
+  parent "Flats"
+  transform 0.0 531.5 0.0 1
+  cull_distance 25
+model "Flat schoolchair 9" "../models/props/SchoolChair_01/SchoolChair_01.gltf" -135.45 13.37 24.87
+  parent "Flats"
+  transform 0.0 349.5 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat folding 39" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -133.18 13.37 25.21
+  parent "Flats"
+  transform 0.0 173.9 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
 model "Rubble 55" "../models/props/clutter/cinder_block_broken.glb" -128.01 0.71 10.49
   parent "Debris"
   transform 0.0 341.6 0.0 1
@@ -3514,6 +4399,146 @@ model "Rag a 57" "../models/props/clutter/rag_a.glb" -84.81 12.50 -147.06
   transform 0.0 115.9 0.0 1
   collision 0
   cull_distance 45
+  cast_shadows 0
+model "Flat table 52" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -89.35 0.50 -112.98
+  parent "Flats"
+  transform 0.0 86.9 0.0 1
+  cull_distance 25
+model "Flat bookshelf 18" "../models/props/wooden_bookshelf_worn/wooden_bookshelf_worn.gltf" -91.99 0.50 -112.47
+  parent "Flats"
+  transform 0.0 175.4 0.0 1
+  cull_distance 25
+model "Flat plastic 22" "../models/props/plastic_monobloc_chair_01/plastic_monobloc_chair_01.gltf" -89.30 0.50 -114.08
+  parent "Flats"
+  transform 0.0 150.9 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat folding 40" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -89.42 0.50 -111.79
+  parent "Flats"
+  transform 0.0 284.6 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 53" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -89.74 3.50 -112.55
+  parent "Flats"
+  transform 0.0 183.9 0.0 1
+  cull_distance 25
+model "Flat bookshelf 19" "../models/props/wooden_bookshelf_worn/wooden_bookshelf_worn.gltf" -91.94 3.50 -113.04
+  parent "Flats"
+  transform 0.0 175.4 0.0 1
+  cull_distance 25
+model "Flat plastic 23" "../models/props/plastic_monobloc_chair_01/plastic_monobloc_chair_01.gltf" -90.83 3.50 -112.48
+  parent "Flats"
+  transform 0.0 106.5 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 34" "../models/props/Television_01/Television_01.gltf" -88.54 3.50 -112.63
+  parent "Flats"
+  transform 0.0 311.8 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 54" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -89.81 12.50 -112.79
+  parent "Flats"
+  transform 0.0 262.4 0.0 1
+  cull_distance 25
+model "Flat bookshelf 20" "../models/props/wooden_bookshelf_worn/wooden_bookshelf_worn.gltf" -91.90 12.50 -113.55
+  parent "Flats"
+  transform 0.0 175.4 0.0 1
+  cull_distance 25
+model "Flat plastic 24" "../models/props/plastic_monobloc_chair_01/plastic_monobloc_chair_01.gltf" -89.96 12.50 -111.70
+  parent "Flats"
+  transform 0.0 266.9 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat folding 41" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -89.65 12.50 -113.98
+  parent "Flats"
+  transform 0.0 171.0 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 55" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -88.94 3.50 -124.32
+  parent "Flats"
+  transform 0.0 89.4 0.0 1
+  cull_distance 25
+model "Flat folding 42" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -88.93 3.50 -125.42
+  parent "Flats"
+  transform 0.0 342.6 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat folding 43" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -88.95 3.50 -123.12
+  parent "Flats"
+  transform 0.0 72.7 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 56" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -88.48 6.50 -124.36
+  parent "Flats"
+  transform 0.0 360.0 0.0 1
+  cull_distance 25
+model "Flat folding 44" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -87.38 6.50 -124.36
+  parent "Flats"
+  transform 0.0 108.5 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 35" "../models/props/television_02/television_02.gltf" -89.68 6.50 -124.36
+  parent "Flats"
+  transform 0.0 23.5 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 57" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -87.04 0.50 -148.08
+  parent "Flats"
+  transform 0.0 276.9 0.0 1
+  cull_distance 25
+model "Flat schoolchair 10" "../models/props/SchoolChair_01/SchoolChair_01.gltf" -86.91 0.50 -146.99
+  parent "Flats"
+  transform 0.0 277.7 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 36" "../models/props/Television_01/Television_01.gltf" -87.18 0.50 -149.27
+  parent "Flats"
+  transform 0.0 286.9 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 58" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -87.24 3.50 -142.76
+  parent "Flats"
+  transform 0.0 275.7 0.0 1
+  cull_distance 25
+model "Flat schoolchair 11" "../models/props/SchoolChair_01/SchoolChair_01.gltf" -87.13 3.75 -141.66
+  parent "Flats"
+  transform 0.0 264.5 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 37" "../models/props/television_02/television_02.gltf" -87.36 3.50 -143.95
+  parent "Flats"
+  transform 0.0 137.2 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 59" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -86.48 9.50 -148.58
+  parent "Flats"
+  transform 0.0 87.6 0.0 1
+  cull_distance 25
+model "Flat plastic 25" "../models/props/plastic_monobloc_chair_01/plastic_monobloc_chair_01.gltf" -86.43 9.50 -149.68
+  parent "Flats"
+  transform 0.0 252.5 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 38" "../models/props/television_02/television_02.gltf" -86.53 9.50 -147.39
+  parent "Flats"
+  transform 0.0 51.9 0.0 1
+  collision 0
+  cull_distance 25
   cast_shadows 0
 model "Rubble 62" "../models/props/clutter/cinder_block_broken.glb" -94.50 -0.16 -116.10
   parent "Debris"
@@ -3864,6 +4889,94 @@ model "Newspaper stack 79" "../models/props/clutter/newspaper_stack.glb" -53.28 
   transform 0.0 316.8 0.0 1
   collision 0
   cull_distance 45
+  cast_shadows 0
+model "Flat table 60" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -47.80 0.87 -3.73
+  parent "Flats"
+  transform 0.0 443.8 0.0 1
+  cull_distance 25
+model "Flat bookshelf 21" "../models/props/wooden_bookshelf_worn/wooden_bookshelf_worn.gltf" -45.66 0.87 -3.57
+  parent "Flats"
+  transform 0.0 355.1 0.0 1
+  cull_distance 25
+model "Flat plastic 26" "../models/props/plastic_monobloc_chair_01/plastic_monobloc_chair_01.gltf" -47.68 0.87 -4.82
+  parent "Flats"
+  transform 0.0 157.7 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 39" "../models/props/Television_01/Television_01.gltf" -47.93 0.87 -2.54
+  parent "Flats"
+  transform 0.0 163.5 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 61" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -49.47 6.87 2.24
+  parent "Flats"
+  transform 0.0 346.2 0.0 1
+  cull_distance 25
+model "Flat schoolchair 12" "../models/props/SchoolChair_01/SchoolChair_01.gltf" -48.41 6.87 2.50
+  parent "Flats"
+  transform 0.0 169.5 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 40" "../models/props/television_02/television_02.gltf" -50.64 6.87 1.95
+  parent "Flats"
+  transform 0.0 174.3 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 62" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -51.10 3.87 21.68
+  parent "Flats"
+  transform 0.0 542.6 0.0 1
+  cull_distance 25
+model "Flat folding 45" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -52.20 3.87 21.73
+  parent "Flats"
+  transform 0.0 0.3 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat folding 46" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -49.91 3.87 21.63
+  parent "Flats"
+  transform 0.0 44.7 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 63" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -49.78 9.87 20.99
+  parent "Flats"
+  transform 0.0 273.7 0.0 1
+  cull_distance 25
+model "Flat bookshelf 22" "../models/props/wooden_bookshelf_worn/wooden_bookshelf_worn.gltf" -47.77 9.87 21.06
+  parent "Flats"
+  transform 0.0 355.1 0.0 1
+  cull_distance 25
+model "Flat folding 47" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -49.71 9.87 22.09
+  parent "Flats"
+  transform 0.0 251.5 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat folding 48" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -49.86 9.87 19.79
+  parent "Flats"
+  transform 0.0 195.5 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 64" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -50.41 6.87 28.06
+  parent "Flats"
+  transform 0.0 345.8 0.0 1
+  cull_distance 25
+model "Flat folding 49" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -49.34 6.87 28.33
+  parent "Flats"
+  transform 0.0 166.8 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 41" "../models/props/television_02/television_02.gltf" -51.57 6.87 27.76
+  parent "Flats"
+  transform 0.0 307.3 0.0 1
+  collision 0
+  cull_distance 25
   cast_shadows 0
 model "Rubble 69" "../models/props/clutter/rubble_pile_large.glb" -43.47 0.21 -10.73
   parent "Debris"
@@ -4373,6 +5486,154 @@ model "Rag b 77" "../models/props/clutter/rag_b.glb" -24.31 12.43 -236.26
   collision 0
   cull_distance 45
   cast_shadows 0
+model "Flat table 65" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -106.48 9.43 -242.26
+  parent "Flats"
+  transform 0.0 95.1 0.0 1
+  cull_distance 25
+model "Flat bookshelf 23" "../models/props/wooden_bookshelf_worn/wooden_bookshelf_worn.gltf" -105.93 9.43 -244.44
+  parent "Flats"
+  transform 0.0 85.9 0.0 1
+  cull_distance 25
+model "Flat folding 50" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -106.58 9.43 -243.36
+  parent "Flats"
+  transform 0.0 290.3 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 42" "../models/props/television_02/television_02.gltf" -106.38 9.43 -241.07
+  parent "Flats"
+  transform 0.0 243.4 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 66" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -98.56 12.43 -242.10
+  parent "Flats"
+  transform 0.0 3.6 0.0 1
+  cull_distance 25
+model "Flat bookshelf 24" "../models/props/wooden_bookshelf_worn/wooden_bookshelf_worn.gltf" -99.63 12.43 -243.99
+  parent "Flats"
+  transform 0.0 85.9 0.0 1
+  cull_distance 25
+model "Flat folding 51" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -97.46 12.43 -242.17
+  parent "Flats"
+  transform 0.0 187.0 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 43" "../models/props/Television_01/Television_01.gltf" -99.76 12.43 -242.02
+  parent "Flats"
+  transform 0.0 338.6 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 67" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -78.89 0.43 -240.69
+  parent "Flats"
+  transform 0.0 183.8 0.0 1
+  cull_distance 25
+model "Flat schoolchair 13" "../models/props/SchoolChair_01/SchoolChair_01.gltf" -79.98 0.43 -240.62
+  parent "Flats"
+  transform 0.0 322.6 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 44" "../models/props/television_02/television_02.gltf" -77.69 0.43 -240.77
+  parent "Flats"
+  transform 0.0 33.1 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 68" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -80.14 3.43 -239.85
+  parent "Flats"
+  transform 0.0 83.6 0.0 1
+  cull_distance 25
+model "Flat bookshelf 25" "../models/props/wooden_bookshelf_worn/wooden_bookshelf_worn.gltf" -79.65 3.43 -242.54
+  parent "Flats"
+  transform 0.0 85.9 0.0 1
+  cull_distance 25
+model "Flat schoolchair 14" "../models/props/SchoolChair_01/SchoolChair_01.gltf" -80.02 3.68 -240.94
+  parent "Flats"
+  transform 0.0 169.0 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat folding 52" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -80.27 3.43 -238.66
+  parent "Flats"
+  transform 0.0 58.2 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 69" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -80.07 6.43 -240.35
+  parent "Flats"
+  transform 0.0 91.2 0.0 1
+  cull_distance 25
+model "Flat schoolchair 15" "../models/props/SchoolChair_01/SchoolChair_01.gltf" -80.10 6.43 -241.45
+  parent "Flats"
+  transform 0.0 274.0 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 45" "../models/props/Television_01/Television_01.gltf" -80.05 6.43 -239.15
+  parent "Flats"
+  transform 0.0 355.4 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 70" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -32.89 12.43 -236.14
+  parent "Flats"
+  transform 0.0 183.8 0.0 1
+  cull_distance 25
+model "Flat bookshelf 26" "../models/props/wooden_bookshelf_worn/wooden_bookshelf_worn.gltf" -33.07 12.43 -239.18
+  parent "Flats"
+  transform 0.0 85.9 0.0 1
+  cull_distance 25
+model "Flat folding 53" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -33.99 12.43 -236.06
+  parent "Flats"
+  transform 0.0 254.6 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat folding 54" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -31.69 12.43 -236.22
+  parent "Flats"
+  transform 0.0 342.4 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 71" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -25.53 0.43 -236.35
+  parent "Flats"
+  transform 0.0 85.1 0.0 1
+  cull_distance 25
+model "Flat folding 55" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -25.44 0.43 -237.45
+  parent "Flats"
+  transform 0.0 56.9 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat folding 56" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -25.63 0.43 -235.16
+  parent "Flats"
+  transform 0.0 127.8 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 72" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -26.56 6.43 -235.69
+  parent "Flats"
+  transform 0.0 174.0 0.0 1
+  cull_distance 25
+model "Flat bookshelf 27" "../models/props/wooden_bookshelf_worn/wooden_bookshelf_worn.gltf" -26.21 6.43 -238.69
+  parent "Flats"
+  transform 0.0 85.9 0.0 1
+  cull_distance 25
+model "Flat schoolchair 16" "../models/props/SchoolChair_01/SchoolChair_01.gltf" -27.66 6.68 -235.81
+  parent "Flats"
+  transform 0.0 300.1 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat folding 57" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -25.37 6.43 -235.57
+  parent "Flats"
+  transform 0.0 151.1 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
 model "Rubble 78" "../models/props/clutter/brick_pile.glb" -107.91 -0.23 -246.19
   parent "Debris"
   transform 0.0 144.7 0.0 1
@@ -4708,6 +5969,114 @@ model "Newspaper sheet a 74" "../models/props/clutter/newspaper_sheet_a.glb" -89
   transform 0.0 44.0 0.0 1
   collision 0
   cull_distance 45
+  cast_shadows 0
+model "Flat table 73" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -93.48 0.75 -46.78
+  parent "Flats"
+  transform 0.0 92.2 0.0 1
+  cull_distance 25
+model "Flat bookshelf 28" "../models/props/wooden_bookshelf_worn/wooden_bookshelf_worn.gltf" -96.27 0.75 -46.41
+  parent "Flats"
+  transform 0.0 175.4 0.0 1
+  cull_distance 25
+model "Flat schoolchair 17" "../models/props/SchoolChair_01/SchoolChair_01.gltf" -93.52 1.00 -47.88
+  parent "Flats"
+  transform 0.0 184.6 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat folding 58" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -93.43 0.75 -45.59
+  parent "Flats"
+  transform 0.0 36.6 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 74" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -93.17 6.75 -45.92
+  parent "Flats"
+  transform 0.0 83.3 0.0 1
+  cull_distance 25
+model "Flat plastic 27" "../models/props/plastic_monobloc_chair_01/plastic_monobloc_chair_01.gltf" -93.04 6.75 -47.01
+  parent "Flats"
+  transform 0.0 107.3 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 46" "../models/props/television_02/television_02.gltf" -93.31 6.75 -44.73
+  parent "Flats"
+  transform 0.0 351.4 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 75" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -92.23 0.75 -57.69
+  parent "Flats"
+  transform 0.0 83.7 0.0 1
+  cull_distance 25
+model "Flat schoolchair 18" "../models/props/SchoolChair_01/SchoolChair_01.gltf" -92.11 1.00 -58.78
+  parent "Flats"
+  transform 0.0 354.7 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat folding 59" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -92.36 0.75 -56.49
+  parent "Flats"
+  transform 0.0 215.9 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 76" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -91.65 6.75 -69.99
+  parent "Flats"
+  transform 0.0 182.6 0.0 1
+  cull_distance 25
+model "Flat bookshelf 29" "../models/props/wooden_bookshelf_worn/wooden_bookshelf_worn.gltf" -94.31 6.75 -70.67
+  parent "Flats"
+  transform 0.0 175.4 0.0 1
+  cull_distance 25
+model "Flat schoolchair 19" "../models/props/SchoolChair_01/SchoolChair_01.gltf" -92.75 7.00 -69.95
+  parent "Flats"
+  transform 0.0 1.0 80.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 47" "../models/props/television_02/television_02.gltf" -90.45 6.75 -70.05
+  parent "Flats"
+  transform 0.0 4.0 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 77" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -91.21 0.75 -75.52
+  parent "Flats"
+  transform 0.0 75.7 0.0 1
+  cull_distance 25
+model "Flat bookshelf 30" "../models/props/wooden_bookshelf_worn/wooden_bookshelf_worn.gltf" -93.88 0.75 -76.05
+  parent "Flats"
+  transform 0.0 175.4 0.0 1
+  cull_distance 25
+model "Flat schoolchair 20" "../models/props/SchoolChair_01/SchoolChair_01.gltf" -90.94 0.75 -76.59
+  parent "Flats"
+  transform 0.0 150.6 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 48" "../models/props/television_02/television_02.gltf" -91.51 0.75 -74.36
+  parent "Flats"
+  transform 0.0 100.0 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat table 78" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -90.86 6.75 -80.75
+  parent "Flats"
+  transform 0.0 168.0 0.0 1
+  cull_distance 25
+model "Flat folding 60" "../models/props/folding_wooden_stool/folding_wooden_stool.gltf" -91.94 6.75 -80.98
+  parent "Flats"
+  transform 0.0 101.0 0.0 1
+  collision 0
+  cull_distance 25
+  cast_shadows 0
+model "Flat television 49" "../models/props/Television_01/Television_01.gltf" -89.69 6.75 -80.50
+  parent "Flats"
+  transform 0.0 300.7 0.0 1
+  collision 0
+  cull_distance 25
   cast_shadows 0
 model "Rubble 90" "../models/props/clutter/rubble_pile_large.glb" -96.92 0.09 -58.89
   parent "Debris"

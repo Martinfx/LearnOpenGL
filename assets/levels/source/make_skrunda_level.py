@@ -236,7 +236,7 @@ L += [
 ]
 for g, p in (('Terrain', ''), ('Buildings', ''), ('Blocks', 'Buildings'), ('Public', 'Buildings'), ('Small', 'Buildings'),
              ('Fences', ''), ('Street', ''), ('Wrecks', 'Street'), ('Lamps', 'Street'), ('Camp', ''), ('Bandit base', ''),
-             ('Clutter', ''),
+             ('Clutter', ''), ('Flats', 'Clutter'),
              ('Vegetation', ''), ('Forest', 'Vegetation'), ('Trees', 'Vegetation'), ('Bushes', 'Vegetation'),
              ('Grass', 'Vegetation'), ('Weeds', 'Vegetation'), ('Debris', ''), ('Loot', ''), ('Markers', ''),
              ('NPC', ''), ('Stalkers', 'NPC'), ('Bandits', 'NPC')):
@@ -580,6 +580,7 @@ def scatter(bid, lx0, lx1, lz0, lz1, y, items, n, parent):
         clutter(f.replace('_', ' ').capitalize(), f, x, yy, z, parent, collision=solid)
 
 
+frng = random.Random(1998)
 PAPER = ['newspaper_sheet_a', 'newspaper_sheet_b', 'cardboard_flattened', 'rag_a', 'rag_b', 'newspaper_stack',
          'cardboard_box_crushed']
 # inside the blocks: paper, rags and crushed boxes in the flats of every floor (people left in a hurry in 1998)
@@ -595,6 +596,31 @@ for bid, b in BUILD.items():
                 scatter(bid, cx - sw / 2 + 0.9, cx - 1.8, -b['width'] / 2 + 0.9, -0.9, floor_y(f) + 0.01, PAPER, 2, 'Clutter')
             if rng.random() < 0.6:
                 scatter(bid, cx + 1.8, cx + sw / 2 - 0.9, -b['width'] / 2 + 0.9, -0.9, floor_y(f) + 0.01, PAPER, 2, 'Clutter')
+    # left-behind furniture in some flats: a low table, a chair (sometimes knocked over), an old TV or a stool.
+    # Own random stream so the rest of the level keeps its layout; only cheap scanned props (< 7k triangles).
+    for k in range(sec):
+        cx = -b['length'] / 2 + sw * (k + 0.5)
+        for f in range(5):
+            if frng.random() > 0.4:
+                continue
+            side = frng.choice((-1, 1))
+            # the two big back rooms of a section: x between the outer wall and the partition at cx, z from the
+            # back wall to the corridor wall at -0.5 (zonegen.skrunda.block); 2 m clear of every wall
+            lx0, lx1 = (cx - sw / 2 + 2.2, cx - 2.2) if side < 0 else (cx + 2.2, cx + sw / 2 - 2.2)
+            lx, lz = frng.uniform(lx0, lx1), frng.uniform(-b['width'] / 2 + 2.4, -2.2)
+            yaw = b['yaw'] + frng.choice((0, 90, 180, 270)) + frng.uniform(-12, 12)
+            x, y, z = to_world(bid, lx, floor_y(f) + 0.01, lz)
+            prop('Flat table', 'WoodenTable_01', x, y, z, 'Flats', yaw=yaw, cull=25)
+            if frng.random() < 0.4:         # a worn bookshelf left standing against the back wall
+                bx, by, bz = to_world(bid, frng.uniform(lx0, lx1), floor_y(f) + 0.01, -b['width'] / 2 + 0.25 + 0.4)
+                prop('Flat bookshelf', 'wooden_bookshelf_worn', bx, by, bz, 'Flats', yaw=b['yaw'] + 90, cull=25)
+            a = math.radians(-yaw)
+            for item, d, coll in ((frng.choice(['SchoolChair_01', 'plastic_monobloc_chair_01', 'folding_wooden_stool']), 1.1, False),
+                                  (frng.choice(['Television_01', 'television_02', 'folding_wooden_stool']), -1.2, False)):
+                ix, iz = x + math.cos(a) * d, z + math.sin(a) * d
+                tipped = frng.random() < 0.35
+                prop('Flat ' + item.split('_')[0].lower(), item, ix, y + (0.25 if tipped and 'Chair' in item else 0), iz, 'Flats',
+                     yaw=frng.uniform(0, 360), rz=(80 if tipped else 0), collision=coll, cull=25, shadows=False)
     # outside: rubble, bricks and broken cinder blocks under the balconies and at the gable ends
     for k in range(int(b['length'] / 9)):
         lx = rng.uniform(-b['length'] / 2 + 1, b['length'] / 2 - 1)
