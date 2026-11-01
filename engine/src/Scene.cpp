@@ -267,6 +267,9 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
         }
         for (const auto& [key, value] : e.properties)
             out << "  prop " << std::quoted(key) << ' ' << std::quoted(value) << '\n';
+        for (const EntityOutput& o : e.outputs)
+            out << "  output " << std::quoted(o.output) << ' ' << std::quoted(o.target) << ' ' << std::quoted(o.input) << ' '
+                << std::quoted(o.parameter) << ' ' << o.delay << ' ' << (o.once ? 1 : 0) << '\n';
     }
     if (!out) {
         setError(error, "Write failed: " + file.string());
@@ -666,6 +669,16 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                 if (p.is_relative())
                     p = std::filesystem::absolute(file).parent_path() / p;
                 *slots[i] = p.lexically_normal();
+            }
+        } else if (key == "output") {
+            EntityOutput o;
+            int once = 0;
+            ok = static_cast<bool>(ls >> std::quoted(o.output) >> std::quoted(o.target) >> std::quoted(o.input) >> std::quoted(o.parameter) >>
+                                   o.delay >> once) &&
+                 lastObject == LastObject::Entity;
+            if (ok) {
+                o.once = once != 0;
+                result.entities.back().outputs.push_back(std::move(o));
             }
         } else if (key == "prop") {
             std::string k, v;

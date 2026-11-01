@@ -80,7 +80,22 @@ bool SaveGame::write(const std::filesystem::path& file, std::string* error) cons
              << ' ' << e.position.y << ' ' << e.position.z << ' ' << e.yaw << "\n";
         if (!e.data.empty())
             body << "data " << e.data << "\n"; // one-line Lua literal, belongs to the entity above
+        if (e.propertiesChanged) { // properties changed by inputs (lights switched, triggers used up)
+            body << "props";
+            for (const auto& [k, v] : e.properties)
+                body << ' ' << quote(k) << ' ' << quote(v);
+            body << "\n";
+        }
+        if (e.touching || !e.firedOutputs.empty()) {
+            body << "io " << (e.touching ? 1 : 0);
+            for (int i : e.firedOutputs)
+                body << ' ' << i;
+            body << "\n";
+        }
     }
+    for (const auto& p : pendingInputs)
+        body << "pending " << p.delay << ' ' << quote(p.target) << ' ' << quote(p.input) << ' ' << quote(p.parameter) << ' '
+             << engine::objectIdToString(p.caller) << ' ' << engine::objectIdToString(p.activator) << "\n";
     const std::string text = body.str();
     char sum[40];
     std::snprintf(sum, sizeof sum, "checksum %016llx\n", static_cast<unsigned long long>(fnv1a(text)));
@@ -176,6 +191,25 @@ bool SaveGame::read(const std::filesystem::path& file, std::string* error)
             entities.push_back(e);
         } else if (key == "data" && !entities.empty()) {
             entities.back().data = line.substr(5);
+        } else if (key == "props" && !entities.empty()) {
+            auto& e = entities.back();
+            e.propertiesChanged = true;
+            for (std::string k, v; unquote(ls, k) && unquote(ls, v);)
+                e.properties[k] = v;
+        } else if (key == "io" && !entities.empty()) {
+            int touching = 0;
+            ls >> touching;
+            entities.back().touching = touching != 0;
+            for (int i; ls >> i;)
+                entities.back().firedOutputs.push_back(i);
+        } else if (key == "pending") {
+            engine::ScriptSystem::PendingInput p;
+            std::string caller, activator;
+            if (ls >> p.delay && unquote(ls, p.target) && unquote(ls, p.input) && unquote(ls, p.parameter) && ls >> caller >> activator) {
+                p.caller = engine::objectIdFromString(caller);
+                p.activator = engine::objectIdFromString(activator);
+                pendingInputs.push_back(std::move(p));
+            }
         }
     }
     if (version == 0 || level.empty()) {

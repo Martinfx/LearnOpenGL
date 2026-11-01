@@ -218,6 +218,10 @@ private:
     QDoubleSpinBox* cullDistanceSpin_ = nullptr;
     QCheckBox* collisionCheck_ = nullptr;
     QCheckBox* dynamicCheck_ = nullptr;          // model: physics prop
+    class OutputsPanel* outputsPanel_ = nullptr;  // entity I/O connections
+    QFormLayout* outputsForm_ = nullptr;
+    bool pickingTarget_ = false;                  // next viewport click picks an I/O target
+    void addLogicEntity(const QString& type);     // "trigger" volume or "relay"
     QDoubleSpinBox* massSpin_ = nullptr;
     QComboBox* colliderCombo_ = nullptr;
     // Physics of a prop from assets/models/props/clutter/clutter.json (dynamic, mass, collider);

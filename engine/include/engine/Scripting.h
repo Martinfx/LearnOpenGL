@@ -53,6 +53,18 @@ public:
     using SoundFn = std::function<void(const std::string& sound, const glm::vec3* position, float volume)>;
     void setSoundHandler(SoundFn handler);
 
+    // Text for the player's screen (ShowMessage input, game.message()).
+    using MessageFn = std::function<void(const std::string& text)>;
+    void setMessageHandler(MessageFn handler);
+
+    // Entity I/O (engine/EntityIO.h): fires `output` of an entity, i.e. queues the
+    // inputs of its matching connections. `activator` = entity index, -1 = the player.
+    void fireOutput(int entityIndex, const std::string& output, int activator = -1);
+    // Sends an input to every entity named `target` after `delay` seconds.
+    void sendInput(const std::string& target, const std::string& input, const std::string& parameter = {}, float delay = 0.0f,
+                   int activator = -1, int caller = -1);
+    int pendingInputs() const;
+
     // Navigation for self:move_to() and game.find_path(); null or not ready = straight lines.
     void setNavMesh(const NavMesh* nav);
 
@@ -67,7 +79,21 @@ public:
         glm::vec3 position{0.0f};
         float yaw = 0.0f;
         std::string data; // Lua literal, "" = nothing
+        // Entity I/O: properties changed by inputs (all of them, when changed), whether
+        // something stands in it (triggers) and which `once` outputs already fired.
+        bool propertiesChanged = false;
+        std::map<std::string, std::string> properties;
+        bool touching = false;
+        std::vector<int> firedOutputs;
     };
+    // Inputs waiting for their delay (saved with the game).
+    struct PendingInput {
+        float delay = 0.0f; // seconds left
+        std::string target, input, parameter;
+        ObjectId caller = 0, activator = 0; // 0 = none / the player
+    };
+    std::vector<PendingInput> savePendingInputs() const;
+    void restorePendingInputs(const std::vector<PendingInput>& pending);
     std::vector<EntityState> saveEntities();
     void restoreEntities(const std::vector<EntityState>& states);
     double time() const; // seconds of game time (game.time())

@@ -107,6 +107,11 @@ private:
     void addAnomalyHelpers(engine::RenderView& view, bool warp) const;
     void addLightHelpers(engine::RenderView& view) const;
     mutable engine::DebugGeometry lightHelpers_; // filled per pane in addLightHelpers
+    // Trigger volumes and the selected entity's I/O connections (arrows to its targets
+    // in yellow, from the entities that send it inputs in cyan).
+    void addIoHelpers(engine::RenderView& view) const;
+    mutable engine::DebugGeometry ioHelpers_;
+    mutable engine::DebugGeometry ioArrows_; // seen through walls
     engine::ParticleSystem::Handle rain_ = 0;
     QTimer particleTimer_;
     QElapsedTimer particleClock_;

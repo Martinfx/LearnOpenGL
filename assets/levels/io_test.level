@@ -1,0 +1,139 @@
+# FPS engine level
+version 6
+player_start 0 0 9
+sun -0.45 -0.75 -0.3
+env sun_color 0.6 0.7 1
+env sun_intensity 0.03
+env sky_zenith 0.02 0.025 0.04
+env sky_horizon 0.04 0.045 0.06
+env ground_color 0.02 0.02 0.02
+env cloud_cover 0.8
+env ambient_intensity 0.15
+env fog_color 0.03 0.035 0.045
+env fog_density 0.01
+env fog_height 1
+env fog_height_falloff 0.12
+env fog_sun_scatter 0
+env exposure 1
+env bloom_intensity 0.08
+env bloom_threshold 1.2
+env ssao_radius 0.6
+env ssao_intensity 1.1
+env shadow_distance 60
+env saturation 0.8
+env contrast 1.1
+env tint 1 1 1
+env vignette 0.35
+env grain 0.035
+loading_title "Test: propojení entit"
+loading_hint "Vejdi do haly: trigger rozsvítí zářivky, spustí poplach a pošle na tebe banditu. Jeho smrt poplach vypne."
+weapon "../weapons/ak74.weapon"
+group "Building" ""
+group "Logic" ""
+group "Hall lights" ""
+group "Cover" ""
+box "Floor" 0 -0.5 -2 18 1 28 0.5 0.5 0.5
+  parent "Building"
+  material "../materials/concrete.material"
+box "Ceiling" 0 4.5 -2 18 1 28 0.5 0.5 0.5
+  parent "Building"
+  material "../materials/concrete.material"
+box "Corridor wall W" -2 2 5.5 1 4 11 0.5 0.5 0.5
+  parent "Building"
+  material "../materials/bricks.material"
+box "Corridor wall E" 2 2 5.5 1 4 11 0.5 0.5 0.5
+  parent "Building"
+  material "../materials/bricks.material"
+box "Corridor end" 0 2 11.5 5 4 1 0.5 0.5 0.5
+  parent "Building"
+  material "../materials/bricks.material"
+box "Hall wall N" 0 2 -14.5 18 4 1 0.5 0.5 0.5
+  parent "Building"
+  material "../materials/bricks.material"
+box "Hall wall W" -8.5 2 -7 1 4 15 0.5 0.5 0.5
+  parent "Building"
+  material "../materials/bricks.material"
+box "Hall wall E" 8.5 2 -7 1 4 15 0.5 0.5 0.5
+  parent "Building"
+  material "../materials/bricks.material"
+box "Hall wall S west" -5 2 0.5 6 4 1 0.5 0.5 0.5
+  parent "Building"
+  material "../materials/bricks.material"
+box "Hall wall S east" 5 2 0.5 6 4 1 0.5 0.5 0.5
+  parent "Building"
+  material "../materials/bricks.material"
+box "Pillar 1" -3.5 2 -5 0.8 4 0.8 0.5 0.5 0.5
+  parent "Building"
+  material "../materials/concrete.material"
+box "Pillar 2" 3.5 2 -5 0.8 4 0.8 0.5 0.5 0.5
+  parent "Building"
+  material "../materials/concrete.material"
+box "Pillar 3" -3.5 2 -10 0.8 4 0.8 0.5 0.5 0.5
+  parent "Building"
+  material "../materials/concrete.material"
+box "Pillar 4" 3.5 2 -10 0.8 4 0.8 0.5 0.5 0.5
+  parent "Building"
+  material "../materials/concrete.material"
+box "Crate stack" -1.5 0.6 -7.5 1.2 1.2 1.2 0.55 0.42 0.28
+  parent "Cover"
+  material "../materials/metal_plate.material"
+box "Low wall" 2 0.5 -3.5 2.5 1 0.4 0.5 0.5 0.5
+  parent "Cover"
+  material "../materials/concrete.material"
+entity "Corridor bulb" "light" 0 3.3 6 0 0.3 0.3 0.3 1 0.72 0.42 ""
+  parent "Building"
+  prop "intensity" "6"
+  prop "range" "7"
+  prop "flicker" "broken"
+  prop "flicker_speed" "0.6"
+entity "Hall entrance" "trigger" 0 0 -0.5 0 3 3 1.5 1 0.55 0.15 ""
+  parent "Logic"
+  prop "once" "1"
+  output "OnTrigger" "Power relay" "Trigger" "" 0 0
+  output "OnTrigger" "!player" "ShowMessage" "Proud naskočil. Někdo tu je." 2.5 0
+entity "Power relay" "relay" 0 3.5 1.5 0 0.4 0.4 0.4 0.7 0.4 1 ""
+  parent "Logic"
+  output "OnTrigger" "Hall tube 1" "TurnOn" "" 0 0
+  output "OnTrigger" "Hall tube 2" "TurnOn" "" 0.7 0
+  output "OnTrigger" "Hall tube 3" "TurnOn" "" 1.4 0
+  output "OnTrigger" "Alarm" "Enable" "" 1.8 0
+  output "OnTrigger" "Alarm light" "TurnOn" "" 1.8 0
+  output "OnTrigger" "Bandit" "Alert" "" 2.2 0
+entity "Hall tube 1" "light" 0 3.8 -2.5 0 0.3 0.3 0.3 0.8 1 0.85 ""
+  parent "Hall lights"
+  prop "intensity" "14"
+  prop "range" "10"
+  prop "flicker" "fluorescent"
+  prop "enabled" "0"
+entity "Hall tube 2" "light" 0 3.8 -7 0 0.3 0.3 0.3 0.8 1 0.85 ""
+  parent "Hall lights"
+  prop "intensity" "14"
+  prop "range" "10"
+  prop "flicker" "fluorescent"
+  prop "enabled" "0"
+  prop "shadows" "1"
+entity "Hall tube 3" "light" 0 3.8 -11.5 0 0.3 0.3 0.3 0.8 1 0.85 ""
+  parent "Hall lights"
+  prop "intensity" "14"
+  prop "range" "10"
+  prop "flicker" "fluorescent"
+  prop "enabled" "0"
+entity "Alarm light" "light" -7.6 3.2 -7 0 0.3 0.3 0.3 1 0.08 0.04 ""
+  parent "Hall lights"
+  prop "intensity" "25"
+  prop "range" "14"
+  prop "flicker" "pulse"
+  prop "flicker_speed" "1.6"
+  prop "enabled" "0"
+entity "Alarm" "sound" -7.6 2.8 -7 0 0.6 0.6 0.6 0.25 0.55 0.95 ""
+  parent "Logic"
+  prop "sound" "sounds/ambient/alarm.sound"
+  prop "enabled" "0"
+entity "Bandit" "enemy" 5 0 -12.5 135 0.6 1.8 0.6 0.55 0.5 0.5 "../scripts/enemy.lua"
+  parent "Logic"
+  character "../models/characters/humans/bandit.glb" 1 0 "Idle_Loop"
+  prop "patrol_radius" "1.5"
+  prop "view_range" "8"
+  output "OnDeath" "Alarm" "Disable" "" 1.5 0
+  output "OnDeath" "Alarm light" "TurnOff" "" 1.5 0
+  output "OnDeath" "!player" "ShowMessage" "Poplach utichl." 2 0

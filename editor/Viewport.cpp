@@ -1,4 +1,5 @@
 #include "Viewport.h"
+#include <engine/EntityIO.h>
 
 #include <engine/Anomaly.h>
 #include <engine/Lights.h>
@@ -220,6 +221,70 @@ void Viewport::addLightHelpers(engine::RenderView& view) const
         view.debug.push_back(&lightHelpers_);
 }
 
+void Viewport::addIoHelpers(engine::RenderView& view) const
+{
+    ioHelpers_ = engine::DebugGeometry{};
+    ioArrows_ = engine::DebugGeometry{};
+    ioArrows_.xray = true;
+    auto lineTo = [](engine::DebugGeometry& g, glm::vec3 a, glm::vec3 b, glm::vec4 c) {
+        g.lines.push_back(a);
+        g.lines.push_back(b);
+        g.lineColors.push_back(c);
+        g.lineColors.push_back(c);
+    };
+    auto line = [&](glm::vec3 a, glm::vec3 b, glm::vec4 c) { lineTo(ioHelpers_, a, b, c); };
+    auto arrow = [&](glm::vec3 a, glm::vec3 b, glm::vec4 c) {
+        auto line = [&](glm::vec3 p, glm::vec3 q, glm::vec4 col) { lineTo(ioArrows_, p, q, col); };
+        line(a, b, c);
+        const glm::vec3 d = b - a;
+        const float len = glm::length(d);
+        if (len < 0.05f)
+            return;
+        const glm::vec3 dir = d / len;
+        const glm::vec3 side = glm::normalize(glm::cross(dir, std::abs(dir.y) > 0.99f ? glm::vec3(1, 0, 0) : glm::vec3(0, 1, 0)));
+        const float head = std::min(0.4f, len * 0.25f);
+        line(b, b - dir * head + side * head * 0.5f, c);
+        line(b, b - dir * head - side * head * 0.5f, c);
+    };
+    const int first = scene_->firstEntity();
+    auto centre = [](const engine::Entity& e) {
+        const engine::Aabb m = e.markerBounds();
+        return (m.min + m.max) * 0.5f;
+    };
+    for (std::size_t i = 0; i < scene_->entities.size(); ++i) {
+        const engine::Entity& e = scene_->entities[i];
+        if (e.type != "trigger")
+            continue;
+        const bool selected = selected_ == first + static_cast<int>(i);
+        const glm::vec4 c = selected ? glm::vec4(1.0f, 0.75f, 0.2f, 0.95f) : glm::vec4(e.color, 0.6f);
+        const engine::Aabb b = e.bounds();
+        const glm::vec3 p[8] = {{b.min.x, b.min.y, b.min.z}, {b.max.x, b.min.y, b.min.z}, {b.max.x, b.min.y, b.max.z}, {b.min.x, b.min.y, b.max.z},
+                                {b.min.x, b.max.y, b.min.z}, {b.max.x, b.max.y, b.min.z}, {b.max.x, b.max.y, b.max.z}, {b.min.x, b.max.y, b.max.z}};
+        for (int k = 0; k < 4; ++k) {
+            line(p[k], p[(k + 1) % 4], c);
+            line(p[k + 4], p[(k + 1) % 4 + 4], c);
+            line(p[k], p[k + 4], c);
+        }
+    }
+    const int sel = selected_ - first;
+    if (selected_ >= first && sel < static_cast<int>(scene_->entities.size())) {
+        const engine::Entity& s = scene_->entities[static_cast<std::size_t>(sel)];
+        for (const engine::EntityOutput& o : s.outputs) // to its targets
+            for (int t : engine::findEntitiesByName(*scene_, o.target == "!self" ? s.name : o.target))
+                arrow(centre(s), centre(scene_->entities[static_cast<std::size_t>(t)]), {1.0f, 0.85f, 0.2f, 0.95f});
+        for (const engine::Entity& other : scene_->entities) // from the entities that target it
+            for (const engine::EntityOutput& o : other.outputs)
+                if (o.target == s.name && &other != &s) {
+                    arrow(centre(other), centre(s), {0.3f, 0.85f, 1.0f, 0.95f});
+                    break;
+                }
+    }
+    if (!ioHelpers_.lines.empty())
+        view.debug.push_back(&ioHelpers_);
+    if (!ioArrows_.lines.empty())
+        view.debug.push_back(&ioArrows_);
+}
+
 // Anomaly fields: rings at the bottom and top of the field (and the vent's fire
 // column), in the anomaly's color; in the perspective view also its idle warp.
 void Viewport::addAnomalyHelpers(engine::RenderView& view, bool warp) const
@@ -385,6 +450,7 @@ void Viewport::paintGL()
             particles_.appendSprites(view.cameraPosition, glm::mat3(glm::inverse(view.view)), view.sprites);
         addAnomalyHelpers(view, pane.mode == ViewMode::Perspective && shading_ != engine::Shading::Wireframe);
         addLightHelpers(view);
+        addIoHelpers(view);
         renderer_.render(*scene_, view);
     }
     // Report driver errors instead of silently showing a broken view.

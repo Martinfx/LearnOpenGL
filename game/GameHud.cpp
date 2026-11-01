@@ -16,7 +16,7 @@ void GameHud::update(float dt, float health)
 void GameHud::notify(const std::string& text)
 {
     message_ = text;
-    messageTime_ = 2.5f;
+    messageTime_ = std::min(8.0f, 2.5f + 0.05f * static_cast<float>(text.size())); // longer texts stay longer
 }
 
 void GameHud::draw(engine::Ui2D& ui, int width, int height, const HudState& s) const

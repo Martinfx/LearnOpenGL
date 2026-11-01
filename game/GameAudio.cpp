@@ -1,6 +1,8 @@
 #include <engine/Log.h>
 #include "GameAudio.h"
 
+#include <engine/EntityIO.h>
+
 #include <cmath>
 
 #include <glm/geometric.hpp>
@@ -131,8 +133,9 @@ void GameAudio::startLevel(const engine::Scene& scene)
         // Zones play in the listener's head and are faded by distance in update();
         // point sources are 3D at the centre of the entity box.
         s.handle = s.zone ? audio_.play2D(*def, s.volume) : audio_.play(*def, (box.min + box.max) * 0.5f, s.volume);
-        if (s.zone)
-            audio_.setVolume(s.handle, 0.0f);
+        s.on = s.zone || (e.alive && engine::entityEnabled(e));
+        if (!s.on || s.zone)
+            audio_.setVolume(s.handle, 0.0f); // switched off in the level: waits for an Enable input
         sources_.push_back(s);
     }
 }
@@ -145,10 +148,17 @@ void GameAudio::update(float dt, const engine::Scene& scene, glm::vec3 eye, glm:
             continue;
         const engine::Entity& e = scene.entities[s.entity];
         const engine::Aabb box = e.bounds();
-        if (s.zone)
-            audio_.setVolume(s.handle, engine::zoneGain(box.min, box.max, s.fade, eye), 0.1f);
-        else
+        // Switched by entity I/O (Enable / Disable / Kill): fades out instead of stopping.
+        const bool on = e.alive && engine::entityEnabled(e);
+        if (s.zone) {
+            audio_.setVolume(s.handle, on ? engine::zoneGain(box.min, box.max, s.fade, eye) : 0.0f, 0.1f);
+        } else {
             audio_.setPosition(s.handle, (box.min + box.max) * 0.5f); // scripts may move it
+            if (on != s.on) {
+                audio_.setVolume(s.handle, on ? s.volume : 0.0f, 0.3f);
+                s.on = on;
+            }
+        }
     }
     // Weather: louder than linear at low intensity so a drizzle is still heard.
     audio_.setVolume(rain_, std::sqrt(std::clamp(scene.environment.rain, 0.0f, 1.0f)), 0.5f);

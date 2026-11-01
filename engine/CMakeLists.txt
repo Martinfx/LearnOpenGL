@@ -23,6 +23,7 @@ add_library(engine STATIC
     src/PlayerController.cpp
     src/Renderer.cpp
     src/Lights.cpp
+    src/EntityIO.cpp
     src/Scene.cpp
     src/JobSystem.cpp
     src/SceneGraph.cpp

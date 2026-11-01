@@ -1112,7 +1112,8 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         }
         if (!e.alive)
             continue;
-        if (e.type == "sound" || e.type == "particle" || e.type == "anomaly" || e.type == "light") { // marker cube; a sound zone itself is the entity size
+        if (e.type == "sound" || e.type == "particle" || e.type == "anomaly" || e.type == "light" || e.type == "trigger" ||
+            e.type == "relay") { // marker cube; a sound zone itself is the entity size
             const Aabb m = e.markerBounds();
             const bool glow = e.type == "light" && !depthOnly; // a bulb: unlit, in the light's color
             if (glow)
@@ -2244,6 +2245,10 @@ void Renderer::drawDebug(const std::vector<const DebugGeometry*>& items, const g
     for (const DebugGeometry* d : items) {
         if (!d)
             continue;
+        if (d->xray)
+            glDisable(GL_DEPTH_TEST);
+        else
+            glEnable(GL_DEPTH_TEST);
         const auto tris = static_cast<GLsizei>(d->triangles.size());
         if (tris > 0) {
             glUniform4fv(p.loc("uDebugColor"), 1, glm::value_ptr(d->fill));

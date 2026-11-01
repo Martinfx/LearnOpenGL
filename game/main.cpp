@@ -628,6 +628,7 @@ int main(int argc, char** argv)
     scripts.setSoundHandler([&audio](const std::string& sound, const glm::vec3* position, float volume) {
         audio.playAsset(sound, position, volume);
     });
+    scripts.setMessageHandler([&hud](const std::string& text) { hud.notify(text); }); // ShowMessage input, game.message()
 
     // Weapons (credits of the models: CREDITS.md next to each model)
     std::vector<engine::Weapon> weapons = loadLoadout(scene, std::filesystem::path(argv[0]).parent_path());
@@ -753,6 +754,7 @@ int main(int argc, char** argv)
         cvars.add("timescale", CVarType::Float, "1", "Game speed (0.1 slow motion .. 4)", engine::CVarCheat, 0.05, 4.0);
         cvars.add("r_debugdraw", CVarType::Bool, "1", "Show debug lines, boxes and texts from code and scripts", engine::CVarDev);
         cvars.add("ai_debug", CVarType::Bool, "0", "Draw enemy states, paths and sight lines", engine::CVarDev);
+        cvars.add("io_debug", CVarType::Bool, "0", "Log entity I/O: outputs fired and inputs received", engine::CVarDev);
         auto levelFile = [&argv](const std::string& name) {
             std::filesystem::path file = name;
             if (file.extension().empty())
@@ -894,6 +896,7 @@ int main(int argc, char** argv)
                 save.props.push_back({m.id, m.position, m.rotation});
         save.flashlightCharge = flashlight.charge();
         save.entities = scripts.saveEntities();
+        save.pendingInputs = scripts.savePendingInputs();
         return save;
     };
     auto saveTo = [&](const std::string& slot) {
@@ -936,6 +939,7 @@ int main(int argc, char** argv)
         kills = loadFrom->kills;
         scripts.setTime(loadFrom->playTime);
         scripts.restoreEntities(loadFrom->entities);
+        scripts.restorePendingInputs(loadFrom->pendingInputs); // also drops the OnStart inputs of a fresh start
         hud.notify("Načteno");
     }
     // Carried over from the previous level (level change): health, weapon, magazines.

@@ -33,6 +33,7 @@ struct SaveGame {
     bool flashlightOn = false;
     float flashlightCharge = 1.0f;
     std::vector<engine::ScriptSystem::EntityState> entities;
+    std::vector<engine::ScriptSystem::PendingInput> pendingInputs; // entity I/O waiting for its delay
 
     bool write(const std::filesystem::path& file, std::string* error = nullptr) const;
     bool read(const std::filesystem::path& file, std::string* error = nullptr);

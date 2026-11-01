@@ -2,6 +2,7 @@
 #include "engine/Scripting.h"
 #include "engine/CVars.h"
 #include "engine/DebugDraw.h"
+#include "engine/EntityIO.h"
 #include "engine/CharacterBody.h"
 #include "engine/NavMesh.h"
 #include "engine/Physics.h"
@@ -39,7 +40,12 @@ struct ScriptEntity {
     sol::protected_function onUpdate;
     sol::protected_function onDamage;
     sol::protected_function onDeath;
+    sol::protected_function onInput;
     bool failed = false;
+    // Entity I/O
+    bool touching = false;            // trigger: something allowed by its filter is inside
+    bool propertiesChanged = false;   // an input changed its properties (saved games keep them)
+    std::vector<char> fired;          // per output connection: a `once` one already fired
     // move_to(): the path being followed (navmesh corners).
     const NavMesh* const* nav = nullptr;
     const double* time = nullptr;
@@ -158,6 +164,15 @@ struct ScriptSystem::Impl {
     std::vector<std::unique_ptr<ScriptEntity>> entities;
     float playerHealth = 100.0f;
     std::string levelChange; // game.change_level()
+    MessageFn message;
+    struct Queued {
+        double at = 0.0;
+        std::uint64_t order = 0; // same time: in the order they were sent
+        std::string target, input, parameter;
+        int caller = -1, activator = -1;
+    };
+    std::vector<Queued> queue;
+    std::uint64_t queueOrder = 0;
     double time = 0.0;
     int errors = 0;
 
@@ -178,7 +193,213 @@ struct ScriptSystem::Impl {
     }
 
     void bindApi();
+
+    // Entity I/O
+    void fireOutput(int index, const std::string& output, int activator);
+    void sendInput(const std::string& target, const std::string& input, const std::string& parameter, float delay, int activator,
+                   int caller);
+    void deliver(const Queued& q);
+    void applyInput(int index, const std::string& input, const std::string& parameter, int activator);
+    void updateTriggers();
+    void kill(ScriptEntity& se, bool notify);
+    void callScript(ScriptEntity& se, sol::protected_function& fn, const char* what, auto&&... args)
+    {
+        if (se.failed || !fn.valid())
+            return;
+        auto r = fn(&se, std::forward<decltype(args)>(args)...);
+        if (!r.valid()) {
+            sol::error err = r;
+            report(se, std::string(what) + ": " + err.what());
+            se.failed = true;
+        }
+    }
+    bool ioDebug() const
+    {
+        const CVar* c = CVarRegistry::global().find("io_debug");
+        return c && c->boolean();
+    }
 };
+
+void ScriptSystem::Impl::fireOutput(int index, const std::string& output, int activator)
+{
+    if (index < 0 || index >= static_cast<int>(entities.size()))
+        return;
+    ScriptEntity& se = *entities[static_cast<std::size_t>(index)];
+    const Entity& e = se.e();
+    se.fired.resize(e.outputs.size(), 0);
+    for (std::size_t i = 0; i < e.outputs.size(); ++i) {
+        const EntityOutput& o = e.outputs[i];
+        if (o.output != output || (o.once && se.fired[i]))
+            continue;
+        se.fired[i] = 1;
+        std::string target = o.target;
+        if (target == "!self")
+            target = e.name;
+        if (target == "!activator") {
+            if (activator >= 0)
+                target = entities[static_cast<std::size_t>(activator)]->e().name;
+            else
+                target = "!player";
+        }
+        if (ioDebug())
+            log("[io] " + e.name + "." + output + " -> " + target + "." + o.input + (o.parameter.empty() ? "" : "(" + o.parameter + ")"));
+        sendInput(target, o.input, o.parameter, o.delay, activator, index);
+    }
+}
+
+void ScriptSystem::Impl::sendInput(const std::string& target, const std::string& input, const std::string& parameter, float delay,
+                                   int activator, int caller)
+{
+    Queued q;
+    q.at = time + std::max(0.0f, delay);
+    q.order = queueOrder++;
+    q.target = target;
+    q.input = input;
+    q.parameter = parameter;
+    q.activator = activator;
+    q.caller = caller;
+    queue.push_back(std::move(q));
+}
+
+void ScriptSystem::Impl::deliver(const Queued& q)
+{
+    if (q.target == "!player") {
+        if (q.input == "Damage")
+            playerHealth = std::max(0.0f, playerHealth - (q.parameter.empty() ? 100.0f : std::strtof(q.parameter.c_str(), nullptr)));
+        else if (q.input == "Heal")
+            playerHealth = std::min(100.0f, playerHealth + (q.parameter.empty() ? 100.0f : std::strtof(q.parameter.c_str(), nullptr)));
+        else if (q.input == "ShowMessage" && message)
+            message(q.parameter);
+        return;
+    }
+    const std::string target = q.target == "!self" && q.caller >= 0 ? entities[static_cast<std::size_t>(q.caller)]->e().name : q.target;
+    const std::vector<int> found = findEntitiesByName(scene, target);
+    if (found.empty())
+        log("[script] I/O: no entity named '" + target + "' for input " + q.input);
+    for (int i : found)
+        applyInput(i, q.input, q.parameter, q.activator);
+}
+
+void ScriptSystem::Impl::kill(ScriptEntity& se, bool notify)
+{
+    Entity& e = se.e();
+    if (!e.alive)
+        return;
+    e.alive = false;
+    if (notify)
+        callScript(se, se.onDeath, "on_death");
+    se.body.reset();
+}
+
+void ScriptSystem::Impl::applyInput(int index, const std::string& input, const std::string& parameter, int activator)
+{
+    ScriptEntity& se = *entities[static_cast<std::size_t>(index)];
+    Entity& e = se.e();
+    if (ioDebug())
+        log("[io] " + e.name + " <- " + input + (parameter.empty() ? "" : "(" + parameter + ")"));
+    auto setEnabled = [&](bool on) {
+        e.properties["enabled"] = on ? "1" : "0";
+        se.propertiesChanged = true;
+    };
+    bool known = true;
+    if (input == "Enable" || input == "TurnOn")
+        setEnabled(true);
+    else if (input == "Disable" || input == "TurnOff")
+        setEnabled(false);
+    else if (input == "Toggle")
+        setEnabled(!entityEnabled(e));
+    else if (input == "Kill")
+        kill(se, false);
+    else if (input == "Damage") {
+        const float amount = parameter.empty() ? 100.0f : std::strtof(parameter.c_str(), nullptr);
+        if (e.alive) {
+            e.health -= amount;
+            callScript(se, se.onDamage, "on_damage", amount);
+            fireOutput(index, "OnDamaged", activator);
+            if (e.health <= 0.0f && e.alive) {
+                e.health = 0.0f;
+                kill(se, true);
+                fireOutput(index, "OnDeath", activator);
+            }
+        }
+    } else if (input == "SetProperty") {
+        const std::size_t eq = parameter.find('=');
+        if (eq != std::string::npos && eq > 0) {
+            e.properties[parameter.substr(0, eq)] = parameter.substr(eq + 1);
+            se.propertiesChanged = true;
+        }
+    } else if (input == "ShowMessage") {
+        std::string text = parameter;
+        if (text.empty())
+            if (const auto it = e.properties.find("message"); it != e.properties.end())
+                text = it->second;
+        if (message && !text.empty())
+            message(text);
+    } else if (input == "PlaySound") {
+        const std::string sound = parameter.empty() && e.properties.count("sound") ? e.properties.at("sound") : parameter;
+        if (playSound && !sound.empty()) {
+            const glm::vec3 at = e.position + glm::vec3(0.0f, std::min(e.size.y, 1.5f) * 0.5f, 0.0f);
+            playSound(sound, &at, 1.0f);
+        }
+    } else if (input == "Trigger" && (e.type == "relay" || e.type == "trigger")) {
+        if (entityEnabled(e))
+            fireOutput(index, "OnTrigger", activator);
+    } else {
+        known = false;
+    }
+    // Scripts may handle any input (also the built-in ones, after the engine did).
+    if (!se.failed && se.onInput.valid()) {
+        sol::object who = activator >= 0 ? sol::make_object(lua, entities[static_cast<std::size_t>(activator)].get()) : sol::object(sol::lua_nil);
+        callScript(se, se.onInput, "on_input", input, parameter, who);
+    } else if (!known) {
+        log("[script] I/O: " + e.name + " (" + e.type + ") has no input " + input);
+    }
+}
+
+void ScriptSystem::Impl::updateTriggers()
+{
+    const glm::vec3 feet = player.feet();
+    const Aabb playerBox{feet - glm::vec3(0.3f, 0.0f, 0.3f), feet + glm::vec3(0.3f, 1.8f, 0.3f)};
+    auto overlaps = [](const Aabb& a, const Aabb& b) {
+        return a.min.x <= b.max.x && a.max.x >= b.min.x && a.min.y <= b.max.y && a.max.y >= b.min.y && a.min.z <= b.max.z &&
+               a.max.z >= b.min.z;
+    };
+    for (std::size_t i = 0; i < entities.size(); ++i) {
+        ScriptEntity& se = *entities[i];
+        const Entity& e = se.e();
+        if (e.type != "trigger")
+            continue;
+        bool inside = false;
+        int activator = -1;
+        if (e.alive && entityEnabled(e)) {
+            const Aabb box = e.bounds();
+            const TriggerFilter filter = triggerFilter(e);
+            if (filter != TriggerFilter::Npc && playerHealth > 0.0f && overlaps(box, playerBox))
+                inside = true;
+            if (!inside && filter != TriggerFilter::Player)
+                for (std::size_t j = 0; j < entities.size() && !inside; ++j) {
+                    const Entity& other = entities[j]->e();
+                    if (j != i && other.alive && !other.helper() && overlaps(box, other.bounds())) {
+                        inside = true;
+                        activator = static_cast<int>(j);
+                    }
+                }
+        }
+        if (inside == se.touching)
+            continue;
+        se.touching = inside;
+        if (inside) {
+            fireOutput(static_cast<int>(i), "OnStartTouch", activator);
+            fireOutput(static_cast<int>(i), "OnTrigger", activator);
+            if (const auto it = e.properties.find("once"); it != e.properties.end() && it->second == "1") {
+                se.e().properties["enabled"] = "0"; // a one-shot trigger switches itself off
+                se.propertiesChanged = true;
+            }
+        } else {
+            fireOutput(static_cast<int>(i), "OnEndTouch", activator);
+        }
+    }
+}
 
 void ScriptSystem::Impl::bindApi()
 {
@@ -248,6 +469,10 @@ void ScriptSystem::Impl::bindApi()
                 s.e().yawDegrees = glm::degrees(std::atan2(d.z, d.x));
         },
         "log", [](ScriptEntity& s, const std::string& msg) { (*s.log)("[" + s.e().name + "] " + msg); },
+        // Entity I/O: fires this entity's output (its connections set in the editor), e.g. "OnOpen".
+        "fire_output", [this](ScriptEntity& s, const std::string& output) {
+            fireOutput(static_cast<int>(s.index), output, -1);
+        },
         // Entity properties (set in the editor: light "enabled", sit point "occupied"...), as text; nil if unset.
         "get_property", [](ScriptEntity& s, const std::string& key) -> sol::optional<std::string> {
             const auto it = s.e().properties.find(key);
@@ -364,6 +589,13 @@ void ScriptSystem::Impl::bindApi()
         return nullptr;
     });
     game.set_function("log", [this](const std::string& msg) { log("[lua] " + msg); });
+    // Entity I/O: game.fire("Gate light", "TurnOn" [, parameter [, delay]]).
+    game.set_function("fire", [this](const std::string& target, const std::string& input, sol::optional<std::string> parameter,
+                                     sol::optional<float> delay) { sendInput(target, input, parameter.value_or(""), delay.value_or(0.0f), -1, -1); });
+    game.set_function("message", [this](const std::string& text) {
+        if (message)
+            message(text);
+    });
     // Console variables: game.cvar("fov") returns the value as text (nil if unknown); set_cvar respects cheat / read-only flags.
     // Debug drawing (shown while r_debugdraw is 1): colour vec3 (0..1), seconds 0 = this frame.
     auto rgba = [](const sol::optional<glm::vec3>& c, glm::vec3 fallback) { return glm::vec4(c.value_or(fallback), 1.0f); };
@@ -451,7 +683,11 @@ int ScriptSystem::start()
         se->onUpdate = se->env["on_update"];
         se->onDamage = se->env["on_damage"];
         se->onDeath = se->env["on_death"];
+        se->onInput = se->env["on_input"];
     }
+    d.queue.clear();
+    for (std::size_t i = 0; i < d.entities.size(); ++i)
+        d.fireOutput(static_cast<int>(i), "OnStart", -1); // delivered on the first update
     return d.errors;
 }
 
@@ -459,6 +695,26 @@ void ScriptSystem::fixedUpdate(float dt)
 {
     Impl& d = *impl_;
     d.time += dt;
+    d.updateTriggers();
+    // Due inputs, oldest first; inputs they cause with no delay run in this step too.
+    for (int guard = 0; guard < 64 && !d.queue.empty(); ++guard) {
+        std::vector<Impl::Queued> due;
+        for (auto it = d.queue.begin(); it != d.queue.end();) {
+            if (it->at <= d.time) {
+                due.push_back(std::move(*it));
+                it = d.queue.erase(it);
+            } else {
+                ++it;
+            }
+        }
+        if (due.empty())
+            break;
+        std::sort(due.begin(), due.end(), [](const Impl::Queued& a, const Impl::Queued& b) {
+            return a.at != b.at ? a.at < b.at : a.order < b.order;
+        });
+        for (const Impl::Queued& q : due)
+            d.deliver(q);
+    }
     for (auto& se : d.entities) {
         if (se->failed || !se->onUpdate.valid() || !se->e().alive)
             continue;
@@ -538,11 +794,13 @@ void ScriptSystem::damageEntity(int entityIndex, float amount)
         }
     };
     call(se.onDamage, "on_damage", amount);
+    d.fireOutput(entityIndex, "OnDamaged", -1);
     if (e.health <= 0.0f && e.alive) {
         e.health = 0.0f;
         e.alive = false;
         call(se.onDeath, "on_death");
         se.body.reset(); // removes the capsule from the world
+        d.fireOutput(entityIndex, "OnDeath", -1);
     }
 }
 
@@ -617,6 +875,45 @@ ScriptCheck checkScriptSyntax(const std::string& source, const std::string& chun
 float ScriptSystem::playerHealth() const { return impl_->playerHealth; }
 void ScriptSystem::setSoundHandler(SoundFn handler) { impl_->playSound = std::move(handler); }
 void ScriptSystem::setNavMesh(const NavMesh* nav) { impl_->nav = nav; }
+void ScriptSystem::setMessageHandler(MessageFn handler) { impl_->message = std::move(handler); }
+void ScriptSystem::fireOutput(int entityIndex, const std::string& output, int activator) { impl_->fireOutput(entityIndex, output, activator); }
+void ScriptSystem::sendInput(const std::string& target, const std::string& input, const std::string& parameter, float delay, int activator,
+                             int caller)
+{
+    impl_->sendInput(target, input, parameter, delay, activator, caller);
+}
+int ScriptSystem::pendingInputs() const { return static_cast<int>(impl_->queue.size()); }
+
+std::vector<ScriptSystem::PendingInput> ScriptSystem::savePendingInputs() const
+{
+    const Impl& d = *impl_;
+    std::vector<PendingInput> out;
+    for (const Impl::Queued& q : d.queue) {
+        PendingInput p;
+        p.delay = static_cast<float>(std::max(0.0, q.at - d.time));
+        p.target = q.target;
+        p.input = q.input;
+        p.parameter = q.parameter;
+        p.caller = q.caller >= 0 ? d.entities[static_cast<std::size_t>(q.caller)]->e().id : 0;
+        p.activator = q.activator >= 0 ? d.entities[static_cast<std::size_t>(q.activator)]->e().id : 0;
+        out.push_back(std::move(p));
+    }
+    return out;
+}
+
+void ScriptSystem::restorePendingInputs(const std::vector<PendingInput>& pending)
+{
+    Impl& d = *impl_;
+    d.queue.clear();
+    auto indexOf = [&d](ObjectId id) {
+        for (std::size_t i = 0; id != 0 && i < d.entities.size(); ++i)
+            if (d.entities[i]->e().id == id)
+                return static_cast<int>(i);
+        return -1;
+    };
+    for (const PendingInput& p : pending)
+        d.sendInput(p.target, p.input, p.parameter, p.delay, indexOf(p.activator), indexOf(p.caller));
+}
 void ScriptSystem::setPlayerHealth(float health) { impl_->playerHealth = health; }
 
 std::string ScriptSystem::takeLevelChange()
@@ -716,6 +1013,13 @@ std::vector<ScriptSystem::EntityState> ScriptSystem::saveEntities()
         st.health = e.health;
         st.position = e.position;
         st.yaw = e.yawDegrees;
+        st.propertiesChanged = se->propertiesChanged;
+        if (se->propertiesChanged)
+            st.properties = e.properties;
+        st.touching = se->touching;
+        for (std::size_t i = 0; i < se->fired.size(); ++i)
+            if (se->fired[i] && i < e.outputs.size() && e.outputs[i].once)
+                st.firedOutputs.push_back(static_cast<int>(i));
         if (!se->failed && se->env.valid()) {
             if (sol::protected_function onSave = se->env["on_save"]; onSave.valid()) {
                 auto r = onSave(se.get());
@@ -750,6 +1054,17 @@ void ScriptSystem::restoreEntities(const std::vector<EntityState>& states)
             se.body->teleport(st.position);
         e.position = st.position;
         se.path.clear();
+        if (!e.alive)
+            se.body.reset();
+        if (st.propertiesChanged) {
+            e.properties = st.properties;
+            se.propertiesChanged = true;
+        }
+        se.touching = st.touching;
+        se.fired.assign(e.outputs.size(), 0);
+        for (int i : st.firedOutputs)
+            if (i >= 0 && i < static_cast<int>(se.fired.size()))
+                se.fired[static_cast<std::size_t>(i)] = 1;
         if (se.failed || !se.env.valid())
             continue;
         sol::protected_function onLoad = se.env["on_load"];

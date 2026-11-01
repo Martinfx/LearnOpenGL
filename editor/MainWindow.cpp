@@ -6,6 +6,7 @@
 #include <engine/TextureCook.h>
 #include "AnomalyPanel.h"
 #include "LightPanel.h"
+#include "OutputsPanel.h"
 #include <QFile>
 #include <QJsonObject>
 #include <QJsonDocument>
@@ -126,7 +127,18 @@ MainWindow::MainWindow()
     tabs_->tabBar()->setTabButton(0, QTabBar::LeftSide, nullptr);
     connect(tabs_, &QTabWidget::tabCloseRequested, this, [this](int index) { closeScriptTab(index); });
     setCentralWidget(tabs_);
-    connect(viewport_, &Viewport::boxPicked, this, &MainWindow::select);
+    connect(viewport_, &Viewport::boxPicked, this, [this](int object) {
+        if (pickingTarget_) { // "Pick target" in the Outputs table
+            pickingTarget_ = false;
+            if (scene_.isEntity(object)) {
+                outputsPanel_->setPickedTarget(QString::fromStdString(scene_.entity(object).name));
+                return;
+            }
+            notify(tr("Picking a target cancelled (that is not an entity)"), 3000);
+            return;
+        }
+        select(object);
+    });
     connect(viewport_, &Viewport::assetDropped, this, [this](const QString& path, glm::vec3 point, int object) {
         switch (assetTypeOf(path)) {
         case AssetType::Model: placeModel(path, point); break;
@@ -197,6 +209,8 @@ void MainWindow::buildMenus()
         light->addAction(tr("Spot light (lamp, reflector)"), this, [this] { addLight(true); });
     }
     edit->addAction(tr("Add &campfire"), this, &MainWindow::addCampfire);
+    edit->addAction(tr("Add t&rigger volume"), this, [this] { addLogicEntity("trigger"); });
+    edit->addAction(tr("Add rela&y (logic)"), this, [this] { addLogicEntity("relay"); });
     edit->addAction(tr("Physics props from the catalogue (crates, barrels...)"), this, &MainWindow::applyPropCatalogueToLevel);
     {
         QMenu* anomaly = edit->addMenu(tr("Add a&nomaly"));
@@ -639,6 +653,7 @@ void MainWindow::buildDocks()
     effectForm_ = makeSection(tr("Particle effect"), "Rendering");
     anomalyForm_ = makeSection(tr("Anomaly"), "General");
     lightForm_ = makeSection(tr("Light"), "Rendering");
+    outputsForm_ = makeSection(tr("Outputs (entity I/O)"), "Script");
     nameEdit_ = new QLineEdit(boxPanel_);
     kindLabel_ = new QLabel(boxPanel_);
     generalForm->addRow(tr("Type"), kindLabel_);
@@ -1165,6 +1180,20 @@ void MainWindow::buildDocks()
     lightPanel_ = new LightPanel(boxPanel_);
     lightForm_->addRow(lightPanel_);
     connect(lightPanel_, &LightPanel::edited, this, &MainWindow::markDirty);
+    outputsPanel_ = new OutputsPanel(boxPanel_);
+    outputsForm_->addRow(outputsPanel_);
+    connect(outputsPanel_, &OutputsPanel::edited, this, [this] {
+        markDirty();
+        viewport_->update();
+    });
+    connect(outputsPanel_, &OutputsPanel::pickTargetRequested, this, [this] {
+        pickingTarget_ = true;
+        notify(tr("Click the target entity in the viewport; a click on anything else cancels"), 6000);
+    });
+    connect(outputsPanel_, &OutputsPanel::selectEntityRequested, this, [this](const QString& name) {
+        if (const int o = engine::findObject(scene_, name.toStdString()); o >= 0)
+            select(o);
+    });
 
     // Tunables the script declares in `properties`; values are saved per entity.
     scriptParams_ = new QTableWidget(0, 2, boxPanel_);
@@ -2034,6 +2063,7 @@ void MainWindow::refreshProperties()
     }
     anomalyPanel_->setEntity(e && e->type == "anomaly" ? selectedEntity() : nullptr, &scene_);
     lightPanel_->setEntity(e && e->type == "light" ? selectedEntity() : nullptr);
+    outputsPanel_->setEntity(selectedEntity(), &scene_);
     detailsIcon_->setPixmap(editorIcon(b ? "cube" : m ? "model" : e ? "person" : "select").pixmap(18, 18));
     updateDetailsVisibility();
     refreshTransformBox();
@@ -2507,6 +2537,20 @@ void MainWindow::addLight(bool spot)
     }
 }
 
+void MainWindow::addLogicEntity(const QString& type)
+{
+    addEntity(type);
+    if (engine::Entity* e = selectedEntity(); e && e->type == type.toStdString() && e->outputs.empty()) {
+        // A first connection to fill in: the usual event of this kind of entity.
+        engine::EntityOutput o;
+        o.output = "OnTrigger";
+        o.input = "TurnOn";
+        e->outputs.push_back(o);
+        refreshProperties();
+        markDirty();
+    }
+}
+
 void MainWindow::addAnomaly(int kind)
 {
     addEntity("anomaly");
@@ -2527,7 +2571,8 @@ void MainWindow::addEntity(const QString& type)
     const glm::vec3 p = cam.position + cam.flatForward() * 6.0f;
     engine::Entity e;
     e.type = type.toStdString();
-    e.name = engine::uniqueNodeName(scene_, (type == "enemy" ? "Enemy " : type == "sound" ? "Sound " : type == "particle" ? "Effect " : type == "light" ? "Light " : "Entity ") +
+    e.name = engine::uniqueNodeName(scene_, (type == "enemy" ? "Enemy " : type == "sound" ? "Sound " : type == "particle" ? "Effect " : type == "light" ? "Light " :
+                                             type == "trigger" ? "Trigger " : type == "relay" ? "Relay " : "Entity ") +
                                                 std::to_string(scene_.entities.size() + 1));
     if (type == "sound") {
         e.size = {1.0f, 1.0f, 1.0f};
@@ -2565,6 +2610,12 @@ void MainWindow::addEntity(const QString& type)
             else
                 e.modelPath.clear();
         }
+    } else if (type == "trigger") {
+        e.size = {2.0f, 2.5f, 2.0f};
+        e.color = {1.0f, 0.55f, 0.15f};
+    } else if (type == "relay") {
+        e.size = {0.4f, 0.4f, 0.4f};
+        e.color = {0.7f, 0.4f, 1.0f};
     } else if (type != "sound" && type != "particle" && type != "anomaly" && type != "light") {
         e.size = {0.5f, 0.5f, 0.5f};
         e.color = {0.3f, 0.6f, 0.9f};
@@ -3809,6 +3860,8 @@ void MainWindow::updateDetailsVisibility()
             relevant = e != nullptr && e->type == "anomaly";
         if (d.form == lightForm_)
             relevant = e != nullptr && e->type == "light";
+        if (d.form == outputsForm_)
+            relevant = e != nullptr;
         bool shown = relevant && (category == "All" || category == d.category);
         // Search: rows whose label contains every word (a matching section title shows all rows).
         const bool titleMatch = std::all_of(words.begin(), words.end(), [&](const QString& w) { return d.section->title().toLower().contains(w); });
@@ -3982,8 +4035,12 @@ void MainWindow::buildModePanel()
         }
         auto* campfire = toolButton("particles", tr("Campfire (fire pit, flames, light, crackle, seats)"), page);
         connect(campfire, &QPushButton::clicked, this, &MainWindow::addCampfire);
+        auto* trigger = toolButton("select", tr("Trigger volume (fires outputs when the player enters)"), page);
+        connect(trigger, &QPushButton::clicked, this, [this] { addLogicEntity("trigger"); });
+        auto* relay = toolButton("select", tr("Relay (passes an input on to several entities)"), page);
+        connect(relay, &QPushButton::clicked, this, [this] { addLogicEntity("relay"); });
         auto* model = toolButton("model", tr("glTF model..."), page);
-        for (QPushButton* b : {box, enemy, entity, sound, particles, anomaly, light, campfire, model})
+        for (QPushButton* b : {box, enemy, entity, sound, particles, anomaly, light, campfire, trigger, relay, model})
             layout->addWidget(b);
         auto* hint = new QLabel(tr("Or drag a model from the Content Browser into the view: it lands where you drop it."), page);
         hint->setObjectName("dim");

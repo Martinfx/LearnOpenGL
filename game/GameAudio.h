@@ -50,6 +50,7 @@ private:
         bool zone = false;
         float fade = 10.0f;
         float volume = 1.0f;
+        bool on = true; // point source: audible (entity enabled and alive)
     };
 
     engine::AudioSystem audio_;

@@ -195,6 +195,10 @@ bool renameNode(Scene& scene, std::string_view oldName, const std::string& newNa
         if (p == old)
             p = newName;
     });
+    for (Entity& e : scene.entities) // entity I/O connections follow the rename
+        for (EntityOutput& o : e.outputs)
+            if (o.target == old)
+                o.target = newName;
     return true;
 }
 

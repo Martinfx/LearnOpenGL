@@ -1,5 +1,7 @@
 #include <engine/Log.h>
 #include "GameEffects.h"
+
+#include <engine/EntityIO.h>
 #include "GameAudio.h"
 
 #include <engine/Log.h>
@@ -74,7 +76,9 @@ void GameEffects::startLevel(const engine::Scene& scene)
     overlay_.clear();
     decals_.clear();
     casings_.clear();
-    for (const engine::Entity& e : scene.entities) {
+    entityEffects_.clear();
+    for (std::size_t i = 0; i < scene.entities.size(); ++i) {
+        const engine::Entity& e = scene.entities[i];
         if (e.type != "particle")
             continue;
         const auto it = e.properties.find("effect");
@@ -84,7 +88,9 @@ void GameEffects::startLevel(const engine::Scene& scene)
         if (p.is_relative())
             p = assetDir_ / p;
         const glm::mat3 yaw(glm::rotate(glm::mat4(1.0f), glm::radians(-e.yawDegrees), glm::vec3(0.0f, 1.0f, 0.0f)));
-        world_.spawn(effect(p.lexically_normal()), e.position, yaw);
+        const auto handle = world_.spawn(effect(p.lexically_normal()), e.position, yaw);
+        if (handle)
+            entityEffects_.push_back({i, handle});
     }
     const engine::Environment& env = scene.environment;
     rain_ = world_.spawn(effect(env.rainEffect.empty() ? (assetDir_ / "particles/rain.particle").lexically_normal() : env.rainEffect),
@@ -145,6 +151,9 @@ void GameEffects::update(float dt, const engine::Scene& scene, const engine::Phy
         world_.setTransform(rain_, eye + glm::vec3(0.0f, 9.0f, 0.0f));
         world_.setRateScale(rain_, scene.environment.rain);
     }
+    for (const auto& [entity, handle] : entityEffects_) // switched by Enable / Disable: no new particles while off
+        if (entity < scene.entities.size())
+            world_.setRateScale(handle, scene.entities[entity].alive && engine::entityEnabled(scene.entities[entity]) ? 1.0f : 0.0f);
     world_.update(dt);
     overlay_.update(dt);
     decals_.update(dt);

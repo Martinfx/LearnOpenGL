@@ -98,6 +98,8 @@ end
 local function set_state(self, s)
     if state ~= s then self:log(state and (state .. " -> " .. s) or s) end
     if state == "rest" and s ~= "rest" then release_seat(self) end
+    -- Entity I/O: the moment it goes after the player (connect e.g. to an alarm in the editor).
+    if s == "chase" and state ~= "chase" and state ~= "attack" and state ~= "search" then self:fire_output("OnSpotted") end
     state, timer = s, 0
 end
 
@@ -145,6 +147,18 @@ function on_damage(self, amount)
         reacting = 0.35
     end
     if state ~= "attack" then set_state(self, "chase") end
+end
+
+-- Entity I/O inputs (Outputs table of another entity, or game.fire): "Alert" sends it after
+-- the player (an alarm, a tripwire); "Calm" sends it back home.
+function on_input(self, input, param)
+    if not self.alive then return end
+    if input == "Alert" then
+        last_seen = game.player_position()
+        if state ~= "attack" and state ~= "chase" then set_state(self, "chase") end
+    elseif input == "Calm" then
+        set_state(self, "return")
+    end
 end
 
 function on_death(self)

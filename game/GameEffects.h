@@ -68,5 +68,7 @@ private:
     std::map<std::filesystem::path, std::shared_ptr<const engine::Model>> models_;
     std::map<std::filesystem::path, std::shared_ptr<engine::TextureAsset>> decalTextures_;
     engine::ParticleSystem::Handle rain_ = 0;
+    // Particle entities: their effect, stopped while the entity is disabled (entity I/O).
+    std::vector<std::pair<std::size_t, engine::ParticleSystem::Handle>> entityEffects_;
     std::mt19937 rng_{99};
 };

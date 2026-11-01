@@ -4,6 +4,7 @@
 #include <engine/Assert.h>
 #include <engine/Anomaly.h>
 #include <engine/Lights.h>
+#include <engine/EntityIO.h>
 #include <engine/Audio.h>
 #include <engine/NavMesh.h>
 #include <engine/Surfaces.h>
@@ -1683,6 +1684,113 @@ void testPhysicsProps()
     check(glm::length(t.model(top).position - before) > 0.3f, "an impulse knocks the crate off the stack");
 }
 
+void testEntityIO()
+{
+    const char* path = "io_listener.lua";
+    std::ofstream(path) << "heard = 0\n"
+                           "function on_input(self, input, param) heard = heard + 1; self.health = tonumber(param) or -1\n"
+                           "  if input == 'Ping' then self:fire_output('OnPong') end end\n"
+                           "function on_save(self) return { heard = heard } end\n";
+    auto s = flatFloor();
+    auto entity = [&](const char* name, const char* type, glm::vec3 pos, glm::vec3 size) -> engine::Entity& {
+        engine::Entity e;
+        e.name = name;
+        e.type = type;
+        e.position = pos;
+        e.size = size;
+        e.id = 0x100 + s.entities.size();
+        s.entities.push_back(e);
+        return s.entities.back();
+    };
+    {
+        engine::Entity& t = entity("Door trigger", "trigger", {0, 0, -5}, {2, 2, 2});
+        t.properties["once"] = "1";
+        t.outputs.push_back({"OnTrigger", "Relay", "Trigger", "", 0.0f, false});
+        t.outputs.push_back({"OnStartTouch", "!player", "ShowMessage", "entered", 0.0f, false});
+    }
+    {
+        engine::Entity& r = entity("Relay", "relay", {0, 3, 0}, {0.4f, 0.4f, 0.4f});
+        r.outputs.push_back({"OnTrigger", "Lamp", "TurnOn", "", 1.0f, false});
+        r.outputs.push_back({"OnTrigger", "Listener", "Ping", "7", 0.0f, true});
+    }
+    entity("Lamp", "light", {0, 3, -5}, {0.3f, 0.3f, 0.3f}).properties["enabled"] = "0";
+    {
+        engine::Entity& l = entity("Listener", "empty", {4, 0, 0}, {0.5f, 0.5f, 0.5f});
+        l.scriptPath = std::filesystem::absolute(path);
+        l.outputs.push_back({"OnPong", "Lamp", "SetProperty", "range=3", 0.0f, false});
+        l.outputs.push_back({"OnDeath", "Lamp", "TurnOff", "", 0.0f, false});
+    }
+    engine::PhysicsWorld world;
+    world.setLevel(s);
+    engine::PlayerController player;
+    player.spawn(world, {0, 0, 0});
+    std::vector<std::string> messages;
+    auto run = [&](engine::ScriptSystem& sys, float seconds) {
+        for (int i = 0; i < static_cast<int>(seconds * 60.0f); ++i)
+            sys.fixedUpdate(1.0f / 60.0f);
+    };
+    auto copy = s;
+    std::vector<std::string> log;
+    engine::ScriptSystem scripts(copy, world, player, [&](const std::string& m) { log.push_back(m); });
+    scripts.setMessageHandler([&](const std::string& m) { messages.push_back(m); });
+    check(scripts.start() == 0, "I/O test scripts start");
+    run(scripts, 0.5f);
+    const engine::Entity& lamp = copy.entities[2];
+    const engine::Entity& listener = copy.entities[3];
+    check(engine::entityEnabled(copy.entities[0]) && !engine::entityEnabled(lamp), "nothing fires before the player enters");
+    player.teleport({0, 0, -5});
+    run(scripts, 0.1f);
+    check(messages.size() == 1 && messages[0] == "entered", "OnStartTouch -> !player ShowMessage");
+    check(!engine::entityEnabled(copy.entities[0]), "a once trigger switches itself off");
+    check(std::abs(listener.health - 7.0f) < 1e-4f, "relay -> script on_input with the parameter");
+    check(lamp.properties.count("range") && lamp.properties.at("range") == "3", "script fire_output -> SetProperty");
+    check(!engine::entityEnabled(lamp) && scripts.pendingInputs() == 1, "a delayed input waits");
+
+    // Saved while the lamp's input is still on its way.
+    const auto saved = scripts.saveEntities();
+    const auto pending = scripts.savePendingInputs();
+    run(scripts, 1.0f);
+    check(engine::entityEnabled(lamp), "the delayed TurnOn arrives");
+    player.teleport({0, 0, 0});
+    run(scripts, 0.2f);
+    player.teleport({0, 0, -5});
+    run(scripts, 0.2f);
+    check(messages.size() == 1, "a used-up once trigger stays quiet");
+    scripts.sendInput("Relay", "Trigger");
+    run(scripts, 0.1f);
+    check(std::abs(listener.health - 7.0f) < 1e-4f && log.end() == std::find_if(log.begin(), log.end(), [](const std::string& m) {
+              return m.find("no input") != std::string::npos;
+          }),
+          "a once connection fires only once");
+    scripts.damageEntity(3, 1000.0f);
+    run(scripts, 0.05f);
+    check(!engine::entityEnabled(lamp), "OnDeath -> TurnOff");
+
+    // Load: properties changed by inputs, used triggers and the waiting input come back.
+    auto fresh = s;
+    engine::ScriptSystem again(fresh, world, player, [](const std::string&) {});
+    again.start();
+    again.restoreEntities(saved);
+    again.restorePendingInputs(pending);
+    check(!engine::entityEnabled(fresh.entities[0]) && fresh.entities[2].properties.count("range"), "saved I/O state restored");
+    check(again.pendingInputs() == 1 && !engine::entityEnabled(fresh.entities[2]), "the waiting input is restored, OnStart ones dropped");
+    run(again, 1.1f);
+    check(engine::entityEnabled(fresh.entities[2]), "the restored input arrives after the rest of its delay");
+
+    // Level file round trip.
+    std::string err;
+    check(engine::saveScene(s, "io_round_trip.level", &err), "save I/O level: " + err);
+    engine::Scene loaded;
+    check(engine::loadScene(loaded, "io_round_trip.level", &err), "load I/O level: " + err);
+    check(loaded.entities.size() == s.entities.size() && loaded.entities[0].outputs == s.entities[0].outputs &&
+              loaded.entities[1].outputs == s.entities[1].outputs && loaded.entities[1].outputs[0].delay == 1.0f &&
+              loaded.entities[1].outputs[1].once,
+          "outputs survive save + load");
+
+    // Renaming an entity keeps the connections pointing at it.
+    check(engine::renameNode(s, "Lamp", "Hall lamp") && s.entities[1].outputs[0].target == "Hall lamp", "rename updates I/O targets");
+}
+
 int main()
 {
     // Hermetic cook cache for the tests.
@@ -1733,6 +1841,7 @@ int main()
     testSurfaces();
     testAnomalies();
     testPhysicsProps();
+    testEntityIO();
     std::printf(failures ? "%d test(s) failed\n" : "all tests passed\n", failures);
     return failures ? 1 : 0;
 }

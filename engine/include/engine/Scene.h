@@ -203,6 +203,20 @@ struct Model {
 };
 
 // Gameplay object (enemy, pickup, trigger...). Behaviour comes from its Lua script.
+// Entity I/O (as in Hammer): when the entity fires `output` (a trigger's
+// "OnStartTouch", an enemy's "OnDeath"...), every entity named `target` receives
+// `input` ("TurnOn", "Trigger", "Kill"...) with `parameter`, after `delay`
+// seconds. engine/EntityIO.h lists the known outputs and inputs.
+struct EntityOutput {
+    std::string output;
+    std::string target;    // entity name; "!self", "!activator" or "!player" also work
+    std::string input;
+    std::string parameter; // optional, e.g. a message text or "key=value" for SetProperty
+    float delay = 0.0f;    // seconds
+    bool once = false;     // fires only the first time
+    bool operator==(const EntityOutput&) const = default;
+};
+
 struct Entity {
     std::string name = "Entity";
     ObjectId id = 0;                // persistent ID (level line `id`), see ObjectId
@@ -217,6 +231,7 @@ struct Entity {
     std::filesystem::path scriptPath;    // absolute path to a .lua file, empty = none
     // Values for the script's `properties` (set in the editor); missing keys use the script defaults.
     std::map<std::string, std::string> properties;
+    std::vector<EntityOutput> outputs;   // connections to other entities (level sub-line `output`)
 
     // Animated character model (glTF with skeleton). It is scaled to the entity's
     // height and stands on its feet; without a model the entity is drawn as a box.
@@ -240,13 +255,15 @@ struct Entity {
     // Editor-only helpers (sound sources and zones, map markers): not drawn in the
     // game and not hit by weapons.
     bool helper() const { return type == "sound" || type == "map_marker" || type == "particle" || type == "anomaly" || type == "light" ||
-                                 type == "sit_point"; }
+                                 type == "sit_point" || type == "trigger" || type == "relay"; }
     // What the editor draws and picks: a sound zone can span the whole level, so
     // it is shown as a small speaker cube at its position; the zone is its size.
     Aabb markerBounds() const
     {
         if (type == "sound" || type == "particle")
             return {position, position + glm::vec3(type == "sound" ? 0.6f : 0.4f)};
+        if (type == "relay" || type == "trigger") // a logic node; a trigger's volume (its size) is drawn as lines
+            return {position - glm::vec3(0.2f, 0.0f, 0.2f), position + glm::vec3(0.2f, 0.4f, 0.2f)};
         if (type == "light") // the light itself is at `position`
             return {position - glm::vec3(0.15f), position + glm::vec3(0.15f)};
         if (type == "anomaly") // the field (size) is drawn as rings by the editor
