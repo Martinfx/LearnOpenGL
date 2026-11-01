@@ -1,4 +1,6 @@
 #version 450 core
+#define RAIN_MAP
+layout(binding = 14) uniform sampler2D uRainMap;
 #include "common.glsl"
 // Physically based shading (metal/roughness, GGX): sun with cascaded shadows,
 // image based lighting from the sky (prefiltered cubemap + BRDF lookup), SSAO,
@@ -303,6 +305,38 @@ void main() {
         metal *= texture(uMetallicMap, uv)[uMetallicChannel];
     float ao = uHasOcclusionMap ? texture(uOcclusionMap, uv).r : 1.0;
 
+    // Rain: surfaces open to the sky darken and turn glossy, flat ground collects puddles
+    // with ripples while it rains; lightning lights everything under the open sky.
+    float skyOpen = 1.0;
+    if (!uOverlay && (uWeather.x > 0.0 || uWeather.y > 0.0)) {
+        vec3 geo = normalize(vNormal) * (gl_FrontFacing ? 1.0 : -1.0);
+        skyOpen = rainExposure(vWorldPos + geo * 0.05);
+        float wet = uWeather.x * skyOpen * mix(0.4, 1.0, smoothstep(-0.2, 0.6, geo.y));
+        if (wet > 0.0) {
+            float porous = 1.0 - metal;
+            albedo *= mix(1.0, 0.55, wet * porous);
+            rough = mix(rough, 0.3, wet * 0.8);
+            float mask = valueNoise(vWorldPos.xz * 0.3) * 0.7 + valueNoise(vWorldPos.xz * 1.3) * 0.3;
+            float puddle = smoothstep(0.74 - uWeather.w * 0.2, 0.79 - uWeather.w * 0.2, mask) * smoothstep(0.9, 0.98, geo.y) *
+                           smoothstep(0.4, 0.9, uWeather.x) * skyOpen;
+            if (puddle > 0.0) {
+                // Ripples: rings spreading from random points in a grid, one drop per cell per cycle.
+                vec2 cellPos = vWorldPos.xz * 3.0;
+                vec2 cell = floor(cellPos);
+                float h = hash12(cell);
+                float t = fract(uSkyHorizon.w * 1.3 + h);
+                vec2 center = cell + vec2(hash12(cell + 1.7), hash12(cell + 4.1));
+                vec2 d = cellPos - center;
+                float r = length(d);
+                float ring = sin((r - t * 0.9) * 40.0) * smoothstep(0.08, 0.0, abs(r - t * 0.9)) * (1.0 - t) * uWeather.x;
+                vec3 water = geo + vec3(d.x, 0.0, d.y) / max(r, 1e-3) * ring * 0.25;
+                n = normalize(mix(n, normalize(water), puddle));
+                rough = mix(rough, 0.04, puddle);
+                albedo *= mix(1.0, 0.75, puddle);
+            }
+        }
+    }
+
     vec3 camera = uOverlay ? vec3(0.0) : uCameraPos.xyz;
     vec3 v = normalize(camera - vWorldPos);
     vec3 l = uOverlay ? normalize(-uOverlaySunDir) : normalize(-uSunDir.xyz);
@@ -342,6 +376,7 @@ void main() {
     color *= mix(1.0, occlusion, 0.3);
     vec3 ambient = ((1.0 - Fa) * (1.0 - metal) * albedo * irradiance + prefiltered * (Fa * brdf.x + brdf.y)) * occlusion;
     color += ambient * uGroundColor.w;
+    color += albedo * (1.0 - metal) * vec3(0.7, 0.75, 0.9) * uWeather.y * 0.45 * skyOpen * (0.4 + 0.6 * max(nWorld.y, 0.0)); // lightning
 
     vec3 emissive = pow(max(uEmissiveColor, vec3(0.0)), vec3(2.2));
     if (uHasEmissiveMap)

@@ -74,6 +74,7 @@ bool SaveGame::write(const std::filesystem::path& file, std::string* error) cons
     body << "flashlight " << (flashlightOn ? 1 : 0) << ' ' << flashlightCharge << "\n";
     if (timeOfDay >= 0.0f)
         body << "time_of_day " << timeOfDay << ' ' << dayMinutes << ' ' << (timeEnabled ? 1 : 0) << "\n";
+    body << "wetness " << wetness << "\n";
     for (const Prop& p : props)
         body << "prop " << engine::objectIdToString(p.id) << ' ' << p.position.x << ' ' << p.position.y << ' ' << p.position.z << ' '
              << p.rotation.x << ' ' << p.rotation.y << ' ' << p.rotation.z << "\n";
@@ -172,6 +173,8 @@ bool SaveGame::read(const std::filesystem::path& file, std::string* error)
                 ammo.push_back(a);
         } else if (key == "kills") {
             ls >> kills;
+        } else if (key == "wetness") {
+            ls >> wetness;
         } else if (key == "time_of_day") {
             int on = 0;
             ls >> timeOfDay >> dayMinutes >> on;

@@ -4,6 +4,7 @@ texture "../textures/particles/raindrop.png"
 blend alpha
 lit 1
 stretch 1 0.02
+sheltered 1
 rate 1600
 max 2500
 life 0.9 1.1
@@ -12,7 +13,7 @@ direction 0 -1 0
 spread 3
 speed 9 11
 wind 0.6 0 0.2
-size 0.006 0.009
+size 0.01 0.014
 color 0.75 0.78 0.82
-color_key 0 1 1 1 0.35
-color_key 1 1 1 1 0.35
+color_key 0 1 1 1 0.5
+color_key 1 1 1 1 0.5

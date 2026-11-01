@@ -16,6 +16,7 @@ struct WeatherKey {
     float rain = 0.0f;
     float wind = 0.0f;
     float exposure = 1.0f;
+    float storm = 0.0f;        // lightning frequency 0..1
 };
 
 // Day/night cycle of a level. Off: the sun stays where Scene::sunDirection points and

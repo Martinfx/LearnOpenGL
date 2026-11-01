@@ -134,6 +134,8 @@ struct EnvironmentBlock {
     glm::vec4 moonDir;    // xyz toward the moon, w: moon brightness 0..1
     glm::vec4 skyParams;  // x: stars, y: twilight glow, z: cloud shadows, w: 1 = time of day on
     glm::vec4 sunPos;     // xyz toward the sun (the main light may be the moon)
+    glm::mat4 rainMatrix; // world -> rain occlusion map (top-down)
+    glm::vec4 weather;    // x: wetness, y: lightning flash, z: 1 = rain map valid, w: puddles
 };
 
 constexpr int kEnvSize = 128;  // environment cubemap face size
@@ -639,6 +641,11 @@ bool Renderer::init(GlLoader loader, std::string* error)
 void Renderer::shutdown()
 {
     releaseOcclusion();
+    if (rainTex_)
+        glDeleteTextures(1, &rainTex_);
+    if (rainFbo_)
+        glDeleteFramebuffers(1, &rainFbo_);
+    rainTex_ = rainFbo_ = 0;
     for (auto& [id, m] : meshes_) {
         glDeleteVertexArrays(1, &m.vao);
         glDeleteBuffers(1, &m.vbo);
@@ -800,6 +807,8 @@ void Renderer::updateEnvironment(const Scene& scene, const RenderView& view)
     b.moonDir = glm::vec4(sky_.moon, sky_.moonLight * std::max(0.0f, e.time.nightBrightness));
     b.skyParams = glm::vec4(sky_.stars, sky_.twilight, sky_.cloudShadows, e.time.enabled ? 1.0f : 0.0f);
     b.sunPos = glm::vec4(e.time.enabled ? sunPosition(e.time, e.time.hour) : -sky_.lightDirection, 0.0f);
+    b.rainMatrix = rainMatrix_;
+    b.weather = glm::vec4(wetness_, lightning_, rainActive_ && rainTex_ ? 1.0f : 0.0f, std::clamp(e.puddles, 0.0f, 1.0f));
     b.sunColor = glm::vec4(linear(e.sunColor), quality_.shadowResolution > 0 ? 1.0f : 0.0f);
     b.skyZenith = glm::vec4(linear(e.skyZenith), e.cloudCover);
     b.skyHorizon = glm::vec4(linear(e.skyHorizon), time_);
@@ -1151,6 +1160,52 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         drawBox(scene.playerStart + glm::vec3(0.0f, 0.9f, 0.0f), glm::vec3(0.6f, 1.8f, 0.6f), glm::vec3(0.2f, 0.8f, 0.3f), 0.0f);
     }
     depthOnly_ = false;
+}
+
+void Renderer::renderRainMap(const Scene& scene, const RenderView& view)
+{
+    constexpr int kRes = 512;
+    constexpr float kHalf = 48.0f;    // m around the camera
+    constexpr float kHeight = 300.0f; // camera above the center
+    if (!rainTex_) {
+        glCreateTextures(GL_TEXTURE_2D, 1, &rainTex_);
+        glTextureStorage2D(rainTex_, 1, GL_DEPTH_COMPONENT24, kRes, kRes);
+        glTextureParameteri(rainTex_, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTextureParameteri(rainTex_, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTextureParameteri(rainTex_, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTextureParameteri(rainTex_, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glCreateFramebuffers(1, &rainFbo_);
+        glNamedFramebufferTexture(rainFbo_, GL_DEPTH_ATTACHMENT, rainTex_, 0);
+        glNamedFramebufferDrawBuffer(rainFbo_, GL_NONE);
+        rainCenter_ = glm::vec3(1e9f);
+    }
+    // Static level: redraw when the camera has moved a quarter of the area, or every
+    // few seconds for moving objects (doors, props).
+    const glm::vec3 eye = view.cameraPosition;
+    if (glm::distance(glm::vec2(eye.x, eye.z), glm::vec2(rainCenter_.x, rainCenter_.z)) < kHalf * 0.25f &&
+        frameNumber_ - rainFrame_ < 240)
+        return;
+    rainCenter_ = glm::vec3(std::round(eye.x / 4.0f) * 4.0f, eye.y, std::round(eye.z / 4.0f) * 4.0f);
+    rainFrame_ = frameNumber_;
+    const glm::vec3 top(rainCenter_.x, eye.y + kHeight * 0.5f, rainCenter_.z);
+    const glm::mat4 lightView = glm::lookAt(top, top - glm::vec3(0, 1, 0), glm::vec3(0, 0, -1));
+    rainMatrix_ = glm::ortho(-kHalf, kHalf, -kHalf, kHalf, 0.0f, kHeight) * lightView;
+    useMeshProgram(programs_.depth);
+    glViewport(0, 0, kRes, kRes);
+    glBindFramebuffer(GL_FRAMEBUFFER, rainFbo_);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+    glDisable(GL_CULL_FACE);
+    glClear(GL_DEPTH_BUFFER_BIT);
+    glUniformMatrix4fv(loc_.viewProj, 1, GL_FALSE, glm::value_ptr(rainMatrix_));
+    RenderView topView = view;
+    topView.drawPlayerStart = false;
+    shadowCascade_ = 2;       // like a far shadow cascade: simple LODs, no grass
+    shadowMinCaster_ = 0.6f;  // debris does not keep the rain off
+    drawGeometry(scene, topView, true, rainMatrix_, true);
+    shadowCascade_ = -1;
+    shadowMinCaster_ = 0.0f;
+    glEnable(GL_CULL_FACE);
 }
 
 void Renderer::renderShadows(const Scene& scene, const RenderView& view)
@@ -1535,6 +1590,11 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     ensureTargets(std::max(1, static_cast<int>(std::lround(outWidth_ * scale))), std::max(1, static_cast<int>(std::lround(outHeight_ * scale))));
 
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, jointBuffer_);
+    wetness_ = std::clamp(view.wetness >= 0.0f ? view.wetness : resolvedEnv_.rain, 0.0f, 1.0f);
+    lightning_ = std::clamp(view.lightning, 0.0f, 1.0f);
+    rainActive_ = (wetness_ > 0.0f || resolvedEnv_.rain > 0.0f) && view.fog; // not in the editor's ortho views
+    if (rainActive_)
+        renderRainMap(scene, view); // before the environment block: it carries the map's matrix
     updateEnvironment(scene, view);
     updateEnvironmentMap(scene);
     collectLights(scene, view);
@@ -1589,6 +1649,7 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     glBindTextureUnit(8, envMap_);
     glBindTextureUnit(9, brdfLut_);
     glBindTextureUnit(13, localShadowTex_ ? localShadowTex_ : shadowDummy_);
+    glBindTextureUnit(14, rainTex_ ? rainTex_ : whiteTex_);
     glUniform1i(loc_.shading, static_cast<int>(view.shading));
     const bool wireframe = view.shading == Shading::Wireframe;
     wireframe_ = wireframe;
@@ -2186,6 +2247,7 @@ void Renderer::drawSprites(const std::vector<SpriteBatch>& batches, const glm::m
         glUniform1i(p.loc("uSpriteLit"), b.lit && !overlay && shading != Shading::Unlit ? 1 : 0);
         glUniform1i(p.loc("uSpriteNoFog"), overlay ? 1 : 0);
         glUniform1i(p.loc("uSpriteDecal"), b.decal ? 1 : 0);
+        glUniform1i(p.loc("uSpriteSheltered"), b.sheltered && !overlay ? 1 : 0);
         glUniform1i(p.loc("uSpriteAdditive"), b.blend == SpriteBlend::Additive ? 1 : 0);
         glUniform1f(p.loc("uDecalLift"), b.decal ? 0.004f : 0.0f);
         // Decals lie on surfaces: a depth bias that grows with the slope keeps them in front at

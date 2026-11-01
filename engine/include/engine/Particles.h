@@ -36,6 +36,7 @@ struct SpriteBatch {
     SpriteBlend blend = SpriteBlend::Alpha;
     bool lit = true;                       // shaded by sun and sky (smoke, dust); off for fire and sparks
     bool decal = false;                    // lies on a surface: drawn first, pulled toward the camera against z-fighting
+    bool sheltered = false;                // hidden under roofs (rain occlusion map)
     float distance = 0.0f;                 // to the camera, for sorting batches
     std::vector<SpriteInstance> instances;
 };
@@ -63,6 +64,7 @@ struct ParticleEmitter {
     SpriteBlend blend = SpriteBlend::Alpha;
     bool lit = true;
     bool stretch = false;                   // stretched along the velocity (sparks, rain)
+    bool sheltered = false;                 // not drawn under roofs (rain, snow)
     float stretchFactor = 0.05f;            // seconds of travel the streak shows
     // Emission
     float rate = 10.0f;                     // particles per second

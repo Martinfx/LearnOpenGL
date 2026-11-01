@@ -237,12 +237,18 @@ EnvironmentPanel::EnvironmentPanel(engine::Scene* scene, QWidget* parent)
     section(tr("Weather"));
     addFloat(form, tr("Rain"), &E::rain, 0, 1, 0.05, 2, tr("0 dry, 1 downpour: rain sound volume"));
     addFloat(form, tr("Wind"), &E::wind, 0, 1, 0.05, 2, tr("0 calm, 1 storm: gusting wind sound volume"));
+    addFloat(form, tr("Storm"), &E::storm, 0, 1, 0.05, 2,
+             tr("Lightning: 0 none, 1 a strike every few seconds (flash of the sky and light, thunder delayed by distance)"));
+    addFloat(form, tr("Puddles"), &E::puddles, 0, 1, 0.05, 2, tr("How much water collects on flat ground open to the sky when wet"));
     rainSound_ = new SoundPicker(this);
     rainSound_->setToolTip(tr("Rain loop; empty = sounds/ambient/rain.sound"));
     form->addRow(tr("Rain sound"), rainSound_);
     windSound_ = new SoundPicker(this);
     windSound_->setToolTip(tr("Wind loop; empty = sounds/ambient/wind_storm.sound"));
     form->addRow(tr("Wind sound"), windSound_);
+    thunderSound_ = new SoundPicker(this);
+    thunderSound_->setToolTip(tr("Thunder (variations); empty = sounds/ambient/thunder.sound"));
+    form->addRow(tr("Thunder sound"), thunderSound_);
     auto soundEdited = [this](std::filesystem::path engine::Environment::*member, const QString& path) {
         if (updating_)
             return;
@@ -253,6 +259,8 @@ EnvironmentPanel::EnvironmentPanel(engine::Scene* scene, QWidget* parent)
             [soundEdited](const QString& p) { soundEdited(&engine::Environment::rainSound, p); });
     connect(windSound_, &SoundPicker::pathChanged, this,
             [soundEdited](const QString& p) { soundEdited(&engine::Environment::windSound, p); });
+    connect(thunderSound_, &SoundPicker::pathChanged, this,
+            [soundEdited](const QString& p) { soundEdited(&engine::Environment::thunderSound, p); });
     section(tr("Sound"));
     reverb_ = new QComboBox(this);
     for (const std::string& name : engine::reverbPresetNames())
@@ -360,6 +368,7 @@ void EnvironmentPanel::refresh()
     sun_->setValue(scene_->sunDirection);
     rainSound_->setPath(QString::fromStdU16String(scene_->environment.rainSound.u16string()));
     windSound_->setPath(QString::fromStdU16String(scene_->environment.windSound.u16string()));
+    thunderSound_->setPath(QString::fromStdU16String(scene_->environment.thunderSound.u16string()));
     reverb_->setCurrentText(QString::fromStdString(scene_->environment.reverb));
     ambience_->setPath(QString::fromStdU16String(scene_->environment.ambience.u16string()));
     refreshTimeOfDay();
@@ -374,6 +383,7 @@ void EnvironmentPanel::applyPreset(int index)
     engine::Environment env = list[static_cast<std::size_t>(index)].env;
     env.rainSound = scene_->environment.rainSound; // presets change the look, not the level's sounds
     env.windSound = scene_->environment.windSound;
+    env.thunderSound = scene_->environment.thunderSound;
     env.lut = scene_->environment.lut;
     env.reverb = scene_->environment.reverb;
     env.ambience = scene_->environment.ambience;
@@ -504,12 +514,12 @@ void EnvironmentPanel::buildTimeOfDay(QFormLayout* form)
     addTime(tr("Cloud shadows"), &T::cloudShadows, 0, 1, 0.05, 2, tr("How dark the shadows of drifting clouds are on the ground"));
 
     // Weather by hour: interpolated keys (wrap around midnight).
-    weather_ = new QTableWidget(0, 6, this);
-    weather_->setHorizontalHeaderLabels({tr("Hour"), tr("Clouds"), tr("Fog"), tr("Rain"), tr("Wind"), tr("Exposure")});
+    weather_ = new QTableWidget(0, 7, this);
+    weather_->setHorizontalHeaderLabels({tr("Hour"), tr("Clouds"), tr("Fog"), tr("Rain"), tr("Wind"), tr("Exposure"), tr("Storm")});
     weather_->verticalHeader()->setVisible(false);
     weather_->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     weather_->setMinimumHeight(110);
-    weather_->setToolTip(tr("Weather keys by hour (with the day/night cycle): clouds, fog density, rain, wind and exposure "
+    weather_->setToolTip(tr("Weather keys by hour (with the day/night cycle): clouds, fog density, rain, wind, exposure and storm "
                             "blend from key to key. No keys = the values below all day."));
     form->addRow(tr("Weather"), weather_);
     connect(weather_, &QTableWidget::cellChanged, this, [this] {
@@ -532,6 +542,7 @@ void EnvironmentPanel::buildTimeOfDay(QFormLayout* form)
         k.fogDensity = current.fogDensity;
         k.rain = current.rain;
         k.wind = current.wind;
+        k.storm = current.storm;
         k.exposure = scene_->environment.time.keys.empty() ? scene_->environment.exposure
                                                            : engine::weatherAt(scene_->environment.time.keys, k.hour).exposure;
         scene_->environment.time.keys.push_back(k);
@@ -576,6 +587,7 @@ void EnvironmentPanel::readWeatherTable()
         k.rain = std::clamp(value(3, k.rain), 0.0f, 1.0f);
         k.wind = std::clamp(value(4, k.wind), 0.0f, 1.0f);
         k.exposure = std::clamp(value(5, k.exposure), 0.05f, 10.0f);
+        k.storm = std::clamp(value(6, k.storm), 0.0f, 1.0f);
         keys.push_back(k);
     }
     scene_->environment.time.keys = keys;
@@ -595,8 +607,8 @@ void EnvironmentPanel::refreshTimeOfDay()
     weather_->setRowCount(static_cast<int>(t.keys.size()));
     for (int r = 0; r < static_cast<int>(t.keys.size()); ++r) {
         const engine::WeatherKey& k = t.keys[static_cast<std::size_t>(r)];
-        const float values[6] = {k.hour, k.cloudCover, k.fogDensity, k.rain, k.wind, k.exposure};
-        for (int c = 0; c < 6; ++c)
+        const float values[7] = {k.hour, k.cloudCover, k.fogDensity, k.rain, k.wind, k.exposure, k.storm};
+        for (int c = 0; c < 7; ++c)
             weather_->setItem(r, c, new QTableWidgetItem(QString::number(static_cast<double>(values[c]), 'g', 4)));
     }
 }

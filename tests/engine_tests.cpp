@@ -6,6 +6,7 @@
 #include <engine/Lights.h>
 #include <engine/EntityIO.h>
 #include <engine/Ambience.h>
+#include <engine/Particles.h>
 #include <engine/Audio.h>
 #include <engine/NavMesh.h>
 #include <engine/Surfaces.h>
@@ -1896,7 +1897,11 @@ void testTimeOfDay()
     s.environment.time.latitude = 56.0f;
     s.environment.time.dayOfYear = 280;
     s.environment.time.moonPhase = 0.25f;
+    keys[0].storm = 0.7f;
     s.environment.time.keys = keys;
+    s.environment.storm = 0.4f;
+    s.environment.puddles = 0.3f;
+    s.environment.thunderSound = std::filesystem::absolute("thunder_custom.sound");
     std::string err;
     check(engine::saveScene(s, "time_of_day.level", &err), "save time: " + err);
     engine::Scene l;
@@ -1904,7 +1909,18 @@ void testTimeOfDay()
     const engine::TimeOfDay& r = l.environment.time;
     check(r.enabled && r.hour == 21.25f && r.dayMinutes == 30.0f && r.latitude == 56.0f && r.dayOfYear == 280 && r.moonPhase == 0.25f,
           "time of day round trip");
-    check(r.keys.size() == 2 && r.keys[0].hour == 22.0f && r.keys[0].rain == 1.0f, "weather keys round trip");
+    check(r.keys.size() == 2 && r.keys[0].hour == 22.0f && r.keys[0].rain == 1.0f && r.keys[0].storm == 0.7f, "weather keys round trip");
+    check(l.environment.storm == 0.4f && l.environment.puddles == 0.3f && l.environment.thunderSound.filename() == "thunder_custom.sound",
+          "storm settings round trip");
+    {
+        engine::ParticleEffect fx;
+        fx.emitters.emplace_back();
+        fx.emitters[0].sheltered = true;
+        check(engine::saveParticleFile(fx, "sheltered.particle", &err), "save particle: " + err);
+        engine::ParticleEffect loaded;
+        check(engine::loadParticleFile(loaded, "sheltered.particle", &err) && !loaded.emitters.empty() && loaded.emitters[0].sheltered,
+              "particle sheltered round trip");
+    }
     char text[8];
     check(std::string(engine::formatHour(21.25f, text)) == "21:15" && std::string(engine::formatHour(24.5f, text)) == "00:30", "format hour");
 }

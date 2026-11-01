@@ -151,6 +151,7 @@ private:
     QComboBox* blend_ = nullptr;
     QCheckBox* lit_ = nullptr;
     QCheckBox* stretch_ = nullptr;
+    QCheckBox* sheltered_ = nullptr;
     QDoubleSpinBox* stretchFactor_ = nullptr;
     QDoubleSpinBox* rate_ = nullptr;
     QSpinBox* burst_ = nullptr;

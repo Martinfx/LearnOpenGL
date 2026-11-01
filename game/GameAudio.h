@@ -41,6 +41,9 @@ public:
     const engine::SurfaceTable& surfaces() const { return surfaces_; }
 
     engine::AudioSystem& system() { return audio_; }
+    const std::filesystem::path& assetDirectory() const { return assetDir_; }
+    // Under a roof: rain and wind loops are muffled.
+    void setSheltered(bool sheltered) { sheltered_ = sheltered; }
 
 private:
     std::shared_ptr<const engine::SoundDef> get(const std::filesystem::path& sound);
@@ -74,6 +77,8 @@ private:
     std::vector<Source> sources_;
     engine::SurfaceTable surfaces_;
     engine::AudioSystem::Handle rain_ = 0, wind_ = 0; // weather loops, volume follows Environment::rain / wind
+    bool sheltered_ = false;
+    float shelterMix_ = 0.0f;   // 0 open .. 1 sheltered, eased
     float stride_ = 0.0f;       // metres walked since the last footstep
     bool wasGrounded_ = true;
     float fallSpeed_ = 0.0f;    // fastest downward speed while airborne

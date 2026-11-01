@@ -89,6 +89,7 @@ WeatherKey weatherAt(const std::vector<WeatherKey>& keys, float hour)
     w.rain = glm::mix(a.rain, b.rain, s);
     w.wind = glm::mix(a.wind, b.wind, s);
     w.exposure = glm::mix(a.exposure, b.exposure, s);
+    w.storm = glm::mix(a.storm, b.storm, s);
     return w;
 }
 
@@ -113,6 +114,7 @@ Environment environmentAt(const Environment& base, glm::vec3 authoredSun, SkySta
         e.rain = w.rain;
         e.wind = w.wind;
         e.exposure = w.exposure;
+        e.storm = w.storm;
     }
     const glm::vec3 sun = sunPosition(t, hour);
     const glm::vec3 moon = moonPosition(t, hour);

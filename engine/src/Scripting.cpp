@@ -166,6 +166,7 @@ struct ScriptSystem::Impl {
     std::string levelChange; // game.change_level()
     MessageFn message;
     DuckFn duck;
+    LightningFn lightning;
     struct Queued {
         double at = 0.0;
         std::uint64_t order = 0; // same time: in the order they were sent
@@ -606,6 +607,10 @@ void ScriptSystem::Impl::bindApi()
             t.dayMinutes = std::max(0.0f, *dayMinutes);
         t.enabled = true;
     });
+    game.set_function("lightning", [this](sol::optional<float> distance) {
+        if (lightning)
+            lightning(distance.value_or(600.0f));
+    });
     game.set_function("is_night", [this] {
         SkyState sky;
         environmentAt(scene.environment, scene.sunDirection, &sky);
@@ -896,6 +901,7 @@ void ScriptSystem::setSoundHandler(SoundFn handler) { impl_->playSound = std::mo
 void ScriptSystem::setNavMesh(const NavMesh* nav) { impl_->nav = nav; }
 void ScriptSystem::setMessageHandler(MessageFn handler) { impl_->message = std::move(handler); }
 void ScriptSystem::setDuckHandler(DuckFn handler) { impl_->duck = std::move(handler); }
+void ScriptSystem::setLightningHandler(LightningFn handler) { impl_->lightning = std::move(handler); }
 void ScriptSystem::fireOutput(int entityIndex, const std::string& output, int activator) { impl_->fireOutput(entityIndex, output, activator); }
 void ScriptSystem::sendInput(const std::string& target, const std::string& input, const std::string& parameter, float delay, int activator,
                              int caller)

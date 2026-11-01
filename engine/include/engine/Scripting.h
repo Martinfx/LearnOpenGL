@@ -59,6 +59,9 @@ public:
     // game.duck_ambience(gain, seconds): the ambience steps back before a scripted event.
     using DuckFn = std::function<void(float gain, float seconds)>;
     void setDuckHandler(DuckFn handler);
+    // game.lightning([distance]): a lightning strike (flash now, thunder later).
+    using LightningFn = std::function<void(float distance)>;
+    void setLightningHandler(LightningFn handler);
 
     // Entity I/O (engine/EntityIO.h): fires `output` of an entity, i.e. queues the
     // inputs of its matching connections. `activator` = entity index, -1 = the player.

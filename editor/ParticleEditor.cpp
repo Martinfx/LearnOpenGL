@@ -510,6 +510,8 @@ ParticleEditor::ParticleEditor(QWidget* parent) : QWidget(parent)
     stretch_ = new QCheckBox(tr("Stretch along motion"), form_);
     stretchFactor_ = number(0, 1, 0.01, 3, form_, tr("Seconds of travel the streak shows"));
     form->addRow(tr("Streaks"), pair(stretch_, stretchFactor_, form_));
+    sheltered_ = new QCheckBox(tr("Hidden under roofs (rain, snow)"), form_);
+    form->addRow(QString(), sheltered_);
 
     section(tr("Emission"));
     rate_ = number(0, 10000, 1, 1, form_, tr("Particles per second"));
@@ -593,7 +595,7 @@ ParticleEditor::ParticleEditor(QWidget* parent) : QWidget(parent)
     for (QDoubleSpinBox* s : {frameRate_, stretchFactor_, rate_, duration_, delay_, spread_, speedMin_, speedMax_, gravity_, drag_, attract_, orbit_,
                               lifeMin_, lifeMax_, sizeMin_, sizeMax_, intensity_, rotationMin_, rotationMax_, spinMin_, spinMax_})
         connect(s, &QDoubleSpinBox::valueChanged, this, changed);
-    for (QCheckBox* c : {randomFrame_, lit_, stretch_, worldSpace_})
+    for (QCheckBox* c : {randomFrame_, lit_, stretch_, sheltered_, worldSpace_})
         connect(c, &QCheckBox::toggled, this, changed);
     for (QComboBox* c : {blend_, shape_})
         connect(c, &QComboBox::activated, this, changed);
@@ -798,6 +800,7 @@ void ParticleEditor::showEmitter()
     blend_->setCurrentIndex(e->blend == engine::SpriteBlend::Additive ? 1 : 0);
     lit_->setChecked(e->lit);
     stretch_->setChecked(e->stretch);
+    sheltered_->setChecked(e->sheltered);
     stretchFactor_->setValue(e->stretchFactor);
     rate_->setValue(e->rate);
     burst_->setValue(e->burst);
@@ -846,6 +849,7 @@ void ParticleEditor::edited()
     e->blend = blend_->currentIndex() == 1 ? engine::SpriteBlend::Additive : engine::SpriteBlend::Alpha;
     e->lit = lit_->isChecked();
     e->stretch = stretch_->isChecked();
+    e->sheltered = sheltered_->isChecked();
     e->stretchFactor = static_cast<float>(stretchFactor_->value());
     e->rate = static_cast<float>(rate_->value());
     e->burst = burst_->value();

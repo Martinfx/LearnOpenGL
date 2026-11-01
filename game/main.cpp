@@ -24,6 +24,7 @@
 #include "GameMenu.h"
 #include "GameSave.h"
 #include "Flashlight.h"
+#include "GameWeather.h"
 #include "KeyNames.h"
 #include "MapHud.h"
 #include <engine/Scripting.h>
@@ -675,6 +676,11 @@ int main(int argc, char** argv)
     GameEffects effects;
     effects.init(std::filesystem::path(argv[0]).parent_path() / "assets", audio.surfaces());
     effects.startLevel(scene);
+    GameWeather weather; // wet ground, lightning and thunder, roof over the player
+    weather.startLevel(scene);
+    scripts.setLightningHandler([&weather](float distance) { weather.strikeNow(distance); });
+    float shelterTimer = 0.0f;
+    bool sheltered = false;
     // Anomalies (gravity traps, discharges, vents, acid, rifts, radiation), detector and Geiger counter.
     GameAnomalies anomalies;
     anomalies.init(std::filesystem::path(argv[0]).parent_path() / "assets", audio);
@@ -763,6 +769,29 @@ int main(int argc, char** argv)
             char text[8];
             return engine::ConsoleResult{true, std::string(t.enabled ? "time " : "time (cycle off) ") + engine::formatHour(t.hour, text) +
                                                    (t.dayMinutes > 0.0f ? ", day = " + std::to_string(static_cast<int>(t.dayMinutes)) + " min" : ", stopped")};
+        });
+        cvars.addCommand("weather", "weather [rain 0..1] [storm 0..1]: shows or sets rain and lightning (the ground is soaked at once)",
+                         [&](const std::vector<std::string>& a) {
+            engine::Environment& e = scene.environment;
+            if (!a.empty()) {
+                e.rain = std::clamp(static_cast<float>(std::atof(a[0].c_str())), 0.0f, 1.0f);
+                for (engine::WeatherKey& k : e.time.keys) // keys would override it
+                    k.rain = e.rain;
+                weather.setWetness(e.rain);
+            }
+            if (a.size() > 1) {
+                e.storm = std::clamp(static_cast<float>(std::atof(a[1].c_str())), 0.0f, 1.0f);
+                for (engine::WeatherKey& k : e.time.keys)
+                    k.storm = e.storm;
+            }
+            return engine::ConsoleResult{true, "rain " + std::to_string(e.rain) + ", storm " + std::to_string(e.storm) +
+                                                   ", wetness " + std::to_string(weather.wetness())};
+        });
+        cvars.addCommand("lightning", "lightning [distance m]: a lightning strike now (thunder after distance / 343 s)",
+                         [&](const std::vector<std::string>& a) {
+            const float distance = a.empty() ? 800.0f : static_cast<float>(std::atof(a[0].c_str()));
+            weather.strikeNow(distance);
+            return engine::ConsoleResult{true, "lightning " + std::to_string(static_cast<int>(distance)) + " m"};
         });
         cvars.addCommand("config_save", "Saves the settings now (also done on exit)", [&cvars](const std::vector<std::string>&) {
             const std::string file = (engine::userDirectory("config") / "game.cfg").string();
@@ -943,6 +972,7 @@ int main(int argc, char** argv)
         save.timeOfDay = scene.environment.time.hour;
         save.dayMinutes = scene.environment.time.dayMinutes;
         save.timeEnabled = scene.environment.time.enabled;
+        save.wetness = weather.wetness();
         save.entities = scripts.saveEntities();
         save.pendingInputs = scripts.savePendingInputs();
         return save;
@@ -974,6 +1004,7 @@ int main(int argc, char** argv)
             scene.environment.time.dayMinutes = loadFrom->dayMinutes;
             scene.environment.time.enabled = loadFrom->timeEnabled;
         }
+        weather.setWetness(loadFrom->wetness);
         if (!loadFrom->props.empty()) { // physics props where they were left
             for (const SaveGame::Prop& p : loadFrom->props)
                 if (const int object = engine::findObjectById(scene, p.id); scene.isModel(object)) {
@@ -1351,6 +1382,12 @@ int main(int argc, char** argv)
         engine::updateAnimations(scene, static_cast<float>(simTime)); // per frame for smooth motion
         audio.update(static_cast<float>(frameTime), scene, camera.position, camera.forward());
         effects.update(static_cast<float>(simTime), scene, physics, camera.position, audio);
+        if ((shelterTimer -= static_cast<float>(frameTime)) <= 0.0f) { // a roof within 40 m above the head
+            shelterTimer = 0.25f;
+            sheltered = physics.raycast(camera.position + glm::vec3(0.0f, 0.3f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), 40.0f).has_value();
+            audio.setSheltered(sheltered);
+        }
+        weather.update(static_cast<float>(simTime), scene, camera.position, sheltered, audio);
         anomalies.update(static_cast<float>(simTime), physics, camera.position);
         flashlight.update(static_cast<float>(simTime), now, camera);
         if (flashlight.justEmptied())
@@ -1374,6 +1411,8 @@ int main(int argc, char** argv)
             view.viewportWidth = width;
             view.viewportHeight = height;
             view.time = static_cast<float>(now);
+            view.wetness = weather.wetness();
+            view.lightning = weather.flash();
             view.deferPresent = true; // the weapon layer is drawn before post-processing
             engine::OverlayPass effectsOverlay; // muzzle flashes, drawn with the weapon below
             effects.fill(view, view.view, effectsOverlay);

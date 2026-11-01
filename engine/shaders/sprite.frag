@@ -1,4 +1,6 @@
 #version 450 core
+#define RAIN_MAP
+layout(binding = 14) uniform sampler2D uRainMap;
 #include "common.glsl"
 in vec2 vUV;
 in vec4 vColor;
@@ -12,6 +14,7 @@ uniform int uSpriteLit;
 uniform int uSpriteDecal;
 uniform int uSpriteAdditive;
 uniform int uSpriteNoFog;   // first-person layer (view space)
+uniform int uSpriteSheltered; // rain: not under roofs
 out vec4 fragColor;
 
 vec4 cell(float index) {
@@ -33,6 +36,8 @@ void main() {
         float d = length(vUV * 2.0 - 1.0);
         tex = vec4(1.0, 1.0, 1.0, pow(clamp(1.0 - d, 0.0, 1.0), 1.5));
     }
+    if (uSpriteSheltered != 0 && rainExposure(vWorld) < 0.5)
+        discard;
     vec4 color = tex * vColor;
     if (color.a < 0.003)
         discard;

@@ -74,6 +74,9 @@ struct RenderView {
     bool drawPlayerStart = false;
     bool editorHelpers = false; // editor: draw helper entities (map markers) the game hides
     float time = 0.0f;        // seconds, animates clouds and film grain
+    // Weather (the game drives these; the editor leaves the defaults).
+    float wetness = -1.0f;    // 0 dry .. 1 soaked surfaces; < 0 = follow the environment's rain
+    float lightning = 0.0f;   // 0..1 flash of a lightning strike this frame
     // The game draws the first-person layer before post-processing: it sets this,
     // calls renderOverlay() and then present().
     bool deferPresent = false;
@@ -270,6 +273,8 @@ private:
     // Local lights: visible ones into frameLights_, shadow layers chosen, clusters built and uploaded.
     void collectLights(const Scene& scene, const RenderView& view);
     void renderLocalShadows(const Scene& scene, const RenderView& view);
+    // Rain occlusion: depth seen from above around the camera (roofs keep the rain off).
+    void renderRainMap(const Scene& scene, const RenderView& view);
     void uploadLightClusters(const RenderView& view);
     // Draws what intersects the frustum of `cull` (view-projection); skipNear keeps
     // shadow casters between the light and the cascade.
@@ -455,6 +460,12 @@ private:
     std::size_t envHash_ = 0;
     unsigned whiteTex_ = 0;             // stand-in when SSAO is off
     unsigned shadowDummy_ = 0;          // stand-in when shadows are off
+    unsigned rainTex_ = 0, rainFbo_ = 0;   // rain occlusion depth (top-down)
+    glm::mat4 rainMatrix_{1.0f};
+    glm::vec3 rainCenter_{1e9f};
+    std::uint64_t rainFrame_ = 0;          // frame of the last rain map update
+    bool rainActive_ = false;              // wet or raining: map used this frame
+    float wetness_ = 0.0f, lightning_ = 0.0f;
 
     // Clustered local lights (shader storage: 5 lights, 6 cluster grid, 7 light indices, 8 shadow matrices).
     unsigned lightBuffer_ = 0, lightGridBuffer_ = 0, lightIndexBuffer_ = 0, lightShadowBuffer_ = 0;

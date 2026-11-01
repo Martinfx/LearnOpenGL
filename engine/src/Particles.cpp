@@ -134,6 +134,7 @@ bool loadParticleFile(ParticleEffect& effect, const std::filesystem::path& file,
             e->blend = v == "additive" ? SpriteBlend::Additive : SpriteBlend::Alpha;
         } else if (key == "lit") ok = static_cast<bool>(ls >> e->lit);
         else if (key == "stretch") ok = static_cast<bool>(ls >> e->stretch >> e->stretchFactor);
+        else if (key == "sheltered") ok = static_cast<bool>(ls >> e->sheltered);
         else if (key == "rate") ok = static_cast<bool>(ls >> e->rate);
         else if (key == "burst") ok = static_cast<bool>(ls >> e->burst);
         else if (key == "duration") ok = static_cast<bool>(ls >> e->duration);
@@ -203,6 +204,8 @@ bool saveParticleFile(const ParticleEffect& effect, const std::filesystem::path&
         out << "blend " << (e.blend == SpriteBlend::Additive ? "additive" : "alpha") << '\n';
         out << "lit " << e.lit << '\n';
         out << "stretch " << e.stretch << ' ' << e.stretchFactor << '\n';
+        if (e.sheltered)
+            out << "sheltered 1\n";
         out << "rate " << e.rate << '\n';
         out << "burst " << e.burst << '\n';
         out << "duration " << e.duration << '\n';
@@ -537,6 +540,7 @@ void ParticleSystem::appendSprites(glm::vec3 eye, const glm::mat3& camera, std::
             b.rows = e.rows;
             b.blend = e.blend;
             b.lit = e.lit;
+            b.sheltered = e.sheltered;
             b.instances.reserve(st.particles.size());
             const glm::vec3 tint = srgbToLinear(e.color) * e.intensity;
             const int cells = e.columns * e.rows;

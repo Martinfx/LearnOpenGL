@@ -353,6 +353,9 @@ struct Environment {
     std::filesystem::path rainSound;
     std::filesystem::path windSound;
     std::filesystem::path rainEffect;  // rain particles around the camera, empty = particles/rain.particle
+    float storm = 0.0f;                // 0 none .. 1 frequent lightning (flash and thunder)
+    float puddles = 0.6f;              // 0..1 how much water collects on flat ground when wet
+    std::filesystem::path thunderSound; // empty = sounds/ambient/thunder.sound
     // Room reverb of the whole level (engine/Audio.h reverbPresetNames()); reverb
     // zones (entities of type "reverb") override it where the listener is.
     std::string reverb = "none";

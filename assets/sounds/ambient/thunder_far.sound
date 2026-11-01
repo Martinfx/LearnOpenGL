@@ -1,0 +1,14 @@
+# Sound: variations (one is picked at random per play) and playback settings
+# Distant thunder: low rumble with a soft onset (procedural, source/thunder.py).
+file "thunder_far_1.ogg"
+file "thunder_far_2.ogg"
+file "thunder_far_3.ogg"
+volume 0.8
+pitch 0.8 1.1
+distance 50 3000
+rolloff 1
+loop 0
+stream 0
+spatial 0
+group ambient
+max_instances 3

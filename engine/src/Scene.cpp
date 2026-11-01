@@ -128,6 +128,12 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
             out << "color_lut " << std::quoted(relative(e.lut)) << ' ' << e.lutStrength << '\n';
         f1("rain", e.rain);
         f1("wind", e.wind);
+        if (e.storm != d.storm)
+            f1("storm", e.storm);
+        if (e.puddles != d.puddles)
+            f1("puddles", e.puddles);
+        if (!e.thunderSound.empty())
+            out << "thunder_sound " << std::quoted(relative(e.thunderSound)) << '\n';
         if (!e.rainSound.empty() || !e.windSound.empty())
             out << "weather_sounds " << std::quoted(e.rainSound.empty() ? std::string() : relative(e.rainSound)) << ' '
                 << std::quoted(e.windSound.empty() ? std::string() : relative(e.windSound)) << '\n';
@@ -142,7 +148,7 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
                 << t.dayOfYear << ' ' << t.north << ' ' << t.moonPhase << ' ' << t.nightBrightness << ' ' << t.cloudShadows << '\n';
         for (const WeatherKey& k : t.keys)
             out << "weather_key " << k.hour << ' ' << k.cloudCover << ' ' << k.fogDensity << ' ' << k.rain << ' ' << k.wind << ' '
-                << k.exposure << '\n';
+                << k.exposure << ' ' << k.storm << '\n';
     }
     if (!scene.map.image.empty())
         out << "map_image " << std::quoted(relative(scene.map.image)) << '\n';
@@ -411,7 +417,7 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                 {"fog_sun_scatter", &e.fogSunScatter}, {"exposure", &e.exposure}, {"bloom_intensity", &e.bloomIntensity},
                 {"bloom_threshold", &e.bloomThreshold}, {"ssao_radius", &e.ssaoRadius}, {"ssao_intensity", &e.ssaoIntensity},
                 {"shadow_distance", &e.shadowDistance}, {"saturation", &e.saturation}, {"contrast", &e.contrast},
-                {"vignette", &e.vignette}, {"grain", &e.grain}, {"rain", &e.rain}, {"wind", &e.wind},
+                {"vignette", &e.vignette}, {"grain", &e.grain}, {"rain", &e.rain}, {"wind", &e.wind}, {"storm", &e.storm}, {"puddles", &e.puddles},
                 {"auto_exposure", &e.autoExposure}, {"exposure_min_ev", &e.exposureMinEv}, {"exposure_max_ev", &e.exposureMaxEv},
                 {"adapt_brighten", &e.adaptBrighten}, {"adapt_darken", &e.adaptDarken}, {"temperature", &e.temperature},
                 {"green_magenta", &e.greenMagenta}};
@@ -439,8 +445,19 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
         } else if (key == "weather_key") {
             WeatherKey k;
             ok = static_cast<bool>(ls >> k.hour >> k.cloudCover >> k.fogDensity >> k.rain >> k.wind >> k.exposure);
+            if (ok && !(ls >> k.storm)) // optional (older files)
+                k.storm = 0.0f;
             if (ok)
                 result.environment.time.keys.push_back(k);
+        } else if (key == "thunder_sound") {
+            std::string path;
+            ok = static_cast<bool>(ls >> std::quoted(path));
+            if (ok && !path.empty()) {
+                std::filesystem::path p = pathFromUtf8(path);
+                if (p.is_relative())
+                    p = std::filesystem::absolute(file).parent_path() / p;
+                result.environment.thunderSound = p.lexically_normal();
+            }
         } else if (key == "reverb") {
             ok = static_cast<bool>(ls >> std::quoted(result.environment.reverb) >> result.environment.reverbAmount);
         } else if (key == "color_lut") {

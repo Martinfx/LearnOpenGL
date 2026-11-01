@@ -18,6 +18,8 @@ layout(std140, binding = 1) uniform Environment {
     vec4 uMoonDir;         // xyz toward the moon, w: moon brightness 0..1
     vec4 uSkyParams;       // x: stars 0..1, y: twilight glow, z: cloud shadows, w: 1 = time of day on
     vec4 uSunPos;          // xyz toward the sun (the main light is the moon at night)
+    mat4 uRainMatrix;      // world -> rain occlusion map (depth seen from above)
+    vec4 uWeather;         // x: wetness, y: lightning flash, z: 1 = rain map valid, w: puddles
 };
 
 const float PI = 3.14159265;
@@ -135,11 +137,14 @@ vec3 skyColor(vec3 dir, bool withSun) {
         vec2 uv = dir.xz / (up + 0.12) * 0.6 + vec2(uSkyHorizon.w * 0.004, uSkyHorizon.w * 0.002);
         float n = fbm(uv * 2.0);
         float clouds = smoothstep(1.0 - cover, 1.0 - cover + 0.35, n) * smoothstep(0.0, 0.12, up);
+        // Lightning lights the clouds from inside.
+        color += vec3(0.75, 0.8, 1.0) * uWeather.y * 0.8 * clouds;
         vec3 lit = uSunColor.rgb * uSunDir.w;
         vec3 cloudColor = mix(uSkyHorizon.rgb * 1.05, lit * 0.12 + uSkyHorizon.rgb * 0.6, pow(max(dot(dir, -normalize(uSunDir.xyz)), 0.0), 4.0) * 0.5);
         cloudColor *= mix(1.0, 0.7, n);
         color = mix(color, cloudColor, clouds * 0.9);
     }
+    color += vec3(0.55, 0.6, 0.75) * uWeather.y * 0.25 * smoothstep(-0.05, 0.3, up); // the whole sky flashes
     return color;
 }
 
@@ -165,6 +170,27 @@ float cloudShadow(vec3 worldPos) {
     return 1.0 - strength * clouds * 0.85;
 }
 
+// 1 where rain reaches `worldPos` (open sky), 0 under a roof. Needs the rain map
+// (texture unit 14) declared by the shader as uRainMap.
+#ifdef RAIN_MAP
+float rainExposure(vec3 worldPos) {
+    if (uWeather.z < 0.5)
+        return 1.0;
+    vec4 p = uRainMatrix * vec4(worldPos, 1.0);
+    vec3 c = p.xyz / p.w * 0.5 + 0.5;
+    if (any(lessThan(c.xy, vec2(0.0))) || any(greaterThan(c.xy, vec2(1.0))))
+        return 1.0;
+    // Something more than ~0.4 m above the point (300 m depth range) keeps it dry; 4 taps soften the edge.
+    vec2 texel = 1.0 / vec2(textureSize(uRainMap, 0));
+    float open = 0.0;
+    for (int i = 0; i < 4; ++i) {
+        vec2 o = (vec2(i & 1, i >> 1) - 0.5) * texel;
+        open += c.z <= texture(uRainMap, c.xy + o).r + 0.4 / 300.0 ? 1.0 : 0.0;
+    }
+    return open * 0.25;
+}
+#endif
+
 // Exponential height fog along the view ray, tinted toward the sun.
 vec3 applyFog(vec3 color, vec3 worldPos) {
     float density = uFogColor.w;
@@ -180,6 +206,6 @@ vec3 applyFog(vec3 color, vec3 worldPos) {
         fogAmount = density * exp(-falloff * startHeight) * dist;
     float f = 1.0 - exp(-max(fogAmount, 0.0));
     float sun = pow(max(dot(dir, -normalize(uSunDir.xyz)), 0.0), 8.0) * uFogParams.z;
-    vec3 fogColor = uFogColor.rgb + uSunColor.rgb * uSunDir.w * 0.08 * sun;
+    vec3 fogColor = uFogColor.rgb + uSunColor.rgb * uSunDir.w * 0.08 * sun + vec3(0.5, 0.55, 0.7) * uWeather.y * 0.12;
     return mix(color, fogColor, f);
 }

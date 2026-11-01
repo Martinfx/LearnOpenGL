@@ -1,0 +1,13 @@
+# Sound: variations (one is picked at random per play) and playback settings
+# Close lightning strike: crack and rolling rumble (procedural, source/thunder.py).
+file "thunder_near_1.ogg"
+file "thunder_near_2.ogg"
+volume 1
+pitch 0.85 1.1
+distance 50 3000
+rolloff 1
+loop 0
+stream 0
+spatial 0
+group ambient
+max_instances 2

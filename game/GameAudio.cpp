@@ -165,8 +165,9 @@ void GameAudio::update(float dt, const engine::Scene& scene, glm::vec3 eye, glm:
     updateAmbience(dt, scene, eye);
     // Weather: louder than linear at low intensity so a drizzle is still heard.
     const engine::Environment env = engine::environmentAt(scene.environment, scene.sunDirection); // weather keys by hour
-    audio_.setVolume(rain_, std::sqrt(std::clamp(env.rain, 0.0f, 1.0f)), 0.5f);
-    audio_.setVolume(wind_, std::sqrt(std::clamp(env.wind, 0.0f, 1.0f)), 0.5f);
+    shelterMix_ += ((sheltered_ ? 1.0f : 0.0f) - shelterMix_) * std::min(1.0f, dt * 3.0f);
+    audio_.setVolume(rain_, std::sqrt(std::clamp(env.rain, 0.0f, 1.0f)) * (1.0f - 0.6f * shelterMix_), 0.5f);
+    audio_.setVolume(wind_, std::sqrt(std::clamp(env.wind, 0.0f, 1.0f)) * (1.0f - 0.45f * shelterMix_), 0.5f);
     audio_.update(dt);
 }
 

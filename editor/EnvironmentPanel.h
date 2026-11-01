@@ -53,6 +53,7 @@ private:
     Vec3Editor* sun_ = nullptr;
     SoundPicker* rainSound_ = nullptr;
     SoundPicker* windSound_ = nullptr;
+    SoundPicker* thunderSound_ = nullptr;
     class QComboBox* reverb_ = nullptr;
     SoundPicker* ambience_ = nullptr;
     QComboBox* preset_ = nullptr;
