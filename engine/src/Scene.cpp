@@ -237,6 +237,10 @@ bool writeLevelSettings(std::ostream& out, const Scene& scene, const std::filesy
             f1("puddles", e.puddles);
         if (!e.thunderSound.empty())
             out << "thunder_sound " << std::quoted(relative(e.thunderSound)) << '\n';
+        if (const AnomalyStormSettings& a = e.anomalyStorm; a != AnomalyStormSettings{})
+            out << "anomaly_storm " << (a.enabled ? 1 : 0) << ' ' << a.minMinutes << ' ' << a.maxMinutes << ' ' << a.warningSeconds << ' '
+                << a.durationSeconds << ' ' << a.damage << ' ' << a.npcDamage << ' ' << a.tint.x << ' ' << a.tint.y << ' ' << a.tint.z
+                << '\n';
         if (!e.rainSound.empty() || !e.windSound.empty())
             out << "weather_sounds " << std::quoted(e.rainSound.empty() ? std::string() : relative(e.rainSound)) << ' '
                 << std::quoted(e.windSound.empty() ? std::string() : relative(e.windSound)) << '\n';
@@ -691,6 +695,12 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                                    p.chance);
             if (ok)
                 result.environment.weather.presets.push_back(p);
+        } else if (key == "anomaly_storm") {
+            AnomalyStormSettings& a = result.environment.anomalyStorm;
+            int on = 0;
+            ok = static_cast<bool>(ls >> on >> a.minMinutes >> a.maxMinutes >> a.warningSeconds >> a.durationSeconds >> a.damage >>
+                                   a.npcDamage >> a.tint.x >> a.tint.y >> a.tint.z);
+            a.enabled = on != 0;
         } else if (key == "thunder_sound") {
             std::string path;
             ok = static_cast<bool>(ls >> std::quoted(path));

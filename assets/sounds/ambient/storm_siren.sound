@@ -1,0 +1,12 @@
+# Sound: variations (one is picked at random per play) and playback settings
+# Anomaly storm warning: a distant wailing siren over the Zone (generated, CC0). Played once per warning.
+file "storm_siren.ogg"
+volume 0.8
+pitch 1 1
+distance 1 60
+rolloff 1
+loop 0
+stream 1
+spatial 0
+group sfx
+max_instances 1

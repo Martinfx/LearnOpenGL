@@ -274,6 +274,8 @@ EnvironmentPanel::EnvironmentPanel(engine::Scene* scene, QWidget* parent)
             [soundEdited](const QString& p) { soundEdited(&engine::Environment::thunderSound, p); });
     section(tr("Weather cycle"));
     buildWeatherCycle(form);
+    section(tr("Anomaly storm"));
+    buildAnomalyStorm(form);
     section(tr("Sound"));
     reverb_ = new QComboBox(this);
     for (const std::string& name : engine::reverbPresetNames())
@@ -386,6 +388,7 @@ void EnvironmentPanel::refresh()
     ambience_->setPath(QString::fromStdU16String(scene_->environment.ambience.u16string()));
     refreshTimeOfDay();
     refreshWeatherCycle();
+    refreshAnomalyStorm();
     updating_ = false;
 }
 
@@ -794,6 +797,84 @@ void EnvironmentPanel::readCycleTable()
     const int preview = cyclePreview_->currentIndex();
     if (preview > 0)
         previewKind(preview - 1); // edits show at once
+}
+
+void EnvironmentPanel::buildAnomalyStorm(QFormLayout* form)
+{
+    stormEnabled_ = new QCheckBox(tr("Anomaly storms in this level"), this);
+    stormEnabled_->setToolTip(tr("Every so often a siren warns of a storm: the sky turns rust red, the ambience goes quiet and then "
+                                 "everyone outdoors gets hurt until it passes. NPCs run under the nearest roof (an interior volume or "
+                                 "anything solid above), dog packs lie low at their lair. Console: storm [warning seconds]; scripts: "
+                                 "game.start_storm(), game.storm()"));
+    form->addRow(QString(), stormEnabled_);
+    connect(stormEnabled_, &QCheckBox::toggled, this, [this](bool on) {
+        if (updating_)
+            return;
+        scene_->environment.anomalyStorm.enabled = on;
+        changed();
+    });
+    using A = engine::AnomalyStormSettings;
+    auto add = [&](const QString& label, float A::*member, double min, double max, double step, const QString& suffix, const QString& tip) {
+        auto* spin = new QDoubleSpinBox(this);
+        spin->setRange(min, max);
+        spin->setSingleStep(step);
+        spin->setDecimals(1);
+        spin->setSuffix(suffix);
+        spin->setToolTip(tip);
+        spin->setKeyboardTracking(false);
+        form->addRow(label, spin);
+        connect(spin, &QDoubleSpinBox::valueChanged, this, [this, member](double v) {
+            if (updating_)
+                return;
+            scene_->environment.anomalyStorm.*member = static_cast<float>(v);
+            changed();
+        });
+        stormFloats_.emplace_back(spin, member);
+    };
+    add(tr("Every (shortest)"), &A::minMinutes, 0.5, 600, 1, tr(" min"), tr("Real minutes from one storm to the next, at least"));
+    add(tr("Every (longest)"), &A::maxMinutes, 0.5, 600, 1, tr(" min"), tr("Real minutes from one storm to the next, at most"));
+    add(tr("Warning"), &A::warningSeconds, 0, 600, 5, tr(" s"), tr("Seconds from the siren to the storm: time to find a roof"));
+    add(tr("Duration"), &A::durationSeconds, 1, 1200, 5, tr(" s"), tr("Seconds the storm rages (then it fades for 25 s)"));
+    add(tr("Damage to player"), &A::damage, 0, 200, 1, tr(" hp/s"), tr("Health lost per second outdoors at the storm's peak"));
+    add(tr("Damage to NPCs"), &A::npcDamage, 0, 200, 1, tr(" hp/s"),
+        tr("Health NPCs lose per second outdoors (mutants belong to the Zone and are spared)"));
+    stormTint_ = new QPushButton(this);
+    stormTint_->setToolTip(tr("Colour of the sky, fog and picture at the storm's peak"));
+    form->addRow(tr("Storm colour"), stormTint_);
+    connect(stormTint_, &QPushButton::clicked, this, [this] {
+        glm::vec3& c = scene_->environment.anomalyStorm.tint;
+        const QColor picked = QColorDialog::getColor(QColor::fromRgbF(c.r, c.g, c.b), this, tr("Storm colour"));
+        if (!picked.isValid())
+            return;
+        c = {static_cast<float>(picked.redF()), static_cast<float>(picked.greenF()), static_cast<float>(picked.blueF())};
+        refreshAnomalyStorm();
+        changed();
+    });
+    stormPreview_ = new QSlider(Qt::Horizontal, this);
+    stormPreview_->setRange(0, 100);
+    stormPreview_->setToolTip(tr("Shows the storm in the viewport (0 = off); only a preview, nothing is saved"));
+    form->addRow(tr("Preview"), stormPreview_);
+    connect(stormPreview_, &QSlider::valueChanged, this, [this](int v) {
+        scene_->environment.anomalyStormNow.look = static_cast<float>(v) / 100.0f;
+        emit previewed();
+    });
+}
+
+void EnvironmentPanel::refreshAnomalyStorm()
+{
+    const engine::AnomalyStormSettings& a = scene_->environment.anomalyStorm;
+    const bool was = updating_;
+    updating_ = true;
+    stormEnabled_->setChecked(a.enabled);
+    for (auto& [spin, member] : stormFloats_)
+        spin->setValue(a.*member);
+    const QColor c = QColor::fromRgbF(std::clamp(a.tint.r, 0.0f, 1.0f), std::clamp(a.tint.g, 0.0f, 1.0f), std::clamp(a.tint.b, 0.0f, 1.0f));
+    stormTint_->setText(c.name());
+    stormTint_->setStyleSheet(QString("background-color: %1; color: %2").arg(c.name(), c.lightness() > 128 ? "black" : "white"));
+    stormPreview_->blockSignals(true);
+    stormPreview_->setValue(static_cast<int>(std::round(scene_->environment.anomalyStormNow.look * 100.0f)));
+    stormPreview_->blockSignals(false);
+    updating_ = was;
 }
 
 void EnvironmentPanel::previewKind(int index)

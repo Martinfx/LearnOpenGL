@@ -90,6 +90,10 @@ methods `:length()`, `:normalized()`, `:flat()` (y = 0), `:dot(other)`.
 | `game.player_faction()`, `game.faction_name(id)` | The player's faction id; a faction's display name |
 | `game.make_noise(position, radius)` | A loud sound (a shot) heard within `radius` m for the next second |
 | `game.noise_near(position)` | Where the nearest loud sound heard at `position` in the last second came from (`vec3`), or `nil`; the player's shots are noises too |
+| `game.storm()` | Anomaly storm now: phase (`"calm"`, `"warning"`, `"storm"`, `"fading"`), seconds left in it, danger 0..1 |
+| `game.start_storm([warning])` | An anomaly storm comes now, after `warning` seconds (default: the level's warning) |
+| `game.sheltered(position)` | `true` under a roof: inside an interior volume or something solid within 40 m above |
+| `game.shelter_near(position, radius)` | The nearest place to hide from the storm: an interior's floor middle, else a navmesh spot well under a roof within 60 m; `nil` = none |
 | `game.entities_near(position, radius, [type])` | Living entities within `radius`, nearest first |
 | `game.characters_near(position, radius)` | Living entities that belong to a faction (people, mutants), nearest first |
 | `game.nav_ready()` | `true` once the level's navmesh is built (it builds in the background after loading) |

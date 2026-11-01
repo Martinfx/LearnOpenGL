@@ -2,7 +2,8 @@
 -- While patrolling it sometimes rests at a free sit point nearby (campfire seats).
 -- Fights whoever its faction is hostile to (the player, other factions; assets/factions.cfg);
 -- neutral ones only fight back when attacked. Members of the same Group (Properties > Character)
--- call each other for help. Attach to an entity of type "enemy" or "npc" in the editor.
+-- call each other for help. When an anomaly storm is coming it runs for the nearest roof and
+-- waits there until the storm fades. Attach to an entity of type "enemy" or "npc" in the editor.
 
 -- Tunables: shown in the editor (Properties > Script parameters) for every
 -- entity using this script. Read them through `props`.
@@ -23,6 +24,7 @@ properties = {
     { "search_time",     5.0,  "Seconds spent searching the last known position" },
     { "alert_range",     40.0, "Calls the members of its group within this distance when it starts a fight, m" },
     { "alife",           "",   "A-life: \"roam\" = its group travels between A-life points while the player is away; empty = stays" },
+    { "shelter_range",   80.0, "Anomaly storm: looks this far for a roof to hide under, m (0 = stays out)" },
     { "patrol_radius",   4.0,  "Wanders this far from its start position, m" },
     { "rest_chance",     0.25, "Chance per patrol leg to sit at a free sit point within 3x the patrol radius" },
     { "rest_time",       30.0, "Seconds sitting before patrolling again" },
@@ -55,6 +57,8 @@ local rest_for = 0      -- seconds this rest lasts
 local graph             -- the character has an animation graph (decided on the first update)
 local anim_speed = 0    -- smoothed movement speed fed to the graph, m/s
 local punching = false  -- an explicit punch clip overrides the graph until it ends
+local shelter_at        -- anomaly storm: the spot under a roof it hides at
+local storm_check = 0   -- next look at the storm
 
 local function distance(a, b) return (b - a):flat():length() end
 
@@ -140,7 +144,9 @@ end
 
 local function pick_patrol_target()
     local p = game.random_nav_point(home, props.patrol_radius)
-    if p then return p end -- a reachable spot
+    -- a reachable spot (the navmesh may pick one anywhere in a large polygon touching the circle)
+    if p and distance(home, p) <= props.patrol_radius + 0.5 then return p end
+    if props.patrol_radius <= 0.5 then return home end
     local a = math.random() * math.pi * 2
     local r = props.patrol_radius * (0.4 + 0.6 * math.random())
     return home + vec3(math.cos(a) * r, 0, math.sin(a) * r)
@@ -198,6 +204,7 @@ function on_load(self, d)
     last_seen, patrol_target = d.last_seen, d.patrol_target or patrol_target
     seat, seated, rest_for = d.seat and game.find(d.seat), d.seated, d.rest_for or props.rest_time
     if seat then seat:set_property("occupied", self.name) elseif state == "rest" then state = "patrol" end
+    if state == "shelter" then state = "return" end -- looks for its roof again if the storm is still on
     grudges = {}
     for _, name in ipairs(d.grudges or {}) do
         local e = game.find(name)
@@ -278,7 +285,7 @@ local function animate_graph(self, dt)
         punching = false
     end
     local want = 0
-    if moving then want = state == "chase" and props.run_speed or props.walk_speed end
+    if moving then want = (state == "chase" or state == "shelter") and props.run_speed or props.walk_speed end
     anim_speed = anim_speed + (want - anim_speed) * math.min(1, dt * 8)
     self:set_anim("speed", anim_speed)
     self:set_anim("sit", state == "rest" and seated == true)
@@ -306,7 +313,7 @@ local function animate(self, dt)
             if not self:play(props.anim_aim, { speed = speed }) then self:play(props.anim_idle, { speed = speed }) end
         end
     elseif moving then
-        self:play(state == "chase" and props.anim_run or props.anim_walk, { speed = speed })
+        self:play((state == "chase" or state == "shelter") and props.anim_run or props.anim_walk, { speed = speed })
     elseif state == "rest" and seated then
         if not self:play(props.anim_sit, { speed = speed }) then self:play(props.anim_idle, { speed = speed }) end
     else
@@ -350,7 +357,35 @@ function on_update(self, dt)
     end
     local goal = target and t_pos(target) or last_seen
 
-    if state == "patrol" then
+    -- Anomaly storm: when warned, run under the nearest roof (unless fighting) and stay there.
+    storm_check = storm_check - dt
+    if storm_check <= 0 then
+        storm_check = 1 + 0.5 * math.random()
+        local phase = game.storm()
+        local danger = phase == "warning" or phase == "storm"
+        if danger and state ~= "shelter" and state ~= "chase" and state ~= "attack" and props.shelter_range > 0 then
+            if game.sheltered(self:eye()) then
+                shelter_at = self.position
+            else
+                shelter_at = game.shelter_near(self.position, props.shelter_range)
+                -- spread out a little inside (several NPCs at one roof)
+                if shelter_at then
+                    local p = game.random_nav_point(shelter_at, 1.5)
+                    if p and distance(p, shelter_at) < 2 and game.sheltered(p + vec3(0, 1.9, 0)) then shelter_at = p end
+                end
+            end
+            if shelter_at then set_state(self, "shelter") end
+        elseif not danger and state == "shelter" then
+            shelter_at = nil
+            set_state(self, "return")
+        end
+    end
+
+    if state == "shelter" then
+        if shelter_at and walk_to(self, shelter_at, props.run_speed) then
+            shelter_at = self.position -- arrived: waits out the storm
+        end
+    elseif state == "patrol" then
         if walk_to(self, patrol_target, props.walk_speed) or timer > 6 then
             patrol_target = pick_patrol_target()
             timer = 0

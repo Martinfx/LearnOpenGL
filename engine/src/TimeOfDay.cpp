@@ -246,6 +246,27 @@ WeatherKey weatherAt(const std::vector<WeatherKey>& keys, float hour)
     return w;
 }
 
+namespace {
+// The anomaly storm over everything else: rust-coloured sky, fog and picture, heavy clouds,
+// wind and lightning (`a` 0..1, Environment::anomalyStormNow).
+void applyAnomalyStorm(Environment& e, float a)
+{
+    a = std::clamp(a, 0.0f, 1.0f);
+    if (a <= 0.0f)
+        return;
+    const glm::vec3 c = e.anomalyStorm.tint;
+    e.tint = glm::mix(e.tint, e.tint * c, a);
+    e.fogColor = glm::mix(e.fogColor, c * 0.55f, a * 0.85f);
+    e.skyZenith = glm::mix(e.skyZenith, c * 0.30f, a * 0.85f);
+    e.skyHorizon = glm::mix(e.skyHorizon, c * 0.60f, a * 0.85f);
+    e.cloudCover = glm::mix(e.cloudCover, 1.0f, a);
+    e.fogDensity *= 1.0f + 1.5f * a;
+    e.sunIntensity *= 1.0f - 0.6f * a;
+    e.wind = std::max(e.wind, a);
+    e.storm = std::max(e.storm, a * a);
+}
+} // namespace
+
 Environment environmentAt(const Environment& base, glm::vec3 authoredSun, SkyState* sky)
 {
     SkyState state;
@@ -256,6 +277,7 @@ Environment environmentAt(const Environment& base, glm::vec3 authoredSun, SkySta
         state.lightDirection = glm::dot(authoredSun, authoredSun) > 1e-8f ? glm::normalize(authoredSun) : glm::vec3(0, -1, 0);
         state.moon = glm::normalize(glm::vec3(0.3f, 0.5f, 0.8f));
         applyWeatherNow(e, base.weatherNow);
+        applyAnomalyStorm(e, base.anomalyStormNow.look);
         if (sky)
             *sky = state;
         return e;
@@ -322,6 +344,7 @@ Environment environmentAt(const Environment& base, glm::vec3 authoredSun, SkySta
     e.fogColor = blend(nightHorizon * 0.8f, twilightFog, base.fogColor);
     // Eyes adapt: a little more exposure at night (still dark: about 1.5 stops).
     e.exposure *= 1.0f + 1.8f * state.night;
+    applyAnomalyStorm(e, base.anomalyStormNow.look);
     if (sky)
         *sky = state;
     return e;

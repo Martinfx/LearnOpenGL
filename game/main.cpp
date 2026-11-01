@@ -798,6 +798,28 @@ int main(int argc, char** argv)
     GameWeather weather; // wet ground, lightning and thunder, roof over the player
     weather.startLevel(scene);
     scripts.setLightningHandler([&weather](float distance) { weather.strikeNow(distance); });
+    // The Zone's anomaly storm (Environment > Anomaly storm): siren, red sky, then get under a roof.
+    engine::AnomalyStorm anomalyStorm;
+    anomalyStorm.start(scene.environment.anomalyStorm);
+    anomalyStorm.publish(scene.environment.anomalyStormNow);
+    float stormHurtTimer = 0.0f;
+    auto stormPhaseChanged = [&](engine::AnomalyStorm::Phase phase) {
+        using P = engine::AnomalyStorm::Phase;
+        const engine::AnomalyStormSettings& ss = scene.environment.anomalyStorm;
+        if (phase == P::Warning) { // the siren wails, the Zone goes quiet, far rumbling
+            hud.notify("Blíží se anomální bouře! Najdi úkryt.");
+            audio.playAsset("sounds/ambient/storm_siren.sound", nullptr, 1.0f);
+            audio.system().duck(engine::AudioGroup::Ambient, 0.35f, std::max(2.0f, ss.warningSeconds), 6.0f);
+            audio.system().duck(engine::AudioGroup::Music, 0.25f, std::max(2.0f, ss.warningSeconds + ss.durationSeconds), 6.0f);
+            weather.strikeNow(2500.0f);
+        } else if (phase == P::Storm) {
+            hud.notify("Anomální bouře! Zůstaň pod střechou.");
+            weather.strikeNow(350.0f);
+        } else if (phase == P::Fading) {
+            hud.notify("Bouře odeznívá");
+        }
+        LOG_INFO("game", "Anomaly storm: %s", engine::stormPhaseName(phase));
+    };
     float shelterTimer = 0.0f;
     engine::TaskGraph frameGraph; // per-frame update (see the main loop)
     bool sheltered = false;
@@ -1042,6 +1064,22 @@ int main(int argc, char** argv)
             weather.strikeNow(distance);
             return engine::ConsoleResult{true, "lightning " + std::to_string(static_cast<int>(distance)) + " m"};
         });
+        cvars.addCommand("storm", "storm [warning seconds]: an anomaly storm comes now | storm stop: ends it | without arguments: shows it",
+                         [&](const std::vector<std::string>& a) {
+            const engine::AnomalyStormSettings& s = scene.environment.anomalyStorm;
+            if (!a.empty() && a[0] == "stop") {
+                anomalyStorm.restore(static_cast<int>(engine::AnomalyStorm::Phase::Fading), 5.0f);
+                return engine::ConsoleResult{true, "storm fading"};
+            }
+            if (!a.empty()) {
+                anomalyStorm.trigger(s, std::max(0.0f, static_cast<float>(std::atof(a[0].c_str()))));
+                return engine::ConsoleResult{true, "storm warning " + a[0] + " s"};
+            }
+            char line[160];
+            std::snprintf(line, sizeof line, "%s, %.0f s left, look %.2f, danger %.2f%s", engine::stormPhaseName(anomalyStorm.phase()),
+                          anomalyStorm.secondsLeft(), anomalyStorm.look(), anomalyStorm.danger(), s.enabled ? "" : " (storms off in this level)");
+            return engine::ConsoleResult{true, line};
+        });
         cvars.addCommand("config_save", "Saves the settings now (also done on exit)", [&cvars](const std::vector<std::string>&) {
             const std::string file = (engine::userDirectory("config") / "game.cfg").string();
             const bool ok = cvars.saveConfig(file);
@@ -1276,6 +1314,8 @@ int main(int argc, char** argv)
         save.entities = scripts.saveEntities();
         save.pendingInputs = scripts.savePendingInputs();
         save.squads = alife.save();
+        save.stormPhase = anomalyStorm.phaseIndex();
+        save.stormSeconds = anomalyStorm.secondsLeft();
         return save;
     };
     auto saveTo = [&](const std::string& slot) {
@@ -1331,6 +1371,11 @@ int main(int argc, char** argv)
         scripts.restoreEntities(loadFrom->entities);
         scripts.restorePendingInputs(loadFrom->pendingInputs); // also drops the OnStart inputs of a fresh start
         alife.restore(loadFrom->squads);
+        if (loadFrom->stormPhase >= 0) {
+            anomalyStorm.restore(loadFrom->stormPhase, loadFrom->stormSeconds);
+            anomalyStorm.update(scene.environment.anomalyStorm, 0.0f);
+            anomalyStorm.publish(scene.environment.anomalyStormNow);
+        }
         hud.notify("Načteno");
     }
     // Carried over from the previous level (level change): health, weapon, magazines.
@@ -1723,6 +1768,37 @@ int main(int argc, char** argv)
                     if (s.target >= 0)
                         engine::DebugDraw::global().arrow(at, alife.points()[static_cast<std::size_t>(s.target)].position + glm::vec3(0.0f, 3.0f, 0.0f), color);
                 }
+            {
+                // Anomaly storm: phases, warnings, and damage to everyone outdoors.
+                engine::AnomalyStormNow& now = scene.environment.anomalyStormNow;
+                const engine::AnomalyStormSettings& ss = scene.environment.anomalyStorm;
+                if (now.request >= 0.0f) { // game.start_storm()
+                    anomalyStorm.trigger(ss, now.request);
+                    now.request = -1.0f;
+                    stormPhaseChanged(engine::AnomalyStorm::Phase::Warning);
+                }
+                if (anomalyStorm.update(ss, dt))
+                    stormPhaseChanged(anomalyStorm.phase());
+                anomalyStorm.publish(now);
+                if (anomalyStorm.danger() > 0.0f) {
+                    if (!sheltered && scripts.playerHealth() > 0.0f)
+                        scripts.setPlayerHealth(std::max(0.0f, scripts.playerHealth() - ss.damage * anomalyStorm.danger() * dt));
+                    if ((stormHurtTimer -= dt) <= 0.0f) { // NPCs outdoors (mutants belong to the Zone and are spared)
+                        stormHurtTimer = 0.5f;
+                        const auto interiors = engine::interiorVolumes(scene);
+                        for (std::size_t i = 0; i < scene.entities.size(); ++i) {
+                            const engine::Entity& e = scene.entities[i];
+                            if (!e.alive || e.offline || e.helper())
+                                continue;
+                            const std::string faction = engine::entityFaction(e);
+                            if (faction.empty() || faction == "mutant")
+                                continue;
+                            if (!engine::sheltered(physics, interiors, e.position + glm::vec3(0.0f, 1.9f, 0.0f)))
+                                scripts.damageEntity(static_cast<int>(i), ss.npcDamage * anomalyStorm.danger() * 0.5f, -2);
+                        }
+                    }
+                }
+            }
             if (std::string change = scripts.takeLevelChange(); !change.empty()) { // game.change_level() from a script
                 std::filesystem::path file = change;
                 if (file.is_relative())
@@ -1807,8 +1883,7 @@ int main(int argc, char** argv)
                 effects.update(sim, scene, physics, camera.position, audio);
                 if ((shelterTimer -= frame) <= 0.0f) { // a roof within 40 m above the head
                     shelterTimer = 0.25f;
-                    sheltered = physics.raycast(camera.position + glm::vec3(0.0f, 0.3f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), 40.0f).has_value() ||
-                                engine::interiorWeight(engine::interiorVolumes(scene), camera.position) > 0.5f; // interior volumes
+                    sheltered = engine::sheltered(physics, engine::interiorVolumes(scene), camera.position); // roof or interior volume
                     audio.setSheltered(sheltered);
                 }
                 weatherDirector.update(scene.environment, sim);
@@ -1940,6 +2015,22 @@ int main(int argc, char** argv)
                 hs.battery = flashlight.hasBattery() ? flashlight.charge() : -1.0f;
                 hs.flashlightOn = flashlight.on();
                 hud.draw(ui, width, height, hs);
+                if (const auto phase = anomalyStorm.phase();
+                    phase == engine::AnomalyStorm::Phase::Warning || phase == engine::AnomalyStorm::Phase::Storm) {
+                    // Storm banner: countdown to the storm / how long it lasts, red while outdoors.
+                    const float H = static_cast<float>(height), text = std::round(std::clamp(H * 0.024f, 12.0f, 28.0f));
+                    const int s = static_cast<int>(std::ceil(anomalyStorm.secondsLeft()));
+                    char line[96];
+                    std::snprintf(line, sizeof line, phase == engine::AnomalyStorm::Phase::Warning ? "BOUŘE ZA %d:%02d" : "BOUŘE %d:%02d", s / 60, s % 60);
+                    const std::string where = sheltered ? "v úkrytu" : "VENKU - HLEDEJ ÚKRYT";
+                    const float w = std::max(ui.textWidth(line, text), ui.textWidth(where, text * 0.8f)) + text * 1.6f;
+                    const glm::vec2 at(std::round((static_cast<float>(width) - w) * 0.5f), std::round(H * 0.11f));
+                    const float pulse = sheltered ? 0.0f : 0.5f + 0.5f * std::sin(static_cast<float>(scripts.time()) * 6.0f);
+                    ui.rect(at, {w, text * 2.6f}, glm::vec4(0.12f + 0.25f * pulse, 0.04f, 0.03f, 0.8f));
+                    ui.text(line, {at.x + text * 0.8f, at.y + text * 0.3f}, text, glm::vec4(1.0f, 0.75f, 0.55f, 1.0f), true);
+                    ui.text(where, {at.x + text * 0.8f, at.y + text * 1.45f}, text * 0.8f,
+                            sheltered ? glm::vec4(0.7f, 0.85f, 0.7f, 1.0f) : glm::vec4(1.0f, 0.45f, 0.35f, 1.0f), true);
+                }
             }
             if (cvShowFps.boolean()) {
                 char fps[32];

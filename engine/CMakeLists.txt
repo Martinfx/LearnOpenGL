@@ -46,6 +46,7 @@ add_library(engine STATIC
     src/Factions.cpp
     src/ALife.cpp
     src/Fauna.cpp
+    src/AnomalyStorm.cpp
     src/Log.cpp
     src/Paths.cpp
     src/Crash.cpp

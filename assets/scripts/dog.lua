@@ -1,6 +1,7 @@
 -- Feral dog (one of a pack): rests and wanders around its lair, hunts whoever it sees or
 -- smells (the mutant faction is hostile to everyone), calls the pack, comes at the prey from
--- different sides, bites and jumps back, and runs home when badly hurt.
+-- different sides, bites and jumps back, and runs home when badly hurt. An anomaly storm
+-- does not hurt it, but it senses one coming and lies low at the lair until it passes.
 -- Attach to an entity of type "mutant" with the pack's name as Group (Place > Dog pack adds
 -- a lair point and four dogs with models/characters/animals/wolf.glb).
 
@@ -137,8 +138,12 @@ function on_update(self, dt)
 
     -- Badly hurt: back to the lair.
     if state ~= "flee" and self.health < start_health * props.flee_health then state, timer = "flee", 0 end
+    -- Anomaly storm coming or raging: the pack runs home and lies low.
+    local phase = game.storm()
+    local lying_low = phase == "warning" or phase == "storm"
+    if lying_low and state ~= "flee" and state ~= "idle" then target, state, timer = nil, "flee", 0 end
 
-    if (state == "idle" or state == "wander") and look <= 0 then
+    if (state == "idle" or state == "wander") and look <= 0 and not lying_low then
         look = 0.3 + 0.1 * math.random()
         local prey = find_prey(self)
         if prey then hunt(self, prey) end
@@ -146,7 +151,7 @@ function on_update(self, dt)
 
     if state == "idle" then
         play(self, props.anim_idle)
-        if timer > 4 + math.random() * 6 then
+        if timer > 4 + math.random() * 6 and not lying_low then
             local a = math.random() * math.pi * 2
             wander_to = game.random_nav_point(lair, props.lair_radius) or
                         (lair + vec3(math.cos(a), 0, math.sin(a)) * (props.lair_radius * math.random()))

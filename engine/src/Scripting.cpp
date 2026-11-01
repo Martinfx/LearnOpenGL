@@ -781,6 +781,54 @@ void ScriptSystem::Impl::bindApi()
         if (lightning)
             lightning(distance.value_or(600.0f));
     });
+    // Anomaly storm (engine/AnomalyStorm.h): game.storm() -> phase ("calm", "warning", "storm",
+    // "fading"), seconds left in it, danger 0..1; game.start_storm([warning seconds]);
+    // game.sheltered(pos) -> under a roof; game.shelter_near(pos, radius) -> the nearest
+    // interior's floor middle, else a navmesh spot under a roof within 60 m (nil = none).
+    game.set_function("storm", [this] {
+        const AnomalyStormNow& n = scene.environment.anomalyStormNow;
+        return std::make_tuple(n.phase, n.secondsLeft, n.danger);
+    });
+    game.set_function("start_storm", [this](sol::optional<float> warning) {
+        scene.environment.anomalyStormNow.request = std::max(0.0f, warning.value_or(scene.environment.anomalyStorm.warningSeconds));
+    });
+    game.set_function("sheltered", [this](const glm::vec3& pos) { return sheltered(physics, interiorVolumes(scene), pos); });
+    game.set_function("shelter_near", [this](const glm::vec3& pos, float radius) -> sol::optional<glm::vec3> {
+        sol::optional<glm::vec3> best;
+        float bestD = radius * radius;
+        for (const InteriorVolume& v : interiorVolumes(scene)) {
+            const glm::vec3 floor(v.center.x, v.center.y - v.half.y + 0.1f, v.center.z);
+            const glm::vec3 d = floor - pos;
+            if (const float dd = glm::dot(d, d); dd <= bestD) {
+                bestD = dd;
+                best = floor;
+            }
+        }
+        if (best || !nav || !nav->ready())
+            return best;
+        // No interior volume near: a reachable spot under a roof (rings of navmesh points, nearest first).
+        const std::vector<InteriorVolume> none;
+        for (float r = 3.0f; r <= std::min(radius, 60.0f); r += 3.0f) {
+            const int n = std::max(8, static_cast<int>(6.2832f * r / 3.0f));
+            float ring = 1e30f;
+            for (int k = 0; k < n; ++k) {
+                const float a = 6.2832f * (static_cast<float>(k) + 0.5f * (static_cast<int>(r) % 2)) / static_cast<float>(n);
+                const auto p = nav->nearestPoint(pos + glm::vec3(std::cos(a) * r, 0.0f, std::sin(a) * r), {1.5f, 8.0f, 1.5f});
+                // Well under it: the roof also covers 1.5 m around (not just its edge).
+                const auto covered = [&](glm::vec3 q) { return sheltered(physics, none, q + glm::vec3(0.0f, 1.9f, 0.0f)); };
+                if (!p || !covered(*p) || !covered(*p + glm::vec3(1.5f, 0, 0)) || !covered(*p - glm::vec3(1.5f, 0, 0)) ||
+                    !covered(*p + glm::vec3(0, 0, 1.5f)) || !covered(*p - glm::vec3(0, 0, 1.5f)))
+                    continue;
+                if (const glm::vec3 d = *p - pos; glm::dot(d, d) < ring) {
+                    ring = glm::dot(d, d);
+                    best = *p;
+                }
+            }
+            if (best)
+                break;
+        }
+        return best;
+    });
     game.set_function("is_night", [this] {
         SkyState sky;
         environmentAt(scene.environment, scene.sunDirection, &sky);

@@ -154,6 +154,16 @@ hejno vzlétne, krouží nad místem jako boidy (drží se pohromadě, letí ste
 k sobě) a po chvíli klidu přistane. Výstřely hráče i NPC slyší skripty přes `game.noise_near`; klidní
 NPC jdou místo výstřelu prozkoumat. V zóně je smečka u doupěte severně od tábora a dvě hejna vran.
 
+### Anomální bouře
+
+Prostředí > Anomaly storm: jednou za 15–30 minut (nastavitelné) zazní nad zónou siréna, ambience a hudba
+ztichnou, v dálce hřmí a na obrazovce běží odpočet. Obloha, mlha a obraz se během varování barví do rezava,
+pak přijde bouře: vítr, blesky a každý venku ztrácí zdraví (hráč i NPC, mutanti ne). Úkryt je cokoli pevného
+nad hlavou nebo interiérový objem; HUD ukazuje „v úkrytu“ / „VENKU“. Varované NPC (`enemy.lua`) běží pod
+nejbližší střechu (`shelter_range`) a po bouři se vrací, psi zalehnou v doupěti. Konzole `storm [s]`,
+`storm stop`, `storm`; Lua `game.storm()`, `game.start_storm()`, `game.sheltered(pos)`,
+`game.shelter_near(pos, r)`. Fáze se ukládá s hrou. V zóně je zapnutá.
+
 ### Script editor
 
 Skripty se píšou přímo v editoru: tlačítko **Edit script** u entity nebo menu Script (New script,

@@ -1,6 +1,7 @@
 #pragma once
 #include <functional>
 #include <optional>
+#include "engine/AnomalyStorm.h"
 #include "engine/Animation.h"
 #include "engine/Geometry.h"
 #include "engine/Material.h"
@@ -412,6 +413,7 @@ struct Environment {
     float windGusts = 0.5f;            // 0 steady .. 1 strong gusts
     float puddles = 0.6f;              // 0..1 how much water collects on flat ground when wet
     std::filesystem::path thunderSound; // empty = sounds/ambient/thunder.sound
+    AnomalyStormSettings anomalyStorm;  // the Zone's storm that sends everyone under a roof
     // Room reverb of the whole level (engine/Audio.h reverbPresetNames()); reverb
     // zones (entities of type "reverb") override it where the listener is.
     std::string reverb = "none";
@@ -424,6 +426,7 @@ struct Environment {
     // Weather changing over time (clear, fog, rain, storm...), engine/TimeOfDay.h.
     WeatherCycle weather;
     WeatherNow weatherNow; // runtime
+    AnomalyStormNow anomalyStormNow; // runtime (the game's AnomalyStorm writes it)
 };
 
 // Folder in the scene hierarchy (no geometry), e.g. "Building A" or "Enemies".

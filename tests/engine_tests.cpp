@@ -716,7 +716,7 @@ void testScriptPropertiesFromEditor()
     std::vector<engine::ScriptProperty> props;
     std::string err;
     check(engine::readScriptProperties(ENGINE_TEST_ASSETS "/scripts/enemy.lua", props, &err), "read enemy.lua properties: " + err);
-    check(props.size() == 30 && props[0].name == "health" && props[0].defaultValue == "100", "enemy.lua declares 30 tunables, health first");
+    check(props.size() == 31 && props[0].name == "health" && props[0].defaultValue == "100", "enemy.lua declares 31 tunables, health first");
 
     // An editor override changes the behaviour: 40 hp dies after two 20-damage hits.
     auto s = flatFloor();
@@ -1040,6 +1040,122 @@ void testALife()
     check(saved.size() == 1 && saved[0].name == "raiders", "roaming squads are saved");
     for (const std::string& m : log)
         check(m.find("[script]") != 0, "no script errors: " + m);
+}
+
+void testAnomalyStorm()
+{
+    // Level setting round trip.
+    {
+        engine::Scene scene = flatFloor();
+        engine::AnomalyStormSettings& a = scene.environment.anomalyStorm;
+        a.enabled = true;
+        a.minMinutes = 5.0f;
+        a.maxMinutes = 9.0f;
+        a.warningSeconds = 45.0f;
+        a.durationSeconds = 70.0f;
+        a.damage = 4.0f;
+        a.npcDamage = 12.0f;
+        a.tint = {0.9f, 0.5f, 0.3f};
+        const auto file = std::filesystem::temp_directory_path() / "storm_roundtrip.level";
+        engine::Scene back;
+        check(engine::saveScene(scene, file) && engine::loadScene(back, file) && back.environment.anomalyStorm == a,
+              "anomaly storm settings survive save and load");
+        std::filesystem::remove(file);
+    }
+    // Phases: calm -> warning -> storm -> fading -> calm, with the look and danger ramps.
+    {
+        engine::AnomalyStormSettings s;
+        s.enabled = true;
+        s.minMinutes = s.maxMinutes = 0.05f; // 3 s
+        s.warningSeconds = 2.0f;
+        s.durationSeconds = 3.0f;
+        engine::AnomalyStorm storm(7);
+        storm.start(s);
+        using P = engine::AnomalyStorm::Phase;
+        auto run = [&](float seconds) {
+            int changes = 0;
+            for (int i = 0; i < static_cast<int>(seconds * 60.0f + 0.5f); ++i)
+                changes += storm.update(s, 1.0f / 60.0f);
+            return changes;
+        };
+        run(2.8f);
+        check(storm.phase() == P::Calm && storm.look() == 0.0f, "calm until the time comes");
+        check(run(0.4f) == 1 && storm.phase() == P::Warning && storm.look() > 0.0f && storm.danger() == 0.0f,
+              "the warning comes: the sky turns, nothing hurts yet");
+        run(2.0f);
+        check(storm.phase() == P::Storm, "then the storm itself");
+        run(1.0f);
+        check(storm.danger() == 1.0f && storm.look() == 1.0f, "full danger in the storm");
+        run(2.2f);
+        check(storm.phase() == P::Fading && storm.danger() == 0.0f, "it fades and stops hurting");
+        run(26.0f);
+        check(storm.phase() == P::Calm && storm.look() == 0.0f && storm.secondsLeft() > 0.0f, "calm again, the next one scheduled");
+        s.enabled = false;
+        run(10.0f);
+        check(storm.phase() == P::Calm, "storms switched off: none comes");
+        storm.trigger(s, 1.0f);
+        run(1.1f);
+        check(storm.phase() == P::Storm, "a forced storm (console, script) runs even when switched off");
+        storm.restore(1, 30.0f);
+        check(storm.phase() == P::Warning && storm.secondsLeft() == 30.0f, "saved games restore the phase");
+        // The sky: rust coloured, lightning, wind.
+        engine::Environment env;
+        env.anomalyStorm.tint = {1.0f, 0.5f, 0.4f};
+        const engine::Environment calm = engine::environmentAt(env, {0, -1, 0});
+        env.anomalyStormNow.look = 1.0f;
+        const engine::Environment red = engine::environmentAt(env, {0, -1, 0});
+        check(red.tint.b < calm.tint.b * 0.6f && red.storm >= 0.99f && red.wind >= 0.99f && red.cloudCover > 0.99f &&
+                  red.fogColor.r > red.fogColor.b,
+              "the storm colours the picture and sky, brings wind and lightning");
+    }
+    // NPCs run under a roof when warned and go home when it is over.
+    {
+        engine::Scene s = flatFloor();
+        s.boxes.push_back({"Roof", {16.0f, 3.2f, 0.0f}, {8.0f, 0.4f, 8.0f}, {1, 1, 1}}); // a canopy on its own, open sides
+        s.playerStart = {-30, 0, -30};
+        engine::Entity npc;
+        npc.type = "npc";
+        npc.name = "Stalker";
+        npc.position = {0, 0, 0};
+        npc.size = {0.6f, 1.8f, 0.6f};
+        npc.scriptPath = ENGINE_TEST_ASSETS "/scripts/enemy.lua";
+        npc.properties["faction"] = "stalker";
+        npc.properties["patrol_radius"] = "0";
+        npc.properties["rest_chance"] = "0";
+        s.entities.push_back(npc);
+        engine::NavMesh nav;
+        check(nav.build(s, s.nav) && nav.ready(), "navmesh for the storm test");
+        engine::PhysicsWorld world;
+        world.setLevel(s);
+        engine::PlayerController player;
+        player.spawn(world, s.playerStart);
+        std::vector<std::string> log;
+        engine::ScriptSystem scripts(s, world, player, [&log](const std::string& m) { log.push_back(m); });
+        scripts.setNavMesh(&nav);
+        check(scripts.start() == 0, "storm test script starts");
+        engine::FpsCamera cam;
+        engine::InputState idle;
+        auto run = [&](float seconds) {
+            for (int i = 0; i < static_cast<int>(seconds * 60.0f); ++i) {
+                player.fixedUpdate(idle, cam, 1.0f / 60.0f);
+                scripts.fixedUpdate(1.0f / 60.0f);
+            }
+        };
+        const glm::vec3 head(0.0f, 1.9f, 0.0f);
+        check(!engine::sheltered(world, {}, s.entities[0].position + head) && engine::sheltered(world, {}, glm::vec3(16, 0, 0) + head),
+              "out in the open vs. under the canopy");
+        run(2.0f);
+        s.environment.anomalyStormNow.phase = "warning";
+        run(15.0f);
+        check(engine::sheltered(world, {}, s.entities[0].position + head),
+              "warned, the stalker runs under the roof: " + std::to_string(s.entities[0].position.x) + " " +
+                  std::to_string(s.entities[0].position.z));
+        s.environment.anomalyStormNow.phase = "calm";
+        run(20.0f);
+        check(glm::length(glm::vec2(s.entities[0].position.x, s.entities[0].position.z)) < 1.5f, "after the storm it goes home");
+        for (const std::string& m : log)
+            check(m.find("[script]") != 0, "no script errors: " + m);
+    }
 }
 
 void testFauna()
@@ -3482,6 +3598,7 @@ int main()
         {"testFactions", testFactions},
         {"testALife", testALife},
         {"testFauna", testFauna},
+        {"testAnomalyStorm", testAnomalyStorm},
         {"testWorldStreaming", testWorldStreaming},
     };
     for (const auto& [name, run] : tests)

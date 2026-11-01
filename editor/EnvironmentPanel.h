@@ -47,6 +47,9 @@ private:
     void refreshWeatherCycle();
     void readCycleTable();
     void previewKind(int index); // -1 = off; viewport only, nothing to save
+    // Anomaly storm (Environment::anomalyStorm): the Zone's storm that sends everyone under a roof.
+    void buildAnomalyStorm(class QFormLayout* form);
+    void refreshAnomalyStorm();
     void applyPreset(int index);
     void changed();
 
@@ -78,4 +81,8 @@ private:
     QComboBox* cycleStart_ = nullptr;
     QComboBox* cyclePreview_ = nullptr;
     class QTableWidget* kinds_ = nullptr;
+    class QCheckBox* stormEnabled_ = nullptr;
+    std::vector<std::pair<QDoubleSpinBox*, float engine::AnomalyStormSettings::*>> stormFloats_;
+    class QPushButton* stormTint_ = nullptr;
+    class QSlider* stormPreview_ = nullptr;
 };
