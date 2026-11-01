@@ -43,6 +43,7 @@
 #include <engine/AssetRegistry.h>
 #include <engine/FileWatcher.h>
 #include <engine/HotReload.h>
+#include <engine/Prefab.h>
 #include <engine/PlayerController.h>
 
 #include <functional>
@@ -2356,6 +2357,119 @@ void testWorldStreaming()
     check(!game.models[5].deferred && !game.models[0].deferred, "streaming: a locked cell is kept");
 }
 
+void testPrefabs()
+{
+    namespace fs = std::filesystem;
+    const fs::path dir = fs::absolute("prefab_assets");
+    fs::remove_all(dir);
+    fs::create_directories(dir / "prefabs");
+    auto writePrefab = [&](const char* wallColor) {
+        std::ofstream(dir / "prefabs" / "post.prefab")
+            << "version 6\n"
+            << "group \"Walls\" \"\"\n"
+            << "box \"Wall\" 1 0.5 0 2 1 0.2 " << wallColor << "\n  parent \"Walls\"\n  id 00000000000000a1\n"
+            << "entity \"Guard\" \"enemy\" 0 0 2 0 0.6 1.8 0.6 1 0 0 \"\"\n  id 00000000000000a2\n  prop \"hp\" \"50\"\n"
+            << "  output \"OnDeath\" \"Door\" \"Open\" \"\" 0 0\n"
+            << "entity \"Door\" \"relay\" 0 0 3 0 1 1 1 1 1 1 \"\"\n  id 00000000000000a3\n";
+        engine::clearPrefabCache();
+    };
+    writePrefab("0.5 0.5 0.5");
+    const fs::path level = dir / "test.level";
+    std::ofstream(level) << "version 6\n"
+                         << "prefab \"A\" \"prefabs/post.prefab\" 10 0 0 0\n  id 0000000000000001\n"
+                         << "prefab \"B\" \"prefabs/post.prefab\" 0 0 10 90\n  id 0000000000000002\n";
+    engine::Scene scene;
+    std::string error;
+    check(engine::loadScene(scene, level, &error), ("level with prefabs loads: " + error).c_str());
+    const int aWall = engine::findObject(scene, "A/Wall"), bWall = engine::findObject(scene, "B/Wall");
+    check(scene.boxes.size() == 2 && scene.entities.size() == 4 && aWall >= 0 && bWall >= 0, "two instances expanded");
+    check(glm::length(engine::objectPosition(scene, aWall) - glm::vec3(11, 0.5f, 0)) < 1e-3f, "instance offset applied");
+    check(glm::length(engine::objectPosition(scene, bWall) - glm::vec3(0, 0.5f, 9)) < 1e-3f && std::abs(scene.boxes[1].rotation.y - 90.0f) < 1e-3f,
+          "instance yaw turns positions and rotations");
+    check(engine::objectParent(scene, aWall) == "A/Walls" && engine::findGroup(scene, "A") >= 0, "hierarchy under the instance group");
+    const int aGuard = engine::findObject(scene, "A/Guard");
+    check(aGuard >= 0 && scene.entity(aGuard).outputs[0].target == "A/Door", "links inside the prefab stay inside the instance");
+    check(scene.boxes[0].id != scene.boxes[1].id, "instances get their own object IDs");
+
+    // Overrides: move a wall, change a property, delete the door.
+    scene.boxes[static_cast<std::size_t>(aWall)].position.x += 1.0f;
+    scene.entity(aGuard).properties["hp"] = "80";
+    scene.entities.erase(scene.entities.begin() + (engine::findObject(scene, "A/Door") - scene.firstEntity()));
+    check(engine::saveScene(scene, level, &error), "level with prefabs saves");
+    std::string text;
+    {
+        std::ifstream in(level);
+        text.assign(std::istreambuf_iterator<char>(in), {});
+    }
+    check(text.find("box ") == std::string::npos && text.find("override \"Wall\" transform 2 0.5 0") != std::string::npos &&
+              text.find("override \"Guard\" prop \"hp\" \"80\"") != std::string::npos &&
+              text.find("override \"Door\" removed") != std::string::npos,
+          "only the differences are saved");
+    // A change to the prefab shows in both instances, the overrides stay.
+    writePrefab("0.2 0.3 0.4");
+    check(engine::loadScene(scene, level, &error), "level reloads");
+    const int a2 = engine::findObject(scene, "A/Wall"), b2 = engine::findObject(scene, "B/Wall");
+    check(a2 >= 0 && b2 >= 0 && std::abs(scene.boxes[static_cast<std::size_t>(a2)].color.r - 0.2f) < 1e-4f &&
+              std::abs(scene.boxes[static_cast<std::size_t>(b2)].color.r - 0.2f) < 1e-4f,
+          "prefab change reaches every instance");
+    check(std::abs(scene.boxes[static_cast<std::size_t>(a2)].position.x - 12.0f) < 1e-3f &&
+              scene.entity(engine::findObject(scene, "A/Guard")).properties["hp"] == "80" && engine::findObject(scene, "A/Door") < 0 &&
+              engine::findObject(scene, "B/Door") >= 0,
+          "overrides survive a prefab change");
+    // Live refresh in the editor (the prefab changes while the level is open).
+    writePrefab("0.2 0.3 0.4");
+    engine::loadPrefab(dir / "prefabs" / "post.prefab"); // cached as the instances were built
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    std::ofstream(dir / "prefabs" / "post.prefab", std::ios::app) << "box \"Extra\" 0 3 0 1 1 1 1 1 1\n  id 00000000000000a4\n";
+    check(engine::refreshPrefabInstances(scene, dir) == 2 && engine::findObject(scene, "A/Extra") >= 0 &&
+              std::abs(scene.boxes[static_cast<std::size_t>(engine::findObject(scene, "A/Wall"))].position.x - 12.0f) < 1e-3f,
+          "refresh adds new prefab objects and keeps overrides");
+
+    // Moving every object of an instance moves the instance; another change detaches.
+    for (int o : engine::descendantObjects(scene, "B"))
+        engine::translateObject(scene, o, glm::vec3(5, 0, 0));
+    scene.boxes[static_cast<std::size_t>(engine::findObject(scene, "A/Extra"))].color = glm::vec3(0, 1, 0);
+    check(engine::saveScene(scene, level, &error), "saves again");
+    check(engine::loadScene(scene, level, &error), "reloads again");
+    const int b = engine::findPrefabInstance(scene, "B");
+    check(b >= 0 && glm::length(scene.prefabs[static_cast<std::size_t>(b)].position - glm::vec3(5, 0, 10)) < 1e-3f,
+          "moving all objects moves the instance");
+    const int extra = engine::findObject(scene, "A/Extra");
+    check(extra >= 0 && scene.boxes[static_cast<std::size_t>(extra)].prefabInstance.empty() &&
+              scene.boxes[static_cast<std::size_t>(extra)].color.g > 0.9f && engine::objectParent(scene, extra).empty(),
+          "an object changed beyond overrides is saved as a normal object");
+
+    // Revert, unpack, create from a group, apply.
+    check(engine::revertPrefabInstance(scene, engine::findPrefabInstance(scene, "A")) && engine::findObject(scene, "A/Door") >= 0,
+          "revert brings the prefab back");
+    engine::unpackPrefab(scene, engine::findPrefabInstance(scene, "A"));
+    check(engine::findPrefabInstance(scene, "A") < 0 && engine::findObject(scene, "A/Wall") >= 0 &&
+              scene.boxes[static_cast<std::size_t>(engine::findObject(scene, "A/Wall"))].prefabInstance.empty(),
+          "unpack keeps the objects");
+    engine::Scene s2;
+    s2.groups.push_back({"Hut", "", {}});
+    s2.boxes.push_back(engine::Box("Floor", glm::vec3(20, 0.1f, 20), glm::vec3(4, 0.2f, 4), glm::vec3(0.5f)));
+    s2.boxes.back().parent = "Hut";
+    s2.boxes.push_back(engine::Box("Roof", glm::vec3(20, 3, 20), glm::vec3(4, 0.2f, 4), glm::vec3(0.5f)));
+    s2.boxes.back().parent = "Hut";
+    engine::assignObjectIds(s2);
+    const fs::path hut = dir / "prefabs" / "hut.prefab";
+    check(engine::createPrefabFromGroup(s2, "Hut", hut, &error), ("group saved as a prefab: " + error).c_str());
+    check(s2.prefabs.size() == 1 && glm::length(s2.prefabs[0].position - glm::vec3(20, 0, 20)) < 1e-3f &&
+              engine::findObject(s2, "Hut/Roof") >= 0 &&
+              std::abs(engine::objectPosition(s2, engine::findObject(s2, "Hut/Roof")).y - 3.0f) < 1e-3f,
+          "the group is replaced by an instance in the same place");
+    engine::addPrefabInstance(s2, hut, glm::vec3(0), 0.0f);
+    s2.boxes[static_cast<std::size_t>(engine::findObject(s2, "Hut/Roof"))].color = glm::vec3(1, 0, 0);
+    check(engine::applyPrefabInstance(s2, 0, dir, &error), "apply to prefab");
+    const int other = engine::findObject(s2, s2.prefabs[1].name + "/Roof");
+    check(other >= 0 && s2.boxes[static_cast<std::size_t>(other)].color.r > 0.9f, "apply updates the other instances");
+    engine::setPrefabTransform(s2, 1, glm::vec3(0, 0, 0), 180.0f);
+    check(glm::length(engine::objectPosition(s2, other) - glm::vec3(0, 3, 0)) < 1e-3f, "turning an instance keeps its objects in place");
+    fs::remove_all(dir);
+    engine::clearPrefabCache();
+}
+
 int main()
 {
     // Hermetic cook cache for the tests.
@@ -2414,6 +2528,7 @@ int main()
     testMemoryBudgets();
     testAssetRegistry();
     testHotReload();
+    testPrefabs();
     testWorldStreaming();
     std::printf(failures ? "%d test(s) failed\n" : "all tests passed\n", failures);
     return failures ? 1 : 0;

@@ -180,6 +180,39 @@ bool renameNode(Scene& scene, std::string_view oldName, const std::string& newNa
     if (nodeExists(scene, newName))
         return false;
     const std::string old(oldName);
+    if (const int g = findGroup(scene, old); g >= 0 && scene.groups[static_cast<std::size_t>(g)].prefabInstance == old) {
+        // The group of a prefab instance: the instance and its "<instance>/..." nodes follow.
+        const std::string oldPrefix = old + "/", newPrefix = newName + "/";
+        auto prefixed = [&](std::string& n) {
+            if (n == old)
+                n = newName;
+            else if (n.rfind(oldPrefix, 0) == 0)
+                n = newPrefix + n.substr(oldPrefix.size());
+        };
+        for (PrefabInstance& inst : scene.prefabs)
+            if (inst.name == old)
+                inst.name = newName;
+        auto follow = [&](auto& node) {
+            if (node.prefabInstance != old)
+                return;
+            node.prefabInstance = newName;
+            prefixed(node.name);
+            prefixed(node.parent);
+        };
+        for (Group& x : scene.groups)
+            follow(x);
+        for (Box& x : scene.boxes)
+            follow(x);
+        for (Model& x : scene.models)
+            follow(x);
+        for (Entity& x : scene.entities)
+            follow(x);
+        forEachParentField(scene, prefixed);
+        for (Entity& e : scene.entities)
+            for (EntityOutput& o : e.outputs)
+                prefixed(o.target);
+        return true;
+    }
     if (const int g = findGroup(scene, old); g >= 0)
         scene.groups[static_cast<std::size_t>(g)].name = newName;
     else if (const int o = findObject(scene, old); o >= 0) {

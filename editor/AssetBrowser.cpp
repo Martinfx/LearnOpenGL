@@ -68,6 +68,7 @@ const char* typeName(AssetType t)
     case AssetType::Audio: return "Audio";
     case AssetType::Particle: return "Particle effect";
     case AssetType::Ambience: return "Ambience set";
+    case AssetType::Prefab: return "Prefab";
     case AssetType::Other: break;
     }
     return "File";
@@ -97,6 +98,8 @@ AssetType assetTypeOf(const QString& path)
         return AssetType::Particle;
     if (ext == "ambience")
         return AssetType::Ambience;
+    if (ext == "prefab")
+        return AssetType::Prefab;
     return AssetType::Other;
 }
 
@@ -258,7 +261,7 @@ AssetBrowser::AssetBrowser(QWidget* parent) : QWidget(parent)
     category_ = new QComboBox(this);
     category_->addItem(tr("All types"), -1);
     for (AssetType t : {AssetType::Model, AssetType::Material, AssetType::Texture, AssetType::Script, AssetType::Weapon,
-                        AssetType::Level, AssetType::Sound, AssetType::Audio, AssetType::Particle, AssetType::Ambience})
+                        AssetType::Level, AssetType::Sound, AssetType::Audio, AssetType::Particle, AssetType::Ambience, AssetType::Prefab})
         category_->addItem(tr(typeName(t)) + "s", static_cast<int>(t));
     category_->setCurrentIndex(0);
     search_ = new QLineEdit(this);
@@ -489,7 +492,8 @@ QIcon AssetBrowser::placeholderIcon(AssetType type) const
     QPixmap pix(kThumbSize, kThumbSize);
     const QColor colors[] = {QColor(70, 120, 80), QColor(120, 90, 50), QColor(70, 90, 130), QColor(110, 70, 110),
                              QColor(130, 60, 60), QColor(60, 110, 120), QColor(45, 95, 150), QColor(40, 75, 115),
-                             QColor(90, 90, 90)};
+                             QColor(120, 100, 60), QColor(80, 110, 70), QColor(60, 100, 170), QColor(90, 90, 90)};
+    static_assert(std::size(colors) == static_cast<std::size_t>(AssetType::Other) + 1, "a colour for every asset type");
     pix.fill(colors[static_cast<int>(type)]);
     QPainter p(&pix);
     p.setPen(Qt::white);

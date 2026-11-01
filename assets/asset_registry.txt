@@ -1779,6 +1779,7 @@ dd20e711df0e07d7 particles/impact_wood.particle
 fb4a33f513167d65 particles/rain.particle
 616c4bc5a306a46a particles/ricochet.particle
 407ae112373aff81 particles/smoke_column.particle
+b6cfb69a09cf93a5 prefabs/checkpoint.prefab
 3a04f88602703cf4 scripts/enemy.lua
 bc8f519ef054b2e7 scripts/objective.lua
 2768d3a63b35a17e sounds/ambience/interior.ambience

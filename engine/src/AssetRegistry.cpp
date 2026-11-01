@@ -126,13 +126,13 @@ bool isAssetExtension(const std::string& e)
 {
     static const std::set<std::string> known = {".png", ".jpg", ".jpeg", ".tga", ".bmp", ".hdr", ".ktx", ".ktx2", ".dds",
                                                 ".glb", ".gltf", ".bin", ".material", ".weapon", ".particle", ".sound",
-                                                ".ambience", ".ogg", ".wav", ".mp3", ".flac", ".lua", ".level", ".terrain"};
+                                                ".ambience", ".ogg", ".wav", ".mp3", ".flac", ".lua", ".level", ".terrain", ".prefab"};
     return known.count(e) != 0;
 }
 
 bool canReference(const fs::path& file)
 {
-    static const std::set<std::string> text = {".level", ".material", ".weapon", ".particle", ".sound", ".ambience",
+    static const std::set<std::string> text = {".level", ".prefab", ".material", ".weapon", ".particle", ".sound", ".ambience",
                                                ".gltf", ".glb", ".lua", ".cfg"};
     return text.count(lower(file.extension().string())) != 0;
 }

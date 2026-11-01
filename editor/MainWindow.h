@@ -145,6 +145,11 @@ private:
     void importModel();
     // Loads in the background, bottom of the model on `point`; `parent` = group to put it in.
     bool placeModel(const QString& path, glm::vec3 point, const std::string& parent = {});
+    // Prefabs (engine/Prefab.h): place an instance, the outliner's group actions.
+    void placePrefab(const QString& path, glm::vec3 point);
+    void prefabAction(const QString& group, const QString& action);
+    int selectedPrefab() const; // instance of the selected object, -1
+    std::filesystem::path levelDir() const;
     void applyLoadedLevel(const QString& path, engine::Scene loaded);
     void dropToFloor();
     void insertModel(const QString& path, engine::Model model, glm::vec3 point, const std::string& parent = {});
@@ -229,6 +234,10 @@ private:
     QFormLayout* outputsForm_ = nullptr;
     QFormLayout* reverbForm_ = nullptr;           // entity type "reverb"
     QFormLayout* waterForm_ = nullptr;            // entity type "water"
+    QFormLayout* prefabForm_ = nullptr;           // object of a prefab instance
+    QLabel* prefabLabel_ = nullptr;
+    class Vec3Editor* prefabPosition_ = nullptr;
+    QDoubleSpinBox* prefabYaw_ = nullptr;
     QDoubleSpinBox* waterClarity_ = nullptr;
     QDoubleSpinBox* waterFlow_ = nullptr;
     QDoubleSpinBox* waterWaves_ = nullptr;

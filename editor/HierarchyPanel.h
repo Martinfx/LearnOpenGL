@@ -28,6 +28,9 @@ signals:
     void objectSelected(int object);
     void hierarchyChanged();          // parent, name or groups changed (level needs saving)
     void renamed();
+    // Context menu on a group: "save" (as a new prefab), or on a prefab instance's
+    // group "revert", "apply", "unpack", "open".
+    void prefabRequested(const QString& group, const QString& action);
 
 protected:
     void dropEvent(QDropEvent* e) override;

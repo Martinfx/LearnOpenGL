@@ -117,8 +117,12 @@ void HierarchyTree::rebuild()
             items[name] = item;
         pending.emplace_back(parent, item);
     };
-    for (const engine::Group& g : scene_->groups)
-        make(g.name, g.parent, -1, tr("group"));
+    for (const engine::Group& g : scene_->groups) {
+        const bool instance = !g.prefabInstance.empty() && g.prefabInstance == g.name;
+        make(g.name, g.parent, -1, instance ? tr("prefab") : tr("group"));
+        if (instance) // prefab instances in blue, like Unreal
+            pending.back().second->setForeground(0, QColor(110, 170, 255));
+    }
     for (int i = 0; i < scene_->objectCount(); ++i)
         make(engine::objectName(*scene_, i), engine::objectParent(*scene_, i), i, kindTag(*scene_, i));
     for (auto& [parent, item] : pending) {
@@ -206,7 +210,7 @@ void HierarchyTree::newGroup(const QString& parent)
 
 void HierarchyTree::contextMenuEvent(QContextMenuEvent* e)
 {
-    QTreeWidgetItem* item = itemAt(viewport()->mapFrom(this, e->pos()));
+    QTreeWidgetItem* item = itemAt(e->pos()); // viewport coordinates (QAbstractScrollArea forwards the event)
     const QString name = item ? item->data(0, kNameRole).toString() : QString();
     const bool isGroup = item && item->data(0, kObjectRole).toInt() < 0;
     QMenu menu(this);
@@ -226,6 +230,19 @@ void HierarchyTree::contextMenuEvent(QContextMenuEvent* e)
                 rebuild();
                 emit hierarchyChanged();
             });
+        if (isGroup) {
+            const int g = engine::findGroup(*scene_, name.toStdString());
+            const bool instance = g >= 0 && scene_->groups[static_cast<std::size_t>(g)].prefabInstance == name.toStdString();
+            menu.addSeparator();
+            if (instance) {
+                menu.addAction(tr("Prefab: revert to prefab"), this, [this, name] { emit prefabRequested(name, "revert"); });
+                menu.addAction(tr("Prefab: apply changes to prefab"), this, [this, name] { emit prefabRequested(name, "apply"); });
+                menu.addAction(tr("Prefab: unpack (normal objects)"), this, [this, name] { emit prefabRequested(name, "unpack"); });
+                menu.addAction(tr("Prefab: open prefab"), this, [this, name] { emit prefabRequested(name, "open"); });
+            } else if (g >= 0 && scene_->groups[static_cast<std::size_t>(g)].prefabInstance.empty()) {
+                menu.addAction(tr("Save as prefab..."), this, [this, name] { emit prefabRequested(name, "save"); });
+            }
+        }
         menu.addSeparator();
         menu.addAction(tr("Expand all"), this, &QTreeWidget::expandAll);
         menu.addAction(tr("Collapse all"), this, &QTreeWidget::collapseAll);

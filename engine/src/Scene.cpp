@@ -2,6 +2,8 @@
 #include <cmath>
 #include <fstream>
 #include "engine/JobSystem.h"
+#include "engine/Log.h"
+#include "engine/Prefab.h"
 
 #include <algorithm>
 #include <map>
@@ -12,6 +14,8 @@
 #include <chrono>
 #include <mutex>
 #include <unordered_set>
+#include <set>
+#include <type_traits>
 #include <random>
 
 namespace engine {
@@ -62,18 +66,93 @@ Scene makeDefaultScene()
     return s;
 }
 
-bool saveScene(const Scene& scene, const std::filesystem::path& file, std::string* error)
+namespace {
+std::string relativeTo(const std::filesystem::path& p, const std::filesystem::path& levelDir)
 {
-    std::ofstream out(file);
-    if (!out) {
-        setError(error, "Cannot write " + file.string());
-        return false;
-    }
-    out << std::setprecision(6);
-    out << "# FPS engine level\nversion 6\n";
+    const std::filesystem::path rel = std::filesystem::absolute(p).lexically_relative(levelDir);
+    return pathToUtf8(rel.empty() ? std::filesystem::absolute(p) : rel); // e.g. another drive on Windows
+}
+
+void writeIdAndParent(std::ostream& out, const std::string& parent, ObjectId id)
+{
+    if (!parent.empty())
+        out << "  parent " << std::quoted(parent) << '\n';
+    if (id != 0)
+        out << "  id " << objectIdToString(id) << '\n';
+}
+} // namespace
+
+void writeBox(std::ostream& out, const Box& b, const std::filesystem::path& levelDir)
+{
+    out << "box " << std::quoted(b.name) << ' '
+        << b.position.x << ' ' << b.position.y << ' ' << b.position.z << ' '
+        << b.size.x << ' ' << b.size.y << ' ' << b.size.z << ' '
+        << b.color.r << ' ' << b.color.g << ' ' << b.color.b << '\n';
+    writeIdAndParent(out, b.parent, b.id);
+    if (b.rotated())
+        out << "  rotation " << b.rotation.x << ' ' << b.rotation.y << ' ' << b.rotation.z << '\n';
+    if (!b.materialPath.empty())
+        out << "  material " << std::quoted(relativeTo(b.materialPath, levelDir)) << '\n';
+    if (b.uvModified())
+        out << "  uv " << b.uvScale.x << ' ' << b.uvScale.y << ' ' << b.uvOffset.x << ' ' << b.uvOffset.y << ' '
+            << b.uvRotation << '\n';
+}
+
+void writeModel(std::ostream& out, const Model& m, const std::filesystem::path& levelDir, bool withBounds)
+{
+    auto relative = [&](const std::filesystem::path& p) { return relativeTo(p, levelDir); };
+    out << "model " << std::quoted(m.name) << ' ' << std::quoted(relative(m.sourcePath)) << ' '
+        << m.position.x << ' ' << m.position.y << ' ' << m.position.z << '\n';
+    writeIdAndParent(out, m.parent, m.id);
+    if (m.rotation != glm::vec3(0.0f) || m.scale != 1.0f)
+        out << "  transform " << m.rotation.x << ' ' << m.rotation.y << ' ' << m.rotation.z << ' ' << m.scale << '\n';
+    for (const auto& [slot, path] : m.materialOverrides)
+        out << "  material_slot " << std::quoted(slot) << ' ' << std::quoted(relative(path)) << '\n';
+    if (!m.lodPath.empty())
+        out << "  lod " << std::quoted(relative(m.lodPath)) << ' ' << m.lodDistance << '\n';
+    if (!m.lodPath.empty())
+        for (const Model::FarLod& far : m.farLods)
+            out << "  lod " << std::quoted(relative(far.path)) << ' ' << far.distance << '\n';
+    if (m.cullDistance > 0.0f)
+        out << "  cull_distance " << m.cullDistance << '\n';
+    if (!m.collision)
+        out << "  collision 0\n";
+    if (!m.castShadows)
+        out << "  cast_shadows 0\n";
+    if (m.sway > 0.0f)
+        out << "  sway " << m.sway << '\n';
+    if (m.dynamic)
+        out << "  physics " << m.massKg << ' ' << std::quoted(m.collider) << '\n';
+    if (withBounds && m.localBounds.min != m.localBounds.max) // lets the game defer far models
+        out << "  bounds " << m.localBounds.min.x << ' ' << m.localBounds.min.y << ' ' << m.localBounds.min.z << ' '
+            << m.localBounds.max.x << ' ' << m.localBounds.max.y << ' ' << m.localBounds.max.z << '\n';
+}
+
+void writeEntity(std::ostream& out, const Entity& e, const std::filesystem::path& levelDir)
+{
+    const std::string script = e.scriptPath.empty() ? std::string() : relativeTo(e.scriptPath, levelDir);
+    out << "entity " << std::quoted(e.name) << ' ' << std::quoted(e.type) << ' '
+        << e.position.x << ' ' << e.position.y << ' ' << e.position.z << ' ' << e.yawDegrees << ' '
+        << e.size.x << ' ' << e.size.y << ' ' << e.size.z << ' '
+        << e.color.r << ' ' << e.color.g << ' ' << e.color.b << ' ' << std::quoted(script) << '\n';
+    writeIdAndParent(out, e.parent, e.id);
+    if (!e.modelPath.empty())
+        out << "  character " << std::quoted(relativeTo(e.modelPath, levelDir))
+            << ' ' << e.modelScale << ' ' << e.modelYaw << ' ' << std::quoted(e.animation) << '\n';
+    for (const auto& [key, value] : e.properties)
+        out << "  prop " << std::quoted(key) << ' ' << std::quoted(value) << '\n';
+    for (const EntityOutput& o : e.outputs)
+        out << "  output " << std::quoted(o.output) << ' ' << std::quoted(o.target) << ' ' << std::quoted(o.input) << ' '
+            << std::quoted(o.parameter) << ' ' << o.delay << ' ' << (o.once ? 1 : 0) << '\n';
+}
+
+namespace {
+// Everything of a level that is not an object (a .prefab file has only objects).
+bool writeLevelSettings(std::ostream& out, const Scene& scene, const std::filesystem::path& file, const std::filesystem::path& levelDir,
+                        std::string* error)
+{
     out << "player_start " << scene.playerStart.x << ' ' << scene.playerStart.y << ' ' << scene.playerStart.z << '\n';
     out << "sun " << scene.sunDirection.x << ' ' << scene.sunDirection.y << ' ' << scene.sunDirection.z << '\n';
-    const std::filesystem::path levelDir = std::filesystem::absolute(file).parent_path();
     auto relative = [&](const std::filesystem::path& p) {
         const std::filesystem::path rel = std::filesystem::absolute(p).lexically_relative(levelDir);
         return pathToUtf8(rel.empty() ? std::filesystem::absolute(p) : rel);
@@ -201,58 +280,11 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
         out << "loading_title " << std::quoted(scene.loading.title) << '\n';
     if (!scene.loading.hint.empty())
         out << "loading_hint " << std::quoted(scene.loading.hint) << '\n';
-    for (const Group& g : scene.groups)
-        out << "group " << std::quoted(g.name) << ' ' << std::quoted(g.parent) << '\n';
-    auto writeParent = [&out](const std::string& parent, ObjectId id = 0) {
-        if (!parent.empty())
-            out << "  parent " << std::quoted(parent) << '\n';
-        if (id != 0)
-            out << "  id " << objectIdToString(id) << '\n';
-    };
-    for (const Box& b : scene.boxes) {
-        out << "box " << std::quoted(b.name) << ' '
-            << b.position.x << ' ' << b.position.y << ' ' << b.position.z << ' '
-            << b.size.x << ' ' << b.size.y << ' ' << b.size.z << ' '
-            << b.color.r << ' ' << b.color.g << ' ' << b.color.b << '\n';
-        writeParent(b.parent, b.id);
-        if (b.rotated())
-            out << "  rotation " << b.rotation.x << ' ' << b.rotation.y << ' ' << b.rotation.z << '\n';
-        if (!b.materialPath.empty())
-            out << "  material " << std::quoted(relative(b.materialPath)) << '\n';
-        if (b.uvModified())
-            out << "  uv " << b.uvScale.x << ' ' << b.uvScale.y << ' ' << b.uvOffset.x << ' ' << b.uvOffset.y << ' '
-                << b.uvRotation << '\n';
-    }
-    for (const Model& m : scene.models) {
-        std::filesystem::path rel = std::filesystem::absolute(m.sourcePath).lexically_relative(levelDir);
-        if (rel.empty())
-            rel = std::filesystem::absolute(m.sourcePath); // e.g. another drive on Windows
-        out << "model " << std::quoted(m.name) << ' ' << std::quoted(pathToUtf8(rel)) << ' '
-            << m.position.x << ' ' << m.position.y << ' ' << m.position.z << '\n';
-        writeParent(m.parent, m.id);
-        if (m.rotation != glm::vec3(0.0f) || m.scale != 1.0f)
-            out << "  transform " << m.rotation.x << ' ' << m.rotation.y << ' ' << m.rotation.z << ' ' << m.scale << '\n';
-        for (const auto& [slot, path] : m.materialOverrides)
-            out << "  material_slot " << std::quoted(slot) << ' ' << std::quoted(relative(path)) << '\n';
-        if (!m.lodPath.empty())
-            out << "  lod " << std::quoted(relative(m.lodPath)) << ' ' << m.lodDistance << '\n';
-        if (!m.lodPath.empty())
-            for (const Model::FarLod& far : m.farLods)
-                out << "  lod " << std::quoted(relative(far.path)) << ' ' << far.distance << '\n';
-        if (m.cullDistance > 0.0f)
-            out << "  cull_distance " << m.cullDistance << '\n';
-        if (!m.collision)
-            out << "  collision 0\n";
-        if (!m.castShadows)
-            out << "  cast_shadows 0\n";
-        if (m.sway > 0.0f)
-            out << "  sway " << m.sway << '\n';
-        if (m.dynamic)
-            out << "  physics " << m.massKg << ' ' << std::quoted(m.collider) << '\n';
-        if (scene.streaming.enabled && m.localBounds.min != m.localBounds.max) // lets the game defer far models
-            out << "  bounds " << m.localBounds.min.x << ' ' << m.localBounds.min.y << ' ' << m.localBounds.min.z << ' '
-                << m.localBounds.max.x << ' ' << m.localBounds.max.y << ' ' << m.localBounds.max.z << '\n';
-    }
+    return true;
+}
+
+void writeLevelPlayer(std::ostream& out, const Scene& scene, const std::filesystem::path& levelDir)
+{
     const PlayerSettings& pl = scene.player;
     out << "player " << pl.walkSpeed << ' ' << pl.sprintSpeed << ' ' << pl.jumpSpeed << ' ' << pl.gravity << ' '
         << pl.airControl << ' ' << pl.height << ' ' << pl.eyeHeight << ' ' << pl.stepHeight << ' '
@@ -302,28 +334,100 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
         const std::filesystem::path rel = std::filesystem::absolute(w).lexically_relative(levelDir);
         out << "weapon " << std::quoted(pathToUtf8(rel.empty() ? std::filesystem::absolute(w) : rel)) << '\n';
     }
-    for (const Entity& e : scene.entities) {
-        std::string script;
-        if (!e.scriptPath.empty()) {
-            std::filesystem::path rel = std::filesystem::absolute(e.scriptPath).lexically_relative(levelDir);
-            script = pathToUtf8(rel.empty() ? std::filesystem::absolute(e.scriptPath) : rel);
-        }
-        out << "entity " << std::quoted(e.name) << ' ' << std::quoted(e.type) << ' '
-            << e.position.x << ' ' << e.position.y << ' ' << e.position.z << ' ' << e.yawDegrees << ' '
-            << e.size.x << ' ' << e.size.y << ' ' << e.size.z << ' '
-            << e.color.r << ' ' << e.color.g << ' ' << e.color.b << ' ' << std::quoted(script) << '\n';
-        writeParent(e.parent, e.id);
-        if (!e.modelPath.empty()) {
-            const std::filesystem::path rel = std::filesystem::absolute(e.modelPath).lexically_relative(levelDir);
-            out << "  character " << std::quoted(pathToUtf8(rel.empty() ? std::filesystem::absolute(e.modelPath) : rel))
-                << ' ' << e.modelScale << ' ' << e.modelYaw << ' ' << std::quoted(e.animation) << '\n';
-        }
-        for (const auto& [key, value] : e.properties)
-            out << "  prop " << std::quoted(key) << ' ' << std::quoted(value) << '\n';
-        for (const EntityOutput& o : e.outputs)
-            out << "  output " << std::quoted(o.output) << ' ' << std::quoted(o.target) << ' ' << std::quoted(o.input) << ' '
-                << std::quoted(o.parameter) << ' ' << o.delay << ' ' << (o.once ? 1 : 0) << '\n';
+}
+} // namespace
+
+bool saveScene(const Scene& scene, const std::filesystem::path& file, std::string* error)
+{
+    std::ofstream out(file);
+    if (!out) {
+        setError(error, "Cannot write " + file.string());
+        return false;
     }
+    out << std::setprecision(6);
+    out << (file.extension() == ".prefab" ? "# FPS engine prefab (objects in the level format)\nversion 6\n" : "# FPS engine level\nversion 6\n");
+    const std::filesystem::path levelDir = std::filesystem::absolute(file).parent_path();
+    const bool prefabFile = file.extension() == ".prefab";
+    if (!prefabFile && !writeLevelSettings(out, scene, file, levelDir, error))
+        return false;
+    // Prefab instances: their objects and groups are written as the instance line and
+    // the differences from the prefab (engine/Prefab.h); detached objects as normal ones.
+    std::vector<PrefabInstance> instances = scene.prefabs;
+    std::set<std::string> instanceNames;
+    std::set<const void*> detached;
+    std::set<std::string> instanceGroups;
+    for (PrefabInstance& inst : instances) {
+        std::vector<int> det;
+        computePrefabOverrides(scene, inst, levelDir, &det);
+        for (int o : det)
+            detached.insert(scene.isBox(o) ? static_cast<const void*>(&scene.boxes[static_cast<std::size_t>(o)])
+                            : scene.isModel(o) ? static_cast<const void*>(&scene.model(o))
+                                               : static_cast<const void*>(&scene.entity(o)));
+        for (const Group& g : scene.groups)
+            if (g.prefabInstance == inst.name && g.name == inst.name)
+                inst.parent = g.parent; // the instance group may have been moved in the hierarchy
+        instanceNames.insert(inst.name);
+    }
+    for (const Group& g : scene.groups)
+        if (instanceNames.count(g.prefabInstance))
+            instanceGroups.insert(g.name);
+    std::map<std::string, std::string> instanceParent;
+    for (const PrefabInstance& inst : instances)
+        instanceParent[inst.name] = inst.parent;
+    // True when the object is written by its instance; a detached object is written
+    // here as a normal one (moved out of the instance's groups, which are not saved).
+    auto skip = [&](const auto& o) {
+        if (o.prefabInstance.empty() || !instanceNames.count(o.prefabInstance))
+            return false;
+        if (detached.count(&o)) {
+            auto copy = o;
+            if (instanceGroups.count(copy.parent))
+                copy.parent = instanceParent[o.prefabInstance];
+            using T = std::decay_t<decltype(o)>;
+            if constexpr (std::is_same_v<T, Box>)
+                writeBox(out, copy, levelDir);
+            else if constexpr (std::is_same_v<T, Model>)
+                writeModel(out, copy, levelDir, scene.streaming.enabled);
+            else
+                writeEntity(out, copy, levelDir);
+        }
+        return true;
+    };
+    for (const Group& g : scene.groups)
+        if (!instanceGroups.count(g.name))
+            out << "group " << std::quoted(g.name) << ' ' << std::quoted(g.parent) << '\n';
+    for (const PrefabInstance& inst : instances) {
+        out << "prefab " << std::quoted(inst.name) << ' ' << std::quoted(relativeTo(inst.path, levelDir)) << ' '
+            << inst.position.x << ' ' << inst.position.y << ' ' << inst.position.z << ' ' << inst.yawDegrees << '\n';
+        writeIdAndParent(out, inst.parent, inst.id);
+        for (const PrefabOverride& o : inst.overrides) {
+            out << "  override " << std::quoted(o.object) << ' ';
+            switch (o.kind) {
+            case PrefabOverride::Kind::Transform:
+                out << "transform " << o.position.x << ' ' << o.position.y << ' ' << o.position.z << ' ' << o.rotation.x << ' '
+                    << o.rotation.y << ' ' << o.rotation.z << ' ' << o.scale.x << ' ' << o.scale.y << ' ' << o.scale.z;
+                break;
+            case PrefabOverride::Kind::Property:
+                out << "prop " << std::quoted(o.key) << ' ' << std::quoted(o.value);
+                break;
+            case PrefabOverride::Kind::Removed:
+                out << "removed";
+                break;
+            }
+            out << '\n';
+        }
+    }
+    for (const Box& b : scene.boxes)
+        if (!skip(b))
+            writeBox(out, b, levelDir);
+    for (const Model& m : scene.models)
+        if (!skip(m))
+            writeModel(out, m, levelDir, scene.streaming.enabled);
+    if (!prefabFile)
+        writeLevelPlayer(out, scene, levelDir);
+    for (const Entity& e : scene.entities)
+        if (!skip(e))
+            writeEntity(out, e, levelDir);
     if (!out) {
         setError(error, "Write failed: " + file.string());
         return false;
@@ -364,7 +468,7 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
     Scene result;
     std::string line;
     int lineNo = 0;
-    enum class LastObject { None, Box, Model, Entity } lastObject = LastObject::None;
+    enum class LastObject { None, Box, Model, Entity, Prefab } lastObject = LastObject::None;
     // Files used several times (fence sections, crates) are parsed once. All
     // model files of the level are read in parallel first (the slow part:
     // glTF parsing and texture decoding), then the lines are applied in order.
@@ -778,7 +882,9 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
             ok = static_cast<bool>(ls >> text) && lastObject != LastObject::None;
             if (ok) {
                 const ObjectId id = objectIdFromString(text);
-                if (lastObject == LastObject::Box)
+                if (lastObject == LastObject::Prefab)
+                    result.prefabs.back().id = id;
+                else if (lastObject == LastObject::Box)
                     result.boxes.back().id = id;
                 else if (lastObject == LastObject::Model)
                     result.models.back().id = id;
@@ -790,7 +896,9 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
             std::string parent;
             ok = static_cast<bool>(ls >> std::quoted(parent)) && lastObject != LastObject::None;
             if (ok) {
-                if (lastObject == LastObject::Box)
+                if (lastObject == LastObject::Prefab)
+                    result.prefabs.back().parent = parent;
+                else if (lastObject == LastObject::Box)
                     result.boxes.back().parent = parent;
                 else if (lastObject == LastObject::Model)
                     result.models.back().parent = parent;
@@ -962,6 +1070,38 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                     p = std::filesystem::absolute(file).parent_path() / p;
                 result.loadout.push_back(p.lexically_normal());
             }
+        } else if (key == "prefab") {
+            // Prefab instance; expanded into objects once the whole file is read.
+            PrefabInstance p;
+            std::string path;
+            ok = static_cast<bool>(ls >> std::quoted(p.name) >> std::quoted(path) >> p.position.x >> p.position.y >> p.position.z >>
+                                   p.yawDegrees);
+            if (ok) {
+                std::filesystem::path f = pathFromUtf8(path);
+                if (f.is_relative())
+                    f = std::filesystem::absolute(file).parent_path() / f;
+                p.path = f.lexically_normal();
+                result.prefabs.push_back(std::move(p));
+                lastObject = LastObject::Prefab;
+            }
+        } else if (key == "override") {
+            PrefabOverride o;
+            std::string kind;
+            ok = lastObject == LastObject::Prefab && static_cast<bool>(ls >> std::quoted(o.object) >> kind);
+            if (ok && kind == "transform") {
+                o.kind = PrefabOverride::Kind::Transform;
+                ok = static_cast<bool>(ls >> o.position.x >> o.position.y >> o.position.z >> o.rotation.x >> o.rotation.y >> o.rotation.z >>
+                                       o.scale.x >> o.scale.y >> o.scale.z);
+            } else if (ok && kind == "prop") {
+                o.kind = PrefabOverride::Kind::Property;
+                ok = static_cast<bool>(ls >> std::quoted(o.key) >> std::quoted(o.value));
+            } else if (ok && kind == "removed") {
+                o.kind = PrefabOverride::Kind::Removed;
+            } else {
+                ok = false;
+            }
+            if (ok)
+                result.prefabs.back().overrides.push_back(std::move(o));
         } else if (key == "entity") {
             Entity e;
             std::string script;
@@ -989,6 +1129,13 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
     }
     if (progress)
         ++progress->done;
+    for (PrefabInstance& p : result.prefabs) {
+        if (p.id == 0)
+            p.id = newObjectId();
+        std::string prefabError;
+        if (!expandPrefab(result, p, &prefabError)) // the instance stays (and is saved) without objects
+            LOG_WARN("level", "%s: prefab %s: %s", pathToUtf8(file.filename()).c_str(), p.name.c_str(), prefabError.c_str());
+    }
     assignObjectIds(result); // levels before version 6, objects added by hand
     scene = std::move(result);
     return true;

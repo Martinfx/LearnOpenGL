@@ -48,6 +48,7 @@
 #include <engine/WorldStreaming.h>
 #include <engine/AssetRegistry.h>
 #include <engine/FileWatcher.h>
+#include <engine/Prefab.h>
 #include <engine/HotReload.h>
 #include <engine/CVars.h>
 #include <engine/Crash.h>
@@ -154,6 +155,7 @@ MainWindow::MainWindow()
     connect(viewport_, &Viewport::assetDropped, this, [this](const QString& path, glm::vec3 point, int object) {
         switch (assetTypeOf(path)) {
         case AssetType::Model: placeModel(path, point); break;
+        case AssetType::Prefab: placePrefab(path, point); break;
         case AssetType::Material:
             if (!assignMaterial(path, object))
                 notify(tr("Drop a material onto a box or a model."), 5000);
@@ -651,6 +653,7 @@ void MainWindow::buildDocks()
         markDirty();
     });
     connect(outliner_, &HierarchyTree::renamed, this, [this] { refreshProperties(); });
+    connect(outliner_, &HierarchyTree::prefabRequested, this, &MainWindow::prefabAction);
     outlinerPanel_ = new OutlinerPanel(outliner_, this);
     outlinerPanel_->setAddMenu(addMenu_, editorIcon("add"));
     auto* outlinerDock = new QDockWidget(tr("Outliner"), this);
@@ -705,6 +708,50 @@ void MainWindow::buildDocks()
     ambienceForm_ = makeSection(tr("Ambience zone"), "Sound");
     pickupForm_ = makeSection(tr("Pickup"), "General");
     waterForm_ = makeSection(tr("Water"), "Rendering");
+    prefabForm_ = makeSection(tr("Prefab"), "General");
+    {
+        // The selected object belongs to a prefab instance: the whole instance's place,
+        // and going back to or updating the prefab.
+        prefabLabel_ = new QLabel(boxPanel_);
+        prefabLabel_->setWordWrap(true);
+        prefabLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
+        prefabForm_->addRow(tr("Prefab"), prefabLabel_);
+        prefabPosition_ = new Vec3Editor(-10000.0, 10000.0, 0.25, boxPanel_);
+        prefabPosition_->setToolTip(tr("Origin of the whole instance (moves all its objects)"));
+        prefabForm_->addRow(tr("Instance position"), prefabPosition_);
+        prefabYaw_ = new QDoubleSpinBox(boxPanel_);
+        prefabYaw_->setRange(-360.0, 360.0);
+        prefabYaw_->setSingleStep(15.0);
+        prefabYaw_->setSuffix(QStringLiteral(" °"));
+        prefabYaw_->setKeyboardTracking(false);
+        prefabForm_->addRow(tr("Instance yaw"), prefabYaw_);
+        auto moveInstance = [this] {
+            const int i = selectedPrefab();
+            if (i < 0)
+                return;
+            engine::setPrefabTransform(scene_, i, prefabPosition_->value(), static_cast<float>(prefabYaw_->value()));
+            markDirty();
+            refreshProperties();
+        };
+        connect(prefabPosition_, &Vec3Editor::valueEdited, this, moveInstance);
+        connect(prefabYaw_, &QDoubleSpinBox::valueChanged, this, moveInstance);
+        auto* buttons = new QWidget(boxPanel_);
+        auto* row = new QHBoxLayout(buttons);
+        row->setContentsMargins(0, 0, 0, 0);
+        const std::pair<QString, QString> actions[] = {{tr("Revert"), "revert"}, {tr("Apply"), "apply"}, {tr("Unpack"), "unpack"},
+                                                       {tr("Open"), "open"}};
+        for (const auto& [label, action] : actions) {
+            auto* b = new QPushButton(label, buttons);
+            row->addWidget(b);
+            connect(b, &QPushButton::clicked, this, [this, action] {
+                if (const int i = selectedPrefab(); i >= 0)
+                    prefabAction(QString::fromStdString(scene_.prefabs[static_cast<std::size_t>(i)].name), action);
+            });
+        }
+        buttons->setToolTip(tr("Revert: drop this instance's changes. Apply: save them into the prefab (every instance). "
+                               "Unpack: make normal objects. Open: the prefab file as a level."));
+        prefabForm_->addRow(tr("Instance"), buttons);
+    }
     nameEdit_ = new QLineEdit(boxPanel_);
     kindLabel_ = new QLabel(boxPanel_);
     generalForm->addRow(tr("Type"), kindLabel_);
@@ -2085,7 +2132,20 @@ void MainWindow::buildDocks()
         const std::vector<std::string> lines = engine::hotReload(changed, {&scene_, nullptr, nullptr, nullptr});
         for (const std::string& line : lines)
             appendLog(tr("reload: %1").arg(QString::fromStdString(line)), 0);
-        if (!lines.empty())
+        // A prefab saved (here or elsewhere): its instances in the open level follow, overrides kept.
+        bool prefabs = false;
+        for (const std::filesystem::path& file : changed)
+            if (file.extension() == ".prefab")
+                if (const int n = engine::refreshPrefabInstances(scene_, levelDir(), file); n > 0) {
+                    appendLog(tr("reload: %1 (%2 instances)").arg(QString::fromStdU16String(file.filename().u16string())).arg(n), 0);
+                    prefabs = true;
+                }
+        if (prefabs) {
+            markDirty();
+            refreshOutliner();
+            refreshProperties();
+        }
+        if (!lines.empty() || prefabs)
             viewport_->update();
     });
     watchTimer->start(1000);
@@ -2371,6 +2431,15 @@ void MainWindow::refreshProperties()
         kindLabel_->clear();
         nameEdit_->clear();
         colorButton_->setStyleSheet(QString());
+    }
+    if (const int pi = selectedPrefab(); pi >= 0) {
+        const engine::PrefabInstance& inst = scene_.prefabs[static_cast<std::size_t>(pi)];
+        const QSignalBlocker block(prefabYaw_);
+        prefabLabel_->setText(tr("%1 (instance \"%2\")").arg(QString::fromStdU16String(inst.path.filename().u16string()),
+                                                             QString::fromStdString(inst.name)));
+        prefabLabel_->setToolTip(QString::fromStdU16String(inst.path.u16string()));
+        prefabPosition_->setValue(inst.position);
+        prefabYaw_->setValue(inst.yawDegrees);
     }
     // Persistent ID (saved games, links, prefabs refer to it); selectable to copy.
     if (const engine::ObjectId id = b ? b->id : m ? m->id : e ? e->id : 0) {
@@ -2884,6 +2953,103 @@ void MainWindow::insertModel(const QString& path, engine::Model model, glm::vec3
     notify(tr("Placed %1").arg(QFileInfo(path).fileName()), 4000);
 }
 
+std::filesystem::path MainWindow::levelDir() const
+{
+    if (currentFile_.isEmpty())
+        return std::filesystem::path(assetPath("levels").toStdU16String());
+    return std::filesystem::path(QFileInfo(currentFile_).absolutePath().toStdU16String());
+}
+
+int MainWindow::selectedPrefab() const
+{
+    return engine::prefabInstanceOf(scene_, selected_);
+}
+
+void MainWindow::placePrefab(const QString& path, glm::vec3 point)
+{
+    // The prefab's models are read on a worker thread (cached), the instance is added here.
+    notify(tr("Loading %1...").arg(QFileInfo(path).fileName()));
+    QPointer<MainWindow> self(this);
+    engine::JobSystem::global().run([self, path, point] {
+        std::string error;
+        const bool ok = engine::loadPrefab(std::filesystem::path(path.toStdU16String()), &error) != nullptr;
+        QMetaObject::invokeMethod(qApp, [self, path, point, ok, error] {
+            if (!self)
+                return;
+            std::string err = error;
+            const glm::vec3 snapped = glm::round(point * 4.0f) / 4.0f;
+            const int i = ok ? engine::addPrefabInstance(self->scene_, std::filesystem::path(path.toStdU16String()), snapped, 0.0f, {}, {}, &err)
+                             : -1;
+            if (i < 0) {
+                QMessageBox::warning(self, tr("Place prefab"), QString::fromStdString(err));
+                return;
+            }
+            self->markDirty();
+            self->refreshOutliner();
+            const std::string first = self->scene_.prefabs[static_cast<std::size_t>(i)].name + "/";
+            for (int o = 0; o < self->scene_.objectCount(); ++o)
+                if (engine::objectName(self->scene_, o).rfind(first, 0) == 0) {
+                    self->select(o);
+                    break;
+                }
+            self->notify(tr("Placed prefab %1").arg(QFileInfo(path).fileName()), 4000);
+        });
+    });
+}
+
+void MainWindow::prefabAction(const QString& group, const QString& action)
+{
+    std::string error;
+    const std::string name = group.toStdString();
+    if (action == "save") {
+        QDir().mkpath(assetPath("prefabs"));
+        QString file = QFileDialog::getSaveFileName(this, tr("Save group as prefab"), assetPath("prefabs/" + group + ".prefab"),
+                                                    tr("Prefabs (*.prefab)"));
+        if (file.isEmpty())
+            return;
+        if (!file.endsWith(".prefab"))
+            file += ".prefab";
+        if (!engine::createPrefabFromGroup(scene_, name, std::filesystem::path(file.toStdU16String()), &error)) {
+            QMessageBox::warning(this, tr("Save as prefab"), QString::fromStdString(error));
+            return;
+        }
+        selected_ = -1;
+        markDirty();
+        refreshOutliner();
+        refreshProperties();
+        notify(tr("Saved %1; the group is now an instance of it").arg(QFileInfo(file).fileName()), 6000);
+        return;
+    }
+    const int i = engine::findPrefabInstance(scene_, name);
+    if (i < 0)
+        return;
+    const QString file = QString::fromStdU16String(scene_.prefabs[static_cast<std::size_t>(i)].path.u16string());
+    if (action == "open") {
+        if (confirmDiscard())
+            openFile(file);
+        return;
+    }
+    if (action == "revert") {
+        if (!engine::revertPrefabInstance(scene_, i, &error))
+            QMessageBox::warning(this, tr("Revert prefab"), QString::fromStdString(error));
+    } else if (action == "apply") {
+        if (QMessageBox::question(this, tr("Apply to prefab"),
+                                  tr("Save this instance into %1? Every instance of the prefab changes (their own overrides stay).")
+                                      .arg(QFileInfo(file).fileName())) != QMessageBox::Yes)
+            return;
+        if (!engine::applyPrefabInstance(scene_, i, levelDir(), &error))
+            QMessageBox::warning(this, tr("Apply to prefab"), QString::fromStdString(error));
+        else
+            notify(tr("Saved %1").arg(QFileInfo(file).fileName()), 4000);
+    } else if (action == "unpack") {
+        engine::unpackPrefab(scene_, i);
+    }
+    selected_ = -1;
+    markDirty();
+    refreshOutliner();
+    refreshProperties();
+}
+
 bool MainWindow::assignMaterial(const QString& path, int object)
 {
     std::string error;
@@ -2930,6 +3096,12 @@ void MainWindow::openAsset(const QString& path, int type)
         const auto& cam = viewport_->camera();
         const glm::vec3 p = cam.position + cam.flatForward() * 8.0f;
         placeModel(path, {p.x, 0.0f, p.z});
+        break;
+    }
+    case AssetType::Prefab: {
+        const auto& cam = viewport_->camera();
+        const glm::vec3 p = cam.position + cam.flatForward() * 8.0f;
+        placePrefab(path, {p.x, 0.0f, p.z});
         break;
     }
     case AssetType::Material: openMaterialEditor(path); break;
@@ -4585,6 +4757,8 @@ void MainWindow::updateDetailsVisibility()
             relevant = e != nullptr && e->type == "ambience";
         if (d.form == waterForm_)
             relevant = e != nullptr && e->type == "water";
+        if (d.form == prefabForm_)
+            relevant = selectedPrefab() >= 0;
         if (d.form == pickupForm_)
             relevant = e != nullptr && e->type == "pickup";
         bool shown = relevant && (category == "All" || category == d.category);

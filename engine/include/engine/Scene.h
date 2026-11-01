@@ -9,6 +9,7 @@
 #include "engine/TimeOfDay.h"
 #include <cstdint>
 #include <filesystem>
+#include <iosfwd>
 #include <glm/gtc/type_precision.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/vec2.hpp>
@@ -39,6 +40,7 @@ struct Box {
     std::string name = "Box";
     ObjectId id = 0;                // persistent ID (level line `id`), see ObjectId
     std::string parent;             // name of the parent object or group in the hierarchy, empty = root
+    std::string prefabInstance, prefabObject; // runtime: prefab instance it was expanded from (engine/Prefab.h)
     glm::vec3 position{0.0f};       // center
     glm::vec3 size{1.0f};
     glm::vec3 rotation{0.0f};       // degrees around X, Y, Z (applied Y, X, Z like models)
@@ -157,6 +159,7 @@ struct Model {
     std::string name = "Model";
     ObjectId id = 0;                // persistent ID (level line `id`), see ObjectId
     std::string parent;               // hierarchy parent (object or group name), empty = root
+    std::string prefabInstance, prefabObject; // runtime: prefab instance it was expanded from (engine/Prefab.h)
     std::filesystem::path sourcePath; // absolute path of the .gltf/.glb
     glm::vec3 position{0.0f};
     PartList parts;                   // shared between copies of the model
@@ -240,6 +243,7 @@ struct Entity {
     std::string name = "Entity";
     ObjectId id = 0;                // persistent ID (level line `id`), see ObjectId
     std::string parent;                  // hierarchy parent (object or group name), empty = root
+    std::string prefabInstance, prefabObject; // runtime: prefab instance it was expanded from (engine/Prefab.h)
     std::string type = "empty";          // gameplay role, readable from scripts
     glm::vec3 position{0.0f};            // base (feet) position
     float yawDegrees = 0.0f;             // facing, 0 = +X, 90 = +Z
@@ -400,6 +404,29 @@ struct Environment {
 struct Group {
     std::string name = "Group";
     std::string parent;                  // empty = root
+    std::string prefabInstance;          // runtime: group of a prefab instance (engine/Prefab.h)
+};
+
+// Difference of one object of a prefab instance from the prefab (engine/Prefab.h).
+struct PrefabOverride {
+    enum class Kind { Transform, Property, Removed } kind = Kind::Transform;
+    std::string object;           // object name in the prefab
+    // Transform, in the prefab's space: position, rotation in degrees (entities: y =
+    // yaw) and box size / model scale (x) / entity size.
+    glm::vec3 position{0.0f}, rotation{0.0f}, scale{1.0f};
+    std::string key, value;       // Property: entity script property
+};
+
+// A prefab placed in the level (level line `prefab`); its objects are in the scene
+// as normal objects named "<name>/<object>" under a group called `name`.
+struct PrefabInstance {
+    std::string name;
+    std::string parent;           // hierarchy parent of the instance group
+    std::filesystem::path path;   // absolute .prefab
+    glm::vec3 position{0.0f};     // the prefab's origin in the level
+    float yawDegrees = 0.0f;      // turn around Y (as a model's rotation.y)
+    ObjectId id = 0;              // object IDs of the instance are derived from it
+    std::vector<PrefabOverride> overrides; // as loaded; saving computes them again
 };
 
 // What the game shows while the level loads (edited in the editor: Level > Loading screen).
@@ -444,6 +471,7 @@ struct Scene {
     std::vector<Box> boxes;
     std::vector<Model> models;
     std::vector<Entity> entities;
+    std::vector<PrefabInstance> prefabs; // engine/Prefab.h; their objects are in the vectors above
     std::vector<std::filesystem::path> loadout;
     NavSettings nav;       // navmesh build settings (agent size, cell size)
     StreamingSettings streaming;
@@ -476,6 +504,10 @@ Scene makeDefaultScene();
 
 // Level files are text; model paths are stored relative to the level file.
 bool saveScene(const Scene& scene, const std::filesystem::path& file, std::string* error = nullptr);
+// One object as its level lines (paths relative to levelDir); used to compare objects.
+void writeBox(std::ostream& out, const Box& b, const std::filesystem::path& levelDir);
+void writeModel(std::ostream& out, const Model& m, const std::filesystem::path& levelDir, bool withBounds);
+void writeEntity(std::ostream& out, const Entity& e, const std::filesystem::path& levelDir);
 // Model files are parsed in parallel on the job system; `progress` (optional) counts them.
 // streamFrom (game): with streaming on, static models in cells beyond the load radius
 // of this point (NaN x: the level's player start) are not read (deferred); null = everything (the editor).

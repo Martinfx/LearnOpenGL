@@ -7624,7 +7624,7 @@ model "Lyokha ammo" "../models/props/ammo_box/ammo_box.gltf" -179.81 6.98 -48.45
 entity "Objective: Lyokha PDA" "objective" -179.41 6.62 -48.45 0 0.05 0.05 0.05 0.55 0.5 0.5 "../scripts/objective.lua"
   parent "Loot"
   prop "radius" "2"
-  prop "message" "PDA Ljochy nalezeno: "skrys je pod vodarnou". Vrat se do Stabu."
+  prop "message" "PDA Ljochy nalezeno: \"skrys je pod vodarnou\". Vrat se do Stabu."
 model "Stash crate" "../models/props/wooden_military_crate/wooden_military_crate.gltf" -275.92 0.17 -24.63
   bounds -0.621033 0 -0.259889 0.621033 0.464815 0.259889
   parent "Loot"

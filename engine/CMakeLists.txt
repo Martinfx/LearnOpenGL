@@ -33,6 +33,7 @@ add_library(engine STATIC
     src/FileWatcher.cpp
     src/HotReload.cpp
     src/AssetPalette.cpp
+    src/Prefab.cpp
     src/Scene.cpp
     src/JobSystem.cpp
     src/SceneGraph.cpp

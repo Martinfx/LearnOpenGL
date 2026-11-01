@@ -1,0 +1,47 @@
+# FPS engine prefab (objects in the level format)
+version 6
+model "Hesco" "../models/zone/hesco_barrier.glb" -12.2797 0.00842988 -1.49948
+  id 7208c0177fe6386d
+model "Hesco 2" "../models/zone/hesco_barrier.glb" -10.7797 0.00842988 -1.49948
+  id 29db353e92f93c36
+model "Hesco 3" "../models/zone/hesco_barrier.glb" -9.27974 0.00842988 -1.49948
+  id d90f0345eb77891f
+model "Hesco 4" "../models/zone/hesco_barrier.glb" -7.77974 0.00842988 -1.49948
+  id 606d7bad90d0f132
+model "Hesco 5" "../models/zone/hesco_barrier.glb" -6.27974 0.00842988 -1.49948
+  id 3a6d8dd754c6d37d
+model "Hesco 6" "../models/zone/hesco_barrier.glb" -4.77974 0.00842988 -1.49948
+  id c0d037767adf4d72
+model "Hesco 7" "../models/zone/hesco_barrier.glb" 5.02026 0.00842988 -1.49948
+  id ac6e03588ffc1652
+model "Hesco 8" "../models/zone/hesco_barrier.glb" 6.52026 0.00842988 -1.49948
+  id fecead408365c23c
+model "Hesco 9" "../models/zone/hesco_barrier.glb" 8.02026 0.00842988 -1.49948
+  id ff5adf213c4c6f8f
+model "Hesco 10" "../models/zone/hesco_barrier.glb" 9.52026 0.00842988 -1.49948
+  id ba89d940259a0c35
+model "Hesco 11" "../models/zone/hesco_barrier.glb" 11.0203 0.00842988 -1.49948
+  id fe83e5e11805961a
+model "Hesco 12" "../models/zone/hesco_barrier.glb" 12.5203 0.00842988 -1.49948
+  id 543b6375be6a35a5
+model "Container" "../models/zone/shipping_container.glb" -18.8797 0.00842988 2.50052
+  id 1545c44d5448bd4f
+  transform 0 90 0 1
+model "Container 2" "../models/zone/shipping_container.glb" 18.6203 0.00842988 4.50052
+  id bd8e8ad20dfdc585
+  transform 0 95 0 1
+model "Container 3" "../models/zone/shipping_container.glb" 18.6203 2.59843 4.50052
+  id 77c886aa69193d8a
+  transform 0 85 0 1
+model "Road barrier" "../models/props/concrete_road_barrier/concrete_road_barrier.gltf" -2.37974 0.00842988 -5.49948
+  id 244096530e06269a
+  transform 0 -2.4 0 1
+model "Road barrier 2" "../models/props/concrete_road_barrier/concrete_road_barrier.gltf" 0.120263 0.00842988 -5.49948
+  id 585d38a72515c2d0
+  transform 0 -7.1 0 1
+model "Road barrier 3" "../models/props/concrete_road_barrier/concrete_road_barrier.gltf" 2.62026 0.00842988 -5.49948
+  id 8239fd4cd006a459
+  transform 0 -2.3 0 1
+model "Warning sign" "../models/zone/gen/warning_sign.glb" -13.8797 0.00842988 -7.49948
+  id 81a02ac7f00bf317
+  transform 0 10 0 1
