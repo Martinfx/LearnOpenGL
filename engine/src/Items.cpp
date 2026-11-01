@@ -68,6 +68,30 @@ bool loadItems(ItemCatalog& catalog, const std::filesystem::path& file, std::str
             if (!(s >> std::quoted(d.id) >> std::quoted(d.name) >> d.price >> d.weight))
                 return fail("ammo needs type name price weight");
             c.items.push_back(d);
+        } else if (key == "belt") {
+            if (!(s >> c.beltSlots))
+                return fail("belt needs a number");
+        } else if (key == "artifact") {
+            d.kind = ItemDef::Kind::Artifact;
+            if (!(s >> std::quoted(d.id) >> std::quoted(d.name) >> std::quoted(d.anomaly) >> d.price >> d.weight >> std::quoted(d.model) >>
+                  d.glow[0] >> d.glow[1] >> d.glow[2]))
+                return fail("artifact needs id name anomaly price weight model r g b");
+            for (std::string effect; s >> effect;) {
+                float v = 0.0f;
+                if (!(s >> v))
+                    return fail("artifact effect " + effect + " needs a value");
+                if (effect == "heal")
+                    d.heal = v;
+                else if (effect == "rad")
+                    d.rad = v;
+                else if (effect == "armor")
+                    d.protection = v;
+                else if (effect == "carry")
+                    d.carry = v;
+                else
+                    return fail("unknown artifact effect " + effect);
+            }
+            c.items.push_back(d);
         } else if (key == "armor") {
             d.kind = ItemDef::Kind::Armor;
             if (!(s >> std::quoted(d.id) >> std::quoted(d.name) >> d.price >> d.weight >> d.protection >> d.wear))
@@ -91,7 +115,8 @@ bool saveItems(const ItemCatalog& c, const std::filesystem::path& file, std::str
     }
     out << "# Price list and weights (editor: Assets > Items). Weapons keep theirs in the .weapon files.\n"
         << "money_start " << c.moneyStart << '\n'
-        << "carry " << c.carryFree << ' ' << c.carryMax << '\n';
+        << "carry " << c.carryFree << ' ' << c.carryMax << '\n'
+        << "belt " << c.beltSlots << '\n';
     for (const ItemDef& d : c.items) {
         switch (d.kind) {
         case ItemDef::Kind::Medkit: out << "medkit " << std::quoted(d.name) << ' ' << d.price << ' ' << d.weight << '\n'; break;
@@ -102,9 +127,47 @@ bool saveItems(const ItemCatalog& c, const std::filesystem::path& file, std::str
             out << "armor " << std::quoted(d.id) << ' ' << std::quoted(d.name) << ' ' << d.price << ' ' << d.weight << ' ' << d.protection
                 << ' ' << d.wear << '\n';
             break;
+        case ItemDef::Kind::Artifact:
+            out << "artifact " << std::quoted(d.id) << ' ' << std::quoted(d.name) << ' ' << std::quoted(d.anomaly) << ' ' << d.price << ' '
+                << d.weight << ' ' << std::quoted(d.model) << ' ' << d.glow[0] << ' ' << d.glow[1] << ' ' << d.glow[2];
+            if (d.heal != 0.0f)
+                out << " heal " << d.heal;
+            if (d.rad != 0.0f)
+                out << " rad " << d.rad;
+            if (d.protection != 0.0f)
+                out << " armor " << d.protection;
+            if (d.carry != 0.0f)
+                out << " carry " << d.carry;
+            out << '\n';
+            break;
         }
     }
     return static_cast<bool>(out);
+}
+
+ArtifactEffects beltEffects(const ItemCatalog& catalog, const std::vector<std::string>& carried)
+{
+    ArtifactEffects e;
+    const std::size_t n = std::min(carried.size(), static_cast<std::size_t>(std::max(0, catalog.beltSlots)));
+    float pass = 1.0f; // armor shares multiply: two 20 % artifacts stop 36 %
+    for (std::size_t i = 0; i < n; ++i)
+        if (const ItemDef* d = catalog.find(ItemDef::Kind::Artifact, carried[i])) {
+            e.heal += d->heal;
+            e.rad += d->rad;
+            e.carry += d->carry;
+            pass *= 1.0f - std::clamp(d->protection, -1.0f, 0.95f);
+        }
+    e.armor = 1.0f - pass;
+    return e;
+}
+
+std::vector<const ItemDef*> artifactsFor(const ItemCatalog& catalog, std::string_view anomaly)
+{
+    std::vector<const ItemDef*> out;
+    for (const ItemDef& d : catalog.items)
+        if (d.kind == ItemDef::Kind::Artifact && d.anomaly == anomaly)
+            out.push_back(&d);
+    return out;
 }
 
 int buyPrice(int price, float markup, float condition)

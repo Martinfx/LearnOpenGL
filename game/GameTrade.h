@@ -14,12 +14,12 @@
 
 // Trading with a character whose entity has the property trade = 1 (E, or a dialog's `trade`
 // action). Its other properties: stock ("medkit 5; ammo 5.45x39 300; weapon weapons/smg.weapon 1;
-// armor jacket 1"), markup (what it asks over the price, 1.3), buy_rate (what it pays, 0.45)
+// armor jacket 1; artifact spring 1"), markup (what it asks over the price, 1.3), buy_rate (what it pays, 0.45)
 // and repair (1 = repairs weapons and armor). The game is paused; a click buys or sells.
 class GameTrade {
 public:
     struct Stock {
-        enum Kind { Medkit, Ammo, Weapon, Armor } kind;
+        enum Kind { Medkit, Ammo, Weapon, Armor, Artifact } kind;
         std::string id; // ammo type, .weapon path (relative to assets/), armor id
         int count = 0;
     };

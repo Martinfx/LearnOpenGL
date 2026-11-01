@@ -18,6 +18,7 @@ struct Inventory {
     int money = 0;              // roubles
     std::string armor;          // worn armor (id in assets/items.cfg), empty = none
     float armorCondition = 1.0f;
+    std::vector<std::string> artifacts; // ids in assets/items.cfg; the first `belt` of them work
 
     // Points every weapon's reserve at the stock of its ammo type (endless without a type).
     void link(std::vector<engine::Weapon>& weapons);

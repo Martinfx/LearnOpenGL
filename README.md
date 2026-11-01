@@ -183,6 +183,17 @@ zásahu a sama se opotřebí. Nad volným nákladem nejde sprint a hráč zpomal
 Úkoly mohou dávat `reward money <n>`. Konzole `trade <jméno>`, `money [n]`. Vše se ukládá s hrou včetně zboží
 obchodníků. V zóně obchoduje Hřiša v táboře.
 
+### Artefakty
+
+V anomáliích rostou artefakty (druhy v `assets/items.cfg`, editor Assets > Items and prices: v jakém druhu
+anomálie roste, cena, váha, model, barva záře a efekty). Každá anomálie má v Properties > Anomaly počet
+(Artifacts) a šanci (Artifact chance); na začátku levelu a po každé anomální bouři vyrostou nové na volných
+místech. Artefakt leží skrytý, detektor ART pípá tím rychleji, čím je blíž, a do 4,5 m se objeví a svítí.
+**E** ho sebere. První tři nesené (pás, `belt` v items.cfg) působí: léčí, přidávají nebo odčerpávají radiaci,
+zachytí část zásahů, přidají nosnost. Obchodníci je vykupují (a v `stock` mohou mít `artifact <id> <n>`).
+Modely: `python3 tools/make_artifacts.py`. Konzole `artifact <id>`, `artifact grow`. V zóně je anomální pole
+na nádraží mezi vagony.
+
 ### Anomální bouře
 
 Prostředí > Anomaly storm: jednou za 15–30 minut (nastavitelné) zazní nad zónou siréna, ambience a hudba

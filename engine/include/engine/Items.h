@@ -16,19 +16,31 @@ namespace engine {
 //   armor "jacket" "Kožená bunda" 1200 2.5 0.2 0.004
 //                                           id, name, price, weight, protection (share of damage
 //                                           taken off when new), wear (condition lost per hp it stops)
+//   belt 3                                  artifacts that work at once (the first ones carried)
+//   artifact "spring" "Pramínek" vent 3000 0.5 "models/artifacts/spring.gltf" 1 0.6 0.2 heal 0.4 rad 0.05
+//                                           id, name, anomaly kind it grows in, price, weight, model,
+//                                           glow colour, then effects on the belt: heal (hp/s),
+//                                           rad (rad/s, negative = draws the dose out), armor (share
+//                                           of damage stopped), carry (kg more load)
 struct ItemDef {
-    enum class Kind { Medkit, Ammo, Armor };
+    enum class Kind { Medkit, Ammo, Armor, Artifact };
     Kind kind = Kind::Medkit;
     std::string id, name;
     int price = 0;
     float weight = 0.0f;
-    float protection = 0.0f, wear = 0.0f; // armor
+    float protection = 0.0f, wear = 0.0f; // armor; artifacts: protection = share of damage stopped
+    // Artifacts
+    std::string anomaly; // AnomalyKindInfo::id of the anomalies it grows in
+    std::string model;   // relative to assets/
+    float glow[3] = {1.0f, 0.8f, 0.4f};
+    float heal = 0.0f, rad = 0.0f, carry = 0.0f;
     bool operator==(const ItemDef&) const = default;
 };
 
 struct ItemCatalog {
     int moneyStart = 500;
     float carryFree = 30.0f, carryMax = 50.0f;
+    int beltSlots = 3;
     std::vector<ItemDef> items;
     const ItemDef* find(ItemDef::Kind kind, std::string_view id = {}) const; // medkit: id ignored
     bool operator==(const ItemCatalog&) const = default;
@@ -37,6 +49,14 @@ struct ItemCatalog {
 ItemCatalog defaultItems();
 bool loadItems(ItemCatalog& catalog, const std::filesystem::path& file, std::string* error = nullptr);
 bool saveItems(const ItemCatalog& catalog, const std::filesystem::path& file, std::string* error = nullptr);
+
+// What the artifacts on the belt (the first beltSlots of `carried`, unknown ids skipped) do together.
+struct ArtifactEffects {
+    float heal = 0.0f, rad = 0.0f, armor = 0.0f, carry = 0.0f;
+};
+ArtifactEffects beltEffects(const ItemCatalog& catalog, const std::vector<std::string>& carried);
+// Artifact kinds that grow in an anomaly kind (by its id, "vent").
+std::vector<const ItemDef*> artifactsFor(const ItemCatalog& catalog, std::string_view anomaly);
 
 // Trade: what a trader asks (markup over the price, worn things cheaper) and pays the player.
 int buyPrice(int price, float markup, float condition = 1.0f);

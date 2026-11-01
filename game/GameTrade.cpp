@@ -28,8 +28,8 @@ std::vector<GameTrade::Stock> GameTrade::parseStock(const std::string& text)
         if (kind == "medkit") {
             st.kind = Stock::Medkit;
             st.id = "medkit";
-        } else if (kind == "ammo" || kind == "weapon" || kind == "armor") {
-            st.kind = kind == "ammo" ? Stock::Ammo : kind == "weapon" ? Stock::Weapon : Stock::Armor;
+        } else if (kind == "ammo" || kind == "weapon" || kind == "armor" || kind == "artifact") {
+            st.kind = kind == "ammo" ? Stock::Ammo : kind == "weapon" ? Stock::Weapon : kind == "armor" ? Stock::Armor : Stock::Artifact;
             if (!(s >> st.id))
                 continue;
         } else {
@@ -48,7 +48,7 @@ std::string GameTrade::formatStock(const std::vector<Stock>& stock)
     for (const Stock& s : stock) {
         if (!out.empty())
             out += "; ";
-        static const char* kinds[] = {"medkit", "ammo", "weapon", "armor"};
+        static const char* kinds[] = {"medkit", "ammo", "weapon", "armor", "artifact"};
         out += kinds[s.kind];
         if (s.kind != Stock::Medkit)
             out += ' ' + s.id;
@@ -120,6 +120,13 @@ std::vector<GameTrade::Row> GameTrade::rows(const Inventory& inv, const std::vec
                 r.enabled = false;
                 r.detail = "už máš";
             }
+        } else if (s.kind == Stock::Artifact) {
+            const engine::ItemDef* d = items.find(engine::ItemDef::Kind::Artifact, s.id);
+            if (!d)
+                continue;
+            r.label = d->name;
+            r.detail = "artefakt × " + std::to_string(s.count);
+            r.price = engine::buyPrice(d->price, markup_);
         } else {
             const engine::ItemDef* d = items.find(engine::ItemDef::Kind::Armor, s.id);
             if (!d)
@@ -173,6 +180,19 @@ std::vector<GameTrade::Row> GameTrade::rows(const Inventory& inv, const std::vec
         r.label = d->name;
         r.detail = "na sobě, stav " + percent(inv.armorCondition);
         r.price = engine::sellPrice(d->price, buyRate_, inv.armorCondition);
+        out.push_back(r);
+    }
+    for (std::size_t a = 0; a < inv.artifacts.size(); ++a) {
+        const engine::ItemDef* d = items.find(engine::ItemDef::Kind::Artifact, inv.artifacts[a]);
+        if (!d)
+            continue;
+        Row r;
+        r.action = 2;
+        r.key = "artifact";
+        r.index = static_cast<int>(a);
+        r.label = d->name;
+        r.detail = static_cast<int>(a) < items.beltSlots ? "artefakt, na pásu" : "artefakt";
+        r.price = engine::sellPrice(d->price, buyRate_);
         out.push_back(r);
     }
     // Services.
@@ -247,6 +267,9 @@ void GameTrade::click(glm::vec2 mouse, Inventory& inv, std::vector<engine::Weapo
                 if (!slot)
                     break;
                 s.count -= 1;
+            } else if (s.kind == Stock::Artifact) {
+                inv.artifacts.push_back(s.id);
+                s.count -= 1;
             } else {
                 if (const engine::ItemDef* old = inv.armor.empty() ? nullptr : items.find(engine::ItemDef::Kind::Armor, inv.armor)) {
                     inv.money += engine::sellPrice(old->price, buyRate_, inv.armorCondition); // the old one goes to the trader
@@ -292,6 +315,10 @@ void GameTrade::click(glm::vec2 mouse, Inventory& inv, std::vector<engine::Weapo
                 inv.medkits -= 1;
                 addStock(Stock::Medkit, "medkit", 1);
             }
+        } else if (r.key == "artifact" && r.index < static_cast<int>(inv.artifacts.size())) {
+            inv.money += r.price;
+            addStock(Stock::Artifact, inv.artifacts[static_cast<std::size_t>(r.index)], 1);
+            inv.artifacts.erase(inv.artifacts.begin() + r.index);
         } else if (r.key == "armor") {
             inv.money += r.price;
             addStock(Stock::Armor, inv.armor, 1);

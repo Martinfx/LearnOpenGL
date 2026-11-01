@@ -1079,6 +1079,32 @@ void testTradeAndWear()
               engine::jamProbability(ak, 0.4f) > 0.0f,
           "a new weapon never jams, worn ones more the worse");
     check(engine::wornSpreadScale(1.0f) == 1.0f && engine::wornSpreadScale(0.0f) > 2.0f, "worn weapons spread more");
+    // Artifacts: every anomaly kind that grows one has a kind, effects add up on the belt only.
+    for (const char* kind : {"crusher", "discharge", "vent", "acid", "rift"}) {
+        const auto kinds = engine::artifactsFor(items, kind);
+        check(!kinds.empty(), std::string("an artifact grows in ") + kind);
+        for (const engine::ItemDef* d : kinds)
+            check(std::filesystem::exists(std::filesystem::path(ENGINE_TEST_ASSETS) / d->model), "artifact model exists: " + d->model);
+    }
+    check(engine::artifactsFor(items, "radiation").empty(), "nothing grows in radiation");
+    const engine::ItemDef* spring = items.find(engine::ItemDef::Kind::Artifact, "spring");
+    const engine::ItemDef* knot = items.find(engine::ItemDef::Kind::Artifact, "knot");
+    check(spring && knot && spring->heal > 0.0f && knot->protection > 0.0f, "spring heals, knot protects");
+    {
+        engine::ItemCatalog belt = items;
+        belt.beltSlots = 2;
+        const auto e = engine::beltEffects(belt, {"knot", "knot", "spring"}); // the spring is in the backpack
+        check(std::abs(e.armor - (1.0f - (1.0f - knot->protection) * (1.0f - knot->protection))) < 1e-4f && e.heal == 0.0f &&
+                  std::abs(e.carry - 2.0f * knot->carry) < 1e-4f,
+              "belt: two knots stack their protection, the third artifact does nothing");
+        check(engine::beltEffects(belt, {"nope"}).armor == 0.0f, "unknown artifacts do nothing");
+    }
+    {
+        engine::Entity e;
+        engine::initAnomalyEntity(e, engine::AnomalyKind::Crusher);
+        const engine::AnomalySettings st = engine::anomalySettings(e);
+        check(st.get("artifacts") >= 1.0f && st.get("artifact_chance") > 0.0f, "anomalies grow one artifact by default");
+    }
 }
 
 void testQuestsAndDialogs()

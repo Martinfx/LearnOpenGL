@@ -100,8 +100,8 @@ private:
     QPlainTextEdit* rewards_ = nullptr;
 };
 
-// The item catalog (assets/items.cfg): start money, carry limits and every medkit, ammo type and
-// armor with its price (traders use it with their markup) and weight (load). Weapons keep their
+// The item catalog (assets/items.cfg): start money, carry limits, belt size and every medkit, ammo
+// type, armor and artifact with its price (traders use it with their markup) and weight (load). Weapons keep their
 // price and weight in their .weapon files (Weapons panel).
 class ItemsEditor : public StoryTab {
     Q_OBJECT
@@ -118,6 +118,7 @@ private:
     class QSpinBox* money_ = nullptr;
     class QDoubleSpinBox* carryFree_ = nullptr;
     class QDoubleSpinBox* carryMax_ = nullptr;
+    class QSpinBox* belt_ = nullptr;
     QTableWidget* table_ = nullptr;
 };
 

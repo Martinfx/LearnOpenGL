@@ -42,6 +42,14 @@ struct SaveGame {
     std::string armor;                  // worn armor id (assets/items.cfg), empty = none
     float armorCondition = 1.0f;
     std::vector<std::string> traders;   // trader stock lines: "<entity name>" "<stock>"
+    std::vector<std::string> artifacts; // carried artifact ids, belt first
+    struct LyingArtifact {
+        std::string id;
+        glm::vec3 position{0.0f};
+        int anomaly = -1;
+    };
+    bool artifactsSaved = false;        // the level's lying artifacts below were saved (else they grow anew)
+    std::vector<LyingArtifact> lyingArtifacts;
     float flashlightCharge = 1.0f;
     // Day/night cycle: time of day (< 0 = not saved, keep the level's), clock speed, cycle on.
     float timeOfDay = -1.0f;

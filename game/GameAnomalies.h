@@ -43,6 +43,7 @@ public:
     void resetDose() { dose_ = 0.0f; }
     void setDose(float rad) { dose_ = rad; } // loading a saved game
     bool empty() const { return field_.anomalies().empty(); }
+    const engine::AnomalyField& field() const { return field_; }
 
 private:
     struct Bolt {

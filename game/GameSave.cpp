@@ -93,6 +93,12 @@ bool SaveGame::write(const std::filesystem::path& file, std::string* error) cons
         body << "armor " << quote(armor) << ' ' << armorCondition << "\n";
     for (const std::string& t : traders)
         body << "trader " << t << "\n";
+    for (const std::string& a : artifacts)
+        body << "artifact_carried " << quote(a) << "\n";
+    if (artifactsSaved)
+        body << "artifacts_saved 1\n";
+    for (const LyingArtifact& a : lyingArtifacts)
+        body << "artifact_lying " << quote(a.id) << ' ' << a.position.x << ' ' << a.position.y << ' ' << a.position.z << ' ' << a.anomaly << "\n";
     body << "flashlight " << (flashlightOn ? 1 : 0) << ' ' << flashlightCharge << "\n";
     if (timeOfDay >= 0.0f)
         body << "time_of_day " << timeOfDay << ' ' << dayMinutes << ' ' << (timeEnabled ? 1 : 0) << "\n";
@@ -200,6 +206,15 @@ bool SaveGame::read(const std::filesystem::path& file, std::string* error)
         } else if (key == "armor" && unquote(ls, str)) {
             armor = str;
             ls >> armorCondition;
+        } else if (key == "artifact_carried" && unquote(ls, str)) {
+            artifacts.push_back(str);
+        } else if (key == "artifacts_saved") {
+            artifactsSaved = true;
+        } else if (key == "artifact_lying" && unquote(ls, str)) {
+            LyingArtifact a;
+            a.id = str;
+            ls >> a.position.x >> a.position.y >> a.position.z >> a.anomaly;
+            lyingArtifacts.push_back(a);
         } else if (key == "trader") {
             std::string rest;
             std::getline(ls >> std::ws, rest);

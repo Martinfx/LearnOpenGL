@@ -29,6 +29,7 @@
 #include "GameConsole.h"
 #include "GameDialog.h"
 #include "GameTrade.h"
+#include "GameArtifacts.h"
 #include "GameHud.h"
 #include "GameMenu.h"
 #include "GameSave.h"
@@ -100,6 +101,7 @@ struct Carry {
     std::vector<float> condition;                   // weapon wear, parallel to weaponFiles
     std::string armor;
     float armorCondition = 1.0f;
+    std::vector<std::string> artifacts;
 };
 
 // Attribution required by CC-BY assets: print the CREDITS.md rows that name the
@@ -837,6 +839,8 @@ int main(int argc, char** argv)
     float stormHurtTimer = 0.0f;
     std::string talkRequest; // console `talk <name>`: starts a talk with that character
     std::string tradeNameRequest; // console `trade <name>`: opens that character's trade
+    std::function<void()> growArtifacts; // set once the artifacts exist (below)
+    std::function<int()> artifactsLying;
     auto stormPhaseChanged = [&](engine::AnomalyStorm::Phase phase) {
         using P = engine::AnomalyStorm::Phase;
         const engine::AnomalyStormSettings& ss = scene.environment.anomalyStorm;
@@ -851,6 +855,8 @@ int main(int argc, char** argv)
             weather.strikeNow(350.0f);
         } else if (phase == P::Fading) {
             hud.notify("Bouře odeznívá");
+        } else if (phase == P::Calm && growArtifacts) {
+            growArtifacts(); // the storm leaves new artifacts in the anomalies
         }
         LOG_INFO("game", "Anomaly storm: %s", engine::stormPhaseName(phase));
     };
@@ -911,6 +917,16 @@ int main(int argc, char** argv)
     GameAnomalies anomalies;
     anomalies.init(std::filesystem::path(argv[0]).parent_path() / "assets", audio);
     anomalies.startLevel(scene);
+    // Artifacts grow in the anomalies (kinds in assets/items.cfg); a saved game replaces them.
+    GameArtifacts artifacts;
+    artifacts.init(std::filesystem::path(argv[0]).parent_path() / "assets", audio);
+    artifacts.startLevel(anomalies.field(), items, physics, true);
+    growArtifacts = [&] {
+        if (const int n = artifacts.grow(anomalies.field(), items, physics))
+            LOG_INFO("game", "Anomaly storm left %d new artifact(s)", n);
+    };
+    artifactsLying = [&] { return static_cast<int>(artifacts.lying().size()); };
+    int artifactTarget = -1; // revealed artifact in reach (E picks it up)
     // Flashlight (F), settings from the level's player.
     Flashlight flashlight;
     flashlight.reset(scene.player);
@@ -1133,6 +1149,22 @@ int main(int argc, char** argv)
                 name += (name.empty() ? "" : " ") + w;
             tradeNameRequest = name;
             return engine::ConsoleResult{!name.empty(), "trade " + name};
+        });
+        cvars.addCommand("artifact", "artifact <id>: gives that artifact (assets/items.cfg) | artifact grow: grows new ones in the anomalies now | artifact: lists the lying ones",
+                         [&](const std::vector<std::string>& a) {
+            if (a.empty()) {
+                std::string out = std::to_string(artifactsLying ? artifactsLying() : 0) + " lying";
+                return engine::ConsoleResult{true, out};
+            }
+            if (a[0] == "grow") {
+                if (growArtifacts)
+                    growArtifacts();
+                return engine::ConsoleResult{true, "grown"};
+            }
+            if (!items.find(engine::ItemDef::Kind::Artifact, a[0]))
+                return engine::ConsoleResult{false, "no artifact " + a[0]};
+            inventory.artifacts.push_back(a[0]);
+            return engine::ConsoleResult{true, "artifact " + a[0]};
         });
         cvars.addCommand("money", "money [n]: shows or sets the player's roubles", [&](const std::vector<std::string>& a) {
             if (!a.empty())
@@ -1385,6 +1417,10 @@ int main(int argc, char** argv)
             save.weaponCondition.push_back(w.condition);
         save.armor = inventory.armor;
         save.armorCondition = inventory.armorCondition;
+        save.artifacts = inventory.artifacts;
+        save.artifactsSaved = true;
+        for (const GameArtifacts::Lying& l : artifacts.lying())
+            save.lyingArtifacts.push_back({l.id, l.position, l.anomaly});
         for (const engine::Entity& e : scene.entities) // traders' goods as left after trading
             if (const auto t = e.properties.find("trade"); t != e.properties.end() && std::atof(t->second.c_str()) >= 0.5)
                 if (const auto st = e.properties.find("stock"); st != e.properties.end())
@@ -1453,6 +1489,13 @@ int main(int argc, char** argv)
             weapons[i].condition = loadFrom->weaponCondition[i];
         inventory.armor = loadFrom->armor;
         inventory.armorCondition = loadFrom->armorCondition;
+        inventory.artifacts = loadFrom->artifacts;
+        if (loadFrom->artifactsSaved) {
+            std::vector<GameArtifacts::Lying> lying;
+            for (const SaveGame::LyingArtifact& a : loadFrom->lyingArtifacts)
+                lying.push_back({a.id, a.position, a.anomaly, static_cast<float>(lying.size()) * 1.7f});
+            artifacts.setLying(std::move(lying));
+        }
         for (const std::string& line : loadFrom->traders) {
             std::istringstream ls(line);
             std::string name, stock;
@@ -1485,6 +1528,7 @@ int main(int argc, char** argv)
             weapons[i].condition = carry->condition[i];
         inventory.armor = carry->armor;
         inventory.armorCondition = carry->armorCondition;
+        inventory.artifacts = carry->artifacts;
         if (carry->weapon < weapons.size()) {
             current = next = carry->weapon;
             weapons[current].drawn();
@@ -1797,6 +1841,19 @@ int main(int argc, char** argv)
                 }
             }
             const bool use = captured && !console.open() && keyDown(window, boundKey("in_use"));
+            // An artifact in reach when nobody to talk to is: E picks it up.
+            artifactTarget = useTarget < 0 && captured && !mapOpen && !talk.active() && !trade.active() && scripts.playerHealth() > 0.0f
+                                 ? artifacts.pickable(camera.position, camera.forward())
+                                 : -1;
+            if (use && !useHeld && artifactTarget >= 0) {
+                const std::string id = artifacts.take(artifactTarget);
+                inventory.artifacts.push_back(id);
+                const bool onBelt = static_cast<int>(inventory.artifacts.size()) <= items.beltSlots;
+                hud.notify("Artefakt: " + artifacts.name(id) + (onBelt ? " (na pásu)" : " (v batohu)"));
+                audio.playAsset("sounds/items/pickup_medkit.sound", nullptr, 0.8f);
+                audio.playAsset("sounds/anomalies/artifact_ping.sound", nullptr, 0.6f);
+                artifactTarget = -1;
+            }
             bool forced = false;
             if (!talkRequest.empty() && !talk.active()) { // console `talk`
                 const auto found = engine::findEntitiesByName(scene, talkRequest);
@@ -2180,9 +2237,17 @@ int main(int argc, char** argv)
             if (const engine::ItemDef* armor = inventory.armor.empty() ? nullptr : items.find(engine::ItemDef::Kind::Armor, inventory.armor);
                 armor && scripts.playerHealth() < healthBefore)
                 scripts.setPlayerHealth(healthBefore - engine::armorAbsorb(*armor, inventory.armorCondition, healthBefore - scripts.playerHealth()));
+            // Artifacts on the belt: stop a share of what got through, heal or hurt, add or draw out radiation.
+            const engine::ArtifactEffects belt = engine::beltEffects(items, inventory.artifacts);
+            if (belt.armor > 0.0f && scripts.playerHealth() < healthBefore)
+                scripts.setPlayerHealth(healthBefore - (healthBefore - scripts.playerHealth()) * (1.0f - belt.armor));
+            if (belt.heal != 0.0f && scripts.playerHealth() > 0.0f && !(belt.heal < 0.0f && cvGod.boolean()))
+                scripts.setPlayerHealth(std::clamp(scripts.playerHealth() + belt.heal * dt, 0.5f, std::max(scripts.playerHealth(), scene.player.maxHealth)));
+            if (belt.rad != 0.0f && scripts.playerHealth() > 0.0f)
+                anomalies.setDose(std::max(0.0f, anomalies.dose() + belt.rad * dt));
             {
                 // Load: over the free weight no sprint and slower, near the maximum a crawl.
-                const float kg = carriedWeight(inventory, weapons, items);
+                const float kg = carriedWeight(inventory, weapons, items) - belt.carry; // artifacts can lighten the load
                 const float k = engine::loadSpeedFactor(items, kg);
                 player.settings.walkSpeed = scene.player.walkSpeed * k;
                 player.settings.sprintSpeed = engine::loadAllowsSprint(items, kg) ? scene.player.sprintSpeed : player.settings.walkSpeed;
@@ -2270,6 +2335,7 @@ int main(int argc, char** argv)
                 weatherDirector.update(scene.environment, sim);
                 weather.update(sim, scene, camera.position, sheltered, audio);
                 anomalies.update(sim, physics, camera.position);
+                artifacts.update(sim, camera.position);
                 flashlight.update(sim, now, camera);
             }, {}, true);
             {
@@ -2328,6 +2394,7 @@ int main(int argc, char** argv)
             engine::OverlayPass effectsOverlay; // muzzle flashes, drawn with the weapon below
             effects.fill(view, view.view, effectsOverlay);
             anomalies.fill(view, view.view);
+            artifacts.fill(view, scripts.time());
             flashlight.fill(view);
             addCharacterFlashlights(scene, view);
             // Debug lines from code and scripts (DebugDraw), with their texts drawn in the HUD below.
@@ -2410,6 +2477,11 @@ int main(int argc, char** argv)
                        << weapons[current].settings.name << " " << static_cast<int>(std::lround(weapons[current].condition * 100.0f)) << " %";
                     if (const engine::ItemDef* ar = inventory.armor.empty() ? nullptr : items.find(engine::ItemDef::Kind::Armor, inventory.armor))
                         st << "   " << ar->name << " " << static_cast<int>(std::lround(inventory.armorCondition * 100.0f)) << " %";
+                    if (!inventory.artifacts.empty()) {
+                        st << "   Pás:";
+                        for (std::size_t a = 0; a < inventory.artifacts.size(); ++a)
+                            st << (a == static_cast<std::size_t>(std::max(0, items.beltSlots)) ? "  | batoh:" : "") << " " << artifacts.name(inventory.artifacts[a]);
+                    }
                     const glm::vec4 col = kg > items.carryFree ? glm::vec4(1.0f, 0.45f, 0.3f, 1.0f) : glm::vec4(0.95f, 0.8f, 0.45f, 1.0f);
                     ui.text(st.str(), {th, static_cast<float>(height) - th * 2.0f}, th, col, true);
                 } else
@@ -2419,6 +2491,7 @@ int main(int argc, char** argv)
             menu.setCanSave(scripts.playerHealth() > 0.0f);
             if (!mapOpen && !menu.active()) {
                 anomalies.drawHud(ui, width, height);
+                artifacts.drawHud(ui, width, height);
                 const engine::Weapon& w = weapons[current];
                 HudState hs;
                 hs.health = scripts.playerHealth();
@@ -2436,6 +2509,15 @@ int main(int argc, char** argv)
                     trade.draw(ui, width, height, inventory, weapons, current, items);
                 } else if (talk.active()) {
                     talk.draw(ui, width, height, talkHover);
+                } else if (artifactTarget >= 0 && artifactTarget < static_cast<int>(artifacts.lying().size())) {
+                    const float H = static_cast<float>(height), size = std::round(std::clamp(H * 0.022f, 12.0f, 26.0f));
+                    const engine::CVar* key = cvars.find("in_use");
+                    const std::string line = (key ? key->value : std::string("E")) + "   Sebrat: " +
+                                             artifacts.name(artifacts.lying()[static_cast<std::size_t>(artifactTarget)].id);
+                    const float w = ui.textWidth(line, size, true);
+                    const glm::vec2 at(std::round((static_cast<float>(width) - w) * 0.5f), std::round(H * 0.6f));
+                    ui.rect(at - glm::vec2(size * 0.6f, size * 0.3f), {w + size * 1.2f, size * 1.6f}, {0.05f, 0.055f, 0.045f, 0.7f});
+                    ui.text(line, at, size, {0.6f, 0.9f, 1.0f, 1.0f}, true);
                 } else if (useTarget >= 0) { // "E  Mluvit: Sidor"
                     const float H = static_cast<float>(height), size = std::round(std::clamp(H * 0.022f, 12.0f, 26.0f));
                     const engine::CVar* key = cvars.find("in_use");
@@ -2609,6 +2691,7 @@ int main(int argc, char** argv)
             carryOut.condition.push_back(w.condition);
         carryOut.armor = inventory.armor;
         carryOut.armorCondition = inventory.armorCondition;
+        carryOut.artifacts = inventory.artifacts;
     }
     return exitRequest;
     };

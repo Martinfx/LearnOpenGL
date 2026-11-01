@@ -620,20 +620,31 @@ ItemsEditor::ItemsEditor(QWidget* parent)
     form->addRow(tr("Start money"), money_);
     form->addRow(tr("Free load"), carryFree_);
     form->addRow(tr("Maximum load"), carryMax_);
-    table_ = new QTableWidget(0, 7, this);
-    table_->setHorizontalHeaderLabels({tr("Kind"), tr("Id"), tr("Name"), tr("Price (RU)"), tr("Weight (kg)"), tr("Protection"), tr("Wear")});
+    table_ = new QTableWidget(0, 11, this);
+    table_->setHorizontalHeaderLabels({tr("Kind"), tr("Id"), tr("Name"), tr("Price (RU)"), tr("Weight (kg)"), tr("Protection"), tr("Wear"),
+                                       tr("Grows in"), tr("Model"), tr("Glow (r g b)"), tr("Heal / rad / carry")});
     table_->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
-    table_->setToolTip(tr("Kind: medkit, ammo (id = ammo type of the weapons, price and weight per round) or armor "
-                          "(protection = share of damage it stops when new, wear = condition lost per hp stopped)"));
+    table_->setToolTip(tr("Kind: medkit, ammo (id = ammo type of the weapons, price and weight per round), armor "
+                          "(protection = share of damage it stops when new, wear = condition lost per hp stopped) or artifact "
+                          "(grows in = anomaly kind: crusher, discharge, vent, acid, rift; model relative to assets/; "
+                          "protection = share of damage stopped on the belt; heal hp/s, rad rad/s (negative draws the dose out), carry kg)"));
     layout->addWidget(table_, 1);
     auto* buttons = new QHBoxLayout();
     auto* add = new QPushButton(tr("+ Item"), this);
     auto* remove = new QPushButton(tr("Delete item"), this);
+    auto* belt = new QSpinBox(this);
+    belt->setRange(0, 10);
+    belt->setPrefix(tr("Belt: "));
+    belt->setSuffix(tr(" artifacts"));
+    belt->setToolTip(tr("How many carried artifacts work at once (the first ones picked up)"));
+    belt_ = belt;
+    buttons->addWidget(belt);
     buttons->addWidget(add);
     buttons->addWidget(remove);
     buttons->addStretch();
     layout->addLayout(buttons);
     connect(money_, &QSpinBox::valueChanged, this, &ItemsEditor::edited);
+    connect(belt_, &QSpinBox::valueChanged, this, &ItemsEditor::edited);
     connect(carryFree_, &QDoubleSpinBox::valueChanged, this, &ItemsEditor::edited);
     connect(carryMax_, &QDoubleSpinBox::valueChanged, this, &ItemsEditor::edited);
     connect(table_, &QTableWidget::itemChanged, this, &ItemsEditor::edited);
@@ -689,7 +700,7 @@ bool ItemsEditor::save(QString* error)
 namespace {
 const char* kindName(engine::ItemDef::Kind k)
 {
-    return k == engine::ItemDef::Kind::Medkit ? "medkit" : k == engine::ItemDef::Kind::Ammo ? "ammo" : "armor";
+    return k == engine::ItemDef::Kind::Medkit ? "medkit" : k == engine::ItemDef::Kind::Ammo ? "ammo" : k == engine::ItemDef::Kind::Artifact ? "artifact" : "armor";
 }
 } // namespace
 
@@ -699,13 +710,17 @@ void ItemsEditor::refresh()
     money_->setValue(items_.moneyStart);
     carryFree_->setValue(items_.carryFree);
     carryMax_->setValue(items_.carryMax);
+    belt_->setValue(items_.beltSlots);
     table_->setRowCount(static_cast<int>(items_.items.size()));
     for (int r = 0; r < static_cast<int>(items_.items.size()); ++r) {
         const engine::ItemDef& d = items_.items[static_cast<std::size_t>(r)];
-        const bool armor = d.kind == engine::ItemDef::Kind::Armor;
+        const bool armor = d.kind == engine::ItemDef::Kind::Armor, art = d.kind == engine::ItemDef::Kind::Artifact;
         const QStringList cells = {kindName(d.kind), QString::fromStdString(d.id), QString::fromStdString(d.name), QString::number(d.price),
-                                   QString::number(d.weight), armor ? QString::number(d.protection) : QString(),
-                                   armor ? QString::number(d.wear) : QString()};
+                                   QString::number(d.weight), armor || art ? QString::number(d.protection) : QString(),
+                                   armor ? QString::number(d.wear) : QString(), art ? QString::fromStdString(d.anomaly) : QString(),
+                                   art ? QString::fromStdString(d.model) : QString(),
+                                   art ? QStringLiteral("%1 %2 %3").arg(d.glow[0]).arg(d.glow[1]).arg(d.glow[2]) : QString(),
+                                   art ? QStringLiteral("%1 %2 %3").arg(d.heal).arg(d.rad).arg(d.carry) : QString()};
         for (int c = 0; c < cells.size(); ++c)
             table_->setItem(r, c, new QTableWidgetItem(cells[c]));
     }
@@ -719,12 +734,16 @@ void ItemsEditor::edited()
     items_.moneyStart = money_->value();
     items_.carryFree = static_cast<float>(carryFree_->value());
     items_.carryMax = static_cast<float>(std::max(carryMax_->value(), carryFree_->value() + 1.0));
+    items_.beltSlots = belt_->value();
     std::vector<engine::ItemDef> list;
     for (int r = 0; r < table_->rowCount(); ++r) {
         auto text = [&](int c) { return table_->item(r, c) ? table_->item(r, c)->text().trimmed() : QString(); };
         engine::ItemDef d;
         const QString kind = text(0).toLower();
-        d.kind = kind == "medkit" ? engine::ItemDef::Kind::Medkit : kind == "ammo" ? engine::ItemDef::Kind::Ammo : engine::ItemDef::Kind::Armor;
+        d.kind = kind == "medkit"     ? engine::ItemDef::Kind::Medkit
+                 : kind == "ammo"     ? engine::ItemDef::Kind::Ammo
+                 : kind == "artifact" ? engine::ItemDef::Kind::Artifact
+                                      : engine::ItemDef::Kind::Armor;
         d.id = d.kind == engine::ItemDef::Kind::Medkit ? std::string("medkit") : text(1).toStdString();
         d.name = text(2).toStdString();
         d.price = std::max(0, text(3).toInt());
@@ -732,6 +751,18 @@ void ItemsEditor::edited()
         if (d.kind == engine::ItemDef::Kind::Armor) {
             d.protection = std::clamp(text(5).toFloat(), 0.0f, 0.95f);
             d.wear = std::max(0.0f, text(6).toFloat());
+        } else if (d.kind == engine::ItemDef::Kind::Artifact) {
+            d.protection = std::clamp(text(5).toFloat(), -1.0f, 0.95f);
+            d.anomaly = text(7).toLower().toStdString();
+            d.model = text(8).toStdString();
+            const QStringList glow = text(9).split(' ', Qt::SkipEmptyParts), fx = text(10).split(' ', Qt::SkipEmptyParts);
+            for (int k = 0; k < 3; ++k) {
+                if (k < glow.size())
+                    d.glow[k] = std::clamp(glow[k].toFloat(), 0.0f, 4.0f);
+            }
+            d.heal = fx.size() > 0 ? fx[0].toFloat() : 0.0f;
+            d.rad = fx.size() > 1 ? fx[1].toFloat() : 0.0f;
+            d.carry = fx.size() > 2 ? fx[2].toFloat() : 0.0f;
         }
         list.push_back(std::move(d));
     }

@@ -19,6 +19,9 @@ float carriedWeight(const Inventory& inventory, const std::vector<engine::Weapon
     if (!inventory.armor.empty())
         if (const engine::ItemDef* d = items.find(engine::ItemDef::Kind::Armor, inventory.armor))
             kg += d->weight;
+    for (const std::string& a : inventory.artifacts)
+        if (const engine::ItemDef* d = items.find(engine::ItemDef::Kind::Artifact, a))
+            kg += d->weight;
     return kg;
 }
 

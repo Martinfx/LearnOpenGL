@@ -50,6 +50,8 @@ const std::vector<AnomalyParam>& paramsFor(AnomalyKind kind)
             P{"throw", 10.0f, 0.0f, 40.0f, 0.5f, " m/s", "Fling speed", "How hard the crush throws things out"},
             P{"cooldown", 3.0f, 0.0f, 60.0f, 0.5f, " s", "Cooldown", "Seconds before it can crush again"},
             P{"detect", 6.0f, 0.0f, 50.0f, 0.5f, " m", "Detector range", "Distance from the field edge where the detector starts beeping"},
+            P{"artifacts", 1.0f, 0.0f, 5.0f, 1.0f, "", "Artifacts", "At most this many artifacts grow in the field (kinds in assets/items.cfg); after every anomaly storm it may grow new ones"},
+            P{"artifact_chance", 0.6f, 0.0f, 1.0f, 0.05f, "", "Artifact chance", "Chance per free place at the level start and after each storm"},
         },
         {   // Discharge
             P{"damage", 35.0f, 0.0f, 1000.0f, 5.0f, "", "Strike damage", "Hit points per lightning strike"},
@@ -57,6 +59,8 @@ const std::vector<AnomalyParam>& paramsFor(AnomalyKind kind)
             P{"cooldown", 2.5f, 0.0f, 60.0f, 0.5f, " s", "Recharge", "Seconds before the next strike"},
             P{"idle", 4.0f, 0.0f, 60.0f, 0.5f, " s", "Idle crackle", "Average seconds between small idle sparks (0 = none)"},
             P{"detect", 5.0f, 0.0f, 50.0f, 0.5f, " m", "Detector range", "Distance from the field edge where the detector starts beeping"},
+            P{"artifacts", 1.0f, 0.0f, 5.0f, 1.0f, "", "Artifacts", "At most this many artifacts grow in the field (kinds in assets/items.cfg); after every anomaly storm it may grow new ones"},
+            P{"artifact_chance", 0.6f, 0.0f, 1.0f, 0.05f, "", "Artifact chance", "Chance per free place at the level start and after each storm"},
         },
         {   // Vent
             P{"damage", 40.0f, 0.0f, 1000.0f, 5.0f, " /s", "Fire damage", "Hit points per second inside the column"},
@@ -66,18 +70,24 @@ const std::vector<AnomalyParam>& paramsFor(AnomalyKind kind)
             P{"lift", 3.0f, 0.0f, 20.0f, 0.5f, " m/s", "Updraft", "Pushes things up while it burns"},
             P{"on_step", 1.0f, 0.0f, 1.0f, 1.0f, "", "Erupts when entered", "Something in the field sets it off", true},
             P{"detect", 5.0f, 0.0f, 50.0f, 0.5f, " m", "Detector range", "Distance from the field edge where the detector starts beeping"},
+            P{"artifacts", 1.0f, 0.0f, 5.0f, 1.0f, "", "Artifacts", "At most this many artifacts grow in the field (kinds in assets/items.cfg); after every anomaly storm it may grow new ones"},
+            P{"artifact_chance", 0.6f, 0.0f, 1.0f, 0.05f, "", "Artifact chance", "Chance per free place at the level start and after each storm"},
         },
         {   // Acid
             P{"damage", 8.0f, 0.0f, 1000.0f, 1.0f, " /s", "Burn damage", "Hit points per second while in the pool"},
             P{"slow", 0.45f, 0.0f, 0.95f, 0.05f, "", "Slow down", "Part of the walking speed the sludge takes away"},
             P{"depth", 0.6f, 0.05f, 5.0f, 0.05f, " m", "Depth", "Feet below this height above the entity are in the pool"},
             P{"detect", 4.0f, 0.0f, 50.0f, 0.5f, " m", "Detector range", "Distance from the field edge where the detector starts beeping"},
+            P{"artifacts", 1.0f, 0.0f, 5.0f, 1.0f, "", "Artifacts", "At most this many artifacts grow in the field (kinds in assets/items.cfg); after every anomaly storm it may grow new ones"},
+            P{"artifact_chance", 0.6f, 0.0f, 1.0f, 0.05f, "", "Artifact chance", "Chance per free place at the level start and after each storm"},
         },
         {   // Rift
             P{"jump", 10.0f, 1.0f, 200.0f, 1.0f, " m", "Throw distance", "How far it throws without a link"},
             P{"damage", 5.0f, 0.0f, 1000.0f, 1.0f, "", "Damage", "Hit points per throw"},
             P{"cooldown", 4.0f, 0.0f, 60.0f, 0.5f, " s", "Cooldown", "Seconds before it throws again"},
             P{"detect", 4.0f, 0.0f, 50.0f, 0.5f, " m", "Detector range", "Distance from the field edge where the detector starts beeping"},
+            P{"artifacts", 1.0f, 0.0f, 5.0f, 1.0f, "", "Artifacts", "At most this many artifacts grow in the field (kinds in assets/items.cfg); after every anomaly storm it may grow new ones"},
+            P{"artifact_chance", 0.6f, 0.0f, 1.0f, 0.05f, "", "Artifact chance", "Chance per free place at the level start and after each storm"},
         },
         {   // Radiation
             P{"intensity", 25.0f, 0.0f, 1000.0f, 1.0f, " rad/s", "Intensity", "Dose rate in the middle of a hotspot, or anywhere in an area"},

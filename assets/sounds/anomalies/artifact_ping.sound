@@ -1,0 +1,11 @@
+# Artifact detector ping (faster and higher when closer to an artifact; generated, CC0)
+file "artifact_ping.ogg"
+volume 0.6
+pitch 1 1
+distance 2 40
+rolloff 1
+loop 0
+stream 0
+spatial 0
+group ui
+max_instances 3
