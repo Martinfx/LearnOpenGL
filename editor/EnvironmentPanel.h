@@ -42,6 +42,11 @@ private:
     void refreshTimeOfDay();
     void setHourPreview(float hour); // slider label + viewport, no undo step
     void readWeatherTable();
+    // Weather cycle (Environment::weather): kinds of weather changing over time.
+    void buildWeatherCycle(class QFormLayout* form);
+    void refreshWeatherCycle();
+    void readCycleTable();
+    void previewKind(int index); // -1 = off; viewport only, nothing to save
     void applyPreset(int index);
     void changed();
 
@@ -68,4 +73,9 @@ private:
     std::vector<std::pair<QDoubleSpinBox*, float engine::TimeOfDay::*>> timeFloats_;
     class QSpinBox* dayOfYear_ = nullptr;
     class QTableWidget* weather_ = nullptr;
+    class QCheckBox* cycleEnabled_ = nullptr;
+    std::vector<std::pair<QDoubleSpinBox*, float engine::WeatherCycle::*>> cycleFloats_;
+    QComboBox* cycleStart_ = nullptr;
+    QComboBox* cyclePreview_ = nullptr;
+    class QTableWidget* kinds_ = nullptr;
 };

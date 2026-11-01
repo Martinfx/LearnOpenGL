@@ -154,6 +154,16 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
             out << "weather_key " << k.hour << ' ' << k.cloudCover << ' ' << k.fogDensity << ' ' << k.rain << ' ' << k.wind << ' '
                 << k.exposure << ' ' << k.storm << '\n';
     }
+    {
+        const WeatherCycle& w = scene.environment.weather;
+        if (w != WeatherCycle{}) {
+            out << "weather_cycle " << (w.enabled ? 1 : 0) << ' ' << w.minMinutes << ' ' << w.maxMinutes << ' ' << w.transitionMinutes
+                << ' ' << std::quoted(w.start) << '\n';
+            for (const WeatherPreset& p : w.presets)
+                out << "weather_preset " << std::quoted(p.name) << ' ' << p.cloudCover << ' ' << p.fogDensity << ' ' << p.rain << ' '
+                    << p.wind << ' ' << p.storm << ' ' << p.exposure << ' ' << p.chance << '\n';
+        }
+    }
     if (!scene.map.image.empty())
         out << "map_image " << std::quoted(relative(scene.map.image)) << '\n';
     if (scene.map.size > 0.0f)
@@ -534,6 +544,19 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                 k.storm = 0.0f;
             if (ok)
                 result.environment.time.keys.push_back(k);
+        } else if (key == "weather_cycle") {
+            WeatherCycle& w = result.environment.weather;
+            int enabled = 0;
+            ok = static_cast<bool>(ls >> enabled >> w.minMinutes >> w.maxMinutes >> w.transitionMinutes);
+            w.enabled = enabled != 0;
+            if (ok && !(ls >> std::quoted(w.start)))
+                w.start.clear();
+        } else if (key == "weather_preset") {
+            WeatherPreset p;
+            ok = static_cast<bool>(ls >> std::quoted(p.name) >> p.cloudCover >> p.fogDensity >> p.rain >> p.wind >> p.storm >> p.exposure >>
+                                   p.chance);
+            if (ok)
+                result.environment.weather.presets.push_back(p);
         } else if (key == "thunder_sound") {
             std::string path;
             ok = static_cast<bool>(ls >> std::quoted(path));

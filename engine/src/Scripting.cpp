@@ -607,6 +607,13 @@ void ScriptSystem::Impl::bindApi()
             t.dayMinutes = std::max(0.0f, *dayMinutes);
         t.enabled = true;
     });
+    // Weather kinds (Environment > Weather cycle): game.set_weather("Storm" [, seconds]),
+    // game.weather() -> the kind now ("" = the level's own weather).
+    game.set_function("set_weather", [this](const std::string& name, sol::optional<float> seconds) {
+        scene.environment.weatherNow.request = name;
+        scene.environment.weatherNow.requestSeconds = seconds ? std::max(0.0f, *seconds) : -1.0f;
+    });
+    game.set_function("weather", [this] { return scene.environment.weatherNow.current; });
     game.set_function("lightning", [this](sol::optional<float> distance) {
         if (lightning)
             lightning(distance.value_or(600.0f));

@@ -41,6 +41,8 @@ struct SaveGame {
     float dayMinutes = 0.0f;
     bool timeEnabled = false;
     float wetness = 0.0f;         // how wet the ground is (dries over minutes)
+    std::string weather;          // weather kind now (Environment > Weather cycle), empty = none
+    float weatherHold = 0.0f;     // s until the cycle changes it
     std::vector<engine::ScriptSystem::EntityState> entities;
     std::vector<engine::ScriptSystem::PendingInput> pendingInputs; // entity I/O waiting for its delay
 

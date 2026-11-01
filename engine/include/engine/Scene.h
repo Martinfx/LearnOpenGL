@@ -390,6 +390,9 @@ struct Environment {
     std::filesystem::path ambience;
     // Day/night cycle (engine/TimeOfDay.h); off = static sun (Scene::sunDirection).
     TimeOfDay time;
+    // Weather changing over time (clear, fog, rain, storm...), engine/TimeOfDay.h.
+    WeatherCycle weather;
+    WeatherNow weatherNow; // runtime
 };
 
 // Folder in the scene hierarchy (no geometry), e.g. "Building A" or "Enemies".

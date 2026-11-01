@@ -264,6 +264,8 @@ EnvironmentPanel::EnvironmentPanel(engine::Scene* scene, QWidget* parent)
             [soundEdited](const QString& p) { soundEdited(&engine::Environment::windSound, p); });
     connect(thunderSound_, &SoundPicker::pathChanged, this,
             [soundEdited](const QString& p) { soundEdited(&engine::Environment::thunderSound, p); });
+    section(tr("Weather cycle"));
+    buildWeatherCycle(form);
     section(tr("Sound"));
     reverb_ = new QComboBox(this);
     for (const std::string& name : engine::reverbPresetNames())
@@ -375,6 +377,7 @@ void EnvironmentPanel::refresh()
     reverb_->setCurrentText(QString::fromStdString(scene_->environment.reverb));
     ambience_->setPath(QString::fromStdU16String(scene_->environment.ambience.u16string()));
     refreshTimeOfDay();
+    refreshWeatherCycle();
     updating_ = false;
 }
 
@@ -615,3 +618,187 @@ void EnvironmentPanel::refreshTimeOfDay()
             weather_->setItem(r, c, new QTableWidgetItem(QString::number(static_cast<double>(values[c]), 'g', 4)));
     }
 }
+
+// ---------------------------------------------------------------------------
+// Weather cycle: kinds of weather (clear, fog, rain, storm...) that follow each other.
+
+namespace {
+constexpr int kKindColumns = 8;
+}
+
+void EnvironmentPanel::buildWeatherCycle(QFormLayout* form)
+{
+    cycleEnabled_ = new QCheckBox(tr("Change the weather over time"), this);
+    cycleEnabled_->setToolTip(tr("In the game each kind of weather lasts a while, then blends into another one picked by chance. "
+                                 "Scripts change it with game.set_weather(\"Storm\", seconds); console: weather Fog 30"));
+    form->addRow(QString(), cycleEnabled_);
+    connect(cycleEnabled_, &QCheckBox::toggled, this, [this](bool on) {
+        if (updating_)
+            return;
+        scene_->environment.weather.enabled = on;
+        changed();
+    });
+    using C = engine::WeatherCycle;
+    auto addCycle = [&](const QString& label, float C::*member, double min, double max, double step, const QString& tip) {
+        auto* spin = new QDoubleSpinBox(this);
+        spin->setRange(min, max);
+        spin->setSingleStep(step);
+        spin->setDecimals(1);
+        spin->setSuffix(tr(" min"));
+        spin->setToolTip(tip);
+        spin->setKeyboardTracking(false);
+        form->addRow(label, spin);
+        connect(spin, &QDoubleSpinBox::valueChanged, this, [this, member](double v) {
+            if (updating_)
+                return;
+            scene_->environment.weather.*member = static_cast<float>(v);
+            changed();
+        });
+        cycleFloats_.emplace_back(spin, member);
+    };
+    addCycle(tr("Shortest"), &C::minMinutes, 0.1, 600, 0.5, tr("Real minutes a kind of weather lasts at least"));
+    addCycle(tr("Longest"), &C::maxMinutes, 0.1, 600, 0.5, tr("Real minutes a kind of weather lasts at most"));
+    addCycle(tr("Transition"), &C::transitionMinutes, 0, 60, 0.5, tr("Real minutes one kind takes to blend into the next"));
+    cycleStart_ = new QComboBox(this);
+    cycleStart_->setToolTip(tr("Weather when the level starts"));
+    form->addRow(tr("Start with"), cycleStart_);
+    connect(cycleStart_, &QComboBox::activated, this, [this](int index) {
+        if (updating_)
+            return;
+        scene_->environment.weather.start = index <= 0 ? std::string() : cycleStart_->itemText(index).toStdString();
+        changed();
+    });
+
+    kinds_ = new QTableWidget(0, kKindColumns, this);
+    kinds_->setHorizontalHeaderLabels(
+        {tr("Kind"), tr("Cloud"), tr("Fog"), tr("Rain"), tr("Wind"), tr("Storm"), tr("Exp."), tr("Chance")});
+    kinds_->verticalHeader()->setVisible(false);
+    kinds_->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    kinds_->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+    kinds_->setMinimumHeight(170);
+    kinds_->setToolTip(tr("Kinds of weather: clouds 0..1, fog density, rain 0..1, wind 0..1, storm (lightning) 0..1, exposure "
+                          "multiplier and the relative chance of being picked next. They replace the values above (and the "
+                          "hourly keys) while the cycle runs."));
+    form->addRow(tr("Kinds"), kinds_);
+    connect(kinds_, &QTableWidget::cellChanged, this, [this] {
+        if (!updating_)
+            readCycleTable();
+    });
+    auto* buttons = new QWidget(this);
+    auto* row = new QHBoxLayout(buttons);
+    row->setContentsMargins(0, 0, 0, 0);
+    auto* add = new QPushButton(tr("Add"), buttons);
+    auto* remove = new QPushButton(tr("Remove"), buttons);
+    auto* reset = new QPushButton(tr("Built-in kinds"), buttons);
+    reset->setToolTip(tr("Clear, Cloudy, Overcast, Fog, Rain and Storm with the engine's values"));
+    row->addWidget(add);
+    row->addWidget(remove);
+    row->addWidget(reset);
+    form->addRow(QString(), buttons);
+    connect(add, &QPushButton::clicked, this, [this] {
+        engine::WeatherCycle& c = scene_->environment.weather;
+        if (c.presets.empty())
+            c.presets = engine::defaultWeatherPresets();
+        engine::WeatherPreset p;
+        p.name = tr("Kind %1").arg(c.presets.size() + 1).toStdString();
+        c.presets.push_back(p);
+        refresh();
+        changed();
+    });
+    connect(remove, &QPushButton::clicked, this, [this] {
+        engine::WeatherCycle& c = scene_->environment.weather;
+        if (c.presets.empty())
+            c.presets = engine::defaultWeatherPresets();
+        const int r = kinds_->currentRow();
+        if (r < 0 || r >= static_cast<int>(c.presets.size()) || c.presets.size() <= 1)
+            return;
+        c.presets.erase(c.presets.begin() + r);
+        refresh();
+        changed();
+    });
+    connect(reset, &QPushButton::clicked, this, [this] {
+        scene_->environment.weather.presets.clear();
+        refresh();
+        changed();
+    });
+    cyclePreview_ = new QComboBox(this);
+    cyclePreview_->setToolTip(tr("Shows a kind in the viewport (not saved)"));
+    form->addRow(tr("Preview"), cyclePreview_);
+    connect(cyclePreview_, &QComboBox::activated, this, [this](int index) { previewKind(index - 1); });
+}
+
+void EnvironmentPanel::refreshWeatherCycle()
+{
+    const engine::WeatherCycle& c = scene_->environment.weather;
+    cycleEnabled_->setChecked(c.enabled);
+    for (auto& [spin, member] : cycleFloats_)
+        spin->setValue(c.*member);
+    const std::vector<engine::WeatherPreset> list = c.presets.empty() ? engine::defaultWeatherPresets() : c.presets;
+    cycleStart_->clear();
+    cycleStart_->addItem(tr("Random"));
+    const QString previewed = QString::fromStdString(scene_->environment.weatherNow.amount > 0.0f ? scene_->environment.weatherNow.current
+                                                                                                    : std::string());
+    cyclePreview_->clear();
+    cyclePreview_->addItem(tr("Off (the values above)"));
+    for (const engine::WeatherPreset& p : list) {
+        cycleStart_->addItem(QString::fromStdString(p.name));
+        cyclePreview_->addItem(QString::fromStdString(p.name));
+    }
+    cycleStart_->setCurrentIndex(std::max(0, cycleStart_->findText(QString::fromStdString(c.start))));
+    if (c.start.empty())
+        cycleStart_->setCurrentIndex(0);
+    cyclePreview_->setCurrentIndex(previewed.isEmpty() ? 0 : std::max(0, cyclePreview_->findText(previewed)));
+    kinds_->setRowCount(static_cast<int>(list.size()));
+    for (int r = 0; r < static_cast<int>(list.size()); ++r) {
+        const engine::WeatherPreset& p = list[static_cast<std::size_t>(r)];
+        kinds_->setItem(r, 0, new QTableWidgetItem(QString::fromStdString(p.name)));
+        const float values[kKindColumns - 1] = {p.cloudCover, p.fogDensity, p.rain, p.wind, p.storm, p.exposure, p.chance};
+        for (int col = 1; col < kKindColumns; ++col)
+            kinds_->setItem(r, col, new QTableWidgetItem(QString::number(static_cast<double>(values[col - 1]), 'g', 4)));
+    }
+}
+
+void EnvironmentPanel::readCycleTable()
+{
+    std::vector<engine::WeatherPreset> list;
+    for (int r = 0; r < kinds_->rowCount(); ++r) {
+        auto value = [&](int col, float fallback) {
+            const QTableWidgetItem* item = kinds_->item(r, col);
+            bool ok = false;
+            const float v = item ? item->text().toFloat(&ok) : 0.0f;
+            return ok ? v : fallback;
+        };
+        engine::WeatherPreset p;
+        if (const QTableWidgetItem* item = kinds_->item(r, 0); item && !item->text().trimmed().isEmpty())
+            p.name = item->text().trimmed().toStdString();
+        p.cloudCover = std::clamp(value(1, p.cloudCover), 0.0f, 1.0f);
+        p.fogDensity = std::clamp(value(2, p.fogDensity), 0.0f, 0.5f);
+        p.rain = std::clamp(value(3, p.rain), 0.0f, 1.0f);
+        p.wind = std::clamp(value(4, p.wind), 0.0f, 1.0f);
+        p.storm = std::clamp(value(5, p.storm), 0.0f, 1.0f);
+        p.exposure = std::clamp(value(6, p.exposure), 0.05f, 10.0f);
+        p.chance = std::max(0.0f, value(7, p.chance));
+        list.push_back(p);
+    }
+    // Unchanged built-in kinds stay implicit (the level file keeps no copy).
+    scene_->environment.weather.presets = list == engine::defaultWeatherPresets() ? std::vector<engine::WeatherPreset>{} : list;
+    changed();
+    const int preview = cyclePreview_->currentIndex();
+    if (preview > 0)
+        previewKind(preview - 1); // edits show at once
+}
+
+void EnvironmentPanel::previewKind(int index)
+{
+    engine::Environment& env = scene_->environment;
+    const std::vector<engine::WeatherPreset> list = env.weather.presets.empty() ? engine::defaultWeatherPresets() : env.weather.presets;
+    if (index < 0 || index >= static_cast<int>(list.size())) {
+        env.weatherNow = engine::WeatherNow{};
+    } else {
+        env.weatherNow.state = list[static_cast<std::size_t>(index)];
+        env.weatherNow.amount = 1.0f;
+        env.weatherNow.current = env.weatherNow.state.name;
+    }
+    emit previewed();
+}
+

@@ -2023,6 +2023,52 @@ void testAssetPalette()
     check(!entries.empty() && entries[0].stats.pixels > 0, "glTF model palette");
 }
 
+void testWeatherCycle()
+{
+    engine::Environment env;
+    env.fogDensity = 0.01f;
+    env.weather.enabled = true;
+    env.weather.start = "Fog";
+    env.weather.minMinutes = env.weather.maxMinutes = 0.1f; // 6 s per kind
+    env.weather.transitionMinutes = 0.05f;                  // 3 s
+    engine::WeatherDirector d(7);
+    d.start(env);
+    check(env.weatherNow.current == "Fog" && env.weatherNow.amount == 1.0f, "weather cycle starts with the chosen kind");
+    const auto list = engine::defaultWeatherPresets();
+    const float fog = list[3].fogDensity;
+    check(std::abs(engine::environmentAt(env, {0, -1, 0}).fogDensity - fog) < 1e-6f, "the kind replaces the authored fog");
+    // A script asks for a storm over 10 s: halfway is between fog and storm.
+    env.weatherNow.request = "Storm";
+    env.weatherNow.requestSeconds = 10.0f;
+    d.update(env, 0.0f);
+    d.update(env, 5.0f);
+    const engine::Environment half = engine::environmentAt(env, {0, -1, 0});
+    check(env.weatherNow.current == "Storm" && half.rain > 0.2f && half.rain < 0.8f, "storm blends in");
+    d.update(env, 5.0f);
+    check(std::abs(engine::environmentAt(env, {0, -1, 0}).storm - list[5].storm) < 1e-5f, "storm reached");
+    // The cycle moves on to another kind after the hold time.
+    for (int i = 0; i < 100; ++i)
+        d.update(env, 0.1f);
+    check(env.weatherNow.current != "Storm", "the cycle picks the next kind");
+    check(!d.change(env, "Blizzard", 1.0f), "unknown kind is refused");
+    // Off: the authored weather again.
+    env.weather.enabled = false;
+    d.update(env, 0.1f);
+    check(engine::environmentAt(env, {0, -1, 0}).fogDensity == 0.01f, "cycle off restores the authored weather");
+
+    // Level file round trip with a custom kind.
+    engine::Scene s;
+    s.environment.weather.enabled = true;
+    s.environment.weather.start = "Ash fall";
+    s.environment.weather.presets = engine::defaultWeatherPresets();
+    s.environment.weather.presets.push_back({"Ash fall", 0.8f, 0.03f, 0.0f, 0.2f, 0.0f, 0.6f, 0.5f});
+    std::string err;
+    check(engine::saveScene(s, "weather.level", &err), "save weather: " + err);
+    engine::Scene t;
+    check(engine::loadScene(t, "weather.level", &err), "load weather: " + err);
+    check(t.environment.weather == s.environment.weather, "weather cycle round trip");
+}
+
 void testWater()
 {
     // A 10 x 4 m canal, 2 m deep, turned 90 degrees (runs along Z), flowing at 1 m/s.
@@ -2180,6 +2226,7 @@ int main()
     testTimeOfDay();
     testAssetPalette();
     testWater();
+    testWeatherCycle();
     testWorldStreaming();
     std::printf(failures ? "%d test(s) failed\n" : "all tests passed\n", failures);
     return failures ? 1 : 0;

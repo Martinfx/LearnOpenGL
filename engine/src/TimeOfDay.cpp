@@ -45,7 +45,160 @@ float solarDeclination(int dayOfYear)
 {
     return radians(-23.44f) * std::cos(2.0f * kPi / 365.0f * static_cast<float>(dayOfYear + 10));
 }
+void applyWeatherNow(Environment& e, const WeatherNow& w)
+{
+    const float a = std::clamp(w.amount, 0.0f, 1.0f);
+    if (a <= 0.0f)
+        return;
+    e.cloudCover = glm::mix(e.cloudCover, w.state.cloudCover, a);
+    e.fogDensity = glm::mix(e.fogDensity, w.state.fogDensity, a);
+    e.rain = glm::mix(e.rain, w.state.rain, a);
+    e.wind = glm::mix(e.wind, w.state.wind, a);
+    e.storm = glm::mix(e.storm, w.state.storm, a);
+    e.exposure *= glm::mix(1.0f, w.state.exposure, a);
+}
+
+WeatherPreset mixPreset(const WeatherPreset& a, const WeatherPreset& b, float t)
+{
+    WeatherPreset w = b;
+    w.cloudCover = glm::mix(a.cloudCover, b.cloudCover, t);
+    w.fogDensity = glm::mix(a.fogDensity, b.fogDensity, t);
+    w.rain = glm::mix(a.rain, b.rain, t);
+    w.wind = glm::mix(a.wind, b.wind, t);
+    w.storm = glm::mix(a.storm, b.storm, t);
+    w.exposure = glm::mix(a.exposure, b.exposure, t);
+    return w;
+}
 } // namespace
+
+std::vector<WeatherPreset> defaultWeatherPresets()
+{
+    //       name        cloud  fog      rain  wind  storm exposure chance
+    return {
+        {"Clear", 0.15f, 0.003f, 0.0f, 0.10f, 0.0f, 1.0f, 3.0f},
+        {"Cloudy", 0.55f, 0.006f, 0.0f, 0.30f, 0.0f, 0.95f, 3.0f},
+        {"Overcast", 0.9f, 0.010f, 0.0f, 0.35f, 0.0f, 0.85f, 2.0f},
+        {"Fog", 0.8f, 0.045f, 0.0f, 0.05f, 0.0f, 0.9f, 1.5f},
+        {"Rain", 0.95f, 0.016f, 0.7f, 0.5f, 0.0f, 0.8f, 2.0f},
+        {"Storm", 1.0f, 0.020f, 1.0f, 0.9f, 0.8f, 0.7f, 0.8f},
+    };
+}
+
+float WeatherDirector::randomHold(const WeatherCycle& c)
+{
+    const float lo = std::max(0.1f, std::min(c.minMinutes, c.maxMinutes));
+    const float hi = std::max(lo, c.maxMinutes);
+    return std::uniform_real_distribution<float>(lo, hi)(rng_) * 60.0f;
+}
+
+void WeatherDirector::start(Environment& env)
+{
+    WeatherNow& now = env.weatherNow;
+    now = WeatherNow{};
+    forced_ = false;
+    to_ = -1;
+    blend_ = 1.0f;
+    const WeatherCycle& c = env.weather;
+    if (!c.enabled)
+        return;
+    const std::vector<WeatherPreset> list = c.presets.empty() ? defaultWeatherPresets() : c.presets;
+    if (list.empty())
+        return;
+    for (std::size_t i = 0; i < list.size(); ++i)
+        if (list[i].name == c.start)
+            to_ = static_cast<int>(i);
+    if (to_ < 0) {
+        std::vector<float> weights;
+        for (const WeatherPreset& p : list)
+            weights.push_back(std::max(p.chance, 0.0f));
+        if (std::all_of(weights.begin(), weights.end(), [](float w) { return w <= 0.0f; }))
+            weights.assign(weights.size(), 1.0f);
+        to_ = static_cast<int>(std::discrete_distribution<int>(weights.begin(), weights.end())(rng_));
+    }
+    from_ = list[static_cast<std::size_t>(to_)];
+    now.state = from_;
+    now.amount = 1.0f;
+    now.current = from_.name;
+    hold_ = randomHold(c);
+}
+
+bool WeatherDirector::change(Environment& env, const std::string& name, float seconds)
+{
+    const std::vector<WeatherPreset> list = env.weather.presets.empty() ? defaultWeatherPresets() : env.weather.presets;
+    for (std::size_t i = 0; i < list.size(); ++i) {
+        if (list[i].name != name)
+            continue;
+        WeatherNow& now = env.weatherNow;
+        // From what is on screen now (also the authored weather when nothing ran yet).
+        if (now.amount < 1.0f) {
+            Environment authored = env;
+            authored.weatherNow.amount = 0.0f;
+            const Environment base = environmentAt(authored, glm::vec3(0, -1, 0));
+            WeatherPreset b;
+            b.cloudCover = base.cloudCover;
+            b.fogDensity = base.fogDensity;
+            b.rain = base.rain;
+            b.wind = base.wind;
+            b.storm = base.storm;
+            b.exposure = 1.0f;
+            from_ = mixPreset(b, now.state, now.amount);
+        } else {
+            from_ = now.state;
+        }
+        to_ = static_cast<int>(i);
+        blend_ = seconds > 0.0f ? 0.0f : 1.0f;
+        blendSeconds_ = std::max(seconds, 0.01f);
+        forced_ = !env.weather.enabled;
+        hold_ = randomHold(env.weather);
+        now.current = name;
+        now.amount = 1.0f;
+        now.state = blend_ >= 1.0f ? list[i] : from_;
+        return true;
+    }
+    return false;
+}
+
+void WeatherDirector::update(Environment& env, float dt)
+{
+    WeatherNow& now = env.weatherNow;
+    const WeatherCycle& c = env.weather;
+    if (!now.request.empty()) {
+        const std::string name = now.request;
+        const float seconds = now.requestSeconds >= 0.0f ? now.requestSeconds : c.transitionMinutes * 60.0f;
+        now.request.clear();
+        now.requestSeconds = -1.0f;
+        change(env, name, seconds);
+    }
+    if (!c.enabled && !forced_) {
+        now.amount = 0.0f;
+        to_ = -1;
+        return;
+    }
+    const std::vector<WeatherPreset> list = c.presets.empty() ? defaultWeatherPresets() : c.presets;
+    if (to_ < 0 || to_ >= static_cast<int>(list.size())) {
+        start(env);
+        return;
+    }
+    if (blend_ < 1.0f) {
+        blend_ = std::min(1.0f, blend_ + dt / blendSeconds_);
+        const float s = blend_ * blend_ * (3.0f - 2.0f * blend_);
+        now.state = mixPreset(from_, list[static_cast<std::size_t>(to_)], s);
+    } else {
+        now.state = list[static_cast<std::size_t>(to_)];
+        if (c.enabled && list.size() > 1 && (hold_ -= dt) <= 0.0f) {
+            // Next kind by chance, never the same one again.
+            std::vector<float> weights;
+            for (std::size_t i = 0; i < list.size(); ++i)
+                weights.push_back(static_cast<int>(i) == to_ ? 0.0f : std::max(list[i].chance, 0.0f));
+            if (std::all_of(weights.begin(), weights.end(), [](float w) { return w <= 0.0f; }))
+                for (std::size_t i = 0; i < list.size(); ++i)
+                    weights[i] = static_cast<int>(i) == to_ ? 0.0f : 1.0f;
+            const int next = static_cast<int>(std::discrete_distribution<int>(weights.begin(), weights.end())(rng_));
+            change(env, list[static_cast<std::size_t>(next)].name, c.transitionMinutes * 60.0f);
+        }
+    }
+    now.amount = 1.0f;
+}
 
 glm::vec3 sunPosition(const TimeOfDay& t, float hour)
 {
@@ -102,6 +255,7 @@ Environment environmentAt(const Environment& base, glm::vec3 authoredSun, SkySta
     if (!t.enabled) {
         state.lightDirection = glm::dot(authoredSun, authoredSun) > 1e-8f ? glm::normalize(authoredSun) : glm::vec3(0, -1, 0);
         state.moon = glm::normalize(glm::vec3(0.3f, 0.5f, 0.8f));
+        applyWeatherNow(e, base.weatherNow);
         if (sky)
             *sky = state;
         return e;
@@ -116,6 +270,7 @@ Environment environmentAt(const Environment& base, glm::vec3 authoredSun, SkySta
         e.exposure = w.exposure;
         e.storm = w.storm;
     }
+    applyWeatherNow(e, base.weatherNow); // the weather cycle (or a script) over the hourly keys
     const glm::vec3 sun = sunPosition(t, hour);
     const glm::vec3 moon = moonPosition(t, hour);
     const float sinAlt = sun.y;
