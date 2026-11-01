@@ -1,5 +1,6 @@
 # Character models
 
+- `animals/` (`wolf.glb`, `crow.glb`): CC0 fauna, see `animals/CREDITS.md`.
 - `library/ual_mannequin.glb`: human mannequin with 46 clips (Quaternius, CC0), see `library/CREDITS.md`.
   Used for the enemies until the rigged post-apo human characters arrive.
 
