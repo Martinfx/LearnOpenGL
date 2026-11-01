@@ -3302,8 +3302,9 @@ int main()
     };
     for (const auto& [name, run] : tests)
         if (assets || !needAssets.count(name)) {
-            if (!assets)
-                std::printf("%s\n", name);
+            // Name first and flushed: a test that crashes the process (Windows CI) is still named in the log.
+            std::printf("== %s\n", name);
+            std::fflush(stdout);
             run();
         }
     std::printf(failures ? "%d test(s) failed\n" : "all tests passed\n", failures);
