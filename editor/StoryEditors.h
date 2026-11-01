@@ -1,6 +1,7 @@
 #pragma once
 #include <engine/Dialog.h>
 #include <engine/Items.h>
+#include <engine/Localization.h>
 #include <engine/Quests.h>
 
 #include <QWidget>
@@ -125,3 +126,30 @@ private:
 // New files with a small valid start (assets/dialogs/<name>.dialog, assets/quests/<name>.quest).
 bool writeNewDialog(const QString& path, QString* error);
 bool writeNewQuest(const QString& path, QString* error);
+
+// Texts and translations (assets/text/<language>.strings): one row per key, one column per
+// language. Cells a language still needs are amber (untranslated); "Only untranslated" hides
+// the rest. Czech (cs) is the base every other language falls back to.
+class StringsEditor : public StoryTab {
+    Q_OBJECT
+public:
+    explicit StringsEditor(QWidget* parent = nullptr);
+    bool load(const QString& folder, QString* error);
+    bool save(QString* error) override;
+
+private:
+    void refresh();
+    void cellEdited(int row, int column);
+    void addKey();
+    void removeKey();
+    void addLanguage();
+    void markUntranslated();
+
+    std::vector<std::string> languages_;           // cs first
+    std::map<std::string, engine::StringTable> tables_;
+    QTableWidget* table_ = nullptr;
+    QLineEdit* filter_ = nullptr;
+    class QCheckBox* onlyMissing_ = nullptr;
+    QLabel* status_ = nullptr;
+};
+

@@ -3,6 +3,7 @@
 #include <engine/Demo.h>
 #include <engine/MeshCache.h>
 #include <engine/Vfs.h>
+#include <engine/Localization.h>
 #include <cstring>
 #include <set>
 #include <engine/Assert.h>
@@ -531,6 +532,63 @@ void testVfs()
     v.setRoot({});
     fs::remove_all(extracted.parent_path().parent_path());
     fs::remove_all(base);
+}
+
+void testLocalization()
+{
+    namespace fs = std::filesystem;
+    const auto dir = fs::temp_directory_path() / "text_test";
+    fs::remove_all(dir);
+    fs::create_directories(dir);
+    {
+        std::ofstream(dir / "cs.strings") << "# test\nmenu.back = Zpět\nhud.ammo.one = {0} náboj\nhud.ammo.few = {0} náboje\n"
+                                             "hud.ammo.other = {0} nábojů\nhud.only_cs = Jen česky\nhud.two = {0} a {1}\nhud.lines = a\\nb\n";
+        std::ofstream(dir / "en.strings") << "menu.back = Back\nhud.ammo.one = {0} round\nhud.ammo.other = {0} rounds\nhud.lines = x\n";
+    }
+    engine::Localization l;
+    std::string error;
+    check(l.load(dir, "cs", &error), "Czech texts load: " + error);
+    check(l.text("menu.back") == "Zpět" && l.text("hud.lines") == "a\nb", "Czech text and \\n");
+    check(l.plural("hud.ammo", 1) == "1 náboj" && l.plural("hud.ammo", 3) == "3 náboje" && l.plural("hud.ammo", 5) == "5 nábojů",
+          "Czech plurals 1 / 2-4 / 5+");
+    check(l.text("no.such.key") == "no.such.key", "a missing key shows itself");
+    check(l.load(dir, "en", &error), "English texts load: " + error);
+    check(l.text("menu.back") == "Back" && l.text("hud.only_cs") == "Jen česky", "English, Czech as the fallback");
+    check(l.plural("hud.ammo", 1) == "1 round" && l.plural("hud.ammo", 3) == "3 rounds", "English plurals");
+    check(engine::formatText(l.text("hud.two"), {"A", "B"}) == "A a B" && l.localize("@menu.back") == "Back" && l.localize("plain") == "plain",
+          "arguments and @key data strings");
+    engine::StringTable cs, en;
+    check(cs.load(dir / "cs.strings") && en.load(dir / "en.strings"), "tables load");
+    const auto missing = engine::untranslatedKeys(cs, en, "en");
+    check(missing == std::vector<std::string>{"hud.only_cs", "hud.two"}, "untranslated: English needs .one/.other only, not .few");
+    check(engine::availableLanguages(dir) == std::vector<std::string>{"cs", "en"}, "languages, Czech first");
+    // Saving keeps every text (and escapes line breaks).
+    check(en.save(dir / "en2.strings") && cs.load(dir / "en2.strings") && cs.texts == en.texts, "a table saves and loads back");
+    fs::remove_all(dir);
+
+    // Every key the game asks for exists in the shipped Czech table.
+    engine::StringTable shipped;
+    check(shipped.load(ENGINE_TEST_ASSETS "/text/cs.strings", &error), "assets/text/cs.strings: " + error);
+    std::vector<std::string> unknown;
+    for (const auto& entry : fs::directory_iterator(fs::path(ENGINE_TEST_ASSETS).parent_path() / "game")) {
+        std::ifstream in(entry.path());
+        const std::string code((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+        for (const char* call : {"tr(\"", "trf(\"", "trn(\""})
+            for (std::size_t at = code.find(call); at != std::string::npos; at = code.find(call, at + 1)) {
+                if (at > 0 && (std::isalnum(static_cast<unsigned char>(code[at - 1])) || code[at - 1] == '_'))
+                    continue; // part of another name
+                if (at >= 2 && code.compare(at - 2, 2, "::") == 0 && (at < 8 || code.compare(at - 8, 8, "engine::") != 0))
+                    continue; // QObject::tr and the like
+                const std::size_t start = at + std::strlen(call), end = code.find('"', start);
+                const std::string key = code.substr(start, end - start);
+                if (key.empty() || key.back() == '.')
+                    continue; // a prefix completed at run time ("language." + code)
+                const bool plural = call[2] == 'n';
+                if (!shipped.texts.count(key) && !(plural && shipped.texts.count(key + ".other")))
+                    unknown.push_back(entry.path().filename().string() + ": " + key);
+            }
+    }
+    check(unknown.empty(), "keys used by the game exist in cs.strings" + (unknown.empty() ? std::string() : ": " + unknown.front()));
 }
 
 void testScriptDebugger()
@@ -4072,6 +4130,7 @@ int main()
         {"testDemo", testDemo},
         {"testMeshCache", testMeshCache},
         {"testVfs", testVfs},
+        {"testLocalization", testLocalization},
         {"testWorldStreaming", testWorldStreaming},
     };
     for (const auto& [name, run] : tests)

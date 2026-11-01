@@ -327,6 +327,17 @@ Explicitní `self:play(klip)` graf dočasně přebije, `self:use_graph()` vrát�
   `--skip-unused` vynechá i to, co `asset_check` hlásí jako nepoužité. `fps_pack game.pak --list` vypíše obsah.
   Hra vypíše připojené vrstvy do logu (`vfs: archive game.pak`, `vfs: mod muj_mod/`).
 
+## Jazyky (lokalizace)
+
+- Texty hry jsou v tabulkách `assets/text/<jazyk>.strings` (`klíč = text`, `{0}` argument, `\n` nový řádek,
+  plurály `klíč.one` / `.few` / `.other` podle pravidel jazyka). Čeština (`cs`) je základ: co jiný jazyk
+  nemá, ukáže se česky.
+- Jazyk se vybírá v Nastavení > Ostatní > Jazyk (cvar `language`, např. `+language en`). Přeložené je
+  menu, nastavení a ukládání; data (dialogy, úkoly, titulky levelů) můžou místo textu napsat `@klíč`.
+- Editor: Assets > Texts and translations: tabulka klíčů a jazyků, nepřeložené buňky jsou oranžové,
+  filtr „Only untranslated“, přidání klíče a jazyka. `asset_check` hlásí nepřeložené klíče jako varování
+  a test hlídá, že každý klíč použitý v kódu hry je v `cs.strings`.
+
 ## Demo a benchmark
 
 - **Záznam:** `fps_game level.level --record trasa.demo` (v editoru Game > Demo > Record demo). Ukládá se, co

@@ -304,6 +304,7 @@ void MainWindow::buildMenus()
     });
     assets->addAction(tr("New q&uest..."), this, [this] { newStoryFile(false); });
     assets->addAction(tr("&Items and prices..."), this, [this] { openStoryEditor(assetPath("items.cfg")); });
+    assets->addAction(tr("Te&xts and translations..."), this, [this] { openStoryEditor(assetPath("text")); });
     assets->addAction(tr("&Particle effect..."), this, [this] {
         const QString path = QFileDialog::getOpenFileName(this, tr("Open particle effect"), assetPath("particles"),
                                                           tr("Particle effects (*.particle)"));
@@ -5150,7 +5151,13 @@ void MainWindow::openStoryEditor(const QString& path)
         }
     StoryTab* tab = nullptr;
     QString error;
-    if (QFileInfo(file).suffix().toLower() == "cfg") {
+    if (QFileInfo(file).isDir() || QFileInfo(file).suffix().toLower() == "strings") { // texts: the whole folder
+        auto* se = new StringsEditor(tabs_);
+        if (se->load(QFileInfo(file).isDir() ? file : QFileInfo(file).absolutePath(), &error))
+            tab = se;
+        else
+            delete se;
+    } else if (QFileInfo(file).suffix().toLower() == "cfg") {
         auto* it = new ItemsEditor(tabs_);
         if (it->load(file, &error))
             tab = it;

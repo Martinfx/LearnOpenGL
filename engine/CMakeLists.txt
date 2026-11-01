@@ -53,6 +53,7 @@ add_library(engine STATIC
     src/Demo.cpp
     src/MeshCache.cpp
     src/Vfs.cpp
+    src/Localization.cpp
     src/Items.cpp
     src/Log.cpp
     src/Paths.cpp

@@ -3,6 +3,7 @@
 // Lists references to missing files (errors), unused assets and, with --models, glTF
 // models whose size does not fit the world scale (1 unit = 1 m). Exit code 1 on errors.
 #include <engine/AssetRegistry.h>
+#include <engine/Localization.h>
 #include <engine/Log.h>
 
 #include <cstdio>
@@ -45,6 +46,20 @@ int main(int argc, char** argv)
         if (!quiet || issue.severity != engine::AssetIssue::Severity::Info)
             std::printf("%s: %s: %s\n", level, issue.file.lexically_relative(registry.root()).generic_string().c_str(),
                         issue.message.c_str());
+    }
+    // Translations: keys the Czech base has and another language still lacks (warnings).
+    const auto textDir = std::filesystem::path(root) / "text";
+    engine::StringTable base;
+    if (std::filesystem::exists(textDir / "cs.strings") && base.load(textDir / "cs.strings", &error)) {
+        for (const std::string& lang : engine::availableLanguages(textDir)) {
+            engine::StringTable other;
+            if (lang == engine::Localization::kBase || !other.load(textDir / (lang + ".strings"), &error))
+                continue;
+            for (const std::string& key : engine::untranslatedKeys(base, other, lang)) {
+                ++warnings;
+                std::printf("warning: text/%s.strings: untranslated %s\n", lang.c_str(), key.c_str());
+            }
+        }
     }
     std::printf("asset_check: %zu assets, %d errors, %d warnings, %d unused\n", registry.records().size(), errors, warnings, infos);
     return errors > 0 ? 1 : 0;

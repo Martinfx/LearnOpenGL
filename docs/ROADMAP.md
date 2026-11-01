@@ -248,7 +248,11 @@ Hotovo, když: zóna 1 × 1 km jde projít bez načítací obrazovky a paměť d
   `VfsStream` místo `std::ifstream` v loaderech, glTF přes `cgltf` file callbacky, skripty přes `safe_script`
   se jménem `@cesta`, zvuky přes `diskPath`. Nástroj `fps_pack` (balení, `--skip-unused`, `--list`), archiv bez
   komprese (textury a zvuky už komprimované jsou). Ověřeno ve hře: mod přejmenoval AK v HUD, archiv s levelem.*
-- [ ] Lokalizace: tabulky řetězců s klíči (čeština, angličtina, plurály), editor tabulek, kontrola nepřeložených.
+- [x] Lokalizace: tabulky řetězců s klíči (čeština, angličtina, plurály), editor tabulek, kontrola nepřeložených.
+  *Hotovo (2026-11-01): engine/Localization (`assets/text/*.strings`, plurály cs/en/pl, fallback na češtinu,
+  `@klíč` v datech), cvar `language` a volba v Nastavení, přeložené menu, nastavení a ukládání (cs + en).
+  Editor Assets > Texts and translations, `asset_check` hlásí nepřeložené, test hlídá klíče z kódu.
+  Zbývá převést další texty HUD, obchodu, dialogů a úkolů na klíče (infrastruktura je hotová).*
 - [ ] Přístupnost: titulky, FOV, vypnutí houpání kamery a motion bluru, velikost textu.
 - [ ] Souhrn licencí třetích stran (OpenAL Soft LGPL: dynamické linkování a text licence).
 - [ ] Credits a licence všech assetů ve hře.

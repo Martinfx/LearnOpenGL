@@ -92,4 +92,5 @@ private:
     std::filesystem::path chosenSave_;
     std::string chosenSlot_;
     bool canSave_ = true;
+    std::filesystem::path assetDir_; // language list (assets/text)
 };

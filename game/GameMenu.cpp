@@ -1,5 +1,6 @@
 #include "GameMenu.h"
 #include <engine/Vfs.h>
+#include <engine/Localization.h>
 
 #include <engine/CVars.h>
 #include <engine/Crash.h>
@@ -37,42 +38,43 @@ struct SettingInfo {
 const std::vector<SettingInfo>& settingInfos()
 {
     static const std::vector<SettingInfo> infos = {
-        {"r_quality", "Kvalita grafiky", 0, {"Nízká", "Střední", "Vysoká", "Ultra"}},
-        {"fov", "Zorné pole (FOV)", 0, {}},
-        {"vsync", "Vertikální synchronizace", 0, {}},
-        {"fps_max", "Omezení snímků (0 = bez)", 0, {}},
-        {"cl_showfps", "Zobrazit FPS", 0, {}},
-        {"r_fullscreen", "Režim okna", 0, {"Okno", "Bez rámečku", "Celá obrazovka"}},
-        {"r_monitor", "Monitor", 0, {"Hlavní", "2", "3", "4", "5", "6", "7", "8"}},
-        {"r_scale", "Rozlišení scény", 0, {}},
-        {"r_aa", "Vyhlazování hran", 0, {"Vypnuto", "FXAA", "TAA"}},
-        {"r_motionblur", "Rozmazání pohybem", 0, {}},
-        {"m_sensitivity", "Citlivost myši", 1, {}},
-        {"m_invert_y", "Obrátit osu Y", 1, {}},
-        {"joy_sensitivity", "Citlivost gamepadu", 1, {}},
-        {"joy_deadzone", "Mrtvá zóna páček", 1, {}},
-        {"in_forward", "Dopředu", 1, {}},
-        {"in_back", "Dozadu", 1, {}},
-        {"in_left", "Vlevo", 1, {}},
-        {"in_right", "Vpravo", 1, {}},
-        {"in_jump", "Skok", 1, {}},
-        {"in_sprint", "Sprint", 1, {}},
-        {"in_crouch", "Dolů (noclip, volná kamera)", 1, {}},
-        {"in_fire", "Střelba", 1, {}},
-        {"in_aim", "Míření", 1, {}},
-        {"in_reload", "Přebití", 1, {}},
-        {"in_bolt", "Hodit šroub", 1, {}},
-        {"in_map", "Mapa", 1, {}},
-        {"in_quicksave", "Rychlé uložení", 1, {}},
-        {"in_quickload", "Rychlé načtení", 1, {}},
-        {"snd_volume", "Celková hlasitost", 2, {}},
-        {"snd_sfx", "Efekty", 2, {}},
-        {"snd_ambient", "Prostředí", 2, {}},
-        {"snd_music", "Hudba", 2, {}},
+        {"r_quality", "setting.r_quality", 0, {"setting.r_quality.0", "setting.r_quality.1", "setting.r_quality.2", "setting.r_quality.3"}},
+        {"fov", "setting.fov", 0, {}},
+        {"vsync", "setting.vsync", 0, {}},
+        {"fps_max", "setting.fps_max", 0, {}},
+        {"cl_showfps", "setting.cl_showfps", 0, {}},
+        {"r_fullscreen", "setting.r_fullscreen", 0, {"setting.r_fullscreen.0", "setting.r_fullscreen.1", "setting.r_fullscreen.2"}},
+        {"r_monitor", "setting.r_monitor", 0, {"setting.r_monitor.0", "2", "3", "4", "5", "6", "7", "8"}},
+        {"r_scale", "setting.r_scale", 0, {}},
+        {"r_aa", "setting.r_aa", 0, {"setting.r_aa.0", "setting.r_aa.1", "setting.r_aa.2"}},
+        {"r_motionblur", "setting.r_motionblur", 0, {}},
+        {"m_sensitivity", "setting.m_sensitivity", 1, {}},
+        {"m_invert_y", "setting.m_invert_y", 1, {}},
+        {"joy_sensitivity", "setting.joy_sensitivity", 1, {}},
+        {"joy_deadzone", "setting.joy_deadzone", 1, {}},
+        {"in_forward", "setting.in_forward", 1, {}},
+        {"in_back", "setting.in_back", 1, {}},
+        {"in_left", "setting.in_left", 1, {}},
+        {"in_right", "setting.in_right", 1, {}},
+        {"in_jump", "setting.in_jump", 1, {}},
+        {"in_sprint", "setting.in_sprint", 1, {}},
+        {"in_crouch", "setting.in_crouch", 1, {}},
+        {"in_fire", "setting.in_fire", 1, {}},
+        {"in_aim", "setting.in_aim", 1, {}},
+        {"in_reload", "setting.in_reload", 1, {}},
+        {"in_bolt", "setting.in_bolt", 1, {}},
+        {"in_map", "setting.in_map", 1, {}},
+        {"in_quicksave", "setting.in_quicksave", 1, {}},
+        {"in_quickload", "setting.in_quickload", 1, {}},
+        {"snd_volume", "setting.snd_volume", 2, {}},
+        {"snd_sfx", "setting.snd_sfx", 2, {}},
+        {"snd_ambient", "setting.snd_ambient", 2, {}},
+        {"snd_music", "setting.snd_music", 2, {}},
+        {"language", "setting.language", 3, {}},
     };
     return infos;
 }
-const char* const kPages[] = {"Grafika", "Ovládání", "Zvuk", "Ostatní"};
+const char* const kPages[] = {"menu.page.graphics", "menu.page.controls", "menu.page.audio", "menu.page.other"};
 
 std::string formatValue(const engine::CVar& v)
 {
@@ -105,6 +107,7 @@ std::string plainMarkdown(std::string s)
 
 void GameMenu::init(const std::filesystem::path& assetDir, const std::filesystem::path& licenseFile)
 {
+    assetDir_ = assetDir;
     credits_.clear();
     levels_.clear();
     std::error_code levelsError;
@@ -296,7 +299,7 @@ void GameMenu::draw(engine::Ui2D& ui, int width, int height, double time)
     }
     // Version in the corner of every menu (bug reports).
     const float small = std::round(std::clamp(h * 0.018f, 11.0f, 18.0f));
-    const std::string version = std::string("sestavení ") + engine::engineVersion();
+    const std::string version = engine::trf("menu.version", std::string(engine::engineVersion()));
     ui.text(version, {w - ui.textWidth(version, small) - small, h - small * 1.8f}, small, kDim);
     pressed_ = released_ = false;
     scroll_ = 0.0;
@@ -326,24 +329,24 @@ void GameMenu::drawMain(engine::Ui2D& ui, float w, float h, double time)
         action_ = Action::Resume;
     if (started_)
         y += bh * 1.1f;
-    if (button(ui, {x - bh * 0.45f, y}, size, started_ ? "Začít lokaci znovu" : "Nová hra"))
+    if (button(ui, {x - bh * 0.45f, y}, size, started_ ? "Začít lokaci znovu" : engine::tr("menu.new_game")))
         action_ = started_ ? Action::Restart : Action::Play;
     y += bh * 1.1f;
     if (levels_.size() > 1) {
-        if (button(ui, {x - bh * 0.45f, y}, size, "Vybrat lokaci"))
+        if (button(ui, {x - bh * 0.45f, y}, size, engine::tr("menu.choose_location")))
             open(Screen::Levels);
         y += bh * 1.1f;
     }
-    if (button(ui, {x - bh * 0.45f, y}, size, "Načíst hru", !saves_.empty()))
+    if (button(ui, {x - bh * 0.45f, y}, size, engine::tr("menu.load_game"), !saves_.empty()))
         open(Screen::Load);
     y += bh * 1.1f;
-    if (button(ui, {x - bh * 0.45f, y}, size, "Nastavení"))
+    if (button(ui, {x - bh * 0.45f, y}, size, engine::tr("menu.settings")))
         open(Screen::Settings);
     y += bh * 1.1f;
-    if (button(ui, {x - bh * 0.45f, y}, size, "Autoři"))
+    if (button(ui, {x - bh * 0.45f, y}, size, engine::tr("menu.credits")))
         open(Screen::Credits);
     y += bh * 1.1f;
-    if (button(ui, {x - bh * 0.45f, y}, size, "Konec"))
+    if (button(ui, {x - bh * 0.45f, y}, size, engine::tr("menu.exit")))
         action_ = Action::Quit;
 }
 
@@ -356,29 +359,29 @@ void GameMenu::drawPause(engine::Ui2D& ui, float w, float h)
     ui.rect(pos, panel, kPanel);
     ui.rect(pos, {panel.x, 3.0f}, kAmber);
     const float title = std::round(bh * 0.7f);
-    ui.text("PAUZA", {pos.x + bh * 0.6f, pos.y + bh * 0.5f}, title, kBone, true);
+    ui.text(engine::tr("menu.pause"), {pos.x + bh * 0.6f, pos.y + bh * 0.5f}, title, kBone, true);
     const glm::vec2 size(panel.x - bh * 0.3f, bh);
     float y = pos.y + bh * 1.7f;
     const float x = pos.x + bh * 0.15f;
-    if (button(ui, {x, y}, size, "Pokračovat"))
+    if (button(ui, {x, y}, size, engine::tr("menu.continue")))
         action_ = Action::Resume;
     y += bh * 1.1f;
-    if (button(ui, {x, y}, size, "Uložit hru", canSave_))
+    if (button(ui, {x, y}, size, engine::tr("menu.save_game"), canSave_))
         open(Screen::Save);
     y += bh * 1.1f;
-    if (button(ui, {x, y}, size, "Načíst hru", !saves_.empty()))
+    if (button(ui, {x, y}, size, engine::tr("menu.load_game"), !saves_.empty()))
         open(Screen::Load);
     y += bh * 1.1f;
-    if (button(ui, {x, y}, size, "Nastavení"))
+    if (button(ui, {x, y}, size, engine::tr("menu.settings")))
         open(Screen::Settings);
     y += bh * 1.1f;
-    if (button(ui, {x, y}, size, "Autoři"))
+    if (button(ui, {x, y}, size, engine::tr("menu.credits")))
         open(Screen::Credits);
     y += bh * 1.1f;
-    if (button(ui, {x, y}, size, "Hlavní menu"))
+    if (button(ui, {x, y}, size, engine::tr("menu.main_menu")))
         action_ = Action::MainMenu;
     y += bh * 1.1f;
-    if (button(ui, {x, y}, size, "Ukončit hru"))
+    if (button(ui, {x, y}, size, engine::tr("menu.quit_game")))
         action_ = Action::Quit;
 }
 
@@ -391,7 +394,7 @@ void GameMenu::drawSettings(engine::Ui2D& ui, float w, float h)
     const glm::vec2 pos = glm::round((glm::vec2(w, h) - panel) * 0.5f);
     ui.rect(pos, panel, kPanel);
     ui.rect(pos, {panel.x, 3.0f}, kAmber);
-    ui.text("NASTAVENÍ", {pos.x + row * 0.6f, pos.y + row * 0.4f}, std::round(row * 0.6f), kBone, true);
+    ui.text(engine::tr("menu.settings_title"), {pos.x + row * 0.6f, pos.y + row * 0.4f}, std::round(row * 0.6f), kBone, true);
 
     // Which settings exist (registered by the game) and on which page.
     engine::CVarRegistry& cvars = engine::CVarRegistry::global();
@@ -410,12 +413,13 @@ void GameMenu::drawSettings(engine::Ui2D& ui, float w, float h)
     for (int p = 0; p < 4; ++p) {
         if (pages[p].empty())
             continue;
-        const float tw = ui.textWidth(kPages[p], text, true) + row * 0.8f;
+        const std::string page = engine::tr(kPages[p]);
+        const float tw = ui.textWidth(page, text, true) + row * 0.8f;
         const bool on = settingsPage_ == p;
         const bool hover = mouse_.x >= tx && mouse_.x < tx + tw && mouse_.y >= tabY && mouse_.y < tabY + row * 0.8f;
         if (on)
             ui.rect({tx, tabY + row * 0.75f}, {tw, 3.0f}, kAmber);
-        ui.text(kPages[p], {tx + row * 0.4f, tabY + row * 0.15f}, text, on ? kAmber : hover ? kBone : kDim, true);
+        ui.text(page, {tx + row * 0.4f, tabY + row * 0.15f}, text, on ? kAmber : hover ? kBone : kDim, true);
         if (hover && released_ && settingsPage_ != p) {
             settingsPage_ = p;
             settingsScroll_ = 0;
@@ -442,7 +446,7 @@ void GameMenu::drawSettings(engine::Ui2D& ui, float w, float h)
     for (const auto& [v, info] : pages[settingsPage_]) {
         if (++rowIndex < settingsScroll_)
             continue;
-        const std::string label = info ? info->label : v->description;
+        const std::string label = info ? engine::tr(info->label) : v->description;
         ui.text(label, {labelX, y + (row - text) * 0.5f}, text, kBone);
         const float cy = y + row * 0.5f;
         const bool hoverRow = mouse_.y >= y && mouse_.y < y + row && mouse_.x >= controlX && mouse_.x < controlX + controlW;
@@ -452,14 +456,14 @@ void GameMenu::drawSettings(engine::Ui2D& ui, float w, float h)
             ui.rect(b, {box, box}, hoverRow ? glm::vec4(0.3f, 0.28f, 0.22f, 1.0f) : kTrack);
             if (v->boolean())
                 ui.rect(b + glm::vec2(box * 0.22f), glm::vec2(box * 0.56f), kAmber);
-            ui.text(v->boolean() ? "Zapnuto" : "Vypnuto", {b.x + box * 1.6f, y + (row - text) * 0.5f}, text, kDim);
+            ui.text(v->boolean() ? engine::tr("menu.on") : engine::tr("menu.off"), {b.x + box * 1.6f, y + (row - text) * 0.5f}, text, kDim);
             if (hoverRow && released_)
                 cvars.set(v->name, v->boolean() ? "0" : "1");
         } else if (info && !info->choices.empty() && v->type == engine::CVarType::Int) {
             // Named choices: < Value >
             const int value = v->integer();
             const int count = static_cast<int>(info->choices.size());
-            const std::string name = value >= 0 && value < count ? info->choices[static_cast<std::size_t>(value)] : v->value;
+            const std::string name = value >= 0 && value < count ? engine::tr(info->choices[static_cast<std::size_t>(value)]) : v->value;
             const float arrow = row * 0.8f;
             const bool left = hoverRow && mouse_.x < controlX + arrow, right = hoverRow && mouse_.x > controlX + controlW - arrow;
             ui.text("<", {controlX + arrow * 0.3f, y + (row - text) * 0.5f}, text, left ? kAmber : kDim, true);
@@ -467,6 +471,19 @@ void GameMenu::drawSettings(engine::Ui2D& ui, float w, float h)
             ui.text(name, {controlX + (controlW - ui.textWidth(name, text, true)) * 0.5f, y + (row - text) * 0.5f}, text, kBone, true);
             if (released_ && (left || right))
                 cvars.set(v->name, std::to_string(std::clamp(value + (right ? 1 : -1), 0, count - 1)));
+        } else if (v->name == "language") {
+            // Languages with a text table in assets/text: < Čeština >
+            const std::vector<std::string> langs = engine::availableLanguages(assetDir_ / "text");
+            const auto at = std::find(langs.begin(), langs.end(), v->value);
+            const int value = at == langs.end() ? 0 : static_cast<int>(at - langs.begin());
+            const std::string name = engine::tr("language." + v->value);
+            const float arrow = row * 0.8f;
+            const bool left = hoverRow && mouse_.x < controlX + arrow, right = hoverRow && mouse_.x > controlX + controlW - arrow;
+            ui.text("<", {controlX + arrow * 0.3f, y + (row - text) * 0.5f}, text, left ? kAmber : kDim, true);
+            ui.text(">", {controlX + controlW - arrow * 0.6f, y + (row - text) * 0.5f}, text, right ? kAmber : kDim, true);
+            ui.text(name, {controlX + (controlW - ui.textWidth(name, text, true)) * 0.5f, y + (row - text) * 0.5f}, text, kBone, true);
+            if (released_ && (left || right) && !langs.empty())
+                cvars.set(v->name, langs[static_cast<std::size_t>((value + (right ? 1 : -1) + static_cast<int>(langs.size())) % static_cast<int>(langs.size()))]);
         } else if (v->type == engine::CVarType::Float || v->type == engine::CVarType::Int) {
             // Slider over the variable's range; the value is printed after it.
             const float valueW = row * 1.8f;
@@ -518,7 +535,7 @@ void GameMenu::drawSettings(engine::Ui2D& ui, float w, float h)
         cvars.saveConfig(file); // saved now, not only at exit
         open(returnTo_);
     }
-    if (button(ui, {pos.x + row * 0.3f, pos.y + panel.y - bsize.y - row * 0.3f}, {row * 4.5f, row * 0.9f}, "Výchozí")) {
+    if (button(ui, {pos.x + row * 0.3f, pos.y + panel.y - bsize.y - row * 0.3f}, {row * 4.5f, row * 0.9f}, engine::tr("menu.defaults"))) {
         for (const auto& [v, info] : pages[settingsPage_])
             cvars.set(v->name, v->defaultValue);
     }
@@ -530,8 +547,8 @@ void GameMenu::drawCredits(engine::Ui2D& ui, float w, float h)
     const float line = std::round(std::clamp(h * 0.024f, 13.0f, 24.0f));
     const float x = std::round(w * 0.08f);
     const float top = line * 6.0f, bottom = h - line * 4.5f;
-    ui.text("AUTOŘI", {x, line * 1.5f}, std::round(line * 1.8f), kBone, true);
-    ui.text("Modely, textury, zvuky a knihovny těchto autorů, použité podle jejich licencí.", {x, line * 3.8f}, line * 0.85f, kDim);
+    ui.text(engine::tr("menu.credits_title"), {x, line * 1.5f}, std::round(line * 1.8f), kBone, true);
+    ui.text(engine::tr("menu.credits_intro"), {x, line * 3.8f}, line * 0.85f, kDim);
 
     float total = 0.0f;
     for (const CreditLine& c : credits_)
@@ -578,7 +595,7 @@ void GameMenu::drawDeath(engine::Ui2D& ui, float w, float h, double time)
     const float t = static_cast<float>(std::clamp((time - openedAt_) / 1.2, 0.0, 1.0));
     ui.rect({0, 0}, {w, h}, {0.18f * t, 0.01f, 0.01f, 0.65f * t});
     const float big = std::round(std::clamp(h * 0.08f, 32.0f, 96.0f));
-    const std::string title = "SMRT";
+    const std::string title = engine::tr("menu.death");
     ui.text(title, {std::round((w - ui.textWidth(title, big, true)) * 0.5f), h * 0.3f}, big, glm::vec4(0.85f, 0.2f, 0.15f, t), true);
     if (t < 1.0f)
         return;
@@ -660,10 +677,10 @@ void GameMenu::drawSaves(engine::Ui2D& ui, float w, float h, bool saving)
     const glm::vec2 pos = glm::round((glm::vec2(w, h) - panel) * 0.5f);
     ui.rect(pos, panel, kPanel);
     ui.rect(pos, {panel.x, 3.0f}, kAmber);
-    ui.text(saving ? "ULOŽIT HRU" : "NAČÍST HRU", {pos.x + row * 0.4f, pos.y + row * 0.3f}, std::round(row * 0.45f), kBone, true);
+    ui.text(saving ? "ULOŽIT HRU" : engine::tr("menu.load_title"), {pos.x + row * 0.4f, pos.y + row * 0.3f}, std::round(row * 0.45f), kBone, true);
     float y = pos.y + row * 1.2f;
     if (rows.empty())
-        ui.text("Zatím žádné uložené hry.", {pos.x + row * 0.45f, y + row * 0.25f}, text, kDim);
+        ui.text(engine::tr("menu.no_saves"), {pos.x + row * 0.45f, y + row * 0.25f}, text, kDim);
     for (const SaveInfo& s : rows) {
         const bool usable = saving || s.valid;
         const glm::vec2 p(pos.x + row * 0.15f, y), size(panel.x - row * 0.3f, row * 0.95f);
@@ -673,7 +690,7 @@ void GameMenu::drawSaves(engine::Ui2D& ui, float w, float h, bool saving)
             ui.rect(p, {3.0f, size.y}, kAmber);
         }
         const bool empty = saving && s.title.empty() && !s.valid;
-        const std::string head = slotLabel(s.slot) + (empty ? "  ·  prázdná" : "  ·  " + s.title);
+        const std::string head = slotLabel(s.slot) + (empty ? "  ·  " + engine::tr("menu.slot_empty") : "  ·  " + s.title);
         ui.text(head, {p.x + row * 0.3f, p.y + row * 0.12f}, text, hover ? kAmber : usable ? kBone : kDim, true);
         if (!s.created.empty())
             ui.text(s.created, {p.x + row * 0.3f, p.y + row * 0.12f + text * 1.25f}, std::round(text * 0.8f), kDim);

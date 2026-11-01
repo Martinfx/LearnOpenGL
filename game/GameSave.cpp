@@ -1,3 +1,4 @@
+#include <engine/Localization.h>
 #include "GameSave.h"
 
 #include <engine/Log.h>
@@ -320,11 +321,11 @@ std::filesystem::path saveFile(const std::string& slot)
 std::string slotLabel(const std::string& slot)
 {
     if (slot == "quick")
-        return "Rychlé uložení";
+        return engine::tr("save.quick");
     if (slot == "auto")
-        return "Automatické uložení";
+        return engine::tr("save.auto");
     if (slot.rfind("slot", 0) == 0)
-        return "Pozice " + slot.substr(4);
+        return engine::trf("save.slot", slot.substr(4));
     return slot;
 }
 

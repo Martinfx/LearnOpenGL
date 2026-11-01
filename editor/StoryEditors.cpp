@@ -1,7 +1,11 @@
 #include "StoryEditors.h"
 #include "AssetPaths.h"
 
+#include <QCheckBox>
 #include <QComboBox>
+#include <QDir>
+#include <QInputDialog>
+#include <QMessageBox>
 #include <QDoubleSpinBox>
 #include <QSpinBox>
 #include <QFileInfo>
@@ -19,6 +23,7 @@
 #include <QVBoxLayout>
 
 #include <iomanip>
+#include <set>
 #include <sstream>
 
 namespace {
@@ -798,3 +803,212 @@ bool writeNewQuest(const QString& path, QString* error)
         *error = QString::fromStdString(e);
     return ok;
 }
+
+// ------------------------------------------------------------------ texts
+
+StringsEditor::StringsEditor(QWidget* parent)
+    : StoryTab(parent)
+{
+    auto* layout = new QVBoxLayout(this);
+    auto* bar = new QHBoxLayout;
+    filter_ = new QLineEdit(this);
+    filter_->setPlaceholderText(tr("Filter keys and texts"));
+    onlyMissing_ = new QCheckBox(tr("Only untranslated"), this);
+    auto* add = new QPushButton(tr("Add key"), this);
+    auto* remove = new QPushButton(tr("Remove key"), this);
+    auto* language = new QPushButton(tr("Add language..."), this);
+    bar->addWidget(filter_, 1);
+    bar->addWidget(onlyMissing_);
+    bar->addWidget(add);
+    bar->addWidget(remove);
+    bar->addWidget(language);
+    layout->addLayout(bar);
+    auto* help = new QLabel(tr("Keys are used by the game (menu.back) and by data as @key (dialogs, quests, level titles). "
+                               "{0} is an argument, key.one / .few / .other are plural forms. Missing texts fall back to Czech."),
+                            this);
+    help->setWordWrap(true);
+    layout->addWidget(help);
+    table_ = new QTableWidget(this);
+    table_->horizontalHeader()->setStretchLastSection(true);
+    table_->verticalHeader()->hide();
+    layout->addWidget(table_, 1);
+    status_ = new QLabel(this);
+    layout->addWidget(status_);
+    connect(filter_, &QLineEdit::textChanged, this, &StringsEditor::refresh);
+    connect(onlyMissing_, &QCheckBox::toggled, this, &StringsEditor::refresh);
+    connect(add, &QPushButton::clicked, this, &StringsEditor::addKey);
+    connect(remove, &QPushButton::clicked, this, &StringsEditor::removeKey);
+    connect(language, &QPushButton::clicked, this, &StringsEditor::addLanguage);
+    connect(table_, &QTableWidget::cellChanged, this, &StringsEditor::cellEdited);
+}
+
+bool StringsEditor::load(const QString& folder, QString* error)
+{
+    path_ = folder;
+    languages_ = engine::availableLanguages(std::filesystem::path(folder.toStdU16String()));
+    if (languages_.empty() || languages_.front() != engine::Localization::kBase)
+        languages_.insert(languages_.begin(), engine::Localization::kBase);
+    tables_.clear();
+    for (const std::string& lang : languages_) {
+        const auto file = std::filesystem::path(folder.toStdU16String()) / (lang + ".strings");
+        std::string err;
+        if (std::filesystem::exists(file) && !tables_[lang].load(file, &err)) {
+            if (error)
+                *error = QString::fromStdString(err);
+            return false;
+        }
+    }
+    refresh();
+    return true;
+}
+
+void StringsEditor::refresh()
+{
+    updating_ = true;
+    std::set<std::string> keys;
+    for (const auto& [lang, t] : tables_)
+        for (const auto& [k, v] : t.texts)
+            keys.insert(k);
+    std::map<std::string, std::set<std::string>> missing; // language -> keys
+    for (std::size_t l = 1; l < languages_.size(); ++l)
+        for (const std::string& k : engine::untranslatedKeys(tables_[languages_[0]], tables_[languages_[l]], languages_[l]))
+            missing[languages_[l]].insert(k);
+    QStringList headers{tr("Key")};
+    for (const std::string& lang : languages_)
+        headers << QString::fromStdString(lang);
+    table_->clear();
+    table_->setColumnCount(static_cast<int>(headers.size()));
+    table_->setHorizontalHeaderLabels(headers);
+    const QString filter = filter_->text().trimmed();
+    std::vector<std::string> shown;
+    for (const std::string& k : keys) {
+        bool untranslated = false;
+        for (const auto& [lang, set] : missing)
+            untranslated = untranslated || set.count(k);
+        if (onlyMissing_->isChecked() && !untranslated)
+            continue;
+        bool match = filter.isEmpty() || QString::fromStdString(k).contains(filter, Qt::CaseInsensitive);
+        for (const std::string& lang : languages_) {
+            const auto& texts = tables_[lang].texts;
+            if (auto it = texts.find(k); !match && it != texts.end())
+                match = QString::fromStdString(it->second).contains(filter, Qt::CaseInsensitive);
+        }
+        if (match)
+            shown.push_back(k);
+    }
+    table_->setRowCount(static_cast<int>(shown.size()));
+    for (int r = 0; r < static_cast<int>(shown.size()); ++r) {
+        const std::string& k = shown[static_cast<std::size_t>(r)];
+        auto* keyItem = new QTableWidgetItem(QString::fromStdString(k));
+        keyItem->setData(Qt::UserRole, QString::fromStdString(k));
+        table_->setItem(r, 0, keyItem);
+        for (std::size_t l = 0; l < languages_.size(); ++l) {
+            const auto& texts = tables_[languages_[l]].texts;
+            const auto it = texts.find(k);
+            auto* item = new QTableWidgetItem(it == texts.end() ? QString() : QString::fromStdString(it->second).replace('\n', "\\n"));
+            if (l > 0 && missing[languages_[l]].count(k))
+                item->setBackground(QColor(0x6b, 0x55, 0x10)); // untranslated
+            table_->setItem(r, static_cast<int>(l) + 1, item);
+        }
+    }
+    table_->resizeColumnToContents(0);
+    QString text = tr("%1 keys").arg(keys.size());
+    for (std::size_t l = 1; l < languages_.size(); ++l)
+        text += tr(" · %1: %2 untranslated").arg(QString::fromStdString(languages_[l])).arg(missing[languages_[l]].size());
+    status_->setText(text);
+    updating_ = false;
+}
+
+void StringsEditor::cellEdited(int row, int column)
+{
+    if (updating_)
+        return;
+    QTableWidgetItem* keyItem = table_->item(row, 0);
+    if (!keyItem)
+        return;
+    const std::string oldKey = keyItem->data(Qt::UserRole).toString().toStdString();
+    if (column == 0) { // renamed key: in every language
+        const std::string newKey = keyItem->text().trimmed().toStdString();
+        if (newKey.empty() || newKey == oldKey)
+            return refresh();
+        for (auto& [lang, t] : tables_)
+            if (auto it = t.texts.find(oldKey); it != t.texts.end()) {
+                t.texts[newKey] = it->second;
+                t.texts.erase(oldKey);
+            }
+    } else {
+        QString text = table_->item(row, column)->text();
+        tables_[languages_[static_cast<std::size_t>(column - 1)]].texts[oldKey] = text.replace("\\n", "\n").toStdString();
+    }
+    setModified(true);
+    markUntranslated();
+}
+
+void StringsEditor::markUntranslated()
+{
+    // Colours and counts follow the edit without rebuilding the table (keeps the cursor).
+    updating_ = true;
+    for (std::size_t l = 1; l < languages_.size(); ++l) {
+        const auto list = engine::untranslatedKeys(tables_[languages_[0]], tables_[languages_[l]], languages_[l]);
+        const std::set<std::string> missing(list.begin(), list.end());
+        for (int r = 0; r < table_->rowCount(); ++r)
+            if (QTableWidgetItem* item = table_->item(r, static_cast<int>(l) + 1); item && table_->item(r, 0))
+                item->setBackground(missing.count(table_->item(r, 0)->data(Qt::UserRole).toString().toStdString())
+                                        ? QBrush(QColor(0x6b, 0x55, 0x10))
+                                        : QBrush());
+    }
+    updating_ = false;
+}
+
+void StringsEditor::addKey()
+{
+    bool ok = false;
+    const QString key = QInputDialog::getText(this, tr("Add key"), tr("Key (e.g. hud.medkit_used):"), QLineEdit::Normal, QString(), &ok).trimmed();
+    if (!ok || key.isEmpty())
+        return;
+    tables_[engine::Localization::kBase].texts[key.toStdString()]; // empty Czech text to fill in
+    setModified(true);
+    filter_->setText(key);
+    refresh();
+}
+
+void StringsEditor::removeKey()
+{
+    const int row = table_->currentRow();
+    if (row < 0 || !table_->item(row, 0))
+        return;
+    const std::string key = table_->item(row, 0)->data(Qt::UserRole).toString().toStdString();
+    for (auto& [lang, t] : tables_)
+        t.texts.erase(key);
+    setModified(true);
+    refresh();
+}
+
+void StringsEditor::addLanguage()
+{
+    bool ok = false;
+    const QString code = QInputDialog::getText(this, tr("Add language"), tr("Language code (e.g. de, pl, sk):"), QLineEdit::Normal,
+                                               QString(), &ok).trimmed().toLower();
+    if (!ok || code.isEmpty() || std::find(languages_.begin(), languages_.end(), code.toStdString()) != languages_.end())
+        return;
+    languages_.push_back(code.toStdString());
+    tables_[code.toStdString()].texts["language." + code.toStdString()]; // its own name, to fill in
+    tables_[engine::Localization::kBase].texts["language." + code.toStdString()];
+    setModified(true);
+    refresh();
+}
+
+bool StringsEditor::save(QString* error)
+{
+    for (const std::string& lang : languages_) {
+        std::string err;
+        if (!tables_[lang].save(std::filesystem::path(path_.toStdU16String()) / (lang + ".strings"), &err)) {
+            if (error)
+                *error = QString::fromStdString(err);
+            return false;
+        }
+    }
+    setModified(false);
+    return true;
+}
+

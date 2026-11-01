@@ -43,6 +43,7 @@
 #include <engine/HotReload.h>
 #include <engine/WorldStreaming.h>
 #include <engine/Demo.h>
+#include <engine/Localization.h>
 #include <limits>
 #include "KeyNames.h"
 #include "MapHud.h"
@@ -555,6 +556,10 @@ int main(int argc, char** argv)
     // .pak files) replacing files by path (engine/Vfs.h).
     for (const std::string& layer : engine::vfs().mountGame(std::filesystem::absolute(std::filesystem::path(argv[0]).parent_path())))
         LOG_INFO("vfs", "%s", layer.c_str());
+    // Texts in the base language until the settings say which one (cvar language).
+    if (std::string textError; !engine::localization().load(std::filesystem::path(argv[0]).parent_path() / "assets" / "text",
+                                                            engine::Localization::kBase, &textError))
+        LOG_WARN("text", "%s", textError.c_str());
     glfwSetErrorCallback([](int code, const char* message) { LOG_WARN("glfw", "%d: %s", code, message); });
     if (!glfwInit())
         return 1;
@@ -1204,6 +1209,13 @@ int main(int argc, char** argv)
         cvars.add("snd_duck", CVarType::Float, "1", "How much gunfire ducks the ambience and music (0 = not at all)", engine::CVarConfig, 0.0, 1.0);
         cvars.add("snd_occlusion", CVarType::Bool, "1", "Walls muffle the sounds behind them", engine::CVarConfig);
         cvars.add("cl_showfps", CVarType::Bool, "0", "Frame rate in the corner", engine::CVarConfig);
+        cvars.add("language", CVarType::String, engine::Localization::kBase, "Language of the texts (assets/text/<language>.strings)",
+                  engine::CVarConfig)
+            .onChange = [textDir = std::filesystem::path(argv[0]).parent_path() / "assets" / "text"](const engine::CVar& v) {
+                std::string error;
+                if (!engine::localization().load(textDir, v.value, &error))
+                    LOG_WARN("text", "%s", error.c_str());
+            };
         cvars.addCommand("quit", "Leaves the game", [window](const std::vector<std::string>&) {
             glfwSetWindowShouldClose(window, GLFW_TRUE);
             return engine::ConsoleResult{true, "bye"};
@@ -1381,6 +1393,8 @@ int main(int argc, char** argv)
                 LOG_WARN("cvar", "Ignored command line argument %s", rest.c_str());
         }
         // Apply what the callbacks have not (values equal to the defaults do not fire onChange).
+        if (firstLevel && cvars.find("language")->value != engine::localization().language())
+            cvars.find("language")->onChange(*cvars.find("language"));
         if (firstLevel && cvars.find("r_fullscreen")->integer() == 0) // the remembered window size
             glfwSetWindowSize(window, cvars.find("r_width")->integer(), cvars.find("r_height")->integer());
         for (const char* name : {"vsync", "r_quality", "r_fullscreen", "snd_volume", "snd_sfx", "snd_ambient", "snd_music"})
@@ -1632,7 +1646,7 @@ int main(int argc, char** argv)
             return false;
         }
         LOG_INFO("save", "Saved %s", saveFile(slot).string().c_str());
-        hud.notify(slot == "auto" ? "Automaticky uloženo" : "Uloženo: " + slotLabel(slot));
+        hud.notify(slot == "auto" ? engine::tr("save.autosaved") : engine::trf("save.saved", slotLabel(slot)));
         return true;
     };
     if (loadFrom) {
