@@ -192,6 +192,11 @@ struct Model {
     float cullDistance = 0.0f;
     bool collision = true;
     bool castShadows = true;          // off for grass and small plants: the shadow pass is the costliest one
+    // Physics prop (crates, barrels, cans): a rigid body the player, bullets and blasts push.
+    // The collider is fitted to localBounds. Ignored for animated models.
+    bool dynamic = false;
+    float massKg = 10.0f;
+    std::string collider = "box";     // "box", "cylinder" (upright) or "sphere"
 
     glm::mat4 transform() const;      // model space -> world
     Aabb bounds() const;              // world-space bounds of the rotated, scaled model

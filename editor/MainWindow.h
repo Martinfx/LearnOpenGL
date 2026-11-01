@@ -150,6 +150,7 @@ private:
     void addAnomaly(int kind); // engine::AnomalyKind
     void addLight(bool spot);
     void addCampfire(); // group: fire pit model, flames, flickering light, crackle, sit points
+    void applyPropCatalogueToLevel(); // every model the catalogue lists
     void browseScript();
     void browseCharacter();
     void refreshCharacter();
@@ -216,6 +217,12 @@ private:
     QDoubleSpinBox* lodDistanceSpin_ = nullptr;
     QDoubleSpinBox* cullDistanceSpin_ = nullptr;
     QCheckBox* collisionCheck_ = nullptr;
+    QCheckBox* dynamicCheck_ = nullptr;          // model: physics prop
+    QDoubleSpinBox* massSpin_ = nullptr;
+    QComboBox* colliderCombo_ = nullptr;
+    // Physics of a prop from assets/models/props/clutter/clutter.json (dynamic, mass, collider);
+    // false when the catalogue does not list the model.
+    bool applyPropCatalogue(engine::Model& model);
     QCheckBox* shadowsCheck_ = nullptr;
     QDoubleSpinBox* uvSpins_[5] = {};   // scale U, V, shift U, V, rotation
     QComboBox* activeMaterial_ = nullptr;

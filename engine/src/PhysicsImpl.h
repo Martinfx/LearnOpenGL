@@ -12,6 +12,7 @@
 #include <glm/common.hpp>
 #include <glm/geometric.hpp>
 #include <memory>
+#include <unordered_map>
 #include <string>
 #include <vector>
 
@@ -53,6 +54,8 @@ struct PhysicsWorld::Impl {
     Impl();
     ~Impl();
     void clearStatic();
+    void clearDynamic();
+    void addDynamic(const Scene& scene, std::size_t model);
     void addStatic(const JPH::ShapeSettings& settings, glm::vec3 position, const std::string& name,
                    glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f), const std::string& surface = {});
     void addStatic(const JPH::ShapeRefC& shape, glm::vec3 position, const std::string& name,
@@ -69,6 +72,14 @@ struct PhysicsWorld::Impl {
     std::vector<std::string> surfaces;
     std::shared_ptr<const Terrain> terrain; // surface of the ground under a hit
     JPH::BodyID terrainBody;
+    struct Prop {
+        std::size_t model = 0;
+        JPH::BodyID body;
+        glm::vec3 center{0.0f}; // collider centre in model space (scaled)
+        bool awake = true;      // synced once more after the body falls asleep (its final pose)
+    };
+    std::vector<Prop> props;
+    std::unordered_map<std::size_t, std::size_t> propOfModel; // model index -> props index
 };
 
 } // namespace engine

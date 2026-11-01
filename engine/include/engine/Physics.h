@@ -12,6 +12,7 @@ struct RayHit {
     glm::vec3 normal{0.0f, 1.0f, 0.0f};
     float distance = 0.0f;
     std::string surface; // what was hit is made of (engine/Surfaces.h), empty = unknown
+    int model = -1;      // dynamic model (index into Scene::models) that was hit, -1 = static or none
 };
 
 // Jolt Physics world. Jolt types stay inside Physics.cpp, so the game and
@@ -23,8 +24,18 @@ public:
     PhysicsWorld(const PhysicsWorld&) = delete;
     PhysicsWorld& operator=(const PhysicsWorld&) = delete;
 
-    // Rebuilds all static collision (boxes and glTF meshes) from the scene.
+    // Rebuilds all static collision (boxes and glTF meshes) and the dynamic props
+    // (models with `dynamic`) from the scene.
     void setLevel(const Scene& scene);
+    // Recreates only the dynamic props at their models' current transforms (after loading a save).
+    void resetDynamic(const Scene& scene);
+    // Copies the props' simulated transforms back to their models; returns how many moved.
+    int syncDynamic(Scene& scene);
+    // Pushes a prop at a world point (N*s), e.g. a bullet hit (RayHit::model).
+    void applyImpulse(int model, glm::vec3 point, glm::vec3 impulse);
+    // Radial push on every prop within `radius` (falls off to 0 at the edge), N*s at the centre.
+    void explode(glm::vec3 center, float radius, float impulse);
+    int dynamicCount() const;
 
     // Advances dynamic bodies; call once per fixed step.
     void step(float dt);

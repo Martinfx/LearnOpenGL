@@ -72,6 +72,9 @@ bool SaveGame::write(const std::filesystem::path& file, std::string* error) cons
     body << "\n";
     body << "kills " << kills << "\n";
     body << "flashlight " << (flashlightOn ? 1 : 0) << ' ' << flashlightCharge << "\n";
+    for (const Prop& p : props)
+        body << "prop " << engine::objectIdToString(p.id) << ' ' << p.position.x << ' ' << p.position.y << ' ' << p.position.z << ' '
+             << p.rotation.x << ' ' << p.rotation.y << ' ' << p.rotation.z << "\n";
     for (const auto& e : entities) {
         body << "entity " << engine::objectIdToString(e.id) << ' ' << (e.alive ? 1 : 0) << ' ' << e.health << ' ' << e.position.x
              << ' ' << e.position.y << ' ' << e.position.z << ' ' << e.yaw << "\n";
@@ -156,6 +159,13 @@ bool SaveGame::read(const std::filesystem::path& file, std::string* error)
             int on = 0;
             ls >> on >> flashlightCharge;
             flashlightOn = on != 0;
+        } else if (key == "prop") {
+            Prop p;
+            std::string id;
+            if (ls >> id >> p.position.x >> p.position.y >> p.position.z >> p.rotation.x >> p.rotation.y >> p.rotation.z) {
+                p.id = engine::objectIdFromString(id);
+                props.push_back(p);
+            }
         } else if (key == "entity") {
             engine::ScriptSystem::EntityState e;
             std::string id;

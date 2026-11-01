@@ -3,6 +3,8 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/euler_angles.hpp>
 #include "PhysicsImpl.h"
 #include "engine/Surfaces.h"
 
@@ -11,6 +13,8 @@
 #include <Jolt/Physics/Collision/CastResult.h>
 #include <Jolt/Physics/Collision/RayCast.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
+#include <Jolt/Physics/Collision/Shape/CylinderShape.h>
+#include <Jolt/Physics/Collision/Shape/SphereShape.h>
 #include <Jolt/Physics/Collision/Shape/HeightFieldShape.h>
 #include <Jolt/Physics/Collision/Shape/MeshShape.h>
 #include <Jolt/Physics/Collision/Shape/ScaledShape.h>
@@ -75,7 +79,74 @@ PhysicsWorld::Impl::Impl()
 
 PhysicsWorld::Impl::~Impl()
 {
+    clearDynamic();
     clearStatic();
+}
+
+void PhysicsWorld::Impl::clearDynamic()
+{
+    JPH::BodyInterface& bodies = system.GetBodyInterface();
+    for (const Prop& p : props) {
+        bodies.RemoveBody(p.body);
+        bodies.DestroyBody(p.body);
+    }
+    props.clear();
+    propOfModel.clear();
+}
+
+namespace {
+glm::quat modelRotation(const Model& m)
+{
+    return glm::normalize(glm::quat(glm::eulerAngleYXZ(glm::radians(m.rotation.y), glm::radians(m.rotation.x), glm::radians(m.rotation.z))));
+}
+} // namespace
+
+void PhysicsWorld::Impl::addDynamic(const Scene& scene, std::size_t index)
+{
+    const Model& m = scene.models[index];
+    const float scale = m.scale > 0.0f ? m.scale : 1.0f;
+    const glm::vec3 size = glm::max((m.localBounds.max - m.localBounds.min) * scale, glm::vec3(0.02f));
+    const glm::vec3 center = (m.localBounds.min + m.localBounds.max) * 0.5f * scale;
+    JPH::ShapeSettings::ShapeResult shape;
+    const float minHalf = std::min({size.x, size.y, size.z}) * 0.5f;
+    if (m.collider == "cylinder") {
+        shape = JPH::CylinderShapeSettings(size.y * 0.5f, std::max(size.x, size.z) * 0.5f,
+                                           std::min(JPH::cDefaultConvexRadius, minHalf * 0.5f))
+                    .Create();
+    } else if (m.collider == "sphere") {
+        shape = JPH::SphereShapeSettings(std::max({size.x, size.y, size.z}) * 0.5f).Create();
+    } else {
+        shape = JPH::BoxShapeSettings(toJolt(size * 0.5f), std::min(JPH::cDefaultConvexRadius, minHalf * 0.5f)).Create();
+    }
+    if (shape.HasError()) {
+        LOG_WARN("physics", "prop '%s': %s", m.name.c_str(), shape.GetError().c_str());
+        return;
+    }
+    const glm::quat rotation = modelRotation(m);
+    JPH::BodyCreationSettings body(shape.Get(), toJolt(m.position + rotation * center),
+                                   JPH::Quat(rotation.x, rotation.y, rotation.z, rotation.w), JPH::EMotionType::Dynamic, Layers::Moving);
+    body.mOverrideMassProperties = JPH::EOverrideMassProperties::CalculateInertia;
+    body.mMassPropertiesOverride.mMass = std::max(0.05f, m.massKg);
+    body.mFriction = 0.7f;
+    body.mRestitution = 0.15f;
+    body.mLinearDamping = 0.1f;
+    body.mAngularDamping = 0.2f;
+    // The world gravity is tuned for the player's jump; props fall at 1 g.
+    body.mGravityFactor = 9.81f / std::max(1.0f, -system.GetGravity().GetY());
+    // Activated so props placed in the air settle; resting ones go to sleep after a moment.
+    std::string surface;
+    for (const MeshPart& part : m.parts)
+        if (surface = surfaceOf(m.materialFor(part), part.materialName); !surface.empty())
+            break;
+    if (surface.empty())
+        surface = guessSurface(m.name + " " + m.sourcePath.stem().string());
+    // User data: surface id in the low 32 bits, model index + 1 in the high ones.
+    body.mUserData = surfaceId(surface.empty() ? "wood" : surface) | (static_cast<JPH::uint64>(index + 1) << 32);
+    const JPH::BodyID id = system.GetBodyInterface().CreateAndAddBody(body, JPH::EActivation::Activate);
+    if (id.IsInvalid())
+        return;
+    propOfModel[index] = props.size();
+    props.push_back({index, id, center});
 }
 
 void PhysicsWorld::Impl::clearStatic()
@@ -113,7 +184,7 @@ void PhysicsWorld::Impl::addStatic(const JPH::ShapeSettings& settings, glm::vec3
     JPH::BodyCreationSettings body(result.Get(), toJolt(position), JPH::Quat(rotation.x, rotation.y, rotation.z, rotation.w),
                                    JPH::EMotionType::Static, Layers::Static);
     body.mUserData = surfaceId(surface);
-    const JPH::BodyID id = system.GetBodyInterface().CreateAndAddBody(body, JPH::EActivation::DontActivate);
+    const JPH::BodyID id = system.GetBodyInterface().CreateAndAddBody(body, JPH::EActivation::Activate);
     if (!id.IsInvalid())
         staticBodies.push_back(id);
 }
@@ -127,7 +198,7 @@ void PhysicsWorld::Impl::addStatic(const JPH::ShapeRefC& shape, glm::vec3 positi
     JPH::BodyCreationSettings body(shape, toJolt(position), JPH::Quat(rotation.x, rotation.y, rotation.z, rotation.w),
                                    JPH::EMotionType::Static, Layers::Static);
     body.mUserData = surfaceId(surface);
-    const JPH::BodyID id = system.GetBodyInterface().CreateAndAddBody(body, JPH::EActivation::DontActivate);
+    const JPH::BodyID id = system.GetBodyInterface().CreateAndAddBody(body, JPH::EActivation::Activate);
     if (!id.IsInvalid())
         staticBodies.push_back(id);
 }
@@ -137,6 +208,7 @@ PhysicsWorld::~PhysicsWorld() = default;
 
 void PhysicsWorld::setLevel(const Scene& scene)
 {
+    impl_->clearDynamic();
     impl_->clearStatic();
     for (const Box& b : scene.boxes) {
         const glm::vec3 half = glm::max(b.size * 0.5f, glm::vec3(0.005f));
@@ -180,9 +252,14 @@ void PhysicsWorld::setLevel(const Scene& scene)
                 impl_->addStatic(JPH::ScaledShapeSettings(shape, JPH::Vec3::sReplicate(scale)), position, name, rotation, surface);
         }
     };
-    for (const Model& m : scene.models) {
+    for (std::size_t i = 0; i < scene.models.size(); ++i) {
+        const Model& m = scene.models[i];
         if (!m.collision)
             continue;
+        if (m.dynamic && !m.skeleton) {
+            impl_->addDynamic(scene, i);
+            continue;
+        }
         const glm::mat3 rotScale(m.transform());
         const float scale = m.scale != 0.0f ? m.scale : 1.0f;
         addModelParts(m, m.name + " " + m.sourcePath.stem().string(), m.position, glm::normalize(glm::quat_cast(rotScale / scale)), scale,
@@ -219,6 +296,64 @@ void PhysicsWorld::setLevel(const Scene& scene)
     impl_->system.OptimizeBroadPhase();
 }
 
+void PhysicsWorld::resetDynamic(const Scene& scene)
+{
+    impl_->clearDynamic();
+    for (std::size_t i = 0; i < scene.models.size(); ++i)
+        if (scene.models[i].dynamic && scene.models[i].collision && !scene.models[i].skeleton)
+            impl_->addDynamic(scene, i);
+}
+
+int PhysicsWorld::syncDynamic(Scene& scene)
+{
+    int moved = 0;
+    const JPH::BodyInterface& bodies = impl_->system.GetBodyInterfaceNoLock();
+    for (Impl::Prop& p : impl_->props) {
+        const bool active = bodies.IsActive(p.body);
+        if (p.model >= scene.models.size() || (!active && !p.awake))
+            continue;
+        p.awake = active;
+        JPH::RVec3 position;
+        JPH::Quat q;
+        bodies.GetPositionAndRotation(p.body, position, q);
+        const glm::quat rotation(q.GetW(), q.GetX(), q.GetY(), q.GetZ());
+        Model& m = scene.models[p.model];
+        m.position = toGlm(position) - rotation * p.center;
+        float y = 0.0f, x = 0.0f, z = 0.0f;
+        glm::extractEulerAngleYXZ(glm::mat4_cast(rotation), y, x, z);
+        m.rotation = glm::degrees(glm::vec3(x, y, z));
+        ++moved;
+    }
+    return moved;
+}
+
+void PhysicsWorld::applyImpulse(int model, glm::vec3 point, glm::vec3 impulse)
+{
+    const auto it = impl_->propOfModel.find(static_cast<std::size_t>(model));
+    if (model < 0 || it == impl_->propOfModel.end())
+        return;
+    impl_->system.GetBodyInterface().AddImpulse(impl_->props[it->second].body, toJolt(impulse), toJolt(point));
+}
+
+void PhysicsWorld::explode(glm::vec3 center, float radius, float impulse)
+{
+    JPH::BodyInterface& bodies = impl_->system.GetBodyInterface();
+    for (const Impl::Prop& p : impl_->props) {
+        const glm::vec3 at = toGlm(bodies.GetCenterOfMassPosition(p.body));
+        const glm::vec3 d = at - center;
+        const float dist = glm::length(d);
+        if (dist >= radius)
+            continue;
+        const glm::vec3 dir = dist > 1e-3f ? d / dist : glm::vec3(0.0f, 1.0f, 0.0f);
+        bodies.AddImpulse(p.body, toJolt((glm::normalize(dir + glm::vec3(0.0f, 0.3f, 0.0f))) * impulse * (1.0f - dist / radius)));
+    }
+}
+
+int PhysicsWorld::dynamicCount() const
+{
+    return static_cast<int>(impl_->props.size());
+}
+
 void PhysicsWorld::step(float dt)
 {
     impl_->system.Update(dt, 1, impl_->tempAllocator.get(), impl_->jobs.get());
@@ -239,9 +374,11 @@ std::optional<RayHit> PhysicsWorld::raycast(glm::vec3 origin, glm::vec3 directio
         if (lock.Succeeded()) {
             const JPH::Body& body = lock.GetBody();
             result.normal = toGlm(body.GetWorldSpaceSurfaceNormal(hit.mSubShapeID2, ray.GetPointOnRay(hit.mFraction)));
-            const JPH::uint64 id = body.GetUserData();
+            const JPH::uint64 id = body.GetUserData() & 0xffffffffull;
             if (id > 0 && id <= impl_->surfaces.size())
                 result.surface = impl_->surfaces[static_cast<std::size_t>(id - 1)];
+            if (const JPH::uint64 model = body.GetUserData() >> 32; model > 0)
+                result.model = static_cast<int>(model - 1);
         }
     }
     if (hit.mBodyID == impl_->terrainBody && impl_->terrain) {

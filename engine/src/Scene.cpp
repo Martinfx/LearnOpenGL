@@ -210,6 +210,8 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
             out << "  collision 0\n";
         if (!m.castShadows)
             out << "  cast_shadows 0\n";
+        if (m.dynamic)
+            out << "  physics " << m.massKg << ' ' << std::quoted(m.collider) << '\n';
     }
     const PlayerSettings& pl = scene.player;
     out << "player " << pl.walkSpeed << ' ' << pl.sprintSpeed << ' ' << pl.jumpSpeed << ' ' << pl.gravity << ' '
@@ -509,6 +511,13 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
             }
         } else if (key == "cull_distance") {
             ok = lastObject == LastObject::Model && static_cast<bool>(ls >> result.models.back().cullDistance);
+        } else if (key == "physics") {
+            ok = lastObject == LastObject::Model;
+            if (ok) {
+                Model& m = result.models.back();
+                ok = static_cast<bool>(ls >> m.massKg >> std::quoted(m.collider));
+                m.dynamic = ok;
+            }
         } else if (key == "cast_shadows") {
             ok = lastObject == LastObject::Model && static_cast<bool>(ls >> result.models.back().castShadows);
         } else if (key == "collision") {

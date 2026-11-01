@@ -889,6 +889,9 @@ int main(int argc, char** argv)
             save.ammo.push_back(w.ammo());
         save.kills = kills;
         save.flashlightOn = flashlight.on();
+        for (const engine::Model& m : scene.models)
+            if (m.dynamic)
+                save.props.push_back({m.id, m.position, m.rotation});
         save.flashlightCharge = flashlight.charge();
         save.entities = scripts.saveEntities();
         return save;
@@ -915,6 +918,14 @@ int main(int argc, char** argv)
         scripts.setPlayerHealth(loadFrom->health);
         anomalies.setDose(loadFrom->dose);
         flashlight.setCharge(loadFrom->flashlightCharge);
+        if (!loadFrom->props.empty()) { // physics props where they were left
+            for (const SaveGame::Prop& p : loadFrom->props)
+                if (const int object = engine::findObjectById(scene, p.id); scene.isModel(object)) {
+                    scene.model(object).position = p.position;
+                    scene.model(object).rotation = p.rotation;
+                }
+            physics.resetDynamic(scene);
+        }
         flashlight.setOn(loadFrom->flashlightOn);
         for (std::size_t w = 0; w < weapons.size() && w < loadFrom->ammo.size(); ++w)
             weapons[w].setAmmo(loadFrom->ammo[w]);
@@ -1213,6 +1224,8 @@ int main(int argc, char** argv)
                         ++kills;
                     break;
                 }
+                if (hit.model >= 0) // physics prop: the bullet (or blow) pushes it
+                    physics.applyImpulse(hit.model, hit.point, dir * damage * (weapon.settings.melee() ? 0.8f : 0.4f));
                 if (weapon.settings.melee())
                     break;
                 const engine::SurfaceType* surface = audio.surfaces().find(hit.surface);
@@ -1255,6 +1268,7 @@ int main(int argc, char** argv)
                 audio.walk(scene.player, player.feet(), player.velocity(), player.grounded(), dt, ground);
             }
             physics.step(dt);
+            physics.syncDynamic(scene); // props the player, shots and blasts moved
             if (scripts.playerHealth() <= 0.0f && menu.screen() != GameMenu::Screen::Death) {
                 LOG_INFO("game", "You died.");
                 if (frameLimit > 0) { // test runs carry on

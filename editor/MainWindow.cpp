@@ -6,6 +6,9 @@
 #include <engine/TextureCook.h>
 #include "AnomalyPanel.h"
 #include "LightPanel.h"
+#include <QFile>
+#include <QJsonObject>
+#include <QJsonDocument>
 #include "HierarchyPanel.h"
 #include "AssetBrowser.h"
 
@@ -194,6 +197,7 @@ void MainWindow::buildMenus()
         light->addAction(tr("Spot light (lamp, reflector)"), this, [this] { addLight(true); });
     }
     edit->addAction(tr("Add &campfire"), this, &MainWindow::addCampfire);
+    edit->addAction(tr("Physics props from the catalogue (crates, barrels...)"), this, &MainWindow::applyPropCatalogueToLevel);
     {
         QMenu* anomaly = edit->addMenu(tr("Add a&nomaly"));
         for (int k = 0; k < static_cast<int>(engine::AnomalyKind::Count); ++k)
@@ -833,6 +837,61 @@ void MainWindow::buildDocks()
     collisionCheck_ = new QCheckBox(tr("Collision (blocks the player and bullets)"), boxPanel_);
     collisionCheck_->setToolTip(tr("Off for grass, leaves and small debris: cheaper physics, walk and shoot through"));
     renderingForm->addRow(tr("Physics"), collisionCheck_);
+    dynamicCheck_ = new QCheckBox(tr("Physics prop (falls, pushed by the player, shots and blasts)"), boxPanel_);
+    dynamicCheck_->setToolTip(tr("A rigid body in the game: crates, barrels, cans. The collider fits the model's bounds"));
+    renderingForm->addRow(QString(), dynamicCheck_);
+    massSpin_ = new QDoubleSpinBox(boxPanel_);
+    massSpin_->setRange(0.05, 5000.0);
+    massSpin_->setDecimals(2);
+    massSpin_->setSingleStep(1.0);
+    massSpin_->setSuffix(tr(" kg"));
+    massSpin_->setKeyboardTracking(false);
+    colliderCombo_ = new QComboBox(boxPanel_);
+    colliderCombo_->addItem(tr("Box"), QStringLiteral("box"));
+    colliderCombo_->addItem(tr("Cylinder (upright)"), QStringLiteral("cylinder"));
+    colliderCombo_->addItem(tr("Sphere"), QStringLiteral("sphere"));
+    {
+        auto* catalogue = new QPushButton(tr("From catalogue"), boxPanel_);
+        catalogue->setToolTip(tr("Physics settings listed for this model in models/props/clutter/clutter.json"));
+        auto* row = new QWidget(boxPanel_);
+        auto* rowLayout = new QHBoxLayout(row);
+        rowLayout->setContentsMargins(0, 0, 0, 0);
+        rowLayout->addWidget(massSpin_, 1);
+        rowLayout->addWidget(catalogue);
+        renderingForm->addRow(tr("Mass"), row);
+        connect(catalogue, &QPushButton::clicked, this, [this] {
+            if (auto* m = selectedModel()) {
+                if (applyPropCatalogue(*m)) {
+                    refreshProperties();
+                    markDirty();
+                } else {
+                    notify(tr("%1 is not in the props catalogue").arg(QString::fromStdU16String(m->sourcePath.filename().u16string())), 4000);
+                }
+            }
+        });
+    }
+    renderingForm->addRow(tr("Collider"), colliderCombo_);
+    connect(dynamicCheck_, &QCheckBox::toggled, this, [this](bool on) {
+        if (auto* m = selectedModel(); m && m->dynamic != on) {
+            m->dynamic = on;
+            massSpin_->setEnabled(on);
+            colliderCombo_->setEnabled(on);
+            markDirty();
+        }
+    });
+    connect(massSpin_, &QDoubleSpinBox::valueChanged, this, [this](double v) {
+        if (auto* m = selectedModel(); m && m->massKg != static_cast<float>(v)) {
+            m->massKg = static_cast<float>(v);
+            markDirty();
+        }
+    });
+    connect(colliderCombo_, &QComboBox::currentIndexChanged, this, [this](int) {
+        const std::string c = colliderCombo_->currentData().toString().toStdString();
+        if (auto* m = selectedModel(); m && m->collider != c) {
+            m->collider = c;
+            markDirty();
+        }
+    });
     shadowsCheck_ = new QCheckBox(tr("Cast shadows"), boxPanel_);
     shadowsCheck_->setToolTip(tr("Off for grass and small plants: shadow maps are the most expensive pass"));
     renderingForm->addRow(tr("Shadows"), shadowsCheck_);
@@ -1931,6 +1990,16 @@ void MainWindow::refreshProperties()
     collisionCheck_->blockSignals(true);
     collisionCheck_->setChecked(m ? m->collision : true);
     collisionCheck_->blockSignals(false);
+    {
+        const QSignalBlocker b1(dynamicCheck_), b2(massSpin_), b3(colliderCombo_);
+        dynamicCheck_->setEnabled(m != nullptr && !m->skeleton);
+        dynamicCheck_->setChecked(m && m->dynamic);
+        massSpin_->setValue(m ? m->massKg : 10.0);
+        massSpin_->setEnabled(m && m->dynamic);
+        const int c = colliderCombo_->findData(QString::fromStdString(m ? m->collider : std::string("box")));
+        colliderCombo_->setCurrentIndex(std::max(0, c));
+        colliderCombo_->setEnabled(m && m->dynamic);
+    }
     shadowsCheck_->setEnabled(m != nullptr);
     shadowsCheck_->blockSignals(true);
     shadowsCheck_->setChecked(m ? m->castShadows : true);
@@ -2240,6 +2309,7 @@ void MainWindow::insertModel(const QString& path, engine::Model model, glm::vec3
     model.position = {snapped.x, point.y - model.localBounds.min.y, snapped.z};
     if (!parent.empty() && std::any_of(scene_.groups.begin(), scene_.groups.end(), [&](const engine::Group& g) { return g.name == parent; }))
         model.parent = parent;
+    applyPropCatalogue(model); // crates and barrels arrive as physics props
     scene_.models.push_back(std::move(model));
     refreshOutliner();
     select(scene_.firstEntity() - 1);
@@ -2312,6 +2382,56 @@ void MainWindow::openAsset(const QString& path, int type)
             notify(path, 5000);
         break;
     }
+}
+
+bool MainWindow::applyPropCatalogue(engine::Model& model)
+{
+    static QJsonObject entries; // name -> entry, from both sections of the catalogue
+    static bool loaded = false;
+    const QString propsDir = assetPath("models/props");
+    if (!loaded) {
+        loaded = true;
+        QFile file(propsDir + "/clutter/clutter.json");
+        if (file.open(QIODevice::ReadOnly)) {
+            const QJsonObject root = QJsonDocument::fromJson(file.readAll()).object();
+            for (const QString& section : root.keys()) {
+                const QJsonObject list = root[section].toObject();
+                for (auto it = list.begin(); it != list.end(); ++it)
+                    entries.insert(it.key(), it.value());
+            }
+        }
+    }
+    const QString source = QDir::cleanPath(QString::fromStdU16String(model.sourcePath.u16string()));
+    const QString relative = QDir(propsDir).relativeFilePath(source);
+    for (auto it = entries.begin(); it != entries.end(); ++it) {
+        const QJsonObject e = it.value().toObject();
+        const QString path = QDir::cleanPath(e["path"].toString());
+        if (path.isEmpty() || (path != relative && QFileInfo(path).completeBaseName() != QFileInfo(source).completeBaseName()))
+            continue;
+        if (e["physics"].toString() != "dynamic")
+            return true; // listed as static: leave it
+        model.dynamic = true;
+        model.massKg = static_cast<float>(e["mass_kg"].toDouble(model.massKg));
+        const QString collider = e["collider"].toString();
+        model.collider = collider == "cylinder" || collider == "sphere" ? collider.toStdString() : std::string("box");
+        return true;
+    }
+    return false;
+}
+
+void MainWindow::applyPropCatalogueToLevel()
+{
+    int changed = 0;
+    for (engine::Model& m : scene_.models) {
+        const bool before = m.dynamic;
+        const float mass = m.massKg;
+        if (applyPropCatalogue(m) && (m.dynamic != before || m.massKg != mass))
+            ++changed;
+    }
+    refreshProperties();
+    if (changed > 0)
+        markDirty();
+    notify(tr("Physics props from the catalogue: %1 model(s) changed").arg(changed), 5000);
 }
 
 void MainWindow::addCampfire()

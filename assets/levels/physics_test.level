@@ -1,0 +1,102 @@
+# FPS engine level
+version 6
+player_start 0 0 6
+sun -0.45 -0.75 -0.3
+env sun_color 1 0.86 0.68
+env sun_intensity 2.4
+env sky_zenith 0.38 0.42 0.44
+env sky_horizon 0.68 0.66 0.58
+env ground_color 0.26 0.24 0.2
+env cloud_cover 0.72
+env ambient_intensity 0.8
+env fog_color 0.6 0.6 0.54
+env fog_density 0.018
+env fog_height 1
+env fog_height_falloff 0.12
+env fog_sun_scatter 1.2
+env exposure 1
+env bloom_intensity 0.05
+env bloom_threshold 1.3
+env ssao_radius 0.6
+env ssao_intensity 1.1
+env shadow_distance 60
+env saturation 0.72
+env contrast 1.1
+env tint 1.02 1 0.9
+env vignette 0.35
+env grain 0.035
+loading_title "Test: fyzikální předměty"
+loading_hint "Bedny, sudy a kanystry padají, dají se odstrčit a rozstřílet."
+weapon "../weapons/ak74.weapon"
+group "Yard" ""
+group "Props" ""
+box "Ground" 0 -0.5 0 30 1 30 0.5 0.48 0.44
+  parent "Yard"
+  material "../materials/concrete.material"
+box "Back wall" 0 1.5 -8 14 3 0.6 0.5 0.5 0.48
+  parent "Yard"
+  material "../materials/concrete.material"
+box "Ramp" 4.5 0.4 -3 3 0.3 4 0.45 0.42 0.4
+  parent "Yard"
+model "Crate 1" "../models/props/wooden_crate_01/wooden_crate_01.gltf" -1.29 0.0 -4
+  parent "Props"
+  physics 18 "box"
+model "Crate 2" "../models/props/wooden_crate_01/wooden_crate_01.gltf" -0.43 0.0 -4
+  parent "Props"
+  physics 18 "box"
+model "Crate 3" "../models/props/wooden_crate_01/wooden_crate_01.gltf" 0.43 0.0 -4
+  parent "Props"
+  physics 18 "box"
+model "Crate 4" "../models/props/wooden_crate_01/wooden_crate_01.gltf" 1.29 0.0 -4
+  parent "Props"
+  physics 18 "box"
+model "Crate 5" "../models/props/wooden_crate_01/wooden_crate_01.gltf" -0.86 0.36 -4
+  parent "Props"
+  physics 18 "box"
+model "Crate 6" "../models/props/wooden_crate_01/wooden_crate_01.gltf" 0.0 0.36 -4
+  parent "Props"
+  physics 18 "box"
+model "Crate 7" "../models/props/wooden_crate_01/wooden_crate_01.gltf" 0.86 0.36 -4
+  parent "Props"
+  physics 18 "box"
+model "Crate 8" "../models/props/wooden_crate_01/wooden_crate_01.gltf" -0.43 0.72 -4
+  parent "Props"
+  physics 18 "box"
+model "Crate 9" "../models/props/wooden_crate_01/wooden_crate_01.gltf" 0.43 0.72 -4
+  parent "Props"
+  physics 18 "box"
+model "Crate 10" "../models/props/wooden_crate_01/wooden_crate_01.gltf" 0.0 1.08 -4
+  parent "Props"
+  physics 18 "box"
+model "Crate 11" "../models/props/wooden_crate_02/wooden_crate_02.gltf" -2.6 0.0 -4.2
+  parent "Props"
+  physics 25 "box"
+model "Crate 12" "../models/props/wooden_crate_02/wooden_crate_02.gltf" -2.6 0.48 -4.2
+  parent "Props"
+  physics 25 "box"
+model "Jerrycan 1" "../models/props/metal_jerrycan/metal_jerrycan.gltf" -4 0 -2.0
+  parent "Props"
+  physics 4 "box"
+model "Jerrycan 2" "../models/props/metal_jerrycan/metal_jerrycan.gltf" -3.3 0 -1.7
+  parent "Props"
+  transform 0 20 0 1
+  physics 4 "box"
+model "Jerrycan 3" "../models/props/metal_jerrycan/metal_jerrycan.gltf" -3.65 0 -1.4
+  parent "Props"
+  transform 0 40 0 1
+  physics 4 "box"
+model "Cardboard 1" "../models/props/clutter/cardboard_box_small.glb" 3.0 0.2 1
+  parent "Props"
+  physics 2 "box"
+model "Cardboard 2" "../models/props/clutter/cardboard_box_small.glb" 3.6 0.5 1
+  parent "Props"
+  physics 2 "box"
+model "Cardboard 3" "../models/props/clutter/cardboard_box_small.glb" 4.2 0.8 1
+  parent "Props"
+  physics 2 "box"
+model "Gas tank" "../models/props/propane_tank/propane_tank.gltf" -2 0 0
+  parent "Props"
+  physics 12 "cylinder"
+model "Tyre" "../models/props/old_tyre/old_tyre.gltf" 2 1.5 -1
+  parent "Props"
+  physics 9 "cylinder"

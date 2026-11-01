@@ -1647,6 +1647,42 @@ void testAnomalies()
     }
 }
 
+void testPhysicsProps()
+{
+    engine::Scene s;
+    std::string err;
+    check(engine::loadScene(s, ENGINE_TEST_ASSETS "/levels/physics_test.level", &err), "load physics_test.level: " + err);
+    const int dynamicModels = static_cast<int>(std::count_if(s.models.begin(), s.models.end(), [](const engine::Model& m) { return m.dynamic; }));
+    check(dynamicModels >= 15, "physics test level has dynamic props");
+    check(engine::saveScene(s, "physics_props.level", &err), "save props: " + err);
+    engine::Scene t;
+    check(engine::loadScene(t, "physics_props.level", &err), "reload props: " + err);
+    const int tyre = engine::findObject(t, "Tyre");
+    check(tyre >= 0 && t.model(tyre).dynamic && t.model(tyre).massKg == 9.0f && t.model(tyre).collider == "cylinder",
+          "physics prop settings survive save + load");
+
+    engine::PhysicsWorld world;
+    world.setLevel(t);
+    check(world.dynamicCount() == dynamicModels, "every dynamic model gets a body");
+    const int top = engine::findObject(t, "Crate 10");
+    const float topY = t.model(top).position.y;
+    for (int i = 0; i < 180; ++i)
+        world.step(1.0f / 60.0f);
+    world.syncDynamic(t);
+    check(t.model(tyre).position.y < 0.8f, "a prop placed in the air falls");
+    check(std::abs(t.model(top).position.y - topY) < 0.05f, "a stacked crate pyramid stays standing");
+
+    const glm::vec3 above = t.model(top).position + glm::vec3(0.0f, 2.0f, 0.0f);
+    const auto hit = world.raycast(above, {0, -1, 0}, 5.0f);
+    check(hit && hit->model == top - t.firstModel(), "a ray reports which prop it hit");
+    const glm::vec3 before = t.model(top).position;
+    world.applyImpulse(top - t.firstModel(), before + glm::vec3(0, 0.2f, 0.2f), {0.0f, 0.0f, -60.0f});
+    for (int i = 0; i < 60; ++i)
+        world.step(1.0f / 60.0f);
+    world.syncDynamic(t);
+    check(glm::length(t.model(top).position - before) > 0.3f, "an impulse knocks the crate off the stack");
+}
+
 int main()
 {
     // Hermetic cook cache for the tests.
@@ -1696,6 +1732,7 @@ int main()
     testEnsure();
     testSurfaces();
     testAnomalies();
+    testPhysicsProps();
     std::printf(failures ? "%d test(s) failed\n" : "all tests passed\n", failures);
     return failures ? 1 : 0;
 }

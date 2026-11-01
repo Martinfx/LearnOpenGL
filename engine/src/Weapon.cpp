@@ -21,6 +21,7 @@ ShotHit traceShot(const Scene& scene, const PhysicsWorld& physics, glm::vec3 ori
         best.distance = hit->distance;
         best.normal = hit->normal;
         best.surface = hit->surface;
+        best.model = hit->model;
     }
     // Characters are not rigid bodies, so test entity bounds separately.
     for (std::size_t i = 0; i < scene.entities.size(); ++i) {
@@ -34,6 +35,7 @@ ShotHit traceShot(const Scene& scene, const PhysicsWorld& physics, glm::vec3 ori
             best.entity = static_cast<int>(i);
             best.normal = -dir;
             best.surface = "flesh";
+            best.model = -1;
         }
     }
     return best;

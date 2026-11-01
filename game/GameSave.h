@@ -24,6 +24,12 @@ struct SaveGame {
     std::size_t weapon = 0;
     std::vector<int> ammo;
     int kills = 0;
+    // Physics props (dynamic models) where they lie now.
+    struct Prop {
+        engine::ObjectId id = 0;
+        glm::vec3 position{0.0f}, rotation{0.0f};
+    };
+    std::vector<Prop> props;
     bool flashlightOn = false;
     float flashlightCharge = 1.0f;
     std::vector<engine::ScriptSystem::EntityState> entities;
