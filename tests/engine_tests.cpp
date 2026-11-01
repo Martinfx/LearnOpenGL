@@ -1161,6 +1161,44 @@ void testTradeAndWear()
               engine::jamProbability(ak, 0.4f) > 0.0f,
           "a new weapon never jams, worn ones more the worse");
     check(engine::wornSpreadScale(1.0f) == 1.0f && engine::wornSpreadScale(0.0f) > 2.0f, "worn weapons spread more");
+    // Inheritance: the old AK-74 is the AK-74 with a few values of its own.
+    {
+        engine::WeaponSettings old;
+        std::string werr;
+        check(engine::loadWeaponFile(old, ENGINE_TEST_ASSETS "/weapons/ak74_old.weapon", &werr), "ak74_old loads: " + werr);
+        check(old.base == "ak74.weapon" && old.damage == ak.damage && old.magazineSize == ak.magazineSize && old.modelPath == ak.modelPath &&
+                  old.spreadDegrees > ak.spreadDegrees && old.price < ak.price && old.name != ak.name,
+              "a weapon inherits from its base and overrides some values");
+        const auto over = engine::weaponOverrides(old, ENGINE_TEST_ASSETS "/weapons/ak74_old.weapon");
+        check(over == std::set<std::string>{"name", "spread", "price", "wear"}, "the overridden keys are known");
+        const auto dir = std::filesystem::temp_directory_path() / "weapon_base_test";
+        std::filesystem::create_directories(dir);
+        engine::WeaponSettings base = ak;
+        base.base.clear();
+        check(engine::saveWeaponFile(base, dir / "base.weapon"), "base saved");
+        engine::WeaponSettings child = base;
+        child.base = "base.weapon";
+        child.damage = base.damage + 5.0f;
+        check(engine::saveWeaponFile(child, dir / "child.weapon"), "variant saved");
+        int lines = 0;
+        {
+            std::ifstream in(dir / "child.weapon");
+            for (std::string l; std::getline(in, l);)
+                lines += !l.empty() && l[0] != '#';
+        }
+        check(lines == 3, "the variant's file has version, base and its one difference (" + std::to_string(lines) + " lines)");
+        base.magazineSize = 45;
+        engine::saveWeaponFile(base, dir / "base.weapon");
+        engine::WeaponSettings back;
+        check(engine::loadWeaponFile(back, dir / "child.weapon") && back.magazineSize == 45 && back.damage == child.damage,
+              "a change to the base shows in the variant, its own values stay");
+        {
+            std::ofstream(dir / "loop.weapon") << "version 2\nbase \"loop.weapon\"\n";
+        }
+        engine::WeaponSettings loop;
+        check(!engine::loadWeaponFile(loop, dir / "loop.weapon"), "a base loop is an error, not a hang");
+        std::filesystem::remove_all(dir);
+    }
     // Artifacts: every anomaly kind that grows one has a kind, effects add up on the belt only.
     for (const char* kind : {"crusher", "discharge", "vent", "acid", "rift"}) {
         const auto kinds = engine::artifactsFor(items, kind);

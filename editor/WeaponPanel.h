@@ -5,6 +5,8 @@
 #include <QWidget>
 #include <array>
 #include <map>
+#include <string>
+#include <vector>
 
 class QCheckBox;
 class QComboBox;
@@ -13,6 +15,7 @@ class QLabel;
 class QDoubleSpinBox;
 class QLineEdit;
 class QListWidget;
+class QPushButton;
 class QSpinBox;
 class Vec3Editor;
 class SoundPicker;
@@ -39,6 +42,9 @@ private:
     void move(int delta);
     void updateTypeRows();
     void fillClipNames();
+    void fillBases();
+    void markOverrides();
+    void resetToBase();
 
     engine::Scene* scene_;
     std::map<std::filesystem::path, engine::WeaponSettings> cache_;
@@ -48,6 +54,10 @@ private:
     QListWidget* list_ = nullptr;
     QWidget* form_ = nullptr;
     QComboBox* type_ = nullptr;
+    QComboBox* base_ = nullptr;      // parent .weapon file (inheritance)
+    QPushButton* resetBase_ = nullptr;
+    QWidget* modelRow_ = nullptr;
+    std::vector<std::pair<QWidget*, std::vector<std::string>>> fieldKeys_; // field -> keys in the .weapon file
     QLineEdit* name_ = nullptr;
     QLineEdit* model_ = nullptr;
     QDoubleSpinBox* damage_ = nullptr;

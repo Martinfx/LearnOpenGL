@@ -353,6 +353,10 @@ Každá zbraň je soubor `.weapon` (typ střelná / chladná, model, poškození
 broky, zásobník, přebíjení, rozptyl, dostřel, poloha, natočení a měřítko v ruce, poloha záblesku). Výzbroj
 testovací úrovně: 1 AK-74M, 2 pistole, 3 nůž, 4 samopal.
 
+- **Dědění** (`base "ak74.weapon"`): varianta převezme všechny hodnoty jiné zbraně a její soubor obsahuje
+  jen to, čím se liší (např. `ak74_old.weapon`: horší rozptyl, rychlejší opotřebení, nižší cena). Změna
+  základní zbraně se tak propíše do všech variant. V editoru (Weapons) je pole Base, přepsané hodnoty mají
+  tučný popisek a Reset vrátí vše na hodnoty základu. Smyčka v dědění je chyba při načtení.
 - **Nůž** (`type melee`): bez nábojů a přebíjení, `fire_interval` je doba seku, `spread` šířka oblouku
   a `range` dosah (1,8 m). Sek trefí nejbližšího nepřítele v oblouku i vedle zdi.
 - **Animované ruce**: když je model zbraně glTF s kostrou (ruce + zbraň), vyberou se v editoru klipy

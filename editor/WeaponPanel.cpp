@@ -20,6 +20,9 @@
 #include <QSpinBox>
 #include <QVBoxLayout>
 
+#include <algorithm>
+#include <set>
+
 namespace {
 QString toQString(const std::filesystem::path& p) { return QString::fromStdU16String(p.u16string()); }
 std::filesystem::path toPath(const QString& s) { return std::filesystem::path(s.toStdU16String()); }
@@ -64,6 +67,7 @@ WeaponPanel::WeaponPanel(engine::Scene* scene, QWidget* parent) : QWidget(parent
     form->setContentsMargins(0, 8, 0, 0);
     name_ = new QLineEdit(form_);
     auto* modelRow = new QWidget(form_);
+    modelRow_ = modelRow;
     auto* modelLayout = new QHBoxLayout(modelRow);
     modelLayout->setContentsMargins(0, 0, 0, 0);
     model_ = new QLineEdit(modelRow);
@@ -101,6 +105,17 @@ WeaponPanel::WeaponPanel(engine::Scene* scene, QWidget* parent) : QWidget(parent
     intervalLabel_ = new QLabel(tr("Fire interval"), form_);
     spreadLabel_ = new QLabel(tr("Spread"), form_);
 
+    auto* baseRow = new QWidget(form_);
+    auto* baseLayout = new QHBoxLayout(baseRow);
+    baseLayout->setContentsMargins(0, 0, 0, 0);
+    base_ = new QComboBox(baseRow);
+    base_->setToolTip(tr("Inherit every value from another weapon file; this file then keeps only what differs "
+                         "(labels in bold). Changing the base updates all values not overridden here."));
+    resetBase_ = new QPushButton(tr("Reset"), baseRow);
+    resetBase_->setToolTip(tr("Drop all overrides: take every value from the base again (keeps the name)"));
+    baseLayout->addWidget(base_, 1);
+    baseLayout->addWidget(resetBase_);
+    form->addRow(tr("Base"), baseRow);
     form->addRow(tr("Type"), type_);
     form->addRow(tr("Name"), name_);
     form->addRow(tr("Model (glTF)"), modelRow);
@@ -190,6 +205,21 @@ WeaponPanel::WeaponPanel(engine::Scene* scene, QWidget* parent) : QWidget(parent
     firearmRows_[12] = ammoType_;
     firearmRows_[13] = startReserve_;
     formLayout_ = form;
+    fieldKeys_ = {{type_, {"type"}}, {name_, {"name"}}, {modelRow_, {"model"}}, {damage_, {"damage"}},
+                  {interval_, {"fire_interval"}}, {automatic_, {"automatic"}}, {pellets_, {"pellets"}},
+                  {magazine_, {"magazine"}}, {ammoType_, {"ammo_type"}}, {startReserve_, {"ammo_type"}},
+                  {reload_, {"reload_time"}}, {reloadEmpty_, {"reload_empty_time"}}, {spread_, {"spread"}},
+                  {range_, {"range"}}, {price_, {"price"}}, {weight_, {"weight"}}, {wear_, {"wear"}}, {jam_, {"wear"}},
+                  {viewOffset_, {"view_offset"}}, {viewRotation_, {"view_rotation"}}, {viewScale_, {"view_scale"}},
+                  {muzzle_, {"muzzle"}}, {aimFov_, {"aim_fov"}}, {aimOffset_, {"aim_offset"}},
+                  {aimRotation_, {"aim_rotation"}}, {aimTime_, {"aim_time"}}, {aimSpread_, {"aim_spread"}}};
+    const char* clipKeys[6] = {"anim_idle", "anim_fire", "anim_reload", "anim_draw", "anim_reload_empty", "anim_walk"};
+    for (std::size_t i = 0; i < clips_.size(); ++i)
+        fieldKeys_.push_back({clips_[i], {clipKeys[i]}});
+    const char* soundKeys[7] = {"sound_fire", "sound_reload", "sound_draw", "sound_impact", "sound_hit",
+                                "sound_reload_empty", "sound_dry_fire"};
+    for (std::size_t i = 0; i < sounds_.size(); ++i)
+        fieldKeys_.push_back({sounds_[i], {soundKeys[i]}});
     layout->addWidget(form_);
     layout->addStretch(1);
 
@@ -224,6 +254,15 @@ WeaponPanel::WeaponPanel(engine::Scene* scene, QWidget* parent) : QWidget(parent
     connect(muzzle_, &Vec3Editor::valueEdited, this, &WeaponPanel::edited);
     connect(aimOffset_, &Vec3Editor::valueEdited, this, &WeaponPanel::edited);
     connect(aimRotation_, &Vec3Editor::valueEdited, this, &WeaponPanel::edited);
+    connect(base_, &QComboBox::currentIndexChanged, this, [this] {
+        auto* w = current();
+        if (!w || updating_)
+            return;
+        w->base = base_->currentData().toString().toStdString();
+        resetBase_->setEnabled(!w->base.empty());
+        edited();
+    });
+    connect(resetBase_, &QPushButton::clicked, this, &WeaponPanel::resetToBase);
     connect(type_, &QComboBox::currentIndexChanged, this, [this] {
         edited();
         updateTypeRows();
@@ -302,8 +341,100 @@ void WeaponPanel::showCurrent()
     viewRotation_->setValue(w->viewRotation);
     muzzle_->setValue(w->muzzle);
     fillClipNames();
+    fillBases();
     updating_ = false;
     updateTypeRows();
+    markOverrides();
+}
+
+// Other .weapon files in the same folder can be the base (no chains back to this one).
+void WeaponPanel::fillBases()
+{
+    const engine::WeaponSettings* w = current();
+    if (!w)
+        return;
+    const auto& file = scene_->loadout[static_cast<std::size_t>(list_->currentRow())];
+    base_->clear();
+    base_->addItem(tr("(none)"), QString());
+    std::error_code ec;
+    std::vector<std::filesystem::path> files;
+    for (const auto& entry : std::filesystem::directory_iterator(std::filesystem::absolute(file).parent_path(), ec))
+        if (entry.path().extension() == ".weapon" && !std::filesystem::equivalent(entry.path(), file, ec))
+            files.push_back(entry.path());
+    std::sort(files.begin(), files.end());
+    for (const auto& f : files) {
+        engine::WeaponSettings other;
+        if (!engine::loadWeaponFile(other, f))
+            continue;
+        // Skip a file that (indirectly) inherits from this one: that would be a loop.
+        bool loop = false;
+        engine::WeaponSettings walk = other;
+        std::filesystem::path at = f;
+        for (int depth = 0; depth < 8 && !walk.base.empty(); ++depth) {
+            const auto next = engine::weaponBaseFile(walk, at);
+            if (std::filesystem::equivalent(next, file, ec)) {
+                loop = true;
+                break;
+            }
+            engine::WeaponSettings up;
+            if (!engine::loadWeaponFile(up, next))
+                break;
+            walk = up;
+            at = next;
+        }
+        if (!loop)
+            base_->addItem(QString("%1  (%2)").arg(toQString(f.filename()), QString::fromStdString(other.name)),
+                           toQString(f.filename()));
+    }
+    int index = base_->findData(QString::fromStdString(w->base));
+    if (index < 0 && !w->base.empty()) {
+        base_->addItem(QString::fromStdString(w->base) + tr("  (missing)"), QString::fromStdString(w->base));
+        index = base_->count() - 1;
+    }
+    base_->setCurrentIndex(std::max(index, 0));
+    resetBase_->setEnabled(!w->base.empty());
+}
+
+// Bold labels mark values this file overrides; the rest come from the base.
+void WeaponPanel::markOverrides()
+{
+    const engine::WeaponSettings* w = current();
+    std::set<std::string> overrides;
+    if (w && !w->base.empty())
+        overrides = engine::weaponOverrides(*w, scene_->loadout[static_cast<std::size_t>(list_->currentRow())]);
+    for (const auto& [field, keys] : fieldKeys_) {
+        auto* label = qobject_cast<QLabel*>(formLayout_->labelForField(field));
+        if (!label)
+            continue;
+        bool bold = false;
+        for (const auto& key : keys)
+            bold = bold || overrides.count(key) > 0;
+        QFont font = label->font();
+        font.setBold(bold);
+        label->setFont(font);
+        label->setToolTip(w && !w->base.empty() ? (bold ? tr("Overridden in this file") : tr("Inherited from the base"))
+                                                : QString());
+    }
+}
+
+void WeaponPanel::resetToBase()
+{
+    auto* w = current();
+    if (!w || w->base.empty())
+        return;
+    const auto& file = scene_->loadout[static_cast<std::size_t>(list_->currentRow())];
+    engine::WeaponSettings base;
+    std::string error;
+    if (!engine::loadWeaponFile(base, engine::weaponBaseFile(*w, file), &error)) {
+        QMessageBox::warning(this, tr("Base weapon"), QString::fromStdString(error));
+        return;
+    }
+    base.name = w->name;
+    base.base = w->base;
+    *w = base;
+    modified_[file] = true;
+    showCurrent();
+    emit loadoutChanged();
 }
 
 // Clip combos list the animations of the view model (e.g. arms holding the weapon).
@@ -395,6 +526,7 @@ void WeaponPanel::edited()
     w->animWalk = clips_[5]->currentText().toStdString();
     modified_[scene_->loadout[static_cast<std::size_t>(list_->currentRow())]] = true;
     list_->currentItem()->setText(QString("%1  %2").arg(list_->currentRow() + 1).arg(name_->text()));
+    markOverrides();
     emit loadoutChanged();
 }
 
@@ -467,8 +599,10 @@ void WeaponPanel::move(int delta)
 
 bool WeaponPanel::saveModified(QString* error)
 {
+    // Bases first: a variant's file is written as its differences to the base on disk.
+    for (int pass = 0; pass < 2; ++pass)
     for (auto& [path, modified] : modified_) {
-        if (!modified)
+        if (!modified || cache_[path].base.empty() != (pass == 0))
             continue;
         std::string err;
         if (!engine::saveWeaponFile(cache_[path], path, &err)) {

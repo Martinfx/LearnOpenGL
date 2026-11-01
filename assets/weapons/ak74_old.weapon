@@ -1,0 +1,7 @@
+# FPS engine weapon
+version 2
+base "ak74.weapon"
+name "AK-74 (starý)"
+spread 2.4
+price 1900
+wear 0.0011 0.16

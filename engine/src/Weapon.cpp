@@ -6,6 +6,7 @@
 #include <cmath>
 #include <fstream>
 #include <iomanip>
+#include <map>
 #include <sstream>
 #include <glm/geometric.hpp>
 #include <glm/trigonometric.hpp>
@@ -108,20 +109,18 @@ std::string pathToUtf8(const std::filesystem::path& p)
 }
 } // namespace
 
-bool saveWeaponFile(const WeaponSettings& w, const std::filesystem::path& file, std::string* error)
+namespace {
+// Every value line of a weapon, paths relative to `file`'s folder (a base and its variant write
+// the same text for the same value, so the variant's file keeps only the differences).
+std::string weaponLines(const WeaponSettings& w, const std::filesystem::path& file)
 {
-    std::ofstream out(file);
-    if (!out) {
-        if (error)
-            *error = "Cannot write " + file.string();
-        return false;
-    }
+    std::ostringstream out;
     std::string model;
     if (!w.modelPath.empty()) {
         const auto rel = std::filesystem::absolute(w.modelPath).lexically_relative(std::filesystem::absolute(file).parent_path());
         model = pathToUtf8(rel.empty() ? std::filesystem::absolute(w.modelPath) : rel);
     }
-    out << std::setprecision(6) << "# FPS engine weapon\nversion 2\n"
+    out << std::setprecision(6)
         << "type " << (w.melee() ? "melee" : "firearm") << '\n'
         << "name " << std::quoted(w.name) << '\n'
         << "model " << std::quoted(model) << '\n'
@@ -171,6 +170,68 @@ bool saveWeaponFile(const WeaponSettings& w, const std::filesystem::path& file, 
         << "casing " << std::quoted(relative(w.casingModel)) << '\n'
         << "casing_offset " << w.casingOffset.x << ' ' << w.casingOffset.y << ' ' << w.casingOffset.z << '\n'
         << "casing_velocity " << w.casingVelocity.x << ' ' << w.casingVelocity.y << ' ' << w.casingVelocity.z << '\n';
+    return out.str();
+}
+
+std::map<std::string, std::string> linesByKey(const std::string& text)
+{
+    std::map<std::string, std::string> out;
+    std::istringstream in(text);
+    for (std::string line; std::getline(in, line);)
+        out[line.substr(0, line.find(' '))] = line;
+    return out;
+}
+} // namespace
+
+std::filesystem::path weaponBaseFile(const WeaponSettings& w, const std::filesystem::path& file)
+{
+    if (w.base.empty())
+        return {};
+    std::filesystem::path p = pathFromUtf8(w.base);
+    if (p.is_relative())
+        p = std::filesystem::absolute(file).parent_path() / p;
+    return p.lexically_normal();
+}
+
+std::set<std::string> weaponOverrides(const WeaponSettings& w, const std::filesystem::path& file)
+{
+    std::set<std::string> out;
+    WeaponSettings base;
+    if (w.base.empty() || !loadWeaponFile(base, weaponBaseFile(w, file)))
+        return out;
+    const auto mine = linesByKey(weaponLines(w, file)), theirs = linesByKey(weaponLines(base, file));
+    for (const auto& [key, line] : mine)
+        if (const auto it = theirs.find(key); it == theirs.end() || it->second != line)
+            out.insert(key);
+    return out;
+}
+
+bool saveWeaponFile(const WeaponSettings& w, const std::filesystem::path& file, std::string* error)
+{
+    std::string body = weaponLines(w, file);
+    if (!w.base.empty()) {
+        WeaponSettings base;
+        if (!loadWeaponFile(base, weaponBaseFile(w, file), error))
+            return false;
+        // Only what differs from the base: the rest follows the base when it changes.
+        const auto theirs = linesByKey(weaponLines(base, file));
+        std::string kept;
+        std::istringstream in(body);
+        for (std::string line; std::getline(in, line);)
+            if (const auto it = theirs.find(line.substr(0, line.find(' '))); it == theirs.end() || it->second != line)
+                kept += line + '\n';
+        body = kept;
+    }
+    std::ofstream out(file);
+    if (!out) {
+        if (error)
+            *error = "Cannot write " + file.string();
+        return false;
+    }
+    out << "# FPS engine weapon\nversion 2\n";
+    if (!w.base.empty())
+        out << "base " << std::quoted(w.base) << '\n';
+    out << body;
     return static_cast<bool>(out);
 }
 
@@ -183,6 +244,35 @@ bool loadWeaponFile(WeaponSettings& weapon, const std::filesystem::path& file, s
         return false;
     }
     WeaponSettings w;
+    // A base first: this file's lines then replace its values.
+    for (std::string line; std::getline(in, line);) {
+        std::istringstream ls(line);
+        std::string key, base;
+        if (ls >> key && key == "base" && ls >> std::quoted(base) && !base.empty()) {
+            static thread_local int depth = 0;
+            if (depth > 8) {
+                if (error)
+                    *error = file.filename().string() + ": base chain too deep (a loop?)";
+                return false;
+            }
+            std::filesystem::path p = pathFromUtf8(base);
+            if (p.is_relative())
+                p = std::filesystem::absolute(file).parent_path() / p;
+            ++depth;
+            std::string baseError;
+            const bool ok = loadWeaponFile(w, p.lexically_normal(), &baseError);
+            --depth;
+            if (!ok) {
+                if (error)
+                    *error = file.filename().string() + ": base: " + baseError;
+                return false;
+            }
+            w.base = base;
+            break;
+        }
+    }
+    in.clear();
+    in.seekg(0);
     std::string line;
     int lineNo = 0;
     while (std::getline(in, line)) {
@@ -192,7 +282,8 @@ bool loadWeaponFile(WeaponSettings& weapon, const std::filesystem::path& file, s
         if (!(ls >> key) || key[0] == '#')
             continue;
         bool ok = true;
-        if (key == "version") { int v = 0; ok = static_cast<bool>(ls >> v) && v >= 1 && v <= 2; }
+        if (key == "base") { std::string b; ok = static_cast<bool>(ls >> std::quoted(b)); }
+        else if (key == "version") { int v = 0; ok = static_cast<bool>(ls >> v) && v >= 1 && v <= 2; }
         else if (key == "type") {
             std::string t;
             ok = static_cast<bool>(ls >> t) && (t == "firearm" || t == "melee");

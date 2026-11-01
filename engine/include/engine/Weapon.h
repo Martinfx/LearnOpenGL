@@ -3,6 +3,7 @@
 #include "engine/Scene.h"
 #include <glm/vec3.hpp>
 #include <filesystem>
+#include <set>
 #include <memory>
 #include <string>
 
@@ -68,6 +69,10 @@ struct WeaponSettings {
     float wearPerShot = 0.0005f;  // condition lost per shot or swing (1 = new, 0 = wrecked)
     float jamChance = 0.08f;      // chance per shot to jam at condition 0 (none above 60 %)
 
+    // Inheritance: `base "ak74.weapon"` (relative to this file) takes every value this file does
+    // not set itself from that weapon, so a variant lists only what differs and follows the base.
+    std::string base;
+
     bool melee() const { return type == Type::Melee; }
 };
 
@@ -75,8 +80,14 @@ struct WeaponSettings {
 float wornSpreadScale(float condition);
 float jamProbability(const WeaponSettings& weapon, float condition);
 
+// With a base, only the lines that differ from the base are written.
 bool saveWeaponFile(const WeaponSettings& weapon, const std::filesystem::path& file, std::string* error = nullptr);
 bool loadWeaponFile(WeaponSettings& weapon, const std::filesystem::path& file, std::string* error = nullptr);
+// Keys ("damage", "spread"...) in which `weapon` (to be saved as `file`) differs from its base;
+// empty without a base. The editor marks them, the rest shows the inherited values.
+std::set<std::string> weaponOverrides(const WeaponSettings& weapon, const std::filesystem::path& file);
+// The base's file for a weapon saved as `file` (empty without a base).
+std::filesystem::path weaponBaseFile(const WeaponSettings& weapon, const std::filesystem::path& file);
 
 struct ShotHit {
     bool hit = false;
