@@ -1,5 +1,7 @@
 #pragma once
+#include <array>
 #include <filesystem>
+#include <glm/mat4x4.hpp>
 #include <memory>
 #include <string>
 #include <vector>
@@ -62,8 +64,26 @@ struct AnimGraph {
         std::string name;         // "footstep", "mag_out", ...
     };
 
+    // Two-bone IK after the graph's pose. Foot: the leg reaches the ground under the foot (the
+    // game supplies the ground heights; the body drops for the lower foot). Hand: the hand keeps
+    // the offset to `target` (a bone, e.g. the other hand on the weapon) it has in the reference
+    // clip, so a two-handed grip holds while aim blends move the arms differently.
+    enum class IkKind { Foot, Hand };
+    struct IkChain {
+        IkKind kind = IkKind::Foot;
+        std::string name;
+        std::string root, mid, end; // thigh, calf, foot / upper arm, forearm, hand
+        float weight = 1.0f;
+        std::string weightParam;    // empty = `weight`; else a float parameter 0..1
+        std::string target;         // Hand: bone it follows
+        std::string referenceClip;  // Hand: clip with the grip to keep
+        float referenceTime = 0.0f;
+    };
+
     std::filesystem::path sourcePath;
     std::vector<Param> params;
+    std::vector<IkChain> ik;
+    float footMaxAdjust = 0.45f;    // m: largest step up / down the feet adapt to
     std::vector<Layer> layers;
     std::vector<Event> events;
 
@@ -95,6 +115,14 @@ struct AnimGraphState {
     std::vector<std::vector<int>> clips; // per state (stateBase[layer] + state): clip index per sample
     std::vector<int> maskNode;          // per layer: mask bone node, -1 = all bones
     std::vector<int> eventClip;         // per AnimGraph::events entry: clip index
+    std::vector<std::array<int, 4>> ikNodes; // per AnimGraph::ik chain: root, mid, end, target node (-1 = missing)
+    std::vector<glm::mat4> ikGrip;      // per chain (Hand): end bone relative to the target in the reference clip
+    // Foot IK input from the game, in model units: lift per chain (ground under that foot relative
+    // to the character's base) and the body drop. Smoothed by the caller.
+    std::vector<float> ikWeight;        // per chain: weight eased toward its parameter
+    std::vector<float> footLift;
+    float pelvisDrop = 0.0f;
+    bool footIk = false;                // the game fed ground heights this frame
 };
 
 } // namespace engine

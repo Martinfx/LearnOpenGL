@@ -160,6 +160,10 @@ pro všechny lidi se stejným rigem; nově přidaný nepřítel ho dostane sám)
 - **Události v klipech** (`footstep`, `mag_out`): `self:anim_event("footstep")` je pravda ve snímku, kdy klip čas minul.
   `enemy.lua` na ně přehraje zvuk kroku.
 
+- **IK** (řádky `ik foot` / `ik hand`): nohy stojí každá na své zemi (schod, svah, suť; tělo klesne za nižší nohou,
+  nejvýš `foot_max_adjust` m), levá ruka drží odstup od pravé ruky z referenčního klipu (`Pistol_Aim_Neutral`),
+  takže úchop zbraně vydrží i při míření nahoru a dolů. Váha řetězce může jít z parametru (`grip`).
+
 Explicitní `self:play(klip)` graf dočasně přebije, `self:use_graph()` vrátí řízení grafu. V levelu je to řádek `  animgraph "cesta"`.
 
 ## Načítání

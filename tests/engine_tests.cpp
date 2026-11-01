@@ -2973,6 +2973,76 @@ void testAnimGraph()
     std::filesystem::remove_all(dir);
 }
 
+void testAnimIk()
+{
+    // Leg: hip at 1 m, knee bent slightly forward, foot on the ground; a target bone beside it.
+    engine::Skeleton sk;
+    sk.nodes = {{"Root", -1, {}, {1, 0, 0, 0}, {1, 1, 1}},
+                {"Hip", 0, {0, 1, 0}, {1, 0, 0, 0}, {1, 1, 1}},
+                {"Knee", 1, {0, -0.5f, 0.05f}, {1, 0, 0, 0}, {1, 1, 1}},
+                {"Foot", 2, {0, -0.5f, -0.05f}, {1, 0, 0, 0}, {1, 1, 1}},
+                {"Target", 0, {0.3f, 0.5f, 0}, {1, 0, 0, 0}, {1, 1, 1}}};
+    auto clip = [](const char* name, glm::vec3 target) {
+        engine::Skeleton::Clip c{name, 1.0f, {}};
+        c.channels.push_back({4, engine::Skeleton::Path::Translation, false, {0.0f, 1.0f}, {glm::vec4(target, 0), glm::vec4(target, 0)}});
+        return c;
+    };
+    sk.clips = {clip("Ref", {0.3f, 0.5f, 0}), clip("Moved", {0.3f, 0.7f, 0.2f})};
+    const std::filesystem::path dir = std::filesystem::temp_directory_path() / "animik_test";
+    std::filesystem::create_directories(dir);
+    {
+        std::ofstream f(dir / "ik.animgraph");
+        f << "param \"grip\" float 0\nfoot_max_adjust 0.4\n"
+             "ik foot \"Leg\" \"Hip\" \"Knee\" \"Foot\" 1 \"\" \"\" \"\" 0\n"
+             "layer \"Base\"\nstate \"S\" clip\nsample \"Ref\"\n";
+        std::ofstream h(dir / "hand.animgraph");
+        h << "param \"grip\" float 0\n"
+             "ik hand \"Grip\" \"Hip\" \"Knee\" \"Foot\" 1 \"grip\" \"Target\" \"Ref\" 0\n"
+             "layer \"Base\"\nstate \"S\" clip\nsample \"Moved\"\n";
+    }
+    std::string error;
+    auto graph = engine::loadAnimGraph(dir / "ik.animgraph", &error);
+    check(graph && graph->ik.size() == 1 && graph->footMaxAdjust == 0.4f, "IK chains load: " + error);
+    engine::AnimGraph copy;
+    check(engine::saveAnimGraphFile(*graph, dir / "copy.animgraph") && engine::loadAnimGraphFile(copy, dir / "copy.animgraph") &&
+              copy.ik.size() == 1 && copy.ik[0].end == "Foot" && copy.ik[0].kind == engine::AnimGraph::IkKind::Foot,
+          "IK chains round trip");
+    engine::Animator a;
+    a.setGraph(graph);
+    for (int i = 0; i < 20; ++i)
+        a.update(sk, 0.05f); // eases the IK weight in
+    std::vector<glm::mat4> pose;
+    engine::evaluatePose(sk, &a, pose);
+    check(std::abs(pose[3][3].y) < 1e-4f, "without ground input the foot stays animated");
+    a.graphState.footIk = true;
+    a.graphState.footLift = {0.2f};
+    a.graphState.pelvisDrop = 0.0f;
+    engine::evaluatePose(sk, &a, pose);
+    const glm::vec3 hip(pose[1][3]), knee(pose[2][3]), foot(pose[3][3]);
+    check(std::abs(foot.y - 0.2f) < 1e-3f && std::abs(foot.x) < 1e-3f, "foot IK lifts the foot onto a 20 cm step");
+    check(std::abs(glm::length(knee - hip) - std::sqrt(0.25f + 0.0025f)) < 1e-3f &&
+              std::abs(glm::length(foot - knee) - std::sqrt(0.25f + 0.0025f)) < 1e-3f && knee.z > 0.0f,
+          "bone lengths kept, knee still bends forward");
+    a.graphState.footLift = {0.0f};
+    a.graphState.pelvisDrop = -0.15f;
+    engine::evaluatePose(sk, &a, pose);
+    check(std::abs(pose[1][3].y - 0.85f) < 1e-3f && std::abs(pose[3][3].y) < 1e-3f, "the body drops, the foot stays on its ground");
+
+    // Hand: keeps the reference offset to Target (foot 1 m below and 0.3 m beside it) after Target moved.
+    engine::Animator h;
+    h.setGraph(engine::loadAnimGraph(dir / "hand.animgraph"));
+    h.update(sk, 0.0f);
+    engine::evaluatePose(sk, &h, pose);
+    check(std::abs(pose[3][3].y) < 1e-3f, "hand IK off while its weight parameter is 0");
+    h.setParam("grip", 1.0f);
+    for (int i = 0; i < 10; ++i)
+        h.update(sk, 0.05f);
+    engine::evaluatePose(sk, &h, pose);
+    const glm::vec3 want = glm::vec3(0.3f, 0.7f, 0.2f) + glm::vec3(-0.3f, -0.5f, 0.0f);
+    check(glm::length(glm::vec3(pose[3][3]) - want) < 1e-3f, "hand IK keeps the grip on the moved target");
+    std::filesystem::remove_all(dir);
+}
+
 void testTaskGraph()
 {
     engine::TaskGraph graph;
@@ -3097,6 +3167,7 @@ int main()
         {"testDistortParticles", testDistortParticles},
         {"testTaskGraph", testTaskGraph},
         {"testAnimGraph", testAnimGraph},
+        {"testAnimIk", testAnimIk},
         {"testEnemyAnimGraph", testEnemyAnimGraph},
         {"testWorldStreaming", testWorldStreaming},
     };

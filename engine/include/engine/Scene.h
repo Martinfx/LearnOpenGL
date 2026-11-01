@@ -1,4 +1,6 @@
 #pragma once
+#include <functional>
+#include <optional>
 #include "engine/Animation.h"
 #include "engine/Geometry.h"
 #include "engine/Material.h"
@@ -553,8 +555,11 @@ bool loadAnimatedModelFile(Model& model, const std::filesystem::path& file, std:
 std::shared_ptr<const Model> loadCharacterModel(const std::filesystem::path& file, std::string* error = nullptr);
 
 // Advances every entity's animation by dt (seconds). Entities that no script
-// animates play their `animation` clip on a loop.
-void updateAnimations(Scene& scene, float dt);
+// animates play their `animation` clip on a loop. With `ground` (height of the ground below a
+// point, called from worker threads: read-only queries) living characters whose animation graph
+// has foot IK chains stand with each foot on its own ground (slopes, steps, rubble).
+using GroundQuery = std::function<std::optional<float>(const glm::vec3& from)>;
+void updateAnimations(Scene& scene, float dt, const GroundQuery& ground = {});
 
 // A tunable declared by a script in its `properties` table (shown in the editor).
 // Gives every box, model and entity without an ID (or with one already used by

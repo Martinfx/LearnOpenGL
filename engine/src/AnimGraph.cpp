@@ -128,6 +128,16 @@ bool loadAnimGraphFile(AnimGraph& graph, const std::filesystem::path& file, std:
             p.type = type == "bool" ? AnimGraph::ParamType::Bool : type == "trigger" ? AnimGraph::ParamType::Trigger : AnimGraph::ParamType::Float;
             ls >> p.value;
             g.params.push_back(p);
+        } else if (key == "ik") {
+            AnimGraph::IkChain c;
+            std::string kind;
+            if (!(ls >> kind >> std::quoted(c.name) >> std::quoted(c.root) >> std::quoted(c.mid) >> std::quoted(c.end)))
+                return fail("bad ik line");
+            c.kind = kind == "hand" ? AnimGraph::IkKind::Hand : AnimGraph::IkKind::Foot;
+            ls >> c.weight >> std::quoted(c.weightParam) >> std::quoted(c.target) >> std::quoted(c.referenceClip) >> c.referenceTime;
+            g.ik.push_back(c);
+        } else if (key == "foot_max_adjust") {
+            ls >> g.footMaxAdjust;
         } else if (key == "layer") {
             AnimGraph::Layer l;
             if (!(ls >> std::quoted(l.name)))
@@ -235,6 +245,11 @@ bool saveAnimGraphFile(const AnimGraph& g, const std::filesystem::path& file, st
     out << "# Animation graph (editor: Animation editor). Clip names come from the character's glTF file.\n";
     for (const AnimGraph::Param& p : g.params)
         out << "param " << std::quoted(p.name) << ' ' << paramTypeName(p.type) << ' ' << p.value << '\n';
+    out << "foot_max_adjust " << g.footMaxAdjust << '\n';
+    for (const AnimGraph::IkChain& c : g.ik)
+        out << "ik " << (c.kind == AnimGraph::IkKind::Hand ? "hand " : "foot ") << std::quoted(c.name) << ' ' << std::quoted(c.root) << ' '
+            << std::quoted(c.mid) << ' ' << std::quoted(c.end) << ' ' << c.weight << ' ' << std::quoted(c.weightParam) << ' '
+            << std::quoted(c.target) << ' ' << std::quoted(c.referenceClip) << ' ' << c.referenceTime << '\n';
     for (const AnimGraph::Event& e : g.events)
         out << "event " << std::quoted(e.clip) << ' ' << e.time << ' ' << std::quoted(e.name) << '\n';
     for (const AnimGraph::Layer& l : g.layers) {

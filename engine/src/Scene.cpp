@@ -8,6 +8,7 @@
 #include "engine/VertexPaint.h"
 
 #include <algorithm>
+#include <array>
 #include <map>
 #include <glm/gtc/matrix_transform.hpp>
 #include <iomanip>
@@ -1372,10 +1373,47 @@ glm::mat4 Entity::modelTransform() const
     return glm::translate(m, glm::vec3(-center.x, -b.min.y, -center.z));
 }
 
-void updateAnimations(Scene& scene, float dt)
+namespace {
+// Foot IK input: the ground under each animated foot relative to the character's base.
+void feedFootIk(Entity& e, const Skeleton& skeleton, float dt, const GroundQuery& ground, std::vector<glm::mat4>& pose)
+{
+    Animator& a = e.animator;
+    AnimGraphState& st = a.graphState;
+    const AnimGraph& g = *a.graph;
+    const bool any = std::any_of(g.ik.begin(), g.ik.end(), [](const AnimGraph::IkChain& c) { return c.kind == AnimGraph::IkKind::Foot; });
+    if (!any || st.ikNodes.size() != g.ik.size() || st.footLift.size() != g.ik.size()) {
+        st.footIk = false;
+        return;
+    }
+    const bool active = ground && e.alive && a.graphActive();
+    evaluatePose(skeleton, &a, pose, false);
+    const glm::mat4 m = e.modelTransform();
+    const float scale = std::max(1e-4f, glm::length(glm::vec3(m[0]))); // model units -> m
+    const float range = g.footMaxAdjust;
+    float drop = 0.0f;
+    std::array<float, 8> lift{};
+    for (std::size_t i = 0; i < g.ik.size() && i < lift.size(); ++i) {
+        const int end = st.ikNodes[i][2];
+        if (!active || g.ik[i].kind != AnimGraph::IkKind::Foot || end < 0)
+            continue;
+        const glm::vec3 foot = glm::vec3(m * pose[static_cast<std::size_t>(end)][3]);
+        const std::optional<float> y = ground(glm::vec3(foot.x, e.position.y + range + 0.3f, foot.z));
+        lift[i] = y ? std::clamp(*y - e.position.y, -range, range) : 0.0f;
+        drop = std::min(drop, lift[i]);
+    }
+    const float k = std::min(1.0f, dt * 12.0f); // ease so stepping onto a ledge does not pop
+    for (std::size_t i = 0; i < g.ik.size() && i < lift.size(); ++i)
+        st.footLift[i] += (lift[i] / scale - st.footLift[i]) * k;
+    st.pelvisDrop += (drop / scale - st.pelvisDrop) * k;
+    st.footIk = true;
+}
+} // namespace
+
+void updateAnimations(Scene& scene, float dt, const GroundQuery& ground)
 {
     // Each entity's animator only touches its own state: spread over the job system.
-    JobSystem::global().parallelFor(scene.entities.size(), 32, [&scene, dt](std::size_t begin, std::size_t end) {
+    JobSystem::global().parallelFor(scene.entities.size(), 32, [&scene, dt, &ground](std::size_t begin, std::size_t end) {
+        std::vector<glm::mat4> pose;
         for (std::size_t i = begin; i < end; ++i) {
             Entity& e = scene.entities[i];
             e.flash = std::max(0.0f, e.flash - dt);
@@ -1385,6 +1423,8 @@ void updateAnimations(Scene& scene, float dt)
             if (e.animator.current.clip < 0 && !e.animator.graph && !e.animation.empty())
                 e.animator.play(skeleton, e.animation, true, 1.0f, 0.0f);
             e.animator.update(skeleton, dt);
+            if (e.animator.graph && !e.animator.graph->ik.empty())
+                feedFootIk(e, skeleton, dt, ground, pose);
         }
     });
 }

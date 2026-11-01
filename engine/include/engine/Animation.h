@@ -85,7 +85,8 @@ struct Animator {
 
 // Model-space matrix of every node for the animator's current pose
 // (rest pose when animator is null or not playing).
-void evaluatePose(const Skeleton& skeleton, const Animator* animator, std::vector<glm::mat4>& globals);
+// `ik` = false skips the graph's IK chains (the game reads the animated foot positions that way).
+void evaluatePose(const Skeleton& skeleton, const Animator* animator, std::vector<glm::mat4>& globals, bool ik = true);
 
 // Skinning matrix per joint of `skin` for the pose in `globals`.
 void skinMatrices(const Skeleton& skeleton, int skin, const std::vector<glm::mat4>& globals, std::vector<glm::mat4>& out);

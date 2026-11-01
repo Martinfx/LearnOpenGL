@@ -1,6 +1,6 @@
 # Animation graph (editor: Animation editor). Clip names come from the character's glTF file.
 # Human NPC (bandit, soldier, stalker, worker): the enemy script sets speed / crouch / sit / aim /
-# aim_pitch / dead and fires hit / shoot / reload. Footstep times are the heel strikes of each clip.
+# aim_pitch / dead / grip (left hand on the gun, 0..1) and fires hit / shoot / reload. Footstep times are the heel strikes of each clip.
 param "speed" float 0
 param "crouch" bool 0
 param "sit" bool 0
@@ -10,6 +10,11 @@ param "aim" bool 0
 param "aim_pitch" float 0
 param "shoot" trigger 0
 param "reload" trigger 0
+param "grip" float 0
+foot_max_adjust 0.45
+ik foot "Left leg" "Bip01 L Thigh" "Bip01 L Calf" "Bip01 L Foot" 1 "" "" "" 0
+ik foot "Right leg" "Bip01 R Thigh" "Bip01 R Calf" "Bip01 R Foot" 1 "" "" "" 0
+ik hand "Left hand on gun" "Bip01 L UpperArm" "Bip01 L Forearm" "Bip01 L Hand" 1 "grip" "Bip01 R Hand" "Pistol_Aim_Neutral" 0
 event "Walk_Loop" 0.622 "footstep"
 event "Walk_Loop" 1.289 "footstep"
 event "Jog_Fwd_Loop" 0.016 "footstep"

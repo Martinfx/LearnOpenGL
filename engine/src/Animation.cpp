@@ -5,6 +5,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/vec2.hpp>
 #include <glm/geometric.hpp>
+#include <glm/gtc/constants.hpp>
+#include <array>
 
 namespace engine {
 
@@ -233,6 +235,30 @@ void resolveGraph(const Skeleton& skeleton, const AnimGraph& g, AnimGraphState& 
     for (std::size_t i = 0; i < g.params.size(); ++i)
         params.push_back(keep && i < st.params.size() ? st.params[i] : g.params[i].value);
     st.params = std::move(params);
+    auto node = [&skeleton](const std::string& name) {
+        for (std::size_t n = 0; n < skeleton.nodes.size() && !name.empty(); ++n)
+            if (skeleton.nodes[n].name == name)
+                return static_cast<int>(n);
+        return -1;
+    };
+    st.ikNodes.clear();
+    st.ikGrip.assign(g.ik.size(), glm::mat4(1.0f));
+    st.ikWeight.resize(g.ik.size(), 0.0f);
+    st.footLift.resize(g.ik.size(), 0.0f);
+    for (std::size_t i = 0; i < g.ik.size(); ++i) {
+        const AnimGraph::IkChain& c = g.ik[i];
+        st.ikNodes.push_back({node(c.root), node(c.mid), node(c.end), node(c.target)});
+        const auto& n = st.ikNodes.back();
+        if (c.kind != AnimGraph::IkKind::Hand || n[2] < 0 || n[3] < 0)
+            continue;
+        Animator reference;
+        if (!reference.play(skeleton, c.referenceClip, false, 1.0f, 0.0f))
+            continue;
+        reference.current.time = c.referenceTime;
+        std::vector<glm::mat4> pose;
+        evaluatePose(skeleton, &reference, pose);
+        st.ikGrip[i] = glm::inverse(pose[static_cast<std::size_t>(n[3])]) * pose[static_cast<std::size_t>(n[2])];
+    }
     st.layers.resize(g.layers.size());
     for (std::size_t l = 0; l < g.layers.size(); ++l) {
         AnimGraphState::Layer& sl = st.layers[l];
@@ -338,6 +364,116 @@ void updateGraph(const Skeleton& skeleton, const AnimGraph& g, AnimGraphState& s
             sl.phase = 0.0f;
             sl.time = 0.0f;
             break;
+        }
+    }
+    for (std::size_t i = 0; i < g.ik.size(); ++i) {
+        const AnimGraph::IkChain& c = g.ik[i];
+        const float target = c.weightParam.empty() ? c.weight : std::clamp(paramValue(g, st, c.weightParam), 0.0f, 1.0f) * c.weight;
+        const float step = dt / 0.2f; // 0.2 s to blend IK in or out
+        st.ikWeight[i] = dt > 0.0f ? st.ikWeight[i] + std::clamp(target - st.ikWeight[i], -step, step) : st.ikWeight[i];
+    }
+}
+
+glm::quat rotationBetween(glm::vec3 from, glm::vec3 to)
+{
+    from = glm::normalize(from);
+    to = glm::normalize(to);
+    const float d = glm::dot(from, to);
+    if (d < -0.9999f) { // opposite: any perpendicular axis
+        glm::vec3 axis = glm::cross(glm::vec3(1, 0, 0), from);
+        if (glm::dot(axis, axis) < 1e-6f)
+            axis = glm::cross(glm::vec3(0, 1, 0), from);
+        return glm::angleAxis(glm::pi<float>(), glm::normalize(axis));
+    }
+    const glm::vec3 c = glm::cross(from, to);
+    return glm::normalize(glm::quat(1.0f + d, c.x, c.y, c.z));
+}
+
+glm::vec3 position(const glm::mat4& m)
+{
+    return glm::vec3(m[3]);
+}
+
+// Rotates node `root` and everything below it about `pivot` (model space).
+void rotateSubtree(const Skeleton& skeleton, std::vector<glm::mat4>& globals, int root, glm::vec3 pivot, const glm::quat& q,
+                   std::vector<char>& inTree)
+{
+    const glm::mat4 m = glm::translate(glm::mat4(1.0f), pivot) * glm::mat4_cast(q) * glm::translate(glm::mat4(1.0f), -pivot);
+    inTree.assign(globals.size(), 0);
+    for (std::size_t n = static_cast<std::size_t>(root); n < globals.size(); ++n) {
+        const int parent = skeleton.nodes[n].parent;
+        inTree[n] = static_cast<int>(n) == root || (parent >= 0 && inTree[static_cast<std::size_t>(parent)]);
+        if (inTree[n])
+            globals[n] = m * globals[n];
+    }
+}
+
+// Two-bone IK: bends root -> mid -> end so the end reaches `target`, keeping the joint's bend direction.
+void solveTwoBone(const Skeleton& skeleton, std::vector<glm::mat4>& globals, const std::array<int, 4>& n, glm::vec3 target,
+                  std::vector<char>& scratch)
+{
+    const glm::vec3 a = position(globals[static_cast<std::size_t>(n[0])]);
+    const glm::vec3 b = position(globals[static_cast<std::size_t>(n[1])]);
+    const glm::vec3 c = position(globals[static_cast<std::size_t>(n[2])]);
+    const float l1 = glm::length(b - a), l2 = glm::length(c - b);
+    const glm::vec3 toTarget = target - a;
+    const float reach = glm::length(toTarget);
+    if (l1 < 1e-5f || l2 < 1e-5f || reach < 1e-5f)
+        return;
+    const float dist = std::clamp(reach, std::abs(l1 - l2) + 1e-4f, l1 + l2 - 1e-4f);
+    const glm::vec3 dir = toTarget / reach;
+    glm::vec3 pole = (b - a) - glm::dot(b - a, dir) * dir;
+    if (glm::dot(pole, pole) < 1e-10f) {
+        pole = glm::cross(dir, glm::vec3(1, 0, 0));
+        if (glm::dot(pole, pole) < 1e-10f)
+            pole = glm::cross(dir, glm::vec3(0, 0, 1));
+    }
+    pole = glm::normalize(pole);
+    const float cosA = std::clamp((l1 * l1 + dist * dist - l2 * l2) / (2.0f * l1 * dist), -1.0f, 1.0f);
+    const glm::vec3 knee = a + dir * (l1 * cosA) + pole * (l1 * std::sqrt(1.0f - cosA * cosA));
+    rotateSubtree(skeleton, globals, n[0], a, rotationBetween(b - a, knee - a), scratch);
+    const glm::vec3 c1 = position(globals[static_cast<std::size_t>(n[2])]);
+    rotateSubtree(skeleton, globals, n[1], knee, rotationBetween(c1 - knee, a + dir * dist - knee), scratch);
+}
+
+glm::quat rotationOf(const glm::mat4& m)
+{
+    return glm::normalize(glm::quat_cast(glm::mat3(glm::normalize(glm::vec3(m[0])), glm::normalize(glm::vec3(m[1])), glm::normalize(glm::vec3(m[2])))));
+}
+
+void applyIk(const Skeleton& skeleton, const AnimGraph& g, const AnimGraphState& st, std::vector<glm::mat4>& globals)
+{
+    if (st.ikNodes.size() != g.ik.size() || st.ikWeight.size() != g.ik.size())
+        return;
+    std::vector<char> scratch;
+    // Feet: the body drops for the lower foot, then each leg reaches its own ground.
+    float footWeight = 0.0f;
+    for (std::size_t i = 0; i < g.ik.size(); ++i)
+        if (g.ik[i].kind == AnimGraph::IkKind::Foot)
+            footWeight = std::max(footWeight, st.ikWeight[i]);
+    const bool feet = st.footIk && footWeight > 0.0f && st.footLift.size() == g.ik.size();
+    if (feet && st.pelvisDrop != 0.0f)
+        for (glm::mat4& m : globals)
+            m[3].y += st.pelvisDrop * footWeight;
+    for (std::size_t i = 0; i < g.ik.size(); ++i) {
+        const AnimGraph::IkChain& c = g.ik[i];
+        const std::array<int, 4>& n = st.ikNodes[i];
+        const float w = st.ikWeight[i];
+        if (w <= 0.0f || n[0] < 0 || n[1] < 0 || n[2] < 0)
+            continue;
+        const glm::vec3 end = position(globals[static_cast<std::size_t>(n[2])]);
+        if (c.kind == AnimGraph::IkKind::Foot) {
+            if (!feet)
+                continue;
+            const float lift = (st.footLift[i] - st.pelvisDrop) * w;
+            if (std::abs(lift) > 1e-5f)
+                solveTwoBone(skeleton, globals, n, end + glm::vec3(0.0f, lift, 0.0f), scratch);
+        } else if (n[3] >= 0) {
+            const glm::mat4 want = globals[static_cast<std::size_t>(n[3])] * st.ikGrip[i];
+            solveTwoBone(skeleton, globals, n, glm::mix(end, position(want), w), scratch);
+            const glm::mat4& now = globals[static_cast<std::size_t>(n[2])];
+            const glm::quat delta = rotationOf(want) * glm::inverse(rotationOf(now));
+            rotateSubtree(skeleton, globals, n[2], position(now), glm::slerp(glm::quat(1, 0, 0, 0), delta, w), scratch);
         }
     }
 }
@@ -516,7 +652,7 @@ std::string Animator::stateName(int layer) const
     return s >= 0 && s < static_cast<int>(states.size()) ? states[static_cast<std::size_t>(s)].name : std::string();
 }
 
-void evaluatePose(const Skeleton& skeleton, const Animator* animator, std::vector<glm::mat4>& globals)
+void evaluatePose(const Skeleton& skeleton, const Animator* animator, std::vector<glm::mat4>& globals, bool ik)
 {
     const std::size_t n = skeleton.nodes.size();
     std::vector<Local> locals(n);
@@ -548,6 +684,8 @@ void evaluatePose(const Skeleton& skeleton, const Animator* animator, std::vecto
         const int parent = skeleton.nodes[i].parent;
         globals[i] = parent >= 0 ? globals[static_cast<std::size_t>(parent)] * local : local;
     }
+    if (ik && animator && animator->graphActive() && !animator->graph->ik.empty())
+        applyIk(skeleton, *animator->graph, animator->graphState, globals);
 }
 
 void skinMatrices(const Skeleton& skeleton, int skin, const std::vector<glm::mat4>& globals, std::vector<glm::mat4>& out)

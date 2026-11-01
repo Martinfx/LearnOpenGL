@@ -193,6 +193,7 @@ local function animate_graph(self, dt)
     self:set_anim("speed", anim_speed)
     self:set_anim("sit", state == "rest" and seated == true)
     self:set_anim("aim", state == "attack")
+    self:set_anim("grip", state == "attack" and 1 or 0)
     if state == "attack" then
         local eye, player = self:eye(), game.player_eye()
         local pitch = math.atan(player.y - eye.y, math.max(distance(eye, player), 0.5))

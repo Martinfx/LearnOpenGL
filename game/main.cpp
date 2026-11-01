@@ -1682,7 +1682,15 @@ int main(int argc, char** argv)
         {
             frameGraph.clear();
             const float sim = static_cast<float>(simTime), frame = static_cast<float>(frameTime);
-            frameGraph.add("animation", [&] { engine::updateAnimations(scene, sim); }); // per frame for smooth motion
+            frameGraph.add("animation", [&] { // per frame for smooth motion; foot IK reads the ground (read-only raycasts)
+                engine::updateAnimations(scene, sim, [&](const glm::vec3& from) -> std::optional<float> {
+                    if (const auto hit = physics.raycast(from, glm::vec3(0.0f, -1.0f, 0.0f), 2.0f))
+                        return hit->point.y;
+                    if (scene.terrain && scene.terrain->valid())
+                        return scene.terrain->heightAt(from.x, from.z);
+                    return std::nullopt;
+                });
+            });
             frameGraph.add("audio, effects, weather", [&] {
                 audio.update(frame, scene, camera.position, camera.forward());
                 effects.update(sim, scene, physics, camera.position, audio);
