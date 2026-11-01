@@ -1,0 +1,46 @@
+{
+ "ammo_can_rifle": {
+  "size_m": [
+   0.285,
+   0.197,
+   0.105
+  ],
+  "tris": 48,
+  "physics": "dynamic",
+  "mass_kg": 3.5,
+  "collider": "box"
+ },
+ "ammo_box_pistol": {
+  "size_m": [
+   0.1,
+   0.042,
+   0.06
+  ],
+  "tris": 12,
+  "physics": "dynamic",
+  "mass_kg": 0.6,
+  "collider": "box"
+ },
+ "medkit_pouch": {
+  "size_m": [
+   0.245,
+   0.165,
+   0.102
+  ],
+  "tris": 134,
+  "physics": "dynamic",
+  "mass_kg": 0.7,
+  "collider": "box"
+ },
+ "bandage_roll": {
+  "size_m": [
+   0.087,
+   0.064,
+   0.167
+  ],
+  "tris": 88,
+  "physics": "dynamic",
+  "mass_kg": 0.05,
+  "collider": "box"
+ }
+}
