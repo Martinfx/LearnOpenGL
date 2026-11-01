@@ -54,6 +54,12 @@ recordings with placeholders.
 | `ambient/crow_1..6` | [Crows singing](https://opengameart.org/content/crows-singing) | IgnasD | CC0 |
 | `ambient/crow_7` | [Crow caw](https://opengameart.org/content/crow-caw) | zeroisnotnull | CC0 |
 | `items/pickup_ammo_*`, `pickup_medkit_*`, `pickup_weapon_*`, `heal_*`: layered inventory Foley (rounds rattle + small metal, canvas rustle, sling + rifle metal, bandage unwrap), see `source/build_items.py` | [RPG Sound Pack](https://opengameart.org/content/rpg-sound-pack) | artisticdude | CC0 |
+| `player/swim_1..2` | [Skippy Fish water sound collection](https://opengameart.org/content/skippy-fish-water-sound-collection) (swim) | jcpmcdonald | CC0 |
+| `player/swim_3..4`, `player/splash_1..2` | [Water splash and sand footsteps](https://opengameart.org/content/water-splash-and-sand-footsteps) (drowning thrash, splash1, splash2) | peludo | CC0 |
+| `player/splash_*` (low layer), `impacts/impact_water_1..3` | [6 short water splashes](https://opengameart.org/content/6-short-water-splashes) | ezwa | CC0 |
+| `impacts/impact_water_4..5` | [40 CC0 water / splash / slime SFX](https://opengameart.org/content/40-cc0-water-splash-slime-sfx) | rubberduck | CC0 |
+| `ambient/underwater_loop` (rumble) | [Underwater or space engine rumble](https://opengameart.org/content/underwater-or-space-engine-rumble) | gmason | CC0 |
+| `ambient/underwater_loop` (bubbles) | [Bubble sound effects](https://opengameart.org/content/bubble-sound-effects) | BMacZero | CC0 |
 
 CC-BY items: "This work is based on <title> by <author>, licensed under CC-BY (https://creativecommons.org/licenses/by/3.0/
 or /4.0/)". Changes: trimmed, converted to mono 48 kHz, normalised, and filtered; loops were crossfaded.

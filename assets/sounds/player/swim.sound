@@ -1,0 +1,14 @@
+# Sound: variations (one is picked at random per play) and playback settings
+file "swim_1.wav"
+file "swim_2.wav"
+file "swim_3.wav"
+file "swim_4.wav"
+volume 0.75
+pitch 0.95 1.05
+distance 1 30
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group sfx
+max_instances 2

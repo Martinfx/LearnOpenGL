@@ -1,0 +1,11 @@
+# Sound: variations (one is picked at random per play) and playback settings
+file "underwater_loop.wav"
+volume 0.8
+pitch 1 1
+distance 1 10
+rolloff 1
+loop 1
+stream 0
+spatial 0
+group sfx
+max_instances 1

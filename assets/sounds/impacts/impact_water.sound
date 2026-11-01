@@ -1,0 +1,15 @@
+# Sound: variations (one is picked at random per play) and playback settings
+file "impact_water_1.wav"
+file "impact_water_2.wav"
+file "impact_water_3.wav"
+file "impact_water_4.wav"
+file "impact_water_5.wav"
+volume 0.8
+pitch 0.92 1.08
+distance 2 60
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group sfx
+max_instances 6
