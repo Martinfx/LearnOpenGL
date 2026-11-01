@@ -1,4 +1,5 @@
-add_executable(fps_game main.cpp MapHud.cpp MapHud.h GameAudio.cpp GameAudio.h GameEffects.cpp GameEffects.h GameConsole.cpp GameConsole.h GameAnomalies.cpp GameAnomalies.h)
+add_executable(fps_game main.cpp MapHud.cpp MapHud.h GameAudio.cpp GameAudio.h GameEffects.cpp GameEffects.h GameConsole.cpp GameConsole.h GameAnomalies.cpp GameAnomalies.h
+    GameMenu.cpp GameMenu.h GameHud.cpp GameHud.h)
 target_link_libraries(fps_game PRIVATE engine glfw)
 set_target_properties(fps_game PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
@@ -15,6 +16,8 @@ add_custom_target(fps_game_assets ALL
     COMMAND ${CMAKE_COMMAND} -E ${ENGINE_COPY_DIR} ${PROJECT_SOURCE_DIR}/assets ${CMAKE_BINARY_DIR}/bin/assets
     COMMENT "Copying changed assets")
 add_dependencies(fps_game_assets fps_game)
+# Third-party licences for the credits screen.
+configure_file(${PROJECT_SOURCE_DIR}/3rdparty/README.md ${CMAKE_BINARY_DIR}/bin/licenses/THIRD_PARTY.md COPYONLY)
 
 # Function names in crash report stacks (backtrace_symbols needs exported symbols).
 if(NOT WIN32)

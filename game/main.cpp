@@ -20,6 +20,8 @@
 #include "GameAudio.h"
 #include "GameEffects.h"
 #include "GameConsole.h"
+#include "GameHud.h"
+#include "GameMenu.h"
 #include "MapHud.h"
 #include <engine/Scripting.h>
 #include <engine/NavMesh.h>
@@ -280,6 +282,7 @@ int main(int argc, char** argv)
     engine::PhysicsWorld physics;
     engine::Ui2D ui; // loading screen, then the map
     MapHud map;
+    std::string levelTitle = levelPath.stem().string();
     {
         const std::filesystem::path assetDir = std::filesystem::path(argv[0]).parent_path() / "assets";
         if (!ui.init(assetDir / "fonts/DejaVuSans.ttf", assetDir / "fonts/DejaVuSans-Bold.ttf", &error))
@@ -288,6 +291,7 @@ int main(int argc, char** argv)
         int imageW = 0, imageH = 0;
         const unsigned background = look.image.empty() ? 0u : engine::Ui2D::loadImage(look.image, &imageW, &imageH);
         const std::string title = look.title.empty() ? levelPath.stem().string() : look.title;
+        levelTitle = title;
         engine::LoadProgress progress;
         std::atomic<bool> finished{false};
         std::string loadError;
@@ -551,6 +555,13 @@ int main(int argc, char** argv)
     glm::vec3 freecamPosition{0.0f};
     bool freecamActive = false;
     GameConsole console;
+    GameMenu menu;
+    GameHud hud;
+    {
+        const std::filesystem::path bin = std::filesystem::path(argv[0]).parent_path();
+        menu.init(bin / "assets", bin / "licenses" / "THIRD_PARTY.md");
+        menu.setTitle(levelTitle, "Prototyp zóny");
+    }
 
     Mouse mouse;
     mouse.console = &console;
@@ -580,7 +591,15 @@ int main(int argc, char** argv)
     glfwSetScrollCallback(window, [](GLFWwindow* w, double, double y) {
         static_cast<Mouse*>(glfwGetWindowUserPointer(w))->scroll += y;
     });
-    bool captured = true;
+    // The game starts in the main menu; test runs (FPS_ENGINE_FRAMES) and --no-menu go straight in.
+    bool noMenu = false;
+    for (int i = 1; i < argc; ++i)
+        noMenu = noMenu || std::string(argv[i]) == "--no-menu";
+    if (std::getenv("FPS_ENGINE_FRAMES") || noMenu)
+        menu.setStarted(true);
+    else
+        menu.open(GameMenu::Screen::Main);
+    bool captured = !menu.active();
     setCaptured(window, captured);
 
     // FPS_ENGINE_FRAMES=N quits after N frames (used for smoke tests in CI).
@@ -614,6 +633,13 @@ int main(int argc, char** argv)
         if (const char* keep = std::getenv("FPS_ENGINE_CONSOLE_OPEN"); !keep || *keep == '0')
             console.toggle(); // closed again unless the screenshot should show it
     }
+    if (const char* screen = std::getenv("FPS_ENGINE_MENU")) { // test hook: open a menu screen (screenshots)
+        const std::string name = screen;
+        menu.setStarted(name != "main");
+        menu.open(name == "main" ? GameMenu::Screen::Main : name == "settings" ? GameMenu::Screen::Settings
+                  : name == "credits" ? GameMenu::Screen::Credits : name == "death" ? GameMenu::Screen::Death
+                  : GameMenu::Screen::Pause);
+    }
     if (const char* slot = std::getenv("FPS_ENGINE_SLOT")) { // weapon slot 1..9 to start with (test hook)
         const long n = std::strtol(slot, nullptr, 10);
         if (n >= 1 && static_cast<std::size_t>(n) <= weapons.size()) {
@@ -637,31 +663,48 @@ int main(int argc, char** argv)
         lastTime = now;
 
         glfwPollEvents();
-        // While the console is open the game gets no input and the cursor is free.
+        // Esc: closes the console (handled by it), steps back in a menu, closes the map, else pauses.
         static bool consoleWasOpen = false;
         if (console.open() != consoleWasOpen) {
             consoleWasOpen = console.open();
-            captured = !console.open();
-            setCaptured(window, captured);
-            mouse.first = true;
-            escHeld = true; // the Esc that closed the console does not also free the mouse
+            escHeld = true; // the Esc that closed the console does nothing else
         }
         const bool esc = glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS && !console.open();
         if (esc && !escHeld) {
-            captured = !captured;
+            if (menu.active())
+                menu.back();
+            else if (mapOpen)
+                mapOpen = false;
+            else
+                menu.open(GameMenu::Screen::Pause);
+        }
+        escHeld = esc;
+        {
+            // Menus get the mouse in framebuffer pixels (HiDPI windows differ from window coordinates).
+            double cx = 0.0, cy = 0.0;
+            int ww = 1, wh = 1, fw = 1, fh = 1;
+            glfwGetCursorPos(window, &cx, &cy);
+            glfwGetWindowSize(window, &ww, &wh);
+            glfwGetFramebufferSize(window, &fw, &fh);
+            const glm::vec2 scale(static_cast<float>(fw) / static_cast<float>(std::max(ww, 1)),
+                                  static_cast<float>(fh) / static_cast<float>(std::max(wh, 1)));
+            menu.mouse(glm::vec2(static_cast<float>(cx), static_cast<float>(cy)) * scale,
+                       !console.open() && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS,
+                       menu.active() ? mouse.scroll : 0.0);
+            if (menu.active())
+                mouse.scroll = 0.0;
+        }
+        // The mouse looks around only while playing (no menu, no console, window focused).
+        const bool wantCapture = !menu.active() && !console.open() && glfwGetWindowAttrib(window, GLFW_FOCUSED);
+        if (wantCapture != captured) {
+            captured = wantCapture;
             setCaptured(window, captured);
             mouse.first = true;
         }
-        escHeld = esc;
-        const bool mKey = glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS && !console.open();
+        const bool mKey = glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS && captured;
         if (mKey && !mapHeld)
             mapOpen = !mapOpen;
         mapHeld = mKey;
-        if (!captured && !console.open() && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
-            captured = true;
-            setCaptured(window, captured);
-            mouse.first = true;
-        }
 
         // Look is applied every frame for responsiveness; movement runs at a fixed rate.
         if (cvInvert.boolean())
@@ -675,7 +718,7 @@ int main(int argc, char** argv)
 
         // Weapon selection: 1-9 or the mouse wheel.
         for (int i = 0; i < 9; ++i) {
-            const bool down = glfwGetKey(window, GLFW_KEY_1 + i) == GLFW_PRESS;
+            const bool down = captured && glfwGetKey(window, GLFW_KEY_1 + i) == GLFW_PRESS;
             if (down && !slotHeld[static_cast<std::size_t>(i)] && static_cast<std::size_t>(i) < weapons.size())
                 next = static_cast<std::size_t>(i);
             slotHeld[static_cast<std::size_t>(i)] = down;
@@ -713,7 +756,8 @@ int main(int argc, char** argv)
                 freecamPosition += glm::normalize(fly) * static_cast<float>(frameTime) * (input.isDown(engine::Action::Sprint) ? 25.0f : 6.0f);
             input = {};
         }
-        const double simTime = frameTime * cvTimescale.number(); // timescale cheat (1 = normal)
+        // Menus pause the game; timescale is a cheat (1 = normal).
+        const double simTime = menu.active() ? 0.0 : frameTime * cvTimescale.number();
         const int steps = clock.advance(simTime);
         for (int i = 0; i < steps; ++i) {
             const float dt = static_cast<float>(clock.step());
@@ -831,11 +875,16 @@ int main(int argc, char** argv)
                 audio.walk(scene.player, player.feet(), player.velocity(), player.grounded(), dt, ground);
             }
             physics.step(dt);
-            if (scripts.playerHealth() <= 0.0f) {
-                LOG_INFO("game", "You died. Respawning.");
-                player.respawn();
-                scripts.setPlayerHealth(scene.player.maxHealth);
-                anomalies.resetDose();
+            if (scripts.playerHealth() <= 0.0f && menu.screen() != GameMenu::Screen::Death) {
+                LOG_INFO("game", "You died.");
+                if (frameLimit > 0) { // test runs carry on
+                    player.respawn();
+                    scripts.setPlayerHealth(scene.player.maxHealth);
+                    anomalies.resetDose();
+                } else {
+                    menu.open(GameMenu::Screen::Death);
+                    break;
+                }
             }
         }
 
@@ -895,7 +944,7 @@ int main(int argc, char** argv)
                 overlay.boxes.push_back({muzzle, glm::vec3(0.05f), glm::vec3(1.0f, 0.85f, 0.35f), true});
             }
             // Crosshair only from the hip: aimed, the sights are the reticle.
-            if (aimed < 0.3f) {
+            if (aimed < 0.3f && !menu.active()) {
                 const float gap = 0.008f, len = 0.012f, thick = 0.0016f;
                 const glm::vec3 white(0.95f);
                 overlay.boxes.push_back({{0, gap + len * 0.5f, -1}, {thick, len, thick}, white, true});
@@ -907,12 +956,26 @@ int main(int argc, char** argv)
             renderer.present();
             // HUD: minimap in the corner, or the full map (M).
             ui.begin(width, height);
-            if (mapOpen)
+            if (menu.active()) {
+                // menus cover the game: no map
+            } else if (mapOpen)
                 map.drawFullMap(ui, width, height, player.feet(), camera.flatForward());
             else
                 map.drawMinimap(ui, width, height, player.feet(), camera.flatForward());
-            if (!mapOpen)
+            hud.update(static_cast<float>(frameTime), scripts.playerHealth());
+            if (!mapOpen && !menu.active()) {
                 anomalies.drawHud(ui, width, height);
+                const engine::Weapon& w = weapons[current];
+                HudState hs;
+                hs.health = scripts.playerHealth();
+                hs.maxHealth = scene.player.maxHealth;
+                hs.weapon = w.settings.name;
+                hs.ammo = w.ammo();
+                hs.magazine = w.settings.magazineSize;
+                hs.melee = w.settings.melee();
+                hs.reload = w.reloading() ? w.reloadProgress() : -1.0f;
+                hud.draw(ui, width, height, hs);
+            }
             if (cvShowFps.boolean()) {
                 char fps[32];
                 std::snprintf(fps, sizeof fps, "%.0f FPS", frameTime > 0.0 ? 1.0 / frameTime : 0.0);
@@ -932,8 +995,25 @@ int main(int argc, char** argv)
                     ui.text(t.text, px - glm::vec2(ui.textWidth(t.text, size) * 0.5f, size), size, t.color, true);
                 }
             }
+            menu.draw(ui, width, height, now);
             console.draw(ui, width, height, now);
             ui.end();
+            switch (menu.takeAction()) {
+            case GameMenu::Action::Play:
+            case GameMenu::Action::Resume:
+                menu.setStarted(true);
+                menu.close();
+                break;
+            case GameMenu::Action::Respawn:
+                player.respawn();
+                scripts.setPlayerHealth(scene.player.maxHealth);
+                anomalies.resetDose();
+                menu.close();
+                break;
+            case GameMenu::Action::MainMenu: menu.open(GameMenu::Screen::Main); break;
+            case GameMenu::Action::Quit: glfwSetWindowShouldClose(window, GLFW_TRUE); break;
+            case GameMenu::Action::None: break;
+            }
             if (screenshotFile && frameLimit > 0 && frame + 1 == frameLimit) { // with the HUD
                 const std::vector<std::uint8_t> rgb = renderer.readPixels(width, height);
                 std::ofstream shot(screenshotFile, std::ios::binary);
