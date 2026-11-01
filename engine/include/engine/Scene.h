@@ -282,14 +282,14 @@ struct Entity {
     // game and not hit by weapons.
     bool helper() const { return type == "sound" || type == "map_marker" || type == "particle" || type == "anomaly" || type == "light" ||
                                  type == "sit_point" || type == "trigger" || type == "relay" || type == "reverb" || type == "ambience" ||
-                                 type == "water"; }
+                                 type == "water" || type == "interior"; }
     // What the editor draws and picks: a sound zone can span the whole level, so
     // it is shown as a small speaker cube at its position; the zone is its size.
     Aabb markerBounds() const
     {
         if (type == "sound" || type == "particle")
             return {position, position + glm::vec3(type == "sound" ? 0.6f : 0.4f)};
-        if (type == "relay" || type == "trigger" || type == "reverb" || type == "ambience") // a node; a volume (its size) is drawn as lines
+        if (type == "relay" || type == "trigger" || type == "reverb" || type == "ambience" || type == "interior") // a node; a volume (its size) is drawn as lines
             return {position - glm::vec3(0.2f, 0.0f, 0.2f), position + glm::vec3(0.2f, 0.4f, 0.2f)};
         if (type == "water") // a node at the middle of the surface; the surface is drawn as water
             return {position + glm::vec3(-0.25f, size.y - 0.05f, -0.25f), position + glm::vec3(0.25f, size.y + 0.25f, 0.25f)};

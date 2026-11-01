@@ -235,6 +235,7 @@ void MainWindow::buildMenus()
     edit->addAction(tr("Add &water (river, pond)"), this, [this] { addEntity("water"); });
     edit->addAction(tr("Add re&verb zone"), this, [this] { addEntity("reverb"); });
     edit->addAction(tr("Add ambience &zone"), this, [this] { addEntity("ambience"); });
+    edit->addAction(tr("Add &interior volume (dark building)"), this, [this] { addEntity("interior"); });
     edit->addAction(tr("Physics props from the catalogue (crates, barrels...)"), this, &MainWindow::applyPropCatalogueToLevel);
     {
         QMenu* anomaly = edit->addMenu(tr("Add a&nomaly"));
@@ -705,6 +706,7 @@ void MainWindow::buildDocks()
     lightForm_ = makeSection(tr("Light"), "Rendering");
     outputsForm_ = makeSection(tr("Outputs (entity I/O)"), "Script");
     reverbForm_ = makeSection(tr("Reverb zone"), "Sound");
+    interiorForm_ = makeSection(tr("Interior"), "Rendering");
     ambienceForm_ = makeSection(tr("Ambience zone"), "Sound");
     pickupForm_ = makeSection(tr("Pickup"), "General");
     waterForm_ = makeSection(tr("Water"), "Rendering");
@@ -1338,6 +1340,45 @@ void MainWindow::buildDocks()
         connect(reverbPreset_, &QComboBox::currentTextChanged, this, [setProp](const QString& t) { setProp("preset", t.toStdString()); });
         connect(reverbAmount_, &QDoubleSpinBox::valueChanged, this, [setProp](double v) { setProp("amount", QString::number(v, 'g', 4).toStdString()); });
         connect(reverbFade_, &QDoubleSpinBox::valueChanged, this, [setProp](double v) { setProp("fade", QString::number(v, 'g', 4).toStdString()); });
+    }
+    {
+        // Interior volume (type "interior"): sky light and outdoor fog dimmed inside, rain
+        // muffled, its own reverb (engine/EntityIO.h InteriorVolume).
+        auto spin = [this](double lo, double hi, double step, const QString& suffix, const QString& tip) {
+            auto* box = new QDoubleSpinBox(boxPanel_);
+            box->setRange(lo, hi);
+            box->setSingleStep(step);
+            box->setSuffix(suffix);
+            box->setKeyboardTracking(false);
+            box->setToolTip(tip);
+            return box;
+        };
+        interiorSky_ = spin(0.0, 1.0, 0.05, QString(), tr("Sky light left inside: 0 pitch dark (only lamps, the flashlight and sun through openings), 1 as outdoors"));
+        interiorFog_ = spin(0.0, 1.0, 0.05, QString(), tr("Outdoor fog density left inside (volumetric fog)"));
+        interiorFade_ = spin(0.0, 20.0, 0.25, tr(" m"), tr("Blends out over this distance outside the box (put the box just inside the walls)"));
+        interiorPreset_ = new QComboBox(boxPanel_);
+        for (const std::string& name : engine::reverbPresetNames())
+            interiorPreset_->addItem(QString::fromStdString(name));
+        interiorPreset_->setToolTip(tr("Room reverb inside (none = keep the surrounding reverb)"));
+        interiorAmount_ = spin(0.0, 1.0, 0.05, QString(), tr("Reverb amount"));
+        interiorForm_->addRow(tr("Sky light"), interiorSky_);
+        interiorForm_->addRow(tr("Fog inside"), interiorFog_);
+        interiorForm_->addRow(tr("Blend distance"), interiorFade_);
+        interiorForm_->addRow(tr("Reverb"), interiorPreset_);
+        interiorForm_->addRow(tr("Reverb amount"), interiorAmount_);
+        auto setProp = [this](const char* key, const std::string& value) {
+            engine::Entity* e = selectedEntity();
+            if (!e || e->type != "interior" || e->properties[key] == value)
+                return;
+            e->properties[key] = value;
+            markDirty();
+        };
+        auto number = [](double v) { return QString::number(v, 'g', 4).toStdString(); };
+        connect(interiorSky_, &QDoubleSpinBox::valueChanged, this, [setProp, number](double v) { setProp("sky", number(v)); });
+        connect(interiorFog_, &QDoubleSpinBox::valueChanged, this, [setProp, number](double v) { setProp("fog", number(v)); });
+        connect(interiorFade_, &QDoubleSpinBox::valueChanged, this, [setProp, number](double v) { setProp("fade", number(v)); });
+        connect(interiorPreset_, &QComboBox::currentTextChanged, this, [setProp](const QString& t) { setProp("preset", t.toStdString()); });
+        connect(interiorAmount_, &QDoubleSpinBox::valueChanged, this, [setProp, number](double v) { setProp("amount", number(v)); });
     }
     {
         // Ambience zone (type "ambience"): an .ambience set heard inside its volume.
@@ -2588,6 +2629,18 @@ void MainWindow::refreshProperties()
         ambienceFade_->setValue(prop("fade", "4").toDouble());
         ambienceOutside_->setValue(prop("outside", "0").toDouble());
     }
+    if (e && e->type == "interior") {
+        const QSignalBlocker b1(interiorSky_), b2(interiorFog_), b3(interiorFade_), b4(interiorPreset_), b5(interiorAmount_);
+        auto prop = [e](const char* key, const char* fallback) {
+            const auto it = e->properties.find(key);
+            return QString::fromStdString(it == e->properties.end() || it->second.empty() ? std::string(fallback) : it->second);
+        };
+        interiorSky_->setValue(prop("sky", "0.15").toDouble());
+        interiorFog_->setValue(prop("fog", "0.2").toDouble());
+        interiorFade_->setValue(prop("fade", "0.5").toDouble());
+        interiorPreset_->setCurrentText(prop("preset", "room"));
+        interiorAmount_->setValue(prop("amount", "1").toDouble());
+    }
     if (e && e->type == "reverb") {
         const QSignalBlocker b1(reverbPreset_), b2(reverbAmount_), b3(reverbFade_);
         auto prop = [e](const char* key, const char* fallback) {
@@ -3313,7 +3366,7 @@ void MainWindow::addEntity(const QString& type)
     engine::Entity e;
     e.type = type.toStdString();
     e.name = engine::uniqueNodeName(scene_, (type == "enemy" ? "Enemy " : type == "sound" ? "Sound " : type == "particle" ? "Effect " : type == "light" ? "Light " :
-                                             type == "trigger" ? "Trigger " : type == "relay" ? "Relay " : type == "reverb" ? "Reverb " : type == "ambience" ? "Ambience " :
+                                             type == "trigger" ? "Trigger " : type == "relay" ? "Relay " : type == "reverb" ? "Reverb " : type == "ambience" ? "Ambience " : type == "interior" ? "Interior " :
                                              type == "water" ? "Water " : "Entity ") +
                                                 std::to_string(scene_.entities.size() + 1));
     if (type == "sound") {
@@ -3366,6 +3419,13 @@ void MainWindow::addEntity(const QString& type)
         e.size = {12.0f, 1.5f, 6.0f};
         e.color = {0.16f, 0.2f, 0.17f}; // murky green-brown
         e.position.y = -1.4f;           // surface 10 cm above the ground plane; lower it into a dug bed
+    } else if (type == "interior") {
+        e.size = {8.0f, 3.0f, 8.0f};
+        e.color = {0.85f, 0.55f, 0.25f};
+        e.properties["sky"] = "0.15";
+        e.properties["fog"] = "0.2";
+        e.properties["fade"] = "0.5";
+        e.properties["preset"] = "room";
     } else if (type == "reverb") {
         e.size = {8.0f, 4.0f, 8.0f};
         e.color = {0.3f, 0.75f, 0.9f};
@@ -4784,6 +4844,8 @@ void MainWindow::updateDetailsVisibility()
             relevant = e != nullptr;
         if (d.form == reverbForm_)
             relevant = e != nullptr && e->type == "reverb";
+        if (d.form == interiorForm_)
+            relevant = e != nullptr && e->type == "interior";
         if (d.form == ambienceForm_)
             relevant = e != nullptr && e->type == "ambience";
         if (d.form == waterForm_)
@@ -4982,8 +5044,10 @@ void MainWindow::buildModePanel()
         connect(reverbZone, &QPushButton::clicked, this, [this] { addEntity("reverb"); });
         auto* ambienceZone = toolButton("sound", tr("Ambience zone (the sound of a building, a forest, a cellar)"), page);
         connect(ambienceZone, &QPushButton::clicked, this, [this] { addEntity("ambience"); });
+        auto* interior = toolButton("cube", tr("Interior volume (dark building: less sky light and fog, no rain, room reverb)"), page);
+        connect(interior, &QPushButton::clicked, this, [this] { addEntity("interior"); });
         auto* model = toolButton("model", tr("glTF model..."), page);
-        for (QPushButton* b : {box, enemy, entity, sound, particles, anomaly, light, campfire, trigger, relay, reverbZone, ambienceZone, model})
+        for (QPushButton* b : {box, enemy, entity, sound, particles, anomaly, light, campfire, trigger, relay, reverbZone, ambienceZone, interior, model})
             layout->addWidget(b);
         auto* hint = new QLabel(tr("Or drag a model from the Content Browser into the view: it lands where you drop it."), page);
         hint->setObjectName("dim");

@@ -25,6 +25,24 @@ enum class TriggerFilter { Player, Npc, Any };
 TriggerFilter triggerFilter(const Entity& trigger); // property "filter": player (default), npc, any
 bool entityEnabled(const Entity& entity);           // property "enabled" is not "0"
 
+// Interior volumes (entity type "interior"): inside, the sky light and the outdoor fog are
+// dimmed (dark buildings where the flashlight matters), rain is muffled as under a roof and
+// the room reverb applies. Properties: sky (sky light left, 0..1), fog (fog density left),
+// fade (m outside the box over which it blends out), preset/amount (reverb, "none" = keep).
+struct InteriorVolume {
+    glm::vec3 center{0.0f};   // middle of the box
+    glm::vec3 half{0.5f};     // half size along its own axes
+    float yawDegrees = 0.0f;  // turned like the entity (0 = +X)
+    float fade = 0.5f;
+    float sky = 0.15f;
+    float fog = 0.2f;
+    // Distance from the box (0 inside), turned into its frame.
+    float distance(glm::vec3 p) const;
+};
+std::vector<InteriorVolume> interiorVolumes(const Scene& scene);
+// 0 outside every interior .. 1 inside one (blends over `fade` outside the box).
+float interiorWeight(const std::vector<InteriorVolume>& volumes, glm::vec3 p);
+
 // Entities named `target` (several may share a name), in scene order.
 std::vector<int> findEntitiesByName(const Scene& scene, const std::string& target);
 

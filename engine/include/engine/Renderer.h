@@ -305,6 +305,7 @@ private:
     // Rain occlusion: depth seen from above around the camera (roofs keep the rain off).
     void renderRainMap(const Scene& scene, const RenderView& view);
     void uploadLightClusters(const RenderView& view);
+    void uploadInteriors(const Scene& scene);
     bool volumetricActive(const RenderView& view) const;
     void renderVolumetricFog(const RenderView& view);
     // Draws what intersects the frustum of `cull` (view-projection); skipNear keeps
@@ -514,6 +515,7 @@ private:
     unsigned shadowDummy_ = 0;          // stand-in when shadows are off
     // Volumetric fog: froxel light + density (ping-pong with the previous frame) and the
     // integrated result read by applyFog (unit 15).
+    unsigned interiorBuffer_ = 0;       // interior volumes (binding 9)
     unsigned volumeScatter_[2] = {0, 0}, volumeIntegrated_ = 0, volumeDummy_ = 0;
     glm::ivec3 volumeDims_{0};
     int volumeCurrent_ = 0;

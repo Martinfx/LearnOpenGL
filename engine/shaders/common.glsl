@@ -27,6 +27,34 @@ layout(std140, binding = 1) uniform Environment {
 // a: transmittance, both from the eye to the froxel (volumetric_*.comp).
 layout(binding = 15) uniform sampler3D uVolumeFog;
 
+// Interior volumes (entity type "interior"): turned boxes where the sky light and the
+// outdoor fog are dimmed. centre + fade, half size + sky light left, cos/sin yaw + fog left.
+struct Interior {
+    vec4 centerFade;
+    vec4 halfSky;
+    vec4 rotationFog;
+};
+layout(std430, binding = 9) readonly buffer Interiors {
+    ivec4 uInteriorCount;
+    Interior uInteriors[];
+};
+
+// x: sky light multiplier, y: fog density multiplier at a world position (1 outdoors).
+vec2 interiorFactors(vec3 p) {
+    vec2 f = vec2(1.0);
+    for (int i = 0; i < uInteriorCount.x; ++i) {
+        Interior v = uInteriors[i];
+        vec3 d = p - v.centerFade.xyz;
+        vec2 cs = v.rotationFog.xy;
+        vec3 local = vec3(cs.x * d.x + cs.y * d.z, d.y, -cs.y * d.x + cs.x * d.z);
+        float outside = length(max(abs(local) - v.halfSky.xyz, vec3(0.0)));
+        float w = 1.0 - clamp(outside / v.centerFade.w, 0.0, 1.0);
+        if (w > 0.0)
+            f = min(f, mix(vec2(1.0), vec2(v.halfSky.w, v.rotationFog.z), w));
+    }
+    return f;
+}
+
 const float PI = 3.14159265;
 
 float distributionGGX(float nh, float a) {

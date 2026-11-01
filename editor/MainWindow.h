@@ -233,6 +233,12 @@ private:
     class OutputsPanel* outputsPanel_ = nullptr;  // entity I/O connections
     QFormLayout* outputsForm_ = nullptr;
     QFormLayout* reverbForm_ = nullptr;           // entity type "reverb"
+    QFormLayout* interiorForm_ = nullptr;         // entity type "interior"
+    QDoubleSpinBox* interiorSky_ = nullptr;
+    QDoubleSpinBox* interiorFog_ = nullptr;
+    QDoubleSpinBox* interiorFade_ = nullptr;
+    QComboBox* interiorPreset_ = nullptr;
+    QDoubleSpinBox* interiorAmount_ = nullptr;
     QFormLayout* waterForm_ = nullptr;            // entity type "water"
     QFormLayout* prefabForm_ = nullptr;           // object of a prefab instance
     QLabel* prefabLabel_ = nullptr;

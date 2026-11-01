@@ -2537,6 +2537,30 @@ void testVolumetricFogSettings()
     fs::remove(file);
 }
 
+void testInteriorVolumes()
+{
+    engine::Scene scene;
+    engine::Entity e;
+    e.type = "interior";
+    e.position = {0.0f, 0.0f, 0.0f};
+    e.yawDegrees = 90.0f; // long side (x) turned onto world z
+    e.size = {10.0f, 3.0f, 2.0f};
+    e.properties["sky"] = "0.1";
+    e.properties["fade"] = "1";
+    scene.entities.push_back(e);
+    engine::Entity other;
+    other.type = "reverb";
+    scene.entities.push_back(other);
+    const auto volumes = engine::interiorVolumes(scene);
+    check(volumes.size() == 1 && volumes[0].sky == 0.1f, "interior volumes come from interior entities");
+    check(engine::interiorWeight(volumes, {0.0f, 1.0f, 4.0f}) == 1.0f, "inside a turned interior");
+    check(engine::interiorWeight(volumes, {4.0f, 1.0f, 0.0f}) == 0.0f, "outside a turned interior");
+    const float edge = engine::interiorWeight(volumes, {1.5f, 1.0f, 0.0f});
+    check(edge > 0.4f && edge < 0.6f, "interior blends out over its fade distance");
+    scene.entities[0].properties["enabled"] = "0";
+    check(engine::interiorVolumes(scene).empty(), "a disabled interior does nothing");
+}
+
 void testTaskGraph()
 {
     engine::TaskGraph graph;
@@ -2637,6 +2661,7 @@ int main()
     testRangeAllocator();
     testImpostorSettings();
     testVolumetricFogSettings();
+    testInteriorVolumes();
     testTaskGraph();
     testWorldStreaming();
     std::printf(failures ? "%d test(s) failed\n" : "all tests passed\n", failures);

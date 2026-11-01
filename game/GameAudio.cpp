@@ -257,14 +257,26 @@ void GameAudio::updateReverb(const engine::Scene& scene, glm::vec3 eye)
     std::vector<Candidate> found;
     float zones = 0.0f;
     for (const engine::Entity& e : scene.entities) {
-        if (e.type != "reverb" || !e.alive || !engine::entityEnabled(e))
+        if ((e.type != "reverb" && e.type != "interior") || !e.alive || !engine::entityEnabled(e))
             continue;
         auto prop = [&e](const char* key, const char* fallback) {
             const auto it = e.properties.find(key);
             return it == e.properties.end() || it->second.empty() ? std::string(fallback) : it->second;
         };
-        const engine::Aabb box = e.bounds();
-        const float w = engine::zoneGain(box.min, box.max, std::strtof(prop("fade", "2").c_str(), nullptr), eye);
+        if (e.type == "interior" && prop("preset", "room") == "none") // an interior without its own reverb
+            continue;
+        float w = 0.0f;
+        if (e.type == "interior") { // turned box, blends out over its own fade
+            engine::InteriorVolume v;
+            v.half = glm::max(e.size * 0.5f, glm::vec3(0.01f));
+            v.center = e.position + glm::vec3(0.0f, v.half.y, 0.0f);
+            v.yawDegrees = e.yawDegrees;
+            v.fade = std::max(0.01f, std::strtof(prop("fade", "0.5").c_str(), nullptr));
+            w = engine::interiorWeight({v}, eye);
+        } else {
+            const engine::Aabb box = e.bounds();
+            w = engine::zoneGain(box.min, box.max, std::strtof(prop("fade", "2").c_str(), nullptr), eye);
+        }
         if (w <= 0.0f)
             continue;
         found.push_back({prop("preset", "room"), w, std::clamp(std::strtof(prop("amount", "1").c_str(), nullptr), 0.0f, 1.0f)});

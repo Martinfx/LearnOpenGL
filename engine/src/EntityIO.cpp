@@ -1,5 +1,9 @@
 #include "engine/EntityIO.h"
 
+#include <algorithm>
+#include <cmath>
+#include <cstdlib>
+
 namespace engine {
 
 std::vector<IoName> entityOutputs(const std::string& type)
@@ -58,6 +62,47 @@ TriggerFilter triggerFilter(const Entity& trigger)
     if (it->second == "any")
         return TriggerFilter::Any;
     return TriggerFilter::Player;
+}
+
+std::vector<InteriorVolume> interiorVolumes(const Scene& scene)
+{
+    std::vector<InteriorVolume> out;
+    for (const Entity& e : scene.entities) {
+        if (e.type != "interior" || !e.alive || !entityEnabled(e))
+            continue;
+        auto number = [&e](const char* key, float fallback) {
+            const auto it = e.properties.find(key);
+            return it == e.properties.end() || it->second.empty() ? fallback : std::strtof(it->second.c_str(), nullptr);
+        };
+        InteriorVolume v;
+        v.half = glm::max(e.size * 0.5f, glm::vec3(0.01f));
+        v.center = e.position + glm::vec3(0.0f, v.half.y, 0.0f);
+        v.yawDegrees = e.yawDegrees;
+        v.fade = std::max(0.0f, number("fade", 0.5f));
+        v.sky = std::clamp(number("sky", 0.15f), 0.0f, 1.0f);
+        v.fog = std::clamp(number("fog", 0.2f), 0.0f, 1.0f);
+        out.push_back(v);
+    }
+    return out;
+}
+
+float InteriorVolume::distance(glm::vec3 p) const
+{
+    // World -> box frame (the entity box is turned by -yaw about +Y, as water bodies).
+    const float c = std::cos(glm::radians(yawDegrees)), s = std::sin(glm::radians(yawDegrees));
+    const glm::vec3 d = p - center;
+    const glm::vec3 local(c * d.x + s * d.z, d.y, -s * d.x + c * d.z);
+    return glm::length(glm::max(glm::abs(local) - half, glm::vec3(0.0f)));
+}
+
+float interiorWeight(const std::vector<InteriorVolume>& volumes, glm::vec3 p)
+{
+    float best = 0.0f;
+    for (const InteriorVolume& v : volumes) {
+        const float d = v.distance(p);
+        best = std::max(best, v.fade > 0.0f ? std::clamp(1.0f - d / v.fade, 0.0f, 1.0f) : (d <= 0.0f ? 1.0f : 0.0f));
+    }
+    return best;
 }
 
 bool entityEnabled(const Entity& entity)

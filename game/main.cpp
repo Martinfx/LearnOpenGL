@@ -1,5 +1,6 @@
 // Game runtime: GLFW window, fixed 60 Hz simulation, first-person player.
 // Usage: fps_game [level-file]
+#include <engine/EntityIO.h>
 #include <engine/JobSystem.h>
 #include <engine/Log.h>
 #include <engine/CVars.h>
@@ -1646,7 +1647,8 @@ int main(int argc, char** argv)
                 effects.update(sim, scene, physics, camera.position, audio);
                 if ((shelterTimer -= frame) <= 0.0f) { // a roof within 40 m above the head
                     shelterTimer = 0.25f;
-                    sheltered = physics.raycast(camera.position + glm::vec3(0.0f, 0.3f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), 40.0f).has_value();
+                    sheltered = physics.raycast(camera.position + glm::vec3(0.0f, 0.3f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), 40.0f).has_value() ||
+                                engine::interiorWeight(engine::interiorVolumes(scene), camera.position) > 0.5f; // interior volumes
                     audio.setSheltered(sheltered);
                 }
                 weatherDirector.update(scene.environment, sim);

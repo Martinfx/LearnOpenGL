@@ -65,13 +65,17 @@ void main() {
         density *= mix(1.0, n * 2.0, clamp(uVolumeLight.z, 0.0, 1.0));
     }
 
+    // Inside buildings (interior volumes) there is less outdoor fog and less sky light in it.
+    vec2 interior = interiorFactors(worldPos);
+    density *= interior.y;
+
     // Light: the fog colour as ambient (darker in shadow when there are shafts), the sun through
     // the shadow map and the local lights, all with a forward-scattering phase function.
     float g = clamp(uVolumeLight.y, -0.9, 0.9);
     float shadow = fogSunShadow(worldPos, depth);
     float cosSun = dot(dir, -normalize(uSunDir.xyz));
     float shafts = max(uVolumeLight.x, 0.0);
-    vec3 light = uFogColor.rgb * mix(1.0, shadow, clamp(shafts * 0.25, 0.0, 0.5));
+    vec3 light = uFogColor.rgb * mix(1.0, shadow, clamp(shafts * 0.25, 0.0, 0.5)) * interior.x;
     light += vec3(0.5, 0.55, 0.7) * uWeather.y * 0.12;
     light += uSunColor.rgb * uSunDir.w * shadow * (0.08 * pow(max(cosSun, 0.0), 8.0) * uFogParams.z + shafts * phaseHG(cosSun, g) * 0.6);
     if (uClusterDims.w > 0 && uVolumeLight.w > 0.0) {

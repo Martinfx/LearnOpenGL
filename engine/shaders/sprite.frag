@@ -47,7 +47,7 @@ void main() {
         vec3 toLight = -normalize(uSunDir.xyz);
         vec3 n = uSpriteDecal != 0 ? normalize(vNormal) : normalize(uCameraPos.xyz - vWorld);
         float wrap = uSpriteDecal != 0 ? max(dot(n, toLight), 0.0) : 0.35 + 0.65 * max(dot(n, toLight) * 0.5 + 0.5, 0.0);
-        vec3 sky = (uSkyZenith.rgb + uSkyHorizon.rgb) * 0.5 * uGroundColor.w;
+        vec3 sky = (uSkyZenith.rgb + uSkyHorizon.rgb) * 0.5 * uGroundColor.w * interiorFactors(vWorld).x;
         color.rgb *= uSunColor.rgb * uSunDir.w * wrap / PI + sky;
     }
     if (uSpriteNoFog != 0) {

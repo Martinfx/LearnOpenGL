@@ -2,6 +2,7 @@
 #include "engine/Water.h"
 
 #include <glad/gl.h>
+#include "engine/EntityIO.h"
 #include "engine/JobSystem.h"
 #include "engine/Log.h"
 #include "engine/Paths.h"
@@ -659,6 +660,11 @@ bool Renderer::init(GlLoader loader, std::string* error)
     glCreateTextures(GL_TEXTURE_2D_ARRAY, 1, &shadowDummy_);
     glTextureStorage3D(shadowDummy_, 1, GL_DEPTH_COMPONENT32F, 1, 1, 1);
     glTextureParameteri(shadowDummy_, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+    glCreateBuffers(1, &interiorBuffer_);
+    label(GL_BUFFER, interiorBuffer_, "interior volumes");
+    const glm::ivec4 noInteriors(0);
+    glNamedBufferData(interiorBuffer_, sizeof noInteriors, &noInteriors, GL_DYNAMIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 9, interiorBuffer_);
     glCreateTextures(GL_TEXTURE_3D, 1, &volumeDummy_); // no volumetric fog: transmittance 1
     glTextureStorage3D(volumeDummy_, 1, GL_RGBA16F, 1, 1, 1);
     const float clearFog[4] = {0.0f, 0.0f, 0.0f, 1.0f};
@@ -753,7 +759,7 @@ void Renderer::shutdown()
     debugBuffer_ = 0;
     debugCapacity_ = 0;
     spriteCapacity_ = 0;
-    for (unsigned* b : {&vbo_, &jointBuffer_, &envBuffer_, &lightBuffer_, &lightGridBuffer_, &lightIndexBuffer_, &lightShadowBuffer_})
+    for (unsigned* b : {&vbo_, &jointBuffer_, &envBuffer_, &lightBuffer_, &lightGridBuffer_, &lightIndexBuffer_, &lightShadowBuffer_, &interiorBuffer_})
         if (*b) {
             glDeleteBuffers(1, b);
             *b = 0;
@@ -1243,7 +1249,7 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         if (!e.alive)
             continue;
         if (e.type == "sound" || e.type == "particle" || e.type == "anomaly" || e.type == "light" || e.type == "trigger" ||
-            e.type == "relay" || e.type == "reverb" || e.type == "ambience" || e.type == "water") { // marker cube; a sound zone itself is the entity size
+            e.type == "relay" || e.type == "reverb" || e.type == "ambience" || e.type == "water" || e.type == "interior") { // marker cube; a sound zone itself is the entity size
             const Aabb m = e.markerBounds();
             const bool glow = e.type == "light" && !depthOnly; // a bulb: unlit, in the light's color
             if (glow)
@@ -1693,6 +1699,28 @@ void Renderer::uploadLightClusters(const RenderView& view)
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 8, lightShadowBuffer_);
 }
 
+void Renderer::uploadInteriors(const Scene& scene)
+{
+    // Interior volumes: the sky light and the fog are dimmed inside (common.glsl interiorFactors).
+    struct GpuInterior {
+        glm::vec4 centerFade, halfSky, rotationFog;
+    };
+    std::pmr::vector<GpuInterior> data(&frameArena_);
+    for (const InteriorVolume& v : interiorVolumes(scene)) {
+        if (data.size() >= 64)
+            break;
+        const float yaw = glm::radians(v.yawDegrees);
+        data.push_back({glm::vec4(v.center, std::max(v.fade, 0.01f)), glm::vec4(v.half, v.sky), glm::vec4(std::cos(yaw), std::sin(yaw), v.fog, 0.0f)});
+    }
+    std::pmr::vector<std::uint8_t> bytes(sizeof(glm::ivec4) + data.size() * sizeof(GpuInterior), 0, &frameArena_);
+    const glm::ivec4 count(static_cast<int>(data.size()), 0, 0, 0);
+    std::memcpy(bytes.data(), &count, sizeof count);
+    if (!data.empty())
+        std::memcpy(bytes.data() + sizeof count, data.data(), data.size() * sizeof(GpuInterior));
+    glNamedBufferData(interiorBuffer_, static_cast<GLsizeiptr>(bytes.size()), bytes.data(), GL_DYNAMIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 9, interiorBuffer_);
+}
+
 bool Renderer::volumetricActive(const RenderView& view) const
 {
     return quality_.volumetricFog > 0 && view.fog && env_ && env_->fogDensity > 0.0f && env_->fogVolumetricRange > 0.0f &&
@@ -1848,6 +1876,7 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     updateEnvironment(scene, view);
     updateEnvironmentMap(scene);
     collectLights(scene, view);
+    uploadInteriors(scene);
     beginPass(PassShadows);
     renderShadows(scene, view);
     renderLocalShadows(scene, view);

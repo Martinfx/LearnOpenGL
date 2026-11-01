@@ -333,6 +333,11 @@ void main() {
     float shadow = uOverlay || nl <= 0.0 ? 1.0 : sunShadow(vWorldPos, normalize(vNormal), nl);
     if (!uOverlay && nl > 0.0)
         shadow *= cloudShadow(vWorldPos);
+    // Inside an interior volume the sky light is dimmed (the first-person layer: where the camera is,
+    // and the sun too, as the overlay has no shadows).
+    float interiorSky = interiorFactors(uOverlay ? uCameraPos.xyz : vWorldPos).x;
+    if (uOverlay)
+        shadow *= interiorSky;
     vec3 color = (diffuse + specular) * uSunColor.rgb * uSunDir.w * nl * shadow;
     if (uOverlay) // view space -> world
         color += localLights(uEnvRotation * vWorldPos + uCameraPos.xyz, uEnvRotation * n, uEnvRotation * normalize(vNormal), uEnvRotation * v,
@@ -354,8 +359,8 @@ void main() {
     // Direct light leaks less into crevices than sky light: soften AO on the sun term.
     color *= mix(1.0, occlusion, 0.3);
     vec3 ambient = ((1.0 - Fa) * (1.0 - metal) * albedo * irradiance + prefiltered * (Fa * brdf.x + brdf.y)) * occlusion;
-    color += ambient * uGroundColor.w;
-    color += albedo * (1.0 - metal) * vec3(0.7, 0.75, 0.9) * uWeather.y * 0.45 * skyOpen * (0.4 + 0.6 * max(nWorld.y, 0.0)); // lightning
+    color += ambient * uGroundColor.w * interiorSky;
+    color += albedo * (1.0 - metal) * vec3(0.7, 0.75, 0.9) * uWeather.y * 0.45 * skyOpen * interiorSky * (0.4 + 0.6 * max(nWorld.y, 0.0)); // lightning
 
     vec3 emissive = pow(max(uEmissiveColor, vec3(0.0)), vec3(2.2));
     if (uHasEmissiveMap)

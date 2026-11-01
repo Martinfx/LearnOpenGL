@@ -254,7 +254,7 @@ void Viewport::addIoHelpers(engine::RenderView& view) const
     };
     for (std::size_t i = 0; i < scene_->entities.size(); ++i) {
         const engine::Entity& e = scene_->entities[i];
-        if (e.type != "trigger" && e.type != "reverb" && e.type != "ambience" && e.type != "water") // volumes: triggers, zones, water
+        if (e.type != "trigger" && e.type != "reverb" && e.type != "ambience" && e.type != "water" && e.type != "interior") // volumes: triggers, zones, water
             continue;
         const bool selected = selected_ == first + static_cast<int>(i);
         const glm::vec4 c = selected ? glm::vec4(1.0f, 0.75f, 0.2f, 0.95f) : glm::vec4(e.type == "water" ? glm::vec3(0.3f, 0.7f, 1.0f) : e.color, 0.6f);
@@ -274,6 +274,21 @@ void Viewport::addIoHelpers(engine::RenderView& view) const
             if (glm::length(w.flow) > 0.0f) { // flow direction on the surface
                 const glm::vec3 mid(w.surface * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
                 arrow(mid, mid + glm::vec3(w.flow.x, 0.0f, w.flow.y) / glm::length(w.flow) * 2.0f, c);
+            }
+            continue;
+        }
+        if (e.type == "interior") { // turned box like the entity
+            glm::mat4 m = glm::translate(glm::mat4(1.0f), e.position);
+            m = glm::rotate(m, -glm::radians(e.yawDegrees), glm::vec3(0.0f, 1.0f, 0.0f));
+            glm::vec3 q[8];
+            for (int k = 0; k < 8; ++k) {
+                const glm::vec3 corner((k & 3) == 1 || (k & 3) == 2 ? 0.5f : -0.5f, k >= 4 ? 1.0f : 0.0f, (k & 3) >= 2 ? 0.5f : -0.5f);
+                q[k] = glm::vec3(m * glm::vec4(corner * e.size, 1.0f));
+            }
+            for (int k = 0; k < 4; ++k) {
+                line(q[k], q[(k + 1) % 4], c);
+                line(q[k + 4], q[(k + 1) % 4 + 4], c);
+                line(q[k], q[k + 4], c);
             }
             continue;
         }
