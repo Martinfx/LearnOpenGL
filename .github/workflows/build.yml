@@ -48,4 +48,4 @@ jobs:
           run: |
             cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DENGINE_JOLT_SSE42=OFF
             cmake --build build
-            ctest --test-dir build --output-on-failure || { cd build/tests && lldb --batch -o run -o bt -o "disassemble --pc" ./engine_tests; exit 1; }
+            ctest --test-dir build --output-on-failure || { cd build/tests && lldb --batch -o run -o bt ./engine_tests; exit 1; }

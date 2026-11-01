@@ -1,5 +1,6 @@
 // Headless tests for the engine core (no OpenGL needed).
 #include <engine/Log.h>
+#include <cstring>
 #include <set>
 #include <engine/Assert.h>
 #include <engine/Anomaly.h>
@@ -2793,75 +2794,98 @@ void testTaskGraph()
     check(count == 64, "wide graph runs every task once");
 }
 
+// Tests that load the real models, textures and levels (Git LFS). A checkout without LFS
+// (the Windows and FreeBSD CI jobs) has pointer files instead; those tests are skipped there.
+bool lfsAssetsPresent()
+{
+    std::ifstream in(ENGINE_TEST_ASSETS "/models/zone/vegetation/spruce_a_lod1.glb", std::ios::binary);
+    char magic[4] = {};
+    return in.read(magic, 4) && std::memcmp(magic, "glTF", 4) == 0;
+}
+
 int main()
 {
     // Hermetic cook cache for the tests.
     engine::textureCookConfig().cacheDir = std::filesystem::current_path() / "texture_cache";
     std::filesystem::remove_all(engine::textureCookConfig().cacheDir);
-    testTextureCooking();
-    testSharedMeshes();
-    testTerrain();
-    testFixedStep();
-    testFallsAndLands();
-    testWallBlocks();
-    testClimbsSteps();
-    testJump();
-    testSceneRoundTrip();
-    testGltfRamp();
-    testLevelWithModel();
-    testRaycast();
-    testModelCollisionFlags();
-    testScriptApi();
-    testScriptErrorIsReported();
-    testEnemyChasesAndAttacks();
-    testEnemyBlockedBySight();
-    testWeaponFireRateAndReload();
-    testShotHitsEnemyNotWallBehind();
-    testEnemyDiesAndReactsToDamage();
-    testTexturedWeaponModel();
-    testWeaponFilesAndLoadout();
-    testSemiAutomatic();
-    testKnifeAndGuns();
-    testHierarchyAndDependencies();
-    testJobSystem();
-    testRotateGizmo();
-    testRotatedBox();
-    testScriptPropertiesFromEditor();
-    testPick();
-    testAnimatedCharacter();
-    testEnemyAnimations();
-    testScriptSyntaxCheck();
-    testMaterialsAndTextures();
-    testAudio();
-    testNavMesh();
-    testObjectIds();
-    testCVars();
-    testLights();
-    testScriptSaveRestore();
-    testLog();
-    testEnsure();
-    testSurfaces();
-    testAnomalies();
-    testPhysicsProps();
-    testEntityIO();
-    testTimeOfDay();
-    testAssetPalette();
-    testWater();
-    testWeatherCycle();
-    testMemoryBudgets();
-    testAssetRegistry();
-    testHotReload();
-    testPrefabs();
-    testRangeAllocator();
-    testImpostorSettings();
-    testVolumetricFogSettings();
-    testInteriorVolumes();
-    testProbes();
-    testMaterialInstances();
-    testVertexPaint();
-    testDistortParticles();
-    testTaskGraph();
-    testWorldStreaming();
+    const std::set<std::string> needAssets = {"testAnimatedCharacter",      "testEnemyAnimations", "testHierarchyAndDependencies",
+                                              "testLevelWithModel",         "testMaterialsAndTextures", "testPhysicsProps",
+                                              "testSharedMeshes",           "testTexturedWeaponModel", "testWeaponFilesAndLoadout"};
+    const bool assets = lfsAssetsPresent();
+    if (!assets)
+        std::printf("Git LFS assets are not checked out: skipping %zu tests that load them\n", needAssets.size());
+    const std::pair<const char*, void (*)()> tests[] = {
+        {"testTextureCooking", testTextureCooking},
+        {"testSharedMeshes", testSharedMeshes},
+        {"testTerrain", testTerrain},
+        {"testFixedStep", testFixedStep},
+        {"testFallsAndLands", testFallsAndLands},
+        {"testWallBlocks", testWallBlocks},
+        {"testClimbsSteps", testClimbsSteps},
+        {"testJump", testJump},
+        {"testSceneRoundTrip", testSceneRoundTrip},
+        {"testGltfRamp", testGltfRamp},
+        {"testLevelWithModel", testLevelWithModel},
+        {"testRaycast", testRaycast},
+        {"testModelCollisionFlags", testModelCollisionFlags},
+        {"testScriptApi", testScriptApi},
+        {"testScriptErrorIsReported", testScriptErrorIsReported},
+        {"testEnemyChasesAndAttacks", testEnemyChasesAndAttacks},
+        {"testEnemyBlockedBySight", testEnemyBlockedBySight},
+        {"testWeaponFireRateAndReload", testWeaponFireRateAndReload},
+        {"testShotHitsEnemyNotWallBehind", testShotHitsEnemyNotWallBehind},
+        {"testEnemyDiesAndReactsToDamage", testEnemyDiesAndReactsToDamage},
+        {"testTexturedWeaponModel", testTexturedWeaponModel},
+        {"testWeaponFilesAndLoadout", testWeaponFilesAndLoadout},
+        {"testSemiAutomatic", testSemiAutomatic},
+        {"testKnifeAndGuns", testKnifeAndGuns},
+        {"testHierarchyAndDependencies", testHierarchyAndDependencies},
+        {"testJobSystem", testJobSystem},
+        {"testRotateGizmo", testRotateGizmo},
+        {"testRotatedBox", testRotatedBox},
+        {"testScriptPropertiesFromEditor", testScriptPropertiesFromEditor},
+        {"testPick", testPick},
+        {"testAnimatedCharacter", testAnimatedCharacter},
+        {"testEnemyAnimations", testEnemyAnimations},
+        {"testScriptSyntaxCheck", testScriptSyntaxCheck},
+        {"testMaterialsAndTextures", testMaterialsAndTextures},
+        {"testAudio", testAudio},
+        {"testNavMesh", testNavMesh},
+        {"testObjectIds", testObjectIds},
+        {"testCVars", testCVars},
+        {"testLights", testLights},
+        {"testScriptSaveRestore", testScriptSaveRestore},
+        {"testLog", testLog},
+        {"testEnsure", testEnsure},
+        {"testSurfaces", testSurfaces},
+        {"testAnomalies", testAnomalies},
+        {"testPhysicsProps", testPhysicsProps},
+        {"testEntityIO", testEntityIO},
+        {"testTimeOfDay", testTimeOfDay},
+        {"testAssetPalette", testAssetPalette},
+        {"testWater", testWater},
+        {"testWeatherCycle", testWeatherCycle},
+        {"testMemoryBudgets", testMemoryBudgets},
+        {"testAssetRegistry", testAssetRegistry},
+        {"testHotReload", testHotReload},
+        {"testPrefabs", testPrefabs},
+        {"testRangeAllocator", testRangeAllocator},
+        {"testImpostorSettings", testImpostorSettings},
+        {"testVolumetricFogSettings", testVolumetricFogSettings},
+        {"testInteriorVolumes", testInteriorVolumes},
+        {"testProbes", testProbes},
+        {"testMaterialInstances", testMaterialInstances},
+        {"testVertexPaint", testVertexPaint},
+        {"testDistortParticles", testDistortParticles},
+        {"testTaskGraph", testTaskGraph},
+        {"testWorldStreaming", testWorldStreaming},
+    };
+    for (const auto& [name, run] : tests)
+        if (assets || !needAssets.count(name)) {
+            if (!assets)
+                std::printf("%s\n", name);
+            run();
+        }
     std::printf(failures ? "%d test(s) failed\n" : "all tests passed\n", failures);
     return failures ? 1 : 0;
 }
