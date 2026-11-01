@@ -113,7 +113,7 @@ bool saveItems(const ItemCatalog& c, const std::filesystem::path& file, std::str
             *error = "cannot write " + file.string();
         return false;
     }
-    out << "# Price list and weights (editor: Assets > Items). Weapons keep theirs in the .weapon files.\n"
+    out << "# Price list and weights (editor: Assets > Items). Weapons keep theirs in their weapon files.\n"
         << "money_start " << c.moneyStart << '\n'
         << "carry " << c.carryFree << ' ' << c.carryMax << '\n'
         << "belt " << c.beltSlots << '\n';
