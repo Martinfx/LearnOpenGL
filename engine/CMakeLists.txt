@@ -51,6 +51,7 @@ add_library(engine STATIC
     src/Dialog.cpp
     src/ScriptDebug.cpp
     src/Demo.cpp
+    src/MeshCache.cpp
     src/Items.cpp
     src/Log.cpp
     src/Paths.cpp

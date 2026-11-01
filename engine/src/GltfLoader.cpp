@@ -1,6 +1,8 @@
 // glTF 2.0 import via cgltf. Static models get node transforms baked into the
 // vertices; animated models keep the node tree, skins and clips (Animation.h).
 #define CGLTF_IMPLEMENTATION
+#include "engine/MeshCache.h"
+#include <cstring>
 #include <cgltf.h>
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -350,6 +352,8 @@ bool loadModelFile(Model& model, const std::filesystem::path& file, std::string*
             *error = file.string() + ": " + message;
         return false;
     };
+    if (readMeshCache(model, file))
+        return true; // cooked earlier and nothing changed since
 
     GltfFile gltf;
     if (!openGltf(gltf, file, error))
@@ -382,6 +386,21 @@ bool loadModelFile(Model& model, const std::filesystem::path& file, std::string*
         }
     model.localBounds = {lo, hi};
     model.sourcePath = std::filesystem::absolute(file);
+    // Cook for the next load: the glTF and its external buffers and images are what it depends on.
+    std::vector<std::filesystem::path> inputs{file};
+    auto external = [&](const char* uri) {
+        if (uri && std::strncmp(uri, "data:", 5) != 0) {
+            std::string decoded(uri);
+            cgltf_decode_uri(decoded.data());
+            decoded.resize(std::strlen(decoded.c_str()));
+            inputs.push_back(file.parent_path() / std::filesystem::path(std::u8string(decoded.begin(), decoded.end())));
+        }
+    };
+    for (cgltf_size i = 0; i < data->buffers_count; ++i)
+        external(data->buffers[i].uri);
+    for (cgltf_size i = 0; i < data->images_count; ++i)
+        external(data->images[i].uri);
+    writeMeshCache(model, file, inputs);
     return true;
 }
 

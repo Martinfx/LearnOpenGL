@@ -231,7 +231,11 @@ Hotovo, když: zóna 1 × 1 km jde projít bez načítací obrazovky a paměť d
 
 ### M5 – Vydání (~3–4 týdny)
 
-- [ ] Cooking: binární meshe, komprimované textury, balení do archivů, kontrola chybějících a nepoužitých assetů.
+- [x] Cooking: binární meshe, komprimované textury, balení do archivů, kontrola chybějících a nepoužitých assetů.
+  *Hotovo (2026-11-01): binární meshe (engine/MeshCache, `.cmesh` vedle `.ctex`, zneplatnění podle velikosti a času
+  glTF, `.bin` a obrázků; načtení zóny o 10 až 35 % rychleji), komprimované textury (BC1/3/5 z M0), kontrola
+  chybějících a nepoužitých assetů (`asset_check`, Assets > Validate assets). Assets > Clear cooked cache.
+  Balení do archivů se dělá s VFS (další bod), kde se archivy i čtou.*
 - [ ] Balíček pro Windows/Linux/FreeBSD, verze buildu z `git describe` (log, menu, crash report), symboly ke každému vydání, release s LTO, artefakty z CI.
 - [ ] VFS s mount pointy: volné soubory → archiv → složka `mods/` přepisující soubory podle cesty.
 - [ ] Lokalizace: tabulky řetězců s klíči (čeština, angličtina, plurály), editor tabulek, kontrola nepřeložených.

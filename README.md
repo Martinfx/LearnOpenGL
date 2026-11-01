@@ -403,6 +403,11 @@ výšková mlha se září ke slunci, bloom, ACES, barevné ladění (saturace, 
   a GPU komprese BC1 (barvy), BC3 (s alfou), BC5 (normal mapy, shader dopočítá Z). Paměť textury klesne
   na 1/4 až 1/8. Výsledek se uloží do cache (`~/.cache/fps_engine/textures`, na Windows
   `%LOCALAPPDATA%\fps_engine\cache\textures`), takže další načtení přeskočí dekódování PNG/JPEG i kompresi.
+- **Uvařené meshe:** statický glTF se při prvním načtení uloží binárně (`fps_engine/meshes/*.cmesh` vedle
+  textur): vrcholy, indexy, materiály a odkazy na uvařené textury, takže další načtení přeskočí JSON,
+  accessory i skládání uzlů. Soubor si pamatuje velikost a čas glTF, `.bin` a obrázků a při jejich změně
+  se uvaří znovu. Zóna se načte asi o 10 až 35 % rychleji (měřeno na llvmpipe, kde hodně dělá diskový cache OS).
+  Assets > Clear cooked cache smaže uvařené textury i meshe při příštím startu.
 - **Streamování:** objekty dál než vzdálenost streamování mají na GPU jen malou kopii (max. 256 px).
   Plné rozlišení se načte z cache na pracovním vlákně, když se přiblížíš; po 5 s v dálce se zase uvolní.
   CPU kopie pixelů se po nahrání na GPU zahazují.

@@ -56,6 +56,9 @@ struct TextureCookConfig {
     std::filesystem::path cacheDir;
 };
 TextureCookConfig& textureCookConfig();
+// Deletes the cooked textures and meshes (MeshCache.h) at the next start of the editor or
+// game: running processes still stream from the files, so they are not deleted now.
+void requestCookCacheClear();
 
 // Downscales to options.maxSize, builds the mip chain and block-compresses it.
 // Big images are split over the job system.

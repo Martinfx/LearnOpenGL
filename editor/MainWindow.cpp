@@ -343,6 +343,15 @@ void MainWindow::buildMenus()
         dialog->setAttribute(Qt::WA_DeleteOnClose);
         dialog->show();
     });
+    assets->addAction(tr("Clear &cooked cache..."), this, [this] {
+        const QString dir = QDir::toNativeSeparators(QString::fromStdU16String(engine::textureCookConfig().cacheDir.parent_path().u16string()));
+        if (QMessageBox::question(this, tr("Clear cooked cache"),
+                                  tr("Delete the cooked textures and meshes in %1 at the next start? They are cooked again "
+                                     "when needed (the first load is slower).").arg(dir)) == QMessageBox::Yes) {
+            engine::requestCookCacheClear();
+            statusBar()->showMessage(tr("The cooked cache is cleared at the next start"), 8000);
+        }
+    });
     assets->addAction(tr("Edit &texture..."), this, [this] {
         const QString path = QFileDialog::getOpenFileName(this, tr("Edit texture"), assetPath("textures"),
                                                           tr("Images (*.png *.jpg *.jpeg)"));
@@ -2602,7 +2611,7 @@ void MainWindow::buildDocks()
         if (process)
             html += row.arg(tr("Editor process"), mb(process), tr("resident memory (with a software GPU driver this includes the GPU data)"));
         html += "</table>";
-        html += tr("<p>Texture cook cache: %1</p>").arg(QDir::toNativeSeparators(QString::fromStdU16String(engine::textureCookConfig().cacheDir.u16string())));
+        html += tr("<p>Cooked cache (textures, meshes): %1</p>").arg(QDir::toNativeSeparators(QString::fromStdU16String(engine::textureCookConfig().cacheDir.parent_path().u16string())));
         memoryLabel->setText(html);
     });
     memoryTimer->start(1000);

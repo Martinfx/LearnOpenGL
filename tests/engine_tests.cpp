@@ -1,6 +1,7 @@
 // Headless tests for the engine core (no OpenGL needed).
 #include <engine/Log.h>
 #include <engine/Demo.h>
+#include <engine/MeshCache.h>
 #include <cstring>
 #include <set>
 #include <engine/Assert.h>
@@ -412,6 +413,64 @@ void testDemo()
     check(std::abs(st.low1Fps - 20.0) < 0.01 && std::abs(st.worstMs - 50.0) < 0.01, "1 % low is the slowest frame");
     check(std::abs(st.medianMs - 10.0) < 0.01, "median frame time");
     check(engine::formatFrameStats(st).find("1% low 20.0 FPS") != std::string::npos, "formatted statistics");
+}
+
+void testMeshCache()
+{
+    // A textured triangle: glTF + external .bin + external BMP image, all written here.
+    const auto dir = std::filesystem::temp_directory_path() / "mesh_cache_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    {
+        std::ofstream bin(dir / "tri.bin", std::ios::binary);
+        const float pos[9] = {0, 0, 0, 1, 0, 0, 0, 1, 0};
+        const float uv[6] = {0, 0, 1, 0, 0, 1};
+        const std::uint16_t idx[4] = {0, 1, 2, 0}; // padded to 4 bytes
+        bin.write(reinterpret_cast<const char*>(pos), sizeof pos);
+        bin.write(reinterpret_cast<const char*>(uv), sizeof uv);
+        bin.write(reinterpret_cast<const char*>(idx), sizeof idx);
+    }
+    {
+        // 2x2 RGB PNG.
+        const std::uint8_t png[77] = {137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 2, 0, 0, 0, 2, 8, 2, 0,
+                                      0, 0, 253, 212, 154, 115, 0, 0, 0, 20, 73, 68, 65, 84, 120, 156, 99, 248, 207, 192, 192, 0, 194,
+                                      12, 255, 255, 255, 103, 0, 0, 30, 239, 4, 252, 163, 200, 180, 247, 0, 0, 0, 0, 73, 69, 78, 68,
+                                      174, 66, 96, 130};
+        std::ofstream(dir / "tex.png", std::ios::binary).write(reinterpret_cast<const char*>(png), sizeof png);
+    }
+    {
+        std::ofstream gltf(dir / "tri.gltf");
+        gltf << R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0]}],
+"nodes":[{"mesh":0,"translation":[0,0.5,0]}],
+"meshes":[{"primitives":[{"attributes":{"POSITION":0,"TEXCOORD_0":1},"indices":2,"material":0}]}],
+"materials":[{"name":"rust","pbrMetallicRoughness":{"baseColorTexture":{"index":0},"roughnessFactor":0.6}}],
+"textures":[{"source":0}],"images":[{"uri":"tex.png"}],
+"buffers":[{"uri":"tri.bin","byteLength":68}],
+"bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":36},{"buffer":0,"byteOffset":36,"byteLength":24},{"buffer":0,"byteOffset":60,"byteLength":6}],
+"accessors":[{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3","min":[0,0,0],"max":[1,1,0]},
+{"bufferView":1,"componentType":5126,"count":3,"type":"VEC2"},{"bufferView":2,"componentType":5123,"count":3,"type":"SCALAR"}]})";
+    }
+    const auto file = dir / "tri.gltf";
+    std::string err;
+    engine::Model first;
+    check(engine::loadModelFile(first, file, &err), "load the test glTF: " + err);
+    check(std::filesystem::exists(engine::meshCachePath(file)), "loading cooks the mesh into the cache");
+    engine::Model cached;
+    check(engine::readMeshCache(cached, file), "the cooked mesh reads back");
+    const bool same = cached.parts.size() == 1 && first.parts.size() == 1 && cached.parts[0].positions == first.parts[0].positions &&
+                      cached.parts[0].indices == first.parts[0].indices && cached.parts[0].texcoords == first.parts[0].texcoords &&
+                      cached.parts[0].materialName == "rust" && std::abs(cached.parts[0].roughness - 0.6f) < 1e-6f &&
+                      cached.parts[0].texture && first.parts[0].texture &&
+                      cached.parts[0].texture->cookedFile == first.parts[0].texture->cookedFile &&
+                      cached.parts[0].texture->width == 2 && cached.localBounds.max.y == first.localBounds.max.y;
+    check(same, "cooked mesh equals the glTF (vertices, material, texture, bounds)");
+    check(std::abs(cached.parts[0].positions[2].y - 1.5f) < 1e-6f, "node transform stays baked in");
+    // A changed input (the image) makes the cache stale.
+    std::filesystem::last_write_time(dir / "tex.png", std::filesystem::last_write_time(dir / "tex.png") + std::chrono::seconds(5));
+    engine::Model stale;
+    check(!engine::readMeshCache(stale, file), "a changed image invalidates the cooked mesh");
+    check(engine::loadModelFile(stale, file, &err) && engine::readMeshCache(cached, file), "the next load cooks it again");
+    std::filesystem::remove_all(dir);
 }
 
 void testScriptDebugger()
@@ -3951,6 +4010,7 @@ int main()
         {"testTradeAndWear", testTradeAndWear},
         {"testScriptDebugger", testScriptDebugger},
         {"testDemo", testDemo},
+        {"testMeshCache", testMeshCache},
         {"testWorldStreaming", testWorldStreaming},
     };
     for (const auto& [name, run] : tests)
