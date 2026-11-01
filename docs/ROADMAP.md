@@ -106,7 +106,7 @@ Podrobně ve výkonové roadmapě vlákna "Vytvořit 3D FPS engine"; tady jen sh
 - [x] Panel snímku v editoru (dok Frame); CPU časy + GPU timer queries po průchodech, ve hře `FPS_ENGINE_STATS=1`
 - [x] Příznak bez kolize a cull distance u modelů (+ jeden Jolt mesh sdílený všemi kopiemi modelu)
 - [x] GPU instancing (kopie modelu jedním draw callem; hospital_street: 3391 → 1339 draw callů)
-- [ ] `glMultiDrawElementsIndirect`, setřídění podle materiálu
+- [x] `glMultiDrawElementsIndirect`, setřídění podle materiálu *Hotovo (2026-11-01): všechny meshe jsou v jednom společném vertex a index bufferu (mesh pool, `engine::RangeAllocator`, roste zkopírováním). Kopie modelů jdou do bufferu transformací; každá část meshe je příkaz indirect draw, příkazy se seřadí podle povrchu (materiál, textury a parametry glTF, vítr, fade, oboustrannost) a stejné povrchy se kreslí jedním `glMultiDrawElementsIndirect`. V depth/stínových průchodech sdílejí jeden příkaz všechny neprůhledné meshe. Index instance jde přes atribut s děličem (base instance), takže to běží i bez GL 4.6. hospital_street: 754 → 213 draw callů na snímek, obraz beze změny. Stat „meshes“ ve hře (`FPS_ENGINE_STATS`) i v doku Frame.*
 - [x] Cache stínů vzdálených kaskád (2./4. snímek), LOD a vyřazení malých vrhačů ve vzdálených kaskádách, přepínač „Cast shadows“ u modelů a vegetace (hospital_street: stíny 236 → 93 ms GPU, snímek 621 → 510 ms na llvmpipe)
 - [x] Alpha mipmapy zachovávající pokrytí pro MASK (tráva a listí nemizí v dálce)
 - [x] Prostorová mřížka modelů (32m buňky se sjednocenými hranicemi, culling po buňkách), řídnutí trávy podle vzdálenosti, stíny detailů jen zblízka, lodScale v presetech (Skrunda-1: 7,9 → 4,4 M trojúhelníků)
@@ -250,7 +250,7 @@ Hotovo, když: zóna 1 × 1 km jde projít bez načítací obrazovky a paměť d
 
 ## 5. Nejbližší kroky
 
-1. Dokončit M0 (zbývá indirect draw, impostory, SoA data, graf úloh).
+1. Dokončit M0 (zbývá impostory, SoA data, graf úloh).
 2. M0.5 Základy v pořadí: logování → asserty a crash handler → GUID entit → cvars a konzole → konfigurace → smoke test v CI → debug kreslení → GL ladění.
 3. Mezitím rychlé opravy z hraní (ruce stejné u všech zbraní). Potom zbytek M1: UI hry a credits → stavy hry → okno a ovládání → uložení hry → lokální světla → **baterka, táborák, expozice a LUT** → fyzika v levelu → propojení entit → audio dál a vrstvený ambient.
 4. Střídání dne a noci hned po M1 (začátek M2/M3), s ním déšť a bouřka, pak volumetrická mlha a tmavé interiéry (M3) a A-Life (M4).

@@ -44,6 +44,7 @@
 #include <engine/FileWatcher.h>
 #include <engine/HotReload.h>
 #include <engine/Prefab.h>
+#include <engine/RangeAllocator.h>
 #include <engine/PlayerController.h>
 
 #include <functional>
@@ -2470,6 +2471,21 @@ void testPrefabs()
     engine::clearPrefabCache();
 }
 
+void testRangeAllocator()
+{
+    engine::RangeAllocator a(100);
+    const auto x = a.allocate(40), y = a.allocate(40), z = a.allocate(40);
+    check(x && *x == 0 && y && *y == 40 && !z, "first fit, full pool refuses");
+    a.release(*x, 40);
+    check(a.largestFree() == 40 && a.used() == 40, "released range is free again");
+    a.release(*y, 40);
+    check(a.largestFree() == 100 && a.used() == 0, "neighbouring free ranges merge");
+    a.allocate(90);
+    a.grow(200);
+    const auto w = a.allocate(100);
+    check(w && *w == 90 && a.capacity() == 200, "growing adds room at the end");
+}
+
 int main()
 {
     // Hermetic cook cache for the tests.
@@ -2529,6 +2545,7 @@ int main()
     testAssetRegistry();
     testHotReload();
     testPrefabs();
+    testRangeAllocator();
     testWorldStreaming();
     std::printf(failures ? "%d test(s) failed\n" : "all tests passed\n", failures);
     return failures ? 1 : 0;

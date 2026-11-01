@@ -1,5 +1,6 @@
 #pragma once
 #include "engine/FrameArena.h"
+#include "engine/RangeAllocator.h"
 #include "engine/Particles.h"
 #include "engine/Lights.h"
 #include "engine/Scene.h"
@@ -194,6 +195,7 @@ public:
         double gpuMs[PassCount] = {};
         double cpuTotalMs = 0.0, gpuTotalMs = 0.0;
         int drawCalls = 0, instanced = 0, culled = 0;
+        int meshDraws = 0;       // meshes drawn by multi-draw-indirect calls (each call counts once in drawCalls)
         long long triangles = 0;
         int uploads = 0;
         int occluded = 0;        // hidden behind nearer geometry (main pass)
@@ -220,12 +222,21 @@ public:
 private:
     FrameArena frameArena_{1024 * 1024}; // per-frame scratch arrays (light clusters, sprites)
     void collectDistortions(const RenderView& view); // anomaly warps of this frame into screen space
+    // Every mesh lives in one shared vertex and index buffer (the mesh pool), so
+    // meshes with the same material can be drawn by one glMultiDrawElementsIndirect.
     struct GpuMesh {
-        unsigned vao = 0, vbo = 0, ibo = 0;
-        int indexCount = 0;
+        unsigned vao = 0;           // the pool's
+        int indexCount = 0, vertexCount = 0;
+        int firstIndex = 0, baseVertex = 0; // place in the pool
         std::size_t bytes = 0;
         bool used = false;
     };
+    unsigned poolVao_ = 0, poolVbo_ = 0, poolIbo_ = 0, iotaBuffer_ = 0, indirectBuffer_ = 0;
+    RangeAllocator poolVertices_, poolIndices_;
+    std::size_t iotaCount_ = 0, indirectCapacity_ = 0;
+    void growMeshPool(std::size_t vertices, std::size_t indices); // room for at least this many more
+    void ensureIota(std::size_t count); // per-instance index attribute 0..count-1
+    void releaseMesh(const GpuMesh& mesh);
     struct GpuTexture {
         unsigned handle = 0;
         bool used = false;
@@ -375,7 +386,7 @@ private:
     std::vector<glm::mat4> instanceData_;
     unsigned instanceBuffer_ = 0;
     std::size_t instanceCapacity_ = 0;
-    int drawCalls_ = 0, lastDrawCalls_ = 0, instanced_ = 0, lastInstanced_ = 0;
+    int drawCalls_ = 0, lastDrawCalls_ = 0, instanced_ = 0, lastInstanced_ = 0, meshDraws_ = 0;
     long long triangles_ = 0;
     int uploads_ = 0;
     // Profiler: timer queries per pass, in a ring of frames.
@@ -428,7 +439,6 @@ private:
     };
     FoliageCache foliageCache_;
     void addFoliage(const Terrain& terrain, const RenderView& view);
-    void drawModelInstanced(const Model& model, int base, int count);
     bool collectTransparent_ = false;   // main pass: Blend parts go to transparent_
     void drawTransparent(const RenderView& view);
     void drawDebug(const std::vector<const DebugGeometry*>& items, const glm::mat4& viewProj);

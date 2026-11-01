@@ -4,12 +4,13 @@ layout(location = 1) in vec3 aNormal;
 layout(location = 2) in vec2 aUV;
 layout(location = 3) in uvec4 aJoints;
 layout(location = 4) in vec4 aWeights;
+layout(location = 5) in uint aInstance; // base instance + instance number (mesh pool VAO)
 #include "common.glsl"
 layout(std140, binding = 0) uniform Joints { mat4 uJoints[256]; };
 uniform float uSway; // bending in the wind: 0 rigid, ~0.3 trees, 1 grass
 uniform bool uSkinned;
 uniform mat4 uModel;
-// Instancing: copies of one model in a single draw, transforms from this buffer.
+// Instancing and multi-draw: transforms from this buffer, at the draw's base instance.
 uniform bool uInstanced;
 uniform int uInstanceBase;
 layout(std430, binding = 2) readonly buffer Instances { mat4 uInstances[]; };
@@ -22,7 +23,7 @@ void main() {
     if (uSkinned)
         skin = aWeights.x * uJoints[aJoints.x] + aWeights.y * uJoints[aJoints.y]
              + aWeights.z * uJoints[aJoints.z] + aWeights.w * uJoints[aJoints.w];
-    mat4 model = uInstanced ? uInstances[uInstanceBase + gl_InstanceID] : uModel;
+    mat4 model = uInstanced ? uInstances[uInstanceBase + int(aInstance)] : uModel;
     vec4 world = model * skin * vec4(aPosition, 1.0);
     if (uSway > 0.0 && uWind.y > 0.0) {
         // Bend away from the wind with height above the object's origin: slow sway with

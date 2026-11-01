@@ -1831,8 +1831,8 @@ int main(int argc, char** argv)
             if (std::getenv("FPS_ENGINE_STATS")) {
                 const engine::Renderer::FrameStats& st = renderer.frameStats();
                 char line[512];
-                int n = std::snprintf(line, sizeof line, "%.1f FPS, %.2f ms | %d draws, %lld tris, %d instanced, %d culled, %d occluded, %d uploads | CPU %.2f ms, GPU %.2f ms |",
-                                      fpsFrames / fpsTimer, 1000.0 * fpsTimer / fpsFrames, st.drawCalls, st.triangles, st.instanced, st.culled, st.occluded, st.uploads,
+                int n = std::snprintf(line, sizeof line, "%.1f FPS, %.2f ms | %d draws (%d meshes), %lld tris, %d instanced, %d culled, %d occluded, %d uploads | CPU %.2f ms, GPU %.2f ms |",
+                                      fpsFrames / fpsTimer, 1000.0 * fpsTimer / fpsFrames, st.drawCalls, st.meshDraws, st.triangles, st.instanced, st.culled, st.occluded, st.uploads,
                                       st.cpuTotalMs, st.gpuTotalMs);
                 for (int p = 0; p < engine::Renderer::PassCount && n > 0 && n < static_cast<int>(sizeof line); ++p)
                     n += std::snprintf(line + n, sizeof line - static_cast<std::size_t>(n), " %s %.2f/%.2f", engine::Renderer::passName(p), st.cpuMs[p], st.gpuMs[p]);

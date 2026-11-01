@@ -2322,13 +2322,14 @@ void MainWindow::buildDocks()
                         .arg(QString::fromUtf8(engine::Renderer::passName(p)), ms(f.cpuMs[p]), f.gpuValid ? ms(f.gpuMs[p]) : QStringLiteral("-"));
         html += QString("<tr><td><b>%1</b></td><td align='right'><b>%2</b></td><td align='right'><b>%3</b></td></tr></table>")
                     .arg(tr("Total"), ms(f.cpuTotalMs), f.gpuValid ? ms(f.gpuTotalMs) : QStringLiteral("-"));
-        html += tr("<p>%1 draw calls, %2 triangles, %3 objects instanced, %4 culled, %5 hidden by occlusion, %6 GPU uploads</p>")
+        html += tr("<p>%1 draw calls (%7 meshes in multi-draws), %2 triangles, %3 objects instanced, %4 culled, %5 hidden by occlusion, %6 GPU uploads</p>")
                     .arg(f.drawCalls)
                     .arg(QLocale().toString(f.triangles))
                     .arg(f.instanced)
                     .arg(f.culled)
                     .arg(f.occluded)
-                    .arg(f.uploads);
+                    .arg(f.uploads)
+                    .arg(f.meshDraws);
         if (!f.gpuValid)
             html += tr("<p>GPU timer queries are not available on this driver.</p>");
         frameLabel->setText(html);

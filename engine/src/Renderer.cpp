@@ -652,12 +652,16 @@ void Renderer::shutdown()
     if (rainFbo_)
         glDeleteFramebuffers(1, &rainFbo_);
     rainTex_ = rainFbo_ = 0;
-    for (auto& [id, m] : meshes_) {
-        glDeleteVertexArrays(1, &m.vao);
-        glDeleteBuffers(1, &m.vbo);
-        glDeleteBuffers(1, &m.ibo);
-    }
     meshes_.clear();
+    if (poolVao_)
+        glDeleteVertexArrays(1, &poolVao_);
+    for (unsigned* b : {&poolVbo_, &poolIbo_, &iotaBuffer_, &indirectBuffer_})
+        if (*b)
+            glDeleteBuffers(1, b);
+    poolVao_ = poolVbo_ = poolIbo_ = iotaBuffer_ = indirectBuffer_ = 0;
+    poolVertices_ = RangeAllocator();
+    poolIndices_ = RangeAllocator();
+    iotaCount_ = indirectCapacity_ = 0;
     if (terrain_.vao) {
         glDeleteVertexArrays(1, &terrain_.vao);
         glDeleteBuffers(1, &terrain_.vbo);
@@ -1657,6 +1661,7 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     lastInstanced_ = instanced_;
     building_.drawCalls = drawCalls_;
     building_.instanced = instanced_;
+    building_.meshDraws = meshDraws_;
     building_.culled = culled_;
     building_.triangles = triangles_;
     building_.uploads = uploads_;
@@ -1667,6 +1672,7 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     collectQueries(); // finishes building_ into stats_ and starts the next frame
     drawCalls_ = 0;
     instanced_ = 0;
+    meshDraws_ = 0;
     triangles_ = 0;
     updateStreaming(); // before releaseUnused(): uses last frame's distances
     releaseUnused();
@@ -2316,83 +2322,169 @@ void Renderer::addFoliage(const Terrain& t, const RenderView& view)
     }
 }
 
-void Renderer::flushInstances()
+namespace {
+// What applySurface() reads from a material or a mesh part: draws whose surfaces
+// match share one multi-draw call. Depth-only passes only care about masked albedo.
+struct SurfaceKey {
+    const void* a = nullptr;   // material, or the part's base texture
+    const void* b = nullptr;   // the part's other textures (hashed)
+    std::uint64_t params = 0;  // the part's factors (hashed)
+    auto operator<=>(const SurfaceKey&) const = default;
+};
+std::uint64_t hashFloats(std::initializer_list<float> values)
 {
-    // One buffer upload for all batches of this pass, then one draw per mesh part and batch.
-    instanceData_.clear();
-    std::vector<std::pair<int, int>> ranges; // base, count per batch (count 1 = plain draw)
-    for (const InstanceBatch& b : batches_) {
-        if (b.transforms.size() < 2) {
-            ranges.emplace_back(-1, 1);
-            continue;
-        }
-        ranges.emplace_back(static_cast<int>(instanceData_.size()), static_cast<int>(b.transforms.size()));
-        instanceData_.insert(instanceData_.end(), b.transforms.begin(), b.transforms.end());
+    std::uint64_t h = 1469598103934665603ull;
+    for (float f : values) {
+        std::uint32_t bits = 0;
+        std::memcpy(&bits, &f, sizeof bits);
+        h = (h ^ bits) * 1099511628211ull;
     }
-    if (!instanceData_.empty()) {
-        const std::size_t bytes = instanceData_.size() * sizeof(glm::mat4);
-        if (!instanceBuffer_)
-            glCreateBuffers(1, &instanceBuffer_);
-        if (bytes > instanceCapacity_) {
-            instanceCapacity_ = std::max(bytes, instanceCapacity_ * 2);
-            glNamedBufferData(instanceBuffer_, static_cast<GLsizeiptr>(instanceCapacity_), nullptr, GL_STREAM_DRAW);
-        } else {
-            glInvalidateBufferData(instanceBuffer_); // orphan: earlier passes may still read it
-        }
-        glNamedBufferSubData(instanceBuffer_, 0, static_cast<GLsizeiptr>(bytes), instanceData_.data());
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, instanceBuffer_);
+    return h;
+}
+SurfaceKey surfaceKey(const Material* material, const MeshPart& part, bool depthOnly)
+{
+    const SurfaceAlpha alpha = surfaceAlpha(material, &part);
+    if (depthOnly && alpha.mode != AlphaMode::Mask)
+        return {};
+    if (material)
+        return {material, nullptr, depthOnly ? 1u : 0u};
+    SurfaceKey k;
+    k.a = part.texture.get();
+    if (depthOnly) {
+        k.params = hashFloats({alpha.cutoff}) | 1u;
+        return k;
     }
-    for (std::size_t i = 0; i < batches_.size(); ++i) {
-        const InstanceBatch& b = batches_[i];
-        drawDistance_ = b.distance;
-        glUniform1f(loc_.sway, b.sway);
-        glUniform2f(loc_.fade, b.fade.x, b.fade.y);
-        if (ranges[i].first < 0) {
-            drawModel(*b.model, b.transforms.front(), 0.0f);
-        } else {
-            drawModelInstanced(*b.model, ranges[i].first, ranges[i].second);
-            if (collectTransparent_)
-                instanced_ += ranges[i].second;
-        }
-    }
-    glUniform1f(loc_.sway, 0.0f);
-    glUniform2f(loc_.fade, 0.0f, 0.0f);
-    batches_.clear();
-    batchIndex_.clear();
+    const std::uintptr_t others = reinterpret_cast<std::uintptr_t>(part.normalTexture.get()) * 31u ^
+                                  reinterpret_cast<std::uintptr_t>(part.metalRoughTexture.get()) * 131u ^
+                                  reinterpret_cast<std::uintptr_t>(part.occlusionTexture.get()) * 1031u ^
+                                  reinterpret_cast<std::uintptr_t>(part.emissiveTexture.get()) * 10007u;
+    k.b = reinterpret_cast<const void*>(others);
+    k.params = hashFloats({part.color.r, part.color.g, part.color.b, part.roughness, part.metallic, part.normalScale, part.emissive.r,
+                           part.emissive.g, part.emissive.b, static_cast<float>(alpha.mode), alpha.cutoff, alpha.opacity});
+    return k;
 }
 
-void Renderer::drawModelInstanced(const Model& model, int base, int count)
+struct DrawElementsIndirectCommand {
+    std::uint32_t count, instanceCount, firstIndex;
+    std::int32_t baseVertex;
+    std::uint32_t baseInstance;
+};
+} // namespace
+
+void Renderer::flushInstances()
 {
+    // All copies of this pass go to one transform buffer; then every mesh part of every
+    // batch becomes an indirect draw command, sorted so that parts with the same surface
+    // (material, wind sway, fade, culling) are drawn by one glMultiDrawElementsIndirect.
+    instanceData_.clear();
+    struct Item {
+        const MeshPart* part;
+        const Material* material;
+        const GpuMesh* mesh;
+        std::uint32_t base, count;
+        float distance, sway;
+        glm::vec2 fade;
+        bool twoSided;
+        SurfaceKey surface;
+    };
+    std::vector<Item> items;
+    const bool cullOn = glIsEnabled(GL_CULL_FACE);
+    for (const InstanceBatch& b : batches_) {
+        const auto base = static_cast<std::uint32_t>(instanceData_.size());
+        const auto count = static_cast<std::uint32_t>(b.transforms.size());
+        instanceData_.insert(instanceData_.end(), b.transforms.begin(), b.transforms.end());
+        if (collectTransparent_ && count > 1)
+            instanced_ += static_cast<int>(count);
+        for (const MeshPart& part : b.model->parts) {
+            const GpuMesh& mesh = upload(part);
+            const Material* material = b.model->materialFor(part);
+            const SurfaceAlpha alpha = surfaceAlpha(material, &part);
+            if (alpha.mode == AlphaMode::Blend) {
+                if (depthOnly_)
+                    continue; // glass neither occludes nor casts shadows
+                if (collectTransparent_) {
+                    for (std::uint32_t i = 0; i < count; ++i)
+                        transparent_.push_back({&part, material, nullptr, b.transforms[i], b.distance, 0.0f});
+                    continue;
+                }
+            }
+            items.push_back({&part, material, &mesh, base, count, b.distance, b.sway, b.fade, alpha.doubleSided && cullOn,
+                             surfaceKey(material, part, depthOnly_)});
+        }
+    }
+    batches_.clear();
+    batchIndex_.clear();
+    if (items.empty())
+        return;
+    const std::size_t bytes = instanceData_.size() * sizeof(glm::mat4);
+    if (!instanceBuffer_)
+        glCreateBuffers(1, &instanceBuffer_);
+    if (bytes > instanceCapacity_) {
+        instanceCapacity_ = std::max(bytes, instanceCapacity_ * 2);
+        glNamedBufferData(instanceBuffer_, static_cast<GLsizeiptr>(instanceCapacity_), nullptr, GL_STREAM_DRAW);
+    } else {
+        glInvalidateBufferData(instanceBuffer_); // orphan: earlier passes may still read it
+    }
+    glNamedBufferSubData(instanceBuffer_, 0, static_cast<GLsizeiptr>(bytes), instanceData_.data());
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, instanceBuffer_);
+    ensureIota(instanceData_.size());
+
+    std::sort(items.begin(), items.end(), [](const Item& x, const Item& y) {
+        return std::tie(x.sway, x.fade.x, x.fade.y, x.twoSided, x.surface) < std::tie(y.sway, y.fade.x, y.fade.y, y.twoSided, y.surface);
+    });
+    std::vector<DrawElementsIndirectCommand> commands;
+    commands.reserve(items.size());
+    for (const Item& it : items)
+        commands.push_back({static_cast<std::uint32_t>(it.mesh->indexCount), it.count, static_cast<std::uint32_t>(it.mesh->firstIndex),
+                            it.mesh->baseVertex, it.base});
+    const std::size_t commandBytes = commands.size() * sizeof(DrawElementsIndirectCommand);
+    if (!indirectBuffer_)
+        glCreateBuffers(1, &indirectBuffer_);
+    if (commandBytes > indirectCapacity_) {
+        indirectCapacity_ = std::max(commandBytes, indirectCapacity_ * 2);
+        glNamedBufferData(indirectBuffer_, static_cast<GLsizeiptr>(indirectCapacity_), nullptr, GL_STREAM_DRAW);
+    } else {
+        glInvalidateBufferData(indirectBuffer_);
+    }
+    glNamedBufferSubData(indirectBuffer_, 0, static_cast<GLsizeiptr>(commandBytes), commands.data());
+    glBindBuffer(GL_DRAW_INDIRECT_BUFFER, indirectBuffer_);
+
     glUniform1f(loc_.highlight, 0.0f);
     glUniform1i(loc_.skinned, 0);
     glUniform1i(loc_.instanced, 1);
-    glUniform1i(loc_.instanceBase, base);
-    for (const MeshPart& part : model.parts) {
-        const GpuMesh& mesh = upload(part);
-        const Material* material = model.materialFor(part);
-        const SurfaceAlpha alpha = surfaceAlpha(material, &part);
-        if (alpha.mode == AlphaMode::Blend) {
-            if (depthOnly_)
-                continue;
-            if (collectTransparent_) {
-                for (int i = 0; i < count; ++i)
-                    transparent_.push_back({&part, material, nullptr, instanceData_[static_cast<std::size_t>(base + i)],
-                                            drawDistance_, 0.0f});
-                continue;
-            }
+    glUniform1i(loc_.instanceBase, 0);
+    glBindVertexArray(poolVao_);
+    for (std::size_t first = 0; first < items.size();) {
+        std::size_t last = first + 1;
+        const Item& f = items[first];
+        float distance = f.distance;
+        long long tris = static_cast<long long>(f.mesh->indexCount / 3) * f.count;
+        while (last < items.size() && items[last].sway == f.sway && items[last].fade == f.fade && items[last].twoSided == f.twoSided &&
+               items[last].surface == f.surface) {
+            distance = std::min(distance, items[last].distance);
+            tris += static_cast<long long>(items[last].mesh->indexCount / 3) * items[last].count;
+            ++last;
         }
-        applySurface(material, &part, part.color, false);
-        glBindVertexArray(mesh.vao);
-        const bool twoSided = alpha.doubleSided && glIsEnabled(GL_CULL_FACE);
-        if (twoSided)
+        drawDistance_ = distance; // texture streaming: the nearest copy
+        glUniform1f(loc_.sway, f.sway);
+        glUniform2f(loc_.fade, f.fade.x, f.fade.y);
+        applySurface(f.material, f.part, f.part->color, false);
+        if (f.twoSided)
             glDisable(GL_CULL_FACE);
-        glDrawElementsInstanced(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, nullptr, count);
-        ++drawCalls_;
-        triangles_ += static_cast<long long>(mesh.indexCount / 3) * count;
-        if (twoSided)
+        glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT,
+                                    reinterpret_cast<const void*>(first * sizeof(DrawElementsIndirectCommand)),
+                                    static_cast<GLsizei>(last - first), 0);
+        if (f.twoSided)
             glEnable(GL_CULL_FACE);
+        ++drawCalls_;
+        meshDraws_ += static_cast<int>(last - first);
+        triangles_ += tris;
+        first = last;
     }
+    glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);
     glUniform1i(loc_.instanced, 0);
+    glUniform1f(loc_.sway, 0.0f);
+    glUniform2f(loc_.fade, 0.0f, 0.0f);
     applySurface(nullptr, nullptr, glm::vec3(1.0f), false);
 }
 
@@ -2428,7 +2520,9 @@ void Renderer::drawTransparent(const RenderView& view)
                 const GpuMesh& mesh = upload(*d.part);
                 applySurface(d.material, d.part, d.part->color, false);
                 glBindVertexArray(mesh.vao);
-                glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, nullptr);
+                glDrawElementsBaseVertex(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT,
+                                         reinterpret_cast<const void*>(static_cast<std::uintptr_t>(mesh.firstIndex) * sizeof(std::uint32_t)),
+                                         mesh.baseVertex);
             }
         }
         glCullFace(GL_BACK);
@@ -2941,6 +3035,7 @@ void Renderer::collectQueries()
     // CPU numbers are from the frame that just ended; GPU numbers a few frames older.
     stats_.drawCalls = building_.drawCalls;
     stats_.instanced = building_.instanced;
+    stats_.meshDraws = building_.meshDraws;
     stats_.culled = building_.culled;
     stats_.triangles = building_.triangles;
     stats_.uploads = building_.uploads;
@@ -2962,6 +3057,66 @@ void Renderer::collectQueries()
     queryFrame_ = (queryFrame_ + 1) % kQueryFrames;
 }
 
+void Renderer::growMeshPool(std::size_t vertices, std::size_t indices)
+{
+    // A bigger buffer, the old content copied over (offsets stay valid), the VAO rebound.
+    auto enlarge = [](unsigned& buffer, RangeAllocator& alloc, std::size_t need, std::size_t unit, std::size_t minimum) {
+        if (alloc.largestFree() >= need && buffer)
+            return;
+        std::size_t capacity = std::max(alloc.capacity(), minimum);
+        while (capacity - alloc.capacity() < need || capacity < alloc.capacity() + need)
+            capacity *= 2;
+        unsigned grown = 0;
+        glCreateBuffers(1, &grown);
+        glNamedBufferStorage(grown, static_cast<GLsizeiptr>(capacity * unit), nullptr, GL_DYNAMIC_STORAGE_BIT);
+        if (buffer) {
+            glCopyNamedBufferSubData(buffer, grown, 0, 0, static_cast<GLsizeiptr>(alloc.capacity() * unit));
+            glDeleteBuffers(1, &buffer);
+        }
+        buffer = grown;
+        alloc.grow(capacity);
+    };
+    enlarge(poolVbo_, poolVertices_, vertices, sizeof(Vertex), 1u << 20);  // 1 M vertices (56 MB) to start
+    enlarge(poolIbo_, poolIndices_, indices, sizeof(std::uint32_t), 4u << 20);
+    if (!poolVao_) {
+        glCreateVertexArrays(1, &poolVao_);
+        // Per-instance index (binding 1, divisor 1): the draw's base instance plus the
+        // instance number, so multi-draw commands find their transforms.
+        glEnableVertexArrayAttrib(poolVao_, 5);
+        glVertexArrayAttribIFormat(poolVao_, 5, 1, GL_UNSIGNED_INT, 0);
+        glVertexArrayAttribBinding(poolVao_, 5, 1);
+        glVertexArrayBindingDivisor(poolVao_, 1, 1);
+        ensureIota(4096);
+    }
+    setupVertexArray(poolVao_, poolVbo_);
+    glVertexArrayElementBuffer(poolVao_, poolIbo_);
+    for (auto& [id, mesh] : meshes_)
+        mesh.vao = poolVao_;
+}
+
+void Renderer::ensureIota(std::size_t count)
+{
+    if (count <= iotaCount_ && iotaBuffer_)
+        return;
+    count = std::max(count, iotaCount_ * 2);
+    std::vector<std::uint32_t> iota(count);
+    for (std::size_t i = 0; i < count; ++i)
+        iota[i] = static_cast<std::uint32_t>(i);
+    if (iotaBuffer_)
+        glDeleteBuffers(1, &iotaBuffer_);
+    glCreateBuffers(1, &iotaBuffer_);
+    glNamedBufferStorage(iotaBuffer_, static_cast<GLsizeiptr>(count * sizeof(std::uint32_t)), iota.data(), 0);
+    iotaCount_ = count;
+    if (poolVao_)
+        glVertexArrayVertexBuffer(poolVao_, 1, iotaBuffer_, 0, sizeof(std::uint32_t));
+}
+
+void Renderer::releaseMesh(const GpuMesh& mesh)
+{
+    poolVertices_.release(static_cast<std::size_t>(mesh.baseVertex), static_cast<std::size_t>(mesh.vertexCount));
+    poolIndices_.release(static_cast<std::size_t>(mesh.firstIndex), static_cast<std::size_t>(mesh.indexCount));
+}
+
 const Renderer::GpuMesh& Renderer::upload(const MeshPart& part)
 {
     auto it = meshes_.find(part.id);
@@ -2981,13 +3136,25 @@ const Renderer::GpuMesh& Renderer::upload(const MeshPart& part)
     }
 
     GpuMesh m;
-    glCreateBuffers(1, &m.vbo);
-    glNamedBufferStorage(m.vbo, static_cast<GLsizeiptr>(vertices.size() * sizeof(Vertex)), vertices.data(), 0);
-    glCreateBuffers(1, &m.ibo);
-    glNamedBufferStorage(m.ibo, static_cast<GLsizeiptr>(part.indices.size() * sizeof(std::uint32_t)), part.indices.data(), 0);
-    glCreateVertexArrays(1, &m.vao);
-    setupVertexArray(m.vao, m.vbo);
-    glVertexArrayElementBuffer(m.vao, m.ibo);
+    auto v = poolVertices_.allocate(vertices.size());
+    auto i = poolIndices_.allocate(part.indices.size());
+    if (!v || !i) {
+        if (v)
+            poolVertices_.release(*v, vertices.size());
+        if (i)
+            poolIndices_.release(*i, part.indices.size());
+        growMeshPool(vertices.size(), part.indices.size());
+        v = poolVertices_.allocate(vertices.size());
+        i = poolIndices_.allocate(part.indices.size());
+    }
+    m.vao = poolVao_;
+    m.baseVertex = static_cast<int>(*v);
+    m.firstIndex = static_cast<int>(*i);
+    m.vertexCount = static_cast<int>(vertices.size());
+    glNamedBufferSubData(poolVbo_, static_cast<GLintptr>(*v * sizeof(Vertex)), static_cast<GLsizeiptr>(vertices.size() * sizeof(Vertex)),
+                         vertices.data());
+    glNamedBufferSubData(poolIbo_, static_cast<GLintptr>(*i * sizeof(std::uint32_t)),
+                         static_cast<GLsizeiptr>(part.indices.size() * sizeof(std::uint32_t)), part.indices.data());
     m.indexCount = static_cast<int>(part.indices.size());
     m.bytes = vertices.size() * sizeof(Vertex) + part.indices.size() * sizeof(std::uint32_t);
     m.used = true;
@@ -3276,7 +3443,9 @@ void Renderer::drawModel(const Model& model, const glm::mat4& transform, float h
         const bool twoSided = alpha.doubleSided && glIsEnabled(GL_CULL_FACE);
         if (twoSided)
             glDisable(GL_CULL_FACE);
-        glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, nullptr);
+        glDrawElementsBaseVertex(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT,
+                                 reinterpret_cast<const void*>(static_cast<std::uintptr_t>(mesh.firstIndex) * sizeof(std::uint32_t)),
+                                 mesh.baseVertex);
         ++drawCalls_;
         triangles_ += mesh.indexCount / 3;
         if (twoSided)
@@ -3629,9 +3798,7 @@ void Renderer::releaseUnused()
     // Meshes of models removed from the scene are freed after one frame.
     for (auto it = meshes_.begin(); it != meshes_.end();) {
         if (!it->second.used) {
-            glDeleteVertexArrays(1, &it->second.vao);
-            glDeleteBuffers(1, &it->second.vbo);
-            glDeleteBuffers(1, &it->second.ibo);
+            releaseMesh(it->second);
             it = meshes_.erase(it);
         } else {
             it->second.used = false;
