@@ -136,6 +136,7 @@ def grime(m, x0, x1, y_top, y_bot, z, region, k=0):
 def facade_grime(m, x0, x1, top, z, rng, plinth=None):
     """Roof-edge drips along a wall from x0 to x1 (canonical frame, face at z) and, with plinth=(y0, y1, z),
     splash dirt on the plinth."""
+    x0, x1 = x0 + 0.2, x1 - 0.2      # clear of the corners: the decal quads must not form a lip the player catches on
     x = x0
     while x < x1 - 0.5:
         w = min(rng.uniform(1.6, 3.4), x1 - x)
@@ -559,6 +560,10 @@ def corridor(length=56.0, depth=13.4, floors=3, seed=0, lod=0, ext='plaster_moss
             else:
                 m.push((hx if side == '+x' else -hx, 0, c), _rot_for(side))
             _frame(m, np.eye(3), 0, 0, ylo, yhi, w, rng, _window_kind(rng, f, 0.2), door=door)
+            m.pop()
+        for side, half in (('+z', hx), ('-z', hx), ('+x', hz), ('-x', hz)):     # rain and splash dirt
+            m.push({'+z': (0, 0, hz), '-z': (0, 0, -hz), '+x': (hx, 0, 0), '-x': (-hx, 0, 0)}[side], _rot_for(side))
+            facade_grime(m, -half, half, top + 0.9, 0.025, rng, plinth=(-BASE + 0.05, -0.04, 0.065))
             m.pop()
     for (a, b, c, d, faces) in ((-hx - 0.04, hz, hx + 0.04, hz + 0.04, 'Z'), (-hx - 0.04, -hz - 0.04, hx + 0.04, -hz, 'z'),
                                 (-hx - 0.04, -hz, -hx, hz, 'x'), (hx, -hz, hx + 0.04, hz, 'X')):

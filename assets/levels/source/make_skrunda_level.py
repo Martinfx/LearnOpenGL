@@ -488,8 +488,11 @@ for x, z, forest, grove in trees:
              'birch_a' if r < 0.82 else 'birch_b' if r < 0.92 else 'spruce_young')
         parent = 'Forest'
     else:
-        f = ('birch_a' if r < 0.35 else 'birch_b' if r < 0.6 else 'birch_young' if r < 0.75 else 'broadleaf_a' if r < 0.85 else
-             'broadleaf_b' if r < 0.93 else 'dead_a')
+        # photos of Skrunda-1 in spring: birches just leafing out, dark spruces between the blocks
+        f = ('spruce_a' if r < 0.08 else 'spruce_b' if r < 0.13 else 'birch_a' if r < 0.43 else 'birch_b' if r < 0.65 else
+             'birch_young' if r < 0.77 else 'broadleaf_a' if r < 0.86 else 'broadleaf_b' if r < 0.94 else 'dead_a')
+        if f.startswith(('birch_a', 'birch_b', 'broadleaf')) and rng.random() < 0.5:
+            f += '_spring'          # sparser, fresh-green crown (thin_glb + recolor_glb of the leaf variant)
         parent = 'Trees'
     veg('Tree', f if f == 'dead_a' else 'sk:' + f, x, z, parent, lod_dist=30, cull=230, shadows=True, collision=True, scale=rng.uniform(0.85, 1.15))
 

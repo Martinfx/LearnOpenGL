@@ -20,7 +20,29 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from thin_glb import read_glb       # noqa: E402
 
 
+def compact(j, binb):
+    """Drop buffer views nothing references any more (replaced images, thinned index lists)."""
+    used = sorted({a['bufferView'] for a in j.get('accessors', []) if 'bufferView' in a} |
+                  {im['bufferView'] for im in j.get('images', []) if 'bufferView' in im})
+    out, remap = bytearray(), {}
+    for old in used:
+        bv = j['bufferViews'][old]
+        o = bv.get('byteOffset', 0)
+        while len(out) % 4:
+            out.append(0)
+        nb = dict(bv, byteOffset=len(out))
+        out += binb[o:o + bv['byteLength']]
+        remap[old] = len(remap)
+        j['bufferViews'][old] = nb
+    j['bufferViews'] = [j['bufferViews'][i] for i in used]
+    for a in j.get('accessors', []) + j.get('images', []):
+        if 'bufferView' in a:
+            a['bufferView'] = remap[a['bufferView']]
+    return out
+
+
 def write_glb(path, j, binb):
+    binb = compact(j, binb)
     while len(binb) % 4:
         binb.append(0)
     j['buffers'][0]['byteLength'] = len(binb)

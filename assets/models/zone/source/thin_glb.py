@@ -3,7 +3,7 @@
 (blades, leaves) of every primitive and drops the rest (--keep-big: the largest pieces such as a trunk always stay). Materials, textures and vertices are kept,
 only the index lists shrink, so the look stays the same, just sparser.
 
-    python3 -I thin_glb.py in.glb out.glb keep_fraction [seed] [--keep-big]
+    python3 -I thin_glb.py in.glb out.glb keep_fraction [seed] [--keep-big] [--only MATERIAL_NAME_PART]
 """
 import json
 import struct
@@ -55,12 +55,15 @@ def components(tri, pos):
     return np.array([find(weld[t[0]]) for t in tri])
 
 
-def thin(src, dst, keep, seed=1, keep_big=False):
+def thin(src, dst, keep, seed=1, keep_big=False, only=None):
     j, binb = read_glb(src)
+    mats = j.get('materials', [])
     rng = np.random.default_rng(seed)
     before = after = 0
     for m in j['meshes']:
         for p in m['primitives']:
+            if only and only not in mats[p.get('material', 0)].get('name', ''):
+                continue
             idx = accessor(j, binb, p['indices']).reshape(-1, 3).astype(np.uint32)
             pos = accessor(j, binb, p['attributes']['POSITION'])
             comp = components(idx, pos)
@@ -95,4 +98,9 @@ def thin(src, dst, keep, seed=1, keep_big=False):
 
 if __name__ == '__main__':
     a = [x for x in sys.argv[1:] if x != '--keep-big']
-    thin(a[0], a[1], float(a[2]), int(a[3]) if len(a) > 3 else 1, '--keep-big' in sys.argv)
+    only = None
+    if '--only' in a:
+        i = a.index('--only')
+        only = a[i + 1]
+        del a[i:i + 2]
+    thin(a[0], a[1], float(a[2]), int(a[3]) if len(a) > 3 else 1, '--keep-big' in sys.argv, only)

@@ -28,7 +28,7 @@ SETS = {
     'brick': ('brick_wall_001', dict()),
     'brick_red': ('red_brick', dict(saturation=0.8)),
     'plaster': ('damaged_plaster', dict(saturation=0.8)),
-    'plaster_green': ('painted_plaster_wall', dict(tint=(0.78, 0.9, 0.8))),
+    'plaster_green': ('painted_plaster_wall', dict(tint=(0.56, 0.64, 0.57))),
     'plaster_blue': ('painted_plaster_wall', dict(tint=(0.72, 0.8, 0.9))),
     'tiles': ('large_grey_tiles', dict()),
     'tiles_floor': ('floor_tiles_06', dict(saturation=0.45, tint=(0.72, 0.7, 0.64))),     # trodden, dusty
@@ -52,7 +52,7 @@ SETS = {
     'plaster_yellow': ('yellow_plaster', dict(saturation=0.6, tint=(1.02, 1.0, 0.94))),
     'plaster_peel': ('worn_plaster_wall', dict()),
     'wallpaper': ('decrepit_wallpaper', dict()),
-    'stair_paint': ('blue_plaster_weathered', dict(saturation=0.65)),
+    'stair_paint': ('blue_plaster_weathered', dict(saturation=0.5, tint=(0.62, 0.66, 0.66))),     # dim: interiors read dark through the windows
     'road': ('aerial_asphalt_01', dict(saturation=0.35, tint=(0.88, 0.85, 0.78))),     # old sun-bleached asphalt, sand in it
     'road_worn': ('asphalt_04', dict()),
     'ground_grass': ('grass_ground', dict(tint=(0.85, 0.95, 0.75))),
