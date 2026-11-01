@@ -2091,6 +2091,14 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     outHeight_ = std::max(1, view.viewportHeight);
     const float scale = view.capture ? 1.0f : std::clamp(quality_.renderScale, 0.25f, 1.0f);
     ensureTargets(std::max(1, static_cast<int>(std::lround(outWidth_ * scale))), std::max(1, static_cast<int>(std::lround(outHeight_ * scale))));
+    {
+        // Motion blur: only a continuous perspective view knows its previous frame.
+        const bool motion = quality_.motionBlur > 0.0f && view.temporal && !view.capture && view.projection[3][3] == 0.0f;
+        motionValid_ = motion && motionActive_;
+        motionActive_ = motion;
+        motionPrevViewProj_ = motionValid_ ? motionViewProj_ : view.projection * view.view;
+        motionViewProj_ = view.projection * view.view;
+    }
     if (taaActive_) {
         auto halton = [](std::uint64_t i, int b) {
             float f = 1.0f, r = 0.0f;
@@ -3164,7 +3172,7 @@ void Renderer::renderOverlay(const RenderView& view, const OverlayPass& pass)
     // First-person layer: own depth range and projection, so the weapon never clips into walls.
     beginPass(PassOverlay);
     overlayDrawn_ = true;
-    if (taaActive_) // TAA reprojects through the scene depth, which the weapon layer clears
+    if (taaActive_ || motionActive_) // TAA and motion blur reproject through the scene depth, which the weapon layer clears
         glCopyImageSubData(depthTex_, GL_TEXTURE_2D, 0, 0, 0, 0, taaDepth_, GL_TEXTURE_2D, 0, 0, 0, 0, width_, height_, 1);
     glBindFramebuffer(GL_FRAMEBUFFER, hdrFbo_);
     glViewport(0, 0, width_, height_);
@@ -3466,6 +3474,12 @@ void Renderer::present()
     glUniform1i(post.loc("uDistortOn"), distortDrawn_ ? 1 : 0);
     glUniform1i(post.loc("uDistortMask"), overlayDrawn_ ? 1 : 0);
     glBindTextureUnit(5, distortDrawn_ ? distortTex_ : whiteTex_);
+    glUniform1f(post.loc("uMotionBlur"), motionValid_ ? std::clamp(quality_.motionBlur, 0.0f, 1.0f) : 0.0f);
+    if (motionValid_) {
+        const glm::mat4 reproject = motionPrevViewProj_ * glm::inverse(projection_ * view_);
+        glUniformMatrix4fv(post.loc("uMotionReproject"), 1, GL_FALSE, glm::value_ptr(reproject));
+    }
+    glBindTextureUnit(6, overlayDrawn_ && (taaActive_ || motionActive_) ? taaDepth_ : depthTex_);
     glBindTextureUnit(0, sceneTex_);
     glBindTextureUnit(1, bloomTex_.empty() ? whiteTex_ : bloomTex_[0]);
     glBindTextureUnit(2, depthTex_);

@@ -121,6 +121,7 @@ struct RenderQuality {
     // takes over when this is on.
     bool taa = true;
     bool ssr = true; // screen-space reflections (wet ground, glass, polished floors)
+    float motionBlur = 0.0f; // camera motion blur in continuous views, shutter fraction 0..1 (0 = off)
     int textureUploadsPerFrame = 6; // new textures sent to the GPU per frame, 0 = all at once
     // Memory. Textures larger than textureMaxSize drop their top mip levels (0 = full size).
     // Texture streaming: objects farther than textureStreamDistance get a small copy
@@ -605,6 +606,9 @@ private:
     glm::vec2 taaJitterUV_{0.0f};
     glm::mat4 taaViewProj_{1.0f}, taaPrevViewProj_{1.0f}, taaJitteredViewProj_{1.0f};
     unsigned sceneTex_ = 0; // what post-processing reads: hdrColor_ or the TAA result
+    // Motion blur: cameras of this and the previous continuous frame.
+    bool motionActive_ = false, motionValid_ = false;
+    glm::mat4 motionViewProj_{1.0f}, motionPrevViewProj_{1.0f}, motionJitteredViewProj_{1.0f};
     // Screen-space reflections: the previous frame's HDR image (mipmapped) they read from.
     unsigned ssrColor_ = 0, ssrFbo_ = 0;
     bool ssrRecord_ = false, ssrValid_ = false;

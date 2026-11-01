@@ -28,6 +28,11 @@ layout(binding = 2) uniform sampler2D uDepth;
 layout(binding = 5) uniform sampler2D uDistortTex;
 uniform bool uDistortOn;
 uniform bool uDistortMask; // depth < 1 is the first-person weapon (own depth layer): not warped
+// Camera motion blur (optional, game): each pixel is smeared along how far it moved on screen
+// since the previous frame (scene depth reprojected), times the shutter fraction.
+layout(binding = 6) uniform sampler2D uSceneDepth; // depth of the world (before the weapon layer)
+uniform float uMotionBlur;     // 0 = off .. 1 = a whole frame of motion
+uniform mat4 uMotionReproject; // this frame's clip -> previous frame's clip
 out vec4 fragColor;
 
 vec3 aces(vec3 x) {
@@ -51,8 +56,36 @@ vec2 distortedUV(vec2 uv) {
     return result;
 }
 
+vec3 sceneColor(vec2 uv) {
+    vec3 c = texture(uHdr, uv).rgb;
+    if (uMotionBlur <= 0.0 || (uDistortMask && texture(uDepth, vUV).r < 1.0))
+        return c; // the weapon moves with the camera: sharp
+    float depth = texture(uSceneDepth, vUV).r;
+    vec4 prev = uMotionReproject * vec4(vUV * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
+    if (prev.w <= 0.0)
+        return c;
+    vec2 velocity = (vUV - (prev.xy / prev.w * 0.5 + 0.5)) * uMotionBlur;
+    vec2 size = vec2(textureSize(uHdr, 0));
+    float pixels = length(velocity * size);
+    if (pixels < 0.75)
+        return c;
+    if (pixels > 48.0)
+        velocity *= 48.0 / pixels;
+    float jitter = hash(gl_FragCoord.xy + fract(uTime) * 517.0) - 0.5;
+    vec3 sum = c;
+    float count = 1.0;
+    for (int i = 0; i < 8; ++i) {
+        vec2 s = clamp(uv + velocity * ((float(i) + 0.5 + jitter) / 8.0 - 0.5), vec2(0.001), vec2(0.999));
+        if (uDistortMask && texture(uDepth, s).r < 1.0)
+            continue; // don't smear the weapon into the world
+        sum += texture(uHdr, s).rgb;
+        count += 1.0;
+    }
+    return sum / count;
+}
+
 void main() {
-    vec3 color = texture(uHdr, distortedUV(vUV)).rgb;
+    vec3 color = sceneColor(distortedUV(vUV));
     vec3 bloom = texture(uBloom, vUV).rgb;
     if (any(isnan(color)) || any(isinf(color))) color = vec3(0.0);
     if (any(isnan(bloom)) || any(isinf(bloom))) bloom = vec3(0.0);

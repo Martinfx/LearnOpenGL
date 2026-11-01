@@ -866,6 +866,8 @@ int main(int argc, char** argv)
                     q.volumetricFog = 0;
                 q.impostors = q.impostors && !std::getenv("FPS_ENGINE_NO_IMPOSTORS");
                 q.occlusionCulling = q.occlusionCulling && !std::getenv("FPS_ENGINE_NO_OCCLUSION");
+                if (const engine::CVar* blur = cvars.find("r_motionblur"))
+                    q.motionBlur = blur->number();
                 if (const engine::CVar* aa = cvars.find("r_aa")) {
                     q.fxaa = aa->integer() == 1;
                     q.taa = aa->integer() == 2;
@@ -884,6 +886,12 @@ int main(int argc, char** argv)
                 engine::RenderQuality q = renderer.quality();
                 q.fxaa = v.integer() == 1;
                 q.taa = v.integer() == 2;
+                renderer.setQuality(q);
+            };
+        cvars.add("r_motionblur", CVarType::Float, "0", "Camera motion blur: share of a frame's motion (0 = off)", engine::CVarConfig, 0.0, 1.0)
+            .onChange = [&renderer](const engine::CVar& v) {
+                engine::RenderQuality q = renderer.quality();
+                q.motionBlur = v.number();
                 renderer.setQuality(q);
             };
         auto windowChanged = [&](const engine::CVar&) {
