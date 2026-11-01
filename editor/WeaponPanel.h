@@ -67,6 +67,10 @@ private:
     QDoubleSpinBox* aimSpread_ = nullptr;
     QDoubleSpinBox* spread_ = nullptr;
     QDoubleSpinBox* range_ = nullptr;
+    QSpinBox* price_ = nullptr;           // trade (assets/items.cfg prices the rest)
+    QDoubleSpinBox* weight_ = nullptr;    // kg, inventory load
+    QDoubleSpinBox* wear_ = nullptr;      // condition lost per shot
+    QDoubleSpinBox* jam_ = nullptr;       // jam chance per shot when wrecked
     Vec3Editor* viewOffset_ = nullptr;
     QDoubleSpinBox* viewScale_ = nullptr;
     Vec3Editor* viewRotation_ = nullptr;

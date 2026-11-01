@@ -15,6 +15,9 @@ struct Inventory {
     std::map<std::string, int> ammo;
     int medkits = 0;
     std::vector<std::filesystem::path> weaponFiles;
+    int money = 0;              // roubles
+    std::string armor;          // worn armor (id in assets/items.cfg), empty = none
+    float armorCondition = 1.0f;
 
     // Points every weapon's reserve at the stock of its ammo type (endless without a type).
     void link(std::vector<engine::Weapon>& weapons);
@@ -24,6 +27,12 @@ struct Inventory {
             ammo[weapon.settings.ammoType] += weapon.settings.startReserve;
     }
 };
+
+// Kilograms carried: weapons (their .weapon weight), rounds, medkits and the armor (assets/items.cfg).
+namespace engine {
+struct ItemCatalog;
+}
+float carriedWeight(const Inventory& inventory, const std::vector<engine::Weapon>& weapons, const engine::ItemCatalog& items);
 
 // Pickups: entities of type "pickup" with properties item = ammo | medkit | weapon,
 // ammo_type, amount and weapon (a .weapon path relative to assets/). Touching one takes

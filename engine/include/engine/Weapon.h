@@ -62,8 +62,18 @@ struct WeaponSettings {
     glm::vec3 casingOffset{0.08f, -0.06f, -0.3f};  // ejection port, view space (m)
     glm::vec3 casingVelocity{1.6f, 1.2f, 0.3f};    // m/s, view space (right, up, back)
 
+    // Trade and wear (assets/items.cfg has the rest of the price list).
+    int price = 1000;             // what a trader asks for a new one
+    float weight = 3.0f;          // kg carried
+    float wearPerShot = 0.0005f;  // condition lost per shot or swing (1 = new, 0 = wrecked)
+    float jamChance = 0.08f;      // chance per shot to jam at condition 0 (none above 60 %)
+
     bool melee() const { return type == Type::Melee; }
 };
+
+// Wear: a worn weapon scatters more (x1 new .. x2.5 wrecked) and jams below 60 % condition.
+float wornSpreadScale(float condition);
+float jamProbability(const WeaponSettings& weapon, float condition);
 
 bool saveWeaponFile(const WeaponSettings& weapon, const std::filesystem::path& file, std::string* error = nullptr);
 bool loadWeaponFile(WeaponSettings& weapon, const std::filesystem::path& file, std::string* error = nullptr);
@@ -127,6 +137,7 @@ public:
     float aimAmount() const { return aim_; }
     bool canAim() const { return !settings.melee() && settings.aimFov > 0.0f; }
     bool flash() const { return flashTimer_ > 0.0f; }
+    float condition = 1.0f; // 1 new .. 0 wrecked: widens the spread (wornSpreadScale); the game wears it per shot
 
 private:
     int ammo_ = 0;

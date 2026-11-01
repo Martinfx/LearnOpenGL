@@ -1,5 +1,6 @@
 #pragma once
 #include <engine/Dialog.h>
+#include <engine/Items.h>
 #include <engine/Quests.h>
 
 #include <QWidget>
@@ -97,6 +98,27 @@ private:
     QLineEdit* giver_ = nullptr;
     QTableWidget* stages_ = nullptr;
     QPlainTextEdit* rewards_ = nullptr;
+};
+
+// The item catalog (assets/items.cfg): start money, carry limits and every medkit, ammo type and
+// armor with its price (traders use it with their markup) and weight (load). Weapons keep their
+// price and weight in their .weapon files (Weapons panel).
+class ItemsEditor : public StoryTab {
+    Q_OBJECT
+public:
+    explicit ItemsEditor(QWidget* parent = nullptr);
+    bool load(const QString& path, QString* error);
+    bool save(QString* error) override;
+
+private:
+    void refresh();
+    void edited();
+
+    engine::ItemCatalog items_;
+    class QSpinBox* money_ = nullptr;
+    class QDoubleSpinBox* carryFree_ = nullptr;
+    class QDoubleSpinBox* carryMax_ = nullptr;
+    QTableWidget* table_ = nullptr;
 };
 
 // New files with a small valid start (assets/dialogs/<name>.dialog, assets/quests/<name>.quest).

@@ -28,6 +28,7 @@
 #include "GameEffects.h"
 #include "GameConsole.h"
 #include "GameDialog.h"
+#include "GameTrade.h"
 #include "GameHud.h"
 #include "GameMenu.h"
 #include "GameSave.h"
@@ -65,6 +66,8 @@
 #include <chrono>
 #include <functional>
 #include <array>
+#include <iomanip>
+#include <sstream>
 #include <cmath>
 #include <string>
 #include <random>
@@ -93,6 +96,10 @@ struct Carry {
     std::vector<std::filesystem::path> weaponFiles; // carried weapons (loadout and pickups)
     std::map<std::string, int> stock;               // rounds by ammo type
     int medkits = 0;
+    int money = 0;
+    std::vector<float> condition;                   // weapon wear, parallel to weaponFiles
+    std::string armor;
+    float armorCondition = 1.0f;
 };
 
 // Attribution required by CC-BY assets: print the CREDITS.md rows that name the
@@ -540,6 +547,13 @@ int main(int argc, char** argv)
             LOG_WARN("quests", "%s", e.c_str());
         LOG_INFO("quests", "%d quests", n);
     }
+    // Price list, weights and armor (assets/items.cfg); weapons have theirs in the .weapon files.
+    engine::ItemCatalog items = engine::defaultItems();
+    {
+        std::string itemError;
+        if (!engine::loadItems(items, std::filesystem::path(argv[0]).parent_path() / "assets" / "items.cfg", &itemError))
+            LOG_WARN("items", "%s (built-in price list used)", itemError.c_str());
+    }
     WindowMode windowMode;
 
     // One level from loading to leaving it (quit, restart, another level). Everything
@@ -759,7 +773,8 @@ int main(int argc, char** argv)
     });
 
     // Weapons (credits of the models: CREDITS.md next to each model)
-    Inventory inventory; // rounds by type, medkits, weapon files
+    Inventory inventory; // rounds by type, medkits, weapon files, money, armor
+    inventory.money = items.moneyStart; // a new game; a save or the previous level replaces it
     std::vector<engine::Weapon> weapons = loadLoadout(scene, std::filesystem::path(argv[0]).parent_path(), inventory.weaponFiles);
     for (const engine::Weapon& w : weapons)
         inventory.addStartingAmmo(w);
@@ -821,6 +836,7 @@ int main(int argc, char** argv)
     anomalyStorm.publish(scene.environment.anomalyStormNow);
     float stormHurtTimer = 0.0f;
     std::string talkRequest; // console `talk <name>`: starts a talk with that character
+    std::string tradeNameRequest; // console `trade <name>`: opens that character's trade
     auto stormPhaseChanged = [&](engine::AnomalyStorm::Phase phase) {
         using P = engine::AnomalyStorm::Phase;
         const engine::AnomalyStormSettings& ss = scene.environment.anomalyStorm;
@@ -1111,6 +1127,18 @@ int main(int argc, char** argv)
             talkRequest = name;
             return engine::ConsoleResult{!name.empty(), "talk " + name};
         });
+        cvars.addCommand("trade", "trade <name>: opens the trade of that character (prop trade = 1)", [&](const std::vector<std::string>& a) {
+            std::string name;
+            for (const std::string& w : a)
+                name += (name.empty() ? "" : " ") + w;
+            tradeNameRequest = name;
+            return engine::ConsoleResult{!name.empty(), "trade " + name};
+        });
+        cvars.addCommand("money", "money [n]: shows or sets the player's roubles", [&](const std::vector<std::string>& a) {
+            if (!a.empty())
+                inventory.money = std::max(0, std::atoi(a[0].c_str()));
+            return engine::ConsoleResult{true, std::to_string(inventory.money) + " RU"};
+        });
         cvars.addCommand("storm", "storm [warning seconds]: an anomaly storm comes now | storm stop: ends it | without arguments: shows it",
                          [&](const std::vector<std::string>& a) {
             const engine::AnomalyStormSettings& s = scene.environment.anomalyStorm;
@@ -1352,6 +1380,15 @@ int main(int argc, char** argv)
         }
         save.stock = inventory.ammo;
         save.medkits = inventory.medkits;
+        save.money = inventory.money;
+        for (const engine::Weapon& w : weapons)
+            save.weaponCondition.push_back(w.condition);
+        save.armor = inventory.armor;
+        save.armorCondition = inventory.armorCondition;
+        for (const engine::Entity& e : scene.entities) // traders' goods as left after trading
+            if (const auto t = e.properties.find("trade"); t != e.properties.end() && std::atof(t->second.c_str()) >= 0.5)
+                if (const auto st = e.properties.find("stock"); st != e.properties.end())
+                    save.traders.push_back(std::string("\"") + e.name + "\" \"" + st->second + "\"");
         save.timeOfDay = scene.environment.time.hour;
         save.dayMinutes = scene.environment.time.dayMinutes;
         save.timeEnabled = scene.environment.time.enabled;
@@ -1410,6 +1447,19 @@ int main(int argc, char** argv)
         for (const std::filesystem::path& f : loadFrom->weaponFiles)
             savedWeapons.push_back(f.is_relative() && !f.empty() ? std::filesystem::path(argv[0]).parent_path() / f : f);
         restoreInventory(savedWeapons, loadFrom->ammo, loadFrom->stock, loadFrom->medkits);
+        if (loadFrom->money >= 0)
+            inventory.money = loadFrom->money;
+        for (std::size_t i = 0; i < weapons.size() && i < loadFrom->weaponCondition.size(); ++i)
+            weapons[i].condition = loadFrom->weaponCondition[i];
+        inventory.armor = loadFrom->armor;
+        inventory.armorCondition = loadFrom->armorCondition;
+        for (const std::string& line : loadFrom->traders) {
+            std::istringstream ls(line);
+            std::string name, stock;
+            if (ls >> std::quoted(name) >> std::quoted(stock))
+                for (int t : engine::findEntitiesByName(scene, name))
+                    scene.entities[static_cast<std::size_t>(t)].properties["stock"] = stock;
+        }
         if (loadFrom->weapon < weapons.size()) {
             current = next = loadFrom->weapon;
             weapons[current].drawn();
@@ -1430,6 +1480,11 @@ int main(int argc, char** argv)
     if (carry) {
         scripts.setPlayerHealth(std::min(carry->health, scene.player.maxHealth));
         restoreInventory(carry->weaponFiles, carry->ammo, carry->stock, carry->medkits);
+        inventory.money = carry->money;
+        for (std::size_t i = 0; i < weapons.size() && i < carry->condition.size(); ++i)
+            weapons[i].condition = carry->condition[i];
+        inventory.armor = carry->armor;
+        inventory.armorCondition = carry->armorCondition;
         if (carry->weapon < weapons.size()) {
             current = next = carry->weapon;
             weapons[current].drawn();
@@ -1510,6 +1565,32 @@ int main(int argc, char** argv)
     bool mapOpen = std::getenv("FPS_ENGINE_MAP") != nullptr, mapHeld = false; // test hook: start with the PDA map open
     // Talking (E at a character with a "dialog" property): the game pauses, answers by 1-9 or mouse.
     GameDialog talk;
+    GameTrade trade; // trade = 1 characters: buy, sell, repair
+    int tradeRequest = -1; // a dialog's `trade` action opens it after the talk
+    std::vector<char> jammed; // per weapon slot: jammed until R clears it
+    float unjamTimer = 0.0f;
+    bool overloadedShown = false;
+    GameTrade::Hooks tradeHooks;
+    tradeHooks.addWeapon = [&](const std::filesystem::path& file) -> std::optional<std::size_t> {
+        const std::size_t before = weapons.size();
+        auto slot = addWeapon(file);
+        if (slot && weapons.size() > before)
+            weapons[*slot].condition = 1.0f;
+        return slot;
+    };
+    tradeHooks.removeWeapon = [&](std::size_t slot) {
+        if (slot >= weapons.size() || slot == current)
+            return;
+        weapons.erase(weapons.begin() + static_cast<std::ptrdiff_t>(slot));
+        inventory.weaponFiles.erase(inventory.weaponFiles.begin() + static_cast<std::ptrdiff_t>(slot));
+        if (slot < jammed.size())
+            jammed.erase(jammed.begin() + static_cast<std::ptrdiff_t>(slot));
+        if (current > slot)
+            --current;
+        next = current;
+        inventory.link(weapons);
+    };
+    tradeHooks.sound = [&](const std::string& s) { audio.playAsset(s, nullptr, 0.8f); };
     bool useHeld = false, talkClickHeld = false;
     std::array<bool, 9> digitHeld{};
     int talkHover = -1, useTarget = -1;
@@ -1518,6 +1599,10 @@ int main(int argc, char** argv)
         auto num = [&](std::size_t i) { return i < w.size() ? static_cast<int>(std::lround(std::atof(w[i].c_str()))) : 0; };
         if (w.empty())
             return {};
+        if (w[0] == "money") {
+            inventory.money += num(1);
+            return "+" + std::to_string(num(1)) + " RU";
+        }
         if (w[0] == "medkits" || w[0] == "medkit") {
             inventory.medkits += num(1);
             return "+" + std::to_string(num(1)) + " lékárnička";
@@ -1547,6 +1632,11 @@ int main(int argc, char** argv)
             } else if (w[0] == "hostile" && talk.entity() >= 0) {
                 scene.entities[static_cast<std::size_t>(talk.entity())].properties["grudge"] = "1";
                 talk.end();
+            } else if (w[0] == "trade" && talk.entity() >= 0) {
+                tradeRequest = talk.entity();
+                talk.end();
+            } else if (w[0] == "give" && w.size() >= 3 && w[1] == "money") {
+                inventory.money += static_cast<int>(std::atof(w[2].c_str()));
             }
         }
     };
@@ -1569,6 +1659,8 @@ int main(int argc, char** argv)
                 menu.back();
             else if (talk.active())
                 talk.end();
+            else if (trade.active())
+                trade.end();
             else if (mapOpen)
                 mapOpen = false;
             else
@@ -1591,7 +1683,8 @@ int main(int argc, char** argv)
                 mouse.scroll = 0.0;
         }
         // The mouse looks around only while playing (no menu, no console, window focused).
-        const bool wantCapture = !menu.active() && !console.open() && !talk.active() && glfwGetWindowAttrib(window, GLFW_FOCUSED);
+        const bool wantCapture =
+            !menu.active() && !console.open() && !talk.active() && !trade.active() && glfwGetWindowAttrib(window, GLFW_FOCUSED);
         if (wantCapture != captured) {
             captured = wantCapture;
             setCaptured(window, captured);
@@ -1633,17 +1726,57 @@ int main(int argc, char** argv)
                 talkClickHeld = click;
                 if (pick >= 0 && pick < talk.answers())
                     runTalkActions(talk.choose(pick, quests));
+            } else if (trade.active() && !menu.active() && !console.open()) {
+                double cx = 0.0, cy = 0.0;
+                int ww = 1, wh = 1, fw = 1, fh = 1;
+                glfwGetCursorPos(window, &cx, &cy);
+                glfwGetWindowSize(window, &ww, &wh);
+                glfwGetFramebufferSize(window, &fw, &fh);
+                const glm::vec2 m(static_cast<float>(cx) * static_cast<float>(fw) / static_cast<float>(std::max(ww, 1)),
+                                  static_cast<float>(cy) * static_cast<float>(fh) / static_cast<float>(std::max(wh, 1)));
+                trade.hover(m);
+                const bool click = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+                if (click && !talkClickHeld) {
+                    const bool many = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+                    trade.click(m, inventory, weapons, current, items, tradeHooks, many);
+                    // The trader keeps what it got (saved with the game).
+                    if (trade.entity() >= 0)
+                        scene.entities[static_cast<std::size_t>(trade.entity())].properties["stock"] = GameTrade::formatStock(trade.stock());
+                }
+                talkClickHeld = click;
             } else {
                 talkClickHeld = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS; // the click that ends a talk does not shoot
             }
+            auto openTrade = [&](int index) {
+                engine::Entity& e = scene.entities[static_cast<std::size_t>(index)];
+                trade.begin(index, e.name, e.properties, assetRoot);
+                const glm::vec3 to = player.feet() - e.position;
+                if (to.x * to.x + to.z * to.z > 1e-4f)
+                    e.yawDegrees = glm::degrees(std::atan2(to.z, to.x));
+            };
+            if (!tradeNameRequest.empty()) {
+                for (int t : engine::findEntitiesByName(scene, tradeNameRequest))
+                    if (std::atof(scene.entities[static_cast<std::size_t>(t)].properties["trade"].c_str()) >= 0.5) {
+                        tradeRequest = t;
+                        break;
+                    }
+                tradeNameRequest.clear();
+            }
+            if (tradeRequest >= 0 && !talk.active()) {
+                openTrade(tradeRequest);
+                tradeRequest = -1;
+            }
             // Who could be talked to: a character with a dialog, close, in front, in sight, not hostile.
             useTarget = -1;
-            if (captured && !mapOpen && !talk.active() && scripts.playerHealth() > 0.0f) {
+            if (captured && !mapOpen && !talk.active() && !trade.active() && scripts.playerHealth() > 0.0f) {
                 float best = 0.85f; // cos of the widest angle
                 for (std::size_t i = 0; i < scene.entities.size(); ++i) {
                     const engine::Entity& e = scene.entities[i];
                     const auto d = e.properties.find("dialog");
-                    if (d == e.properties.end() || d->second.empty() || !e.alive || e.offline)
+                    const auto t = e.properties.find("trade");
+                    const bool talks = d != e.properties.end() && !d->second.empty();
+                    const bool trades = t != e.properties.end() && std::atof(t->second.c_str()) >= 0.5;
+                    if ((!talks && !trades) || !e.alive || e.offline)
                         continue;
                     const glm::vec3 at = e.position + glm::vec3(0.0f, std::min(e.size.y, 1.8f) * 0.75f, 0.0f);
                     const glm::vec3 to = at - camera.position;
@@ -1668,12 +1801,16 @@ int main(int argc, char** argv)
             if (!talkRequest.empty() && !talk.active()) { // console `talk`
                 const auto found = engine::findEntitiesByName(scene, talkRequest);
                 talkRequest.clear();
-                if (!found.empty() && scene.entities[static_cast<std::size_t>(found.front())].properties.count("dialog")) {
+                if (!found.empty() && (scene.entities[static_cast<std::size_t>(found.front())].properties.count("dialog") ||
+                                       scene.entities[static_cast<std::size_t>(found.front())].properties.count("trade"))) {
                     useTarget = found.front();
                     forced = true;
                 }
             }
-            if (((use && !useHeld) || forced) && useTarget >= 0 && !talk.active()) {
+            if (((use && !useHeld) || forced) && useTarget >= 0 && !talk.active() &&
+                scene.entities[static_cast<std::size_t>(useTarget)].properties.count("dialog") == 0) { // a trader without words
+                openTrade(useTarget);
+            } else if (((use && !useHeld) || forced) && useTarget >= 0 && !talk.active() && !trade.active()) {
                 engine::Entity& e = scene.entities[static_cast<std::size_t>(useTarget)];
                 std::filesystem::path file = std::filesystem::path(std::u8string(e.properties["dialog"].begin(), e.properties["dialog"].end()));
                 if (file.is_relative())
@@ -1762,10 +1899,11 @@ int main(int argc, char** argv)
 
         // Weapon selection: 1-9 or the mouse wheel.
         for (int i = 0; i < 9; ++i) {
-            const bool down = captured && glfwGetKey(window, GLFW_KEY_1 + i) == GLFW_PRESS;
+            const bool pressed = glfwGetKey(window, GLFW_KEY_1 + i) == GLFW_PRESS;
+            const bool down = captured && pressed;
             if (down && !slotHeld[static_cast<std::size_t>(i)] && static_cast<std::size_t>(i) < weapons.size())
                 next = static_cast<std::size_t>(i);
-            slotHeld[static_cast<std::size_t>(i)] = down;
+            slotHeld[static_cast<std::size_t>(i)] = pressed; // a key still held from answering a dialog does not switch
         }
         if (captured && std::abs(mouse.scroll) >= 1.0 && weapons.size() > 1) {
             const int dir = mouse.scroll > 0 ? -1 : 1;
@@ -1816,7 +1954,7 @@ int main(int argc, char** argv)
             input = {};
         }
         // Menus pause the game; timescale is a cheat (1 = normal).
-        const double simTime = menu.active() || talk.active() ? 0.0 : frameTime * cvTimescale.number();
+        const double simTime = menu.active() || talk.active() || trade.active() ? 0.0 : frameTime * cvTimescale.number();
         const int steps = clock.advance(simTime);
         for (int i = 0; i < steps; ++i) {
             ENGINE_ZONE("Simulation step");
@@ -1860,8 +1998,34 @@ int main(int argc, char** argv)
             }
             engine::Weapon& weapon = weapons[current];
             const bool ready = next == current && lowered <= 0.0f;
-            const int shots = weapon.update(dt, ready && (autoFire || input.isDown(engine::Action::Fire)),
-                                            ready && input.isDown(engine::Action::Reload));
+            // Worn weapons jam: the trigger does nothing until R clears it.
+            jammed.resize(weapons.size(), 0);
+            unjamTimer = std::max(0.0f, unjamTimer - dt);
+            const bool fireHeld = ready && (autoFire || input.isDown(engine::Action::Fire));
+            bool reloadHeld = ready && input.isDown(engine::Action::Reload);
+            if (jammed[current]) {
+                static bool jamFireHeld = false;
+                if (fireHeld && !jamFireHeld) {
+                    audio.play(weapon.settings.soundDryFire, player.eye());
+                    hud.notify("Zbraň se zasekla! R ji uvolní");
+                }
+                jamFireHeld = fireHeld;
+                if (reloadHeld && unjamTimer <= 0.0f) {
+                    jammed[current] = 0;
+                    unjamTimer = 0.9f;
+                    audio.play(weapon.settings.soundReload, player.eye(), 0.7f);
+                }
+                reloadHeld = false;
+            }
+            const int shots = weapon.update(dt, fireHeld && !jammed[current] && unjamTimer <= 0.0f, reloadHeld);
+            if (shots > 0) {
+                weapon.condition = std::max(0.0f, weapon.condition - weapon.settings.wearPerShot * static_cast<float>(shots));
+                if (!cvGod.boolean()) {
+                    static std::mt19937 jamRng{std::random_device{}()};
+                    if (std::uniform_real_distribution<float>(0.0f, 1.0f)(jamRng) < engine::jamProbability(weapon.settings, weapon.condition))
+                        jammed[current] = 1;
+                }
+            }
             if (next != current)
                 weapon.aim(1.0f, false); // switching drops the aim
             weapon.aim(dt, ready && input.isDown(engine::Action::Aim));
@@ -2012,6 +2176,21 @@ int main(int argc, char** argv)
             if (scripts.playerHealth() < healthBefore)
                 audio.play2D(scene.player.hurtSound);
             anomalies.fixedUpdate(dt, scene, physics, player, scripts); // forces act on the next movement step
+            // Armor takes part of every hit (and wears doing it).
+            if (const engine::ItemDef* armor = inventory.armor.empty() ? nullptr : items.find(engine::ItemDef::Kind::Armor, inventory.armor);
+                armor && scripts.playerHealth() < healthBefore)
+                scripts.setPlayerHealth(healthBefore - engine::armorAbsorb(*armor, inventory.armorCondition, healthBefore - scripts.playerHealth()));
+            {
+                // Load: over the free weight no sprint and slower, near the maximum a crawl.
+                const float kg = carriedWeight(inventory, weapons, items);
+                const float k = engine::loadSpeedFactor(items, kg);
+                player.settings.walkSpeed = scene.player.walkSpeed * k;
+                player.settings.sprintSpeed = engine::loadAllowsSprint(items, kg) ? scene.player.sprintSpeed : player.settings.walkSpeed;
+                const bool over = kg > items.carryFree;
+                if (over && !overloadedShown)
+                    hud.notify("Jsi přetížený (" + std::to_string(static_cast<int>(std::lround(kg))) + " kg)");
+                overloadedShown = over;
+            }
             if (cvGod.boolean() && scripts.playerHealth() < healthBefore) // god: anomalies do not hurt either
                 scripts.setPlayerHealth(healthBefore);
             {
@@ -2221,9 +2400,19 @@ int main(int argc, char** argv)
                     }
                     questViews.push_back(std::move(v));
                 }
-                if (mapOpen)
+                if (mapOpen) {
                     map.drawFullMap(ui, width, height, player.feet(), camera.flatForward(), questViews);
-                else
+                    // PDA status: money, load, condition of the weapon in hand and the armor.
+                    const float th = std::max(14.0f, static_cast<float>(height) * 0.018f);
+                    const float kg = carriedWeight(inventory, weapons, items);
+                    std::ostringstream st;
+                    st << inventory.money << " RU   " << std::fixed << std::setprecision(1) << kg << " / " << items.carryFree << " kg   "
+                       << weapons[current].settings.name << " " << static_cast<int>(std::lround(weapons[current].condition * 100.0f)) << " %";
+                    if (const engine::ItemDef* ar = inventory.armor.empty() ? nullptr : items.find(engine::ItemDef::Kind::Armor, inventory.armor))
+                        st << "   " << ar->name << " " << static_cast<int>(std::lround(inventory.armorCondition * 100.0f)) << " %";
+                    const glm::vec4 col = kg > items.carryFree ? glm::vec4(1.0f, 0.45f, 0.3f, 1.0f) : glm::vec4(0.95f, 0.8f, 0.45f, 1.0f);
+                    ui.text(st.str(), {th, static_cast<float>(height) - th * 2.0f}, th, col, true);
+                } else
                     map.drawMinimap(ui, width, height, player.feet(), camera.flatForward(), questViews);
             }
             hud.update(static_cast<float>(frameTime), scripts.playerHealth());
@@ -2243,13 +2432,16 @@ int main(int argc, char** argv)
                 hs.battery = flashlight.hasBattery() ? flashlight.charge() : -1.0f;
                 hs.flashlightOn = flashlight.on();
                 hud.draw(ui, width, height, hs);
-                if (talk.active()) {
+                if (trade.active()) {
+                    trade.draw(ui, width, height, inventory, weapons, current, items);
+                } else if (talk.active()) {
                     talk.draw(ui, width, height, talkHover);
                 } else if (useTarget >= 0) { // "E  Mluvit: Sidor"
                     const float H = static_cast<float>(height), size = std::round(std::clamp(H * 0.022f, 12.0f, 26.0f));
                     const engine::CVar* key = cvars.find("in_use");
-                    const std::string line = (key ? key->value : std::string("E")) + "   Mluvit: " +
-                                             scene.entities[static_cast<std::size_t>(useTarget)].name;
+                    const engine::Entity& target = scene.entities[static_cast<std::size_t>(useTarget)];
+                    const std::string line = (key ? key->value : std::string("E")) + (target.properties.count("dialog") ? "   Mluvit: " : "   Obchodovat: ") +
+                                             target.name;
                     const float w = ui.textWidth(line, size, true);
                     const glm::vec2 at(std::round((static_cast<float>(width) - w) * 0.5f), std::round(H * 0.6f));
                     ui.rect(at - glm::vec2(size * 0.6f, size * 0.3f), {w + size * 1.2f, size * 1.6f}, {0.05f, 0.055f, 0.045f, 0.7f});
@@ -2411,6 +2603,12 @@ int main(int argc, char** argv)
         carryOut.weaponFiles = inventory.weaponFiles;
         carryOut.stock = inventory.ammo;
         carryOut.medkits = inventory.medkits;
+        carryOut.money = inventory.money;
+        carryOut.condition.clear();
+        for (const engine::Weapon& w : weapons)
+            carryOut.condition.push_back(w.condition);
+        carryOut.armor = inventory.armor;
+        carryOut.armorCondition = inventory.armorCondition;
     }
     return exitRequest;
     };

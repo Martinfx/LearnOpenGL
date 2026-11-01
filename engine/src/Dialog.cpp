@@ -37,7 +37,7 @@ std::string word(const std::string& w)
 
 const std::set<std::string> kQuestActions = {"start_quest", "advance_quest", "complete_quest", "fail_quest", "quest_stage", "set_flag",
                                              "clear_flag"};
-const std::set<std::string> kGameActions = {"give", "fire", "hostile"};
+const std::set<std::string> kGameActions = {"give", "fire", "hostile", "trade"};
 
 } // namespace
 

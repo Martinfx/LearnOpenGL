@@ -122,6 +122,21 @@ WeaponPanel::WeaponPanel(engine::Scene* scene, QWidget* parent) : QWidget(parent
     form->addRow(tr("Empty reload time"), reloadEmpty_);
     form->addRow(spreadLabel_, spread_);
     form->addRow(tr("Range"), range_);
+    form->addRow(new QLabel(tr("<b>Trade and wear</b>"), form_));
+    price_ = new QSpinBox(form_);
+    price_->setRange(0, 1000000);
+    price_->setSuffix(tr(" RU"));
+    price_->setToolTip(tr("Base price: traders sell it for more (markup), buy it for less, worn ones cheaper"));
+    form->addRow(tr("Price"), price_);
+    weight_ = spin(form_, 0, 100, 0.1, 2, tr(" kg"));
+    weight_->setToolTip(tr("Counts toward the player's load (assets/items.cfg: carry free / max)"));
+    form->addRow(tr("Weight"), weight_);
+    wear_ = spin(form_, 0, 0.1, 0.0001, 4, tr(" per shot"));
+    wear_->setToolTip(tr("Condition lost per shot (1 = new). Worn weapons spread more and below 60 % they jam"));
+    form->addRow(tr("Wear"), wear_);
+    jam_ = spin(form_, 0, 1, 0.01, 2, QString());
+    jam_->setToolTip(tr("Chance per shot to jam when completely worn (0 = never jams); R clears a jam"));
+    form->addRow(tr("Jam chance"), jam_);
     form->addRow(new QLabel(tr("<b>First-person view</b>"), form_));
     form->addRow(tr("View offset"), viewOffset_);
     form->addRow(tr("View rotation"), viewRotation_);
@@ -198,10 +213,10 @@ WeaponPanel::WeaponPanel(engine::Scene* scene, QWidget* parent) : QWidget(parent
         fillClipNames();
     });
     connect(name_, &QLineEdit::editingFinished, this, &WeaponPanel::edited);
-    for (QDoubleSpinBox* s : {damage_, interval_, reload_, reloadEmpty_, aimFov_, aimTime_, aimSpread_, spread_, range_, viewScale_})
+    for (QDoubleSpinBox* s : {damage_, interval_, reload_, reloadEmpty_, aimFov_, aimTime_, aimSpread_, spread_, range_, viewScale_, weight_, wear_, jam_})
         connect(s, &QDoubleSpinBox::valueChanged, this, &WeaponPanel::edited);
     connect(ammoType_, &QLineEdit::editingFinished, this, &WeaponPanel::edited);
-    for (QSpinBox* s : {pellets_, magazine_, startReserve_})
+    for (QSpinBox* s : {pellets_, magazine_, startReserve_, price_})
         connect(s, &QSpinBox::valueChanged, this, &WeaponPanel::edited);
     connect(automatic_, &QCheckBox::toggled, this, &WeaponPanel::edited);
     connect(viewOffset_, &Vec3Editor::valueEdited, this, &WeaponPanel::edited);
@@ -267,6 +282,10 @@ void WeaponPanel::showCurrent()
     automatic_->setChecked(w->automatic);
     pellets_->setValue(w->pellets);
     magazine_->setValue(w->magazineSize);
+    price_->setValue(w->price);
+    weight_->setValue(w->weight);
+    wear_->setValue(w->wearPerShot);
+    jam_->setValue(w->jamChance);
     ammoType_->setText(QString::fromStdString(w->ammoType));
     startReserve_->setValue(w->startReserve);
     reload_->setValue(w->reloadTime);
@@ -348,6 +367,10 @@ void WeaponPanel::edited()
     w->automatic = automatic_->isChecked();
     w->pellets = pellets_->value();
     w->magazineSize = magazine_->value();
+    w->price = price_->value();
+    w->weight = static_cast<float>(weight_->value());
+    w->wearPerShot = static_cast<float>(wear_->value());
+    w->jamChance = static_cast<float>(jam_->value());
     w->ammoType = ammoType_->text().trimmed().toStdString();
     w->startReserve = startReserve_->value();
     w->reloadTime = static_cast<float>(reload_->value());

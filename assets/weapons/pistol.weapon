@@ -40,3 +40,6 @@ effect_smoke "../particles/muzzle_smoke.particle"
 casing "../models/weapons/casings/casing_9x18.glb"
 casing_offset 0.06 -0.05 -0.28
 casing_velocity 1.5 1.6 0.2
+price 900
+weight 0.73
+wear 0.0008 0.06

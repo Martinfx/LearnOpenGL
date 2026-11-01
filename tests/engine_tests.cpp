@@ -53,6 +53,7 @@
 #include <engine/AssetRegistry.h>
 #include <engine/FileWatcher.h>
 #include <engine/HotReload.h>
+#include <engine/Items.h>
 #include <engine/Prefab.h>
 #include <engine/RangeAllocator.h>
 #include <engine/PlayerController.h>
@@ -718,7 +719,7 @@ void testScriptPropertiesFromEditor()
     std::vector<engine::ScriptProperty> props;
     std::string err;
     check(engine::readScriptProperties(ENGINE_TEST_ASSETS "/scripts/enemy.lua", props, &err), "read enemy.lua properties: " + err);
-    check(props.size() == 31 && props[0].name == "health" && props[0].defaultValue == "100", "enemy.lua declares 31 tunables, health first");
+    check(props.size() == 36 && props[0].name == "health" && props[0].defaultValue == "100", "enemy.lua declares 36 tunables, health first");
 
     // An editor override changes the behaviour: 40 hp dies after two 20-damage hits.
     auto s = flatFloor();
@@ -1044,13 +1045,49 @@ void testALife()
         check(m.find("[script]") != 0, "no script errors: " + m);
 }
 
+void testTradeAndWear()
+{
+    engine::ItemCatalog items;
+    std::string error;
+    check(engine::loadItems(items, ENGINE_TEST_ASSETS "/items.cfg", &error), "items.cfg loads: " + error);
+    check(items.find(engine::ItemDef::Kind::Medkit) && items.find(engine::ItemDef::Kind::Ammo, "5.45x39") &&
+              items.find(engine::ItemDef::Kind::Armor, "jacket") && !items.find(engine::ItemDef::Kind::Armor, "nope"),
+          "catalog: medkit, ammo by type, armor by id");
+    {
+        const auto file = std::filesystem::temp_directory_path() / "rt_items.cfg";
+        engine::ItemCatalog back;
+        check(engine::saveItems(items, file) && engine::loadItems(back, file) && back == items, "items.cfg round trip");
+        std::filesystem::remove(file);
+    }
+    check(engine::buyPrice(1000, 1.3f) == 1300 && engine::buyPrice(1000, 1.3f, 0.5f) < 1300, "buy price: markup, worn is cheaper");
+    check(engine::sellPrice(1000, 0.45f) == 450 && engine::sellPrice(1000, 0.45f, 0.5f) < 450, "sell price: rate, worn is cheaper");
+    check(engine::repairPrice(1000, 1.0f) == 0 && engine::repairPrice(1000, 0.6f) > 0 && engine::repairPrice(1000, 0.2f) > engine::repairPrice(1000, 0.6f),
+          "repair costs more the more worn");
+    const engine::ItemDef& jacket = *items.find(engine::ItemDef::Kind::Armor, "jacket");
+    float cond = 1.0f;
+    const float taken = engine::armorAbsorb(jacket, cond, 50.0f);
+    check(taken < 50.0f && taken > 30.0f && cond < 1.0f, "armor stops part of a hit and wears");
+    float wrecked = 0.0f;
+    check(std::abs(engine::armorAbsorb(jacket, wrecked, 50.0f) - 50.0f) < 1e-3f, "wrecked armor stops nothing");
+    check(engine::loadSpeedFactor(items, 10.0f) == 1.0f && engine::loadSpeedFactor(items, items.carryMax + 5.0f) < 0.5f &&
+              engine::loadAllowsSprint(items, 10.0f) && !engine::loadAllowsSprint(items, items.carryFree + 1.0f),
+          "load: full speed when light, slow and no sprint when overloaded");
+    engine::WeaponSettings ak;
+    check(engine::loadWeaponFile(ak, ENGINE_TEST_ASSETS "/weapons/ak74.weapon") && ak.price > 0 && ak.weight > 1.0f && ak.wearPerShot > 0.0f,
+          "ak74: price, weight and wear");
+    check(engine::jamProbability(ak, 1.0f) == 0.0f && engine::jamProbability(ak, 0.1f) > engine::jamProbability(ak, 0.4f) &&
+              engine::jamProbability(ak, 0.4f) > 0.0f,
+          "a new weapon never jams, worn ones more the worse");
+    check(engine::wornSpreadScale(1.0f) == 1.0f && engine::wornSpreadScale(0.0f) > 2.0f, "worn weapons spread more");
+}
+
 void testQuestsAndDialogs()
 {
     engine::Quests quests;
     std::vector<std::string> errors;
     check(quests.loadFolder(ENGINE_TEST_ASSETS "/quests", &errors) >= 1 && errors.empty(), "the shipped quests load");
     const engine::QuestDef* stash = quests.find("camp_stash");
-    check(stash && stash->stages.size() == 2 && stash->stage("report") && stash->rewards.size() == 3, "camp_stash: two stages, three rewards");
+    check(stash && stash->stages.size() == 2 && stash->stage("report") && stash->rewards.size() == 4, "camp_stash: two stages, four rewards");
     for (const char* name : {"grisha", "tolik"}) {
         engine::DialogDef d;
         std::string error;
@@ -3704,6 +3741,7 @@ int main()
         {"testFauna", testFauna},
         {"testAnomalyStorm", testAnomalyStorm},
         {"testQuestsAndDialogs", testQuestsAndDialogs},
+        {"testTradeAndWear", testTradeAndWear},
         {"testWorldStreaming", testWorldStreaming},
     };
     for (const auto& [name, run] : tests)

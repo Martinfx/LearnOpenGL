@@ -6,6 +6,8 @@ node "first"
   text "Další, co přežil cestu po dálnici? Sedni si k ohni, tady tě nikdo střílet nebude. Já jsem Hřiša."
   do set_flag "met_grisha"
   choice "Co se tu dá dělat?" "work"
+  choice "Prodáváš něco?" ""
+    do trade
   choice "Jen se ohřeju. Měj se." ""
 
 node "found"
@@ -24,6 +26,8 @@ node "start"
   choice "Máš pro mě nějakou práci?" "work"
     if quest "camp_stash" none
   choice "Co je nového v Zóně?" "news"
+  choice "Ukaž, co máš na prodej." ""
+    do trade
   choice "Nic, měj se." ""
 
 node "work"

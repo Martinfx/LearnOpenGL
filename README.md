@@ -170,6 +170,19 @@ New quest založí nový; dole se hlásí chyby (odpověď vede na neexistujíc�
 `quest`, `quest start|next|done|fail <id>`, `talk <jméno>`. Postup se ukládá s hrou a přenáší mezi levely.
 V zóně: Hřiša v táboře dává úkol „Zásoby z nemocnice“ (skrýš v horním patře nemocnice), Tolik vypráví o bouřích.
 
+### Obchod, peníze, opotřebení
+
+`assets/items.cfg` (editor: Assets > Items and prices) určuje startovní peníze, volný a maximální náklad a
+ceny a váhy lékárniček, nábojů a zbrojí; zbraně mají cenu, váhu, opotřebení na výstřel a šanci zaseknutí ve
+svém `.weapon` (Weapons > Trade and wear). Obchodník je postava s vlastností `trade` = 1 (`enemy.lua`:
+`stock` např. `medkit 5; ammo 5.45x39 300; weapon weapons/smg.weapon 1; armor jacket 1`, `markup`,
+`buy_rate`, `repair`). Hráč stiskne **E** u obchodníka bez dialogu, jinak dialog nabídne akci `do trade`.
+V obchodě klik koupí (Shift = víc najednou), klik na věc u sebe ji prodá, opotřebené věci lze opravit. Zbraň
+se střelbou opotřebí: roste rozptyl a pod 60 % stavu se občas zasekne (**R** ji uvolní). Zbroj zachytí část
+zásahu a sama se opotřebí. Nad volným nákladem nejde sprint a hráč zpomaluje. Peníze, náklad a stav ukazuje PDA.
+Úkoly mohou dávat `reward money <n>`. Konzole `trade <jméno>`, `money [n]`. Vše se ukládá s hrou včetně zboží
+obchodníků. V zóně obchoduje Hřiša v táboře.
+
 ### Anomální bouře
 
 Prostředí > Anomaly storm: jednou za 15–30 minut (nastavitelné) zazní nad zónou siréna, ambience a hudba

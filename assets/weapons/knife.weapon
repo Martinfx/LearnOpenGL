@@ -24,3 +24,6 @@ sound_reload ""
 sound_draw "../sounds/weapons/draw.sound"
 sound_impact "../sounds/impacts/impact_hard.sound"
 sound_hit "../sounds/impacts/impact_flesh.sound"
+price 150
+weight 0.3
+wear 0.0002 0

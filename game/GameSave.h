@@ -37,6 +37,11 @@ struct SaveGame {
     std::vector<std::filesystem::path> weaponFiles; // carried weapons, parallel to `ammo` (magazines)
     std::map<std::string, int> stock;               // rounds by ammo type
     int medkits = 0;
+    int money = -1;                     // roubles, -1 = not saved (older saves: the start money)
+    std::vector<float> weaponCondition; // wear of the carried weapons, parallel to weaponFiles
+    std::string armor;                  // worn armor id (assets/items.cfg), empty = none
+    float armorCondition = 1.0f;
+    std::vector<std::string> traders;   // trader stock lines: "<entity name>" "<stock>"
     float flashlightCharge = 1.0f;
     // Day/night cycle: time of day (< 0 = not saved, keep the level's), clock speed, cycle on.
     float timeOfDay = -1.0f;

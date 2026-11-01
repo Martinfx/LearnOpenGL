@@ -28,6 +28,11 @@ properties = {
     { "patrol_radius",   4.0,  "Wanders this far from its start position, m" },
     { "rest_chance",     0.25, "Chance per patrol leg to sit at a free sit point within 3x the patrol radius" },
     { "rest_time",       30.0, "Seconds sitting before patrolling again" },
+    { "trade",           0,    "1 = a trader: E (or a dialog's `do trade`) opens buying, selling and repairs" },
+    { "stock",           "",   "Trader's goods: \"medkit 5; ammo 5.45x39 300; weapon weapons/smg.weapon 1; armor jacket 1\" (prices in assets/items.cfg)" },
+    { "markup",          1.3,  "Trader sells for the price times this" },
+    { "buy_rate",        0.45, "Trader buys for the price times this (worn things less)" },
+    { "repair",          1,    "1 = the trader repairs weapons and armor" },
     -- Animation clips of the character model (Properties > Character model).
     { "anim_idle",       "Idle_Loop",          "Clip while standing" },
     { "anim_sit",        "Sitting_Idle_Loop",  "Clip while resting at a sit point" },

@@ -1,9 +1,26 @@
 #include "Inventory.h"
 
 #include <engine/EntityIO.h>
+#include <engine/Items.h>
 
 #include <algorithm>
 #include <cstdlib>
+
+float carriedWeight(const Inventory& inventory, const std::vector<engine::Weapon>& weapons, const engine::ItemCatalog& items)
+{
+    float kg = 0.0f;
+    for (const engine::Weapon& w : weapons)
+        kg += std::max(0.0f, w.settings.weight);
+    for (const auto& [type, rounds] : inventory.ammo)
+        if (const engine::ItemDef* d = items.find(engine::ItemDef::Kind::Ammo, type))
+            kg += d->weight * static_cast<float>(std::max(rounds, 0));
+    if (const engine::ItemDef* d = items.find(engine::ItemDef::Kind::Medkit))
+        kg += d->weight * static_cast<float>(std::max(inventory.medkits, 0));
+    if (!inventory.armor.empty())
+        if (const engine::ItemDef* d = items.find(engine::ItemDef::Kind::Armor, inventory.armor))
+            kg += d->weight;
+    return kg;
+}
 
 void Inventory::link(std::vector<engine::Weapon>& weapons)
 {
@@ -34,7 +51,12 @@ std::vector<PickupResult> collectPickups(engine::Scene& scene, glm::vec3 feet, I
         const std::string item = property(e, "item", "ammo");
         PickupResult r;
         r.entity = i;
-        if (item == "medkit") {
+        if (item == "money") {
+            const int n = std::max(1, std::atoi(property(e, "amount", "100").c_str()));
+            inventory.money += n;
+            r.message = "Sebráno: " + std::to_string(n) + " RU";
+            r.sound = property(e, "sound", "sounds/items/pickup_ammo.sound");
+        } else if (item == "medkit") {
             const int n = std::max(1, std::atoi(property(e, "amount", "1").c_str()));
             inventory.medkits += n;
             r.message = n > 1 ? "Sebráno: " + std::to_string(n) + " × lékárnička" : "Sebráno: lékárnička";

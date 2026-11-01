@@ -2,6 +2,8 @@
 #include "AssetPaths.h"
 
 #include <QComboBox>
+#include <QDoubleSpinBox>
+#include <QSpinBox>
 #include <QFileInfo>
 #include <QFormLayout>
 #include <QHBoxLayout>
@@ -481,7 +483,7 @@ QuestEditor::QuestEditor(QWidget* parent)
     buttons->addStretch();
     form->addRow(QString(), buttons);
     rewards_ = lines(this, tr("One reward per line, given when the quest is done:\n  medkits <n>\n  ammo <type> <n>   e.g. ammo 5.45x39 60\n"
-                              "  goodwill <faction> <n>"),
+                              "  goodwill <faction> <n>\n  money <roubles>"),
                      4);
     form->addRow(tr("Rewards"), rewards_);
     layout->addStretch();
@@ -594,6 +596,146 @@ void QuestEditor::edited()
     for (const QString& line : rewards_->toPlainText().split('\n'))
         if (auto w = splitWords(line.toStdString()); !w.empty())
             quest_.rewards.push_back(std::move(w));
+    setModified(true);
+}
+
+ItemsEditor::ItemsEditor(QWidget* parent)
+    : StoryTab(parent)
+{
+    auto* layout = new QVBoxLayout(this);
+    auto* form = new QFormLayout();
+    layout->addLayout(form);
+    money_ = new QSpinBox(this);
+    money_->setRange(0, 10000000);
+    money_->setSuffix(tr(" RU"));
+    money_->setToolTip(tr("Roubles the player starts a new game with"));
+    carryFree_ = new QDoubleSpinBox(this);
+    carryMax_ = new QDoubleSpinBox(this);
+    for (QDoubleSpinBox* d : {carryFree_, carryMax_}) {
+        d->setRange(1, 1000);
+        d->setSuffix(tr(" kg"));
+    }
+    carryFree_->setToolTip(tr("Up to this load the player moves normally; above it no sprint and slower"));
+    carryMax_->setToolTip(tr("At this load the player crawls (30 % speed)"));
+    form->addRow(tr("Start money"), money_);
+    form->addRow(tr("Free load"), carryFree_);
+    form->addRow(tr("Maximum load"), carryMax_);
+    table_ = new QTableWidget(0, 7, this);
+    table_->setHorizontalHeaderLabels({tr("Kind"), tr("Id"), tr("Name"), tr("Price (RU)"), tr("Weight (kg)"), tr("Protection"), tr("Wear")});
+    table_->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
+    table_->setToolTip(tr("Kind: medkit, ammo (id = ammo type of the weapons, price and weight per round) or armor "
+                          "(protection = share of damage it stops when new, wear = condition lost per hp stopped)"));
+    layout->addWidget(table_, 1);
+    auto* buttons = new QHBoxLayout();
+    auto* add = new QPushButton(tr("+ Item"), this);
+    auto* remove = new QPushButton(tr("Delete item"), this);
+    buttons->addWidget(add);
+    buttons->addWidget(remove);
+    buttons->addStretch();
+    layout->addLayout(buttons);
+    connect(money_, &QSpinBox::valueChanged, this, &ItemsEditor::edited);
+    connect(carryFree_, &QDoubleSpinBox::valueChanged, this, &ItemsEditor::edited);
+    connect(carryMax_, &QDoubleSpinBox::valueChanged, this, &ItemsEditor::edited);
+    connect(table_, &QTableWidget::itemChanged, this, &ItemsEditor::edited);
+    connect(add, &QPushButton::clicked, this, [this] {
+        engine::ItemDef d;
+        d.kind = engine::ItemDef::Kind::Armor;
+        d.id = "armor" + std::to_string(items_.items.size() + 1);
+        d.name = "...";
+        d.price = 1000;
+        d.weight = 3.0f;
+        d.protection = 0.2f;
+        d.wear = 0.004f;
+        items_.items.push_back(d);
+        refresh();
+        setModified(true);
+    });
+    connect(remove, &QPushButton::clicked, this, [this] {
+        const int r = table_->currentRow();
+        if (r < 0 || r >= static_cast<int>(items_.items.size()))
+            return;
+        items_.items.erase(items_.items.begin() + r);
+        refresh();
+        setModified(true);
+    });
+}
+
+bool ItemsEditor::load(const QString& path, QString* error)
+{
+    std::string e;
+    if (!engine::loadItems(items_, toPath(path), &e)) {
+        if (error)
+            *error = QString::fromStdString(e);
+        return false;
+    }
+    path_ = path;
+    refresh();
+    setModified(false);
+    return true;
+}
+
+bool ItemsEditor::save(QString* error)
+{
+    std::string e;
+    if (!engine::saveItems(items_, toPath(path_), &e)) {
+        if (error)
+            *error = QString::fromStdString(e);
+        return false;
+    }
+    setModified(false);
+    return true;
+}
+
+namespace {
+const char* kindName(engine::ItemDef::Kind k)
+{
+    return k == engine::ItemDef::Kind::Medkit ? "medkit" : k == engine::ItemDef::Kind::Ammo ? "ammo" : "armor";
+}
+} // namespace
+
+void ItemsEditor::refresh()
+{
+    updating_ = true;
+    money_->setValue(items_.moneyStart);
+    carryFree_->setValue(items_.carryFree);
+    carryMax_->setValue(items_.carryMax);
+    table_->setRowCount(static_cast<int>(items_.items.size()));
+    for (int r = 0; r < static_cast<int>(items_.items.size()); ++r) {
+        const engine::ItemDef& d = items_.items[static_cast<std::size_t>(r)];
+        const bool armor = d.kind == engine::ItemDef::Kind::Armor;
+        const QStringList cells = {kindName(d.kind), QString::fromStdString(d.id), QString::fromStdString(d.name), QString::number(d.price),
+                                   QString::number(d.weight), armor ? QString::number(d.protection) : QString(),
+                                   armor ? QString::number(d.wear) : QString()};
+        for (int c = 0; c < cells.size(); ++c)
+            table_->setItem(r, c, new QTableWidgetItem(cells[c]));
+    }
+    updating_ = false;
+}
+
+void ItemsEditor::edited()
+{
+    if (updating_)
+        return;
+    items_.moneyStart = money_->value();
+    items_.carryFree = static_cast<float>(carryFree_->value());
+    items_.carryMax = static_cast<float>(std::max(carryMax_->value(), carryFree_->value() + 1.0));
+    std::vector<engine::ItemDef> list;
+    for (int r = 0; r < table_->rowCount(); ++r) {
+        auto text = [&](int c) { return table_->item(r, c) ? table_->item(r, c)->text().trimmed() : QString(); };
+        engine::ItemDef d;
+        const QString kind = text(0).toLower();
+        d.kind = kind == "medkit" ? engine::ItemDef::Kind::Medkit : kind == "ammo" ? engine::ItemDef::Kind::Ammo : engine::ItemDef::Kind::Armor;
+        d.id = d.kind == engine::ItemDef::Kind::Medkit ? std::string("medkit") : text(1).toStdString();
+        d.name = text(2).toStdString();
+        d.price = std::max(0, text(3).toInt());
+        d.weight = std::max(0.0f, text(4).toFloat());
+        if (d.kind == engine::ItemDef::Kind::Armor) {
+            d.protection = std::clamp(text(5).toFloat(), 0.0f, 0.95f);
+            d.wear = std::max(0.0f, text(6).toFloat());
+        }
+        list.push_back(std::move(d));
+    }
+    items_.items = std::move(list);
     setModified(true);
 }
 

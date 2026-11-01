@@ -81,6 +81,18 @@ bool SaveGame::write(const std::filesystem::path& file, std::string* error) cons
     for (const auto& [type, rounds] : stock)
         body << "stock " << quote(type) << ' ' << rounds << "\n";
     body << "medkits " << medkits << "\n";
+    if (money >= 0)
+        body << "money " << money << "\n";
+    if (!weaponCondition.empty()) {
+        body << "weapon_condition";
+        for (float c : weaponCondition)
+            body << ' ' << c;
+        body << "\n";
+    }
+    if (!armor.empty())
+        body << "armor " << quote(armor) << ' ' << armorCondition << "\n";
+    for (const std::string& t : traders)
+        body << "trader " << t << "\n";
     body << "flashlight " << (flashlightOn ? 1 : 0) << ' ' << flashlightCharge << "\n";
     if (timeOfDay >= 0.0f)
         body << "time_of_day " << timeOfDay << ' ' << dayMinutes << ' ' << (timeEnabled ? 1 : 0) << "\n";
@@ -180,6 +192,18 @@ bool SaveGame::read(const std::filesystem::path& file, std::string* error)
                 stock[str] = rounds;
         } else if (key == "medkits") {
             ls >> medkits;
+        } else if (key == "money") {
+            ls >> money;
+        } else if (key == "weapon_condition") {
+            for (float c; ls >> c;)
+                weaponCondition.push_back(c);
+        } else if (key == "armor" && unquote(ls, str)) {
+            armor = str;
+            ls >> armorCondition;
+        } else if (key == "trader") {
+            std::string rest;
+            std::getline(ls >> std::ws, rest);
+            traders.push_back(rest);
         } else if (key == "level" && unquote(ls, str)) {
             level = std::filesystem::path(str);
         } else if (key == "title" && unquote(ls, str)) {

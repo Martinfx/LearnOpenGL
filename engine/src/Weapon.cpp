@@ -149,7 +149,10 @@ bool saveWeaponFile(const WeaponSettings& w, const std::filesystem::path& file, 
         << "aim_rotation " << w.aimRotation.x << ' ' << w.aimRotation.y << ' ' << w.aimRotation.z << '\n'
         << "aim_fov " << w.aimFov << '\n'
         << "aim_time " << w.aimTime << '\n'
-        << "aim_spread " << w.aimSpread << '\n';
+        << "aim_spread " << w.aimSpread << '\n'
+        << "price " << w.price << '\n'
+        << "weight " << w.weight << '\n'
+        << "wear " << w.wearPerShot << ' ' << w.jamChance << '\n';
     auto relative = [&](const std::filesystem::path& p) {
         if (p.empty())
             return std::string();
@@ -214,6 +217,9 @@ bool loadWeaponFile(WeaponSettings& weapon, const std::filesystem::path& file, s
         else if (key == "ammo_type") ok = static_cast<bool>(ls >> std::quoted(w.ammoType) >> w.startReserve);
         else if (key == "reload_time") ok = static_cast<bool>(ls >> w.reloadTime);
         else if (key == "spread") ok = static_cast<bool>(ls >> w.spreadDegrees);
+        else if (key == "price") ok = static_cast<bool>(ls >> w.price);
+        else if (key == "weight") ok = static_cast<bool>(ls >> w.weight);
+        else if (key == "wear") ok = static_cast<bool>(ls >> w.wearPerShot >> w.jamChance);
         else if (key == "range") ok = static_cast<bool>(ls >> w.range);
         else if (key == "view_offset") ok = static_cast<bool>(ls >> w.viewOffset.x >> w.viewOffset.y >> w.viewOffset.z);
         else if (key == "view_scale") ok = static_cast<bool>(ls >> w.viewScale);
@@ -394,6 +400,18 @@ float Weapon::reloadProgress() const
     return reloading() ? 1.0f - reloadTimer_ / reloadDuration_ : 0.0f;
 }
 
+float wornSpreadScale(float condition)
+{
+    return 1.0f + 1.5f * (1.0f - std::clamp(condition, 0.0f, 1.0f));
+}
+
+float jamProbability(const WeaponSettings& weapon, float condition)
+{
+    if (weapon.melee() || condition >= 0.6f)
+        return 0.0f;
+    return std::max(0.0f, weapon.jamChance) * (0.6f - std::max(condition, 0.0f)) / 0.6f;
+}
+
 glm::vec3 Weapon::spreadDirection(glm::vec3 aim)
 {
     auto random01 = [this] {
@@ -406,7 +424,7 @@ glm::vec3 Weapon::spreadDirection(glm::vec3 aim)
     const glm::vec3 helper = std::abs(aim.y) < 0.99f ? glm::vec3(0, 1, 0) : glm::vec3(1, 0, 0);
     const glm::vec3 u = glm::normalize(glm::cross(aim, helper));
     const glm::vec3 v = glm::cross(u, aim);
-    const float spread = settings.spreadDegrees * (1.0f + (settings.aimSpread - 1.0f) * aim_);
+    const float spread = settings.spreadDegrees * (1.0f + (settings.aimSpread - 1.0f) * aim_) * wornSpreadScale(condition);
     const float angle = glm::radians(spread) * std::sqrt(random01());
     const float phi = 6.2831853f * random01();
     return glm::normalize(aim + (u * std::cos(phi) + v * std::sin(phi)) * std::tan(angle));
