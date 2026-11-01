@@ -123,6 +123,7 @@ struct RenderQuality {
     // Occlusion culling: objects hidden behind nearer geometry in a recent frame's depth
     // (read back asynchronously, small screen copy) are skipped in the depth and main passes.
     bool occlusionCulling = true;
+    float renderScale = 1.0f; // scene resolution relative to the window (0.5 = half), HUD stays sharp
 
     static RenderQuality preset(int level); // 0 low, 1 medium, 2 high, 3 ultra
 };
@@ -409,7 +410,8 @@ private:
     std::vector<glm::mat4> joints_;     // scratch: skinning matrices
 
     // Render targets.
-    int width_ = 0, height_ = 0;
+    int width_ = 0, height_ = 0;          // render targets (output size x render scale)
+    int outWidth_ = 0, outHeight_ = 0;    // the view's size in the target framebuffer
     unsigned hdrFbo_ = 0, hdrColor_ = 0, depthTex_ = 0;
     unsigned ssaoFbo_ = 0, ssaoTex_ = 0, ssaoBlurFbo_ = 0, ssaoBlurTex_ = 0;
     std::vector<unsigned> bloomTex_, bloomFbo_;

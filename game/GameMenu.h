@@ -29,11 +29,15 @@ public:
     bool active() const { return screen_ != Screen::None; }
     bool started() const { return started_; } // a game is running (Main shows "Continue")
     void setStarted(bool started) { started_ = started; }
+    void setSettingsPage(int page) { settingsPage_ = page; } // 0 graphics, 1 controls, 2 audio
 
     // Esc: back one screen (settings/credits to where they came from, pause to the game).
     void back();
     // Mouse in window pixels; call every frame before draw().
     void mouse(glm::vec2 position, bool leftDown, double scroll);
+    // Key and mouse button presses (KeyNames.h codes) for binding a key in Settings > Controls.
+    void keyEvent(int code);
+    bool capturingKey() const { return !capturing_.empty(); }
     void draw(engine::Ui2D& ui, int width, int height, double time);
     Action takeAction();
     const std::filesystem::path& chosenLevel() const { return chosenLevel_; } // after Action::LoadLevel
@@ -60,6 +64,10 @@ private:
     double scroll_ = 0.0;
     std::string dragging_;     // slider being dragged (cvar name)
     int settingsPage_ = 0;
+    int settingsScroll_ = 0;   // rows scrolled on the current page
+    std::string capturing_;    // binding waiting for a key (cvar name)
+    bool swallowEsc_ = false;
+    bool suppressRelease_ = false;  // the Esc that cancelled a binding does not also leave the screen
     float creditsScroll_ = 0.0f;
 
     struct CreditLine {

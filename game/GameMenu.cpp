@@ -5,6 +5,10 @@
 #include <engine/Paths.h>
 #include <engine/Scene.h>
 
+#include "KeyNames.h"
+
+#include <GLFW/glfw3.h>
+
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -37,8 +41,25 @@ const std::vector<SettingInfo>& settingInfos()
         {"vsync", "Vertikální synchronizace", 0, {}},
         {"fps_max", "Omezení snímků (0 = bez)", 0, {}},
         {"cl_showfps", "Zobrazit FPS", 0, {}},
+        {"r_fullscreen", "Režim okna", 0, {"Okno", "Bez rámečku", "Celá obrazovka"}},
+        {"r_monitor", "Monitor", 0, {"Hlavní", "2", "3", "4", "5", "6", "7", "8"}},
+        {"r_scale", "Rozlišení scény", 0, {}},
         {"m_sensitivity", "Citlivost myši", 1, {}},
         {"m_invert_y", "Obrátit osu Y", 1, {}},
+        {"joy_sensitivity", "Citlivost gamepadu", 1, {}},
+        {"joy_deadzone", "Mrtvá zóna páček", 1, {}},
+        {"in_forward", "Dopředu", 1, {}},
+        {"in_back", "Dozadu", 1, {}},
+        {"in_left", "Vlevo", 1, {}},
+        {"in_right", "Vpravo", 1, {}},
+        {"in_jump", "Skok", 1, {}},
+        {"in_sprint", "Sprint", 1, {}},
+        {"in_crouch", "Dolů (noclip, volná kamera)", 1, {}},
+        {"in_fire", "Střelba", 1, {}},
+        {"in_aim", "Míření", 1, {}},
+        {"in_reload", "Přebití", 1, {}},
+        {"in_bolt", "Hodit šroub", 1, {}},
+        {"in_map", "Mapa", 1, {}},
         {"snd_volume", "Celková hlasitost", 2, {}},
         {"snd_sfx", "Efekty", 2, {}},
         {"snd_ambient", "Prostředí", 2, {}},
@@ -160,13 +181,41 @@ void GameMenu::open(Screen screen)
         returnTo_ = screen_ == Screen::None ? Screen::Pause : screen_;
     screen_ = screen;
     dragging_.clear();
+    capturing_.clear();
+    settingsScroll_ = 0;
     creditsScroll_ = 0.0f;
     justOpened_ = true;
     openedAt_ = 0.0;
 }
 
+void GameMenu::keyEvent(int code)
+{
+    if (capturing_.empty())
+        return;
+    if (code == GLFW_KEY_ESCAPE) {
+        capturing_.clear();
+        swallowEsc_ = true;
+        return;
+    }
+    const std::string name = keyName(code);
+    if (name.empty())
+        return; // a key without a name (layout specific): keep waiting
+    engine::CVarRegistry::global().set(capturing_, name);
+    capturing_.clear();
+    if (code >= kMouseBase)
+        suppressRelease_ = true; // releasing the button that was just bound clicks nothing
+}
+
 void GameMenu::back()
 {
+    if (swallowEsc_) {
+        swallowEsc_ = false;
+        return;
+    }
+    if (!capturing_.empty()) {
+        capturing_.clear();
+        return;
+    }
     switch (screen_) {
     case Screen::Settings:
     case Screen::Credits:
@@ -185,6 +234,10 @@ void GameMenu::mouse(glm::vec2 position, bool leftDown, double scroll)
     mouse_ = position;
     pressed_ = leftDown && !down_;
     released_ = !leftDown && down_;
+    if (released_ && suppressRelease_) {
+        released_ = false;
+        suppressRelease_ = false;
+    }
     down_ = leftDown;
     scroll_ = scroll;
     if (!down_)
@@ -315,7 +368,7 @@ void GameMenu::drawSettings(engine::Ui2D& ui, float w, float h)
     ui.rect({0, 0}, {w, h}, kShade);
     const float row = std::round(std::clamp(h * 0.055f, 30.0f, 56.0f));
     const float text = std::round(row * 0.45f);
-    const glm::vec2 panel(std::min(w - row, std::max(w * 0.5f, 640.0f)), std::min(h - row, row * 11.5f));
+    const glm::vec2 panel(std::min(w - row, std::max(w * 0.5f, 640.0f)), std::min(h - row, row * 13.5f));
     const glm::vec2 pos = glm::round((glm::vec2(w, h) - panel) * 0.5f);
     ui.rect(pos, panel, kPanel);
     ui.rect(pos, {panel.x, 3.0f}, kAmber);
@@ -328,9 +381,9 @@ void GameMenu::drawSettings(engine::Ui2D& ui, float w, float h)
         if (const engine::CVar* v = cvars.find(info.cvar))
             pages[info.page].push_back({v, &info});
     for (const engine::CVar* v : cvars.list())
-        if ((v->flags & engine::CVarConfig) &&
+        if ((v->flags & engine::CVarConfig) && !(v->flags & engine::CVarDev) &&
             std::none_of(settingInfos().begin(), settingInfos().end(), [&](const SettingInfo& i) { return v->name == i.cvar; }))
-            pages[3].push_back({v, nullptr});
+            pages[v->name.rfind("in_", 0) == 0 ? 1 : 3].push_back({v, nullptr}); // key bindings: Controls
 
     // Page tabs.
     float tx = pos.x + row * 0.6f;
@@ -344,18 +397,32 @@ void GameMenu::drawSettings(engine::Ui2D& ui, float w, float h)
         if (on)
             ui.rect({tx, tabY + row * 0.75f}, {tw, 3.0f}, kAmber);
         ui.text(kPages[p], {tx + row * 0.4f, tabY + row * 0.15f}, text, on ? kAmber : hover ? kBone : kDim, true);
-        if (hover && released_)
+        if (hover && released_ && settingsPage_ != p) {
             settingsPage_ = p;
+            settingsScroll_ = 0;
+            capturing_.clear();
+        }
         tx += tw + row * 0.2f;
     }
     if (pages[settingsPage_].empty())
         settingsPage_ = 0;
 
-    // Rows: label on the left, control on the right.
+    // Rows: label on the left, control on the right; the wheel scrolls long pages.
+    const int visibleRows = std::max(1, static_cast<int>((panel.y - row * 4.2f) / row));
+    const int pageRows = static_cast<int>(pages[settingsPage_].size());
+    settingsScroll_ = std::clamp(settingsScroll_ - static_cast<int>(scroll_), 0, std::max(0, pageRows - visibleRows));
+    if (pageRows > visibleRows) {
+        char more[48];
+        std::snprintf(more, sizeof more, "%d-%d z %d", settingsScroll_ + 1, std::min(pageRows, settingsScroll_ + visibleRows), pageRows);
+        ui.text(more, {pos.x + panel.x - ui.textWidth(more, text * 0.85f) - row * 0.8f, tabY + row * 0.2f}, text * 0.85f, kDim);
+    }
     float y = pos.y + row * 2.6f;
+    int rowIndex = -1;
     const float labelX = pos.x + row * 0.8f;
     const float controlX = pos.x + panel.x * 0.55f, controlW = panel.x * 0.45f - row * 0.8f;
     for (const auto& [v, info] : pages[settingsPage_]) {
+        if (++rowIndex < settingsScroll_)
+            continue;
         const std::string label = info ? info->label : v->description;
         ui.text(label, {labelX, y + (row - text) * 0.5f}, text, kBone);
         const float cy = y + row * 0.5f;
@@ -409,11 +476,20 @@ void GameMenu::drawSettings(engine::Ui2D& ui, float w, float h)
                 if (buf != v->value)
                     cvars.set(v->name, buf);
             }
+        } else if (v->name.rfind("in_", 0) == 0) {
+            // Key binding: click, then press the key (or a mouse button); Esc cancels.
+            const bool waiting = capturing_ == v->name;
+            const glm::vec2 b(controlX, y + row * 0.12f), bs(controlW, row * 0.76f);
+            ui.rect(b, bs, waiting ? glm::vec4(0.93f, 0.62f, 0.2f, 0.25f) : hoverRow ? glm::vec4(0.3f, 0.28f, 0.22f, 1.0f) : kTrack);
+            const std::string shown = waiting ? "Stiskni klávesu…" : keyLabel(keyCode(v->value));
+            ui.text(shown, {b.x + row * 0.3f, y + (row - text) * 0.5f}, text, waiting ? kAmber : kBone, !waiting);
+            if (hoverRow && released_ && !waiting && capturing_.empty())
+                capturing_ = v->name;
         } else {
             ui.text(v->value, {controlX, y + (row - text) * 0.5f}, text, kDim);
         }
         y += row;
-        if (y > pos.y + panel.y - row * 1.6f)
+        if (rowIndex + 1 >= settingsScroll_ + visibleRows)
             break;
     }
 

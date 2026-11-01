@@ -870,7 +870,7 @@ void Renderer::updateEnvironment(const Scene& scene, const RenderView& view)
     b.shadowParams.x = 0.0005f;
     b.shadowParams.y = 2.0f * (splits[0]) / static_cast<float>(std::max(1, quality_.shadowResolution)) * 1.5f;
     b.shadowParams.w = static_cast<float>(kEnvMips - 1);
-    b.viewport = glm::vec4(view.viewportWidth, view.viewportHeight, 1.0f / view.viewportWidth, 1.0f / view.viewportHeight);
+    b.viewport = glm::vec4(width_, height_, 1.0f / static_cast<float>(width_), 1.0f / static_cast<float>(height_)); // render targets
     glNamedBufferSubData(envBuffer_, 0, sizeof(b), &b);
     glBindBufferBase(GL_UNIFORM_BUFFER, 1, envBuffer_);
 }
@@ -1225,7 +1225,12 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     pollOcclusion();
     view_ = view.view;
     projection_ = view.projection;
-    ensureTargets(std::max(1, view.viewportWidth), std::max(1, view.viewportHeight));
+    // Render scale: the scene is drawn at a fraction of the output size and stretched in the
+    // final pass (post / FXAA), for slow GPUs; menus and HUD stay sharp.
+    outWidth_ = std::max(1, view.viewportWidth);
+    outHeight_ = std::max(1, view.viewportHeight);
+    const float scale = std::clamp(quality_.renderScale, 0.25f, 1.0f);
+    ensureTargets(std::max(1, static_cast<int>(std::lround(outWidth_ * scale))), std::max(1, static_cast<int>(std::lround(outHeight_ * scale))));
 
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, jointBuffer_);
     updateEnvironment(scene, view);
@@ -2089,7 +2094,7 @@ void Renderer::present()
     if (fxaa)
         glViewport(0, 0, width_, height_);
     else
-        glViewport(targetX_, targetY_, width_, height_);
+        glViewport(targetX_, targetY_, outWidth_, outHeight_);
     const Program& post = programs_.post;
     glUseProgram(post.id);
     glUniform1f(post.loc("uExposure"), e.exposure);
@@ -2112,7 +2117,7 @@ void Renderer::present()
     glDrawArrays(GL_TRIANGLES, 0, 3);
     if (fxaa) {
         glBindFramebuffer(GL_FRAMEBUFFER, static_cast<unsigned>(targetFbo_));
-        glViewport(targetX_, targetY_, width_, height_);
+        glViewport(targetX_, targetY_, outWidth_, outHeight_);
         glUseProgram(programs_.fxaa.id);
         glBindTextureUnit(0, ldrTex_);
         glDrawArrays(GL_TRIANGLES, 0, 3);

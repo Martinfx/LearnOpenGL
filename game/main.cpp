@@ -22,6 +22,7 @@
 #include "GameConsole.h"
 #include "GameHud.h"
 #include "GameMenu.h"
+#include "KeyNames.h"
 #include "MapHud.h"
 #include <engine/Scripting.h>
 #include <engine/NavMesh.h>
@@ -38,6 +39,7 @@
 #include <set>
 #include <algorithm>
 #include <atomic>
+#include <map>
 #include <optional>
 #include <thread>
 #include <chrono>
@@ -56,6 +58,7 @@ struct Mouse {
     glm::vec2 delta{0.0f};
     double scroll = 0.0;
     GameConsole* console = nullptr; // receives typed text and keys while open
+    GameMenu* menu = nullptr;       // key presses while it waits for a key binding
 };
 
 // How a level session ended, and what a level change carries over.
@@ -141,19 +144,143 @@ bool ricochetRoll(float chance)
 }
 float ricochetLift() { return std::uniform_real_distribution<float>(1.0f, 8.0f)(ricochetRng()); }
 
+// Key bindings: console variables in_* (key names from KeyNames.h), edited in
+// Settings > Controls and saved in game.cfg.
+struct Binding {
+    const char* cvar;
+    const char* key;   // default
+    const char* label; // settings screen
+    int action;        // engine::Action, or -1 for keys the game reads itself (bolt, map)
+};
+constexpr Binding kBindings[] = {
+    {"in_forward", "W", "Dopředu", static_cast<int>(engine::Action::MoveForward)},
+    {"in_back", "S", "Dozadu", static_cast<int>(engine::Action::MoveBack)},
+    {"in_left", "A", "Vlevo", static_cast<int>(engine::Action::MoveLeft)},
+    {"in_right", "D", "Vpravo", static_cast<int>(engine::Action::MoveRight)},
+    {"in_jump", "SPACE", "Skok", static_cast<int>(engine::Action::Jump)},
+    {"in_sprint", "LSHIFT", "Sprint", static_cast<int>(engine::Action::Sprint)},
+    {"in_crouch", "LCTRL", "Dolů (noclip, volná kamera)", static_cast<int>(engine::Action::Crouch)},
+    {"in_fire", "MOUSE1", "Střelba", static_cast<int>(engine::Action::Fire)},
+    {"in_aim", "MOUSE2", "Míření", static_cast<int>(engine::Action::Aim)},
+    {"in_reload", "R", "Přebití", static_cast<int>(engine::Action::Reload)},
+    {"in_bolt", "G", "Hodit šroub", -1},
+    {"in_map", "M", "Mapa", -1},
+};
+
+// Current key of a binding (parsed again only when the variable changed).
+int boundKey(const char* cvar)
+{
+    static std::map<std::string, std::pair<std::string, int>> cache;
+    const engine::CVar* v = engine::CVarRegistry::global().find(cvar);
+    if (!v)
+        return -1;
+    auto& [text, code] = cache[cvar];
+    if (text != v->value || code == 0) {
+        text = v->value;
+        code = keyCode(text);
+    }
+    return code;
+}
+
+bool keyDown(GLFWwindow* window, int code)
+{
+    if (code < 0)
+        return false;
+    if (code >= kMouseBase)
+        return glfwGetMouseButton(window, code - kMouseBase) == GLFW_PRESS;
+    return glfwGetKey(window, code) == GLFW_PRESS;
+}
+
 void readInput(GLFWwindow* window, engine::InputState& input)
 {
-    using engine::Action;
-    input.set(Action::MoveForward, glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS);
-    input.set(Action::MoveBack, glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS);
-    input.set(Action::MoveLeft, glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS);
-    input.set(Action::MoveRight, glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS);
-    input.set(Action::Jump, glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS);
-    input.set(Action::Sprint, glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS);
-    input.set(Action::Crouch, glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS);
-    input.set(Action::Fire, glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS);
-    input.set(Action::Reload, glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS);
-    input.set(Action::Aim, glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS);
+    for (const Binding& b : kBindings)
+        if (b.action >= 0)
+            input.set(static_cast<engine::Action>(b.action), keyDown(window, boundKey(b.cvar)));
+}
+
+// Gamepad (any GLFW-mapped controller): left stick moves, right stick looks, RT fires,
+// LT aims, A jump, B down, X reload, L3 sprint, Y next weapon, Start menu, Back map.
+struct PadState {
+    bool present = false;
+    glm::vec2 look{0.0f};
+    bool start = false, back = false, nextWeapon = false;
+};
+PadState readGamepad(engine::InputState& input, float deadzone)
+{
+    PadState out;
+    for (int jid = GLFW_JOYSTICK_1; jid <= GLFW_JOYSTICK_4; ++jid) {
+        GLFWgamepadstate pad;
+        if (!glfwJoystickIsGamepad(jid) || !glfwGetGamepadState(jid, &pad))
+            continue;
+        out.present = true;
+        auto axis = [&](int a) {
+            const float v = pad.axes[a];
+            if (std::abs(v) < deadzone)
+                return 0.0f;
+            const float k = (std::abs(v) - deadzone) / (1.0f - deadzone);
+            return std::copysign(k * k, v); // finer control near the centre
+        };
+        using engine::Action;
+        const float lx = axis(GLFW_GAMEPAD_AXIS_LEFT_X), ly = axis(GLFW_GAMEPAD_AXIS_LEFT_Y);
+        auto press = [&](Action a, bool on) {
+            if (on)
+                input.set(a, true);
+        };
+        press(Action::MoveForward, ly < -0.3f);
+        press(Action::MoveBack, ly > 0.3f);
+        press(Action::MoveLeft, lx < -0.3f);
+        press(Action::MoveRight, lx > 0.3f);
+        press(Action::Fire, pad.axes[GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER] > 0.0f);
+        press(Action::Aim, pad.axes[GLFW_GAMEPAD_AXIS_LEFT_TRIGGER] > 0.0f || pad.buttons[GLFW_GAMEPAD_BUTTON_LEFT_BUMPER]);
+        press(Action::Jump, pad.buttons[GLFW_GAMEPAD_BUTTON_A]);
+        press(Action::Crouch, pad.buttons[GLFW_GAMEPAD_BUTTON_B]);
+        press(Action::Reload, pad.buttons[GLFW_GAMEPAD_BUTTON_X]);
+        press(Action::Sprint, pad.buttons[GLFW_GAMEPAD_BUTTON_LEFT_THUMB]);
+        out.look += glm::vec2(axis(GLFW_GAMEPAD_AXIS_RIGHT_X), axis(GLFW_GAMEPAD_AXIS_RIGHT_Y));
+        out.start = out.start || pad.buttons[GLFW_GAMEPAD_BUTTON_START];
+        out.back = out.back || pad.buttons[GLFW_GAMEPAD_BUTTON_BACK];
+        out.nextWeapon = out.nextWeapon || pad.buttons[GLFW_GAMEPAD_BUTTON_Y];
+    }
+    return out;
+}
+
+// Window mode: 0 windowed, 1 borderless on a monitor, 2 exclusive fullscreen.
+struct WindowMode {
+    int mode = 0, monitor = 0;
+    glm::ivec2 windowedPos{100, 100}, windowedSize{1280, 720};
+};
+void applyWindowMode(GLFWwindow* window, WindowMode& current, int mode, int monitorIndex)
+{
+    int count = 0;
+    GLFWmonitor** monitors = glfwGetMonitors(&count);
+    if (count <= 0)
+        return;
+    GLFWmonitor* monitor = monitors[std::clamp(monitorIndex, 0, count - 1)];
+    const GLFWvidmode* video = glfwGetVideoMode(monitor);
+    if (!video)
+        return;
+    if (current.mode == 0 && mode != 0) { // remember the window to go back to
+        glfwGetWindowPos(window, &current.windowedPos.x, &current.windowedPos.y);
+        glfwGetWindowSize(window, &current.windowedSize.x, &current.windowedSize.y);
+    }
+    if (mode == 2) {
+        glfwSetWindowMonitor(window, monitor, 0, 0, video->width, video->height, video->refreshRate);
+    } else if (mode == 1) {
+        int mx = 0, my = 0;
+        glfwGetMonitorPos(monitor, &mx, &my);
+        glfwSetWindowMonitor(window, nullptr, mx, my, video->width, video->height, 0);
+        glfwSetWindowAttrib(window, GLFW_DECORATED, GLFW_FALSE);
+        glfwSetWindowPos(window, mx, my);
+        glfwSetWindowSize(window, video->width, video->height);
+    } else {
+        glfwSetWindowAttrib(window, GLFW_DECORATED, GLFW_TRUE);
+        glfwSetWindowMonitor(window, nullptr, current.windowedPos.x, current.windowedPos.y, current.windowedSize.x,
+                             current.windowedSize.y, 0);
+    }
+    current.mode = mode;
+    current.monitor = monitorIndex;
+    LOG_INFO("window", "%s on monitor %d (%dx%d)", mode == 2 ? "fullscreen" : mode == 1 ? "borderless" : "windowed",
+             monitorIndex, video->width, video->height);
 }
 
 struct Impact {
@@ -228,6 +355,14 @@ GLFWwindow* createWindow()
 }
 
 } // namespace
+
+#ifdef _WIN32
+// Laptops with two GPUs: ask the NVIDIA / AMD driver for the fast one.
+extern "C" {
+__declspec(dllexport) unsigned long NvOptimusEnablement = 1;
+__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
+}
+#endif
 
 int main(int argc, char** argv)
 {
@@ -305,6 +440,7 @@ int main(int argc, char** argv)
 
     Mouse mouse;
     mouse.console = &console;
+    mouse.menu = &menu;
     glfwSetWindowUserPointer(window, &mouse);
     glfwSetCharCallback(window, [](GLFWwindow* w, unsigned codepoint) {
         if (auto* m = static_cast<Mouse*>(glfwGetWindowUserPointer(w)); m->console)
@@ -314,6 +450,10 @@ int main(int argc, char** argv)
         auto* m = static_cast<Mouse*>(glfwGetWindowUserPointer(w));
         if (!m->console)
             return;
+        if (m->menu && m->menu->capturingKey() && action == GLFW_PRESS && !m->console->open()) {
+            m->menu->keyEvent(key);
+            return;
+        }
         if (key == GLFW_KEY_GRAVE_ACCENT && action == GLFW_PRESS) { // ~ (key left of 1 on any layout)
             m->console->toggle();
             return;
@@ -328,6 +468,11 @@ int main(int argc, char** argv)
         m->lastX = x;
         m->lastY = y;
     });
+    glfwSetMouseButtonCallback(window, [](GLFWwindow* w, int button, int action, int) {
+        auto* m = static_cast<Mouse*>(glfwGetWindowUserPointer(w));
+        if (m->menu && m->menu->capturingKey() && action == GLFW_PRESS)
+            m->menu->keyEvent(kMouseBase + button);
+    });
     glfwSetScrollCallback(window, [](GLFWwindow* w, double, double y) {
         static_cast<Mouse*>(glfwGetWindowUserPointer(w))->scroll += y;
     });
@@ -339,6 +484,7 @@ int main(int argc, char** argv)
     const long frameLimit = frameLimitEnv ? std::strtol(frameLimitEnv, nullptr, 10) : -1;
     long frame = 0;
     bool firstLevel = true;
+    WindowMode windowMode;
 
     // One level from loading to leaving it (quit, restart, another level). Everything
     // level-scoped lives in here; the window, renderer, UI, console and menu outlive it.
@@ -517,7 +663,30 @@ int main(int argc, char** argv)
             .onChange = [](const engine::CVar& v) { glfwSwapInterval(v.boolean() ? 1 : 0); };
         cvars.add("fps_max", CVarType::Int, "0", "Frame rate limit, 0 = none", engine::CVarConfig, 0.0, 1000.0);
         cvars.add("r_quality", CVarType::Int, "2", "Graphics preset: 0 low, 1 medium, 2 high, 3 ultra", engine::CVarConfig, 0.0, 3.0)
-            .onChange = [&renderer](const engine::CVar& v) { renderer.setQuality(engine::RenderQuality::preset(v.integer())); };
+            .onChange = [&renderer, &cvars](const engine::CVar& v) {
+                engine::RenderQuality q = engine::RenderQuality::preset(v.integer());
+                q.renderScale = cvars.find("r_scale") ? cvars.find("r_scale")->number() : 1.0f;
+                renderer.setQuality(q);
+            };
+        cvars.add("r_scale", CVarType::Float, "1", "Render resolution (0.5 = half; menus and HUD stay sharp)", engine::CVarConfig, 0.5, 1.0)
+            .onChange = [&renderer](const engine::CVar& v) {
+                engine::RenderQuality q = renderer.quality();
+                q.renderScale = v.number();
+                renderer.setQuality(q);
+            };
+        auto windowChanged = [&](const engine::CVar&) {
+            const int mode = cvars.find("r_fullscreen")->integer(), monitor = cvars.find("r_monitor")->integer();
+            if (mode != windowMode.mode || monitor != windowMode.monitor)
+                applyWindowMode(window, windowMode, mode, monitor);
+        };
+        cvars.add("r_fullscreen", CVarType::Int, "0", "0 window, 1 borderless, 2 fullscreen", engine::CVarConfig, 0.0, 2.0).onChange = windowChanged;
+        cvars.add("r_monitor", CVarType::Int, "0", "Monitor for fullscreen (0 = primary)", engine::CVarConfig, 0.0, 7.0).onChange = windowChanged;
+        cvars.add("r_width", CVarType::Int, "1280", "Window width (windowed)", engine::CVarConfig | engine::CVarDev, 320.0, 16384.0);
+        cvars.add("r_height", CVarType::Int, "720", "Window height (windowed)", engine::CVarConfig | engine::CVarDev, 240.0, 16384.0);
+        cvars.add("joy_sensitivity", CVarType::Float, "1", "Gamepad look speed", engine::CVarConfig, 0.1, 4.0);
+        cvars.add("joy_deadzone", CVarType::Float, "0.15", "Gamepad stick dead zone", engine::CVarConfig, 0.0, 0.5);
+        for (const Binding& b : kBindings)
+            cvars.add(b.cvar, CVarType::String, b.key, b.label, engine::CVarConfig);
         auto volume = [&](const char* name, const char* description, std::function<void(float)> apply) {
             cvars.add(name, CVarType::Float, "1", description, engine::CVarConfig, 0.0, 1.0).onChange =
                 [apply](const engine::CVar& v) { apply(v.number()); };
@@ -550,7 +719,9 @@ int main(int argc, char** argv)
                 LOG_WARN("cvar", "Ignored command line argument %s", rest.c_str());
         }
         // Apply what the callbacks have not (values equal to the defaults do not fire onChange).
-        for (const char* name : {"vsync", "r_quality", "snd_volume", "snd_sfx", "snd_ambient", "snd_music"})
+        if (firstLevel && cvars.find("r_fullscreen")->integer() == 0) // the remembered window size
+            glfwSetWindowSize(window, cvars.find("r_width")->integer(), cvars.find("r_height")->integer());
+        for (const char* name : {"vsync", "r_quality", "r_fullscreen", "snd_volume", "snd_sfx", "snd_ambient", "snd_music"})
             if (const engine::CVar* v = cvars.find(name); v && v->onChange)
                 v->onChange(*v);
     }
@@ -691,7 +862,9 @@ int main(int argc, char** argv)
         if (const char* screen = std::getenv("FPS_ENGINE_MENU")) { // test hook: open a menu screen (screenshots)
             const std::string name = screen;
             menu.setStarted(name != "main");
-            menu.open(name == "main" ? GameMenu::Screen::Main : name == "settings" ? GameMenu::Screen::Settings
+            if (name == "controls")
+                menu.setSettingsPage(1);
+            menu.open(name == "main" ? GameMenu::Screen::Main : name == "settings" || name == "controls" ? GameMenu::Screen::Settings
                       : name == "credits" ? GameMenu::Screen::Credits : name == "death" ? GameMenu::Screen::Death : name == "levels" ? GameMenu::Screen::Levels
                       : GameMenu::Screen::Pause);
         }
@@ -720,6 +893,7 @@ int main(int argc, char** argv)
     double fpsTimer = 0.0;
     int fpsFrames = 0;
     bool escHeld = false;
+    bool padStartHeld = false, padWeaponHeld = false;
     bool mapOpen = false, mapHeld = false;
 
     while (!glfwWindowShouldClose(window) && (frameLimit < 0 || frame < frameLimit) && exitRequest.kind == LevelExit::None) {
@@ -766,7 +940,16 @@ int main(int argc, char** argv)
             setCaptured(window, captured);
             mouse.first = true;
         }
-        const bool mKey = glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS && captured;
+        engine::InputState padInput;
+        const PadState pad = cvars.find("joy_deadzone") ? readGamepad(padInput, cvars.find("joy_deadzone")->number()) : PadState{};
+        if (pad.start && !padStartHeld) { // Start works like Esc
+            if (menu.active())
+                menu.back();
+            else
+                menu.open(GameMenu::Screen::Pause);
+        }
+        padStartHeld = pad.start;
+        const bool mKey = (keyDown(window, boundKey("in_map")) || pad.back) && captured;
         if (mKey && !mapHeld)
             mapOpen = !mapOpen;
         mapHeld = mKey;
@@ -774,12 +957,20 @@ int main(int argc, char** argv)
         // Look is applied every frame for responsiveness; movement runs at a fixed rate.
         if (cvInvert.boolean())
             mouse.delta.y = -mouse.delta.y;
+        if (captured && pad.present) // right stick: like moving the mouse ~900 px/s at full tilt
+            mouse.delta += pad.look * glm::vec2(1.0f, cvInvert.boolean() ? -1.0f : 1.0f) * static_cast<float>(frameTime) * 900.0f *
+                           cvars.find("joy_sensitivity")->number();
         if (captured)
             camera.look(mouse.delta);
         mouse.delta = glm::vec2(0.0f);
         readInput(window, input);
+        for (std::size_t a = 0; a < input.down.size(); ++a)
+            input.down[a] = input.down[a] || padInput.down[a];
         if (!captured || console.open())
             input = {};
+        if (captured && pad.nextWeapon && !padWeaponHeld && weapons.size() > 1)
+            next = (next + 1) % weapons.size();
+        padWeaponHeld = pad.nextWeapon;
 
         // Weapon selection: 1-9 or the mouse wheel.
         for (int i = 0; i < 9; ++i) {
@@ -796,7 +987,7 @@ int main(int argc, char** argv)
         // G: throw a bolt (finds anomalies and sets them off). FPS_ENGINE_BOLT=1 throws one at the start (test hook).
         {
             static bool testBolt = std::getenv("FPS_ENGINE_BOLT") != nullptr;
-            const bool g = captured && glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS;
+            const bool g = captured && keyDown(window, boundKey("in_bolt"));
             if ((g && !boltHeld) || (testBolt && frame == 2)) {
                 anomalies.throwBolt(player.eye(), camera.forward(), player.velocity());
                 testBolt = false;
@@ -1130,6 +1321,14 @@ int main(int argc, char** argv)
                 LOG_INFO("stats", "%s", line);
             }
             glfwSetWindowTitle(window, title);
+            if (windowMode.mode == 0 && !glfwGetWindowAttrib(window, GLFW_ICONIFIED)) { // remembered for the next start
+                int ww = 0, wh = 0;
+                glfwGetWindowSize(window, &ww, &wh);
+                if (ww > 0 && wh > 0 && (ww != cvars.find("r_width")->integer() || wh != cvars.find("r_height")->integer())) {
+                    cvars.set("r_width", std::to_string(ww));
+                    cvars.set("r_height", std::to_string(wh));
+                }
+            }
             fpsTimer = 0.0;
             fpsFrames = 0;
         }
