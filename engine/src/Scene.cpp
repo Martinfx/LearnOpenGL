@@ -146,6 +146,8 @@ void writeEntity(std::ostream& out, const Entity& e, const std::filesystem::path
     if (!e.modelPath.empty())
         out << "  character " << std::quoted(relativeTo(e.modelPath, levelDir))
             << ' ' << e.modelScale << ' ' << e.modelYaw << ' ' << std::quoted(e.animation) << '\n';
+    if (!e.modelPath.empty() && !e.animGraphPath.empty())
+        out << "  animgraph " << std::quoted(relativeTo(e.animGraphPath, levelDir)) << '\n';
     for (const auto& [key, value] : e.properties)
         out << "  prop " << std::quoted(key) << ' ' << std::quoted(value) << '\n';
     for (const EntityOutput& o : e.outputs)
@@ -1101,6 +1103,20 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                     return false;
                 }
             }
+        } else if (key == "animgraph") {
+            std::string path;
+            ok = !result.entities.empty() && static_cast<bool>(ls >> std::quoted(path));
+            if (ok) {
+                std::filesystem::path p = pathFromUtf8(path);
+                if (p.is_relative())
+                    p = std::filesystem::absolute(file).parent_path() / p;
+                Entity& e = result.entities.back();
+                e.animGraphPath = p.lexically_normal();
+                std::string graphError;
+                e.animator.setGraph(loadAnimGraph(e.animGraphPath, &graphError));
+                if (!e.animator.graph)
+                    LOG_WARN("level", "%s", graphError.c_str()); // the character still plays its clip
+            }
         } else if (key == "weapon") {
             std::string path;
             ok = static_cast<bool>(ls >> std::quoted(path));
@@ -1366,7 +1382,7 @@ void updateAnimations(Scene& scene, float dt)
             if (!e.model || !e.model->skeleton)
                 continue;
             const Skeleton& skeleton = *e.model->skeleton;
-            if (e.animator.current.clip < 0 && !e.animation.empty())
+            if (e.animator.current.clip < 0 && !e.animator.graph && !e.animation.empty())
                 e.animator.play(skeleton, e.animation, true, 1.0f, 0.0f);
             e.animator.update(skeleton, dt);
         }

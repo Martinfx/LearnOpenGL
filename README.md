@@ -146,6 +146,22 @@ AI nepřítele má klipy jako parametry (`anim_idle`, `anim_walk`, `anim_run`, `
 Nepřátelé jsou zatím lidský manekýn od Quaterniuse (CC0) se 46 animacemi (chůze, běh, míření a střelba z pistole, zásah, smrt), viz `assets/models/characters/CREDITS.md`. Skript `enemy.lua` je ozbrojený člověk: hlídkuje, pronásleduje, z dálky střílí a zblízka udeří.
 Z Blenderu: armatura + akce, export glTF 2.0 s volbou Animation (každá akce = jeden klip).
 
+### Animační graf
+
+Properties > Character > Animation graph přiřadí postavě soubor `.animgraph` (`assets/animgraphs/human.animgraph`
+pro všechny lidi se stejným rigem; nově přidaný nepřítel ho dostane sám). Graf má:
+
+- **Parametry** (`float`, `bool`, `trigger`), které nastavuje skript: `self:set_anim("speed", 3.2)`, `self:anim_trigger("hit")`.
+- **Vrstvy se stavy:** stav hraje klip, nebo **blend space** 1D (idle / chůze / běh podle `speed`) či 2D. Klipy v blend
+  space běží synchronně (stejná fáze kroku). Vyšší vrstva přepíše jen kosti pod **maskou** (např. `Bip01 Spine1`:
+  míření a střelba horní polovinou těla, nohy dál běží); stav `empty` vrstvu vypne.
+- **Přechody** s prolínáním, podmínkami (`dead`, `!aim`, `speed > 2`), exit time a zdrojem `*` (z jakéhokoli stavu).
+  Trigger se přechodem spotřebuje.
+- **Události v klipech** (`footstep`, `mag_out`): `self:anim_event("footstep")` je pravda ve snímku, kdy klip čas minul.
+  `enemy.lua` na ně přehraje zvuk kroku.
+
+Explicitní `self:play(klip)` graf dočasně přebije, `self:use_graph()` vrátí řízení grafu. V levelu je to řádek `  animgraph "cesta"`.
+
 ## Načítání
 
 - **Hra:** level se načítá na pozadí. Všechny soubory modelů se čtou paralelně na pracovních vláknech a každý jen jednou. Pak se meshe a textury pošlou na GPU, takže se ve hře už nedonahrávají. Mezitím běží načítací obrazovka s obrázkem, titulkem, nápovědou, progressbarem a právě načítanou položkou. Okno po celou dobu reaguje.

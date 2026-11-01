@@ -62,6 +62,12 @@ methods `:length()`, `:normalized()`, `:flat()` (y = 0), `:dot(other)`.
 | `:animation_done()` | A non-looping clip reached its end (it then holds the last frame) |
 | `animation_time` | Seconds into the current clip |
 | `:has_animation(clip)` | The model has this clip |
+| `:set_anim(param, value)` | Sets an animation graph parameter (number or bool); false if the entity has no graph or no such parameter |
+| `:get_anim(param)` | Current value of an animation graph parameter |
+| `:anim_trigger(param)` | Fires a graph trigger (`hit`, `shoot`); the transition that uses it consumes it |
+| `:anim_state(layer)` | Name of the state graph layer `layer` is in (1 = base, default) |
+| `:anim_event(name)` | A clip event of the graph (`footstep`, `mag_out`) fired in the last animation update |
+| `:use_graph()` | Ends a clip started with `:play` and hands the pose back to the graph |
 | `:move_to(target, speed)` | Walks along the navmesh around obstacles (re-plans as `target` moves); returns `true` on arrival. Without a navmesh it walks straight |
 | `flash` | Seconds of white hit flash (e.g. `self.flash = 0.12` in `on_damage`) |
 

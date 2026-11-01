@@ -713,7 +713,7 @@ void testScriptPropertiesFromEditor()
     std::vector<engine::ScriptProperty> props;
     std::string err;
     check(engine::readScriptProperties(ENGINE_TEST_ASSETS "/scripts/enemy.lua", props, &err), "read enemy.lua properties: " + err);
-    check(props.size() == 27 && props[0].name == "health" && props[0].defaultValue == "100", "enemy.lua declares 27 tunables, health first");
+    check(props.size() == 28 && props[0].name == "health" && props[0].defaultValue == "100", "enemy.lua declares 28 tunables, health first");
 
     // An editor override changes the behaviour: 40 hp dies after two 20-damage hits.
     auto s = flatFloor();
@@ -835,6 +835,55 @@ void testEnemyAnimations()
     check(loaded.entities.size() == 1 && loaded.entities[0].model && loaded.entities[0].modelScale == 1.25f
               && loaded.entities[0].modelYaw == 15.0f && loaded.entities[0].animation == "Wave",
           "character model, scale, yaw and clip are saved");
+}
+
+void testEnemyAnimGraph()
+{
+    // The enemy script drives human.animgraph: run speed while chasing, aim/shoot on the upper
+    // body, death on the base layer; the graph is saved with the level.
+    auto s = flatFloor();
+    s.playerStart = {0, 0, 0};
+    engine::Entity e = enemyAt({26, 0, 0}, 180.0f);
+    e.modelPath = ENGINE_TEST_ASSETS "/models/characters/humans/soldier.glb";
+    e.model = engine::loadCharacterModel(e.modelPath);
+    e.animation = "Idle_Loop";
+    e.animGraphPath = std::filesystem::path(ENGINE_TEST_ASSETS "/animgraphs/human.animgraph").lexically_normal();
+    e.animator.setGraph(engine::loadAnimGraph(e.animGraphPath));
+    check(e.animator.graph != nullptr, "human.animgraph loads");
+    s.entities.push_back(e);
+    engine::PhysicsWorld world;
+    world.setLevel(s);
+    engine::PlayerController player;
+    player.spawn(world, s.playerStart);
+    engine::ScriptSystem scripts(s, world, player, [](const std::string&) {});
+    scripts.start();
+    const engine::Skeleton& sk = *s.entities[0].model->skeleton;
+    bool ran = false, aimed = false, shot = false, stepped = false;
+    for (int i = 0; i < 300; ++i) {
+        scripts.fixedUpdate(1.0f / 60.0f);
+        engine::updateAnimations(s, 1.0f / 60.0f);
+        const engine::Animator& a = s.entities[0].animator;
+        ran = ran || (a.stateName() == "Locomotion" && a.param("speed") > 3.0f);
+        aimed = aimed || a.stateName(1) == "Aim";
+        shot = shot || a.stateName(1) == "Shoot";
+        stepped = stepped || std::find(a.graphState.events.begin(), a.graphState.events.end(), "footstep") != a.graphState.events.end();
+    }
+    check(ran, "chasing enemy runs in the locomotion blend space");
+    check(stepped, "running fires footstep events");
+    check(aimed && shot, "attacking enemy aims and shoots on the upper body layer");
+    for (int i = 0; i < 10; ++i)
+        scripts.damageEntity(0, 30.0f);
+    for (int i = 0; i < 200; ++i)
+        engine::updateAnimations(s, 1.0f / 60.0f);
+    check(s.entities[0].animator.stateName() == "Death" && s.entities[0].animator.finished(sk), "killed enemy plays the Death state to its end");
+
+    std::string err;
+    check(engine::saveScene(s, "graph.level", &err), "save level with an animation graph: " + err);
+    engine::Scene loaded;
+    check(engine::loadScene(loaded, "graph.level", &err) && loaded.entities.size() == 1 &&
+              loaded.entities[0].animGraphPath == s.entities[0].animGraphPath && loaded.entities[0].animator.graph,
+          "animation graph path is saved with the level");
+    std::filesystem::remove("graph.level");
 }
 
 void testScriptSyntaxCheck()
@@ -2814,6 +2863,116 @@ void testDistortParticles()
     fs::remove(file);
 }
 
+void testAnimGraph()
+{
+    // Synthetic skeleton: root -> Spine -> Hand. Clips move the root along x (A: 0, B: 10) and
+    // the spine (C: 5; C also moves the root, which the upper layer's mask must ignore).
+    engine::Skeleton sk;
+    sk.nodes = {{"Root", -1, {}, {1, 0, 0, 0}, {1, 1, 1}}, {"Spine", 0, {}, {1, 0, 0, 0}, {1, 1, 1}}, {"Hand", 1, {}, {1, 0, 0, 0}, {1, 1, 1}}};
+    auto clip = [](const char* name, float duration, std::vector<std::pair<int, float>> moves) {
+        engine::Skeleton::Clip c{name, duration, {}};
+        for (auto [node, x] : moves)
+            c.channels.push_back({node, engine::Skeleton::Path::Translation, false, {0.0f, duration}, {glm::vec4(x, 0, 0, 0), glm::vec4(x, 0, 0, 0)}});
+        return c;
+    };
+    sk.clips = {clip("A", 1.0f, {{0, 0.0f}}), clip("B", 2.0f, {{0, 10.0f}}), clip("C", 1.0f, {{0, 99.0f}, {1, 5.0f}})};
+
+    const std::filesystem::path dir = std::filesystem::temp_directory_path() / "animgraph_test";
+    std::filesystem::create_directories(dir);
+    {
+        std::ofstream f(dir / "t.animgraph");
+        f << "param \"speed\" float 0\nparam \"hit\" trigger\nparam \"aim\" bool 0\nparam \"x\" float 0\nparam \"y\" float 0\n"
+             "event \"A\" 0.5 \"step\"\n"
+             "layer \"Base\" \"\" 1 \"\"\nentry \"Loco\"\n"
+             "state \"Loco\" blend1d \"speed\" \"\" loop 1 speed 1\nsample \"A\" 0\nsample \"B\" 2\n"
+             "state \"Hit\" clip \"\" \"\" loop 0\nsample \"A\"\n"
+             "state \"Grid\" blend2d \"x\" \"y\"\nsample \"A\" 0 0\nsample \"B\" 1 0\nsample \"A\" 0 1\nsample \"B\" 1 1\n"
+             "transition \"Loco\" \"Hit\" 0 -1 hit\ntransition \"Hit\" \"Loco\" 0 1\ntransition \"*\" \"Grid\" 0 -1 speed > 50\n"
+             "layer \"Upper\" \"Spine\" 1 \"\"\nentry \"Off\"\nstate \"Off\" empty\nstate \"Aim\" clip\nsample \"C\"\n"
+             "transition \"Off\" \"Aim\" 0 -1 aim\ntransition \"Aim\" \"Off\" 0.5 -1 !aim\n";
+    }
+    std::string error;
+    engine::AnimGraph g;
+    check(engine::loadAnimGraphFile(g, dir / "t.animgraph", &error), "anim graph loads: " + error);
+    check(g.layers.size() == 2 && g.layers[0].states.size() == 3 && g.layers[0].transitions.size() == 3 && g.params.size() == 5,
+          "anim graph layers, states, transitions and parameters");
+    check(g.layers[0].transitions[2].from == -1 && g.layers[0].transitions[2].conditions[0].op == engine::AnimGraph::Op::Greater,
+          "from-any transition with a comparison");
+    check(engine::saveAnimGraphFile(g, dir / "copy.animgraph", &error), "anim graph saves");
+    engine::AnimGraph copy;
+    check(engine::loadAnimGraphFile(copy, dir / "copy.animgraph", &error) && copy.layers[1].maskBone == "Spine" &&
+              copy.layers[0].states[2].samples.size() == 4 && copy.layers[0].transitions[1].exitTime == 1.0f && copy.events.size() == 1,
+          "anim graph round trip");
+    engine::AnimGraph bad;
+    {
+        std::ofstream f(dir / "bad.animgraph");
+        f << "layer \"Base\"\nstate \"S\" clip\ntransition \"S\" \"Nope\" 0.2 -1\n";
+    }
+    check(!engine::loadAnimGraphFile(bad, dir / "bad.animgraph", &error) && error.find("Nope") != std::string::npos,
+          "transition to an unknown state is an error");
+
+    engine::Animator a;
+    a.setGraph(std::make_shared<engine::AnimGraph>(g));
+    std::vector<glm::mat4> pose;
+    auto rootX = [&] { engine::evaluatePose(sk, &a, pose); return pose[0][3].x; };
+    check(a.setParam("speed", 1.0f) && !a.setParam("missing", 1.0f), "parameters by name");
+    a.update(sk, 0.0f);
+    check(std::abs(rootX() - 5.0f) < 1e-3f, "blend 1D halfway between A (0) and B (10)");
+    a.update(sk, 0.75f); // synced phase: one pass takes 0.5 * 1 + 0.5 * 2 = 1.5 s
+    check(std::abs(a.graphState.layers[0].phase - 0.5f) < 1e-3f, "blend space samples share one phase");
+    check(a.stateName() == "Loco" && a.clipName(sk) == "Loco", "state name");
+
+    a.setParam("speed", 0.0f);
+    a.update(sk, 0.0f);
+    a.graphState.layers[0].phase = 0.4f; // only A plays: its event at 0.5 s fires on the way past
+    a.update(sk, 0.2f);
+    check(std::find(a.graphState.events.begin(), a.graphState.events.end(), "step") != a.graphState.events.end(), "clip event fires");
+    a.update(sk, 0.2f);
+    check(a.graphState.events.empty(), "events last one update");
+
+    a.trigger("hit");
+    a.update(sk, 0.01f);
+    check(a.stateName() == "Hit" && a.param("hit") == 0.0f, "trigger moves to Hit and is consumed");
+    a.update(sk, 0.5f);
+    check(a.stateName() == "Hit", "Hit waits for its exit time");
+    a.update(sk, 0.6f);
+    check(a.stateName() == "Loco" && !a.finished(sk), "back to locomotion at the end of the clip");
+
+    // Upper layer: C moves the spine to 5 but its root key (99) is outside the mask.
+    a.setParam("aim", 1.0f);
+    a.update(sk, 0.01f);
+    engine::evaluatePose(sk, &a, pose);
+    check(a.stateName(1) == "Aim" && std::abs(pose[1][3].x - 5.0f) < 1e-3f && std::abs(pose[0][3].x) < 1e-3f, "masked layer moves only the spine");
+    check(std::abs(pose[2][3].x - 5.0f) < 1e-3f, "bones under the mask follow");
+    a.setParam("aim", 0.0f);
+    a.update(sk, 0.0f);  // leaves Aim
+    a.update(sk, 0.25f); // fading out over 0.5 s: halfway
+    engine::evaluatePose(sk, &a, pose);
+    check(a.stateName(1) == "Off" && std::abs(pose[1][3].x - 2.5f) < 0.05f, "empty state fades the layer out");
+
+    // Explicit clips override the graph; stop() hands control back.
+    a.play(sk, "B", true, 1.0f, 0.0f);
+    check(!a.graphActive() && std::abs(rootX() - 10.0f) < 1e-3f, "play() overrides the graph");
+    a.stop();
+    check(a.graphActive(), "stop() returns to the graph");
+
+    // From any state to the 2D blend space; corner and centre weights.
+    a.setParam("speed", 60.0f);
+    a.setParam("x", 1.0f);
+    a.setParam("y", 1.0f);
+    a.update(sk, 0.0f);
+    check(a.stateName() == "Grid" && std::abs(rootX() - 10.0f) < 1e-3f, "blend 2D at a corner plays that sample");
+    a.setParam("x", 0.5f);
+    a.setParam("y", 0.5f);
+    check(std::abs(rootX() - 5.0f) < 1e-3f, "blend 2D in the centre mixes evenly");
+
+    engine::Animator shared;
+    auto cached = engine::loadAnimGraph(dir / "t.animgraph");
+    check(cached && cached == engine::loadAnimGraph(dir / "t.animgraph"), "graphs are cached per path");
+    check(engine::loadAnimGraph(ENGINE_TEST_ASSETS "/animgraphs/human.animgraph", &error) != nullptr, "human.animgraph loads: " + error);
+    std::filesystem::remove_all(dir);
+}
+
 void testTaskGraph()
 {
     engine::TaskGraph graph;
@@ -2866,7 +3025,7 @@ int main()
     // Hermetic cook cache for the tests.
     engine::textureCookConfig().cacheDir = std::filesystem::current_path() / "texture_cache";
     std::filesystem::remove_all(engine::textureCookConfig().cacheDir);
-    const std::set<std::string> needAssets = {"testAnimatedCharacter",      "testEnemyAnimations", "testHierarchyAndDependencies",
+    const std::set<std::string> needAssets = {"testAnimatedCharacter",      "testEnemyAnimations", "testEnemyAnimGraph", "testHierarchyAndDependencies",
                                               "testLevelWithModel",         "testMaterialsAndTextures", "testPhysicsProps",
                                               "testSharedMeshes",           "testTexturedWeaponModel", "testWeaponFilesAndLoadout"};
     const bool assets = lfsAssetsPresent();
@@ -2937,6 +3096,8 @@ int main()
         {"testParticleEvents", testParticleEvents},
         {"testDistortParticles", testDistortParticles},
         {"testTaskGraph", testTaskGraph},
+        {"testAnimGraph", testAnimGraph},
+        {"testEnemyAnimGraph", testEnemyAnimGraph},
         {"testWorldStreaming", testWorldStreaming},
     };
     for (const auto& [name, run] : tests)

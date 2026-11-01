@@ -520,7 +520,21 @@ void ScriptSystem::Impl::bindApi()
         "has_animation", [](ScriptEntity& s, const std::string& clip) {
             const Entity& e = s.e();
             return e.model && e.model->skeleton && e.model->skeleton->findClip(clip) >= 0;
-        });
+        },
+        // Animation graph (.animgraph): parameters drive states and blend spaces.
+        "set_anim", [](ScriptEntity& s, const std::string& name, sol::object value) {
+            Entity& e = s.e();
+            const float v = value.is<bool>() ? (value.as<bool>() ? 1.0f : 0.0f) : value.is<double>() ? static_cast<float>(value.as<double>()) : 0.0f;
+            return e.animator.setParam(name, v);
+        },
+        "get_anim", [](ScriptEntity& s, const std::string& name) { return s.e().animator.param(name); },
+        "anim_trigger", [](ScriptEntity& s, const std::string& name) { return s.e().animator.trigger(name); },
+        "anim_state", [](ScriptEntity& s, sol::optional<int> layer) { return s.e().animator.stateName(layer.value_or(1) - 1); },
+        "anim_event", [](ScriptEntity& s, const std::string& name) {
+            const auto& events = s.e().animator.graphState.events;
+            return std::find(events.begin(), events.end(), name) != events.end();
+        },
+        "use_graph", [](ScriptEntity& s) { s.e().animator.stop(); });
 
     sol::table game = lua.create_named_table("game");
     game.set_function("player_position", [this] { return player.feet(); });

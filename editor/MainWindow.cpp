@@ -1184,6 +1184,56 @@ void MainWindow::buildDocks()
     characterForm->addRow(tr("Model scale"), modelScaleSpin_);
     characterForm->addRow(tr("Model yaw"), modelYawSpin_);
     characterForm->addRow(tr("Animation"), animationCombo_);
+    // Animation graph (.animgraph): states, blend spaces and layers driven by the script's parameters.
+    animGraphRow_ = new QWidget(boxPanel_);
+    {
+        auto* row = new QHBoxLayout(animGraphRow_);
+        row->setContentsMargins(0, 0, 0, 0);
+        animGraphEdit_ = new QLineEdit(animGraphRow_);
+        animGraphEdit_->setReadOnly(true);
+        animGraphEdit_->setPlaceholderText(tr("none (plays the clip above)"));
+        auto* browse = new QPushButton(tr("..."), animGraphRow_);
+        auto* clear = new QPushButton(tr("x"), animGraphRow_);
+        browse->setFixedWidth(32);
+        clear->setFixedWidth(32);
+        row->addWidget(animGraphEdit_);
+        row->addWidget(browse);
+        row->addWidget(clear);
+        animGraphRow_->setToolTip(tr("Animation graph: the script sets its parameters (speed, aim, dead...) and the graph picks "
+                                     "and blends the clips. Without one the Animation clip loops."));
+        connect(browse, &QPushButton::clicked, this, [this] {
+            auto* e = selectedEntity();
+            if (!e || !e->model)
+                return;
+            const QString start = e->animGraphPath.empty() ? assetPath("animgraphs") : QString::fromStdU16String(e->animGraphPath.u16string());
+            const QString path = QFileDialog::getOpenFileName(this, tr("Animation graph"), start, tr("Animation graphs (*.animgraph);;All files (*)"));
+            if (path.isEmpty())
+                return;
+            std::string error;
+            auto graph = engine::loadAnimGraph(std::filesystem::path(path.toStdU16String()), &error);
+            if (!graph) {
+                QMessageBox::warning(this, tr("Animation graph"), QString::fromStdString(error));
+                return;
+            }
+            e->animGraphPath = graph->sourcePath;
+            e->animator.stop();
+            e->animator.setGraph(graph);
+            refreshProperties();
+            markDirty();
+        });
+        connect(clear, &QPushButton::clicked, this, [this] {
+            auto* e = selectedEntity();
+            if (!e || e->animGraphPath.empty())
+                return;
+            e->animGraphPath.clear();
+            e->animator.setGraph(nullptr);
+            if (e->model && e->model->skeleton && !e->animation.empty())
+                e->animator.play(*e->model->skeleton, e->animation, true, 1.0f, 0.2f, true);
+            refreshProperties();
+            markDirty();
+        });
+    }
+    characterForm->addRow(tr("Animation graph"), animGraphRow_);
     characterFlashlight_ = new QComboBox(boxPanel_);
     characterFlashlight_->addItems({tr("None"), tr("Always on"), tr("On at night")});
     characterFlashlight_->setToolTip(tr("A spot light from the eyes along the facing while the character lives "
@@ -1229,7 +1279,8 @@ void MainWindow::buildDocks()
         if (!e || !e->model || !e->model->skeleton || clip.toStdString() == e->animation)
             return;
         e->animation = clip.toStdString();
-        e->animator.play(*e->model->skeleton, e->animation, true, 1.0f, 0.2f, true);
+        if (!e->animator.graph) // with a graph the preview shows the graph's entry states
+            e->animator.play(*e->model->skeleton, e->animation, true, 1.0f, 0.2f, true);
         markDirty();
     });
 
@@ -3504,8 +3555,15 @@ void MainWindow::addEntity(const QString& type)
         if (QFileInfo::exists(human)) {
             e.modelPath = std::filesystem::path(human.toStdU16String());
             e.model = engine::loadCharacterModel(e.modelPath);
-            if (e.model)
+            if (e.model) {
                 e.animation = "Idle_Loop";
+                // The bundled humans share one rig: the human graph drives them.
+                const QString graph = assetPath("animgraphs/human.animgraph");
+                if (human.contains("/humans/") && QFileInfo::exists(graph)) {
+                    e.animGraphPath = std::filesystem::path(graph.toStdU16String());
+                    e.animator.setGraph(engine::loadAnimGraph(e.animGraphPath));
+                }
+            }
             else
                 e.modelPath.clear();
         }
@@ -3666,6 +3724,9 @@ void MainWindow::refreshCharacter()
     }
     animationCombo_->setEnabled(animationCombo_->count() > 0);
     animationCombo_->blockSignals(false);
+    animGraphRow_->setEnabled(hasModel && e->model->skeleton);
+    animGraphEdit_->setText(e && !e->animGraphPath.empty() ? QString::fromStdU16String(e->animGraphPath.filename().u16string()) : QString());
+    animGraphEdit_->setToolTip(e && !e->animGraphPath.empty() ? QString::fromStdU16String(e->animGraphPath.u16string()) : QString());
     {
         const QSignalBlocker block(characterFlashlight_);
         int lit = 0;

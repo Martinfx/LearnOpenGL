@@ -33,6 +33,9 @@ properties = {
     { "anim_hit",        "Hit_Chest",          "Clip played when hurt" },
     { "anim_death",      "Death01",            "Clip played once when killed" },
     { "anim_speed",      1.0,                  "Playback speed multiplier for all clips" },
+    -- With an animation graph (Properties > Character > Animation graph) the clips above are
+    -- ignored except anim_attack: the graph's parameters are driven instead.
+    { "sound_step",      "sounds/player/step_dirt.sound", "Footstep sound on the graph's footstep events (empty = silent)" },
 }
 
 local state, timer, home, last_seen, patrol_target, next_attack
@@ -41,6 +44,9 @@ local reacting = 0      -- seconds left of the hit reaction clip
 local moving = false   -- set by walk_to, picks walk/run vs. idle animation
 local seat, seated      -- sit point entity while resting, true once sitting on it
 local rest_for = 0      -- seconds this rest lasts
+local graph             -- the character has an animation graph (decided on the first update)
+local anim_speed = 0    -- smoothed movement speed fed to the graph, m/s
+local punching = false  -- an explicit punch clip overrides the graph until it ends
 
 local function distance(a, b) return (b - a):flat():length() end
 
@@ -143,7 +149,9 @@ function on_damage(self, amount)
     hurt_flash = 0.1
     self.flash = 0.12
     last_seen = game.player_position()
-    if self.alive and self:play(props.anim_hit, { loop = false, restart = true, fade = 0.05, speed = props.anim_speed }) then
+    if graph then
+        if self.alive then self:anim_trigger("hit"); reacting = 0.35 end
+    elseif self.alive and self:play(props.anim_hit, { loop = false, restart = true, fade = 0.05, speed = props.anim_speed }) then
         reacting = 0.35
     end
     if state ~= "attack" then set_state(self, "chase") end
@@ -164,11 +172,41 @@ end
 function on_death(self)
     self:log("destroyed")
     release_seat(self)
-    self:play(props.anim_death, { loop = false, fade = 0.1, speed = props.anim_speed })
+    if graph then
+        self:use_graph()
+        self:set_anim("dead", true)
+    else
+        self:play(props.anim_death, { loop = false, fade = 0.1, speed = props.anim_speed })
+    end
+end
+
+-- Animation graph: movement speed, sitting and aiming as parameters; footsteps from clip events.
+local function animate_graph(self, dt)
+    if punching then
+        if not self:animation_done() then return end
+        self:use_graph()
+        punching = false
+    end
+    local target = 0
+    if moving then target = state == "chase" and props.run_speed or props.walk_speed end
+    anim_speed = anim_speed + (target - anim_speed) * math.min(1, dt * 8)
+    self:set_anim("speed", anim_speed)
+    self:set_anim("sit", state == "rest" and seated == true)
+    self:set_anim("aim", state == "attack")
+    if state == "attack" then
+        local eye, player = self:eye(), game.player_eye()
+        local pitch = math.atan(player.y - eye.y, math.max(distance(eye, player), 0.5))
+        self:set_anim("aim_pitch", math.max(-1, math.min(1, pitch / math.rad(45))))
+    end
+    if props.sound_step ~= "" and self:anim_event("footstep") then
+        game.play_sound(props.sound_step, self.position, 0.6)
+    end
 end
 
 -- Chooses the clip for the current state; no-op for entities without a character model.
-local function animate(self)
+local function animate(self, dt)
+    if graph == nil then graph = self:set_anim("speed", 0) end
+    if graph then return animate_graph(self, dt) end
     local speed = props.anim_speed
     if reacting > 0 then return end
     if state == "attack" then
@@ -234,7 +272,7 @@ function on_update(self, dt)
             if dist <= props.melee_range then
                 game.damage_player(props.melee_damage)
                 next_attack = game.time() + 1.0
-                self:play(props.anim_attack, { loop = false, restart = true, fade = 0.1, speed = props.anim_speed })
+                if self:play(props.anim_attack, { loop = false, restart = true, fade = 0.1, speed = props.anim_speed }) then punching = graph end
             else
                 -- Hit chance falls off with distance; misses still make noise and keep the player moving.
                 local chance = math.min(0.95, math.max(0.05, props.accuracy * 10 / math.max(dist, 1)))
@@ -244,7 +282,8 @@ function on_update(self, dt)
                     game.play_sound(props.sound_shot, vec3(p.x, p.y + 1.4, p.z))
                 end
                 next_attack = game.time() + props.shot_interval * (0.8 + 0.4 * math.random())
-                self:play(props.anim_shoot, { loop = false, restart = true, fade = 0.05, speed = props.anim_speed })
+                if graph then self:anim_trigger("shoot")
+                else self:play(props.anim_shoot, { loop = false, restart = true, fade = 0.05, speed = props.anim_speed }) end
             end
         end
     elseif state == "search" then
@@ -257,7 +296,7 @@ function on_update(self, dt)
         if walk_to(self, home, props.walk_speed) then set_state(self, "patrol") end
     end
 
-    animate(self)
+    animate(self, dt)
 
     -- ai_debug 1 (console): state, health and the view cone above every enemy.
     if game.cvar("ai_debug") == "1" then

@@ -1,0 +1,100 @@
+#pragma once
+#include <filesystem>
+#include <memory>
+#include <string>
+#include <vector>
+
+namespace engine {
+
+// Animation graph (.animgraph, edited in the Animation editor): parameters set by scripts and
+// the game (speed, aiming, a death trigger), layers of states with transitions between them.
+// A state plays one clip or blends several by one or two parameters (blend space: idle / walk /
+// run by speed; aim up / down by pitch). Upper layers override the bones under a mask bone
+// (shooting with the upper body while the legs walk). Clips can carry named events (footstep,
+// magazine out) that fire when playback passes them.
+struct AnimGraph {
+    enum class ParamType { Float, Bool, Trigger };
+    struct Param {
+        std::string name;
+        ParamType type = ParamType::Float;
+        float value = 0.0f; // default
+    };
+    struct Sample {
+        std::string clip;
+        float x = 0.0f, y = 0.0f; // position in the blend space
+        float speed = 1.0f;
+    };
+    enum class StateKind { Clip, Blend1D, Blend2D, Empty };
+    struct State {
+        std::string name;
+        StateKind kind = StateKind::Clip;
+        std::vector<Sample> samples; // Clip: one; blend spaces: several; Empty: none (layer off)
+        std::string paramX, paramY;  // blend space parameters
+        bool loop = true;
+        float speed = 1.0f;
+        float editorX = 0.0f, editorY = 0.0f; // node position in the editor's graph
+    };
+    enum class Op { IsTrue, IsFalse, Greater, Less, GreaterEq, LessEq, Equal, NotEqual };
+    struct Condition {
+        std::string param;
+        Op op = Op::IsTrue;
+        float value = 0.0f;
+    };
+    struct Transition {
+        int from = -1;            // state index, -1 = from any state
+        int to = 0;
+        float duration = 0.2f;    // crossfade seconds
+        float exitTime = -1.0f;   // 0..1 of the source state's clip before it may leave, -1 = any time
+        std::vector<Condition> conditions; // all must hold (none: leaves at the exit time)
+    };
+    struct Layer {
+        std::string name = "Base";
+        std::string maskBone;     // empty = every bone; else this bone and everything below it
+        float weight = 1.0f;
+        std::string weightParam;  // empty = `weight`; else a float parameter 0..1
+        std::vector<State> states;
+        std::vector<Transition> transitions;
+        int entry = 0;            // state the layer starts in
+    };
+    struct Event {
+        std::string clip;
+        float time = 0.0f;        // seconds into the clip
+        std::string name;         // "footstep", "mag_out", ...
+    };
+
+    std::filesystem::path sourcePath;
+    std::vector<Param> params;
+    std::vector<Layer> layers;
+    std::vector<Event> events;
+
+    int findParam(const std::string& name) const;  // -1 if missing
+    int findState(int layer, const std::string& name) const;
+};
+
+const char* animOpText(AnimGraph::Op op); // "", "!", ">", "<", ">=", "<=", "==", "!="
+
+bool loadAnimGraphFile(AnimGraph& graph, const std::filesystem::path& file, std::string* error = nullptr);
+bool saveAnimGraphFile(const AnimGraph& graph, const std::filesystem::path& file, std::string* error = nullptr);
+// Cached per path: entities with the same graph share it; the editor edits it in place.
+std::shared_ptr<AnimGraph> loadAnimGraph(const std::filesystem::path& file, std::string* error = nullptr);
+
+// Playback state of a graph on one character (part of engine::Animator).
+struct AnimGraphState {
+    struct Layer {
+        int state = -1, previous = -1;
+        float phase = 0.0f, previousPhase = 0.0f; // 0..1 through the state's clips (blend spaces in sync)
+        float time = 0.0f;                        // normalized time in the state, not wrapped (exit times)
+        float fade = 0.0f, fadeDuration = 0.0f;   // crossfade from `previous`, seconds
+    };
+    std::vector<Layer> layers;
+    std::vector<float> params;          // by AnimGraph::params index
+    std::vector<std::string> events;    // fired during the last update (the next update clears them)
+    const void* resolvedFor = nullptr;  // skeleton the indices below belong to (nullptr = resolve again)
+    const void* resolvedGraph = nullptr;
+    std::vector<int> stateBase;         // per layer: index of its first state in `clips`
+    std::vector<std::vector<int>> clips; // per state (stateBase[layer] + state): clip index per sample
+    std::vector<int> maskNode;          // per layer: mask bone node, -1 = all bones
+    std::vector<int> eventClip;         // per AnimGraph::events entry: clip index
+};
+
+} // namespace engine

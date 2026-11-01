@@ -271,6 +271,7 @@ struct Entity {
     float modelScale = 1.0f;             // multiplier on top of the fit to size.y
     float modelYaw = 0.0f;               // degrees, added when the model does not face +Z
     std::string animation;               // clip played when no script chooses one (editor preview)
+    std::filesystem::path animGraphPath; // absolute .animgraph, empty = plays `animation`
 
     std::shared_ptr<const Model> model;  // runtime: loaded from modelPath
     Animator animator;                   // runtime

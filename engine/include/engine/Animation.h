@@ -1,8 +1,11 @@
 #pragma once
+#include "engine/AnimGraph.h"
+
 #include <glm/gtc/quaternion.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -45,6 +48,8 @@ struct Skeleton {
 
 // Playback state of one animated object: the current clip plus a crossfade
 // from the previous one, so switching walk -> run -> attack is smooth.
+// With an animation graph the graph drives the pose (states, blend spaces, layers) while no
+// clip is played explicitly: play() overrides the graph, stop() hands control back to it.
 struct Animator {
     struct Track {
         int clip = -1;
@@ -64,7 +69,18 @@ struct Animator {
     void stop();
     void update(const Skeleton& skeleton, float dt);
     bool finished(const Skeleton& skeleton) const; // a non-looping clip reached its end
-    std::string clipName(const Skeleton& skeleton) const;
+    std::string clipName(const Skeleton& skeleton) const; // clip, or the base layer's state with a graph
+
+    std::shared_ptr<const AnimGraph> graph;
+    AnimGraphState graphState;
+    void setGraph(std::shared_ptr<const AnimGraph> g);
+    bool graphActive() const { return graph && current.clip < 0; }
+    bool setParam(const std::string& name, float value); // false if the graph has no such parameter
+    float param(const std::string& name) const;
+    bool trigger(const std::string& name);               // sets a trigger; a transition using it consumes it
+    std::string stateName(int layer = 0) const;
+    // Re-reads clip and bone names after the graph was edited (keeps parameters and states when possible).
+    void graphChanged() { graphState.resolvedFor = nullptr; }
 };
 
 // Model-space matrix of every node for the animator's current pose

@@ -1,0 +1,66 @@
+# Animation graph (editor: Animation editor). Clip names come from the character's glTF file.
+# Human NPC (bandit, soldier, stalker, worker): the enemy script sets speed / crouch / sit / aim /
+# aim_pitch / dead and fires hit / shoot / reload. Footstep times are the heel strikes of each clip.
+param "speed" float 0
+param "crouch" bool 0
+param "sit" bool 0
+param "dead" bool 0
+param "hit" trigger 0
+param "aim" bool 0
+param "aim_pitch" float 0
+param "shoot" trigger 0
+param "reload" trigger 0
+event "Walk_Loop" 0.622 "footstep"
+event "Walk_Loop" 1.289 "footstep"
+event "Jog_Fwd_Loop" 0.016 "footstep"
+event "Jog_Fwd_Loop" 0.482 "footstep"
+event "Sprint_Loop" 0 "footstep"
+event "Sprint_Loop" 0.333 "footstep"
+event "Crouch_Fwd_Loop" 0 "footstep"
+event "Crouch_Fwd_Loop" 0.967 "footstep"
+event "Pistol_Reload" 0.35 "mag_out"
+event "Pistol_Reload" 1.1 "mag_in"
+
+layer "Base" "" 1 ""
+entry "Locomotion"
+state "Locomotion" blend1d "speed" "" loop 1 speed 1 at 0 0
+sample "Idle_Loop" 0 0 1
+sample "Walk_Loop" 1.4 0 1
+sample "Jog_Fwd_Loop" 4 0 1
+sample "Sprint_Loop" 6.5 0 1
+state "Crouch" blend1d "speed" "" loop 1 speed 1 at 0 160
+sample "Crouch_Idle_Loop" 0 0 1
+sample "Crouch_Fwd_Loop" 1.2 0 1
+state "Sit" clip "" "" loop 1 speed 1 at -220 0
+sample "Sitting_Idle_Loop" 0 0 1
+state "Hit" clip "" "" loop 0 speed 1 at 220 0
+sample "Hit_Chest" 0 0 1
+state "Death" clip "" "" loop 0 speed 1 at 220 160
+sample "Death01" 0 0 1
+transition "*" "Death" 0.15 -1 dead
+transition "Locomotion" "Crouch" 0.25 -1 crouch !dead
+transition "Crouch" "Locomotion" 0.25 -1 !crouch
+transition "Locomotion" "Sit" 0.4 -1 sit
+transition "Sit" "Locomotion" 0.4 -1 !sit
+transition "Locomotion" "Hit" 0.05 -1 hit !dead
+transition "Crouch" "Hit" 0.05 -1 hit !dead
+transition "Hit" "Locomotion" 0.2 0.85
+
+layer "Upper body" "Bip01 Spine1" 1 ""
+entry "Off"
+state "Off" empty "" "" loop 1 speed 1 at 0 0
+state "Aim" blend1d "aim_pitch" "" loop 1 speed 1 at 220 0
+sample "Pistol_Aim_Down" -1 0 1
+sample "Pistol_Aim_Neutral" 0 0 1
+sample "Pistol_Aim_Up" 1 0 1
+state "Shoot" clip "" "" loop 0 speed 1 at 440 0
+sample "Pistol_Shoot" 0 0 1
+state "Reload" clip "" "" loop 0 speed 1 at 220 160
+sample "Pistol_Reload" 0 0 1
+transition "*" "Off" 0.1 -1 dead
+transition "Off" "Aim" 0.2 -1 aim !dead
+transition "Aim" "Off" 0.25 -1 !aim
+transition "Aim" "Shoot" 0.05 -1 shoot
+transition "Shoot" "Aim" 0.1 0.9
+transition "Aim" "Reload" 0.2 -1 reload
+transition "Reload" "Aim" 0.2 0.95

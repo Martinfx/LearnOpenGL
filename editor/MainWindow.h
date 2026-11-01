@@ -336,6 +336,8 @@ private:
     QDoubleSpinBox* modelScaleSpin_ = nullptr;
     QDoubleSpinBox* modelYawSpin_ = nullptr;
     QComboBox* animationCombo_ = nullptr;
+    QLineEdit* animGraphEdit_ = nullptr;
+    QWidget* animGraphRow_ = nullptr;
     std::vector<engine::ScriptProperty> scriptProps_;
     std::vector<std::pair<QDoubleSpinBox*, float engine::PlayerSettings::*>> playerSpins_;
     QCheckBox* flashlightCheck_ = nullptr;
