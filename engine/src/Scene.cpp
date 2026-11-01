@@ -1316,15 +1316,19 @@ glm::mat4 Entity::modelTransform() const
 
 void updateAnimations(Scene& scene, float dt)
 {
-    for (Entity& e : scene.entities) {
-        e.flash = std::max(0.0f, e.flash - dt);
-        if (!e.model || !e.model->skeleton)
-            continue;
-        const Skeleton& skeleton = *e.model->skeleton;
-        if (e.animator.current.clip < 0 && !e.animation.empty())
-            e.animator.play(skeleton, e.animation, true, 1.0f, 0.0f);
-        e.animator.update(skeleton, dt);
-    }
+    // Each entity's animator only touches its own state: spread over the job system.
+    JobSystem::global().parallelFor(scene.entities.size(), 32, [&scene, dt](std::size_t begin, std::size_t end) {
+        for (std::size_t i = begin; i < end; ++i) {
+            Entity& e = scene.entities[i];
+            e.flash = std::max(0.0f, e.flash - dt);
+            if (!e.model || !e.model->skeleton)
+                continue;
+            const Skeleton& skeleton = *e.model->skeleton;
+            if (e.animator.current.clip < 0 && !e.animation.empty())
+                e.animator.play(skeleton, e.animation, true, 1.0f, 0.0f);
+            e.animator.update(skeleton, dt);
+        }
+    });
 }
 
 Aabb Scene::objectBounds(int object) const

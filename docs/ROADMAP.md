@@ -114,7 +114,7 @@ Podrobně ve výkonové roadmapě vlákna "Vytvořit 3D FPS engine"; tady jen sh
 - [x] Occlusion culling: max-depth kopie depth pre-passu (160 px), asynchronní readback přes PBO + fence, CPU test buněk a modelů; přepínač v doku Frame, `FPS_ENGINE_NO_OCCLUSION=1`
 - [x] Víc LOD úrovní na model (`lod` víckrát s rostoucí vzdáleností; v editoru Details > Far LODs)
 - [x] Impostory pro vzdálené stromy *Hotovo (2026-11-01): renderer upeče z modelu dva pohledy (zepředu a z boku, základní barva bez světla, ortograficky, 2 × 256 px) a z nich dva překřížené čtverce s alpha mask; peče se na začátku snímku, až jsou textury modelu na GPU, nejvýš 8 za snímek. Zapíná se vzdáleností: u modelu `impostor <m>` (Details › Rendering › Impostor distance), u typu vegetace `foliage_impostor <m>` (Foliage › Impostor distance); je to poslední LOD, platí lodScale presetu, prochází multi-draw, stíny i vítr. Skrunda-1 (stromy od 90 m): 2,65 → 2,45 M trojúhelníků při stejném obrazu. Stromy v zone/hospital_street mají LOD1 už jako pár karet, tam se nezapínají. Pro měření `FPS_ENGINE_NO_IMPOSTORS=1` (přepínače `FPS_ENGINE_NO_*` teď přežijí nastavení presetu).*
-- [ ] Data entit a modelů v souvislých polích (ECS-like: transformace, hranice a flagy v SoA), paralelní update přes JobSystem
+- [x] Data entit a modelů v souvislých polích (ECS-like: transformace, hranice a flagy v SoA), paralelní update přes JobSystem *Hotovo (2026-11-01): mřížka modelů v rendereru drží transformace, hranice, cull distance a flagy (stíny, animace) v souvislých polích; přestaví se paralelně jen při změně modelů. Culling po modelech běží na JobSystemu (`parallelFor` nad kandidáty z viditelných buněk, čte jen tato pole, bez GL), kreslení pak jde v pevném pořadí, takže dávky a streamování textur jsou stejné jako dřív (hospital_street: stejné draw cally, trojúhelníky i obraz). Animace entit (`updateAnimations`) se počítají paralelně po entitách.*
 - [ ] Snímek jako graf úloh v JobSystemu (animace, culling, skripty paralelně), pak render vlákno
 
 Hotovo, když: zóna (`zone.level`) běží na střední kartě nad 60 FPS na High, editor ukazuje čas snímku a paměť, žádné záseky při chůzi.
@@ -250,7 +250,7 @@ Hotovo, když: zóna 1 × 1 km jde projít bez načítací obrazovky a paměť d
 
 ## 5. Nejbližší kroky
 
-1. Dokončit M0 (zbývá SoA data a graf úloh).
+1. Dokončit M0 (zbývá graf úloh snímku).
 2. M0.5 Základy v pořadí: logování → asserty a crash handler → GUID entit → cvars a konzole → konfigurace → smoke test v CI → debug kreslení → GL ladění.
 3. Mezitím rychlé opravy z hraní (ruce stejné u všech zbraní). Potom zbytek M1: UI hry a credits → stavy hry → okno a ovládání → uložení hry → lokální světla → **baterka, táborák, expozice a LUT** → fyzika v levelu → propojení entit → audio dál a vrstvený ambient.
 4. Střídání dne a noci hned po M1 (začátek M2/M3), s ním déšť a bouřka, pak volumetrická mlha a tmavé interiéry (M3) a A-Life (M4).

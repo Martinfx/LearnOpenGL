@@ -331,13 +331,21 @@ private:
         const Scene* scene = nullptr;
         std::uint64_t hash = 0;
         std::vector<ModelCell> cells;
+        // Per model, packed (structure of arrays) for the culling loop on the job system.
+        static constexpr std::uint8_t kCastShadows = 1, kAnimated = 2;
         std::vector<Aabb> bounds;         // world bounds per model
+        std::vector<glm::mat4> transforms; // Model::transform()
+        std::vector<float> cullDistance;
+        std::vector<std::uint8_t> flags;  // kCastShadows, kAnimated
         std::vector<float> diagonal;
         std::vector<float> random;        // 0..1 per model (detail thinning)
         std::vector<std::uint8_t> detail; // grass-like model
         int rebuilds = 0;
     };
     ModelGrid grid_;
+    std::vector<std::uint32_t> cullCandidates_; // scratch of drawGeometry()
+    std::vector<float> cullDistances_;
+    std::vector<std::uint8_t> cullDrawn_;
     // Occlusion culling (CPU test against a small max-depth copy read back without stalls).
     struct OcclusionReadback {
         unsigned pbo = 0;

@@ -1062,9 +1062,11 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
     const bool mainPass = !depthOnly && shadowCascade_ < 0;
     const bool shadowPass = shadowCascade_ >= 0;
     const ModelGrid& grid = grid_;
+    // 1. Whole cells first: beyond every cull distance inside, out of the frustum, or
+    //    (far shadow cascades) only small casters. The models of the rest are candidates.
+    std::vector<std::uint32_t>& candidates = cullCandidates_;
+    candidates.clear();
     for (const ModelCell& cell : grid.cells) {
-        // Whole cells first: beyond every cull distance inside, out of the frustum, or
-        // (far shadow cascades) only small casters.
         const float cellDistance = distanceTo(view.cameraPosition, cell.bounds);
         const bool cellFar = cell.maxCull > 0.0f && cellDistance > cell.maxCull;
         const bool cellTiny = shadowMinCaster_ > 0.0f && cell.maxDiagonal < shadowMinCaster_;
@@ -1075,20 +1077,40 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
             culled_ += static_cast<int>(cell.models.size());
             continue;
         }
-        for (std::uint32_t i : cell.models) {
+        candidates.insert(candidates.end(), cell.models.begin(), cell.models.end());
+    }
+    // 2. Per model, on the job system: only the packed arrays of the grid are read
+    //    (bounds, cull distance, flags), no GL.
+    std::vector<float>& distances = cullDistances_;
+    std::vector<std::uint8_t>& drawn = cullDrawn_;
+    distances.resize(candidates.size());
+    drawn.resize(candidates.size());
+    const glm::vec3 eye = view.cameraPosition;
+    JobSystem::global().parallelFor(candidates.size(), 512, [&](std::size_t begin, std::size_t end) {
+        for (std::size_t k = begin; k < end; ++k) {
+            const std::uint32_t i = candidates[k];
+            const Aabb& bounds = grid.bounds[i];
+            const float distance = distanceTo(eye, bounds);
+            const float cull = grid.cullDistance[i];
+            bool skip = (cull > 0.0f && distance > cull) || (shadowPass && !(grid.flags[i] & ModelGrid::kCastShadows)) ||
+                        (shadowMinCaster_ > 0.0f && grid.diagonal[i] < shadowMinCaster_);
+            if (!skip && grid.detail[i]) {
+                // Grass and weeds: fewer of them with distance, shadows only up close.
+                const float keep = 1.0f - (1.0f - quality_.detailDensityFar) * glm::smoothstep(0.3f, 1.0f, distance / cull);
+                skip = grid.random[i] > keep || (shadowPass && (shadowCascade_ > 0 || distance > quality_.detailShadowDistance));
+            }
+            distances[k] = distance;
+            drawn[k] = !skip && visible(bounds) && !occluded(bounds);
+        }
+    });
+    // 3. Draw (in grid order, so batches and texture streaming stay deterministic).
+    for (std::size_t k = 0; k < candidates.size(); ++k) {
+        {
+        const std::uint32_t i = candidates[k];
         const Model& model = scene.models[i];
         const Aabb& modelBounds = grid.bounds[i];
-        drawDistance_ = distanceTo(view.cameraPosition, modelBounds);
-        const bool tooFar = model.cullDistance > 0.0f && drawDistance_ > model.cullDistance;
-        bool skip = tooFar || (shadowPass && !model.castShadows) ||
-                    (shadowMinCaster_ > 0.0f && grid.diagonal[i] < shadowMinCaster_);
-        if (!skip && grid.detail[i]) {
-            // Grass and weeds: fewer of them with distance, shadows only up close.
-            const float d = drawDistance_ / model.cullDistance;
-            const float keep = 1.0f - (1.0f - quality_.detailDensityFar) * glm::smoothstep(0.3f, 1.0f, d);
-            skip = grid.random[i] > keep || (shadowPass && (shadowCascade_ > 0 || drawDistance_ > quality_.detailShadowDistance));
-        }
-        if (skip || !visible(modelBounds) || occluded(modelBounds)) {
+        drawDistance_ = distances[k];
+        if (!drawn[k]) {
             if (mainPass)
                 keepAliveLods(model, nullptr);
             ++culled_;
@@ -1113,7 +1135,7 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         if (!quality_.instancing || selected || draw->skeleton || draw->parts.empty()) {
             glUniform1f(loc_.sway, model.sway);
             glUniform2f(loc_.fade, fade.x, fade.y);
-            drawModel(*draw, model.transform(), selected ? 1.0f : 0.0f);
+            drawModel(*draw, grid.transforms[i], selected ? 1.0f : 0.0f);
             glUniform1f(loc_.sway, 0.0f);
             glUniform2f(loc_.fade, 0.0f, 0.0f);
             continue;
@@ -1130,7 +1152,7 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         if (added)
             batches_.push_back({draw, {}, drawDistance_, model.sway, fade});
         InstanceBatch& batch = batches_[it->second];
-        batch.transforms.push_back(model.transform());
+        batch.transforms.push_back(grid.transforms[i]);
         batch.distance = std::min(batch.distance, drawDistance_);
         }
     }
@@ -3815,23 +3837,37 @@ void Renderer::updateModelGrid(const Scene& scene)
     ++grid_.rebuilds;
     const std::size_t n = scene.models.size();
     grid_.bounds.resize(n);
+    grid_.transforms.resize(n);
+    grid_.cullDistance.resize(n);
+    grid_.flags.resize(n);
     grid_.diagonal.resize(n);
     grid_.random.resize(n);
     grid_.detail.resize(n);
     grid_.cells.clear();
+    // The packed arrays (structure of arrays) in parallel: transforms and bounds are the
+    // costly part (rotations), each model is independent.
+    JobSystem::global().parallelFor(n, 256, [&](std::size_t begin, std::size_t end) {
+        for (std::size_t i = begin; i < end; ++i) {
+            const Model& m = scene.models[i];
+            const Aabb b = m.bounds();
+            grid_.bounds[i] = b;
+            grid_.transforms[i] = m.transform();
+            grid_.cullDistance[i] = m.cullDistance;
+            grid_.flags[i] = static_cast<std::uint8_t>((m.castShadows ? ModelGrid::kCastShadows : 0) | (m.skeleton ? ModelGrid::kAnimated : 0));
+            grid_.diagonal[i] = glm::length(b.max - b.min);
+            std::uint32_t r = static_cast<std::uint32_t>(i) * 2654435761u;
+            r ^= r >> 15;
+            r *= 2246822519u;
+            r ^= r >> 13;
+            grid_.random[i] = static_cast<float>(r & 0xffffff) / 16777216.0f;
+            grid_.detail[i] = m.cullDistance > 0.0f && !m.collision && !m.skeleton && b.max.y - b.min.y < 2.0f; // low: grass, weeds, debris
+        }
+    });
     constexpr float kCell = 32.0f;
     std::unordered_map<std::uint64_t, std::size_t> index;
     for (std::size_t i = 0; i < n; ++i) {
         const Model& m = scene.models[i];
-        const Aabb b = m.bounds();
-        grid_.bounds[i] = b;
-        grid_.diagonal[i] = glm::length(b.max - b.min);
-        std::uint32_t r = static_cast<std::uint32_t>(i) * 2654435761u;
-        r ^= r >> 15;
-        r *= 2246822519u;
-        r ^= r >> 13;
-        grid_.random[i] = static_cast<float>(r & 0xffffff) / 16777216.0f;
-        grid_.detail[i] = m.cullDistance > 0.0f && !m.collision && !m.skeleton && b.max.y - b.min.y < 2.0f; // low: grass, weeds, debris
+        const Aabb& b = grid_.bounds[i];
         const glm::vec3 c = (b.min + b.max) * 0.5f;
         const auto cx = static_cast<std::int32_t>(std::floor(c.x / kCell)), cz = static_cast<std::int32_t>(std::floor(c.z / kCell));
         const std::uint64_t key = (static_cast<std::uint64_t>(static_cast<std::uint32_t>(cx)) << 32) | static_cast<std::uint32_t>(cz);
