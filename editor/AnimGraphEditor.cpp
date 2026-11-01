@@ -1,5 +1,6 @@
 #include "AnimGraphEditor.h"
 #include "AssetPaths.h"
+#include <engine/Physics.h>
 #include <QCheckBox>
 #include <QComboBox>
 #include <QContextMenuEvent>
@@ -98,6 +99,34 @@ AnimPreview::~AnimPreview()
     cleanup();
 }
 
+bool AnimPreview::dropRagdoll(QString* error)
+{
+    stopRagdoll();
+    engine::Entity& e = scene_.entities.front();
+    if (!e.animator.graph || e.animator.graph->ragdoll.empty()) {
+        if (error)
+            *error = tr("No ragdoll bones: add them in the Ragdoll tab");
+        return false;
+    }
+    if (!physics_)
+        physics_ = std::make_unique<engine::PhysicsWorld>();
+    physics_->setLevel(scene_); // the ground and the step
+    // A little push backwards so it does not fold straight down.
+    if (!engine::startRagdoll(*physics_, e, ragdoll_, glm::vec3(0.0f, 0.0f, -0.8f))) {
+        if (error)
+            *error = tr("None of the ragdoll bones is in this character's skeleton");
+        return false;
+    }
+    return true;
+}
+
+void AnimPreview::stopRagdoll()
+{
+    if (physics_)
+        engine::stopRagdoll(*physics_, ragdoll_);
+    scene_.entities.front().animator.poseOverride.clear();
+}
+
 void AnimPreview::cleanup()
 {
     if (!ready_)
@@ -117,6 +146,7 @@ bool AnimPreview::setModel(const QString& path, QString* error)
             *error = err.empty() ? tr("No skeleton in %1").arg(path) : QString::fromStdString(err);
         return false;
     }
+    stopRagdoll();
     engine::Entity& e = scene_.entities.front();
     e.modelPath = std::filesystem::path(path.toStdU16String());
     e.model = model;
@@ -144,6 +174,7 @@ const engine::Skeleton* AnimPreview::skeleton() const
 
 void AnimPreview::setStep(bool step)
 {
+    stopRagdoll(); // its collision was built with the old ground
     step_ = step;
     if (step_ && scene_.boxes.size() == 1) // under the character's left foot (it faces +Z: left is +X)
         scene_.boxes.emplace_back("Step", glm::vec3(0.25f, 0.1f, 0.0f), glm::vec3(0.4f, 0.2f, 0.7f), glm::vec3(0.45f, 0.44f, 0.5f));
@@ -162,6 +193,13 @@ void AnimPreview::restart()
 
 void AnimPreview::advance(float dt)
 {
+    if (ragdoll_.handle >= 0 && physics_) {
+        engine::Entity& e = scene_.entities.front();
+        if (dt > 0.0f)
+            physics_->step(std::min(dt, 1.0f / 30.0f));
+        if (e.model && e.model->skeleton)
+            engine::ragdollPose(*physics_, ragdoll_, *e.model->skeleton, e.animator.poseOverride);
+    }
     // Foot IK against the preview's ground (and the step).
     engine::updateAnimations(scene_, dt, [this](const glm::vec3& p) -> std::optional<float> {
         float y = 0.0f;
@@ -952,6 +990,65 @@ AnimGraphEditor::AnimGraphEditor(QWidget* parent) : QWidget(parent)
         });
     }
 
+    {
+        auto* page = new QWidget(leftTabs);
+        auto* v = new QVBoxLayout(page);
+        ragdollOnDeath_ = new QCheckBox(tr("Ragdoll when the character dies"), page);
+        ragdollOnDeath_->setToolTip(tr("The game replaces the animation with physics bodies at the moment of death"));
+        ragdoll_ = new QTableWidget(0, 6, page);
+        ragdoll_->setHorizontalHeaderLabels({tr("Bone"), tr("Radius"), tr("Length"), tr("Mass"), tr("Swing°"), tr("Twist°")});
+        ragdoll_->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+        ragdoll_->verticalHeader()->hide();
+        ragdoll_->setToolTip(tr("One capsule body per bone, from the bone to the next listed bone below it (Length 0) or Length metres; "
+                                "jointed to the nearest listed bone above with a swing cone and a twist limit"));
+        auto* add = new QPushButton(tr("Add"), page);
+        auto* remove = new QPushButton(tr("Remove"), page);
+        dropButton_ = new QPushButton(tr("Drop in preview"), page);
+        dropButton_->setToolTip(tr("Test: the preview character goes limp from its current pose (click again to stand up)"));
+        auto* row = new QHBoxLayout;
+        row->addWidget(add);
+        row->addWidget(remove);
+        row->addStretch();
+        row->addWidget(dropButton_);
+        v->addWidget(ragdollOnDeath_);
+        v->addWidget(ragdoll_, 1);
+        v->addLayout(row);
+        leftTabs->addTab(page, tr("Ragdoll"));
+        connect(ragdollOnDeath_, &QCheckBox::toggled, this, [this](bool on) {
+            if (updating_)
+                return;
+            graph_->ragdollOnDeath = on;
+            edited(false);
+        });
+        connect(add, &QPushButton::clicked, this, [this] {
+            engine::AnimGraph::RagdollBone b;
+            const QStringList bones = boneNames();
+            b.bone = bones.isEmpty() ? std::string() : s(bones.front());
+            graph_->ragdoll.push_back(b);
+            edited(true);
+        });
+        connect(remove, &QPushButton::clicked, this, [this] {
+            const int r = ragdoll_->currentRow();
+            if (r < 0 || r >= static_cast<int>(graph_->ragdoll.size()))
+                return;
+            graph_->ragdoll.erase(graph_->ragdoll.begin() + r);
+            edited(true);
+        });
+        connect(dropButton_, &QPushButton::clicked, this, [this] {
+            if (preview_->ragdollActive()) {
+                preview_->stopRagdoll();
+                dropButton_->setText(tr("Drop in preview"));
+                return;
+            }
+            QString error;
+            if (!preview_->dropRagdoll(&error)) {
+                status_->setText(error);
+                return;
+            }
+            dropButton_->setText(tr("Stand up"));
+        });
+    }
+
     // Centre: graph and timeline.
     view_ = new AnimGraphView(this);
     timeline_ = new AnimTimeline(this);
@@ -1245,8 +1342,6 @@ bool AnimGraphEditor::load(const QString& path, QString* error)
     refreshLayers();
     refreshParams();
     refreshClipLists();
-    refreshIk();
-    refreshDetails();
     return true;
 }
 
@@ -1291,6 +1386,7 @@ void AnimGraphEditor::edited(bool structure)
         refreshLayers();
         refreshParams();
         refreshIk();
+        refreshRagdoll();
         refreshDetails();
     }
     view_->update();
@@ -1458,7 +1554,49 @@ void AnimGraphEditor::refreshIk()
 void AnimGraphEditor::refreshClipLists()
 {
     refreshIk();
+    refreshRagdoll();
     refreshDetails();
+}
+
+void AnimGraphEditor::refreshRagdoll()
+{
+    updating_ = true;
+    ragdollOnDeath_->setChecked(graph_->ragdollOnDeath);
+    ragdoll_->setRowCount(static_cast<int>(graph_->ragdoll.size()));
+    const QStringList bones = boneNames();
+    for (int r = 0; r < static_cast<int>(graph_->ragdoll.size()); ++r) {
+        const auto& b = graph_->ragdoll[static_cast<std::size_t>(r)];
+        auto* bone = new QComboBox(ragdoll_);
+        bone->setEditable(true);
+        fillCombo(bone, bones, q(b.bone));
+        ragdoll_->setCellWidget(r, 0, bone);
+        QDoubleSpinBox* spins[5] = {number(0.01, 0.5, 0.01, 3, ragdoll_), number(0.0, 2.0, 0.02, 2, ragdoll_), number(0.1, 100.0, 0.5, 1, ragdoll_),
+                                    number(0.0, 170.0, 5.0, 0, ragdoll_), number(0.0, 170.0, 5.0, 0, ragdoll_)};
+        const float values[5] = {b.radius, b.length, b.mass, b.swing, b.twist};
+        for (int c = 0; c < 5; ++c) {
+            spins[c]->setButtonSymbols(QAbstractSpinBox::NoButtons);
+            spins[c]->setValue(values[c]);
+            ragdoll_->setCellWidget(r, c + 1, spins[c]);
+        }
+        auto boneEdited = [this, r, bone, spins] {
+            if (updating_ || r >= static_cast<int>(graph_->ragdoll.size()))
+                return;
+            auto& rb = graph_->ragdoll[static_cast<std::size_t>(r)];
+            rb.bone = s(bone->currentText());
+            rb.radius = static_cast<float>(spins[0]->value());
+            rb.length = static_cast<float>(spins[1]->value());
+            rb.mass = static_cast<float>(spins[2]->value());
+            rb.swing = static_cast<float>(spins[3]->value());
+            rb.twist = static_cast<float>(spins[4]->value());
+            edited(false);
+        };
+        connect(bone, &QComboBox::currentTextChanged, this, boneEdited);
+        for (QDoubleSpinBox* sp : spins)
+            connect(sp, &QDoubleSpinBox::valueChanged, this, boneEdited);
+    }
+    ragdoll_->resizeColumnsToContents();
+    ragdoll_->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+    updating_ = false;
 }
 
 void AnimGraphEditor::refreshDetails()

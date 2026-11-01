@@ -80,11 +80,24 @@ struct AnimGraph {
         float referenceTime = 0.0f;
     };
 
+    // Ragdoll (dead characters, engine/Ragdoll.h): one capsule body per listed bone, from the bone
+    // to its first listed child (or `length` along the bone), jointed to the nearest listed ancestor.
+    struct RagdollBone {
+        std::string bone;
+        float radius = 0.08f;       // m
+        float length = 0.0f;        // m, 0 = to the next ragdoll bone below (end bones: 2 x radius)
+        float mass = 5.0f;          // kg
+        float swing = 45.0f;        // degrees: cone the bone may swing in relative to its parent
+        float twist = 20.0f;        // degrees either way around the bone
+    };
+
     std::filesystem::path sourcePath;
     unsigned revision = 0;          // bumped by every edit (Animation editor): animators re-resolve
     std::vector<Param> params;
     std::vector<IkChain> ik;
     float footMaxAdjust = 0.45f;    // m: largest step up / down the feet adapt to
+    std::vector<RagdollBone> ragdoll; // empty = no ragdoll
+    bool ragdollOnDeath = true;     // the game switches dead characters to the ragdoll
     std::vector<Layer> layers;
     std::vector<Event> events;
 

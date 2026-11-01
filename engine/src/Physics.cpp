@@ -5,6 +5,8 @@
 #include <glm/gtc/quaternion.hpp>
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/euler_angles.hpp>
+#include <glm/gtx/quaternion.hpp>
+#include <glm/gtc/constants.hpp>
 #include "PhysicsImpl.h"
 #include "engine/Surfaces.h"
 
@@ -15,6 +17,10 @@
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/Shape/CylinderShape.h>
 #include <Jolt/Physics/Collision/Shape/SphereShape.h>
+#include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
+#include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
+#include <Jolt/Physics/Collision/GroupFilterTable.h>
+#include <Jolt/Physics/Constraints/SwingTwistConstraint.h>
 #include <Jolt/Physics/Collision/Shape/HeightFieldShape.h>
 #include <Jolt/Physics/Collision/Shape/MeshShape.h>
 #include <Jolt/Physics/Collision/Shape/ScaledShape.h>
@@ -80,6 +86,7 @@ PhysicsWorld::Impl::Impl()
 
 PhysicsWorld::Impl::~Impl()
 {
+    clearRagdolls();
     clearDynamic();
     clearStatic();
 }
@@ -277,6 +284,7 @@ PhysicsWorld::~PhysicsWorld() = default;
 
 void PhysicsWorld::setLevel(const Scene& scene)
 {
+    impl_->clearRagdolls();
     impl_->clearDynamic();
     impl_->clearStatic();
     for (const Box& b : scene.boxes) {
@@ -420,6 +428,173 @@ int PhysicsWorld::dynamicCount() const
     return static_cast<int>(impl_->props.size());
 }
 
+void PhysicsWorld::Impl::clearRagdolls()
+{
+    JPH::BodyInterface& bodies = system.GetBodyInterface();
+    for (RagdollBodies& r : ragdolls) {
+        for (const auto& c : r.constraints)
+            system.RemoveConstraint(c);
+        for (JPH::BodyID b : r.bodies) {
+            bodies.RemoveBody(b);
+            bodies.DestroyBody(b);
+        }
+    }
+    ragdolls.clear();
+}
+
+int PhysicsWorld::addRagdoll(const std::vector<RagdollPartDesc>& parts)
+{
+    if (parts.empty())
+        return -1;
+    int handle = 0;
+    while (handle < static_cast<int>(impl_->ragdolls.size()) && impl_->ragdolls[static_cast<std::size_t>(handle)].used)
+        ++handle;
+    if (handle == static_cast<int>(impl_->ragdolls.size()))
+        impl_->ragdolls.emplace_back();
+    Impl::RagdollBodies& r = impl_->ragdolls[static_cast<std::size_t>(handle)];
+    r = {};
+    r.used = true;
+    // Neighbouring parts overlap at their joints: they must not collide.
+    JPH::Ref<JPH::GroupFilterTable> filter = new JPH::GroupFilterTable(static_cast<JPH::uint>(parts.size()));
+    for (std::size_t i = 0; i < parts.size(); ++i)
+        if (parts[i].parent >= 0)
+            filter->DisableCollision(static_cast<JPH::CollisionGroup::SubGroupID>(i), static_cast<JPH::CollisionGroup::SubGroupID>(parts[i].parent));
+    JPH::BodyInterface& bodies = impl_->system.GetBodyInterface();
+    const float gravityFactor = 9.81f / std::max(1.0f, -impl_->system.GetGravity().GetY());
+    std::vector<glm::quat> rotations;
+    for (std::size_t i = 0; i < parts.size(); ++i) {
+        const RagdollPartDesc& p = parts[i];
+        const glm::vec3 origin(p.bone[3]);
+        const glm::quat rot = glm::normalize(glm::quat_cast(glm::mat3(glm::normalize(glm::vec3(p.bone[0])), glm::normalize(glm::vec3(p.bone[1])),
+                                                                      glm::normalize(glm::vec3(p.bone[2])))));
+        rotations.push_back(rot);
+        // Capsule along the bone (Jolt capsules run along Y), in the body's frame.
+        glm::vec3 axis = glm::inverse(rot) * (p.end - origin);
+        float length = glm::length(axis);
+        if (length < 1e-3f) {
+            axis = glm::vec3(0.0f, 1.0f, 0.0f);
+            length = p.radius * 2.0f;
+        }
+        axis /= length;
+        const float radius = std::max(0.01f, p.radius);
+        const float half = std::max(0.005f, length * 0.5f - radius * 0.5f);
+        glm::quat align = glm::rotation(glm::vec3(0.0f, 1.0f, 0.0f), axis);
+        if (glm::dot(axis, glm::vec3(0.0f, 1.0f, 0.0f)) < -0.9999f)
+            align = glm::angleAxis(glm::pi<float>(), glm::vec3(1.0f, 0.0f, 0.0f));
+        JPH::RotatedTranslatedShapeSettings shape(toJolt(axis * (length * 0.5f)), JPH::Quat(align.x, align.y, align.z, align.w),
+                                                  new JPH::CapsuleShapeSettings(half, radius));
+        JPH::ShapeSettings::ShapeResult result = shape.Create();
+        if (result.HasError()) {
+            LOG_WARN("physics", "ragdoll part %zu: %s", i, result.GetError().c_str());
+            r.bodies.push_back(JPH::BodyID());
+            continue;
+        }
+        JPH::BodyCreationSettings body(result.Get(), toJolt(origin), JPH::Quat(rot.x, rot.y, rot.z, rot.w), JPH::EMotionType::Dynamic,
+                                       Layers::Moving);
+        body.mOverrideMassProperties = JPH::EOverrideMassProperties::CalculateInertia;
+        body.mMassPropertiesOverride.mMass = std::max(0.2f, p.mass);
+        body.mFriction = 0.8f;
+        body.mRestitution = 0.05f;
+        body.mLinearDamping = 0.15f;
+        body.mAngularDamping = 0.6f;
+        body.mGravityFactor = gravityFactor;
+        body.mCollisionGroup = JPH::CollisionGroup(filter, static_cast<JPH::CollisionGroup::GroupID>(handle),
+                                                   static_cast<JPH::CollisionGroup::SubGroupID>(i));
+        body.mUserData = (static_cast<JPH::uint64>(0x80000000u | static_cast<JPH::uint32>(handle + 1)) << 32) | impl_->surfaceId("flesh");
+        body.mLinearVelocity = toJolt(p.velocity);
+        body.mMotionQuality = JPH::EMotionQuality::LinearCast; // thin limbs at falling speed
+        r.bodies.push_back(bodies.CreateAndAddBody(body, JPH::EActivation::Activate));
+    }
+    for (std::size_t i = 0; i < parts.size(); ++i) {
+        const RagdollPartDesc& p = parts[i];
+        if (p.parent < 0 || r.bodies[i].IsInvalid() || r.bodies[static_cast<std::size_t>(p.parent)].IsInvalid())
+            continue;
+        const glm::vec3 joint(p.bone[3]);
+        glm::vec3 twist = p.end - joint;
+        if (glm::dot(twist, twist) < 1e-8f)
+            twist = rotations[i] * glm::vec3(0.0f, 1.0f, 0.0f);
+        twist = glm::normalize(twist);
+        glm::vec3 plane = glm::cross(twist, std::abs(twist.y) < 0.9f ? glm::vec3(0.0f, 1.0f, 0.0f) : glm::vec3(1.0f, 0.0f, 0.0f));
+        plane = glm::normalize(plane);
+        JPH::SwingTwistConstraintSettings c;
+        c.mSpace = JPH::EConstraintSpace::WorldSpace;
+        c.mPosition1 = c.mPosition2 = toJolt(joint);
+        c.mTwistAxis1 = c.mTwistAxis2 = toJolt(twist);
+        c.mPlaneAxis1 = c.mPlaneAxis2 = toJolt(plane);
+        c.mNormalHalfConeAngle = c.mPlaneHalfConeAngle = glm::radians(std::clamp(p.swingDegrees, 0.0f, 170.0f));
+        c.mTwistMinAngle = -glm::radians(std::clamp(p.twistDegrees, 0.0f, 170.0f));
+        c.mTwistMaxAngle = glm::radians(std::clamp(p.twistDegrees, 0.0f, 170.0f));
+        c.mMaxFrictionTorque = 2.0f; // limbs settle instead of swinging on
+        JPH::Ref<JPH::Constraint> constraint = bodies.CreateConstraint(&c, r.bodies[static_cast<std::size_t>(p.parent)], r.bodies[i]);
+        if (constraint) {
+            impl_->system.AddConstraint(constraint);
+            r.constraints.push_back(constraint);
+        }
+    }
+    return handle;
+}
+
+bool PhysicsWorld::ragdollTransforms(int ragdoll, std::vector<glm::mat4>& out) const
+{
+    if (ragdoll < 0 || ragdoll >= static_cast<int>(impl_->ragdolls.size()) || !impl_->ragdolls[static_cast<std::size_t>(ragdoll)].used)
+        return false;
+    const JPH::BodyInterface& bodies = impl_->system.GetBodyInterfaceNoLock();
+    const auto& r = impl_->ragdolls[static_cast<std::size_t>(ragdoll)];
+    out.resize(r.bodies.size());
+    for (std::size_t i = 0; i < r.bodies.size(); ++i) {
+        if (r.bodies[i].IsInvalid()) {
+            out[i] = glm::mat4(1.0f);
+            continue;
+        }
+        JPH::RVec3 position;
+        JPH::Quat q;
+        bodies.GetPositionAndRotation(r.bodies[i], position, q);
+        out[i] = glm::translate(glm::mat4(1.0f), toGlm(position)) * glm::mat4_cast(glm::quat(q.GetW(), q.GetX(), q.GetY(), q.GetZ()));
+    }
+    return true;
+}
+
+void PhysicsWorld::ragdollImpulse(int ragdoll, glm::vec3 point, glm::vec3 impulse)
+{
+    if (ragdoll < 0 || ragdoll >= static_cast<int>(impl_->ragdolls.size()) || !impl_->ragdolls[static_cast<std::size_t>(ragdoll)].used)
+        return;
+    JPH::BodyInterface& bodies = impl_->system.GetBodyInterface();
+    JPH::BodyID best;
+    float bestDist = 1e9f;
+    for (JPH::BodyID b : impl_->ragdolls[static_cast<std::size_t>(ragdoll)].bodies) {
+        if (b.IsInvalid())
+            continue;
+        const float d = glm::distance(toGlm(bodies.GetCenterOfMassPosition(b)), point);
+        if (d < bestDist) {
+            bestDist = d;
+            best = b;
+        }
+    }
+    if (!best.IsInvalid())
+        bodies.AddImpulse(best, toJolt(impulse), toJolt(point));
+}
+
+void PhysicsWorld::removeRagdoll(int ragdoll)
+{
+    if (ragdoll < 0 || ragdoll >= static_cast<int>(impl_->ragdolls.size()))
+        return;
+    auto& r = impl_->ragdolls[static_cast<std::size_t>(ragdoll)];
+    JPH::BodyInterface& bodies = impl_->system.GetBodyInterface();
+    for (const auto& c : r.constraints)
+        impl_->system.RemoveConstraint(c);
+    for (JPH::BodyID b : r.bodies)
+        if (!b.IsInvalid()) {
+            bodies.RemoveBody(b);
+            bodies.DestroyBody(b);
+        }
+    r = {};
+}
+
+int PhysicsWorld::ragdollCount() const
+{
+    return static_cast<int>(std::count_if(impl_->ragdolls.begin(), impl_->ragdolls.end(), [](const auto& r) { return r.used; }));
+}
+
 void PhysicsWorld::step(float dt)
 {
     impl_->system.Update(dt, 1, impl_->tempAllocator.get(), impl_->jobs.get());
@@ -443,8 +618,10 @@ std::optional<RayHit> PhysicsWorld::raycast(glm::vec3 origin, glm::vec3 directio
             const JPH::uint64 id = body.GetUserData() & 0xffffffffull;
             if (id > 0 && id <= impl_->surfaces.size())
                 result.surface = impl_->surfaces[static_cast<std::size_t>(id - 1)];
-            if (const JPH::uint64 model = body.GetUserData() >> 32; model > 0)
-                result.model = static_cast<int>(model - 1);
+            if (const JPH::uint64 high = body.GetUserData() >> 32; high & 0x80000000ull)
+                result.ragdoll = static_cast<int>((high & 0x7fffffffull) - 1);
+            else if (high > 0)
+                result.model = static_cast<int>(high - 1);
         }
     }
     if (hit.mBodyID == impl_->terrainBody && impl_->terrain) {

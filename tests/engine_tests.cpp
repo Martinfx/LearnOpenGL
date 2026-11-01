@@ -20,6 +20,7 @@
 #include <engine/Camera.h>
 #include <engine/FixedStepClock.h>
 #include <engine/Physics.h>
+#include <engine/Ragdoll.h>
 #include <engine/PlayerController.h>
 #include <engine/Probes.h>
 #include <engine/Renderer.h>
@@ -3043,6 +3044,55 @@ void testAnimIk()
     std::filesystem::remove_all(dir);
 }
 
+void testRagdoll()
+{
+    // A soldier standing on the floor goes limp: the bodies fall, settle on the floor and stay together.
+    auto s = flatFloor();
+    engine::Entity e;
+    e.position = {0, 0, 0};
+    e.modelPath = ENGINE_TEST_ASSETS "/models/characters/humans/soldier.glb";
+    e.model = engine::loadCharacterModel(e.modelPath);
+    e.animGraphPath = std::filesystem::path(ENGINE_TEST_ASSETS "/animgraphs/human.animgraph").lexically_normal();
+    e.animator.setGraph(engine::loadAnimGraph(e.animGraphPath));
+    check(e.model && e.animator.graph && e.animator.graph->ragdoll.size() == 13, "human.animgraph lists 13 ragdoll bones");
+    s.entities.push_back(e);
+    engine::updateAnimations(s, 0.1f);
+    engine::PhysicsWorld world;
+    world.setLevel(s);
+    engine::Ragdoll ragdoll;
+    check(engine::startRagdoll(world, s.entities[0], ragdoll, glm::vec3(1.0f, 0.0f, 0.0f)) && world.ragdollCount() == 1, "ragdoll created");
+    const engine::Skeleton& sk = *s.entities[0].model->skeleton;
+    int pelvis = -1, head = -1;
+    for (std::size_t n = 0; n < sk.nodes.size(); ++n) {
+        if (sk.nodes[n].name == "Bip01 Pelvis")
+            pelvis = static_cast<int>(n);
+        if (sk.nodes[n].name == "Bip01 Head")
+            head = static_cast<int>(n);
+    }
+    std::vector<glm::mat4> pose;
+    check(engine::ragdollPose(world, ragdoll, sk, pose) && pose.size() == sk.nodes.size(), "ragdoll pose for every node");
+    const glm::mat4 m = s.entities[0].modelTransform();
+    const float headStart = glm::vec3(m * pose[static_cast<std::size_t>(head)][3]).y;
+    check(std::abs(glm::length(glm::vec3(m * pose[static_cast<std::size_t>(head)][3]) - glm::vec3(m * ragdoll.start[static_cast<std::size_t>(head)][3]))) < 0.01f,
+          "the ragdoll starts in the animated pose");
+    for (int i = 0; i < 240; ++i)
+        world.step(1.0f / 60.0f);
+    check(engine::ragdollPose(world, ragdoll, sk, pose), "pose after falling");
+    const glm::vec3 headEnd(m * pose[static_cast<std::size_t>(head)][3]), pelvisEnd(m * pose[static_cast<std::size_t>(pelvis)][3]);
+    std::printf("  ragdoll: head %.2f -> %.2f m, pelvis at %.2f %.2f %.2f\n", headStart, headEnd.y, pelvisEnd.x, pelvisEnd.y, pelvisEnd.z);
+    check(headStart > 1.4f && headEnd.y < 0.5f && pelvisEnd.y > -0.05f && pelvisEnd.y < 0.4f, "the body falls and lies on the floor");
+    check(glm::distance(headEnd, pelvisEnd) < 1.2f && std::abs(pelvisEnd.x) < 3.0f && std::abs(pelvisEnd.z) < 3.0f, "the parts stay together");
+    // Shots find the ragdoll and push it.
+    const auto hit = world.raycast(pelvisEnd + glm::vec3(0, 2, 0), glm::vec3(0, -1, 0), 3.0f);
+    check(hit && hit->ragdoll == ragdoll.handle && hit->surface == "flesh", "raycasts hit the ragdoll (flesh)");
+    s.entities[0].animator.poseOverride = pose;
+    std::vector<glm::mat4> drawn;
+    engine::evaluatePose(sk, &s.entities[0].animator, drawn);
+    check(drawn.size() == pose.size() && drawn[static_cast<std::size_t>(head)] == pose[static_cast<std::size_t>(head)], "the pose override is drawn");
+    engine::stopRagdoll(world, ragdoll);
+    check(world.ragdollCount() == 0, "ragdoll removed");
+}
+
 void testTaskGraph()
 {
     engine::TaskGraph graph;
@@ -3095,7 +3145,7 @@ int main()
     // Hermetic cook cache for the tests.
     engine::textureCookConfig().cacheDir = std::filesystem::current_path() / "texture_cache";
     std::filesystem::remove_all(engine::textureCookConfig().cacheDir);
-    const std::set<std::string> needAssets = {"testAnimatedCharacter",      "testEnemyAnimations", "testEnemyAnimGraph", "testHierarchyAndDependencies",
+    const std::set<std::string> needAssets = {"testAnimatedCharacter",      "testEnemyAnimations", "testEnemyAnimGraph", "testRagdoll", "testHierarchyAndDependencies",
                                               "testLevelWithModel",         "testMaterialsAndTextures", "testPhysicsProps",
                                               "testSharedMeshes",           "testTexturedWeaponModel", "testWeaponFilesAndLoadout"};
     const bool assets = lfsAssetsPresent();
@@ -3168,6 +3218,7 @@ int main()
         {"testTaskGraph", testTaskGraph},
         {"testAnimGraph", testAnimGraph},
         {"testAnimIk", testAnimIk},
+        {"testRagdoll", testRagdoll},
         {"testEnemyAnimGraph", testEnemyAnimGraph},
         {"testWorldStreaming", testWorldStreaming},
     };

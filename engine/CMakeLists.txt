@@ -11,6 +11,7 @@ add_library(engine STATIC
     src/GltfLoader.cpp
     src/Material.cpp
     src/AnimGraph.cpp
+    src/Ragdoll.cpp
     src/VertexPaint.cpp
     src/TextureCook.cpp
     src/Memory.cpp

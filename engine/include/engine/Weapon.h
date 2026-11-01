@@ -76,6 +76,7 @@ struct ShotHit {
     glm::vec3 normal{0.0f, 1.0f, 0.0f};
     std::string surface;         // engine/Surfaces.h; "flesh" for characters, empty = unknown
     int model = -1;              // dynamic prop hit (Scene::models index), -1 = none
+    int ragdoll = -1;            // ragdoll hit (PhysicsWorld handle), -1 = none
 };
 
 // Closest hit along a ray: level geometry (Jolt) or a living entity.

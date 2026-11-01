@@ -73,6 +73,9 @@ struct Animator {
 
     std::shared_ptr<const AnimGraph> graph;
     AnimGraphState graphState;
+    // Model-space pose set from outside (a ragdoll): used instead of clips and graph while it has
+    // one matrix per skeleton node.
+    std::vector<glm::mat4> poseOverride;
     void setGraph(std::shared_ptr<const AnimGraph> g);
     bool graphActive() const { return graph && current.clip < 0; }
     bool setParam(const std::string& name, float value); // false if the graph has no such parameter

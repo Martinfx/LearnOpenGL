@@ -23,6 +23,7 @@ ShotHit traceShot(const Scene& scene, const PhysicsWorld& physics, glm::vec3 ori
         best.normal = hit->normal;
         best.surface = hit->surface;
         best.model = hit->model;
+        best.ragdoll = hit->ragdoll;
     }
     // Characters are not rigid bodies, so test entity bounds separately.
     for (std::size_t i = 0; i < scene.entities.size(); ++i) {
@@ -37,6 +38,7 @@ ShotHit traceShot(const Scene& scene, const PhysicsWorld& physics, glm::vec3 ori
             best.normal = -dir;
             best.surface = "flesh";
             best.model = -1;
+            best.ragdoll = -1;
         }
     }
     // Water stops a shot from above at its surface (a splash; shallow angles may skip off it).

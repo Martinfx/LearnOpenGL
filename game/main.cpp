@@ -15,6 +15,7 @@
 #include <engine/FixedStepClock.h>
 #include <engine/Input.h>
 #include <engine/Physics.h>
+#include <engine/Ragdoll.h>
 #include <engine/PlayerController.h>
 #include <engine/Renderer.h>
 #include <engine/Scene.h>
@@ -527,6 +528,9 @@ int main(int argc, char** argv)
     engine::setCrashContext("level", levelPath.string());
     engine::Scene scene;
     engine::PhysicsWorld physics;
+    // Dead characters whose animation graph lists ragdoll bones: entity index -> ragdoll.
+    std::map<std::size_t, engine::Ragdoll> ragdolls;
+    std::map<std::size_t, std::pair<glm::vec3, glm::vec3>> killShots; // entity -> (point, impulse) of the shot that killed it
     MapHud map;
     std::string levelTitle = levelPath.stem().string();
     {
@@ -548,6 +552,8 @@ int main(int argc, char** argv)
             if (!loaded)
                 scene = engine::makeDefaultScene();
             progress.setStep("physics");
+            ragdolls.clear(); // setLevel removes their bodies
+            killShots.clear();
             physics.setLevel(scene);
             ++progress.done;
             finished = true;
@@ -1113,6 +1119,25 @@ int main(int argc, char** argv)
                 return engine::ConsoleResult{false, "usage: give health|ammo|medkit|all"};
             return engine::ConsoleResult{true, "gave " + what};
         }, engine::CVarCheat);
+        cvars.addCommand("kill", "kill [radius m]: kills the enemies within the radius (default 15 m), e.g. to look at ragdolls",
+                         [&](const std::vector<std::string>& a) {
+            float radius = 15.0f;
+            try {
+                if (!a.empty())
+                    radius = std::stof(a[0]);
+            } catch (...) {
+                return engine::ConsoleResult{false, "usage: kill [radius]"};
+            }
+            int killed = 0;
+            for (std::size_t i = 0; i < scene.entities.size(); ++i) {
+                const engine::Entity& e = scene.entities[i];
+                if (e.alive && e.type == "enemy" && glm::distance(e.position, player.feet()) <= radius) {
+                    scripts.damageEntity(static_cast<int>(i), 100000.0f);
+                    ++killed;
+                }
+            }
+            return engine::ConsoleResult{true, "killed " + std::to_string(killed)};
+        }, engine::CVarCheat);
         cvars.addCommand("teleport", "teleport X Y Z (feet), or teleport NAME (an entity or object), or teleport (to where you look)",
                          [&](const std::vector<std::string>& a) {
             glm::vec3 target;
@@ -1609,12 +1634,18 @@ int main(int argc, char** argv)
                 if (hit.entity >= 0) {
                     const bool wasAlive = scene.entities[static_cast<std::size_t>(hit.entity)].alive;
                     scripts.damageEntity(hit.entity, damage);
-                    if (wasAlive && !scene.entities[static_cast<std::size_t>(hit.entity)].alive)
+                    if (wasAlive && !scene.entities[static_cast<std::size_t>(hit.entity)].alive) {
                         ++kills;
+                        killShots[static_cast<std::size_t>(hit.entity)] = {hit.point, dir * damage * (weapon.settings.melee() ? 1.2f : 0.8f)};
+                    }
                     break;
                 }
                 if (hit.model >= 0) // physics prop: the bullet (or blow) pushes it
                     physics.applyImpulse(hit.model, hit.point, dir * damage * (weapon.settings.melee() ? 0.8f : 0.4f));
+                if (hit.ragdoll >= 0) { // a body on the ground: the shot moves it, then stops
+                    physics.ragdollImpulse(hit.ragdoll, hit.point, dir * damage * 0.4f);
+                    break;
+                }
                 if (weapon.settings.melee())
                     break;
                 const engine::SurfaceType* surface = audio.surfaces().find(hit.surface);
@@ -1659,8 +1690,32 @@ int main(int argc, char** argv)
                 audio.walk(scene.player, player.feet(), player.velocity(), player.grounded(), dt, ground);
                 audio.water(player.feet(), player.velocity(), player.waterDepth() > 0.0f, player.swimming(), player.headUnderwater(), dt);
             }
+            // Characters that died this step go limp: a ragdoll from their current pose.
+            for (std::size_t i = 0; i < scene.entities.size(); ++i) {
+                engine::Entity& e = scene.entities[i];
+                const bool wants = !e.alive && e.animator.graph && e.animator.graph->ragdollOnDeath && !e.animator.graph->ragdoll.empty();
+                const auto it = ragdolls.find(i);
+                if (wants && it == ragdolls.end()) {
+                    engine::Ragdoll r;
+                    if (engine::startRagdoll(physics, e, r)) {
+                        if (const auto shot = killShots.find(i); shot != killShots.end())
+                            physics.ragdollImpulse(r.handle, shot->second.first, shot->second.second);
+                        ragdolls.emplace(i, std::move(r));
+                    }
+                } else if (!wants && it != ragdolls.end()) { // alive again (a loaded save)
+                    engine::stopRagdoll(physics, it->second);
+                    e.animator.poseOverride.clear();
+                    ragdolls.erase(it);
+                }
+                killShots.erase(i);
+            }
             physics.step(dt);
             physics.syncDynamic(scene); // props the player, shots and blasts moved
+            for (auto& [index, ragdoll] : ragdolls) {
+                engine::Entity& e = scene.entities[index];
+                if (e.model && e.model->skeleton)
+                    engine::ragdollPose(physics, ragdoll, *e.model->skeleton, e.animator.poseOverride);
+            }
             if (scripts.playerHealth() <= 0.0f && menu.screen() != GameMenu::Screen::Death) {
                 LOG_INFO("game", "You died.");
                 if (frameLimit > 0) { // test runs carry on

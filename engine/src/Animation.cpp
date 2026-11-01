@@ -655,6 +655,10 @@ std::string Animator::stateName(int layer) const
 
 void evaluatePose(const Skeleton& skeleton, const Animator* animator, std::vector<glm::mat4>& globals, bool ik)
 {
+    if (animator && !animator->poseOverride.empty() && animator->poseOverride.size() == skeleton.nodes.size()) {
+        globals = animator->poseOverride;
+        return;
+    }
     const std::size_t n = skeleton.nodes.size();
     std::vector<Local> locals(n);
     for (std::size_t i = 0; i < n; ++i)

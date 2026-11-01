@@ -1,5 +1,6 @@
 #pragma once
 #include <engine/AnimGraph.h>
+#include <engine/Ragdoll.h>
 #include <engine/Renderer.h>
 #include <engine/Scene.h>
 #include <QElapsedTimer>
@@ -36,6 +37,9 @@ public:
     void setStep(bool step); // a 20 cm step under the left foot (foot IK)
     void restart();          // back to the entry states, parameters keep their values
     void advance(float dt);  // one update now (scrubbing while paused)
+    bool dropRagdoll(QString* error); // the character goes limp from its current pose
+    void stopRagdoll();
+    bool ragdollActive() const { return ragdoll_.handle >= 0; }
 
 signals:
     void ticked(); // after every update: the graph view and timeline follow the playback
@@ -52,6 +56,8 @@ private:
 
     engine::Renderer renderer_;
     engine::Scene scene_;
+    std::unique_ptr<engine::PhysicsWorld> physics_; // created for the first ragdoll test
+    engine::Ragdoll ragdoll_;
     bool ready_ = false;
     bool paused_ = false, step_ = false;
     float speed_ = 1.0f;
@@ -163,6 +169,7 @@ private:
     void refreshLayers();
     void refreshParams();
     void refreshIk();
+    void refreshRagdoll();
     void refreshDetails();
     void refreshClipLists();
     void tick();
@@ -215,4 +222,9 @@ private:
     QComboBox* ikClip_ = nullptr;
     QDoubleSpinBox* ikTime_ = nullptr;
     QDoubleSpinBox* footMax_ = nullptr;
+
+    // Ragdoll
+    QTableWidget* ragdoll_ = nullptr;
+    QCheckBox* ragdollOnDeath_ = nullptr;
+    QPushButton* dropButton_ = nullptr;
 };

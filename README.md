@@ -173,6 +173,10 @@ pravé tlačítko ji smaže). Vlevo parametry (sloupec Preview řídí náhled: 
 (klipy blend space s polohou X/Y), přechodu (prolnutí, exit time, podmínky jako text) nebo vrstvy (maska, váha).
 Úpravy se hned projeví i na postavách v levelu; Save uloží soubor, zavření bez uložení vrátí stav ze souboru.
 
+- **Ragdoll** (řádky `ragdoll`, záložka Ragdoll v Animation editoru): po smrti se postava změní na fyzikální těla
+  (kapsle mezi kostmi, klouby s limitem švihu a zkroucení). Výstřel, který zabil, tělo odhodí, další zásahy ho posunou.
+  Drop in preview pád vyzkouší v náhledu. Cheat `kill [m]` v konzoli zabije nepřátele v okolí.
+
 Explicitní `self:play(klip)` graf dočasně přebije, `self:use_graph()` vrátí řízení grafu. V levelu je to řádek `  animgraph "cesta"`.
 
 ## Načítání

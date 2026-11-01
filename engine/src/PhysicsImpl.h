@@ -8,6 +8,7 @@
 #include <Jolt/Core/JobSystemThreadPool.h>
 #include <Jolt/Core/TempAllocator.h>
 #include <Jolt/Physics/PhysicsSystem.h>
+#include <Jolt/Physics/Constraints/Constraint.h>
 
 #include <glm/common.hpp>
 #include <glm/geometric.hpp>
@@ -85,6 +86,13 @@ struct PhysicsWorld::Impl {
         bool awake = true;      // synced once more after the body falls asleep (its final pose)
     };
     std::vector<Prop> props;
+    struct RagdollBodies {
+        std::vector<JPH::BodyID> bodies;
+        std::vector<JPH::Ref<JPH::Constraint>> constraints;
+        bool used = false;
+    };
+    std::vector<RagdollBodies> ragdolls; // by handle; freed slots are reused
+    void clearRagdolls();
     std::unordered_map<std::size_t, std::size_t> propOfModel; // model index -> props index
 };
 

@@ -182,6 +182,14 @@ bool loadAnimGraphFile(AnimGraph& graph, const std::filesystem::path& file, std:
             c.kind = kind == "hand" ? AnimGraph::IkKind::Hand : AnimGraph::IkKind::Foot;
             ls >> c.weight >> std::quoted(c.weightParam) >> std::quoted(c.target) >> std::quoted(c.referenceClip) >> c.referenceTime;
             g.ik.push_back(c);
+        } else if (key == "ragdoll") {
+            AnimGraph::RagdollBone b;
+            if (!(ls >> std::quoted(b.bone)))
+                return fail("bad ragdoll line");
+            ls >> b.radius >> b.length >> b.mass >> b.swing >> b.twist;
+            g.ragdoll.push_back(b);
+        } else if (key == "ragdoll_on_death") {
+            ls >> g.ragdollOnDeath;
         } else if (key == "foot_max_adjust") {
             ls >> g.footMaxAdjust;
         } else if (key == "layer") {
@@ -281,6 +289,10 @@ bool saveAnimGraphFile(const AnimGraph& g, const std::filesystem::path& file, st
         out << "ik " << (c.kind == AnimGraph::IkKind::Hand ? "hand " : "foot ") << std::quoted(c.name) << ' ' << std::quoted(c.root) << ' '
             << std::quoted(c.mid) << ' ' << std::quoted(c.end) << ' ' << c.weight << ' ' << std::quoted(c.weightParam) << ' '
             << std::quoted(c.target) << ' ' << std::quoted(c.referenceClip) << ' ' << c.referenceTime << '\n';
+    if (!g.ragdoll.empty())
+        out << "ragdoll_on_death " << (g.ragdollOnDeath ? 1 : 0) << '\n';
+    for (const AnimGraph::RagdollBone& b : g.ragdoll)
+        out << "ragdoll " << std::quoted(b.bone) << ' ' << b.radius << ' ' << b.length << ' ' << b.mass << ' ' << b.swing << ' ' << b.twist << '\n';
     for (const AnimGraph::Event& e : g.events)
         out << "event " << std::quoted(e.clip) << ' ' << e.time << ' ' << std::quoted(e.name) << '\n';
     for (const AnimGraph::Layer& l : g.layers) {
