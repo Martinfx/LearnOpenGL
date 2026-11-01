@@ -57,6 +57,10 @@ public:
     using Command = std::function<ConsoleResult(const std::vector<std::string>& args)>;
     void addCommand(const std::string& name, const std::string& description, Command command, unsigned flags = CVarNone);
     // "name" prints a variable, "name value" sets it, otherwise runs a command.
+    void removeCommand(const std::string& name);
+    // Drops every onChange except the registry's own (cheats): callbacks often point at
+    // objects of one level, which the game destroys when it loads another.
+    void clearCallbacks();
     ConsoleResult execute(const std::string& line);
     // Names starting with `prefix` (variables and commands), for Tab completion.
     std::vector<std::string> complete(const std::string& prefix) const;

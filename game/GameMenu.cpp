@@ -3,6 +3,7 @@
 #include <engine/CVars.h>
 #include <engine/Crash.h>
 #include <engine/Paths.h>
+#include <engine/Scene.h>
 
 #include <algorithm>
 #include <cmath>
@@ -79,6 +80,14 @@ std::string plainMarkdown(std::string s)
 void GameMenu::init(const std::filesystem::path& assetDir, const std::filesystem::path& licenseFile)
 {
     credits_.clear();
+    levels_.clear();
+    std::error_code levelsError;
+    for (const auto& entry : std::filesystem::directory_iterator(assetDir / "levels", levelsError))
+        if (entry.path().extension() == ".level") {
+            const engine::LoadingScreen look = engine::readLoadingScreen(entry.path());
+            levels_.push_back({entry.path(), look.title.empty() ? entry.path().stem().string() : look.title, look.hint});
+        }
+    std::sort(levels_.begin(), levels_.end(), [](const LevelEntry& a, const LevelEntry& b) { return a.title < b.title; });
     std::vector<std::filesystem::path> files;
     std::error_code ec;
     for (auto it = std::filesystem::recursive_directory_iterator(assetDir, ec); !ec && it != std::filesystem::recursive_directory_iterator();
@@ -146,7 +155,8 @@ void GameMenu::setTitle(const std::string& title, const std::string& subtitle)
 
 void GameMenu::open(Screen screen)
 {
-    if ((screen == Screen::Settings || screen == Screen::Credits) && screen_ != Screen::Settings && screen_ != Screen::Credits)
+    auto sub = [](Screen s) { return s == Screen::Settings || s == Screen::Credits || s == Screen::Levels; };
+    if (sub(screen) && !sub(screen_))
         returnTo_ = screen_ == Screen::None ? Screen::Pause : screen_;
     screen_ = screen;
     dragging_.clear();
@@ -159,7 +169,8 @@ void GameMenu::back()
 {
     switch (screen_) {
     case Screen::Settings:
-    case Screen::Credits: open(returnTo_); break;
+    case Screen::Credits:
+    case Screen::Levels: open(returnTo_); break;
     case Screen::Pause: action_ = Action::Resume; break;
     case Screen::Main:
         if (started_)
@@ -215,6 +226,7 @@ void GameMenu::draw(engine::Ui2D& ui, int width, int height, double time)
     case Screen::Settings: drawSettings(ui, w, h); break;
     case Screen::Credits: drawCredits(ui, w, h); break;
     case Screen::Death: drawDeath(ui, w, h, time); break;
+    case Screen::Levels: drawLevels(ui, w, h); break;
     default: break;
     }
     // Version in the corner of every menu (bug reports).
@@ -249,9 +261,12 @@ void GameMenu::drawMain(engine::Ui2D& ui, float w, float h, double time)
         action_ = Action::Resume;
     if (started_)
         y += bh * 1.1f;
-    if (!started_) { // restarting a running level comes with the game states (level reload)
-        if (button(ui, {x - bh * 0.45f, y}, size, "Nová hra"))
-            action_ = Action::Play;
+    if (button(ui, {x - bh * 0.45f, y}, size, started_ ? "Začít lokaci znovu" : "Nová hra"))
+        action_ = started_ ? Action::Restart : Action::Play;
+    y += bh * 1.1f;
+    if (levels_.size() > 1) {
+        if (button(ui, {x - bh * 0.45f, y}, size, "Vybrat lokaci"))
+            open(Screen::Levels);
         y += bh * 1.1f;
     }
     button(ui, {x - bh * 0.45f, y}, size, "Načíst hru", false); // saving comes next (M1)
@@ -479,8 +494,45 @@ void GameMenu::drawDeath(engine::Ui2D& ui, float w, float h, double time)
     if (button(ui, {x, y}, size, "Zkusit znovu"))
         action_ = Action::Respawn;
     y += bh * 1.1f;
+    if (button(ui, {x, y}, size, "Začít lokaci znovu"))
+        action_ = Action::Restart;
+    y += bh * 1.1f;
     button(ui, {x, y}, size, "Načíst poslední uložení", false);
     y += bh * 1.1f;
     if (button(ui, {x, y}, size, "Hlavní menu"))
         action_ = Action::MainMenu;
+}
+
+void GameMenu::drawLevels(engine::Ui2D& ui, float w, float h)
+{
+    ui.rect({0, 0}, {w, h}, kShade);
+    const float row = std::round(std::clamp(h * 0.07f, 40.0f, 72.0f));
+    const float text = std::round(row * 0.38f);
+    const glm::vec2 panel(std::min(w - row, std::max(w * 0.5f, 640.0f)), std::min(h - row, row * (static_cast<float>(levels_.size()) + 2.8f)));
+    const glm::vec2 pos = glm::round((glm::vec2(w, h) - panel) * 0.5f);
+    ui.rect(pos, panel, kPanel);
+    ui.rect(pos, {panel.x, 3.0f}, kAmber);
+    ui.text("VYBRAT LOKACI", {pos.x + row * 0.4f, pos.y + row * 0.3f}, std::round(row * 0.45f), kBone, true);
+    float y = pos.y + row * 1.2f;
+    for (const LevelEntry& level : levels_) {
+        if (y > pos.y + panel.y - row * 1.6f)
+            break;
+        const glm::vec2 p(pos.x + row * 0.15f, y), size(panel.x - row * 0.3f, row * 0.95f);
+        const bool hover = mouse_.x >= p.x && mouse_.x < p.x + size.x && mouse_.y >= p.y && mouse_.y < p.y + size.y;
+        if (hover) {
+            ui.rect(p, size, {0.93f, 0.62f, 0.2f, 0.12f});
+            ui.rect(p, {3.0f, size.y}, kAmber);
+        }
+        ui.text(level.title, {p.x + row * 0.3f, p.y + row * 0.12f}, text, hover ? kAmber : kBone, true);
+        const std::string sub = level.file.filename().string() + (level.hint.empty() ? "" : "  ·  " + level.hint);
+        ui.text(sub, {p.x + row * 0.3f, p.y + row * 0.12f + text * 1.25f}, std::round(text * 0.8f), kDim);
+        if (hover && released_ && !justOpened_) {
+            chosenLevel_ = level.file;
+            action_ = Action::LoadLevel;
+        }
+        y += row;
+    }
+    const glm::vec2 bsize(row * 2.4f, row * 0.7f);
+    if (button(ui, {pos.x + panel.x - bsize.x - row * 0.2f, pos.y + panel.y - bsize.y - row * 0.2f}, bsize, "Zpět"))
+        open(returnTo_);
 }

@@ -157,6 +157,7 @@ struct ScriptSystem::Impl {
     sol::state lua;
     std::vector<std::unique_ptr<ScriptEntity>> entities;
     float playerHealth = 100.0f;
+    std::string levelChange; // game.change_level()
     double time = 0.0;
     int errors = 0;
 
@@ -303,6 +304,7 @@ void ScriptSystem::Impl::bindApi()
         }
         return t;
     });
+    game.set_function("change_level", [this](const std::string& file) { levelChange = file; });
     game.set_function("damage_player", [this](float amount) { playerHealth = std::max(0.0f, playerHealth - amount); });
     game.set_function("time", [this] { return time; });
     game.set_function("can_see", [this](const glm::vec3& from, const glm::vec3& to) {
@@ -580,6 +582,13 @@ float ScriptSystem::playerHealth() const { return impl_->playerHealth; }
 void ScriptSystem::setSoundHandler(SoundFn handler) { impl_->playSound = std::move(handler); }
 void ScriptSystem::setNavMesh(const NavMesh* nav) { impl_->nav = nav; }
 void ScriptSystem::setPlayerHealth(float health) { impl_->playerHealth = health; }
+
+std::string ScriptSystem::takeLevelChange()
+{
+    std::string file;
+    file.swap(impl_->levelChange);
+    return file;
+}
 int ScriptSystem::errorCount() const { return impl_->errors; }
 
 } // namespace engine

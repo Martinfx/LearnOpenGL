@@ -16,8 +16,8 @@
 // from the table in GameMenu.cpp (unknown ones go to "Other").
 class GameMenu {
 public:
-    enum class Screen { None, Main, Pause, Settings, Credits, Death };
-    enum class Action { None, Play, Resume, Respawn, MainMenu, Quit };
+    enum class Screen { None, Main, Pause, Settings, Credits, Death, Levels };
+    enum class Action { None, Play, Resume, Respawn, Restart, LoadLevel, MainMenu, Quit };
 
     // Reads the credits (CREDITS.md under assets/ and the third-party licences).
     void init(const std::filesystem::path& assetDir, const std::filesystem::path& licenseFile);
@@ -36,6 +36,7 @@ public:
     void mouse(glm::vec2 position, bool leftDown, double scroll);
     void draw(engine::Ui2D& ui, int width, int height, double time);
     Action takeAction();
+    const std::filesystem::path& chosenLevel() const { return chosenLevel_; } // after Action::LoadLevel
 
 private:
     bool button(engine::Ui2D& ui, glm::vec2 pos, glm::vec2 size, const std::string& label, bool enabled = true);
@@ -44,6 +45,7 @@ private:
     void drawSettings(engine::Ui2D& ui, float w, float h);
     void drawCredits(engine::Ui2D& ui, float w, float h);
     void drawDeath(engine::Ui2D& ui, float w, float h, double time);
+    void drawLevels(engine::Ui2D& ui, float w, float h);
 
     Screen screen_ = Screen::None;
     Screen returnTo_ = Screen::Main; // where settings / credits go back to
@@ -65,4 +67,11 @@ private:
         int kind; // 0 heading, 1 entry, 2 blank
     };
     std::vector<CreditLine> credits_;
+
+    struct LevelEntry {
+        std::filesystem::path file;
+        std::string title, hint;
+    };
+    std::vector<LevelEntry> levels_; // assets/levels/*.level
+    std::filesystem::path chosenLevel_;
 };

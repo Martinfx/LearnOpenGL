@@ -182,6 +182,18 @@ std::vector<const CVar*> CVarRegistry::list(const std::string& prefix) const
     return out;
 }
 
+void CVarRegistry::removeCommand(const std::string& name)
+{
+    commands_.erase(name);
+}
+
+void CVarRegistry::clearCallbacks()
+{
+    for (auto& [name, v] : vars_)
+        if (name != "cheats")
+            v.onChange = nullptr;
+}
+
 void CVarRegistry::addCommand(const std::string& name, const std::string& description, Command command, unsigned flags)
 {
     commands_[name] = CommandEntry{description, std::move(command), flags};

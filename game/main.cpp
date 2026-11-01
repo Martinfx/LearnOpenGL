@@ -38,6 +38,7 @@
 #include <set>
 #include <algorithm>
 #include <atomic>
+#include <optional>
 #include <thread>
 #include <chrono>
 #include <functional>
@@ -55,6 +56,17 @@ struct Mouse {
     glm::vec2 delta{0.0f};
     double scroll = 0.0;
     GameConsole* console = nullptr; // receives typed text and keys while open
+};
+
+// How a level session ended, and what a level change carries over.
+struct LevelExit {
+    enum Kind { None, Quit, Load, Change } kind = None;
+    std::filesystem::path level;
+};
+struct Carry {
+    float health = 100.0f;
+    std::size_t weapon = 0;
+    std::vector<int> ammo;
 };
 
 // Attribution required by CC-BY assets: print the CREDITS.md rows that name the
@@ -269,7 +281,7 @@ int main(int argc, char** argv)
         } else if (arg == "--shaders" && i + 1 < argc) {
             if (!renderer.reloadShaders(argv[++i], &error))
                 LOG_WARN("shaders", "%s\n", error.c_str());
-        } else {
+        } else if (arg.rfind("--", 0) != 0) { // options like --no-menu are read elsewhere
             levelPath = arg;
         }
     }
@@ -277,16 +289,67 @@ int main(int argc, char** argv)
     // Level: command line argument, else the bundled sample, else built-in default.
     // It loads on a background thread (models in parallel) while the loading
     // screen shows the progress; then meshes and textures go to the GPU.
-    engine::setCrashContext("level", levelPath.string());
-    engine::Scene scene;
-    engine::PhysicsWorld physics;
-    engine::Ui2D ui; // loading screen, then the map
-    MapHud map;
-    std::string levelTitle = levelPath.stem().string();
+    engine::Ui2D ui; // loading screen, menus, HUD
     {
         const std::filesystem::path assetDir = std::filesystem::path(argv[0]).parent_path() / "assets";
         if (!ui.init(assetDir / "fonts/DejaVuSans.ttf", assetDir / "fonts/DejaVuSans-Bold.ttf", &error))
-            LOG_WARN("ui", "Loading screen: %s", error.c_str());
+            LOG_WARN("ui", "Fonts: %s", error.c_str());
+    }
+    GameConsole console;
+    GameMenu menu;
+    GameHud hud;
+    {
+        const std::filesystem::path bin = std::filesystem::path(argv[0]).parent_path();
+        menu.init(bin / "assets", bin / "licenses" / "THIRD_PARTY.md");
+    }
+
+    Mouse mouse;
+    mouse.console = &console;
+    glfwSetWindowUserPointer(window, &mouse);
+    glfwSetCharCallback(window, [](GLFWwindow* w, unsigned codepoint) {
+        if (auto* m = static_cast<Mouse*>(glfwGetWindowUserPointer(w)); m->console)
+            m->console->onChar(codepoint);
+    });
+    glfwSetKeyCallback(window, [](GLFWwindow* w, int key, int, int action, int mods) {
+        auto* m = static_cast<Mouse*>(glfwGetWindowUserPointer(w));
+        if (!m->console)
+            return;
+        if (key == GLFW_KEY_GRAVE_ACCENT && action == GLFW_PRESS) { // ~ (key left of 1 on any layout)
+            m->console->toggle();
+            return;
+        }
+        m->console->onKey(key, action, mods);
+    });
+    glfwSetCursorPosCallback(window, [](GLFWwindow* w, double x, double y) {
+        auto* m = static_cast<Mouse*>(glfwGetWindowUserPointer(w));
+        if (!m->first)
+            m->delta += glm::vec2(static_cast<float>(x - m->lastX), static_cast<float>(y - m->lastY));
+        m->first = false;
+        m->lastX = x;
+        m->lastY = y;
+    });
+    glfwSetScrollCallback(window, [](GLFWwindow* w, double, double y) {
+        static_cast<Mouse*>(glfwGetWindowUserPointer(w))->scroll += y;
+    });
+    bool noMenu = false;
+    for (int i = 1; i < argc; ++i)
+        noMenu = noMenu || std::string(argv[i]) == "--no-menu";
+    // FPS_ENGINE_FRAMES=N quits after N frames (used for smoke tests in CI).
+    const char* frameLimitEnv = std::getenv("FPS_ENGINE_FRAMES");
+    const long frameLimit = frameLimitEnv ? std::strtol(frameLimitEnv, nullptr, 10) : -1;
+    long frame = 0;
+    bool firstLevel = true;
+
+    // One level from loading to leaving it (quit, restart, another level). Everything
+    // level-scoped lives in here; the window, renderer, UI, console and menu outlive it.
+    auto playLevel = [&](const std::filesystem::path& levelPath, const Carry* carry, Carry& carryOut) -> LevelExit {
+    LevelExit exitRequest; // set to leave the level (menu, console `map`, game.change_level)
+    engine::setCrashContext("level", levelPath.string());
+    engine::Scene scene;
+    engine::PhysicsWorld physics;
+    MapHud map;
+    std::string levelTitle = levelPath.stem().string();
+    {
         const engine::LoadingScreen look = engine::readLoadingScreen(levelPath);
         int imageW = 0, imageH = 0;
         const unsigned background = look.image.empty() ? 0u : engine::Ui2D::loadImage(look.image, &imageW, &imageH);
@@ -401,7 +464,7 @@ int main(int argc, char** argv)
             if (navmesh.build(scene, scene.nav, &navError, nullptr, &navCancel))
                 LOG_INFO("navmesh", "%d tiles, %d polygons in %.1f s\n", navmesh.tileCount(), navmesh.polygonCount(),
                             navmesh.buildSeconds());
-            else
+            else if (!navCancel) // leaving the level early is not a problem
                 LOG_WARN("navmesh", "%s", navError.c_str());
             std::fflush(stdout);
         });
@@ -479,11 +542,13 @@ int main(int argc, char** argv)
             const bool ok = cvars.saveConfig(file);
             return engine::ConsoleResult{ok, ok ? "saved " + file : "cannot write " + file};
         });
-        const std::filesystem::path config = engine::userDirectory("config") / "game.cfg";
-        if (cvars.loadConfig(config.string()))
-            LOG_INFO("cvar", "Settings from %s", config.string().c_str());
-        for (const std::string& rest : cvars.applyCommandLine(cvarArgs))
-            LOG_WARN("cvar", "Ignored command line argument %s", rest.c_str());
+        if (firstLevel) {
+            const std::filesystem::path config = engine::userDirectory("config") / "game.cfg";
+            if (cvars.loadConfig(config.string()))
+                LOG_INFO("cvar", "Settings from %s", config.string().c_str());
+            for (const std::string& rest : cvars.applyCommandLine(cvarArgs))
+                LOG_WARN("cvar", "Ignored command line argument %s", rest.c_str());
+        }
         // Apply what the callbacks have not (values equal to the defaults do not fire onChange).
         for (const char* name : {"vsync", "r_quality", "snd_volume", "snd_sfx", "snd_ambient", "snd_music"})
             if (const engine::CVar* v = cvars.find(name); v && v->onChange)
@@ -505,6 +570,34 @@ int main(int argc, char** argv)
         cvars.add("timescale", CVarType::Float, "1", "Game speed (0.1 slow motion .. 4)", engine::CVarCheat, 0.05, 4.0);
         cvars.add("r_debugdraw", CVarType::Bool, "1", "Show debug lines, boxes and texts from code and scripts", engine::CVarDev);
         cvars.add("ai_debug", CVarType::Bool, "0", "Draw enemy states, paths and sight lines", engine::CVarDev);
+        auto levelFile = [&argv](const std::string& name) {
+            std::filesystem::path file = name;
+            if (file.extension().empty())
+                file += ".level";
+            if (file.is_relative())
+                file = std::filesystem::path(argv[0]).parent_path() / "assets" / "levels" / file;
+            return file;
+        };
+        cvars.addCommand("map", "map NAME: loads assets/levels/NAME.level (without anything carried over)",
+                         [&exitRequest, levelFile](const std::vector<std::string>& a) {
+            if (a.empty())
+                return engine::ConsoleResult{false, "usage: map NAME"};
+            const std::filesystem::path file = levelFile(a[0]);
+            if (!std::filesystem::exists(file))
+                return engine::ConsoleResult{false, "no level " + file.string()};
+            exitRequest = {LevelExit::Load, file};
+            return engine::ConsoleResult{true, "loading " + file.filename().string()};
+        });
+        cvars.addCommand("changelevel", "changelevel NAME: goes to another level with health and weapons",
+                         [&exitRequest, levelFile](const std::vector<std::string>& a) {
+            if (a.empty())
+                return engine::ConsoleResult{false, "usage: changelevel NAME"};
+            const std::filesystem::path file = levelFile(a[0]);
+            if (!std::filesystem::exists(file))
+                return engine::ConsoleResult{false, "no level " + file.string()};
+            exitRequest = {LevelExit::Change, file};
+            return engine::ConsoleResult{true, "changing to " + file.filename().string()};
+        });
         cvars.addCommand("give", "give health|ammo|all", [&](const std::vector<std::string>& a) {
             const std::string what = a.empty() ? "all" : a[0];
             if (what == "health" || what == "all")
@@ -554,110 +647,82 @@ int main(int argc, char** argv)
     const engine::CVar& cvAiDebug = *cvars.find("ai_debug");
     glm::vec3 freecamPosition{0.0f};
     bool freecamActive = false;
-    GameConsole console;
-    GameMenu menu;
-    GameHud hud;
-    {
-        const std::filesystem::path bin = std::filesystem::path(argv[0]).parent_path();
-        menu.init(bin / "assets", bin / "licenses" / "THIRD_PARTY.md");
-        menu.setTitle(levelTitle, "Prototyp zóny");
-    }
-
-    Mouse mouse;
-    mouse.console = &console;
-    glfwSetWindowUserPointer(window, &mouse);
-    glfwSetCharCallback(window, [](GLFWwindow* w, unsigned codepoint) {
-        if (auto* m = static_cast<Mouse*>(glfwGetWindowUserPointer(w)); m->console)
-            m->console->onChar(codepoint);
-    });
-    glfwSetKeyCallback(window, [](GLFWwindow* w, int key, int, int action, int mods) {
-        auto* m = static_cast<Mouse*>(glfwGetWindowUserPointer(w));
-        if (!m->console)
-            return;
-        if (key == GLFW_KEY_GRAVE_ACCENT && action == GLFW_PRESS) { // ~ (key left of 1 on any layout)
-            m->console->toggle();
-            return;
-        }
-        m->console->onKey(key, action, mods);
-    });
-    glfwSetCursorPosCallback(window, [](GLFWwindow* w, double x, double y) {
-        auto* m = static_cast<Mouse*>(glfwGetWindowUserPointer(w));
-        if (!m->first)
-            m->delta += glm::vec2(static_cast<float>(x - m->lastX), static_cast<float>(y - m->lastY));
-        m->first = false;
-        m->lastX = x;
-        m->lastY = y;
-    });
-    glfwSetScrollCallback(window, [](GLFWwindow* w, double, double y) {
-        static_cast<Mouse*>(glfwGetWindowUserPointer(w))->scroll += y;
-    });
+    menu.setTitle(levelTitle, "Prototyp zóny");
     // The game starts in the main menu; test runs (FPS_ENGINE_FRAMES) and --no-menu go straight in.
-    bool noMenu = false;
-    for (int i = 1; i < argc; ++i)
-        noMenu = noMenu || std::string(argv[i]) == "--no-menu";
-    if (std::getenv("FPS_ENGINE_FRAMES") || noMenu)
+    // Later levels (restart, level change) start playing at once.
+    if (!firstLevel || std::getenv("FPS_ENGINE_FRAMES") || noMenu) {
         menu.setStarted(true);
-    else
+        menu.close();
+    } else {
         menu.open(GameMenu::Screen::Main);
+    }
     bool captured = !menu.active();
     setCaptured(window, captured);
 
-    // FPS_ENGINE_FRAMES=N quits after N frames (used for smoke tests in CI).
-    const char* frameLimitEnv = std::getenv("FPS_ENGINE_FRAMES");
-    const long frameLimit = frameLimitEnv ? std::strtol(frameLimitEnv, nullptr, 10) : -1;
     // Test helpers: FPS_ENGINE_AUTOFIRE=1 holds the trigger, FPS_ENGINE_SCREENSHOT=file.ppm saves the last frame.
     const bool autoFire = std::getenv("FPS_ENGINE_AUTOFIRE") != nullptr;
     const char* screenshotFile = std::getenv("FPS_ENGINE_SCREENSHOT");
-    if (const char* pos = std::getenv("FPS_ENGINE_POS")) { // "x y z" feet position (test hook)
-        glm::vec3 p(0.0f);
-        if (std::sscanf(pos, "%f %f %f", &p.x, &p.y, &p.z) == 3)
-            player.spawn(physics, p);
-    }
-    if (const char* crash = std::getenv("FPS_ENGINE_CRASH")) { // test hook: "segv" or "check" checks the crash report
-        if (std::string(crash) == "check")
-            ENGINE_CHECK(false, "FPS_ENGINE_CRASH test");
-        volatile int* nowhere = nullptr;
-        *nowhere = 1;
-    }
-    if (const char* line = std::getenv("FPS_ENGINE_CONSOLE")) { // console lines separated by ";" (test hook)
-        console.toggle();
-        std::string all = line, part; // several lines separated by ';'
-        for (std::size_t start = 0; start <= all.size();) {
-            const std::size_t end = all.find(';', start);
-            part = all.substr(start, end == std::string::npos ? std::string::npos : end - start);
-            console.submitLine(part);
-            if (end == std::string::npos)
-                break;
-            start = end + 1;
+    if (firstLevel) { // test hooks
+        if (const char* pos = std::getenv("FPS_ENGINE_POS")) { // "x y z" feet position (test hook)
+            glm::vec3 p(0.0f);
+            if (std::sscanf(pos, "%f %f %f", &p.x, &p.y, &p.z) == 3)
+                player.spawn(physics, p);
         }
-        if (const char* keep = std::getenv("FPS_ENGINE_CONSOLE_OPEN"); !keep || *keep == '0')
-            console.toggle(); // closed again unless the screenshot should show it
+        if (const char* crash = std::getenv("FPS_ENGINE_CRASH")) { // test hook: "segv" or "check" checks the crash report
+            if (std::string(crash) == "check")
+                ENGINE_CHECK(false, "FPS_ENGINE_CRASH test");
+            volatile int* nowhere = nullptr;
+            *nowhere = 1;
+        }
+        if (const char* line = std::getenv("FPS_ENGINE_CONSOLE")) { // console lines separated by ";" (test hook)
+            console.toggle();
+            std::string all = line, part; // several lines separated by ';'
+            for (std::size_t start = 0; start <= all.size();) {
+                const std::size_t end = all.find(';', start);
+                part = all.substr(start, end == std::string::npos ? std::string::npos : end - start);
+                console.submitLine(part);
+                if (end == std::string::npos)
+                    break;
+                start = end + 1;
+            }
+            if (const char* keep = std::getenv("FPS_ENGINE_CONSOLE_OPEN"); !keep || *keep == '0')
+                console.toggle(); // closed again unless the screenshot should show it
+        }
+        if (const char* screen = std::getenv("FPS_ENGINE_MENU")) { // test hook: open a menu screen (screenshots)
+            const std::string name = screen;
+            menu.setStarted(name != "main");
+            menu.open(name == "main" ? GameMenu::Screen::Main : name == "settings" ? GameMenu::Screen::Settings
+                      : name == "credits" ? GameMenu::Screen::Credits : name == "death" ? GameMenu::Screen::Death : name == "levels" ? GameMenu::Screen::Levels
+                      : GameMenu::Screen::Pause);
+        }
+        if (const char* slot = std::getenv("FPS_ENGINE_SLOT")) { // weapon slot 1..9 to start with (test hook)
+            const long n = std::strtol(slot, nullptr, 10);
+            if (n >= 1 && static_cast<std::size_t>(n) <= weapons.size()) {
+                current = next = static_cast<std::size_t>(n - 1);
+                weapons[current].drawn();
+            }
+        }
+        if (const char* look = std::getenv("FPS_ENGINE_LOOK")) // "yaw pitch" in degrees
+            std::sscanf(look, "%f %f", &camera.yawDegrees, &camera.pitchDegrees);
     }
-    if (const char* screen = std::getenv("FPS_ENGINE_MENU")) { // test hook: open a menu screen (screenshots)
-        const std::string name = screen;
-        menu.setStarted(name != "main");
-        menu.open(name == "main" ? GameMenu::Screen::Main : name == "settings" ? GameMenu::Screen::Settings
-                  : name == "credits" ? GameMenu::Screen::Credits : name == "death" ? GameMenu::Screen::Death
-                  : GameMenu::Screen::Pause);
-    }
-    if (const char* slot = std::getenv("FPS_ENGINE_SLOT")) { // weapon slot 1..9 to start with (test hook)
-        const long n = std::strtol(slot, nullptr, 10);
-        if (n >= 1 && static_cast<std::size_t>(n) <= weapons.size()) {
-            current = next = static_cast<std::size_t>(n - 1);
+    // Carried over from the previous level (level change): health, weapon, magazines.
+    if (carry) {
+        scripts.setPlayerHealth(std::min(carry->health, scene.player.maxHealth));
+        for (std::size_t w = 0; w < weapons.size() && w < carry->ammo.size(); ++w)
+            weapons[w].setAmmo(carry->ammo[w]);
+        if (carry->weapon < weapons.size()) {
+            current = next = carry->weapon;
             weapons[current].drawn();
         }
     }
-    if (const char* look = std::getenv("FPS_ENGINE_LOOK")) // "yaw pitch" in degrees
-        std::sscanf(look, "%f %f", &camera.yawDegrees, &camera.pitchDegrees);
 
     double lastTime = glfwGetTime();
     double fpsTimer = 0.0;
     int fpsFrames = 0;
-    long frame = 0;
     bool escHeld = false;
     bool mapOpen = false, mapHeld = false;
 
-    while (!glfwWindowShouldClose(window) && (frameLimit < 0 || frame < frameLimit)) {
+    while (!glfwWindowShouldClose(window) && (frameLimit < 0 || frame < frameLimit) && exitRequest.kind == LevelExit::None) {
         const double now = glfwGetTime();
         const double frameTime = now - lastTime;
         lastTime = now;
@@ -860,6 +925,12 @@ int main(int argc, char** argv)
 
             const float healthBefore = scripts.playerHealth();
             scripts.fixedUpdate(dt);
+            if (std::string change = scripts.takeLevelChange(); !change.empty()) { // game.change_level() from a script
+                std::filesystem::path file = change;
+                if (file.is_relative())
+                    file = std::filesystem::path(argv[0]).parent_path() / "assets" / "levels" / file;
+                exitRequest = {LevelExit::Change, file};
+            }
             if (cvGod.boolean() && scripts.playerHealth() < healthBefore)
                 scripts.setPlayerHealth(healthBefore);
             if (scripts.playerHealth() < healthBefore)
@@ -1011,6 +1082,8 @@ int main(int argc, char** argv)
                 menu.close();
                 break;
             case GameMenu::Action::MainMenu: menu.open(GameMenu::Screen::Main); break;
+            case GameMenu::Action::Restart: exitRequest = {LevelExit::Load, levelPath}; break;
+            case GameMenu::Action::LoadLevel: exitRequest = {LevelExit::Load, menu.chosenLevel()}; break;
             case GameMenu::Action::Quit: glfwSetWindowShouldClose(window, GLFW_TRUE); break;
             case GameMenu::Action::None: break;
             }
@@ -1070,6 +1143,37 @@ int main(int argc, char** argv)
     if (navBuilder.joinable())
         navBuilder.join();
     map.release(); // GL objects go while the context exists
+    // Console bindings that point at this level's objects go with it.
+    for (const char* command : {"quit", "pos", "config_save", "give", "teleport", "map", "changelevel"})
+        cvars.removeCommand(command);
+    cvars.clearCallbacks();
+    engine::DebugDraw::global().clear();
+    if (exitRequest.kind == LevelExit::None)
+        exitRequest.kind = LevelExit::Quit;
+    if (exitRequest.kind == LevelExit::Change) { // what the player takes along
+        carryOut.health = scripts.playerHealth();
+        carryOut.weapon = current;
+        carryOut.ammo.clear();
+        for (const engine::Weapon& w : weapons)
+            carryOut.ammo.push_back(w.ammo());
+    }
+    return exitRequest;
+    };
+
+    // Levels one after another: restart and level change load a fresh session.
+    std::optional<Carry> carry;
+    for (;;) {
+        Carry carryOut;
+        const LevelExit result = playLevel(levelPath, carry ? &*carry : nullptr, carryOut);
+        firstLevel = false;
+        if (result.kind == LevelExit::Quit || glfwWindowShouldClose(window) || (frameLimit >= 0 && frame >= frameLimit))
+            break;
+        levelPath = result.level;
+        carry.reset();
+        if (result.kind == LevelExit::Change)
+            carry = carryOut;
+        LOG_INFO("game", "Loading %s", levelPath.string().c_str());
+    }
     ui.shutdown();
     renderer.shutdown();
     glfwDestroyWindow(window);

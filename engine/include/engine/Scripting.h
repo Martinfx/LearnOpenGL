@@ -56,6 +56,8 @@ public:
     void setNavMesh(const NavMesh* nav);
 
     float playerHealth() const;
+    // Level file a script asked for with game.change_level() (empty = none); cleared by the call.
+    std::string takeLevelChange();
     void setPlayerHealth(float health);
     int errorCount() const;
 

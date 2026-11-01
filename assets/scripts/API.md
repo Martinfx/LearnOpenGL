@@ -75,6 +75,7 @@ methods `:length()`, `:normalized()`, `:flat()` (y = 0), `:dot(other)`.
 | `game.raycast(origin, dir, max)` | `hit, point, distance` |
 | `game.find(name)` | Entity or `nil` |
 | `game.log(text)`, `print(...)` | Prints to the game console |
+| `game.change_level(file)` | Loads another level (file in `assets/levels/` or absolute); health, weapon and magazines come along |
 | `game.cvar(name)` | Console variable as text (`"1"`, `"0.5"`), nil if unknown |
 | `game.set_cvar(name, value)` | Sets a console variable; false if unknown, out of range or a locked cheat |
 | `game.debug_line(a, b, [color], [seconds])` | Debug line (also `debug_arrow`); color is a `vec3` 0..1, seconds 0 = this frame |

@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include "engine/Scene.h"
 #include <glm/vec3.hpp>
 #include <filesystem>
@@ -100,6 +101,7 @@ public:
 
     int ammo() const { return ammo_; }
     void refill() { ammo_ = settings.melee() ? 0 : settings.magazineSize; } // cheat `give ammo`
+    void setAmmo(int ammo) { ammo_ = settings.melee() ? 0 : std::clamp(ammo, 0, settings.magazineSize); } // level change, saves
     bool reloadingFromEmpty() const { return reloadFromEmpty_; } // the current / last reload started on an empty magazine   // melee weapons always report 0
     float swing() const;                 // melee: 0..1 through the current swing, 0 when idle
 
