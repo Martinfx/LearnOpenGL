@@ -94,6 +94,10 @@ methods `:length()`, `:normalized()`, `:flat()` (y = 0), `:dot(other)`.
 | `game.start_storm([warning])` | An anomaly storm comes now, after `warning` seconds (default: the level's warning) |
 | `game.sheltered(position)` | `true` under a roof: inside an interior volume or something solid within 40 m above |
 | `game.shelter_near(position, radius)` | The nearest place to hide from the storm: an interior's floor middle, else a navmesh spot well under a roof within 60 m; `nil` = none |
+| `game.quest(id)` | Quest state (`"none"`, `"active"`, `"done"`, `"failed"`) and its current stage id (`""` unless active); quests are `assets/quests/*.quest` |
+| `game.start_quest(id)` / `game.advance_quest(id)` / `game.complete_quest(id)` / `game.fail_quest(id)` | Moves the quest on (advance: next stage, or done after the last); `true` when it changed. The HUD reports it, rewards come with "done" |
+| `game.set_quest_stage(id, stage)` | Jumps to a stage (starts the quest if needed) |
+| `game.flag(name)` / `game.set_flag(name [, on])` | Named story flags shared with dialogs (`if flag met_grisha`), saved with the game |
 | `game.entities_near(position, radius, [type])` | Living entities within `radius`, nearest first |
 | `game.characters_near(position, radius)` | Living entities that belong to a faction (people, mutants), nearest first |
 | `game.nav_ready()` | `true` once the level's navmesh is built (it builds in the background after loading) |

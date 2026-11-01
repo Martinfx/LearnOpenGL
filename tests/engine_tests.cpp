@@ -6,6 +6,8 @@
 #include <engine/ALife.h>
 #include <engine/Anomaly.h>
 #include <engine/Fauna.h>
+#include <engine/Dialog.h>
+#include <engine/Quests.h>
 #include <engine/Lights.h>
 #include <engine/EntityIO.h>
 #include <engine/Ambience.h>
@@ -1040,6 +1042,108 @@ void testALife()
     check(saved.size() == 1 && saved[0].name == "raiders", "roaming squads are saved");
     for (const std::string& m : log)
         check(m.find("[script]") != 0, "no script errors: " + m);
+}
+
+void testQuestsAndDialogs()
+{
+    engine::Quests quests;
+    std::vector<std::string> errors;
+    check(quests.loadFolder(ENGINE_TEST_ASSETS "/quests", &errors) >= 1 && errors.empty(), "the shipped quests load");
+    const engine::QuestDef* stash = quests.find("camp_stash");
+    check(stash && stash->stages.size() == 2 && stash->stage("report") && stash->rewards.size() == 3, "camp_stash: two stages, three rewards");
+    for (const char* name : {"grisha", "tolik"}) {
+        engine::DialogDef d;
+        std::string error;
+        check(engine::loadDialog(d, std::string(ENGINE_TEST_ASSETS "/dialogs/") + name + ".dialog", &error), "dialog loads: " + error);
+        const auto problems = engine::checkDialog(d, &quests);
+        check(problems.empty(), std::string(name) + ".dialog has no broken links" + (problems.empty() ? "" : ": " + problems[0]));
+    }
+    engine::DialogDef grisha;
+    engine::loadDialog(grisha, ENGINE_TEST_ASSETS "/dialogs/grisha.dialog");
+    // Round trips of both formats.
+    {
+        const auto dir = std::filesystem::temp_directory_path();
+        engine::DialogDef d2;
+        engine::QuestDef q2;
+        check(engine::saveDialog(grisha, dir / "rt.dialog") && engine::loadDialog(d2, dir / "rt.dialog") && d2 == grisha, "dialog save/load round trip");
+        check(engine::saveQuest(*stash, dir / "rt.quest") && engine::loadQuest(q2, dir / "rt.quest") && q2 == *stash, "quest save/load round trip");
+        std::filesystem::remove(dir / "rt.dialog");
+        std::filesystem::remove(dir / "rt.quest");
+    }
+    // The talk: greeting, job offered, quest started; then the waiting line; then the reward.
+    engine::DialogSession talk;
+    auto choose = [&](const std::string& text) {
+        for (std::size_t i = 0; i < talk.choices().size(); ++i)
+            if (talk.node()->choices[static_cast<std::size_t>(talk.choices()[i])].text.starts_with(text))
+                return talk.choose(static_cast<int>(i), quests);
+        check(false, "answer \"" + text + "\" offered in node " + (talk.node() ? talk.node()->id : std::string("-")));
+        return std::vector<engine::DialogAction>{};
+    };
+    check(talk.start(grisha, quests) && talk.node()->id == "first", "first meeting: the greeting");
+    choose("Co se tu");
+    check(talk.node() && talk.node()->id == "work" && quests.flag("met_grisha"), "asks for work; the meeting is remembered");
+    choose("Platí");
+    check(!talk.active() && quests.status("camp_stash") == engine::Quests::Status::Active && quests.stage("camp_stash") == "find",
+          "the quest starts at its first stage");
+    auto events = quests.takeEvents();
+    check(events.size() == 1 && events[0].kind == engine::Quests::Event::Started, "one event: started");
+    check(talk.start(grisha, quests) && talk.node()->id == "waiting", "while searching he repeats where to go");
+    talk.end();
+    check(quests.advance("camp_stash") && quests.stage("camp_stash") == "report", "the stash found: report back");
+    check(talk.start(grisha, quests) && talk.node()->id == "found", "back at the camp: the reward line");
+    choose("Rádo");
+    check(quests.status("camp_stash") == engine::Quests::Status::Completed && quests.is("camp_stash", "done"), "completed");
+    check(talk.start(grisha, quests) && talk.node()->id == "start", "later: the ordinary greeting");
+    bool offersWork = false;
+    for (int i : talk.choices())
+        offersWork = offersWork || talk.node()->choices[static_cast<std::size_t>(i)].text.starts_with("Máš");
+    check(!offersWork, "no job offered again once it is done");
+    // Saved games.
+    const std::vector<std::string> saved = quests.save();
+    engine::Quests back;
+    back.loadFolder(ENGINE_TEST_ASSETS "/quests");
+    back.restore(saved);
+    check(back.is("camp_stash", "done") && back.flag("met_grisha") && back.save() == saved, "quest log and flags survive a save");
+    // Game actions come back to the caller; quest ones are done.
+    {
+        engine::Quests q;
+        q.loadFolder(ENGINE_TEST_ASSETS "/quests");
+        const auto game = engine::runDialogActions({{{"give", "medkits", "2"}}, {{"quest_stage", "camp_stash", "report"}}, {{"fire", "Gate", "Open"}}}, q);
+        check(game.size() == 2 && game[0].words[0] == "give" && game[1].words[0] == "fire" && q.stage("camp_stash") == "report",
+              "give/fire go to the game, quest_stage jumps (and starts the quest)");
+    }
+    // A quest objective in a level: counts only at its stage, then moves the quest on.
+    {
+        auto s = flatFloor();
+        s.playerStart = {0, 0, 0};
+        engine::Entity stashEntity;
+        stashEntity.type = "objective";
+        stashEntity.name = "Hospital stash";
+        stashEntity.position = {0.5f, 0, 0};
+        stashEntity.scriptPath = ENGINE_TEST_ASSETS "/scripts/objective.lua";
+        stashEntity.properties["quest"] = "camp_stash";
+        stashEntity.properties["stage"] = "find";
+        s.entities.push_back(stashEntity);
+        engine::PhysicsWorld world;
+        world.setLevel(s);
+        engine::PlayerController player;
+        player.spawn(world, s.playerStart);
+        engine::Quests q;
+        q.loadFolder(ENGINE_TEST_ASSETS "/quests");
+        std::vector<std::string> log;
+        engine::ScriptSystem scripts(s, world, player, [&log](const std::string& m) { log.push_back(m); });
+        scripts.setQuests(&q);
+        check(scripts.start() == 0, "objective script starts");
+        for (int i = 0; i < 30; ++i)
+            scripts.fixedUpdate(1.0f / 60.0f);
+        check(q.status("camp_stash") == engine::Quests::Status::None, "the stash means nothing before the quest is taken");
+        q.start("camp_stash");
+        for (int i = 0; i < 30; ++i)
+            scripts.fixedUpdate(1.0f / 60.0f);
+        check(q.stage("camp_stash") == "report", "standing at the stash moves the quest to its report stage");
+        for (const std::string& m : log)
+            check(m.find("[script]") != 0, "no script errors: " + m);
+    }
 }
 
 void testAnomalyStorm()
@@ -3599,6 +3703,7 @@ int main()
         {"testALife", testALife},
         {"testFauna", testFauna},
         {"testAnomalyStorm", testAnomalyStorm},
+        {"testQuestsAndDialogs", testQuestsAndDialogs},
         {"testWorldStreaming", testWorldStreaming},
     };
     for (const auto& [name, run] : tests)

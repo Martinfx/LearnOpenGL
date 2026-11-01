@@ -87,6 +87,8 @@ bool SaveGame::write(const std::filesystem::path& file, std::string* error) cons
     body << "wetness " << wetness << "\n";
     if (!weather.empty())
         body << "weather " << quote(weather) << ' ' << weatherHold << "\n";
+    for (const std::string& q : quests)
+        body << "questlog " << q << "\n";
     if (stormPhase >= 0)
         body << "anomaly_storm " << stormPhase << ' ' << stormSeconds << "\n";
     for (const Prop& p : props)
@@ -207,6 +209,10 @@ bool SaveGame::read(const std::filesystem::path& file, std::string* error)
             float v = 0.0f;
             if (ls >> v)
                 goodwill[str] = v;
+        } else if (key == "questlog") {
+            std::string rest;
+            std::getline(ls >> std::ws, rest);
+            quests.push_back(rest);
         } else if (key == "anomaly_storm") {
             ls >> stormPhase >> stormSeconds;
         } else if (key == "wetness") {

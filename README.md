@@ -49,7 +49,7 @@ Výstupy jsou v `build/bin/`.
 ## Ovládání
 
 **Hra** (`fps_game [soubor.level]`): WASD pohyb, myš rozhlížení, mezerník skok, Shift sprint,
-levé tlačítko střelba, pravé tlačítko míření přes mířidla (přiblížení, menší rozptyl; nastavení `aim_*` v panelu Weapons), R přebití, 1–9 nebo kolečko výběr zbraně, Esc uvolní myš.
+levé tlačítko střelba, pravé tlačítko míření přes mířidla (přiblížení, menší rozptyl; nastavení `aim_*` v panelu Weapons), R přebití, 1–9 nebo kolečko výběr zbraně, E mluvit s postavou, M mapa a úkoly (PDA), Esc uvolní myš.
 
 **Editor** (`fps_editor [soubor.level]`): pravé tlačítko + WASD/QE létání (kolečko mění rychlost),
 levé tlačítko výběr, F zaměří výběr, Ctrl+B přidá box, Ctrl+I importuje glTF model, Ctrl+D duplikuje, Del smaže,
@@ -153,6 +153,22 @@ a zavolají smečku, přibíhají každý z jiné strany, kousnou a odskočí; t
 hejno vzlétne, krouží nad místem jako boidy (drží se pohromadě, letí stejným směrem, nepřibližují se
 k sobě) a po chvíli klidu přistane. Výstřely hráče i NPC slyší skripty přes `game.noise_near`; klidní
 NPC jdou místo výstřelu prozkoumat. V zóně je smečka u doupěte severně od tábora a dvě hejna vran.
+
+### Úkoly a dialogy
+
+Úkoly jsou soubory `assets/quests/*.quest` (id, název, popis, kdo ho dává, etapy v pořadí s textem do PDA
+a entitou, kterou PDA ukáže na mapě, odměny: lékárničky, náboje, reputace). Dialogy jsou `assets/dialogs/*.dialog`:
+strom uzlů (co postava říká) a odpovědí hráče; uzel i odpověď mají podmínky (`quest <id> none|active|done|<etapa>`,
+`flag <jméno>`, `not …`) a akce (`start_quest`, `quest_stage`, `complete_quest`, `set_flag`, `give …`, `fire`,
+`hostile`). Rozhovor začíná prvním uzlem, jehož podmínky platí. Postava dostane dialog v Properties > Character >
+Dialog; ve hře se k ní hráč přiblíží a stiskne **E** (nepřátelé nemluví), odpovídá klávesami 1–9 nebo myší,
+hra mezitím stojí. Úkoly ukazuje PDA (M) vpravo vedle mapy, cíl aktuální etapy je kosočtverec na mapě i minimapě;
+změny hlásí HUD s pípnutím. `objective.lua` s vlastností `quest` / `stage` posune úkol, když k němu hráč dojde.
+Editor: Assets > Dialog / Quest otevře strom dialogu nebo úkol (dvojklik v Content Browseru taky), New dialog /
+New quest založí nový; dole se hlásí chyby (odpověď vede na neexistující uzel, neznámý úkol). Lua: `game.quest`,
+`start_quest`, `set_quest_stage`, `advance_quest`, `complete_quest`, `fail_quest`, `flag`, `set_flag`. Konzole
+`quest`, `quest start|next|done|fail <id>`, `talk <jméno>`. Postup se ukládá s hrou a přenáší mezi levely.
+V zóně: Hřiša v táboře dává úkol „Zásoby z nemocnice“ (skrýš v horním patře nemocnice), Tolik vypráví o bouřích.
 
 ### Anomální bouře
 

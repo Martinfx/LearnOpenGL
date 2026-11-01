@@ -27,6 +27,7 @@
 #include "GameAudio.h"
 #include "GameEffects.h"
 #include "GameConsole.h"
+#include "GameDialog.h"
 #include "GameHud.h"
 #include "GameMenu.h"
 #include "GameSave.h"
@@ -196,6 +197,7 @@ constexpr Binding kBindings[] = {
     {"in_map", "M", "Mapa", -1},
     {"in_flashlight", "F", "Baterka", -1},
     {"in_heal", "H", "Lékárnička", -1},
+    {"in_use", "E", "Mluvit / použít", -1},
     {"in_quicksave", "F5", "Rychlé uložení", -1},
     {"in_quickload", "F9", "Rychlé načtení", -1},
 };
@@ -528,6 +530,16 @@ int main(int argc, char** argv)
         if (!engine::loadFactions(factions, std::filesystem::path(argv[0]).parent_path() / "assets" / "factions.cfg", &factionError))
             LOG_WARN("factions", "%s (built-in factions used)", factionError.c_str());
     }
+    // Quests (assets/quests/*.quest) and the player's log: like the factions, one for the whole
+    // game (progress carries over level changes and is saved).
+    engine::Quests quests;
+    {
+        std::vector<std::string> questErrors;
+        const int n = quests.loadFolder(std::filesystem::path(argv[0]).parent_path() / "assets" / "quests", &questErrors);
+        for (const std::string& e : questErrors)
+            LOG_WARN("quests", "%s", e.c_str());
+        LOG_INFO("quests", "%d quests", n);
+    }
     WindowMode windowMode;
 
     // One level from loading to leaving it (quit, restart, another level). Everything
@@ -708,6 +720,11 @@ int main(int argc, char** argv)
         factions.goodwill = loadFrom->goodwill;
     else if (!carry)
         factions.goodwill.clear(); // a new game
+    scripts.setQuests(&quests);
+    if (loadFrom)
+        quests.restore(loadFrom->quests);
+    else if (!carry)
+        quests.clearProgress();
     scripts.setPlayerHealth(scene.player.maxHealth);
     scripts.setSoundHandler([&audio](const std::string& sound, const glm::vec3* position, float volume) {
         audio.playAsset(sound, position, volume);
@@ -803,6 +820,7 @@ int main(int argc, char** argv)
     anomalyStorm.start(scene.environment.anomalyStorm);
     anomalyStorm.publish(scene.environment.anomalyStormNow);
     float stormHurtTimer = 0.0f;
+    std::string talkRequest; // console `talk <name>`: starts a talk with that character
     auto stormPhaseChanged = [&](engine::AnomalyStorm::Phase phase) {
         using P = engine::AnomalyStorm::Phase;
         const engine::AnomalyStormSettings& ss = scene.environment.anomalyStorm;
@@ -1064,6 +1082,35 @@ int main(int argc, char** argv)
             weather.strikeNow(distance);
             return engine::ConsoleResult{true, "lightning " + std::to_string(static_cast<int>(distance)) + " m"};
         });
+        cvars.addCommand("quest", "quest: lists the quest log | quest start|done|fail|next <id> | quest stage <id> <stage>",
+                         [&](const std::vector<std::string>& a) {
+            if (a.empty()) {
+                std::string out;
+                for (const auto& [id, def] : quests.all())
+                    out += id + " [" + engine::questStatusName(quests.status(id)) + "] " + quests.stage(id) + " - " + def.title + "\n";
+                return engine::ConsoleResult{true, out.empty() ? std::string("no quests in assets/quests") : out};
+            }
+            const std::string id = a.size() > 1 ? a[1] : std::string();
+            bool ok = false;
+            if (a[0] == "start")
+                ok = quests.start(id);
+            else if (a[0] == "done")
+                ok = quests.complete(id);
+            else if (a[0] == "fail")
+                ok = quests.fail(id);
+            else if (a[0] == "next")
+                ok = quests.advance(id);
+            else if (a[0] == "stage" && a.size() > 2)
+                ok = quests.setStage(id, a[2]);
+            return engine::ConsoleResult{ok, ok ? a[0] + " " + id : "cannot " + a[0] + " " + id};
+        });
+        cvars.addCommand("talk", "talk <name>: talks to the character of that name (wherever it is)", [&](const std::vector<std::string>& a) {
+            std::string name;
+            for (const std::string& w : a)
+                name += (name.empty() ? "" : " ") + w;
+            talkRequest = name;
+            return engine::ConsoleResult{!name.empty(), "talk " + name};
+        });
         cvars.addCommand("storm", "storm [warning seconds]: an anomaly storm comes now | storm stop: ends it | without arguments: shows it",
                          [&](const std::vector<std::string>& a) {
             const engine::AnomalyStormSettings& s = scene.environment.anomalyStorm;
@@ -1314,6 +1361,7 @@ int main(int argc, char** argv)
         save.entities = scripts.saveEntities();
         save.pendingInputs = scripts.savePendingInputs();
         save.squads = alife.save();
+        save.quests = quests.save();
         save.stormPhase = anomalyStorm.phaseIndex();
         save.stormSeconds = anomalyStorm.secondsLeft();
         return save;
@@ -1459,7 +1507,49 @@ int main(int argc, char** argv)
     bool escHeld = false;
     bool padStartHeld = false, padWeaponHeld = false;
     bool quickSaveHeld = false, quickLoadHeld = false;
-    bool mapOpen = false, mapHeld = false;
+    bool mapOpen = std::getenv("FPS_ENGINE_MAP") != nullptr, mapHeld = false; // test hook: start with the PDA map open
+    // Talking (E at a character with a "dialog" property): the game pauses, answers by 1-9 or mouse.
+    GameDialog talk;
+    bool useHeld = false, talkClickHeld = false;
+    std::array<bool, 9> digitHeld{};
+    int talkHover = -1, useTarget = -1;
+    // Rewards and dialog "give": medkits n | ammo <type> n | goodwill <faction> n; returns a short text.
+    auto giveReward = [&](const std::vector<std::string>& w) -> std::string {
+        auto num = [&](std::size_t i) { return i < w.size() ? static_cast<int>(std::lround(std::atof(w[i].c_str()))) : 0; };
+        if (w.empty())
+            return {};
+        if (w[0] == "medkits" || w[0] == "medkit") {
+            inventory.medkits += num(1);
+            return "+" + std::to_string(num(1)) + " lékárnička";
+        }
+        if (w[0] == "ammo" && w.size() >= 3) {
+            inventory.ammo[w[1]] += num(2);
+            inventory.link(weapons);
+            return "+" + std::to_string(num(2)) + " nábojů " + w[1];
+        }
+        if (w[0] == "goodwill" && w.size() >= 3) {
+            factions.changeGoodwill(w[1], static_cast<float>(num(2)));
+            const engine::Faction* f = factions.find(w[1]);
+            return (num(2) >= 0 ? "+" : "") + std::to_string(num(2)) + " reputace " + (f ? f->name : w[1]);
+        }
+        LOG_WARN("quests", "unknown reward %s", w[0].c_str());
+        return {};
+    };
+    auto runTalkActions = [&](const std::vector<engine::DialogAction>& actions) {
+        for (const engine::DialogAction& a : actions) {
+            const std::vector<std::string>& w = a.words;
+            if (w[0] == "give") {
+                const std::string got = giveReward(std::vector<std::string>(w.begin() + 1, w.end()));
+                if (!got.empty())
+                    hud.notify(got);
+            } else if (w[0] == "fire" && w.size() >= 3) {
+                scripts.sendInput(w[1], w[2], w.size() > 3 ? w[3] : std::string(), 0.0f, -1, talk.entity());
+            } else if (w[0] == "hostile" && talk.entity() >= 0) {
+                scene.entities[static_cast<std::size_t>(talk.entity())].properties["grudge"] = "1";
+                talk.end();
+            }
+        }
+    };
 
     while (!glfwWindowShouldClose(window) && (frameLimit < 0 || frame < frameLimit) && exitRequest.kind == LevelExit::None) {
         const double now = fixedDt > 0.0 ? lastTime + fixedDt : glfwGetTime();
@@ -1477,6 +1567,8 @@ int main(int argc, char** argv)
         if (esc && !escHeld) {
             if (menu.active())
                 menu.back();
+            else if (talk.active())
+                talk.end();
             else if (mapOpen)
                 mapOpen = false;
             else
@@ -1499,7 +1591,7 @@ int main(int argc, char** argv)
                 mouse.scroll = 0.0;
         }
         // The mouse looks around only while playing (no menu, no console, window focused).
-        const bool wantCapture = !menu.active() && !console.open() && glfwGetWindowAttrib(window, GLFW_FOCUSED);
+        const bool wantCapture = !menu.active() && !console.open() && !talk.active() && glfwGetWindowAttrib(window, GLFW_FOCUSED);
         if (wantCapture != captured) {
             captured = wantCapture;
             setCaptured(window, captured);
@@ -1518,6 +1610,116 @@ int main(int argc, char** argv)
         if (mKey && !mapHeld)
             mapOpen = !mapOpen;
         mapHeld = mKey;
+        // Talking: answers by number keys or a click; E at a character starts a talk.
+        {
+            int pick = -1;
+            for (int k = 0; k < 9; ++k) {
+                const bool d = glfwGetKey(window, GLFW_KEY_1 + k) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_KP_1 + k) == GLFW_PRESS;
+                if (d && !digitHeld[static_cast<std::size_t>(k)])
+                    pick = k;
+                digitHeld[static_cast<std::size_t>(k)] = d;
+            }
+            if (talk.active() && !menu.active() && !console.open()) {
+                double cx = 0.0, cy = 0.0;
+                int ww = 1, wh = 1, fw = 1, fh = 1;
+                glfwGetCursorPos(window, &cx, &cy);
+                glfwGetWindowSize(window, &ww, &wh);
+                glfwGetFramebufferSize(window, &fw, &fh);
+                talkHover = talk.hit({static_cast<float>(cx) * static_cast<float>(fw) / static_cast<float>(std::max(ww, 1)),
+                                      static_cast<float>(cy) * static_cast<float>(fh) / static_cast<float>(std::max(wh, 1))});
+                const bool click = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+                if (click && !talkClickHeld && talkHover >= 0)
+                    pick = talkHover;
+                talkClickHeld = click;
+                if (pick >= 0 && pick < talk.answers())
+                    runTalkActions(talk.choose(pick, quests));
+            } else {
+                talkClickHeld = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS; // the click that ends a talk does not shoot
+            }
+            // Who could be talked to: a character with a dialog, close, in front, in sight, not hostile.
+            useTarget = -1;
+            if (captured && !mapOpen && !talk.active() && scripts.playerHealth() > 0.0f) {
+                float best = 0.85f; // cos of the widest angle
+                for (std::size_t i = 0; i < scene.entities.size(); ++i) {
+                    const engine::Entity& e = scene.entities[i];
+                    const auto d = e.properties.find("dialog");
+                    if (d == e.properties.end() || d->second.empty() || !e.alive || e.offline)
+                        continue;
+                    const glm::vec3 at = e.position + glm::vec3(0.0f, std::min(e.size.y, 1.8f) * 0.75f, 0.0f);
+                    const glm::vec3 to = at - camera.position;
+                    const float dist = glm::length(to);
+                    if (dist > 3.0f || dist < 1e-3f)
+                        continue;
+                    const float facing = glm::dot(to / dist, camera.forward());
+                    if (facing <= best)
+                        continue;
+                    if (const auto grudge = e.properties.find("grudge"); grudge != e.properties.end() && grudge->second == "1")
+                        continue;
+                    if (factions.attitude("player", engine::entityFaction(e)) == engine::Attitude::Hostile && !engine::entityFaction(e).empty())
+                        continue;
+                    if (const auto hit = physics.raycast(camera.position, to / dist, dist); hit && hit->distance < dist - 0.6f)
+                        continue; // a wall between
+                    best = facing;
+                    useTarget = static_cast<int>(i);
+                }
+            }
+            const bool use = captured && !console.open() && keyDown(window, boundKey("in_use"));
+            bool forced = false;
+            if (!talkRequest.empty() && !talk.active()) { // console `talk`
+                const auto found = engine::findEntitiesByName(scene, talkRequest);
+                talkRequest.clear();
+                if (!found.empty() && scene.entities[static_cast<std::size_t>(found.front())].properties.count("dialog")) {
+                    useTarget = found.front();
+                    forced = true;
+                }
+            }
+            if (((use && !useHeld) || forced) && useTarget >= 0 && !talk.active()) {
+                engine::Entity& e = scene.entities[static_cast<std::size_t>(useTarget)];
+                std::filesystem::path file = std::filesystem::path(std::u8string(e.properties["dialog"].begin(), e.properties["dialog"].end()));
+                if (file.is_relative())
+                    file = assetRoot / file;
+                std::string why;
+                if (talk.begin(file.lexically_normal(), e.name, useTarget, quests, &why)) {
+                    const glm::vec3 to = player.feet() - e.position; // turns to the player
+                    if (to.x * to.x + to.z * to.z > 1e-4f)
+                        e.yawDegrees = glm::degrees(std::atan2(to.z, to.x));
+                    runTalkActions(talk.takeGameActions());
+                    for (bool& h : digitHeld)
+                        h = true; // keys held now do not answer
+                } else {
+                    hud.notify(e.name + " nemá co říct");
+                    LOG_WARN("dialog", "%s: %s", e.name.c_str(), why.c_str());
+                }
+            }
+            useHeld = use;
+            // Quest news for the HUD; rewards of completed quests.
+            std::string news;
+            for (const engine::Quests::Event& ev : quests.takeEvents()) {
+                const engine::QuestDef* q = quests.find(ev.quest);
+                if (!q)
+                    continue;
+                std::string line;
+                if (ev.kind == engine::Quests::Event::Started) {
+                    line = "Nový úkol: " + q->title;
+                } else if (ev.kind == engine::Quests::Event::Stage) {
+                    const engine::QuestStage* st = q->stage(quests.stage(ev.quest));
+                    line = q->title + ": " + (st ? st->text : std::string());
+                } else if (ev.kind == engine::Quests::Event::Completed) {
+                    line = "Úkol splněn: " + q->title;
+                    for (const auto& r : q->rewards)
+                        if (const std::string got = giveReward(r); !got.empty())
+                            line += ", " + got;
+                } else {
+                    line = "Úkol selhal: " + q->title;
+                }
+                LOG_INFO("quests", "%s", line.c_str());
+                news += (news.empty() ? "" : "  |  ") + line;
+            }
+            if (!news.empty()) {
+                hud.notify(news);
+                audio.playAsset("sounds/ui/pda_beep.sound", nullptr, 0.8f);
+            }
+        }
         {
             const bool fKey = captured && !console.open() && keyDown(window, boundKey("in_flashlight"));
             if (fKey && !flashlightHeld && !flashlight.toggle() && scene.player.flashlight)
@@ -1614,7 +1816,7 @@ int main(int argc, char** argv)
             input = {};
         }
         // Menus pause the game; timescale is a cheat (1 = normal).
-        const double simTime = menu.active() ? 0.0 : frameTime * cvTimescale.number();
+        const double simTime = menu.active() || talk.active() ? 0.0 : frameTime * cvTimescale.number();
         const int steps = clock.advance(simTime);
         for (int i = 0; i < steps; ++i) {
             ENGINE_ZONE("Simulation step");
@@ -1994,10 +2196,36 @@ int main(int argc, char** argv)
             ui.begin(width, height);
             if (menu.active()) {
                 // menus cover the game: no map
-            } else if (mapOpen)
-                map.drawFullMap(ui, width, height, player.feet(), camera.flatForward());
-            else
-                map.drawMinimap(ui, width, height, player.feet(), camera.flatForward());
+            } else {
+                // PDA tasks: active ones first (newest first), then done and failed.
+                std::vector<QuestView> questViews;
+                std::vector<std::pair<double, const std::string*>> order;
+                for (const auto& [id, entry] : quests.entries())
+                    order.emplace_back((entry.status == engine::Quests::Status::Active ? 1e9 : 0.0) + entry.started, &id);
+                std::sort(order.begin(), order.end(), [](const auto& a, const auto& b) { return a.first > b.first; });
+                for (const auto& [key, id] : order) {
+                    const engine::QuestDef* q = quests.find(*id);
+                    if (!q)
+                        continue;
+                    QuestView v;
+                    v.title = q->title;
+                    v.description = q->description;
+                    v.active = quests.status(*id) == engine::Quests::Status::Active;
+                    v.failed = quests.status(*id) == engine::Quests::Status::Failed;
+                    if (const engine::QuestStage* st = v.active ? q->stage(quests.stage(*id)) : nullptr) {
+                        v.stage = st->text;
+                        if (!st->target.empty())
+                            for (int t : engine::findEntitiesByName(scene, st->target))
+                                v.targets.push_back({scene.entities[static_cast<std::size_t>(t)].position.x,
+                                                     scene.entities[static_cast<std::size_t>(t)].position.z});
+                    }
+                    questViews.push_back(std::move(v));
+                }
+                if (mapOpen)
+                    map.drawFullMap(ui, width, height, player.feet(), camera.flatForward(), questViews);
+                else
+                    map.drawMinimap(ui, width, height, player.feet(), camera.flatForward(), questViews);
+            }
             hud.update(static_cast<float>(frameTime), scripts.playerHealth());
             menu.setCanSave(scripts.playerHealth() > 0.0f);
             if (!mapOpen && !menu.active()) {
@@ -2015,6 +2243,18 @@ int main(int argc, char** argv)
                 hs.battery = flashlight.hasBattery() ? flashlight.charge() : -1.0f;
                 hs.flashlightOn = flashlight.on();
                 hud.draw(ui, width, height, hs);
+                if (talk.active()) {
+                    talk.draw(ui, width, height, talkHover);
+                } else if (useTarget >= 0) { // "E  Mluvit: Sidor"
+                    const float H = static_cast<float>(height), size = std::round(std::clamp(H * 0.022f, 12.0f, 26.0f));
+                    const engine::CVar* key = cvars.find("in_use");
+                    const std::string line = (key ? key->value : std::string("E")) + "   Mluvit: " +
+                                             scene.entities[static_cast<std::size_t>(useTarget)].name;
+                    const float w = ui.textWidth(line, size, true);
+                    const glm::vec2 at(std::round((static_cast<float>(width) - w) * 0.5f), std::round(H * 0.6f));
+                    ui.rect(at - glm::vec2(size * 0.6f, size * 0.3f), {w + size * 1.2f, size * 1.6f}, {0.05f, 0.055f, 0.045f, 0.7f});
+                    ui.text(line, at, size, {0.93f, 0.84f, 0.6f, 1.0f}, true);
+                }
                 if (const auto phase = anomalyStorm.phase();
                     phase == engine::AnomalyStorm::Phase::Warning || phase == engine::AnomalyStorm::Phase::Storm) {
                     // Storm banner: countdown to the storm / how long it lasts, red while outdoors.

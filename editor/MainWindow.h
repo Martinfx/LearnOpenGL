@@ -142,6 +142,8 @@ private:
     SoundEditor* openSoundEditor(const QString& path);
     void openSurfacesEditor();
     void openFactionsEditor();
+    void openStoryEditor(const QString& path); // .dialog / .quest
+    void newStoryFile(bool dialog);            // Assets > New dialog / New quest
     void reloadFactionList(); // Properties > Character > Faction offers the factions of assets/factions.cfg
     void openParticleEditor(const QString& path);
     void openAnimGraphEditor(const QString& path);
@@ -350,6 +352,7 @@ private:
     QComboBox* characterFlashlight_ = nullptr;  // entity property "flashlight": none / "1" / "night"
     QComboBox* characterFaction_ = nullptr;     // entity property "faction" (empty = by type)
     QLineEdit* characterGroup_ = nullptr;       // entity property "group": squad that calls each other for help
+    QLineEdit* characterDialog_ = nullptr;      // entity property "dialog": .dialog the player talks through (E)
     engine::FactionTable factionList_;
     QCheckBox* flashlightShadowsCheck_ = nullptr;
     QPushButton* flashlightColor_ = nullptr;

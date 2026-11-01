@@ -1,5 +1,6 @@
 #pragma once
 #include "engine/Factions.h"
+#include "engine/Quests.h"
 #include "engine/Scene.h"
 #include <glm/vec3.hpp>
 #include <functional>
@@ -52,6 +53,10 @@ public:
     // scripts (NPCs come to look, crows take off).
     void makeNoise(glm::vec3 at, float radius);
     FactionTable& factions();
+    // Quests (engine/Quests.h) scripts read and move on (game.quest, game.set_quest_stage...).
+    // Defaults to an empty log; the game sets its own (assets/quests/, saved with the game).
+    void setQuests(Quests* quests); // null = the built-in one
+    Quests& quests();
 
     // Outside forces on an entity for the next fixedUpdate (anomalies): a one-off
     // velocity change, an extra velocity (pull, lift) and 0..1 of its walking speed taken away.

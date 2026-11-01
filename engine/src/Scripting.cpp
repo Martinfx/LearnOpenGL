@@ -185,6 +185,8 @@ struct ScriptSystem::Impl {
     std::vector<Noise> noises; // the last second's loud sounds
     FactionTable ownFactions = defaultFactions();
     FactionTable* factions = &ownFactions;
+    Quests ownQuests;
+    Quests* quests = &ownQuests;
 
     Impl(Scene& s, PhysicsWorld& p, PlayerController& pl, LogFn l)
         : scene(s), physics(p), player(pl), log(std::move(l))
@@ -829,6 +831,19 @@ void ScriptSystem::Impl::bindApi()
         }
         return best;
     });
+    // Quests (assets/quests/*.quest): game.quest(id) -> state ("none", "active", "done",
+    // "failed"), current stage; start_quest, set_quest_stage, advance_quest, complete_quest,
+    // fail_quest -> true when it changed; game.flag(name), game.set_flag(name [, on]).
+    game.set_function("quest", [this](const std::string& id) {
+        return std::make_tuple(std::string(questStatusName(quests->status(id))), quests->stage(id));
+    });
+    game.set_function("start_quest", [this](const std::string& id) { return quests->start(id); });
+    game.set_function("set_quest_stage", [this](const std::string& id, const std::string& stage) { return quests->setStage(id, stage); });
+    game.set_function("advance_quest", [this](const std::string& id) { return quests->advance(id); });
+    game.set_function("complete_quest", [this](const std::string& id) { return quests->complete(id); });
+    game.set_function("fail_quest", [this](const std::string& id) { return quests->fail(id); });
+    game.set_function("flag", [this](const std::string& name) { return quests->flag(name); });
+    game.set_function("set_flag", [this](const std::string& name, sol::optional<bool> on) { quests->setFlag(name, on.value_or(true)); });
     game.set_function("is_night", [this] {
         SkyState sky;
         environmentAt(scene.environment, scene.sunDirection, &sky);
@@ -1028,6 +1043,8 @@ void ScriptSystem::makeNoise(glm::vec3 at, float radius)
 
 void ScriptSystem::setFactions(FactionTable* table) { impl_->factions = table ? table : &impl_->ownFactions; }
 FactionTable& ScriptSystem::factions() { return *impl_->factions; }
+void ScriptSystem::setQuests(Quests* q) { impl_->quests = q ? q : &impl_->ownQuests; }
+Quests& ScriptSystem::quests() { return *impl_->quests; }
 
 bool readScriptProperties(const std::filesystem::path& script, std::vector<ScriptProperty>& out, std::string* error)
 {

@@ -29,6 +29,7 @@
 #include "SoundEditor.h"
 #include "SurfacesEditor.h"
 #include "FactionsEditor.h"
+#include "StoryEditors.h"
 #include "ParticleEditor.h"
 #include "AnimGraphEditor.h"
 #include "EditorUi.h"
@@ -289,6 +290,18 @@ void MainWindow::buildMenus()
     assets->addAction(tr("&Material editor"), QKeySequence(Qt::CTRL | Qt::Key_M), this, [this] { openMaterialEditor(); });
     assets->addAction(tr("S&urfaces (footsteps, impacts)"), this, [this] { openSurfacesEditor(); });
     assets->addAction(tr("&Factions (who fights whom)"), this, [this] { openFactionsEditor(); });
+    assets->addAction(tr("&Dialog..."), this, [this] {
+        const QString path = QFileDialog::getOpenFileName(this, tr("Open dialog"), assetPath("dialogs"), tr("Dialogs (*.dialog)"));
+        if (!path.isEmpty())
+            openStoryEditor(path);
+    });
+    assets->addAction(tr("New dia&log..."), this, [this] { newStoryFile(true); });
+    assets->addAction(tr("&Quest..."), this, [this] {
+        const QString path = QFileDialog::getOpenFileName(this, tr("Open quest"), assetPath("quests"), tr("Quests (*.quest)"));
+        if (!path.isEmpty())
+            openStoryEditor(path);
+    });
+    assets->addAction(tr("New q&uest..."), this, [this] { newStoryFile(false); });
     assets->addAction(tr("&Particle effect..."), this, [this] {
         const QString path = QFileDialog::getOpenFileName(this, tr("Open particle effect"), assetPath("particles"),
                                                           tr("Particle effects (*.particle)"));
@@ -1305,6 +1318,52 @@ void MainWindow::buildDocks()
             else
                 e->properties["group"] = group;
             markDirty();
+        });
+        // What the player can talk to it about (E in the game): a .dialog file.
+        auto* dialogRow = new QWidget(boxPanel_);
+        auto* dialogLayout = new QHBoxLayout(dialogRow);
+        dialogLayout->setContentsMargins(0, 0, 0, 0);
+        characterDialog_ = new QLineEdit(dialogRow);
+        characterDialog_->setPlaceholderText(tr("none"));
+        characterDialog_->setToolTip(tr("Dialog (assets/dialogs/*.dialog) the player opens with E when close; "
+                                        "hostile characters do not talk."));
+        auto* pick = new QPushButton(tr("..."), dialogRow);
+        pick->setToolTip(tr("Pick a dialog file"));
+        auto* editDialog = new QPushButton(tr("Edit"), dialogRow);
+        editDialog->setToolTip(tr("Open the dialog tree (or create a new dialog for this character)"));
+        dialogLayout->addWidget(characterDialog_, 1);
+        dialogLayout->addWidget(pick);
+        dialogLayout->addWidget(editDialog);
+        characterForm->addRow(tr("Dialog"), dialogRow);
+        auto setDialog = [this](const std::string& rel) {
+            engine::Entity* e = selectedEntity();
+            if (!e)
+                return;
+            const auto it = e->properties.find("dialog");
+            if ((it == e->properties.end() ? std::string() : it->second) == rel)
+                return;
+            if (rel.empty())
+                e->properties.erase("dialog");
+            else
+                e->properties["dialog"] = rel;
+            markDirty();
+        };
+        connect(characterDialog_, &QLineEdit::editingFinished, this,
+                [this, setDialog] { setDialog(characterDialog_->text().trimmed().toStdString()); });
+        connect(pick, &QPushButton::clicked, this, [this, setDialog] {
+            const QString path = QFileDialog::getOpenFileName(this, tr("Dialog"), assetPath("dialogs"), tr("Dialogs (*.dialog)"));
+            if (path.isEmpty())
+                return;
+            const QString rel = QDir(assetRoot()).relativeFilePath(path);
+            characterDialog_->setText(rel);
+            setDialog(rel.toStdString());
+        });
+        connect(editDialog, &QPushButton::clicked, this, [this] {
+            const QString rel = characterDialog_->text().trimmed();
+            if (rel.isEmpty())
+                newStoryFile(true);
+            else
+                openStoryEditor(QDir::isAbsolutePath(rel) ? rel : assetPath(rel));
         });
         reloadFactionList();
     }
@@ -3401,6 +3460,10 @@ void MainWindow::openAssetFile(const QString& path)
         openFactionsEditor();
         return;
     }
+    if (const QString ext = QFileInfo(path).suffix().toLower(); ext == "dialog" || ext == "quest") {
+        openStoryEditor(path);
+        return;
+    }
     openAsset(path, static_cast<int>(assetTypeOf(path)));
 }
 
@@ -3436,6 +3499,8 @@ void MainWindow::openAsset(const QString& path, int type)
             openSurfacesEditor();
         else if (QFileInfo(path).fileName() == "factions.cfg")
             openFactionsEditor();
+        else if (const QString ext = QFileInfo(path).suffix().toLower(); ext == "dialog" || ext == "quest")
+            openStoryEditor(path);
         else
             notify(path, 5000);
         break;
@@ -3915,6 +3980,12 @@ void MainWindow::refreshCharacter()
                 group = it->second;
         characterGroup_->setText(QString::fromStdString(group));
         characterGroup_->setEnabled(e != nullptr);
+        std::string dialog;
+        if (e)
+            if (const auto it = e->properties.find("dialog"); it != e->properties.end())
+                dialog = it->second;
+        characterDialog_->setText(QString::fromStdString(dialog));
+        characterDialog_->setEnabled(e != nullptr);
     }
 }
 
@@ -4538,6 +4609,23 @@ bool MainWindow::closeScriptTab(int index)
         w->deleteLater();
         return true;
     }
+    if (auto* st = qobject_cast<StoryTab*>(w)) {
+        if (st->isModified()) {
+            tabs_->setCurrentIndex(index);
+            const auto answer = QMessageBox::question(this, tr("Unsaved changes"), tr("Save changes to %1?").arg(st->path()),
+                                                      QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
+            if (answer == QMessageBox::Cancel)
+                return false;
+            QString error;
+            if (answer == QMessageBox::Save && !st->save(&error)) {
+                QMessageBox::warning(this, tr("Save"), error);
+                return false;
+            }
+        }
+        tabs_->removeTab(index);
+        w->deleteLater();
+        return true;
+    }
     if (auto* fa = qobject_cast<FactionsEditor*>(w)) {
         if (fa->isModified()) {
             tabs_->setCurrentIndex(index);
@@ -4621,6 +4709,9 @@ bool MainWindow::saveAllScripts()
         } else if (auto* fa = qobject_cast<FactionsEditor*>(w); fa && fa->isModified()) {
             ok = fa->save(&error);
             path = fa->path();
+        } else if (auto* st = qobject_cast<StoryTab*>(w); st && st->isModified()) {
+            ok = st->save(&error);
+            path = st->path();
         }
         if (!ok) {
             QMessageBox::warning(this, tr("Save"), tr("%1\n%2").arg(path, error));
@@ -4647,6 +4738,8 @@ bool MainWindow::confirmCloseScripts()
             modified = ag->isModified();
         else if (auto* fa = qobject_cast<FactionsEditor*>(w))
             modified = fa->isModified();
+        else if (auto* st = qobject_cast<StoryTab*>(w))
+            modified = st->isModified();
         if (modified && !closeScriptTab(i))
             return false;
     }
@@ -4867,6 +4960,67 @@ void MainWindow::openFactionsEditor()
     connect(fe, &FactionsEditor::saved, this, &MainWindow::reloadFactionList);
 }
 
+void MainWindow::openStoryEditor(const QString& path)
+{
+    const QString file = QFileInfo(path).absoluteFilePath();
+    for (int i = 1; i < tabs_->count(); ++i)
+        if (auto* st = qobject_cast<StoryTab*>(tabs_->widget(i)); st && QFileInfo(st->path()).absoluteFilePath() == file) {
+            tabs_->setCurrentIndex(i);
+            return;
+        }
+    StoryTab* tab = nullptr;
+    QString error;
+    if (QFileInfo(file).suffix().toLower() == "dialog") {
+        auto* d = new DialogEditor(tabs_);
+        if (d->load(file, &error))
+            tab = d;
+        else
+            delete d;
+    } else {
+        auto* q = new QuestEditor(tabs_);
+        if (q->load(file, &error))
+            tab = q;
+        else
+            delete q;
+    }
+    if (!tab) {
+        QMessageBox::warning(this, tr("Open"), error);
+        return;
+    }
+    const int index = tabs_->addTab(tab, tab->title());
+    tabs_->setTabToolTip(index, tab->path());
+    tabs_->setCurrentIndex(index);
+    connect(tab, &StoryTab::modificationChanged, this, [this, tab] {
+        if (const int i = tabs_->indexOf(tab); i >= 0)
+            tabs_->setTabText(i, tab->title());
+    });
+}
+
+void MainWindow::newStoryFile(bool dialog)
+{
+    const QString folder = assetPath(dialog ? "dialogs" : "quests");
+    QDir().mkpath(folder);
+    QString path = QFileDialog::getSaveFileName(this, dialog ? tr("New dialog") : tr("New quest"), folder,
+                                                dialog ? tr("Dialogs (*.dialog)") : tr("Quests (*.quest)"));
+    if (path.isEmpty())
+        return;
+    const QString ext = dialog ? ".dialog" : ".quest";
+    if (!path.endsWith(ext))
+        path += ext;
+    QString error;
+    if (!(dialog ? writeNewDialog(path, &error) : writeNewQuest(path, &error))) {
+        QMessageBox::warning(this, dialog ? tr("New dialog") : tr("New quest"), error);
+        return;
+    }
+    // A selected character without a dialog talks through the new one right away.
+    if (auto* e = selectedEntity(); dialog && e && !e->properties.count("dialog")) {
+        e->properties["dialog"] = QDir(assetRoot()).relativeFilePath(path).toStdString();
+        refreshProperties();
+        markDirty();
+    }
+    openStoryEditor(path);
+}
+
 void MainWindow::openSurfacesEditor()
 {
     for (int i = 1; i < tabs_->count(); ++i)
@@ -4973,6 +5127,8 @@ void MainWindow::saveCurrent()
         ok = su->save(&error);
     else if (auto* fa = qobject_cast<FactionsEditor*>(tabs_->currentWidget()))
         ok = fa->save(&error);
+    else if (auto* st = qobject_cast<StoryTab*>(tabs_->currentWidget()))
+        ok = st->save(&error);
     else if (auto* pe = qobject_cast<ParticleEditor*>(tabs_->currentWidget()))
         ok = pe->save(&error);
     else if (auto* ag = qobject_cast<AnimGraphEditor*>(tabs_->currentWidget()))

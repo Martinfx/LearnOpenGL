@@ -1,0 +1,22 @@
+# Dialog (editor: Assets > Dialogs). The talk starts at the first node whose conditions hold.
+speaker "Tolik"
+
+node "start"
+  text "Hm? Jo, klidně se ohřej. Jen moc nemluv, poslouchám rádio."
+  choice "Co v tom rádiu dávají?" "radio"
+  choice "Kdo tu velí?" "boss"
+  choice "Nechám tě být." ""
+
+node "radio"
+  text "Šum, a občas někdo počítá čísla. Prý vojenský maják. Já ho poslouchám kvůli bouřím: když začne pištět, mám tak minutu, než se nebe zbarví do ruda."
+  choice "Kvůli bouřím?" "storm"
+  choice "Zajímavé." ""
+
+node "storm"
+  text "Bouře přichází bez varování, jen siréna z města. Kdo je venku, toho to spálí zevnitř. Sklep, dům, vagon, cokoli se střechou. Psi to cítí dřív než my."
+  do set_flag "heard_about_storm"
+  choice "Budu si to pamatovat." ""
+
+node "boss"
+  text "Nikdo. Ale když chceš práci, zeptej se Hřiši. Ten vždycky něco potřebuje."
+  choice "Díky." ""

@@ -46,6 +46,7 @@ recordings with placeholders.
 | `ambient/campfire_loop.ogg` | Procedural (noise and crackle synthesis, `source/campfire_crackle.py`) | made for this project | CC0 |
 | `ambient/alarm_loop.ogg` | Procedural (two-tone horn synthesis, `source/alarm_siren.py`) | made for this project | CC0 |
 | `ambient/storm_siren.ogg` | Procedural (wailing siren synthesis, `source/storm_siren.sh`) | made for this project | CC0 |
+| `ui/pda_beep.ogg` | Procedural (two tones, `source/pda_beep.sh`) | made for this project | CC0 |
 | `ambient/radio_waltz_loop.ogg`, `radio_beacon_loop.ogg` | Procedural (an original waltz on synthesized accordion reeds and a Morse beacon, through a small-speaker band-pass with static and fading, `source/radio.py`) | made for this project | CC0 |
 | `ambient/metal_creak_1..4.ogg` | Procedural (stick-slip friction through metal resonances, `source/metal_creak.py`) | made for this project | CC0 |
 | `ambient/thunder_near_1..3.ogg`, `ambient/thunder_far_1..5.ogg` (cut by `source/build_thunder.py`) | [Thunder / Lightning Ambience - Field Recording](https://opengameart.org/content/thunder-lightning-ambience-field-recording) | Gregor Quendel | CC-BY 4.0 |

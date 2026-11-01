@@ -47,6 +47,8 @@ add_library(engine STATIC
     src/ALife.cpp
     src/Fauna.cpp
     src/AnomalyStorm.cpp
+    src/Quests.cpp
+    src/Dialog.cpp
     src/Log.cpp
     src/Paths.cpp
     src/Crash.cpp

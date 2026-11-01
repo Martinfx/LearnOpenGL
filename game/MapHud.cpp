@@ -20,6 +20,14 @@ glm::vec2 rotate(glm::vec2 v, glm::vec2 forward)
     return right * v.x - forward * v.y;
 }
 
+const glm::vec4 kQuest(1.0f, 0.72f, 0.18f, 1.0f);
+
+void diamond(engine::Ui2D& ui, glm::vec2 at, float r, glm::vec4 color)
+{
+    ui.triangle(at + glm::vec2(0, -r), at + glm::vec2(r, 0), at + glm::vec2(0, r), color);
+    ui.triangle(at + glm::vec2(0, -r), at + glm::vec2(0, r), at + glm::vec2(-r, 0), color);
+}
+
 void arrow(engine::Ui2D& ui, glm::vec2 at, glm::vec2 dir, float size, glm::vec4 color)
 {
     const glm::vec2 side(-dir.y, dir.x);
@@ -57,7 +65,7 @@ glm::vec2 MapHud::uv(glm::vec2 p) const
     return ownImage_ ? t : glm::vec2(t.x, 1.0f - t.y);
 }
 
-void MapHud::drawMinimap(engine::Ui2D& ui, int width, int height, glm::vec3 player, glm::vec3 forward3) const
+void MapHud::drawMinimap(engine::Ui2D& ui, int width, int height, glm::vec3 player, glm::vec3 forward3, const std::vector<QuestView>& quests) const
 {
     const float H = static_cast<float>(height);
     const float side = std::round(std::clamp(H * 0.24f, 140.0f, 320.0f));
@@ -88,6 +96,21 @@ void MapHud::drawMinimap(engine::Ui2D& ui, int width, int height, glm::vec3 play
         const glm::vec2 at = center + screen / radius * side * 0.5f;
         ui.rect(at - glm::vec2(4.0f), glm::vec2(8.0f), kMarker);
     }
+    // Quest targets: a diamond, held at the edge when farther than the minimap shows.
+    for (const QuestView& q : quests) {
+        if (!q.active)
+            continue;
+        for (const glm::vec2& t : q.targets) {
+            const glm::vec2 d = t - me;
+            const glm::vec2 right(-forward.y, forward.x);
+            glm::vec2 screen(glm::dot(d, right), -glm::dot(d, forward));
+            const float far = std::max(std::abs(screen.x), std::abs(screen.y));
+            const bool outside = far > radius * 0.92f;
+            if (outside)
+                screen *= radius * 0.92f / far;
+            diamond(ui, center + screen / radius * side * 0.5f, side * (outside ? 0.025f : 0.035f), kQuest);
+        }
+    }
     arrow(ui, center, {0.0f, -1.0f}, side * 0.045f, kPlayer);
     // North: an N on the edge in the direction of -Z.
     const glm::vec2 right(-forward.y, forward.x);
@@ -101,7 +124,7 @@ void MapHud::drawMinimap(engine::Ui2D& ui, int width, int height, glm::vec3 play
     ui.text(coords, pos + glm::vec2(side - ui.textWidth(coords, textSize * 0.8f) - 4.0f, side + 6.0f), textSize * 0.8f, kText);
 }
 
-void MapHud::drawFullMap(engine::Ui2D& ui, int width, int height, glm::vec3 player, glm::vec3 forward3) const
+void MapHud::drawFullMap(engine::Ui2D& ui, int width, int height, glm::vec3 player, glm::vec3 forward3, const std::vector<QuestView>& quests) const
 {
     const float W = static_cast<float>(width), H = static_cast<float>(height);
     ui.rect({0, 0}, {W, H}, {0.02f, 0.02f, 0.018f, 0.75f});
@@ -141,6 +164,62 @@ void MapHud::drawFullMap(engine::Ui2D& ui, int width, int height, glm::vec3 play
         placed.push_back({best.x, best.y, size.x, size.y});
         ui.rect(best, size, {0.0f, 0.0f, 0.0f, 0.45f});
         ui.text(m.name, best + glm::vec2(3.0f, size.y * 0.5f - textSize * 0.6f), textSize, kText, true);
+    }
+    for (const QuestView& q : quests)
+        if (q.active)
+            for (const glm::vec2& t : q.targets) {
+                const glm::vec2 at = glm::clamp(toScreen(t), pos, pos + glm::vec2(side));
+                diamond(ui, at, std::max(8.0f, side * 0.014f), {0.0f, 0.0f, 0.0f, 0.6f});
+                diamond(ui, at, std::max(6.0f, side * 0.011f), kQuest);
+            }
+    // Quest list (PDA tasks) beside the map, or over its top left corner on narrow screens.
+    if (!quests.empty()) {
+        float x = pos.x + side + 28.0f;
+        float w = W - x - textSize;
+        if (w < textSize * 12.0f) {
+            x = pos.x + 8.0f;
+            w = side * 0.45f;
+        }
+        float y = pos.y;
+        auto wrap = [&](const std::string& s, float size) {
+            std::vector<std::string> lines;
+            std::string line, word;
+            for (std::size_t i = 0; i <= s.size(); ++i) {
+                if (i == s.size() || s[i] == ' ') {
+                    const std::string c = line.empty() ? word : line + ' ' + word;
+                    if (!line.empty() && ui.textWidth(c, size) > w - textSize)
+                        lines.push_back(line), line = word;
+                    else
+                        line = c;
+                    word.clear();
+                } else {
+                    word += s[i];
+                }
+            }
+            if (!line.empty())
+                lines.push_back(line);
+            return lines;
+        };
+        std::vector<std::pair<std::string, glm::vec4>> rows; // text, colour (titles coloured, stage text plain)
+        for (const QuestView& q : quests) {
+            const glm::vec4 c = q.active ? kQuest : (q.failed ? glm::vec4(0.7f, 0.35f, 0.3f, 1.0f) : glm::vec4(0.55f, 0.55f, 0.5f, 1.0f));
+            rows.push_back({(q.active ? "" : (q.failed ? "[selhal] " : "[splněn] ")) + q.title, c});
+            if (q.active)
+                for (const std::string& l : wrap(q.stage, textSize * 0.9f))
+                    rows.push_back({"  " + l, kText});
+            rows.push_back({std::string(), kText});
+        }
+        const float h = static_cast<float>(rows.size()) * textSize * 1.2f + textSize * 2.4f;
+        ui.rect({x - 8.0f, y - 8.0f}, {w + 16.0f, std::min(h, side + 16.0f)}, {0.05f, 0.055f, 0.045f, 0.85f});
+        ui.text("ÚKOLY", {x, y}, textSize * 1.1f, kText, true);
+        y += textSize * 2.0f;
+        for (const auto& [t, c] : rows) {
+            if (y > pos.y + side - textSize)
+                break;
+            const bool title = c != kText;
+            ui.text(t, {x, y}, title ? textSize : textSize * 0.9f, c, title);
+            y += textSize * 1.2f;
+        }
     }
     glm::vec2 forward(forward3.x, forward3.z);
     forward = glm::length(forward) > 1e-4f ? glm::normalize(forward) : glm::vec2(0.0f, -1.0f);

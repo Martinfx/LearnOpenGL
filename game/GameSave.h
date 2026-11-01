@@ -47,6 +47,7 @@ struct SaveGame {
     float weatherHold = 0.0f;     // s until the cycle changes it
     int stormPhase = -1;          // anomaly storm: phase (engine::AnomalyStorm), -1 = not saved
     float stormSeconds = 0.0f;    // s left in that phase
+    std::vector<std::string> quests; // engine::Quests::save() lines (quest log and flags)
     std::vector<engine::ScriptSystem::EntityState> entities;
     std::vector<engine::ScriptSystem::PendingInput> pendingInputs; // entity I/O waiting for its delay
     std::vector<engine::ALife::SquadState> squads;                 // A-life roaming squads

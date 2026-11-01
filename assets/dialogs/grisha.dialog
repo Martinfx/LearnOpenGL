@@ -1,0 +1,38 @@
+# Dialog (editor: Assets > Dialogs). The talk starts at the first node whose conditions hold.
+speaker "Hřiša"
+
+node "first"
+  if not flag "met_grisha"
+  text "Další, co přežil cestu po dálnici? Sedni si k ohni, tady tě nikdo střílet nebude. Já jsem Hřiša."
+  do set_flag "met_grisha"
+  choice "Co se tu dá dělat?" "work"
+  choice "Jen se ohřeju. Měj se." ""
+
+node "found"
+  if quest "camp_stash" "report"
+  text "No ne, ty jsi to fakt přinesl? I s obvazy? Tady máš za to náboje, ty se ti budou hodit víc než mně."
+  choice "Rádo se stalo." ""
+    do complete_quest "camp_stash"
+
+node "waiting"
+  if quest "camp_stash" "find"
+  text "Nemocnice je ve městě na východ odtud. Horní patro, oddělení na severní straně. Dej pozor na bandity u cihelny."
+  choice "Už jdu." ""
+
+node "start"
+  text "Zase ty. Co potřebuješ?"
+  choice "Máš pro mě nějakou práci?" "work"
+    if quest "camp_stash" none
+  choice "Co je nového v Zóně?" "news"
+  choice "Nic, měj se." ""
+
+node "work"
+  text "Práce by byla. Před poslední bouří jsem schoval zásoby v nemocnici ve městě, horní patro. Pak mě odtamtud vyhnali bandité. Přines mi je a nebudeš litovat."
+  choice "Platí, dojdu tam." ""
+    if quest "camp_stash" none
+    do start_quest "camp_stash"
+  choice "Teď ne." ""
+
+node "news"
+  text "Psi se zase drží severně od tábora a bandité se usadili u cihelny. A když uslyšíš sirénu, nehraj si na hrdinu a zalez pod střechu."
+  choice "Díky za radu." "start"
