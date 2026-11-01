@@ -90,6 +90,9 @@ public:
     std::shared_ptr<const SoundDef> loadSound(const std::filesystem::path& file, std::string* error = nullptr);
     // Starts decoding every variation in the background so the first play has no delay.
     void preload(const SoundDef& sound);
+    // Hot reload of a changed .sound (in place, playing voices follow) or audio file
+    // (decoded again; voices already playing finish the old one). False if not loaded.
+    bool reloadFile(const std::filesystem::path& file);
 
     Handle play(const SoundDef& sound, glm::vec3 position, float volume = 1.0f);
     Handle play2D(const SoundDef& sound, float volume = 1.0f);

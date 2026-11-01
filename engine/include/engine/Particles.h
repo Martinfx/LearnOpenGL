@@ -112,6 +112,8 @@ bool saveParticleFile(const ParticleEffect& effect, const std::filesystem::path&
 std::shared_ptr<ParticleEffect> loadParticleEffect(const std::filesystem::path& file, std::string* error = nullptr);
 // Re-reads the emitter textures after an edit (editor).
 void loadParticleTextures(ParticleEffect& effect);
+// Hot reload: reads the changed file into the cached effect in use. False if nothing uses it.
+bool reloadParticleEffect(const std::filesystem::path& file, std::string* error = nullptr);
 
 float evalCurve(const std::vector<ParticleKey>& curve, float t, float fallback = 1.0f);    // x
 glm::vec4 evalColorCurve(const std::vector<ParticleKey>& curve, float t);                 // rgba

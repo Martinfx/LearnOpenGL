@@ -188,11 +188,23 @@ bool decodeImage(const std::filesystem::path& file, TextureAsset& asset, std::st
 
 } // namespace
 
+std::map<std::filesystem::path, std::weak_ptr<TextureAsset>>& textureCache()
+{
+    static std::map<std::filesystem::path, std::weak_ptr<TextureAsset>> cache;
+    return cache;
+}
+
+std::map<std::filesystem::path, std::weak_ptr<Material>>& materialCache()
+{
+    static std::map<std::filesystem::path, std::weak_ptr<Material>> cache;
+    return cache;
+}
+
 std::shared_ptr<TextureAsset> loadTextureAsset(const std::filesystem::path& image, std::string* error, bool color,
                                                TextureUsage usage)
 {
     const std::lock_guard lock(cacheMutex());
-    static std::map<std::filesystem::path, std::weak_ptr<TextureAsset>> cache;
+    auto& cache = textureCache();
     const std::filesystem::path key = normalized(image);
     if (auto it = cache.find(key); it != cache.end())
         if (auto shared = it->second.lock())
@@ -423,7 +435,7 @@ bool parseMaterial(Material& m, const std::filesystem::path& file, std::string* 
 std::shared_ptr<Material> loadMaterial(const std::filesystem::path& file, std::string* error)
 {
     const std::lock_guard lock(cacheMutex());
-    static std::map<std::filesystem::path, std::weak_ptr<Material>> cache;
+    auto& cache = materialCache();
     const std::filesystem::path key = normalized(file);
     if (auto it = cache.find(key); it != cache.end())
         if (auto shared = it->second.lock())
@@ -529,4 +541,36 @@ bool setMaterialMap(Material& material, MapKind kind, const std::filesystem::pat
     return true;
 }
 
+std::shared_ptr<TextureAsset> findTextureAsset(const std::filesystem::path& image)
+{
+    const std::lock_guard lock(cacheMutex());
+    const auto it = textureCache().find(normalized(image));
+    return it == textureCache().end() ? nullptr : it->second.lock();
+}
+
+std::shared_ptr<Material> findMaterial(const std::filesystem::path& file)
+{
+    const std::lock_guard lock(cacheMutex());
+    const auto it = materialCache().find(normalized(file));
+    return it == materialCache().end() ? nullptr : it->second.lock();
+}
+
+bool reloadTexture(const std::filesystem::path& image, std::string* error)
+{
+    const std::shared_ptr<TextureAsset> asset = findTextureAsset(image);
+    if (!asset)
+        return false;
+    TextureAsset fresh = *asset; // decode outside the shared object, then swap the pixels in
+    fresh.source.clear();
+    if (!decodeImage(asset->imagePath, fresh, error))
+        return false;
+    asset->source = std::move(fresh.source);
+    asset->width = fresh.width;
+    asset->height = fresh.height;
+    asset->settings = readTextureSettings(asset->imagePath, asset->settings);
+    applyTextureSettings(*asset, true);
+    return true;
+}
+
 } // namespace engine
+

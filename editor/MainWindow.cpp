@@ -47,6 +47,8 @@
 #include <engine/Terrain.h>
 #include <engine/WorldStreaming.h>
 #include <engine/AssetRegistry.h>
+#include <engine/FileWatcher.h>
+#include <engine/HotReload.h>
 #include <engine/CVars.h>
 #include <engine/Crash.h>
 #include <engine/Paths.h>
@@ -2071,6 +2073,22 @@ void MainWindow::buildDocks()
             });
         });
     }
+
+    // Hot reload: textures, materials, models and particle effects changed outside the editor
+    // (or by one of its editors) update in the viewport.
+    watcher_ = std::make_unique<engine::FileWatcher>(std::filesystem::path(assetRoot().toStdU16String()), 1.0);
+    auto* watchTimer = new QTimer(this);
+    connect(watchTimer, &QTimer::timeout, this, [this] {
+        const auto changed = watcher_->changes();
+        if (changed.empty())
+            return;
+        const std::vector<std::string> lines = engine::hotReload(changed, {&scene_, nullptr, nullptr, nullptr});
+        for (const std::string& line : lines)
+            appendLog(tr("reload: %1").arg(QString::fromStdString(line)), 0);
+        if (!lines.empty())
+            viewport_->update();
+    });
+    watchTimer->start(1000);
 
     // Memory: GPU (renderer) and CPU (level assets, whole process), refreshed while visible.
     auto* memoryLabel = new QLabel(this);

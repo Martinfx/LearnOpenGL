@@ -253,10 +253,42 @@ void loadParticleTextures(ParticleEffect& effect)
     }
 }
 
-std::shared_ptr<ParticleEffect> loadParticleEffect(const std::filesystem::path& file, std::string* error)
+namespace {
+std::mutex& effectCacheMutex()
 {
     static std::mutex mutex;
+    return mutex;
+}
+std::map<std::filesystem::path, std::weak_ptr<ParticleEffect>>& effectCache()
+{
     static std::map<std::filesystem::path, std::weak_ptr<ParticleEffect>> cache;
+    return cache;
+}
+} // namespace
+
+bool reloadParticleEffect(const std::filesystem::path& file, std::string* error)
+{
+    const std::filesystem::path key = std::filesystem::absolute(file).lexically_normal();
+    std::shared_ptr<ParticleEffect> effect;
+    {
+        std::lock_guard lock(effectCacheMutex());
+        if (auto it = effectCache().find(key); it != effectCache().end())
+            effect = it->second.lock();
+    }
+    if (!effect)
+        return false;
+    ParticleEffect fresh;
+    if (!loadParticleFile(fresh, key, error))
+        return false;
+    loadParticleTextures(fresh);
+    *effect = std::move(fresh); // effects playing it pick up the new emitters (update() resizes their state)
+    return true;
+}
+
+std::shared_ptr<ParticleEffect> loadParticleEffect(const std::filesystem::path& file, std::string* error)
+{
+    std::mutex& mutex = effectCacheMutex();
+    auto& cache = effectCache();
     const std::filesystem::path key = std::filesystem::absolute(file).lexically_normal();
     {
         std::lock_guard lock(mutex);

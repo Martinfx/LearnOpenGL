@@ -30,6 +30,8 @@ add_library(engine STATIC
     src/WorldStreaming.cpp
     src/FrameArena.cpp
     src/AssetRegistry.cpp
+    src/FileWatcher.cpp
+    src/HotReload.cpp
     src/AssetPalette.cpp
     src/Scene.cpp
     src/JobSystem.cpp

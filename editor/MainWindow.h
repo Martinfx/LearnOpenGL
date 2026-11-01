@@ -4,6 +4,7 @@
 #include <memory>
 #include <engine/Renderer.h>
 #include <engine/Scene.h>
+#include <engine/FileWatcher.h>
 
 #include "EditorHistory.h"
 
@@ -335,6 +336,8 @@ private:
     class QTimer* streamTimer_ = nullptr;
     std::vector<std::pair<QDoubleSpinBox*, float engine::StreamingSettings::*>> streamSpins_;
     engine::DebugGeometry streamDebug_;
+    // Hot reload of assets changed on disk (Blender export, image editor): engine/HotReload.h.
+    std::unique_ptr<engine::FileWatcher> watcher_;
     // Memory dock: budget by category (Scene::memoryBudget).
     class QTableWidget* budgetTable_ = nullptr;
     std::vector<QDoubleSpinBox*> budgetSpins_;

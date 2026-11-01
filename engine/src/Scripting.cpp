@@ -909,6 +909,38 @@ void ScriptSystem::setNavMesh(const NavMesh* nav) { impl_->nav = nav; }
 void ScriptSystem::setMessageHandler(MessageFn handler) { impl_->message = std::move(handler); }
 void ScriptSystem::setDuckHandler(DuckFn handler) { impl_->duck = std::move(handler); }
 void ScriptSystem::setLightningHandler(LightningFn handler) { impl_->lightning = std::move(handler); }
+int ScriptSystem::reloadScript(const std::filesystem::path& file)
+{
+    Impl& d = *impl_;
+    const std::filesystem::path key = std::filesystem::absolute(file).lexically_normal();
+    int count = 0;
+    for (auto& se : d.entities) {
+        const Entity& e = se->e();
+        if (e.scriptPath.empty() || std::filesystem::absolute(e.scriptPath).lexically_normal() != key)
+            continue;
+        // Runs the file again in the entity's own globals: functions are replaced, state the
+        // script keeps (self.data, its globals) stays. on_start is not called again.
+        if (!se->env.valid())
+            se->env = sol::environment(d.lua, sol::create, d.lua.globals());
+        const std::u8string u8 = e.scriptPath.u8string();
+        sol::protected_function_result loaded =
+            d.lua.safe_script_file(std::string(u8.begin(), u8.end()), se->env, sol::script_pass_on_error);
+        if (!loaded.valid()) {
+            sol::error err = loaded;
+            d.report(*se, std::string("reload: ") + err.what());
+            continue; // keeps running the old functions
+        }
+        buildProps(d.lua, se->env, e);
+        se->onUpdate = se->env["on_update"];
+        se->onDamage = se->env["on_damage"];
+        se->onDeath = se->env["on_death"];
+        se->onInput = se->env["on_input"];
+        se->failed = false;
+        ++count;
+    }
+    return count;
+}
+
 std::size_t ScriptSystem::memoryBytes() const { return impl_->lua.memory_used(); }
 void ScriptSystem::fireOutput(int entityIndex, const std::string& output, int activator) { impl_->fireOutput(entityIndex, output, activator); }
 void ScriptSystem::sendInput(const std::string& target, const std::string& input, const std::string& parameter, float delay, int activator,

@@ -106,4 +106,10 @@ bool setMaterialMap(Material& material, MapKind kind, const std::filesystem::pat
 // Re-reads a material file into the cached object (e.g. "Revert" in the editor).
 bool reloadMaterial(Material& material, std::string* error = nullptr);
 
+// Hot reload (engine/HotReload.h): the cached objects in use, or null when nothing uses the file.
+std::shared_ptr<TextureAsset> findTextureAsset(const std::filesystem::path& image);
+std::shared_ptr<Material> findMaterial(const std::filesystem::path& file);
+// Decodes the changed image again into the cached asset (every material using it updates). False if not in use.
+bool reloadTexture(const std::filesystem::path& image, std::string* error = nullptr);
+
 } // namespace engine

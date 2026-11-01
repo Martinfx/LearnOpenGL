@@ -63,6 +63,9 @@ public:
     using LightningFn = std::function<void(float distance)>;
     void setLightningHandler(LightningFn handler);
     std::size_t memoryBytes() const; // Lua heap of all scripts
+    // Hot reload: runs a changed script again for every entity using it (state kept,
+    // on_start not repeated). Returns how many entities got the new code.
+    int reloadScript(const std::filesystem::path& file);
 
     // Entity I/O (engine/EntityIO.h): fires `output` of an entity, i.e. queues the
     // inputs of its matching connections. `activator` = entity index, -1 = the player.

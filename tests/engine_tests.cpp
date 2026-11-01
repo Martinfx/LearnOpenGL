@@ -41,6 +41,8 @@
 #include <engine/FrameArena.h>
 #include <engine/Memory.h>
 #include <engine/AssetRegistry.h>
+#include <engine/FileWatcher.h>
+#include <engine/HotReload.h>
 #include <engine/PlayerController.h>
 
 #include <functional>
@@ -2026,6 +2028,74 @@ void testAssetPalette()
     check(!entries.empty() && entries[0].stats.pixels > 0, "glTF model palette");
 }
 
+void testHotReload()
+{
+    namespace fs = std::filesystem;
+    const fs::path dir = fs::absolute("hot_reload_assets");
+    fs::remove_all(dir);
+    fs::create_directories(dir);
+    // The watcher sees a written file.
+    {
+        std::ofstream(dir / "a.material") << "color 1 0 0\n";
+        engine::FileWatcher watcher(dir, 0.05);
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        check(watcher.changes().empty(), "nothing changed yet");
+        std::this_thread::sleep_for(std::chrono::milliseconds(1100)); // coarse file times on some file systems
+        std::ofstream(dir / "a.material") << "color 0 1 0\n";
+        std::ofstream(dir / "notes.txt") << "not an asset";
+        std::vector<fs::path> changed;
+        for (int i = 0; i < 40 && changed.empty(); ++i) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            changed = watcher.changes();
+        }
+        check(changed.size() == 1 && changed[0].filename() == "a.material", "watcher reports the changed asset only");
+    }
+    // Material in use: reloaded in place.
+    std::ofstream(dir / "b.material") << "color 1 0 0\n";
+    auto mat = engine::loadMaterial(dir / "b.material");
+    std::ofstream(dir / "b.material") << "color 0 0 1\n";
+    auto lines = engine::hotReload({dir / "b.material", dir / "unused.material"}, {});
+    check(mat && mat->color == glm::vec3(0, 0, 1) && lines.size() == 1, "material reloaded in place, unused files skipped");
+    // Particle effect in use.
+    {
+        engine::ParticleEffect fx;
+        fx.emitters.emplace_back();
+        fx.emitters[0].burst = 3;
+        std::string err;
+        check(engine::saveParticleFile(fx, dir / "fx.particle", &err), "save fx: " + err);
+        auto used = engine::loadParticleEffect(dir / "fx.particle");
+        fx.emitters[0].burst = 9;
+        fx.emitters.emplace_back();
+        check(engine::saveParticleFile(fx, dir / "fx.particle", &err), "save fx again: " + err);
+        engine::hotReload({dir / "fx.particle"}, {});
+        check(used && used->emitters.size() == 2 && used->emitters[0].burst == 9, "particle effect reloaded in place");
+    }
+    // Lua: new functions, state kept, on_start not repeated.
+    {
+        const fs::path script = dir / "counter.lua";
+        std::ofstream(script) << "starts = (starts or 0) + 1\nfunction on_start(self) self.health = 0 end\n"
+                                 "function on_update(self, dt) self.health = self.health + 1 end\n";
+        auto s = flatFloor();
+        engine::Entity e;
+        e.name = "Counter";
+        e.scriptPath = script;
+        s.entities.push_back(e);
+        engine::PhysicsWorld world;
+        world.setLevel(s);
+        engine::PlayerController player;
+        player.spawn(world, {0, 0, 0});
+        engine::ScriptSystem scripts(s, world, player, [](const std::string&) {});
+        scripts.start();
+        scripts.fixedUpdate(1.0f / 60.0f);
+        std::ofstream(script) << "starts = (starts or 0) + 1\nfunction on_start(self) self.health = 0 end\n"
+                                 "function on_update(self, dt) self.health = self.health + 100 end\n";
+        lines = engine::hotReload({script}, {&s, &world, nullptr, &scripts});
+        scripts.fixedUpdate(1.0f / 60.0f);
+        check(lines.size() == 1 && s.entities[0].health == 101.0f, "script reloaded: new on_update, health kept");
+    }
+    fs::remove_all(dir);
+}
+
 void testAssetRegistry()
 {
     namespace fs = std::filesystem;
@@ -2343,6 +2413,7 @@ int main()
     testWeatherCycle();
     testMemoryBudgets();
     testAssetRegistry();
+    testHotReload();
     testWorldStreaming();
     std::printf(failures ? "%d test(s) failed\n" : "all tests passed\n", failures);
     return failures ? 1 : 0;

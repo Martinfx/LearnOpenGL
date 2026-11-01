@@ -28,6 +28,8 @@
 #include "Inventory.h"
 #include <engine/Water.h>
 #include <engine/Memory.h>
+#include <engine/FileWatcher.h>
+#include <engine/HotReload.h>
 #include <engine/WorldStreaming.h>
 #include <limits>
 #include "KeyNames.h"
@@ -769,6 +771,40 @@ int main(int argc, char** argv)
     bool sheltered = false;
     // Memory budget of the level (engine/Memory.h): measured every 2 s, a warning when a
     // category goes over its limit (once until it drops below again), console `memory`.
+    // Hot reload: files saved in the editor (or an image editor) show up while playing.
+    // The level's own assets folder is watched (the source tree when started from the editor).
+    std::unique_ptr<engine::FileWatcher> watcher;
+    float watchTimer = 0.0f;
+    const std::filesystem::path watchRoot = [&] {
+        for (std::filesystem::path p = std::filesystem::absolute(levelPath).parent_path(); !p.empty() && p != p.root_path(); p = p.parent_path())
+            if (p.filename() == "assets")
+                return p;
+        return std::filesystem::path(argv[0]).parent_path() / "assets";
+    }();
+    auto hotReload = [&] {
+        const std::vector<std::filesystem::path> changed = watcher->changes();
+        if (changed.empty())
+            return;
+        std::vector<std::string> lines = engine::hotReload(changed, {&scene, &physics, &audio.system(), &scripts});
+        for (const std::filesystem::path& f : changed) { // carried weapons: new settings, same magazine
+            const std::filesystem::path key = std::filesystem::absolute(f).lexically_normal();
+            for (std::size_t i = 0; i < inventory.weaponFiles.size() && i < weapons.size(); ++i) {
+                if (inventory.weaponFiles[i] != key)
+                    continue;
+                if (auto w = loadWeapon(key)) {
+                    const int ammo = weapons[i].ammo();
+                    weapons[i] = std::move(*w);
+                    weapons[i].setAmmo(ammo);
+                    inventory.link(weapons);
+                    lines.push_back("weapon " + key.filename().string());
+                }
+            }
+        }
+        for (const std::string& line : lines)
+            LOG_INFO("reload", "%s", line.c_str());
+        if (!lines.empty())
+            hud.notify(lines.size() == 1 ? "Načteno znovu: " + lines.front() : "Načteno znovu: " + std::to_string(lines.size()) + " souborů");
+    };
     std::array<bool, engine::kMemoryCategories> overBudgetWarned{};
     float memoryTimer = 2.0f;
     auto measureMemory = [&] {
@@ -811,6 +847,8 @@ int main(int argc, char** argv)
         cvars.add("vsync", CVarType::Bool, "0", "Wait for the monitor refresh (no tearing, adds latency)", engine::CVarConfig)
             .onChange = [](const engine::CVar& v) { glfwSwapInterval(v.boolean() ? 1 : 0); };
         cvars.add("fps_max", CVarType::Int, "0", "Frame rate limit, 0 = none", engine::CVarConfig, 0.0, 1000.0);
+        cvars.add("dev_hot_reload", CVarType::Bool, "1",
+                  "Reload changed assets while playing (textures, materials, models, sounds, effects, .weapon, Lua)", engine::CVarConfig);
         cvars.add("r_quality", CVarType::Int, "2", "Graphics preset: 0 low, 1 medium, 2 high, 3 ultra", engine::CVarConfig, 0.0, 3.0)
             .onChange = [&renderer, &cvars](const engine::CVar& v) {
                 engine::RenderQuality q = engine::RenderQuality::preset(v.integer());
@@ -1591,6 +1629,16 @@ int main(int argc, char** argv)
             shelterTimer = 0.25f;
             sheltered = physics.raycast(camera.position + glm::vec3(0.0f, 0.3f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), 40.0f).has_value();
             audio.setSheltered(sheltered);
+        }
+        if ((watchTimer -= static_cast<float>(frameTime)) <= 0.0f) {
+            watchTimer = 0.5f;
+            const engine::CVar* hot = cvars.find("dev_hot_reload");
+            if (hot && hot->boolean() && !watcher)
+                watcher = std::make_unique<engine::FileWatcher>(watchRoot, 0.5);
+            else if (hot && !hot->boolean())
+                watcher.reset();
+            if (watcher)
+                hotReload();
         }
         if ((memoryTimer -= static_cast<float>(frameTime)) <= 0.0f) {
             memoryTimer = 2.0f;

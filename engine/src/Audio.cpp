@@ -397,6 +397,7 @@ struct AudioSystem::Impl {
     std::mutex mutex; // voices (the stream thread refills stream voices)
     std::vector<std::unique_ptr<Voice>> voices;
     std::unordered_map<std::string, std::shared_ptr<Clip>> clips;
+    std::vector<std::shared_ptr<Clip>> retired; // replaced by a hot reload; buffers freed once no voice plays them
     std::array<float, static_cast<std::size_t>(AudioGroup::Count)> groupVolumes{};
     float master = 1.0f;
     Handle nextId = 1;
@@ -443,6 +444,13 @@ struct AudioSystem::Impl {
 
     void uploadClips()
     {
+        std::erase_if(retired, [](const std::shared_ptr<Clip>& c) {
+            if (c.use_count() > 1 || c->state == Loading)
+                return false; // a voice still plays it, or its decode job runs
+            if (c->buffer)
+                alDeleteBuffers(1, &c->buffer);
+            return true;
+        });
         for (auto& [key, clip] : clips) {
             if (clip->state != Decoded)
                 continue;
@@ -886,6 +894,13 @@ void AudioSystem::shutdown()
             alDeleteBuffers(1, &clip->buffer);
     }
     m.clips.clear();
+    for (auto& clip : m.retired) {
+        while (clip->state == Impl::Loading)
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        if (clip->buffer)
+            alDeleteBuffers(1, &clip->buffer);
+    }
+    m.retired.clear();
     if (m.efx.ok) {
         m.efx.deleteSlots(static_cast<ALsizei>(m.slots.size()), m.slots.data());
         m.efx.deleteEffects(static_cast<ALsizei>(m.effects.size()), m.effects.data());
@@ -924,6 +939,37 @@ std::shared_ptr<const SoundDef> AudioSystem::loadSound(const std::filesystem::pa
     }
     impl_->cache.emplace(key, def);
     return def;
+}
+
+bool AudioSystem::reloadFile(const std::filesystem::path& file)
+{
+    const std::filesystem::path key = std::filesystem::absolute(file).lexically_normal();
+    bool any = false;
+    if (auto it = impl_->cache.find(key); it != impl_->cache.end() && isSoundFile(key)) {
+        SoundDef fresh;
+        std::string error;
+        if (loadSoundFile(fresh, key, &error)) {
+            std::lock_guard lock(impl_->mutex); // voices point at the definition: change it in place
+            *const_cast<SoundDef*>(it->second.get()) = std::move(fresh);
+            any = true;
+        } else {
+            LOG_WARN("audio", "%s\n", error.c_str());
+        }
+        if (impl_->initialized)
+            preload(*it->second);
+    }
+    if (impl_->initialized) {
+        for (bool mono : {false, true}) {
+            const std::string clipKey = key.string() + (mono ? "|mono" : "");
+            if (auto it = impl_->clips.find(clipKey); it != impl_->clips.end()) {
+                impl_->retired.push_back(it->second); // playing voices keep the old buffer
+                impl_->clips.erase(it);
+                impl_->clipFor(key, mono);
+                any = true;
+            }
+        }
+    }
+    return any;
 }
 
 void AudioSystem::preload(const SoundDef& sound)
