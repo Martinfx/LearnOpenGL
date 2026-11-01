@@ -51,6 +51,10 @@ else()
     message(STATUS "Jolt: 3rdparty/jolt")
     # Portable build: SSE4.2 baseline (no AVX), dynamic MSVC runtime to match Qt,
     # RTTI/exceptions on because engine classes derive from Jolt interfaces.
+    # ENGINE_JOLT_SSE42=OFF: plain SSE2 for CPUs without SSE4 (e.g. the default QEMU CPU of the
+    # FreeBSD CI virtual machine, where SSE4.2 code dies with SIGILL).
+    set(USE_SSE4_1 ${ENGINE_JOLT_SSE42} CACHE BOOL "" FORCE)
+    set(USE_SSE4_2 ${ENGINE_JOLT_SSE42} CACHE BOOL "" FORCE)
     set(USE_AVX OFF CACHE BOOL "" FORCE)
     set(USE_AVX2 OFF CACHE BOOL "" FORCE)
     set(USE_LZCNT OFF CACHE BOOL "" FORCE)

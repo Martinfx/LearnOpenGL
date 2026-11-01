@@ -46,6 +46,6 @@ jobs:
           usesh: true
           prepare: pkg install -y git cmake ninja glfw glm qt6-base
           run: |
-            cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+            cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DENGINE_JOLT_SSE42=OFF
             cmake --build build
             ctest --test-dir build --output-on-failure
