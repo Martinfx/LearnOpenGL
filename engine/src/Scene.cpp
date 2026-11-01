@@ -239,6 +239,9 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
             out << "  sway " << m.sway << '\n';
         if (m.dynamic)
             out << "  physics " << m.massKg << ' ' << std::quoted(m.collider) << '\n';
+        if (scene.streaming.enabled && m.localBounds.min != m.localBounds.max) // lets the game defer far models
+            out << "  bounds " << m.localBounds.min.x << ' ' << m.localBounds.min.y << ' ' << m.localBounds.min.z << ' '
+                << m.localBounds.max.x << ' ' << m.localBounds.max.y << ' ' << m.localBounds.max.z << '\n';
     }
     const PlayerSettings& pl = scene.player;
     out << "player " << pl.walkSpeed << ' ' << pl.sprintSpeed << ' ' << pl.jumpSpeed << ' ' << pl.gravity << ' '
@@ -268,6 +271,11 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
         if (!pl.footstepSound.empty() || !pl.landSound.empty() || !pl.hurtSound.empty())
             out << "player_sounds " << std::quoted(rel(pl.footstepSound)) << ' ' << std::quoted(rel(pl.landSound)) << ' '
                 << std::quoted(rel(pl.hurtSound)) << '\n';
+    }
+    if (scene.streaming != StreamingSettings{}) {
+        const StreamingSettings& st = scene.streaming;
+        out << "streaming " << (st.enabled ? 1 : 0) << ' ' << st.cellSize << ' ' << st.loadRadius << ' ' << st.unloadRadius << ' '
+            << st.budgetMB << ' ' << (st.keepFarLod ? 1 : 0) << '\n';
     }
     {
         const NavSettings& n = scene.nav;
@@ -330,7 +338,7 @@ LoadingScreen readLoadingScreen(const std::filesystem::path& file)
     return result;
 }
 
-bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* error, LoadProgress* progress)
+bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* error, LoadProgress* progress, const glm::vec3* streamFrom)
 {
     std::ifstream in(file);
     if (!in) {
@@ -345,29 +353,95 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
     // model files of the level are read in parallel first (the slow part:
     // glTF parsing and texture decoding), then the lines are applied in order.
     std::map<std::filesystem::path, Model> loaded;
+    // World streaming: which models start deferred (far static models with saved bounds),
+    // and the one LOD file each of them keeps (its coarsest) when keepFarLod is on.
+    std::vector<char> deferModel;
+    std::vector<std::filesystem::path> keepLod;
     {
-        std::vector<std::filesystem::path> files;
+        struct ScanModel {
+            std::filesystem::path file;
+            glm::vec3 position{0.0f};
+            bool hasBounds = false, dynamic = false;
+            Aabb local;
+            std::vector<std::filesystem::path> lods;
+        };
+        std::vector<ScanModel> scanned;
+        std::vector<std::pair<std::filesystem::path, int>> otherFiles; // foliage: always loaded
+        StreamingSettings streaming;
+        glm::vec3 start(0.0f);
+        bool inModel = false;
         std::ifstream scan(file);
         std::string scanLine;
+        auto resolve = [&](const std::string& path) {
+            std::filesystem::path p = pathFromUtf8(path);
+            if (p.is_relative())
+                p = std::filesystem::absolute(file).parent_path() / p;
+            return p.lexically_normal();
+        };
         while (std::getline(scan, scanLine)) {
             std::istringstream ls(scanLine);
             std::string key, name, path;
             ls >> key;
-            if (key == "model")
-                ls >> std::quoted(name) >> std::quoted(path);
-            else if (key == "lod")
-                ls >> std::quoted(path);
-            else if (key == "foliage_type" || key == "foliage_lod")
-                ls >> std::quoted(path);
-            if (path.empty())
-                continue;
-            std::filesystem::path p = pathFromUtf8(path);
-            if (p.is_relative())
-                p = std::filesystem::absolute(file).parent_path() / p;
-            p = p.lexically_normal();
-            if (std::find(files.begin(), files.end(), p) == files.end())
-                files.push_back(p);
+            const bool sub = !scanLine.empty() && scanLine[0] == ' ';
+            if (!sub)
+                inModel = false;
+            if (key == "model") {
+                ScanModel m;
+                if (ls >> std::quoted(name) >> std::quoted(path) >> m.position.x >> m.position.y >> m.position.z) {
+                    m.file = resolve(path);
+                    scanned.push_back(std::move(m));
+                    inModel = true;
+                }
+            } else if (key == "lod" && inModel && ls >> std::quoted(path)) {
+                scanned.back().lods.push_back(resolve(path));
+            } else if (key == "bounds" && inModel) {
+                Aabb& b = scanned.back().local;
+                scanned.back().hasBounds = static_cast<bool>(ls >> b.min.x >> b.min.y >> b.min.z >> b.max.x >> b.max.y >> b.max.z);
+            } else if (key == "physics" && inModel) {
+                scanned.back().dynamic = true;
+            } else if ((key == "foliage_type" || key == "foliage_lod") && ls >> std::quoted(path) && !path.empty()) {
+                otherFiles.emplace_back(resolve(path), 0);
+            } else if (key == "player_start") {
+                ls >> start.x >> start.y >> start.z;
+            } else if (key == "streaming") {
+                int en = 0, keep = 1;
+                ls >> en >> streaming.cellSize >> streaming.loadRadius >> streaming.unloadRadius >> streaming.budgetMB >> keep;
+                streaming.enabled = en != 0;
+            }
         }
+        const glm::vec3 from = streamFrom && !std::isnan(streamFrom->x) ? *streamFrom : start;
+        deferModel.assign(scanned.size(), 0);
+        keepLod.assign(scanned.size(), {});
+        std::vector<std::filesystem::path> files;
+        auto need = [&files](const std::filesystem::path& p) {
+            if (!p.empty() && std::find(files.begin(), files.end(), p) == files.end())
+                files.push_back(p);
+        };
+        for (std::size_t i = 0; i < scanned.size(); ++i) {
+            const ScanModel& m = scanned[i];
+            bool defer = false;
+            if (streamFrom && streaming.enabled && m.hasBounds && !m.dynamic) {
+                // The cell the model's centre falls in (rotation and scale ignored here: the
+                // cell box is what counts, and the streamer re-checks with the real bounds).
+                const glm::vec3 c = m.position + (m.local.min + m.local.max) * 0.5f;
+                const float cs = std::max(streaming.cellSize, 1.0f);
+                const glm::vec2 cell(std::floor(c.x / cs), std::floor(c.z / cs));
+                const glm::vec2 lo = cell * cs, hi = lo + glm::vec2(cs);
+                const glm::vec2 nearest = glm::clamp(glm::vec2(from.x, from.z), lo, hi);
+                defer = glm::distance(nearest, glm::vec2(from.x, from.z)) > streaming.loadRadius;
+            }
+            deferModel[i] = defer ? 1 : 0;
+            if (!defer) {
+                need(m.file);
+                for (const auto& l : m.lods)
+                    need(l);
+            } else if (streaming.keepFarLod && !m.lods.empty()) {
+                keepLod[i] = m.lods.back();
+                need(keepLod[i]);
+            }
+        }
+        for (const auto& [p, unused] : otherFiles)
+            need(p);
         std::vector<Model> models(files.size());
         std::vector<char> ok(files.size(), 0);
         if (progress) {
@@ -616,7 +690,16 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                     p = std::filesystem::absolute(file).parent_path() / p;
                 auto lod = std::make_shared<Model>();
                 std::string modelError;
-                if (!m.lodPath.empty()) { // second and later `lod` lines: farther levels
+                const std::size_t modelIndex = result.models.size() - 1;
+                const bool skip = m.deferred && modelIndex < keepLod.size() && keepLod[modelIndex] != p.lexically_normal();
+                if (skip) { // deferred model: only its coarsest level is read now
+                    if (!m.lodPath.empty())
+                        m.farLods.push_back({p.lexically_normal(), nullptr, distance});
+                    else {
+                        m.lodDistance = distance;
+                        m.lodPath = p.lexically_normal();
+                    }
+                } else if (!m.lodPath.empty()) { // second and later `lod` lines: farther levels
                     Model::FarLod far;
                     far.path = p.lexically_normal();
                     far.distance = distance;
@@ -631,6 +714,20 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                 }
                 // A missing LOD file is not fatal: the full model is drawn at every distance.
             }
+        } else if (key == "bounds") {
+            ok = lastObject == LastObject::Model;
+            if (ok) { // saved model-space bounds: used while the mesh is deferred
+                Aabb b;
+                ok = static_cast<bool>(ls >> b.min.x >> b.min.y >> b.min.z >> b.max.x >> b.max.y >> b.max.z);
+                if (ok && result.models.back().deferred)
+                    result.models.back().localBounds = b;
+            }
+        } else if (key == "streaming") {
+            StreamingSettings& st = result.streaming;
+            int en = 0, keep = 1;
+            ok = static_cast<bool>(ls >> en >> st.cellSize >> st.loadRadius >> st.unloadRadius >> st.budgetMB >> keep);
+            st.enabled = en != 0;
+            st.keepFarLod = keep != 0;
         } else if (key == "transform") {
             ok = lastObject == LastObject::Model;
             if (ok) {
@@ -695,7 +792,16 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
             std::string path;
             ok = static_cast<bool>(ls >> std::quoted(m.name) >> std::quoted(path)
                                       >> m.position.x >> m.position.y >> m.position.z);
-            if (ok) {
+            const std::size_t modelIndex = result.models.size();
+            if (ok && modelIndex < deferModel.size() && deferModel[modelIndex]) {
+                std::filesystem::path p = pathFromUtf8(path);
+                if (p.is_relative())
+                    p = std::filesystem::absolute(file).parent_path() / p;
+                m.sourcePath = p.lexically_normal(); // mesh comes later (WorldStreamer); bounds from the `bounds` line
+                m.deferred = true;
+                result.models.push_back(std::move(m));
+                lastObject = LastObject::Model;
+            } else if (ok) {
                 std::filesystem::path p = pathFromUtf8(path);
                 if (p.is_relative())
                     p = std::filesystem::absolute(file).parent_path() / p;
@@ -968,10 +1074,17 @@ const Model& Model::lodFor(float distance, float lodScale) const
     const Model* pick = this;
     if (lod && distance > lodDistance * lodScale)
         pick = lod.get();
-    if (pick != this)
+    if (pick != this || (!lod && distance > lodDistance * lodScale))
         for (const FarLod& far : farLods)
             if (far.model && distance > far.distance * lodScale)
                 pick = far.model.get();
+    if (pick->parts.empty()) { // streamed out: the coarsest level that is in memory stands in
+        for (auto it = farLods.rbegin(); it != farLods.rend(); ++it)
+            if (it->model && !it->model->parts.empty())
+                return *it->model;
+        if (lod && !lod->parts.empty())
+            return *lod;
+    }
     return *pick;
 }
 

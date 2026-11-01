@@ -61,6 +61,12 @@ struct PhysicsWorld::Impl {
     void addStatic(const JPH::ShapeRefC& shape, glm::vec3 position, const std::string& name,
                    glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f), const std::string& surface = {});
     JPH::uint64 surfaceId(const std::string& surface); // body user data: index + 1 into `surfaces`, 0 = none
+    // Static collision of one level model (a Jolt mesh per part, shared by copies); bodies kept per model
+    // so world streaming can remove them again.
+    void addStaticModel(const Model& m, std::size_t index);
+    void removeStaticModel(std::size_t index);
+    std::unordered_map<std::size_t, std::vector<JPH::BodyID>> modelBodies;
+    std::unordered_map<std::uint64_t, JPH::ShapeRefC> meshShapes; // MeshPart::id -> shape
 
     BroadPhaseLayersImpl broadPhaseLayers;
     ObjectVsBroadPhaseFilter objectVsBroadPhase;

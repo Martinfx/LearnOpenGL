@@ -37,6 +37,7 @@
 #include <cstdio>
 #include <engine/CVars.h>
 #include <engine/Water.h>
+#include <engine/WorldStreaming.h>
 #include <engine/PlayerController.h>
 
 #include <functional>
@@ -2071,6 +2072,60 @@ void testWater()
     check(std::abs(player.feet().z) > 0.5f, "water: the current carries the player");
 }
 
+void testWorldStreaming()
+{
+    // Ramps every 100 m along X; streaming with 64 m cells, load within 120 m.
+    std::string err;
+    engine::Model ramp;
+    check(engine::loadModelFile(ramp, ENGINE_TEST_ASSETS "/models/ramp.gltf", &err), "streaming: ramp " + err);
+    engine::Scene s;
+    s.streaming.enabled = true;
+    s.streaming.cellSize = 64.0f;
+    s.streaming.loadRadius = 120.0f;
+    s.streaming.unloadRadius = 180.0f;
+    for (int i = 0; i < 6; ++i) {
+        engine::Model m = ramp;
+        m.name = "Ramp " + std::to_string(i);
+        m.position = {i * 100.0f + 10.0f, 0.0f, 10.0f};
+        s.models.push_back(m);
+    }
+    s.playerStart = {0.0f, 0.0f, 0.0f};
+    check(engine::saveScene(s, "streaming_test.level", &err), "streaming: save " + err);
+    engine::Scene editor, game;
+    check(engine::loadScene(editor, "streaming_test.level", &err) && editor.streaming.enabled && editor.streaming.cellSize == 64.0f &&
+              std::none_of(editor.models.begin(), editor.models.end(), [](const engine::Model& m) { return m.deferred; }),
+          "streaming: the editor loads everything " + err);
+    const glm::vec3 nan(std::numeric_limits<float>::quiet_NaN());
+    check(engine::loadScene(game, "streaming_test.level", &err, nullptr, &nan), "streaming: game load " + err);
+    int deferred = 0;
+    for (const engine::Model& m : game.models)
+        deferred += m.deferred;
+    check(deferred == 4 && !game.models[0].deferred && !game.models[1].deferred && game.models[5].parts.empty() &&
+              game.models[5].localBounds.max == ramp.localBounds.max,
+          "streaming: far models deferred with their saved bounds (" + std::to_string(deferred) + ")");
+    engine::PhysicsWorld physics;
+    physics.setLevel(game);
+    engine::WorldStreamer streamer;
+    streamer.reset(game);
+    const glm::vec3 top = game.models[5].position + glm::vec3((ramp.localBounds.min.x + ramp.localBounds.max.x) * 0.5f, 30.0f,
+                                                              ramp.localBounds.max.z - 0.2f);
+    check(!physics.raycast(top, {0, -1, 0}, 60.0f), "streaming: no collision while deferred");
+    streamer.loadAround(game, &physics, {510.0f, 0.0f, 10.0f});
+    check(!game.models[5].deferred && !game.models[5].parts.empty() && game.models[0].deferred &&
+              game.models[5].parts.sharedWith(game.models[4].parts),
+          "streaming: walking to the far end loads it (shared mesh) and releases the start");
+    check(static_cast<bool>(physics.raycast(top, {0, -1, 0}, 60.0f)), "streaming: collision added with the mesh");
+    const engine::WorldStreamer::Stats st = streamer.stats();
+    check(st.cells == 6 && st.loadedCells == 2 && st.released >= 2 && st.meshBytes > 0, "streaming: stats");
+    // Locked cells stay; a tiny budget keeps only the nearest.
+    engine::WorldStreamer::Cell* far = streamer.cell(streamer.cellOf(game.models[5].bounds().min));
+    check(far != nullptr, "streaming: cell lookup");
+    if (far)
+        far->locked = true;
+    streamer.loadAround(game, &physics, {10.0f, 0.0f, 10.0f});
+    check(!game.models[5].deferred && !game.models[0].deferred, "streaming: a locked cell is kept");
+}
+
 int main()
 {
     // Hermetic cook cache for the tests.
@@ -2125,6 +2180,7 @@ int main()
     testTimeOfDay();
     testAssetPalette();
     testWater();
+    testWorldStreaming();
     std::printf(failures ? "%d test(s) failed\n" : "all tests passed\n", failures);
     return failures ? 1 : 0;
 }

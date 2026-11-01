@@ -454,6 +454,8 @@ void Viewport::paintGL()
         view.gizmoBoxes = gizmoBoxes();
         if (debug_)
             view.debug.push_back(debug_);
+        if (overlay_)
+            view.debug.push_back(overlay_);
         if (brush_ && brushHover_ && scene_->terrain) {
             // Brush ring: small markers on the ground around the cursor.
             const int n = 48;

@@ -322,6 +322,16 @@ private:
     std::shared_ptr<engine::NavMesh> navMesh_; // last finished build
     engine::DebugGeometry navDebug_;
     bool navStale_ = true;
+    // World streaming (Level details): settings and a cell overlay in the viewport.
+    void refreshStreamingOverlay();
+    class QCheckBox* streamEnabled_ = nullptr;
+    class QCheckBox* streamKeepLod_ = nullptr;
+    class QCheckBox* streamShow_ = nullptr;
+    class QSpinBox* streamBudget_ = nullptr;
+    class QLabel* streamStatus_ = nullptr;
+    class QTimer* streamTimer_ = nullptr;
+    std::vector<std::pair<QDoubleSpinBox*, float engine::StreamingSettings::*>> streamSpins_;
+    engine::DebugGeometry streamDebug_;
     int logListener_ = 0; // engine log -> Output Log
     // Crash recovery: the edited level is saved to the user folder every 90 s while unsaved.
     void autosave();

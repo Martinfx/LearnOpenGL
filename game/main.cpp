@@ -27,6 +27,8 @@
 #include "GameWeather.h"
 #include "Inventory.h"
 #include <engine/Water.h>
+#include <engine/WorldStreaming.h>
+#include <limits>
 #include "KeyNames.h"
 #include "MapHud.h"
 #include <engine/Scripting.h>
@@ -527,7 +529,10 @@ int main(int argc, char** argv)
         std::string loadError;
         bool loaded = false;
         std::thread loader([&] {
-            loaded = engine::loadScene(scene, levelPath, &loadError, &progress);
+            // World streaming: far static models are read later, around where the player appears
+            // (a save's position, else the level's start: NaN).
+            const glm::vec3 streamFrom = loadFrom ? loadFrom->feet : glm::vec3(std::numeric_limits<float>::quiet_NaN());
+            loaded = engine::loadScene(scene, levelPath, &loadError, &progress, &streamFrom);
             if (!loaded)
                 scene = engine::makeDefaultScene();
             progress.setStep("physics");
@@ -615,6 +620,10 @@ int main(int argc, char** argv)
     engine::PlayerController player;
     player.settings = scene.player; // movement and health come from the level (editor: Level > Player)
     player.spawn(physics, scene.playerStart);
+    // World streaming: near cells load on workers as the player moves, far ones are released.
+    engine::WorldStreamer streamer;
+    streamer.reset(scene);
+    streamer.loadAround(scene, &physics, scene.playerStart);
 
     // Audio: mixing runs on miniaudio's device thread, files decode on its job thread.
     GameAudio audio;
@@ -625,16 +634,42 @@ int main(int argc, char** argv)
     engine::NavMesh navmesh;
     std::thread navBuilder;
     std::atomic<bool> navCancel{false};
-    if (scene.nav.enabled)
-        navBuilder = std::thread([&] {
+    if (scene.nav.enabled) {
+        // The builder reads its own copy of the level geometry (mesh data is shared, not
+        // copied): the world streamer and dynamic props change scene.models meanwhile.
+        auto navScene = std::make_shared<engine::Scene>();
+        navScene->boxes = scene.boxes;
+        navScene->models = scene.models;
+        navScene->terrain = scene.terrain;
+        navScene->nav = scene.nav;
+        navBuilder = std::thread([&, navScene] {
+            // Models the streamer has not loaded yet (far cells) still shape the paths:
+            // read their meshes here, once per file, and drop them after the build.
+            std::map<std::filesystem::path, engine::PartList> meshes;
+            for (engine::Model& m : navScene->models) {
+                if (navCancel)
+                    break;
+                if (!m.deferred || !m.collision || m.sourcePath.empty())
+                    continue;
+                auto it = meshes.find(m.sourcePath);
+                if (it == meshes.end()) {
+                    engine::Model loaded;
+                    std::string loadError;
+                    if (!engine::loadModelFile(loaded, m.sourcePath, &loadError))
+                        LOG_WARN("navmesh", "%s", loadError.c_str());
+                    it = meshes.emplace(m.sourcePath, loaded.parts).first;
+                }
+                m.parts = it->second;
+            }
             std::string navError;
-            if (navmesh.build(scene, scene.nav, &navError, nullptr, &navCancel))
+            if (navmesh.build(*navScene, navScene->nav, &navError, nullptr, &navCancel))
                 LOG_INFO("navmesh", "%d tiles, %d polygons in %.1f s\n", navmesh.tileCount(), navmesh.polygonCount(),
                             navmesh.buildSeconds());
             else if (!navCancel) // leaving the level early is not a problem
                 LOG_WARN("navmesh", "%s", navError.c_str());
             std::fflush(stdout);
         });
+    }
 
     engine::ScriptSystem scripts(scene, physics, player);
     scripts.setNavMesh(&navmesh);
@@ -795,6 +830,15 @@ int main(int argc, char** argv)
         cvars.addCommand("quit", "Leaves the game", [window](const std::vector<std::string>&) {
             glfwSetWindowShouldClose(window, GLFW_TRUE);
             return engine::ConsoleResult{true, "bye"};
+        });
+        cvars.addCommand("streaming", "World streaming: cells loaded, meshes in memory", [&](const std::vector<std::string>&) {
+            const engine::WorldStreamer::Stats s = streamer.stats();
+            char buf[256];
+            std::snprintf(buf, sizeof buf, "%s: %d/%d cells loaded (%d loading), %d models in memory, %.1f MB meshes, %d loads, %d releases%s",
+                          scene.streaming.enabled ? "on" : "off", s.loadedCells, s.cells, s.loadingCells, s.residentModels,
+                          static_cast<double>(s.meshBytes) / (1024.0 * 1024.0), s.loadsStarted, s.released,
+                          s.overBudget ? ", over budget" : "");
+            return engine::ConsoleResult{true, buf};
         });
         cvars.addCommand("pos", "Prints the player's position and view", [&player, &camera](const std::vector<std::string>&) {
             char buf[160];
@@ -968,6 +1012,7 @@ int main(int argc, char** argv)
                 target = hit->point + hit->normal * 0.3f;
             }
             player.teleport(target);
+            streamer.loadAround(scene, &physics, target);
             char buf[96];
             std::snprintf(buf, sizeof buf, "teleported to %.1f %.1f %.1f", target.x, target.y, target.z);
             return engine::ConsoleResult{true, buf};
@@ -1057,6 +1102,7 @@ int main(int argc, char** argv)
     };
     if (loadFrom) {
         player.teleport(loadFrom->feet);
+        streamer.loadAround(scene, &physics, loadFrom->feet);
         camera.yawDegrees = loadFrom->yaw;
         camera.pitchDegrees = loadFrom->pitch;
         scripts.setPlayerHealth(loadFrom->health);
@@ -1105,8 +1151,10 @@ int main(int argc, char** argv)
     if (firstLevel) { // test hooks
         if (const char* pos = std::getenv("FPS_ENGINE_POS")) { // "x y z" feet position (test hook)
             glm::vec3 p(0.0f);
-            if (std::sscanf(pos, "%f %f %f", &p.x, &p.y, &p.z) == 3)
+            if (std::sscanf(pos, "%f %f %f", &p.x, &p.y, &p.z) == 3) {
+                streamer.loadAround(scene, &physics, p);
                 player.spawn(physics, p);
+            }
         }
         if (const char* crash = std::getenv("FPS_ENGINE_CRASH")) { // test hook: "segv" or "check" checks the crash report
             if (std::string(crash) == "check")
@@ -1527,6 +1575,7 @@ int main(int argc, char** argv)
                 if (!debugLines.lines.empty())
                     view.debug.push_back(&debugLines);
             }
+            streamer.update(scene, &physics, camera.position);
             renderer.render(scene, view);
 
             // First-person layer: weapon, muzzle flash and crosshair.
@@ -1689,6 +1738,12 @@ int main(int argc, char** argv)
     if (frameLimit >= 0) // smoke tests: where the run ended
         LOG_INFO("game", "End: pos %.2f %.2f %.2f | HP %.1f | dose %.1f rad | kills %d", player.feet().x, player.feet().y, player.feet().z,
                     scripts.playerHealth(), anomalies.dose(), kills);
+    if (frameLimit >= 0 && scene.streaming.enabled) {
+        const engine::WorldStreamer::Stats s = streamer.stats();
+        LOG_INFO("game", "Streaming: %d/%d cells loaded (%d loading), %d models in memory, %d deferred, %.1f MB meshes",
+                 s.loadedCells, s.cells, s.loadingCells, s.residentModels, s.deferredModels,
+                 static_cast<double>(s.meshBytes) / (1024.0 * 1024.0));
+    }
     cvars.saveConfig((engine::userDirectory("config") / "game.cfg").string());
     navCancel = true;
     if (navBuilder.joinable())

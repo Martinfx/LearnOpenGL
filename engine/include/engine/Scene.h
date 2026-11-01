@@ -202,6 +202,22 @@ struct Model {
 
     glm::mat4 transform() const;      // model space -> world
     Aabb bounds() const;              // world-space bounds of the rotated, scaled model
+    // World streaming (runtime): the mesh is not in memory (far cell); localBounds still
+    // hold its size and the coarsest LOD may stand in. WorldStreamer loads it when near.
+    bool deferred = false;
+};
+
+// World streaming: the level is cut into square cells; static models of the cells
+// near the player are loaded on worker threads, far ones released (their coarsest
+// LOD can stay as a stand-in). Level line `streaming`.
+struct StreamingSettings {
+    bool enabled = false;
+    float cellSize = 128.0f;     // metres
+    float loadRadius = 256.0f;   // cells closer than this (to the cell's box) are loaded
+    float unloadRadius = 352.0f; // and released beyond this (hysteresis)
+    int budgetMB = 1024;         // mesh memory; the nearest cells win when it runs out
+    bool keepFarLod = true;      // far cells show their models' coarsest LOD
+    bool operator==(const StreamingSettings&) const = default;
 };
 
 // Gameplay object (enemy, pickup, trigger...). Behaviour comes from its Lua script.
@@ -426,6 +442,7 @@ struct Scene {
     std::vector<Entity> entities;
     std::vector<std::filesystem::path> loadout;
     NavSettings nav;       // navmesh build settings (agent size, cell size)
+    StreamingSettings streaming;
     PlayerSettings player; // player's .weapon files (absolute), slot 1, 2, ...
     glm::vec3 playerStart{0.0f, 0.0f, 0.0f}; // feet position
     glm::vec3 sunDirection{-0.4f, -1.0f, -0.3f};
@@ -455,8 +472,10 @@ Scene makeDefaultScene();
 // Level files are text; model paths are stored relative to the level file.
 bool saveScene(const Scene& scene, const std::filesystem::path& file, std::string* error = nullptr);
 // Model files are parsed in parallel on the job system; `progress` (optional) counts them.
+// streamFrom (game): with streaming on, static models in cells beyond the load radius
+// of this point (NaN x: the level's player start) are not read (deferred); null = everything (the editor).
 bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* error = nullptr,
-               LoadProgress* progress = nullptr);
+               LoadProgress* progress = nullptr, const glm::vec3* streamFrom = nullptr);
 // Square area of the map: the level's settings, or everything in the level plus a margin.
 void mapArea(const Scene& scene, glm::vec2& min, float& size);
 // Only the loading screen settings of a level (fast: no models are read).

@@ -1093,9 +1093,9 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         const bool selected = static_cast<int>(scene.boxes.size() + i) == view.selectedObject;
         // Distance LOD: the simpler copy beyond lodDistance (the other one stays uploaded).
         const Model* draw = &model;
-        if (model.lod) {
+        if (model.lod || model.deferred) {
             draw = &model.lodFor(glm::distance(view.cameraPosition, (modelBounds.min + modelBounds.max) * 0.5f), quality_.lodScale);
-            if (draw == &model && (shadowCascade_ > 0 || (shadowPass && grid.detail[i])))
+            if (draw == &model && model.lod && (shadowCascade_ > 0 || (shadowPass && grid.detail[i])))
                 draw = model.lod.get(); // shadows: the simple copy is enough
             if (mainPass)
                 keepAliveLods(model, draw);

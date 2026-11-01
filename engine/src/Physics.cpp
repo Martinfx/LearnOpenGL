@@ -157,6 +157,8 @@ void PhysicsWorld::Impl::clearStatic()
         bodies.DestroyBody(id);
     }
     staticBodies.clear();
+    modelBodies.clear();
+    meshShapes.clear();
     surfaces.clear();
     terrain.reset();
     terrainBody = JPH::BodyID();
@@ -201,6 +203,72 @@ void PhysicsWorld::Impl::addStatic(const JPH::ShapeRefC& shape, glm::vec3 positi
     const JPH::BodyID id = system.GetBodyInterface().CreateAndAddBody(body, JPH::EActivation::Activate);
     if (!id.IsInvalid())
         staticBodies.push_back(id);
+}
+
+void PhysicsWorld::Impl::addStaticModel(const Model& m, std::size_t index)
+{
+    removeStaticModel(index);
+    const glm::mat3 rotScale(m.transform());
+    const float scale = m.scale != 0.0f ? m.scale : 1.0f;
+    const glm::quat rotation = glm::normalize(glm::quat_cast(rotScale / scale));
+    const std::string name = m.name + " " + m.sourcePath.stem().string();
+    const std::size_t first = staticBodies.size();
+    for (const MeshPart& part : m.parts) {
+        std::string surface = surfaceOf(m.materialFor(part), part.materialName);
+        if (surface.empty())
+            surface = guessSurface(name);
+        if (surface.empty())
+            surface = "concrete";
+        JPH::ShapeRefC& shape = meshShapes[part.id];
+        if (!shape) {
+            JPH::VertexList vertices;
+            vertices.reserve(part.positions.size());
+            for (const glm::vec3& p : part.positions)
+                vertices.push_back(JPH::Float3(p.x, p.y, p.z));
+            JPH::IndexedTriangleList triangles;
+            triangles.reserve(part.indices.size() / 3);
+            for (std::size_t i = 0; i + 2 < part.indices.size(); i += 3)
+                triangles.push_back(JPH::IndexedTriangle(part.indices[i], part.indices[i + 1], part.indices[i + 2], 0));
+            JPH::ShapeSettings::ShapeResult result = JPH::MeshShapeSettings(std::move(vertices), std::move(triangles)).Create();
+            if (result.HasError()) {
+                LOG_WARN("physics", "skipping '%s': %s\n", name.c_str(), result.GetError().c_str());
+                meshShapes.erase(part.id);
+                continue;
+            }
+            shape = result.Get();
+        }
+        if (scale == 1.0f)
+            addStatic(shape, m.position, name, rotation, surface);
+        else
+            addStatic(JPH::ScaledShapeSettings(shape, JPH::Vec3::sReplicate(scale)), m.position, name, rotation, surface);
+    }
+    if (staticBodies.size() > first)
+        modelBodies[index].assign(staticBodies.begin() + static_cast<std::ptrdiff_t>(first), staticBodies.end());
+}
+
+void PhysicsWorld::Impl::removeStaticModel(std::size_t index)
+{
+    const auto it = modelBodies.find(index);
+    if (it == modelBodies.end())
+        return;
+    JPH::BodyInterface& bodies = system.GetBodyInterface();
+    for (const JPH::BodyID& id : it->second) {
+        bodies.RemoveBody(id);
+        bodies.DestroyBody(id);
+        staticBodies.erase(std::remove(staticBodies.begin(), staticBodies.end(), id), staticBodies.end());
+    }
+    modelBodies.erase(it);
+}
+
+void PhysicsWorld::addStaticModel(const Scene& scene, std::size_t model)
+{
+    if (model < scene.models.size() && scene.models[model].collision && !scene.models[model].dynamic)
+        impl_->addStaticModel(scene.models[model], model);
+}
+
+void PhysicsWorld::removeStaticModel(std::size_t model)
+{
+    impl_->removeStaticModel(model);
 }
 
 PhysicsWorld::PhysicsWorld() : impl_(std::make_unique<Impl>()) {}
@@ -260,10 +328,7 @@ void PhysicsWorld::setLevel(const Scene& scene)
             impl_->addDynamic(scene, i);
             continue;
         }
-        const glm::mat3 rotScale(m.transform());
-        const float scale = m.scale != 0.0f ? m.scale : 1.0f;
-        addModelParts(m, m.name + " " + m.sourcePath.stem().string(), m.position, glm::normalize(glm::quat_cast(rotScale / scale)), scale,
-                      "concrete");
+        impl_->addStaticModel(m, i);
     }
     // Terrain: a Jolt height field (same samples as the render mesh), plus painted
     // foliage whose type has collision (trees), sharing one mesh per type.

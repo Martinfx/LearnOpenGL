@@ -36,6 +36,9 @@ public:
     // Radial push on every prop within `radius` (falls off to 0 at the edge), N*s at the centre.
     void explode(glm::vec3 center, float radius, float impulse);
     int dynamicCount() const;
+    // World streaming: static collision of one model added when its mesh arrives, removed when released.
+    void addStaticModel(const Scene& scene, std::size_t model);
+    void removeStaticModel(std::size_t model);
 
     // Advances dynamic bodies; call once per fixed step.
     void step(float dt);

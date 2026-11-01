@@ -2,6 +2,7 @@
 
 #include <engine/Anomaly.h>
 #include <engine/Memory.h>
+#include <QAbstractButton>
 #include <QCheckBox>
 #include <engine/TextureCook.h>
 #include "AnomalyPanel.h"
@@ -41,6 +42,8 @@
 #include <engine/JobSystem.h>
 #include "PaletteDialog.h"
 #include <engine/Log.h>
+#include <engine/Terrain.h>
+#include <engine/WorldStreaming.h>
 #include <engine/CVars.h>
 #include <engine/Crash.h>
 #include <engine/Paths.h>
@@ -1764,6 +1767,96 @@ void MainWindow::buildDocks()
             navStatus_->setText(tr("Building... %1 %").arg(int(navJob_->progress * 100.0f)));
     });
 
+    // World streaming: the game loads far static models by cells around the player.
+    levelForm->addRow(new QLabel(tr("<b>World streaming</b>"), levelPanel));
+    streamEnabled_ = new QCheckBox(tr("Stream far models in the game"), levelPanel);
+    streamEnabled_->setToolTip(tr("Static models are grouped into square cells; the game loads cells near the player "
+                                  "on worker threads and releases far ones. The editor always shows everything."));
+    levelForm->addRow(QString(), streamEnabled_);
+    connect(streamEnabled_, &QCheckBox::toggled, this, [this](bool on) {
+        if (scene_.streaming.enabled != on) {
+            scene_.streaming.enabled = on;
+            markDirty();
+            refreshStreamingOverlay();
+        }
+    });
+    struct StreamField {
+        const char* label;
+        float engine::StreamingSettings::*member;
+        double min, max, step;
+        const char* tip;
+    };
+    const StreamField streamFields[] = {
+        {"Cell size", &engine::StreamingSettings::cellSize, 8, 2048, 8, "Side of a streaming cell"},
+        {"Load radius", &engine::StreamingSettings::loadRadius, 16, 8192, 16, "Cells closer to the player than this are loaded"},
+        {"Unload radius", &engine::StreamingSettings::unloadRadius, 16, 8192, 16,
+         "Loaded cells are released beyond this (keep it above the load radius)"},
+    };
+    for (const StreamField& f : streamFields) {
+        auto* spin = new QDoubleSpinBox(levelPanel);
+        spin->setRange(f.min, f.max);
+        spin->setSingleStep(f.step);
+        spin->setDecimals(0);
+        spin->setSuffix(" m");
+        spin->setKeyboardTracking(false);
+        spin->setToolTip(tr(f.tip));
+        levelForm->addRow(tr(f.label), spin);
+        const auto member = f.member;
+        connect(spin, &QDoubleSpinBox::valueChanged, this, [this, member](double v) {
+            if (scene_.streaming.*member != static_cast<float>(v)) {
+                scene_.streaming.*member = static_cast<float>(v);
+                if (scene_.streaming.unloadRadius < scene_.streaming.loadRadius)
+                    scene_.streaming.unloadRadius = scene_.streaming.loadRadius;
+                markDirty();
+                refreshStreamingOverlay();
+            }
+        });
+        streamSpins_.emplace_back(spin, member);
+    }
+    streamBudget_ = new QSpinBox(levelPanel);
+    streamBudget_->setRange(64, 65536);
+    streamBudget_->setSingleStep(128);
+    streamBudget_->setSuffix(" MB");
+    streamBudget_->setKeyboardTracking(false);
+    streamBudget_->setToolTip(tr("Mesh memory of the streamed models; when it runs out the nearest cells win"));
+    levelForm->addRow(tr("Memory budget"), streamBudget_);
+    connect(streamBudget_, &QSpinBox::valueChanged, this, [this](int v) {
+        if (scene_.streaming.budgetMB != v) {
+            scene_.streaming.budgetMB = v;
+            markDirty();
+        }
+    });
+    streamKeepLod_ = new QCheckBox(tr("Far cells show the coarsest LOD"), levelPanel);
+    streamKeepLod_->setToolTip(tr("Models with LODs keep their coarsest level loaded, so far buildings stay on the horizon"));
+    levelForm->addRow(QString(), streamKeepLod_);
+    connect(streamKeepLod_, &QCheckBox::toggled, this, [this](bool on) {
+        if (scene_.streaming.keepFarLod != on) {
+            scene_.streaming.keepFarLod = on;
+            markDirty();
+        }
+    });
+    streamShow_ = new QCheckBox(tr("Show cells in the viewport"), levelPanel);
+    streamShow_->setToolTip(tr("Green: loaded from the camera position, yellow: kept until the unload radius, grey: unloaded"));
+    levelForm->addRow(QString(), streamShow_);
+    streamStatus_ = new QLabel(levelPanel);
+    streamStatus_->setObjectName("dim");
+    streamStatus_->setWordWrap(true);
+    levelForm->addRow(QString(), streamStatus_);
+    streamTimer_ = new QTimer(this);
+    streamTimer_->setInterval(250); // follows the camera while shown
+    connect(streamTimer_, &QTimer::timeout, this, &MainWindow::refreshStreamingOverlay);
+    connect(streamShow_, &QCheckBox::toggled, this, [this](bool on) {
+        QSettings().setValue("view/streamingCells", on);
+        if (on)
+            streamTimer_->start();
+        else
+            streamTimer_->stop();
+        viewport_->setOverlayGeometry(on ? &streamDebug_ : nullptr);
+        refreshStreamingOverlay();
+    });
+    if (QSettings().value("view/streamingCells", false).toBool())
+        QTimer::singleShot(0, streamShow_, [this] { streamShow_->setChecked(true); });
+
     connect(playerStartEdit_, &Vec3Editor::valueEdited, this, [this](glm::vec3 v) {
         scene_.playerStart = v;
         markDirty();
@@ -2402,6 +2495,17 @@ void MainWindow::refreshLevelProperties()
         QSignalBlocker block(spin);
         spin->setValue(scene_.nav.*member);
     }
+    {
+        QSignalBlocker b1(streamEnabled_), b2(streamKeepLod_), b3(streamBudget_);
+        streamEnabled_->setChecked(scene_.streaming.enabled);
+        streamKeepLod_->setChecked(scene_.streaming.keepFarLod);
+        streamBudget_->setValue(scene_.streaming.budgetMB);
+    }
+    for (auto& [spin, member] : streamSpins_) {
+        QSignalBlocker block(spin);
+        spin->setValue(scene_.streaming.*member);
+    }
+    refreshStreamingOverlay();
     // Another level or an undo step: the shown navmesh no longer matches.
     setNavOutOfDate();
     if (navShowAction_ && navShowAction_->isChecked())
@@ -2461,6 +2565,94 @@ void MainWindow::buildNavMesh()
             self->viewport_->update();
         });
     });
+}
+
+void MainWindow::refreshStreamingOverlay()
+{
+    if (!streamStatus_)
+        return;
+    const engine::StreamingSettings& st = scene_.streaming;
+    const std::vector<engine::StreamingCellInfo> cells = engine::streamingCells(scene_);
+    int streamed = 0;
+    for (const auto& c : cells)
+        streamed += c.models;
+    const int fixed = static_cast<int>(scene_.models.size()) - streamed;
+    const glm::vec3 eye = viewport_->camera().position;
+    auto distance = [&](const engine::Aabb& b) {
+        const glm::vec2 p(eye.x, eye.z);
+        const glm::vec2 nearest = glm::clamp(p, glm::vec2(b.min.x, b.min.z), glm::vec2(b.max.x, b.max.z));
+        return glm::distance(nearest, p);
+    };
+    int near = 0;
+    for (const auto& c : cells)
+        near += distance(c.bounds) <= st.loadRadius ? 1 : 0;
+    if (!st.enabled)
+        streamStatus_->setText(tr("Off: the game loads every model at the start. %1 models would stream in %2 cells.")
+                                   .arg(streamed)
+                                   .arg(cells.size()));
+    else
+        streamStatus_->setText(tr("%1 cells, %2 streamed models, %3 always loaded (dynamic, animated). "
+                                  "From the camera %4 cells are loaded.")
+                                   .arg(cells.size())
+                                   .arg(streamed)
+                                   .arg(fixed)
+                                   .arg(near));
+    if (!streamShow_ || !streamShow_->isChecked())
+        return;
+    // Cell squares following the ground, a little inside so neighbours stay apart.
+    streamDebug_ = engine::DebugGeometry{};
+    streamDebug_.fill.a = 0.0f;
+    streamDebug_.edges.a = 0.0f;
+    const engine::Terrain* terrain = scene_.terrain.get();
+    auto addLine = [&](glm::vec3 a, glm::vec3 b, glm::vec4 color) {
+        const int steps = std::max(1, static_cast<int>(glm::distance(a, b) / 8.0f));
+        glm::vec3 prev = a;
+        for (int k = 1; k <= steps; ++k) {
+            glm::vec3 p = glm::mix(a, b, static_cast<float>(k) / static_cast<float>(steps));
+            if (terrain) {
+                prev.y = std::max(prev.y, terrain->heightAt(prev.x, prev.z) + 0.6f);
+                p.y = std::max(p.y, terrain->heightAt(p.x, p.z) + 0.6f);
+            }
+            streamDebug_.lines.push_back(prev);
+            streamDebug_.lines.push_back(p);
+            streamDebug_.lineColors.push_back(color);
+            streamDebug_.lineColors.push_back(color);
+            prev = p;
+        }
+    };
+    const float cs = std::max(st.cellSize, 8.0f);
+    const float inset = std::min(1.0f, cs * 0.02f);
+    for (const auto& c : cells) {
+        const float d = distance(c.bounds);
+        const glm::vec4 color = d <= st.loadRadius     ? glm::vec4(0.3f, 1.0f, 0.4f, 1.0f)
+                                : d <= st.unloadRadius ? glm::vec4(1.0f, 0.85f, 0.2f, 1.0f)
+                                                       : glm::vec4(0.55f, 0.55f, 0.6f, 1.0f);
+        const float y = c.bounds.min.y + 0.1f;
+        const glm::vec3 p0(c.x * cs + inset, y, c.z * cs + inset), p1((c.x + 1) * cs - inset, y, c.z * cs + inset),
+            p2((c.x + 1) * cs - inset, y, (c.z + 1) * cs - inset), p3(c.x * cs + inset, y, (c.z + 1) * cs - inset);
+        addLine(p0, p1, color);
+        addLine(p1, p2, color);
+        addLine(p2, p3, color);
+        addLine(p3, p0, color);
+        // The models' extent inside the cell (what the distance is measured to).
+        const glm::vec3 lo = c.bounds.min, hi = c.bounds.max;
+        const glm::vec4 dim(color.r, color.g, color.b, 0.45f);
+        streamDebug_.lines.insert(streamDebug_.lines.end(), {glm::vec3(lo.x, hi.y, lo.z), glm::vec3(hi.x, hi.y, lo.z),
+                                                             glm::vec3(hi.x, hi.y, lo.z), glm::vec3(hi.x, hi.y, hi.z),
+                                                             glm::vec3(hi.x, hi.y, hi.z), glm::vec3(lo.x, hi.y, hi.z),
+                                                             glm::vec3(lo.x, hi.y, hi.z), glm::vec3(lo.x, hi.y, lo.z)});
+        streamDebug_.lineColors.insert(streamDebug_.lineColors.end(), 8, dim);
+    }
+    // Load radius around the camera.
+    const float ringY = terrain ? terrain->heightAt(eye.x, eye.z) : eye.y - scene_.player.eyeHeight;
+    const int n = 96;
+    for (int k = 0; k < n; ++k) {
+        const float a0 = 6.2831853f * static_cast<float>(k) / n, a1 = 6.2831853f * static_cast<float>(k + 1) / n;
+        addLine(glm::vec3(eye.x + std::cos(a0) * st.loadRadius, ringY, eye.z + std::sin(a0) * st.loadRadius),
+                glm::vec3(eye.x + std::cos(a1) * st.loadRadius, ringY, eye.z + std::sin(a1) * st.loadRadius),
+                glm::vec4(0.3f, 0.8f, 1.0f, 1.0f));
+    }
+    viewport_->update();
 }
 
 void MainWindow::markDirty()
@@ -4211,6 +4403,7 @@ void MainWindow::updateDetailsVisibility()
         // Search: rows whose label contains every word (a matching section title shows all rows).
         const bool titleMatch = std::all_of(words.begin(), words.end(), [&](const QString& w) { return d.section->title().toLower().contains(w); });
         int visibleRows = 0;
+        bool headingMatch = false; // a matching sub-heading ("<b>World streaming</b>") shows the rows under it
         for (int row = 0; row < d.form->rowCount(); ++row) {
             QString label;
             if (QLayoutItem* item = d.form->itemAt(row, QFormLayout::LabelRole); item && item->widget())
@@ -4220,9 +4413,17 @@ void MainWindow::updateDetailsVisibility()
             QLayoutItem* field = d.form->itemAt(row, QFormLayout::FieldRole);
             if (!field)
                 field = d.form->itemAt(row, QFormLayout::SpanningRole);
+            if (label.isEmpty() && field && field->widget()) { // a check box or note without a row label
+                if (auto* button = qobject_cast<QAbstractButton*>(field->widget()))
+                    label = button->text().toLower();
+                else if (auto* l = qobject_cast<QLabel*>(field->widget()))
+                    label = l->text().toLower();
+            }
             const bool applies = !any || !field || !field->widget() || field->widget()->isEnabled();
-            const bool match = applies && (words.isEmpty() || titleMatch ||
-                                           std::all_of(words.begin(), words.end(), [&](const QString& w) { return label.contains(w); }));
+            const bool wordsMatch = std::all_of(words.begin(), words.end(), [&](const QString& w) { return label.contains(w); });
+            if (label.startsWith("<b>"))
+                headingMatch = !words.isEmpty() && wordsMatch;
+            const bool match = applies && (words.isEmpty() || titleMatch || headingMatch || wordsMatch);
             d.form->setRowVisible(row, match);
             visibleRows += match ? 1 : 0;
         }
