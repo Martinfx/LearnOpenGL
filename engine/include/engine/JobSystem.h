@@ -58,6 +58,33 @@ private:
     bool stopping_ = false;
 };
 
+// One frame's work as tasks with dependencies ("after"). Tasks run on the job
+// system as soon as what they wait for is done; main-thread tasks (GL, audio
+// devices, anything not thread-safe) run on the thread that calls run(). A worker
+// task that has not started when the caller is otherwise idle is run by the caller
+// (no stall behind long jobs such as streaming loads). Reusable: run() again.
+class TaskGraph {
+public:
+    using Id = std::size_t;
+    Id add(const char* name, std::function<void()> fn, std::vector<Id> after = {}, bool mainThread = false);
+    void run(JobSystem& jobs = JobSystem::global());
+    void clear() { tasks_.clear(); }
+    std::size_t size() const { return tasks_.size(); }
+    // Milliseconds each task took in the last run() (profiling: FPS_ENGINE_STATS).
+    double taskMs(Id id) const { return tasks_[id].ms; }
+    const char* taskName(Id id) const { return tasks_[id].name; }
+
+private:
+    struct Task {
+        const char* name = "";
+        std::function<void()> fn;
+        std::vector<Id> after, next;
+        bool mainThread = false;
+        double ms = 0.0;
+    };
+    std::vector<Task> tasks_;
+};
+
 // Results that must be applied on the main thread (GL uploads, scene changes).
 // Workers post closures; the main thread drains them with a time budget.
 class MainThreadQueue {

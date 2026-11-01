@@ -14,6 +14,7 @@
 #include <atomic>
 #include <chrono>
 #include <thread>
+#include <mutex>
 #include <engine/Gizmo.h>
 #include <engine/Camera.h>
 #include <engine/FixedStepClock.h>
@@ -2505,6 +2506,44 @@ void testImpostorSettings()
     fs::remove(file);
 }
 
+void testTaskGraph()
+{
+    engine::TaskGraph graph;
+    std::mutex m;
+    std::vector<std::string> order;
+    const auto mainId = std::this_thread::get_id();
+    std::atomic<bool> mainOk{true};
+    auto log = [&](const char* name) {
+        std::lock_guard lock(m);
+        order.push_back(name);
+    };
+    const auto a = graph.add("a", [&] { log("a"); });
+    const auto b = graph.add("b", [&] { std::this_thread::sleep_for(std::chrono::milliseconds(5)); log("b"); });
+    const auto c = graph.add("c", [&] {
+        mainOk = mainOk && std::this_thread::get_id() == mainId;
+        log("c");
+    }, {a}, true);
+    graph.add("d", [&] { log("d"); }, {b, c});
+    for (int run = 0; run < 50; ++run) {
+        order.clear();
+        graph.run();
+        auto pos = [&](const char* n) { return std::find(order.begin(), order.end(), n) - order.begin(); };
+        if (order.size() != 4 || pos("a") > pos("c") || pos("d") != 3) {
+            check(false, "task graph keeps dependencies");
+            return;
+        }
+    }
+    check(mainOk, "main-thread tasks run on the caller");
+    check(graph.taskMs(b) >= 4.0, "task times are measured");
+    // Many independent tasks finish (some on workers, the rest helped by the caller).
+    engine::TaskGraph wide;
+    std::atomic<int> count{0};
+    for (int i = 0; i < 64; ++i)
+        wide.add("w", [&] { ++count; });
+    wide.run();
+    check(count == 64, "wide graph runs every task once");
+}
+
 int main()
 {
     // Hermetic cook cache for the tests.
@@ -2566,6 +2605,7 @@ int main()
     testPrefabs();
     testRangeAllocator();
     testImpostorSettings();
+    testTaskGraph();
     testWorldStreaming();
     std::printf(failures ? "%d test(s) failed\n" : "all tests passed\n", failures);
     return failures ? 1 : 0;

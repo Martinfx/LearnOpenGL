@@ -1,5 +1,6 @@
 // Game runtime: GLFW window, fixed 60 Hz simulation, first-person player.
 // Usage: fps_game [level-file]
+#include <engine/JobSystem.h>
 #include <engine/Log.h>
 #include <engine/CVars.h>
 #include <engine/DebugDraw.h>
@@ -769,6 +770,7 @@ int main(int argc, char** argv)
     weather.startLevel(scene);
     scripts.setLightningHandler([&weather](float distance) { weather.strikeNow(distance); });
     float shelterTimer = 0.0f;
+    engine::TaskGraph frameGraph; // per-frame update (see the main loop)
     bool sheltered = false;
     // Memory budget of the level (engine/Memory.h): measured every 2 s, a warning when a
     // category goes over its limit (once until it drops below again), console `memory`.
@@ -1627,13 +1629,28 @@ int main(int argc, char** argv)
         }
 
         camera.position = freecamActive ? freecamPosition : player.interpolatedEye(static_cast<float>(clock.alpha()));
-        engine::updateAnimations(scene, static_cast<float>(simTime)); // per frame for smooth motion
-        audio.update(static_cast<float>(frameTime), scene, camera.position, camera.forward());
-        effects.update(static_cast<float>(simTime), scene, physics, camera.position, audio);
-        if ((shelterTimer -= static_cast<float>(frameTime)) <= 0.0f) { // a roof within 40 m above the head
-            shelterTimer = 0.25f;
-            sheltered = physics.raycast(camera.position + glm::vec3(0.0f, 0.3f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), 40.0f).has_value();
-            audio.setSheltered(sheltered);
+        // The rest of the frame's update as a task graph: character animation (itself
+        // parallel per entity) runs on the workers while the main thread updates sound,
+        // particles, weather, anomalies and the flashlight (they share the audio system).
+        // Both only read what the other writes; the graph joins before rendering.
+        {
+            frameGraph.clear();
+            const float sim = static_cast<float>(simTime), frame = static_cast<float>(frameTime);
+            frameGraph.add("animation", [&] { engine::updateAnimations(scene, sim); }); // per frame for smooth motion
+            frameGraph.add("audio, effects, weather", [&] {
+                audio.update(frame, scene, camera.position, camera.forward());
+                effects.update(sim, scene, physics, camera.position, audio);
+                if ((shelterTimer -= frame) <= 0.0f) { // a roof within 40 m above the head
+                    shelterTimer = 0.25f;
+                    sheltered = physics.raycast(camera.position + glm::vec3(0.0f, 0.3f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), 40.0f).has_value();
+                    audio.setSheltered(sheltered);
+                }
+                weatherDirector.update(scene.environment, sim);
+                weather.update(sim, scene, camera.position, sheltered, audio);
+                anomalies.update(sim, physics, camera.position);
+                flashlight.update(sim, now, camera);
+            }, {}, true);
+            frameGraph.run();
         }
         if ((watchTimer -= static_cast<float>(frameTime)) <= 0.0f) {
             watchTimer = 0.5f;
@@ -1656,10 +1673,6 @@ int main(int argc, char** argv)
             }
             overBudgetWarned = over;
         }
-        weatherDirector.update(scene.environment, static_cast<float>(simTime));
-        weather.update(static_cast<float>(simTime), scene, camera.position, sheltered, audio);
-        anomalies.update(static_cast<float>(simTime), physics, camera.position);
-        flashlight.update(static_cast<float>(simTime), now, camera);
         if (flashlight.justEmptied())
             hud.notify("Baterka je vybitá");
 
@@ -1841,6 +1854,10 @@ int main(int argc, char** argv)
                                       st.cpuTotalMs, st.gpuTotalMs);
                 for (int p = 0; p < engine::Renderer::PassCount && n > 0 && n < static_cast<int>(sizeof line); ++p)
                     n += std::snprintf(line + n, sizeof line - static_cast<std::size_t>(n), " %s %.2f/%.2f", engine::Renderer::passName(p), st.cpuMs[p], st.gpuMs[p]);
+                // Frame update tasks (last frame): what runs side by side before rendering.
+                for (std::size_t t = 0; t < frameGraph.size() && n > 0 && n < static_cast<int>(sizeof line); ++t)
+                    n += std::snprintf(line + n, sizeof line - static_cast<std::size_t>(n), "%s %s %.2f", t == 0 ? " | tasks:" : ",",
+                                       frameGraph.taskName(t), frameGraph.taskMs(t));
                 LOG_INFO("stats", "%s", line);
             }
             glfwSetWindowTitle(window, title);

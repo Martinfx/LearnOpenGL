@@ -139,4 +139,103 @@ std::size_t MainThreadQueue::pending() const
     return queue_.size();
 }
 
+
+TaskGraph::Id TaskGraph::add(const char* name, std::function<void()> fn, std::vector<Id> after, bool mainThread)
+{
+    Task t;
+    t.name = name;
+    t.fn = std::move(fn);
+    t.after = std::move(after);
+    t.mainThread = mainThread;
+    tasks_.push_back(std::move(t));
+    return tasks_.size() - 1;
+}
+
+void TaskGraph::run(JobSystem& jobs)
+{
+    const std::size_t n = tasks_.size();
+    if (n == 0)
+        return;
+    for (Task& t : tasks_)
+        t.next.clear();
+    for (Id i = 0; i < n; ++i)
+        for (Id a : tasks_[i].after)
+            tasks_[a].next.push_back(i);
+
+    // Shared with queued jobs, which may run after run() returned (their task was
+    // taken by the caller meanwhile): they only touch this state until they win a task.
+    enum Phase : int { Waiting, Ready, Running, Done };
+    struct State {
+        explicit State(std::size_t count) : waiting(count), phase(count) {}
+        std::vector<std::atomic<int>> waiting;
+        std::vector<std::atomic<int>> phase;
+        std::atomic<std::size_t> done{0};
+        std::mutex mutex;
+        std::condition_variable wake;
+        std::exception_ptr error;
+        std::function<void(Id)> execute;
+    };
+    auto state = std::make_shared<State>(n);
+    State* st = state.get();
+    const bool workers = jobs.threadCount() > 0;
+    std::function<void(Id)> makeReady = [this, st, &jobs, workers, weak = std::weak_ptr<State>(state)](Id i) {
+        st->phase[i].store(Ready);
+        if (!tasks_[i].mainThread && workers)
+            jobs.run([weak, i] {
+                if (auto s = weak.lock()) {
+                    int expected = Ready;
+                    if (s->phase[i].compare_exchange_strong(expected, Running))
+                        s->execute(i);
+                }
+            });
+        std::lock_guard lock(st->mutex);
+        st->wake.notify_all();
+    };
+    st->execute = [this, st, &makeReady](Id i) {
+        const auto start = std::chrono::steady_clock::now();
+        try {
+            tasks_[i].fn();
+        } catch (...) {
+            std::lock_guard lock(st->mutex);
+            if (!st->error)
+                st->error = std::current_exception();
+        }
+        tasks_[i].ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
+        st->phase[i].store(Done);
+        for (Id j : tasks_[i].next)
+            if (st->waiting[j].fetch_sub(1) == 1)
+                makeReady(j);
+        st->done.fetch_add(1);
+        std::lock_guard lock(st->mutex);
+        st->wake.notify_all();
+    };
+    for (Id i = 0; i < n; ++i)
+        st->waiting[i].store(static_cast<int>(tasks_[i].after.size()));
+    for (Id i = 0; i < n; ++i)
+        if (tasks_[i].after.empty())
+            makeReady(i);
+
+    auto take = [&](bool mainOnly) {
+        for (Id i = 0; i < n; ++i) {
+            if (mainOnly != tasks_[i].mainThread && (mainOnly || workers))
+                continue;
+            int expected = Ready;
+            if (st->phase[i].load() == Ready && st->phase[i].compare_exchange_strong(expected, Running)) {
+                st->execute(i);
+                return true;
+            }
+        }
+        return false;
+    };
+    while (st->done.load() < n) {
+        // Own work first, then help with worker tasks nobody has started yet.
+        if (take(true) || take(false))
+            continue;
+        std::unique_lock lock(st->mutex);
+        st->wake.wait_for(lock, std::chrono::microseconds(500));
+    }
+    if (st->error)
+        std::rethrow_exception(st->error);
+}
+
 } // namespace engine
