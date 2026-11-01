@@ -39,11 +39,14 @@
 #include <QComboBox>
 #include <QSpinBox>
 #include <QPointer>
+#include <thread>
 #include <engine/JobSystem.h>
 #include "PaletteDialog.h"
+#include "AssetValidationDialog.h"
 #include <engine/Log.h>
 #include <engine/Terrain.h>
 #include <engine/WorldStreaming.h>
+#include <engine/AssetRegistry.h>
 #include <engine/CVars.h>
 #include <engine/Crash.h>
 #include <engine/Paths.h>
@@ -285,6 +288,19 @@ void MainWindow::buildMenus()
                     openMaterialEditor(path);
                 else
                     assets_->reveal(path); // models: show them in the Content Browser
+            },
+            this);
+        dialog->setAttribute(Qt::WA_DeleteOnClose);
+        dialog->show();
+    });
+    assets->addAction(tr("&Validate assets..."), this, [this] {
+        auto* dialog = new AssetValidationDialog(
+            [this](const QString& path) {
+                const AssetType type = assetTypeOf(path);
+                if (type == AssetType::Model || type == AssetType::Texture || type == AssetType::Level || type == AssetType::Other)
+                    assets_->reveal(path); // show it in the Content Browser
+                else
+                    openAssetFile(path);
             },
             this);
         dialog->setAttribute(Qt::WA_DeleteOnClose);
@@ -1952,6 +1968,8 @@ void MainWindow::buildDocks()
         openAsset(path, static_cast<int>(type));
     });
     connect(assets_, &AssetBrowser::saveAllRequested, this, &MainWindow::saveAll);
+    connect(assets_, &AssetBrowser::renameRequested, this, &MainWindow::renameAsset);
+    connect(assets_, &AssetBrowser::referencesRequested, this, &MainWindow::showAssetReferences);
     connect(assets_, &AssetBrowser::newAssetRequested, this, [this](const QString& kind, const QString& folder) {
         if (kind == "material")
             openMaterialEditor();
@@ -3310,6 +3328,91 @@ void MainWindow::deleteBox()
     refreshOutliner();
     select(next);
     markDirty();
+}
+
+void MainWindow::renameAsset(const QString& from, const QString& to)
+{
+    // The open level may use the asset: its file must be current to be rewritten, then it is reopened.
+    if (dirty_ && !currentFile_.isEmpty()) {
+        const auto answer = QMessageBox::question(this, tr("Rename asset"),
+                                                  tr("The level has unsaved changes. Save it first? (Its references are updated on disk.)"),
+                                                  QMessageBox::Save | QMessageBox::Cancel);
+        if (answer != QMessageBox::Save || !save())
+            return;
+    }
+    notify(tr("Renaming %1...").arg(QFileInfo(from).fileName()));
+    QPointer<MainWindow> self(this);
+    const std::filesystem::path root(assetRoot().toStdU16String());
+    const std::filesystem::path src(from.toStdU16String()), dst(to.toStdU16String());
+    std::thread([self, root, src, dst, from, to] {
+        engine::AssetRegistry registry;
+        std::string error;
+        std::vector<std::filesystem::path> changed;
+        const bool ok = registry.scan(root, &error) && registry.rename(src, dst, &error, &changed);
+        QStringList files;
+        for (const auto& f : changed)
+            files << QString::fromStdU16String(f.u16string());
+        const QString message = QString::fromStdString(error);
+        QMetaObject::invokeMethod(qApp, [self, ok, files, message, from, to] {
+            if (!self)
+                return;
+            if (!ok) {
+                QMessageBox::warning(self, tr("Rename asset"), tr("Could not rename %1:\n%2").arg(QFileInfo(from).fileName(), message));
+                return;
+            }
+            self->notify(tr("Renamed %1 to %2, %n file(s) updated", nullptr, int(files.size()))
+                             .arg(QFileInfo(from).fileName(), QDir(assetRoot()).relativeFilePath(to)));
+            for (const QString& f : files)
+                self->appendLog(tr("  references updated in %1").arg(QDir(assetRoot()).relativeFilePath(f)), 0);
+            self->assets_->rescan();
+            self->assets_->reveal(to);
+            const auto same = [](const QString& a, const QString& b) { return QFileInfo(a).absoluteFilePath() == QFileInfo(b).absoluteFilePath(); };
+            if (!self->currentFile_.isEmpty() &&
+                (std::any_of(files.begin(), files.end(), [&](const QString& f) { return same(f, self->currentFile_); }) ||
+                 same(from, self->currentFile_)))
+                self->openFile(same(from, self->currentFile_) ? to : self->currentFile_); // reload with the new paths
+        });
+    }).detach();
+}
+
+void MainWindow::showAssetReferences(const QString& path)
+{
+    QPointer<MainWindow> self(this);
+    const std::filesystem::path root(assetRoot().toStdU16String());
+    const std::filesystem::path file(path.toStdU16String());
+    std::thread([self, root, file, path] {
+        engine::AssetRegistry registry;
+        std::string error;
+        QStringList usedBy, uses, missing;
+        if (registry.scan(root, &error)) {
+            for (const auto* r : registry.referencedBy(file))
+                usedBy << QString::fromStdString(r->path.generic_string());
+            if (const auto* r = registry.find(file)) {
+                for (std::uint64_t dep : r->dependencies)
+                    if (const auto* d = registry.find(dep))
+                        uses << QString::fromStdString(d->path.generic_string());
+                for (const std::string& m : r->missing)
+                    missing << QString::fromStdString(m);
+            }
+        }
+        QMetaObject::invokeMethod(qApp, [self, path, usedBy, uses, missing] {
+            if (!self)
+                return;
+            auto list = [](QStringList l) {
+                l.sort();
+                if (l.size() > 30) {
+                    const int more = int(l.size()) - 30;
+                    l = l.mid(0, 30);
+                    l << QObject::tr("... and %1 more").arg(more);
+                }
+                return l.isEmpty() ? QObject::tr("(nothing)") : l.join('\n');
+            };
+            QString text = tr("Used by:\n%1\n\nUses:\n%2").arg(list(usedBy), list(uses));
+            if (!missing.isEmpty())
+                text += tr("\n\nMissing files it refers to:\n%1").arg(list(missing));
+            QMessageBox::information(self, tr("References of %1").arg(QFileInfo(path).fileName()), text);
+        });
+    }).detach();
 }
 
 bool MainWindow::confirmDiscard()

@@ -384,6 +384,47 @@ AssetBrowser::AssetBrowser(QWidget* parent) : QWidget(parent)
                        [folder] { QDesktopServices::openUrl(QUrl::fromLocalFile(QDir(assetRoot()).filePath(folder))); });
         menu.exec(folders_->viewport()->mapToGlobal(pos));
     });
+    list_->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(list_, &QListWidget::customContextMenuRequested, this, [this](const QPoint& pos) {
+        QListWidgetItem* item = list_->itemAt(pos);
+        if (!item)
+            return;
+        const QString path = item->data(kPathRole).toString();
+        const QFileInfo info(path);
+        QMenu menu;
+        menu.addAction(tr("Rename..."), this, [this, path, info] {
+            bool ok = false;
+            const QString name = QInputDialog::getText(this, tr("Rename asset"),
+                                                       tr("New name (references in levels, materials and other assets are updated):"),
+                                                       QLineEdit::Normal, info.fileName(), &ok)
+                                     .trimmed();
+            if (!ok || name.isEmpty() || name == info.fileName() || name.contains('/') || name.contains('\\'))
+                return;
+            QString newName = name;
+            if (QFileInfo(newName).suffix().isEmpty())
+                newName += "." + info.suffix(); // the type stays
+            else if (QFileInfo(newName).suffix().compare(info.suffix(), Qt::CaseInsensitive) != 0) {
+                QMessageBox::warning(this, tr("Rename asset"), tr("Keep the .%1 extension: the type of a file cannot change.").arg(info.suffix()));
+                return;
+            }
+            emit renameRequested(path, info.dir().filePath(newName));
+        });
+        menu.addAction(editorIcon("folder"), tr("Move to folder..."), this, [this, path, info] {
+            const QString folder = QFileDialog::getExistingDirectory(this, tr("Move asset to"), info.absolutePath());
+            if (folder.isEmpty() || QDir(folder) == info.dir())
+                return;
+            if (QDir(assetRoot()).relativeFilePath(folder).startsWith("..")) {
+                QMessageBox::warning(this, tr("Move asset"), tr("Pick a folder inside the assets folder."));
+                return;
+            }
+            emit renameRequested(path, QDir(folder).filePath(info.fileName()));
+        });
+        menu.addAction(tr("Show references"), this, [this, path] { emit referencesRequested(path); });
+        menu.addSeparator();
+        menu.addAction(tr("Show in file manager"), this,
+                       [info] { QDesktopServices::openUrl(QUrl::fromLocalFile(info.absolutePath())); });
+        menu.exec(list_->viewport()->mapToGlobal(pos));
+    });
     connect(list_, &QListWidget::itemSelectionChanged, this, &AssetBrowser::updateStatus);
     favorites_ = QSettings().value("content/favorites").toStringList();
 

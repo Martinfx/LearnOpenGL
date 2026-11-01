@@ -40,6 +40,7 @@
 #include <engine/WorldStreaming.h>
 #include <engine/FrameArena.h>
 #include <engine/Memory.h>
+#include <engine/AssetRegistry.h>
 #include <engine/PlayerController.h>
 
 #include <functional>
@@ -2025,6 +2026,60 @@ void testAssetPalette()
     check(!entries.empty() && entries[0].stats.pixels > 0, "glTF model palette");
 }
 
+void testAssetRegistry()
+{
+    namespace fs = std::filesystem;
+    const fs::path root = fs::absolute("registry_assets");
+    fs::remove_all(root);
+    fs::create_directories(root / "levels");
+    fs::create_directories(root / "materials");
+    fs::create_directories(root / "models/crate");
+    fs::create_directories(root / "textures");
+    auto write = [](const fs::path& f, const std::string& text) { std::ofstream(f, std::ios::binary) << text; };
+    auto read = [](const fs::path& f) {
+        std::ifstream in(f, std::ios::binary);
+        return std::string(std::istreambuf_iterator<char>(in), {});
+    };
+    write(root / "textures/rust.png", "png");
+    write(root / "materials/rust.material", "albedo \"../textures/rust.png\"\nroughness 0.8\n");
+    write(root / "models/crate/crate.gltf", "{\"images\":[{\"name\":\"look.png\",\"uri\": \"crate_diff.png\"}]}");
+    write(root / "models/crate/crate_diff.png", "png");
+    write(root / "levels/a.level", "model \"Crate\" \"../models/crate/crate.gltf\" 0 0 0\nmaterial \"../materials/rust.material\"\n"
+                                   "missing \"../textures/gone.png\"\n");
+    engine::AssetRegistry reg;
+    std::string err;
+    check(reg.scan(root, &err), "registry scan: " + err);
+    check(reg.records().size() == 5, "five assets");
+    const auto* tex = reg.find(fs::path("textures/rust.png"));
+    check(tex && reg.referencedBy(root / "textures/rust.png").size() == 1, "the material uses the texture");
+    const auto* level = reg.find(root / "levels/a.level");
+    check(level && level->dependencies.size() == 2 && level->missing.size() == 1, "level dependencies and a missing file");
+    const auto refs = engine::findReferences(root / "models/crate/crate.gltf", root);
+    check(refs.size() == 1 && refs[0].text == "crate_diff.png", "glTF: uri values only, not names");
+    const auto issues = reg.validate();
+    check(std::count_if(issues.begin(), issues.end(), [](const engine::AssetIssue& i) { return i.severity == engine::AssetIssue::Severity::Error; }) == 1,
+          "validation reports the missing file");
+    check(reg.save(&err), "registry save: " + err);
+    const std::uint64_t guid = tex->guid;
+
+    // Rename into another folder: the material's path follows, the GUID stays.
+    std::vector<fs::path> changed;
+    check(reg.rename(root / "textures/rust.png", root / "textures/metal/rust_old.png", &err, &changed), "rename: " + err);
+    check(read(root / "materials/rust.material").find("\"../textures/metal/rust_old.png\"") != std::string::npos && changed.size() == 1,
+          "reference rewritten");
+    // Move the glTF up a folder: its own relative uri is rewritten, the level follows.
+    check(reg.rename(root / "models/crate/crate.gltf", root / "models/crate.gltf", &err), "move gltf: " + err);
+    check(read(root / "models/crate.gltf").find("\"crate/crate_diff.png\"") != std::string::npos &&
+              read(root / "levels/a.level").find("\"../models/crate.gltf\"") != std::string::npos,
+          "moved glTF keeps its texture, the level its model");
+    check(!reg.rename(root / "materials/rust.material", root / "levels/a.level", &err), "rename onto an existing file fails");
+    engine::AssetRegistry again;
+    check(again.scan(root, &err) && again.find(fs::path("textures/metal/rust_old.png")) &&
+              again.find(fs::path("textures/metal/rust_old.png"))->guid == guid,
+          "GUID kept across the rename and a rescan");
+    fs::remove_all(root);
+}
+
 void testMemoryBudgets()
 {
     // Frame arena: aligned bump allocations, one block again after a big frame.
@@ -2287,6 +2342,7 @@ int main()
     testWater();
     testWeatherCycle();
     testMemoryBudgets();
+    testAssetRegistry();
     testWorldStreaming();
     std::printf(failures ? "%d test(s) failed\n" : "all tests passed\n", failures);
     return failures ? 1 : 0;

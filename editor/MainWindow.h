@@ -149,6 +149,9 @@ private:
     void insertModel(const QString& path, engine::Model model, glm::vec3 point, const std::string& parent = {});
     bool assignMaterial(const QString& material, int object);
     void openAsset(const QString& path, int type);
+    // Content Browser: rename / move an asset with the references to it (engine/AssetRegistry.h).
+    void renameAsset(const QString& from, const QString& to);
+    void showAssetReferences(const QString& path);
     void addEntity(const QString& type);
     void addAnomaly(int kind); // engine::AnomalyKind
     void addLight(bool spot);

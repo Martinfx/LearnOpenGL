@@ -29,6 +29,7 @@ add_library(engine STATIC
     src/Water.cpp
     src/WorldStreaming.cpp
     src/FrameArena.cpp
+    src/AssetRegistry.cpp
     src/AssetPalette.cpp
     src/Scene.cpp
     src/JobSystem.cpp

@@ -97,6 +97,9 @@ signals:
     void assetSelected(const QString& path, AssetType type);
     void saveAllRequested();
     void newAssetRequested(const QString& kind, const QString& folder); // material, script, level
+    // Context menu of a file: rename or move it (references are rewritten), list what uses it.
+    void renameRequested(const QString& path, const QString& newPath);
+    void referencesRequested(const QString& path);
 
 private:
     void applyFilter();

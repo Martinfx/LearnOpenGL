@@ -3,6 +3,12 @@ target_link_libraries(engine_tests PRIVATE engine)
 add_test(NAME engine_tests COMMAND engine_tests WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 target_compile_definitions(engine_tests PRIVATE ENGINE_TEST_ASSETS="${PROJECT_SOURCE_DIR}/assets")
 
+# Asset validation (missing references; `asset_check --models` also checks the scale).
+add_executable(asset_check asset_check.cpp)
+target_link_libraries(asset_check PRIVATE engine)
+add_test(NAME asset_check COMMAND asset_check ${PROJECT_SOURCE_DIR}/assets --quiet)
+set_tests_properties(asset_check PROPERTIES LABELS assets)
+
 # Smoke test of every level (ctest -L smoke; skip with ctest -LE smoke). Needs a
 # display or xvfb-run, so it is only added where one of them exists.
 find_program(XVFB_RUN xvfb-run)
