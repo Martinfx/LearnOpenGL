@@ -544,6 +544,7 @@ void Renderer::useMeshProgram(const Program& p)
     loc_.alphaMode = p.loc("uAlphaMode");
     loc_.instanced = p.loc("uInstanced");
     loc_.sway = p.loc("uSway");
+    loc_.fade = p.loc("uFade");
     loc_.instanceBase = p.loc("uInstanceBase");
     loc_.alphaCutoff = p.loc("uAlphaCutoff");
     loc_.opacity = p.loc("uOpacity");
@@ -659,8 +660,11 @@ void Renderer::shutdown()
         glDeleteBuffers(1, &terrain_.vbo);
         glDeleteBuffers(1, &terrain_.ibo);
     }
-    if (terrain_.splat)
-        glDeleteTextures(1, &terrain_.splat);
+    for (unsigned* tex : {&terrain_.splat, &terrain_.albedoArray, &terrain_.normalArray})
+        if (*tex)
+            glDeleteTextures(1, tex);
+    if (terrain_.copyFbo)
+        glDeleteFramebuffers(1, &terrain_.copyFbo);
     terrain_ = GpuTerrain{};
     for (auto& frame : queries_)
         for (unsigned& q : frame)
@@ -1087,10 +1091,14 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
             if (mainPass)
                 keepAliveLods(model, draw);
         }
+        // Dissolve over the last 15 % before the cull distance instead of popping out.
+        const glm::vec2 fade = model.cullDistance > 0.0f && !shadowPass ? glm::vec2(model.cullDistance * 0.85f, model.cullDistance) : glm::vec2(0.0f);
         if (!quality_.instancing || selected || draw->skeleton || draw->parts.empty()) {
             glUniform1f(loc_.sway, model.sway);
+            glUniform2f(loc_.fade, fade.x, fade.y);
             drawModel(*draw, model.transform(), selected ? 1.0f : 0.0f);
             glUniform1f(loc_.sway, 0.0f);
+            glUniform2f(loc_.fade, 0.0f, 0.0f);
             continue;
         }
         // Batch with other copies: same shared mesh list, material overrides and sway.
@@ -1099,9 +1107,11 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
             key = key * 1099511628211ull ^ reinterpret_cast<std::uintptr_t>(material.get());
         if (model.sway > 0.0f)
             key = key * 1099511628211ull ^ static_cast<std::uint64_t>(model.sway * 1000.0f + 1.0f);
+        if (fade.y > 0.0f)
+            key = key * 1099511628211ull ^ static_cast<std::uint64_t>(fade.y * 16.0f + 7.0f);
         auto [it, added] = batchIndex_.emplace(key, batches_.size());
         if (added)
-            batches_.push_back({draw, {}, drawDistance_, model.sway});
+            batches_.push_back({draw, {}, drawDistance_, model.sway, fade});
         InstanceBatch& batch = batches_[it->second];
         batch.transforms.push_back(model.transform());
         batch.distance = std::min(batch.distance, drawDistance_);
@@ -1755,20 +1765,76 @@ void Renderer::drawTerrain(const Terrain& t, const RenderView& view)
     const int res = t.resolution;
     constexpr int kChunk = GpuTerrain::kChunk, kLevels = GpuTerrain::kLevels;
     const std::size_t gridCount = static_cast<std::size_t>(res) * res;
+    // Grid vertices, then a copy of each lowered by kSkirt metres (skirts).
+    constexpr float kSkirt = 6.0f;
+    const float d = t.spacing();
+    auto h = [&](int x, int z) {
+        return t.heights[static_cast<std::size_t>(std::clamp(z, 0, res - 1)) * res + std::clamp(x, 0, res - 1)];
+    };
+    auto makeVertex = [&](int x, int z) {
+        Vertex v;
+        v.position = {t.origin.x + x * d, h(x, z), t.origin.y + z * d};
+        v.normal = glm::normalize(glm::vec3(h(x - 1, z) - h(x + 1, z), 2.0f * d, h(x, z - 1) - h(x, z + 1)));
+        v.uv = {static_cast<float>(x) / (res - 1), static_cast<float>(z) / (res - 1)};
+        return v;
+    };
+    auto chunkBounds = [&](int cx, int cz) {
+        const int quads = res - 1;
+        const int x0 = cx * kChunk, z0 = cz * kChunk;
+        const int x1 = std::min(quads, x0 + kChunk), z1 = std::min(quads, z0 + kChunk);
+        float lo = 1e30f, hi = -1e30f;
+        for (int z = z0; z <= z1; ++z)
+            for (int x = x0; x <= x1; ++x) {
+                const float y = t.heights[static_cast<std::size_t>(z) * res + x];
+                lo = std::min(lo, y);
+                hi = std::max(hi, y);
+            }
+        terrain_.chunks[static_cast<std::size_t>(cz) * terrain_.chunksX + cx].bounds = {
+            {t.origin.x + x0 * d, lo, t.origin.y + z0 * d}, {t.origin.x + x1 * d, hi, t.origin.y + z1 * d}};
+    };
+    if (terrain_.meshVersion != t.meshVersion && terrain_.resolution == res && terrain_.vao && terrain_.origin == t.origin &&
+        terrain_.size == t.size) {
+        // Brush strokes: follow the edit list from the version on the GPU; only those tiles are re-sent.
+        std::uint64_t v = terrain_.meshVersion;
+        int x0 = res, z0 = res, x1 = -1, z1 = -1;
+        for (const Terrain::MeshEdit& e : t.meshEdits)
+            if (e.before == v) {
+                x0 = std::min(x0, e.x0);
+                z0 = std::min(z0, e.z0);
+                x1 = std::max(x1, e.x1);
+                z1 = std::max(z1, e.z1);
+                v = e.after;
+            }
+        if (v == t.meshVersion && x1 >= x0) {
+            // Normals use the neighbours: one more sample around.
+            x0 = std::max(0, x0 - 1);
+            z0 = std::max(0, z0 - 1);
+            x1 = std::min(res - 1, x1 + 1);
+            z1 = std::min(res - 1, z1 + 1);
+            std::vector<Vertex> row(static_cast<std::size_t>(x1 - x0 + 1));
+            for (int z = z0; z <= z1; ++z) {
+                for (int x = x0; x <= x1; ++x)
+                    row[static_cast<std::size_t>(x - x0)] = makeVertex(x, z);
+                const std::size_t first = static_cast<std::size_t>(z) * res + x0;
+                const auto bytes = static_cast<GLsizeiptr>(row.size() * sizeof(Vertex));
+                glNamedBufferSubData(terrain_.vbo, static_cast<GLintptr>(first * sizeof(Vertex)), bytes, row.data());
+                for (Vertex& rv : row)
+                    rv.position.y -= kSkirt;
+                glNamedBufferSubData(terrain_.vbo, static_cast<GLintptr>((gridCount + first) * sizeof(Vertex)), bytes, row.data());
+            }
+            for (int cz = std::max(0, (z0 - 1) / kChunk); cz <= std::min(terrain_.chunksX - 1, z1 / kChunk); ++cz)
+                for (int cx = std::max(0, (x0 - 1) / kChunk); cx <= std::min(terrain_.chunksX - 1, x1 / kChunk); ++cx)
+                    chunkBounds(cx, cz);
+            terrain_.meshVersion = t.meshVersion;
+            ++uploads_;
+        }
+    }
     if (terrain_.meshVersion != t.meshVersion || terrain_.resolution != res) {
-        // Grid vertices, then a copy of each lowered by kSkirt metres (skirts).
-        constexpr float kSkirt = 6.0f;
         std::vector<Vertex> vertices(gridCount * 2);
-        const float d = t.spacing();
-        auto h = [&](int x, int z) {
-            return t.heights[static_cast<std::size_t>(std::clamp(z, 0, res - 1)) * res + std::clamp(x, 0, res - 1)];
-        };
         for (int z = 0; z < res; ++z)
             for (int x = 0; x < res; ++x) {
                 Vertex& v = vertices[static_cast<std::size_t>(z) * res + x];
-                v.position = {t.origin.x + x * d, h(x, z), t.origin.y + z * d};
-                v.normal = glm::normalize(glm::vec3(h(x - 1, z) - h(x + 1, z), 2.0f * d, h(x, z - 1) - h(x, z + 1)));
-                v.uv = {static_cast<float>(x) / (res - 1), static_cast<float>(z) / (res - 1)};
+                v = makeVertex(x, z);
                 Vertex& skirt = vertices[gridCount + static_cast<std::size_t>(z) * res + x];
                 skirt = v;
                 skirt.position.y -= kSkirt;
@@ -1832,20 +1898,11 @@ void Renderer::drawTerrain(const Terrain& t, const RenderView& view)
         }
         // Chunk bounds from the heights.
         for (int cz = 0; cz < chunksX; ++cz)
-            for (int cx = 0; cx < chunksX; ++cx) {
-                const int x0 = cx * kChunk, z0 = cz * kChunk;
-                const int x1 = std::min(quads, x0 + kChunk), z1 = std::min(quads, z0 + kChunk);
-                float lo = 1e30f, hi = -1e30f;
-                for (int z = z0; z <= z1; ++z)
-                    for (int x = x0; x <= x1; ++x) {
-                        const float y = t.heights[static_cast<std::size_t>(z) * res + x];
-                        lo = std::min(lo, y);
-                        hi = std::max(hi, y);
-                    }
-                terrain_.chunks[static_cast<std::size_t>(cz) * chunksX + cx].bounds = {
-                    {t.origin.x + x0 * d, lo, t.origin.y + z0 * d}, {t.origin.x + x1 * d, hi, t.origin.y + z1 * d}};
-            }
+            for (int cx = 0; cx < chunksX; ++cx)
+                chunkBounds(cx, cz);
         terrain_.resolution = res;
+        terrain_.origin = t.origin;
+        terrain_.size = t.size;
         terrain_.meshVersion = t.meshVersion;
     }
     if (terrain_.splatVersion != t.splatVersion || terrain_.splatResolution != t.splatResolution) {
@@ -1854,15 +1911,27 @@ void Renderer::drawTerrain(const Terrain& t, const RenderView& view)
             terrain_.splat = 0;
         }
         if (!terrain_.splat) {
-            glCreateTextures(GL_TEXTURE_2D, 1, &terrain_.splat);
-            glTextureStorage2D(terrain_.splat, 1, GL_RGBA8, t.splatResolution, t.splatResolution);
+            glCreateTextures(GL_TEXTURE_2D_ARRAY, 1, &terrain_.splat);
+            glTextureStorage3D(terrain_.splat, 1, GL_RGBA8, t.splatResolution, t.splatResolution, 2);
             glTextureParameteri(terrain_.splat, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
             glTextureParameteri(terrain_.splat, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
             glTextureParameteri(terrain_.splat, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
             glTextureParameteri(terrain_.splat, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         }
+        // Interleaved 8 bytes per pixel -> two RGBA planes (layers 0-3, 4-7).
+        const std::size_t pixels = static_cast<std::size_t>(t.splatResolution) * t.splatResolution;
+        terrain_.splatPlanes.resize(pixels * 8);
+        if (t.splat.size() >= pixels * Terrain::kLayers) {
+            std::uint8_t* a = terrain_.splatPlanes.data();
+            std::uint8_t* b = a + pixels * 4;
+            for (std::size_t i = 0; i < pixels; ++i) {
+                std::memcpy(a + i * 4, &t.splat[i * Terrain::kLayers], 4);
+                std::memcpy(b + i * 4, &t.splat[i * Terrain::kLayers + 4], 4);
+            }
+        }
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        glTextureSubImage2D(terrain_.splat, 0, 0, 0, t.splatResolution, t.splatResolution, GL_RGBA, GL_UNSIGNED_BYTE, t.splat.data());
+        glTextureSubImage3D(terrain_.splat, 0, 0, 0, 0, t.splatResolution, t.splatResolution, 2, GL_RGBA, GL_UNSIGNED_BYTE,
+                            terrain_.splatPlanes.data());
         glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
         terrain_.splatResolution = t.splatResolution;
         terrain_.splatVersion = t.splatVersion;
@@ -1885,38 +1954,31 @@ void Renderer::drawTerrain(const Terrain& t, const RenderView& view)
         glUniform1i(mesh.loc("uTerrain"), 1);
         glUniform2fv(mesh.loc("uTerrainOrigin"), 1, glm::value_ptr(t.origin));
         glUniform1f(mesh.loc("uTerrainSize"), t.size);
-        glm::vec4 tiling(0.25f), roughness(0.9f), normalStrength(1.0f);
-        glm::ivec4 hasAlbedo(0), hasNormal(0);
-        glm::vec3 colors[4] = {glm::vec3(0.45f, 0.42f, 0.36f), glm::vec3(0.38f, 0.42f, 0.25f), glm::vec3(0.32f, 0.3f, 0.27f),
-                               glm::vec3(0.5f)};
-        const unsigned albedoUnits[4] = {0, 10, 11, 12}, normalUnits[4] = {1, 2, 3, 5};
-        for (int i = 0; i < Terrain::kLayers; ++i) {
+        constexpr int kL = Terrain::kLayers;
+        float tiling[kL], roughness[kL], normalStrength[kL];
+        // Default tints (no material): dirt, grass, gravel, grey, then four more muted ones.
+        glm::vec3 colors[kL] = {{0.45f, 0.42f, 0.36f}, {0.38f, 0.42f, 0.25f}, {0.32f, 0.3f, 0.27f}, {0.5f, 0.5f, 0.5f},
+                                {0.4f, 0.33f, 0.25f}, {0.3f, 0.36f, 0.28f}, {0.42f, 0.4f, 0.38f}, {0.25f, 0.24f, 0.22f}};
+        for (int i = 0; i < kL; ++i) {
             const TerrainLayer& layer = t.layers[static_cast<std::size_t>(i)];
             tiling[i] = layer.tiling;
-            const Material* m = layer.material.get();
-            if (!m)
-                continue;
-            colors[i] = m->color;
-            roughness[i] = m->roughness;
-            normalStrength[i] = m->normalStrength;
-            auto bind = [&](MapKind kind, unsigned unit) {
-                const auto& asset = m->map(kind);
-                const Texture* tex = asset ? asset->texture.get() : nullptr;
-                const unsigned handle = tex && tex->valid() ? texture(*tex) : 0u;
-                if (handle)
-                    glBindTextureUnit(unit, handle);
-                return handle != 0 ? 1 : 0;
-            };
-            hasAlbedo[i] = bind(MapKind::Albedo, albedoUnits[i]);
-            hasNormal[i] = bind(MapKind::Normal, normalUnits[i]);
+            roughness[i] = 0.9f;
+            normalStrength[i] = 1.0f;
+            if (const Material* m = layer.material.get()) {
+                colors[i] = m->color;
+                roughness[i] = m->roughness;
+                normalStrength[i] = m->normalStrength;
+            }
         }
-        glBindTextureUnit(4, terrain_.splat);
-        glUniform4fv(mesh.loc("uLayerTiling"), 1, glm::value_ptr(tiling));
-        glUniform3fv(mesh.loc("uLayerColor"), 4, glm::value_ptr(colors[0]));
-        glUniform4iv(mesh.loc("uLayerHasAlbedo"), 1, glm::value_ptr(hasAlbedo));
-        glUniform4iv(mesh.loc("uLayerHasNormal"), 1, glm::value_ptr(hasNormal));
-        glUniform4fv(mesh.loc("uLayerRoughness"), 1, glm::value_ptr(roughness));
-        glUniform4fv(mesh.loc("uLayerNormalStrength"), 1, glm::value_ptr(normalStrength));
+        const int maps = updateTerrainLayers(t);
+        glBindTextureUnit(10, terrain_.albedoArray);
+        glBindTextureUnit(11, terrain_.normalArray);
+        glBindTextureUnit(12, terrain_.splat);
+        glUniform1fv(mesh.loc("uLayerTiling"), kL, tiling);
+        glUniform3fv(mesh.loc("uLayerColor"), kL, glm::value_ptr(colors[0]));
+        glUniform1i(mesh.loc("uLayerMaps"), maps);
+        glUniform1fv(mesh.loc("uLayerRoughness"), kL, roughness);
+        glUniform1fv(mesh.loc("uLayerNormalStrength"), kL, normalStrength);
     } else {
         glUniform1i(loc_.alphaMode, 0);
     }
@@ -1940,6 +2002,102 @@ void Renderer::drawTerrain(const Terrain& t, const RenderView& view)
     }
     if (!depthOnly_)
         glUniform1i(programs_.mesh.loc("uTerrain"), 0);
+}
+
+int Renderer::updateTerrainLayers(const Terrain& t)
+{
+    // Every layer's albedo and normal map is drawn (resampled, with its mip chain) into one
+    // slice of a texture array, so the shader samples 8 layers through 2 units. A slice is
+    // redrawn only when its source texture changes (material edit, texture streamed in).
+    constexpr int kSize = GpuTerrain::kLayerMapSize, kL = Terrain::kLayers;
+    const int levels = static_cast<int>(std::log2(static_cast<float>(kSize))) + 1;
+    if (!terrain_.albedoArray) {
+        glCreateTextures(GL_TEXTURE_2D_ARRAY, 1, &terrain_.albedoArray);
+        glTextureStorage3D(terrain_.albedoArray, levels, GL_SRGB8_ALPHA8, kSize, kSize, kL);
+        glCreateTextures(GL_TEXTURE_2D_ARRAY, 1, &terrain_.normalArray);
+        glTextureStorage3D(terrain_.normalArray, levels, GL_RGBA8, kSize, kSize, kL);
+        for (unsigned tex : {terrain_.albedoArray, terrain_.normalArray}) {
+            glTextureParameteri(tex, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+            glTextureParameteri(tex, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTextureParameteri(tex, GL_TEXTURE_WRAP_S, GL_REPEAT);
+            glTextureParameteri(tex, GL_TEXTURE_WRAP_T, GL_REPEAT);
+            glTextureParameterf(tex, GL_TEXTURE_MAX_ANISOTROPY, 8.0f);
+        }
+        glCreateFramebuffers(1, &terrain_.copyFbo);
+    }
+    int maps = 0;
+    bool changed[2] = {false, false};
+    struct Copy {
+        unsigned source, target;
+        int slice;
+    };
+    std::vector<Copy> copies;
+    for (int i = 0; i < kL; ++i) {
+        const Material* m = t.layers[static_cast<std::size_t>(i)].material.get();
+        auto handleOf = [&](MapKind kind) {
+            const auto& asset = m ? m->map(kind) : nullptr;
+            const Texture* tex = asset ? asset->texture.get() : nullptr;
+            return tex && tex->valid() ? texture(*tex) : 0u;
+        };
+        const unsigned albedo = handleOf(MapKind::Albedo), normal = handleOf(MapKind::Normal);
+        maps |= (albedo ? 1 << i : 0) | (normal ? 256 << i : 0);
+        if (albedo && albedo != terrain_.albedoSource[i]) {
+            copies.push_back({albedo, terrain_.albedoArray, i});
+            changed[0] = true;
+        }
+        if (normal && normal != terrain_.normalSource[i]) {
+            copies.push_back({normal, terrain_.normalArray, i});
+            changed[1] = true;
+        }
+        terrain_.albedoSource[i] = albedo;
+        terrain_.normalSource[i] = normal;
+    }
+    if (copies.empty())
+        return maps;
+    // Draw state of the pass in progress, restored below.
+    GLint fbo = 0, program = 0, vao = 0, viewport[4];
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &fbo);
+    glGetIntegerv(GL_CURRENT_PROGRAM, &program);
+    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &vao);
+    glGetIntegerv(GL_VIEWPORT, viewport);
+    const GLboolean depth = glIsEnabled(GL_DEPTH_TEST), blend = glIsEnabled(GL_BLEND), cull = glIsEnabled(GL_CULL_FACE),
+                    srgb = glIsEnabled(GL_FRAMEBUFFER_SRGB);
+    GLboolean depthMask = GL_TRUE;
+    glGetBooleanv(GL_DEPTH_WRITEMASK, &depthMask);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
+    glDisable(GL_CULL_FACE);
+    glDepthMask(GL_FALSE);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, terrain_.copyFbo);
+    glViewport(0, 0, kSize, kSize);
+    glUseProgram(programs_.copy.id);
+    glBindVertexArray(emptyVao_);
+    for (const Copy& c : copies) {
+        // sRGB albedo: decoded when sampled, encoded again when written.
+        if (c.target == terrain_.albedoArray)
+            glEnable(GL_FRAMEBUFFER_SRGB);
+        else
+            glDisable(GL_FRAMEBUFFER_SRGB);
+        glNamedFramebufferTextureLayer(terrain_.copyFbo, GL_COLOR_ATTACHMENT0, c.target, 0, c.slice);
+        glBindTextureUnit(0, c.source);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+    }
+    glNamedFramebufferTextureLayer(terrain_.copyFbo, GL_COLOR_ATTACHMENT0, 0, 0, 0);
+    if (changed[0])
+        glGenerateTextureMipmap(terrain_.albedoArray);
+    if (changed[1])
+        glGenerateTextureMipmap(terrain_.normalArray);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, static_cast<GLuint>(fbo));
+    glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+    glUseProgram(static_cast<GLuint>(program));
+    glBindVertexArray(static_cast<GLuint>(vao));
+    (depth ? glEnable : glDisable)(GL_DEPTH_TEST);
+    (blend ? glEnable : glDisable)(GL_BLEND);
+    (cull ? glEnable : glDisable)(GL_CULL_FACE);
+    (srgb ? glEnable : glDisable)(GL_FRAMEBUFFER_SRGB);
+    glDepthMask(depthMask);
+    uploads_ += static_cast<int>(copies.size());
+    return maps;
 }
 
 void Renderer::addFoliage(const Terrain& t, const RenderView& view)
@@ -2023,6 +2181,9 @@ void Renderer::addFoliage(const Terrain& t, const RenderView& view)
                 from[levelCount++] = lod.distance * quality_.lodScale;
             }
         const float farDensity = detail ? std::min(type.farDensity, quality_.detailDensityFar) : type.farDensity;
+        const glm::vec2 fade = type.cullDistance > 0.0f && type.fade > 0.0f && shadowCascade_ < 0
+                                   ? glm::vec2(type.cullDistance * (1.0f - type.fade), type.cullDistance)
+                                   : glm::vec2(0.0f);
         for (const FoliageCell& cell : c.types[ti]) {
             const float cellDistance = distanceTo(view.cameraPosition, cell.bounds);
             if ((type.cullDistance > 0.0f && cellDistance > type.cullDistance) || cellDistance > shadowReach ||
@@ -2032,7 +2193,7 @@ void Renderer::addFoliage(const Terrain& t, const RenderView& view)
             }
             for (std::uint32_t i : cell.instances) {
                 const float d = glm::distance(view.cameraPosition, t.foliage[i].position);
-                if ((type.cullDistance > 0.0f && d > type.cullDistance + 2.0f) || d > shadowReach)
+                if ((type.cullDistance > 0.0f && d > type.cullDistance + (fade.y > 0.0f ? 0.0f : 2.0f)) || d > shadowReach)
                     continue;
                 if (farDensity < 1.0f && type.cullDistance > 0.0f) {
                     // Thinning toward the cull distance, stable per instance.
@@ -2053,9 +2214,11 @@ void Renderer::addFoliage(const Terrain& t, const RenderView& view)
                 std::uint64_t key = reinterpret_cast<std::uintptr_t>(&draw->parts[0]);
                 if (type.sway > 0.0f)
                     key = key * 1099511628211ull ^ static_cast<std::uint64_t>(type.sway * 1000.0f + 1.0f);
+                if (fade.y > 0.0f)
+                    key = key * 1099511628211ull ^ static_cast<std::uint64_t>(fade.x * 16.0f + 3.0f) * 31u ^ static_cast<std::uint64_t>(fade.y * 16.0f);
                 auto [it, added] = batchIndex_.emplace(key, batches_.size());
                 if (added)
-                    batches_.push_back({draw, {}, cellDistance, type.sway});
+                    batches_.push_back({draw, {}, cellDistance, type.sway, fade});
                 InstanceBatch& batch = batches_[it->second];
                 batch.distance = std::min(batch.distance, cellDistance);
                 batch.transforms.push_back(c.transforms[i]);
@@ -2094,6 +2257,7 @@ void Renderer::flushInstances()
         const InstanceBatch& b = batches_[i];
         drawDistance_ = b.distance;
         glUniform1f(loc_.sway, b.sway);
+        glUniform2f(loc_.fade, b.fade.x, b.fade.y);
         if (ranges[i].first < 0) {
             drawModel(*b.model, b.transforms.front(), 0.0f);
         } else {
@@ -2103,6 +2267,7 @@ void Renderer::flushInstances()
         }
     }
     glUniform1f(loc_.sway, 0.0f);
+    glUniform2f(loc_.fade, 0.0f, 0.0f);
     batches_.clear();
     batchIndex_.clear();
 }

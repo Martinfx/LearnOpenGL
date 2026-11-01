@@ -56,7 +56,8 @@ QDoubleSpinBox* spin(QWidget* parent, double lo, double hi, double step, double 
 
 // Layer colours of the brush ring (match the default layer tints in the shader).
 const glm::vec3 kLayerColors[engine::Terrain::kLayers] = {
-    {0.45f, 0.8f, 0.3f}, {0.85f, 0.65f, 0.35f}, {0.6f, 0.6f, 0.65f}, {0.9f, 0.9f, 0.4f}};
+    {0.45f, 0.8f, 0.3f}, {0.85f, 0.65f, 0.35f}, {0.6f, 0.6f, 0.65f}, {0.9f, 0.9f, 0.4f},
+    {0.9f, 0.45f, 0.3f}, {0.35f, 0.75f, 0.75f}, {0.75f, 0.45f, 0.85f}, {0.95f, 0.95f, 0.95f}};
 
 } // namespace
 
@@ -90,7 +91,15 @@ struct TerrainUi : QObject {
     QCheckBox* shadows = nullptr;
     QDoubleSpinBox* farDensity = nullptr;
     QDoubleSpinBox* sway = nullptr;
+    QDoubleSpinBox* fade = nullptr;
+    std::array<QDoubleSpinBox*, engine::FoliageType::kLayerSlots> layerDensity{};
+    QFormLayout* typeForm = nullptr;
+    QPushButton* fill = nullptr;
     QLineEdit* lods = nullptr;
+    QDoubleSpinBox* resizeTo = nullptr;
+    QButtonGroup* anchor = nullptr;
+    QPushButton* resize = nullptr;
+    QLabel* sizeInfo = nullptr;
     QDoubleSpinBox* foliageRadius = nullptr;
     QRadioButton* erase = nullptr;
     QLabel* foliageInfo = nullptr;
@@ -257,6 +266,72 @@ void MainWindow::buildTerrainPages()
             layerSection->setBodyLayout(layerGrid);
             v->addWidget(layerSection);
 
+            // Size: grow or crop by whole tiles, like a canvas resize with an anchor.
+            auto* sizeSection = new CollapsibleSection(tr("Size and tiles"), ui.edit);
+            auto* sizeLayout = new QVBoxLayout;
+            ui.sizeInfo = new QLabel(ui.edit);
+            ui.sizeInfo->setObjectName("dim");
+            ui.sizeInfo->setWordWrap(true);
+            sizeLayout->addWidget(ui.sizeInfo);
+            auto* sizeForm = new QFormLayout;
+            ui.resizeTo = spin(ui.edit, 16, 16384, 64, 256, 0, " m");
+            ui.resizeTo->setToolTip(tr("New side length; the sample spacing stays, so detail is kept (at most 4097 samples per side)"));
+            sizeForm->addRow(tr("New size"), ui.resizeTo);
+            auto* anchorGrid = new QGridLayout;
+            anchorGrid->setSpacing(2);
+            ui.anchor = new QButtonGroup(ui.edit);
+            for (int i = 0; i < 9; ++i) {
+                auto* b = new QPushButton(ui.edit);
+                b->setCheckable(true);
+                b->setFixedSize(24, 24);
+                b->setObjectName("tool"); // checked = highlighted
+                b->setToolTip(tr("This part of the terrain stays in place; new ground is added on the other sides"));
+                ui.anchor->addButton(b, i);
+                anchorGrid->addWidget(b, 2 - i / 3, i % 3); // row 0 = +Z (north) at the top
+            }
+            ui.anchor->button(4)->setChecked(true);
+            anchorGrid->setColumnStretch(3, 1);
+            auto* anchorBox = new QWidget(ui.edit);
+            anchorBox->setLayout(anchorGrid);
+            sizeForm->addRow(tr("Anchor"), anchorBox);
+            sizeLayout->addLayout(sizeForm);
+            ui.resize = new QPushButton(tr("Resize terrain"), ui.edit);
+            ui.resize->setToolTip(tr("Grows (new ground continues the edge heights, layer 1) or crops; runs in the background, Undo restores"));
+            sizeLayout->addWidget(ui.resize);
+            sizeSection->setBodyLayout(sizeLayout);
+            v->addWidget(sizeSection);
+            connect(ui.resize, &QPushButton::clicked, this, [this] {
+                if (!scene_.terrain)
+                    return;
+                const int a = terrainUi_->anchor->checkedId();
+                const glm::ivec2 anchor(a % 3 - 1, a / 3 - 1);
+                const float newSize = static_cast<float>(terrainUi_->resizeTo->value());
+                std::shared_ptr<const engine::Terrain> snapshot = scene_.terrain;
+                terrainUi_->resize->setEnabled(false);
+                QPointer<MainWindow> self(this);
+                engine::JobSystem::global().run([self, snapshot, anchor, newSize] {
+                    auto resized = std::make_shared<engine::Terrain>(*snapshot);
+                    const bool ok = resized->resize(newSize, anchor);
+                    QMetaObject::invokeMethod(qApp, [self, snapshot, resized, ok] {
+                        if (!self)
+                            return;
+                        self->terrainUi_->resize->setEnabled(true);
+                        if (!ok) {
+                            self->notify(tr("Too large: at most 4097 samples per side at this spacing"), 5000);
+                            return;
+                        }
+                        if (self->scene_.terrain != snapshot) {
+                            self->notify(tr("The terrain changed meanwhile; resize again"), 5000);
+                            return;
+                        }
+                        self->scene_.terrain = resized;
+                        self->markDirty();
+                        self->refreshTerrainPanel();
+                        self->viewport_->update();
+                    });
+                });
+            });
+
             auto* remove = new QPushButton(editorIcon("delete"), tr("Delete terrain"), ui.edit);
             v->addWidget(remove);
             connect(remove, &QPushButton::clicked, this, [this] {
@@ -353,6 +428,20 @@ void MainWindow::buildTerrainPages()
         ui.sway = spin(ui.typeProps, 0.0, 3.0, 0.05, 1.0, 2);
         ui.sway->setToolTip(tr("Bending in the level's wind (Environment > Wind): 1 grass, about 0.3 trees, 0 rigid"));
         props->addRow(tr("Wind sway"), ui.sway);
+        ui.fade = spin(ui.typeProps, 0.0, 1.0, 0.05, 0.15, 2);
+        ui.fade->setToolTip(tr("Dissolves over this share of the cull distance instead of popping out; 0 = off"));
+        props->addRow(tr("Fade"), ui.fade);
+        ui.typeForm = props;
+        for (int l = 0; l < engine::FoliageType::kLayerSlots; ++l) {
+            ui.layerDensity[static_cast<std::size_t>(l)] = spin(ui.typeProps, 0.0, 1.0, 0.1, 1.0, 2);
+            ui.layerDensity[static_cast<std::size_t>(l)]->setToolTip(
+                tr("Share of the density that grows where this terrain layer is painted (0 = none, e.g. on asphalt)"));
+            props->addRow(tr("On layer %1").arg(l + 1), ui.layerDensity[static_cast<std::size_t>(l)]);
+        }
+        ui.fill = new QPushButton(tr("Fill terrain by layers"), ui.typeProps);
+        ui.fill->setToolTip(tr("Replaces all instances of this type: density times the layer shares over the whole terrain "
+                               "(computed in the background; Undo restores the previous ones)"));
+        props->addRow(ui.fill);
         auto* lodRow = new QHBoxLayout;
         ui.lods = new QLineEdit(ui.typeProps);
         ui.lods->setReadOnly(true);
@@ -431,6 +520,39 @@ void MainWindow::buildTerrainPages()
         connect(ui.shadows, &QCheckBox::toggled, this, [editType](bool on) { editType([on](auto& ft) { ft.castShadows = on; }); });
         connect(ui.farDensity, &QDoubleSpinBox::valueChanged, this, [editType](double x) { editType([x](auto& ft) { ft.farDensity = static_cast<float>(x); }); });
         connect(ui.sway, &QDoubleSpinBox::valueChanged, this, [editType](double x) { editType([x](auto& ft) { ft.sway = static_cast<float>(x); }); });
+        connect(ui.fade, &QDoubleSpinBox::valueChanged, this, [editType](double x) { editType([x](auto& ft) { ft.fade = static_cast<float>(x); }); });
+        for (int l = 0; l < engine::FoliageType::kLayerSlots; ++l)
+            connect(ui.layerDensity[static_cast<std::size_t>(l)], &QDoubleSpinBox::valueChanged, this,
+                    [editType, l](double x) { editType([x, l](auto& ft) { ft.layerDensity[static_cast<std::size_t>(l)] = static_cast<float>(x); }); });
+        connect(ui.fill, &QPushButton::clicked, this, [this] {
+            const int row = terrainUi_->types->currentRow();
+            if (!scene_.terrain || row < 0 || row >= static_cast<int>(scene_.terrain->foliageTypes.size()))
+                return;
+            // Snapshot (copy on write keeps it unchanged) -> worker -> swap in on the UI thread.
+            std::shared_ptr<const engine::Terrain> snapshot = scene_.terrain;
+            terrainUi_->fill->setEnabled(false);
+            notify(tr("Filling the terrain..."), 3000);
+            QPointer<MainWindow> self(this);
+            const std::uint32_t seed = terrainUi_->rng();
+            engine::JobSystem::global().run([self, snapshot, row, seed] {
+                auto added = std::make_shared<std::vector<engine::FoliageInstance>>(snapshot->scatterFoliage(row, seed));
+                QMetaObject::invokeMethod(qApp, [self, snapshot, row, added] {
+                    if (!self)
+                        return;
+                    self->terrainUi_->fill->setEnabled(true);
+                    if (!self->scene_.terrain || row >= static_cast<int>(self->scene_.terrain->foliageTypes.size()))
+                        return;
+                    engine::Terrain* t = self->editTerrain();
+                    std::erase_if(t->foliage, [row](const engine::FoliageInstance& f) { return f.type == row; });
+                    t->foliage.insert(t->foliage.end(), added->begin(), added->end());
+                    t->foliageVersion = engine::newResourceId();
+                    self->markDirty();
+                    self->refreshTerrainPanel();
+                    self->viewport_->update();
+                    self->notify(tr("%n instance(s) placed", nullptr, static_cast<int>(added->size())), 4000);
+                });
+            });
+        });
         connect(ui.types, &QListWidget::currentRowChanged, this, [this] {
             if (!terrainUi_->refreshing)
                 refreshTerrainPanel();
@@ -549,6 +671,16 @@ void MainWindow::refreshTerrainPanel()
                              .arg(static_cast<double>(t->origin.y))
                              .arg(t->resolution)
                              .arg(t->foliage.size()));
+        {
+            const int tiles = (t->resolution - 2) / 64 + 1; // renderer tiles: 64 quads, LOD and culling each
+            ui.sizeInfo->setText(tr("%1 m between samples · %2 × %2 tiles of %3 m (each culled and simplified with distance)")
+                                     .arg(static_cast<double>(t->spacing()), 0, 'g', 3)
+                                     .arg(tiles)
+                                     .arg(static_cast<double>(t->spacing() * 64.0f), 0, 'g', 4));
+            const QSignalBlocker block(ui.resizeTo);
+            ui.resizeTo->setSingleStep(static_cast<double>(t->spacing() * 64.0f));
+            ui.resizeTo->setValue(static_cast<double>(t->size));
+        }
         // Material choices: every .material under assets/materials.
         QDirIterator it(assetPath("materials"), {"*.material"}, QDir::Files, QDirIterator::Subdirectories);
         QStringList files;
@@ -605,6 +737,18 @@ void MainWindow::refreshTerrainPanel()
             ui.shadows->setChecked(ft.castShadows);
             ui.farDensity->setValue(ft.farDensity);
             ui.sway->setValue(ft.sway);
+            ui.fade->setValue(ft.fade);
+            for (int l = 0; l < engine::FoliageType::kLayerSlots; ++l) {
+                QDoubleSpinBox* s = ui.layerDensity[static_cast<std::size_t>(l)];
+                s->setValue(ft.layerDensity[static_cast<std::size_t>(l)]);
+                const engine::TerrainLayer& layer = t->layers[static_cast<std::size_t>(l)];
+                const bool used = l == 0 || !layer.materialPath.empty();
+                if (auto* label = qobject_cast<QLabel*>(ui.typeForm->labelForField(s)))
+                    label->setText(used ? tr("On %1").arg(QFileInfo(toQ(layer.materialPath)).completeBaseName().isEmpty()
+                                                              ? tr("layer %1").arg(l + 1)
+                                                              : QFileInfo(toQ(layer.materialPath)).completeBaseName())
+                                        : tr("On layer %1 (unused)").arg(l + 1));
+            }
             QStringList lods;
             for (const engine::FoliageType::Lod& lod : ft.lods)
                 lods << QString("%1 @ %2 m%3")

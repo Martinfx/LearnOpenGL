@@ -1014,6 +1014,9 @@ void testTerrain()
     for (int i = 0; i < 10; ++i)
         t->paintLayer({10, 0, 10}, 4.0f, 0.5f, 2);
     check(t->layerWeight(2, 10.0f, 10.0f) > 0.9f && t->layerWeight(0, -20.0f, -20.0f) > 0.99f, "terrain: paint layer 2");
+    for (int i = 0; i < 10; ++i)
+        t->paintLayer({-20, 0, 10}, 3.0f, 0.5f, 6);
+    check(t->layerWeight(6, -20.0f, 10.0f) > 0.9f && t->layerWeight(2, 10.0f, 10.0f) > 0.9f, "terrain: paint layer 7 of 8");
     engine::FoliageType grass;
     grass.density = 2.0f;
     t->foliageTypes.push_back(grass);
@@ -1028,8 +1031,27 @@ void testTerrain()
     check(engine::loadScene(again, "terrain_test.level", &err) && again.terrain &&
               std::abs(again.terrain->heightAt(0, 0) - t->heightAt(0, 0)) < 1e-5f &&
               again.terrain->foliage.size() == t->foliage.size() && again.terrain->foliageTypes.size() == 1 &&
-              again.terrain->layerWeight(2, 10.0f, 10.0f) > 0.9f,
+              again.terrain->layerWeight(2, 10.0f, 10.0f) > 0.9f && again.terrain->layerWeight(6, -20.0f, 10.0f) > 0.9f,
           "terrain: level round trip " + err);
+    // Brush edits are listed for partial uploads; resize keeps heights and paint where they were.
+    {
+        engine::Terrain g = *t;
+        const std::uint64_t v0 = g.meshVersion;
+        g.sculpt({5, 0, 5}, 3.0f, 1.0f, engine::Terrain::Sculpt::Raise);
+        g.sculpt({6, 0, 5}, 3.0f, 1.0f, engine::Terrain::Sculpt::Smooth);
+        check(g.meshEdits.size() >= 2 && g.meshEdits[g.meshEdits.size() - 2].before == v0 && g.meshEdits.back().after == g.meshVersion,
+              "terrain: edit list for partial uploads");
+        const float h0 = g.heightAt(0.0f, 0.0f), road = g.layerWeight(2, 10.0f, 10.0f);
+        const float edge = g.heightAt(31.9f, 0.0f);
+        check(g.resize(128.0f, {-1, -1}) && std::abs(g.size - 128.0f) < 1e-3f && g.resolution == 129 && g.splatResolution == 128 &&
+                  g.origin == glm::vec2(-32.0f) && std::abs(g.heightAt(0.0f, 0.0f) - h0) < 1e-4f &&
+                  std::abs(g.layerWeight(2, 10.0f, 10.0f) - road) < 0.02f && g.layerWeight(0, 80.0f, 80.0f) > 0.99f &&
+                  std::abs(g.heightAt(60.0f, 0.0f) - edge) < 0.05f && g.meshEdits.empty(),
+              "terrain: grow toward +X +Z");
+        check(g.resize(64.0f, {1, 1}) && g.origin == glm::vec2(32.0f) && g.layerWeight(0, 80.0f, 80.0f) > 0.99f,
+              "terrain: crop keeping the +X +Z corner");
+        check(!g.resize(100000.0f, {0, 0}), "terrain: resize limit");
+    }
     check(t->eraseFoliage({-10, 0, -10}, 5.0f) == static_cast<int>(t->foliage.size() + 0) || t->foliage.empty(), "terrain: erase foliage");
 
     // Physics: the height field collides where it is drawn; trees with collision block rays.
@@ -1067,6 +1089,8 @@ void testTerrain()
         lodded->foliageTypes[0].modelPath = lod.modelPath;
         lodded->foliageTypes[0].lods = {lod};
         lodded->foliageTypes[0].farDensity = 0.4f;
+        lodded->foliageTypes[0].fade = 0.25f;
+        lodded->foliageTypes[0].layerDensity = {1.0f, 0.5f, 0.0f, 0.75f, 1.0f, 1.0f, 0.25f, 1.0f};
         engine::Scene ls;
         ls.terrain = lodded;
         check(engine::saveScene(ls, "terrain_lod.level", &err), "terrain lod: save " + err);
@@ -1074,8 +1098,28 @@ void testTerrain()
         check(engine::loadScene(back, "terrain_lod.level", &err) && back.terrain && back.terrain->foliageTypes.size() == 1 &&
                   back.terrain->foliageTypes[0].lods.size() == 1 && back.terrain->foliageTypes[0].lods[0].model &&
                   back.terrain->foliageTypes[0].lods[0].distance == 12.5f &&
-                  std::abs(back.terrain->foliageTypes[0].farDensity - 0.4f) < 1e-4f,
-              "terrain: foliage LOD and far density round trip " + err);
+                  std::abs(back.terrain->foliageTypes[0].farDensity - 0.4f) < 1e-4f && back.terrain->foliageTypes[0].fade == 0.25f &&
+                  back.terrain->foliageTypes[0].layerDensity[1] == 0.5f && back.terrain->foliageTypes[0].layerDensity[2] == 0.0f &&
+                  back.terrain->foliageTypes[0].layerDensity[3] == 0.75f,
+              "terrain: foliage LOD, far density, fade and layer density round trip " + err);
+    }
+    // Density by layers: none on layer 2 (painted around 10,10), full on layer 0.
+    {
+        auto layered = std::make_shared<engine::Terrain>(*t);
+        layered->foliage.clear();
+        layered->foliageTypes[0].layerDensity = {1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f};
+        std::mt19937 r2(7);
+        const int onGrass = layered->paintFoliage({-20, 0, 20}, 3.0f, 0, r2);
+        const int onRoad = layered->paintFoliage({10, 0, 10}, 2.0f, 0, r2);
+        check(onGrass > 20 && onRoad == 0, "terrain: brush density by layer");
+        const auto scattered = layered->scatterFoliage(0, 3u);
+        int nearRoad = 0;
+        for (const engine::FoliageInstance& f : scattered)
+            nearRoad += std::hypot(f.position.x - 10.0f, f.position.z - 10.0f) < 1.5f;
+        const float expected = 2.0f * 64.0f * 64.0f; // density x area, minus the layer-2 spot
+        check(nearRoad == 0 && scattered.size() > expected * 0.85f && scattered.size() < expected * 1.05f,
+              "terrain: fill by layers (" + std::to_string(scattered.size()) + ")");
+        check(layered->scatterFoliage(0, 3u).size() == scattered.size(), "terrain: fill is deterministic");
     }
 }
 

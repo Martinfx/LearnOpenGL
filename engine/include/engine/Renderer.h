@@ -257,7 +257,7 @@ private:
         int tiling = -1, worldUv = -1, grid = -1, emissiveColor = -1, roughness = -1, metallic = -1;
         int normalStrength = -1, roughnessChannel = -1, metallicChannel = -1, overlay = -1, envRotation = -1;
         int overlaySun = -1, uvScale = -1, uvOffset = -1, uvRotation = -1, shading = -1;
-        int alphaMode = -1, alphaCutoff = -1, opacity = -1, instanced = -1, instanceBase = -1, sway = -1;
+        int alphaMode = -1, alphaCutoff = -1, opacity = -1, instanced = -1, instanceBase = -1, sway = -1, fade = -1;
         int hasMap[6] = {-1, -1, -1, -1, -1, -1};
     };
 
@@ -365,6 +365,7 @@ private:
         std::vector<glm::mat4> transforms;
         float distance = 1e30f;
         float sway = 0.0f; // bending in the wind (Model::sway, FoliageType::sway)
+        glm::vec2 fade{0.0f}; // dithered fade from x to y metres (cull distance); y 0 = none
     };
     std::vector<InstanceBatch> batches_;
     std::unordered_map<std::uint64_t, std::size_t> batchIndex_;
@@ -395,14 +396,22 @@ private:
             Aabb bounds;
             std::uint32_t first[kLevels] = {}, count[kLevels] = {}; // index ranges per level
         };
-        unsigned vao = 0, vbo = 0, ibo = 0, splat = 0;
+        unsigned vao = 0, vbo = 0, ibo = 0, splat = 0; // splat: 2D array, slice 0 layers 0-3, slice 1 layers 4-7
         int resolution = 0, splatResolution = 0;
+        glm::vec2 origin{0.0f};
+        float size = 0.0f;
+        // Layer maps copied into arrays (slice = layer), rebuilt per slice when its source texture changes.
+        static constexpr int kLayerMapSize = 1024;
+        unsigned albedoArray = 0, normalArray = 0, copyFbo = 0;
+        unsigned albedoSource[8] = {}, normalSource[8] = {};
+        std::vector<std::uint8_t> splatPlanes; // upload scratch
         std::uint64_t meshVersion = 0, splatVersion = 0;
         std::vector<Chunk> chunks;
         int chunksX = 0;
     };
     GpuTerrain terrain_;
     void drawTerrain(const Terrain& terrain, const RenderView& view);
+    int updateTerrainLayers(const Terrain& terrain); // returns the uLayerMaps bits
     // Foliage instances sorted into 32 m cells per type, for culling.
     struct FoliageCell {
         Aabb bounds;

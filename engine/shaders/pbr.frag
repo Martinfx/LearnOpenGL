@@ -19,20 +19,19 @@ layout(binding = 6) uniform sampler2DArrayShadow uShadowMap;
 layout(binding = 7) uniform sampler2D uSsao;
 layout(binding = 8) uniform samplerCube uEnvMap;
 layout(binding = 9) uniform sampler2D uBrdfLut;
-// Terrain: layers 1..3 albedo (layer 0 uses uAlbedoMap). Layer normals use the normal,
-// roughness, metallic and emissive units (0..3); the splat map uses the occlusion unit.
-layout(binding = 10) uniform sampler2D uLayer1Albedo;
-layout(binding = 11) uniform sampler2D uLayer2Albedo;
-layout(binding = 12) uniform sampler2D uLayer3Albedo;
+// Terrain: up to 8 layers. Their albedo and normal maps are copied into two texture
+// arrays (one slice per layer); the splat map is an array of two RGBA8 slices (layers 0-3, 4-7).
+layout(binding = 10) uniform sampler2DArray uLayerAlbedo;
+layout(binding = 11) uniform sampler2DArray uLayerNormal;
+layout(binding = 12) uniform sampler2DArray uTerrainSplat;
 uniform bool uTerrain;
 uniform vec2 uTerrainOrigin;
 uniform float uTerrainSize;
-uniform vec4 uLayerTiling;
-uniform vec3 uLayerColor[4];       // sRGB
-uniform ivec4 uLayerHasAlbedo;
-uniform ivec4 uLayerHasNormal;
-uniform vec4 uLayerRoughness;
-uniform vec4 uLayerNormalStrength;
+uniform float uLayerTiling[8];
+uniform vec3 uLayerColor[8];       // sRGB
+uniform int uLayerMaps;            // bits 0-7: albedo map, bits 8-15: normal map
+uniform float uLayerRoughness[8];
+uniform float uLayerNormalStrength[8];
 uniform bool uHasTexture;
 uniform bool uHasNormalMap;
 uniform bool uHasRoughnessMap;
@@ -219,7 +218,16 @@ vec3 localLights(vec3 worldPos, vec3 n, vec3 geomNormal, vec3 v, vec3 albedo, fl
     return sum;
 }
 
+uniform vec2 uFade; // dithered dissolve from x to y metres from the camera (cull distance); y 0 = off
+
 void main() {
+    if (uFade.y > 0.0) {
+        float k = smoothstep(uFade.x, uFade.y, length(vWorldPos - uCameraPos.xyz));
+        // Interleaved gradient noise: a fine, stable screen pattern (TAA-free dither).
+        float noise = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
+        if (k > noise)
+            discard;
+    }
     if (uEmissive) {
         fragColor = vec4(pow(max(uColor, vec3(0.0)), vec3(2.2)) * 4.0, 1.0); // bright enough to bloom
         return;
@@ -238,23 +246,31 @@ void main() {
     }
     uv = uv * uTiling * uUvScale + uUvOffset;
 
-    vec4 terrainW = vec4(0.0);
+    float terrainW[8];
     if (uTerrain) {
-        terrainW = texture(uOcclusionMap, (vWorldPos.xz - uTerrainOrigin) / uTerrainSize);
-        terrainW /= max(dot(terrainW, vec4(1.0)), 1e-4);
+        vec2 st = (vWorldPos.xz - uTerrainOrigin) / uTerrainSize;
+        vec4 a = texture(uTerrainSplat, vec3(st, 0.0)), b = texture(uTerrainSplat, vec3(st, 1.0));
+        float sum = max(dot(a, vec4(1.0)) + dot(b, vec4(1.0)), 1e-4);
+        a /= sum;
+        b /= sum;
+        for (int i = 0; i < 4; ++i) {
+            terrainW[i] = a[i];
+            terrainW[i + 4] = b[i];
+        }
     }
     vec3 albedo = pow(max(uColor, vec3(0.0)), vec3(2.2));
     if (uTerrain) {
+        // Layers under ~0.5 % weight are skipped: most pixels sample one or two.
         vec2 p = vWorldPos.xz;
-        vec3 c0 = pow(max(uLayerColor[0], vec3(0.0)), vec3(2.2));
-        vec3 c1 = pow(max(uLayerColor[1], vec3(0.0)), vec3(2.2));
-        vec3 c2 = pow(max(uLayerColor[2], vec3(0.0)), vec3(2.2));
-        vec3 c3 = pow(max(uLayerColor[3], vec3(0.0)), vec3(2.2));
-        if (uLayerHasAlbedo.x != 0) c0 *= texture(uAlbedoMap, p * uLayerTiling.x).rgb;
-        if (uLayerHasAlbedo.y != 0) c1 *= texture(uLayer1Albedo, p * uLayerTiling.y).rgb;
-        if (uLayerHasAlbedo.z != 0) c2 *= texture(uLayer2Albedo, p * uLayerTiling.z).rgb;
-        if (uLayerHasAlbedo.w != 0) c3 *= texture(uLayer3Albedo, p * uLayerTiling.w).rgb;
-        albedo = c0 * terrainW.x + c1 * terrainW.y + c2 * terrainW.z + c3 * terrainW.w;
+        albedo = vec3(0.0);
+        for (int i = 0; i < 8; ++i) {
+            if (terrainW[i] < 0.004)
+                continue;
+            vec3 c = pow(max(uLayerColor[i], vec3(0.0)), vec3(2.2));
+            if ((uLayerMaps & (1 << i)) != 0)
+                c *= texture(uLayerAlbedo, vec3(p * uLayerTiling[i], float(i))).rgb;
+            albedo += c * terrainW[i];
+        }
     }
     float alpha = uOpacity;
     if (uHasTexture) {
@@ -288,15 +304,26 @@ void main() {
     if (uTerrain) {
         // Blend the layers' tangent-space normals by weight (screen-space frame from world X/Z).
         vec2 p = vWorldPos.xz;
-        vec3 m = vec3(0.0, 0.0, 1.0) * dot(terrainW, vec4(1.0) - vec4(uLayerHasNormal));
-        vec4 strength = uLayerNormalStrength;
-        if (uLayerHasNormal.x != 0) { vec2 xy = texture(uNormalMap, p * uLayerTiling.x).xy * 2.0 - 1.0; m += terrainW.x * vec3(xy * strength.x, sqrt(max(1.0 - dot(xy, xy), 0.0))); }
-        if (uLayerHasNormal.y != 0) { vec2 xy = texture(uRoughnessMap, p * uLayerTiling.y).xy * 2.0 - 1.0; m += terrainW.y * vec3(xy * strength.y, sqrt(max(1.0 - dot(xy, xy), 0.0))); }
-        if (uLayerHasNormal.z != 0) { vec2 xy = texture(uMetallicMap, p * uLayerTiling.z).xy * 2.0 - 1.0; m += terrainW.z * vec3(xy * strength.z, sqrt(max(1.0 - dot(xy, xy), 0.0))); }
-        if (uLayerHasNormal.w != 0) { vec2 xy = texture(uEmissiveMap, p * uLayerTiling.w).xy * 2.0 - 1.0; m += terrainW.w * vec3(xy * strength.w, sqrt(max(1.0 - dot(xy, xy), 0.0))); }
+        vec3 m = vec3(0.0);
+        for (int i = 0; i < 8; ++i) {
+            if (terrainW[i] < 0.004)
+                continue;
+            if ((uLayerMaps & (256 << i)) == 0) {
+                m.z += terrainW[i];
+                continue;
+            }
+            vec2 xy = texture(uLayerNormal, vec3(p * uLayerTiling[i], float(i))).xy * 2.0 - 1.0;
+            m += terrainW[i] * vec3(xy * uLayerNormalStrength[i], sqrt(max(1.0 - dot(xy, xy), 0.0)));
+        }
+        m.z = max(m.z, 1e-3);
         n = perturbNormal(n, vWorldPos, p, normalize(m));
     }
-    float rough = uTerrain ? dot(terrainW, uLayerRoughness) : uRoughness;
+    float rough = uRoughness;
+    if (uTerrain) {
+        rough = 0.0;
+        for (int i = 0; i < 8; ++i)
+            rough += terrainW[i] * uLayerRoughness[i];
+    }
     if (uHasRoughnessMap)
         rough *= texture(uRoughnessMap, uv)[uRoughnessChannel];
     rough = clamp(rough, 0.04, 1.0);

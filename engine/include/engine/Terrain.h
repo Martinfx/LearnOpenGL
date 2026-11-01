@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <glm/vec2.hpp>
+#include <glm/ext/vector_int2.hpp>
 #include <glm/vec3.hpp>
 
 namespace engine {
@@ -26,6 +27,7 @@ struct TerrainLayer {
 
 // A plant or prop painted with the foliage brush; drawn with instancing.
 struct FoliageType {
+    static constexpr int kLayerSlots = 8; // = Terrain::kLayers
     std::filesystem::path modelPath;    // absolute .glb/.gltf
     std::shared_ptr<const Model> model; // runtime
     float density = 0.5f;               // instances per square metre the brush aims for
@@ -46,6 +48,11 @@ struct FoliageType {
     float farDensity = 1.0f;
     // Bending in the level's wind: 1 grass, ~0.3 trees, 0 rigid (rocks, wrecks).
     float sway = 1.0f;
+    // Dithered fade over this share of the cull distance before it (0 = pops out).
+    float fade = 0.15f;
+    // How much of `density` grows on each terrain layer (grass on layer 0, none on asphalt).
+    // Brush and "Fill" multiply density by the weighted sum at the spot, clamped to 0..1.
+    std::array<float, kLayerSlots> layerDensity{1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f};
 };
 
 struct FoliageInstance {
@@ -56,26 +63,33 @@ struct FoliageInstance {
     std::uint16_t type = 0;
 };
 
-// Heightfield ground with up to four blended texture layers (splat map: the
-// RGBA weights of layers 0..3) and painted foliage. Sculpted and painted with
+// Heightfield ground with up to eight blended texture layers (splat map: one
+// weight byte per layer and pixel) and painted foliage. Sculpted and painted with
 // brushes in the editor (Landscape and Foliage modes). Stored next to the level
 // as "<level>.terrain" (binary: heights, splat map, foliage instances); layers
 // and foliage types are level lines so they stay readable and diffable.
 struct Terrain {
-    static constexpr int kLayers = 4;
+    static constexpr int kLayers = 8;
 
     glm::vec2 origin{-128.0f, -128.0f}; // min X/Z corner, metres
     float size = 256.0f;                // square side, metres
     int resolution = 257;               // height samples per side
     std::vector<float> heights;         // resolution * resolution, row = Z
     int splatResolution = 512;          // splat map pixels per side
-    std::vector<std::uint8_t> splat;    // RGBA8 weights of layers 0..3
+    std::vector<std::uint8_t> splat;    // kLayers weight bytes per pixel (layers 0..7)
     std::array<TerrainLayer, kLayers> layers;
     std::vector<FoliageType> foliageTypes;
     std::vector<FoliageInstance> foliage;
 
     // Change counters for the renderer and physics (new values on every edit).
     std::uint64_t meshVersion = 0, splatVersion = 0, foliageVersion = 0;
+    // Recent height edits (sample rectangles, inclusive): the renderer re-uploads just these
+    // tiles when it saw the version before them; anything else rebuilds everything.
+    struct MeshEdit {
+        std::uint64_t before = 0, after = 0;
+        int x0 = 0, z0 = 0, x1 = 0, z1 = 0;
+    };
+    std::vector<MeshEdit> meshEdits; // oldest first, at most 32
 
     // Flat ground at height 0, layer 0 everywhere.
     void create(glm::vec2 origin, float size, int resolution, int splatResolution = 512);
@@ -92,9 +106,20 @@ struct Terrain {
     enum class Sculpt { Raise, Lower, Smooth, Flatten };
     void sculpt(glm::vec3 center, float radius, float strength, Sculpt mode, float flattenHeight = 0.0f);
     void paintLayer(glm::vec3 center, float radius, float strength, int layer);
+    // Grows or crops the terrain to `newSize` metres keeping the sample spacing (and the
+    // splat texel size); `anchor` (-1, 0, 1 per axis) is the side that stays put, like a
+    // canvas resize: (-1, -1) adds the new ground toward +X and +Z. New ground continues
+    // the edge heights with layer 1; foliage outside is dropped. False if it would exceed
+    // 4097 samples per side.
+    bool resize(float newSize, glm::ivec2 anchor);
     // Adds instances of `type` up to its density inside the circle (keeps spacing); returns how many.
     int paintFoliage(glm::vec3 center, float radius, int type, std::mt19937& rng);
     int eraseFoliage(glm::vec3 center, float radius, int type = -1); // -1 = every type
+    // 0..1: share of the type's density at the spot (its layerDensity by the splat weights).
+    float foliageChance(const FoliageType& type, float x, float z) const;
+    // Instances of `type` over the whole terrain by density and layers (jittered grid,
+    // deterministic for a seed). Const: run it on a worker with a terrain snapshot.
+    std::vector<FoliageInstance> scatterFoliage(int type, std::uint32_t seed) const;
     void removeFoliageType(int type);
     void snapFoliageToGround();                                       // after sculpting
 

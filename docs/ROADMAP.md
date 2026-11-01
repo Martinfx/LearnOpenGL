@@ -165,8 +165,8 @@ Hotovo, když: hra se spustí do menu, jde projít lokaci, nepřátelé obcháze
 
 ### M2 – Otevřená zóna (~8 týdnů)
 
-- [ ] **Terén** (3 týdny): heightmapa po dlaždicích, sculpt a malování až 8 vrstev materiálu v editoru, kolize v Jolt (HeightFieldShape), LOD terénu.
-  Hotovo: jedna heightmapa, režim Landscape (raise/lower/smooth/flatten, malování 4 vrstev), kolize HeightFieldShape. Zbývá: dlaždice, 8 vrstev, LOD.
+- [x] **Terén** (3 týdny): heightmapa po dlaždicích, sculpt a malování až 8 vrstev materiálu v editoru, kolize v Jolt (HeightFieldShape), LOD terénu.
+  Hotovo: jedna heightmapa, režim Landscape (raise/lower/smooth/flatten), kolize HeightFieldShape. *Hotovo (2026-11-01): 8 vrstev materiálu (splat s 8 váhami, mapy vrstev v texture arrays, takže shader potřebuje jen 3 jednotky; starší .terrain se 4 vrstvami se načtou), dlaždice po 64 čtvercích s vlastním cullingem a LOD (5 úrovní, sukně proti dírám), při modelování se na GPU posílají jen změněné dlaždice; v editoru „Size and tiles“: změna velikosti s kotvou (přidá nebo ořízne terén na zvolených stranách, na pozadí, s Undo).* Velký svět po buňkách řeší Streamování světa.
 - [x] **Vegetace** (2 týdny): štětec na stromy, keře a trávu (instancing z M0), hustota podle vrstev terénu, vítr ve vertex shaderu, cull distance a fade.
   Hotovo: režim Foliage (štětec, typy s hustotou, měřítkem, cull distance, kolizí, náklonem, stíny), instancing po 32m buňkách, kolize stromů. LOD úrovně foliage (`foliage_lod`) a řídnutí do dálky (far density). *Hotovo (2026-11-01): hustota podle vrstev terénu (u typu „On <vrstva>“ 0–1, štětec i tlačítko „Fill terrain by layers“ počítané na pozadí z kopie terénu, s Undo), vítr ve vertex shaderu (Environment > Wind, Wind sway u typu), dithered fade před cull distance (Fade u typu, modely s cull distance mizí také plynule).*
 - [ ] **Streamování světa** (3 týdny): rozdělení levelu na buňky (např. 128 × 128 m), načítání a uvolňování podle vzdálenosti na pracovních vláknech, HLOD/impostory budov, editor zobrazí buňky a umí je zamknout/načíst; rozpočet paměti.

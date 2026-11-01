@@ -177,7 +177,10 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
         for (const FoliageType& f : scene.terrain->foliageTypes) {
             out << "foliage_type " << std::quoted(f.modelPath.empty() ? std::string() : relative(f.modelPath)) << ' ' << f.density << ' ' << f.minScale << ' '
                 << f.maxScale << ' ' << f.cullDistance << ' ' << f.collision << ' ' << f.alignToSlope << ' ' << f.castShadows << ' '
-                << f.farDensity << ' ' << f.sway << '\n';
+                << f.farDensity << ' ' << f.sway << ' ' << f.fade;
+            for (float d : f.layerDensity)
+                out << ' ' << d;
+            out << '\n';
             for (const FoliageType::Lod& lod : f.lods)
                 out << "foliage_lod " << std::quoted(relative(lod.modelPath)) << ' ' << lod.distance << '\n';
         }
@@ -535,6 +538,15 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                     ft.sway = std::max(0.0f, sway);
                 else
                     ft.sway = sway;
+                float fade = 0.15f;
+                if (ls >> fade)
+                    ft.fade = std::clamp(fade, 0.0f, 1.0f);
+                for (float& d : ft.layerDensity) {
+                    float v = 1.0f;
+                    if (!(ls >> v))
+                        break;
+                    d = std::max(0.0f, v);
+                }
                 std::filesystem::path p = pathFromUtf8(path);
                 if (p.is_relative())
                     p = std::filesystem::absolute(file).parent_path() / p;
