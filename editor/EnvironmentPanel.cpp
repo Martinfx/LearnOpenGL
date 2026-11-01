@@ -173,6 +173,12 @@ EnvironmentPanel::EnvironmentPanel(engine::Scene* scene, QWidget* parent)
     addFloat(form, tr("Height"), &E::fogHeight, -100, 100, 0.5, 1, tr("Fog is densest below this height (m)"));
     addFloat(form, tr("Height falloff"), &E::fogHeightFalloff, 0, 2, 0.01, 3);
     addFloat(form, tr("Sun glow"), &E::fogSunScatter, 0, 5, 0.1, 2, tr("Fog brightens toward the sun"));
+    addFloat(form, tr("Volumetric range"), &E::fogVolumetricRange, 0, 256, 4, 0,
+             tr("Meters of volumetric fog in front of the camera (light shafts, lamps), 0 = simple fog only"));
+    addFloat(form, tr("Light shafts"), &E::fogLightShafts, 0, 5, 0.05, 2, tr("Strength of the sun in the fog: rays through gaps and shadows"));
+    addFloat(form, tr("Anisotropy"), &E::fogAnisotropy, -0.9, 0.9, 0.05, 2, tr("0 even scattering, higher = brighter looking toward the light"));
+    addFloat(form, tr("Noise"), &E::fogNoise, 0, 1, 0.05, 2, tr("0 smooth, 1 patchy fog drifting with the wind"));
+    addFloat(form, tr("Local lights"), &E::fogLocalLights, 0, 5, 0.05, 2, tr("How strongly lamps and the flashlight light up the fog"));
     section(tr("Camera and image"));
     addFloat(form, tr("Exposure"), &E::exposure, 0.05, 10, 0.05, 2, tr("Manual exposure; with auto-exposure it is the compensation"));
     addFloat(form, tr("Auto exposure"), &E::autoExposure, 0, 1, 0.05, 2,

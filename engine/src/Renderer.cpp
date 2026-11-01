@@ -138,6 +138,7 @@ struct EnvironmentBlock {
     glm::mat4 rainMatrix; // world -> rain occlusion map (top-down)
     glm::vec4 weather;    // x: wetness, y: lightning flash, z: 1 = rain map valid, w: puddles
     glm::vec4 wind;       // xz: direction the wind blows, y: strength 0..1, w: gusts 0..1
+    glm::vec4 volumetric; // x: 1 = on, y: near, z: 1 / log(far / near), w: far
 };
 
 constexpr int kEnvSize = 128;  // environment cubemap face size
@@ -358,6 +359,35 @@ unsigned linkProgram(const std::map<std::string, std::string>& files, const std:
     return program;
 }
 
+unsigned linkCompute(const std::map<std::string, std::string>& files, const std::string& name, std::string* error)
+{
+    const auto cs = files.find(name);
+    if (cs == files.end()) {
+        if (error)
+            *error = "Missing shader " + name;
+        return 0;
+    }
+    const unsigned shader = compileStage(GL_COMPUTE_SHADER, withIncludes(cs->second, files), name, error);
+    if (!shader)
+        return 0;
+    const unsigned program = glCreateProgram();
+    glAttachShader(program, shader);
+    glLinkProgram(program);
+    glDeleteShader(shader);
+    GLint linked = 0;
+    glGetProgramiv(program, GL_LINK_STATUS, &linked);
+    if (!linked) {
+        std::array<char, 4096> log{};
+        glGetProgramInfoLog(program, static_cast<GLsizei>(log.size()), nullptr, log.data());
+        if (error)
+            *error = name + ": " + log.data();
+        glDeleteProgram(program);
+        return 0;
+    }
+    label(GL_PROGRAM, program, name);
+    return program;
+}
+
 unsigned makeTexture2D(GLenum format, int w, int h, GLint filter, int levels = 1)
 {
     unsigned t = 0;
@@ -413,12 +443,14 @@ RenderQuality RenderQuality::preset(int level)
         q.textureMaxSize = 1024; q.textureStreamDistance = 20.0f;
         q.lodScale = 0.5f; q.detailDensityFar = 0.1f; q.detailShadowDistance = 0.0f;
         q.localShadowResolution = 512; q.localShadowLayers = 6;
+        q.volumetricFog = 0;
         break;
     case 1:
         q.shadowResolution = 1024; q.shadowCascades = 3; q.ssao = true; q.bloom = true;
         q.textureMaxSize = 2048; q.textureStreamDistance = 30.0f;
         q.lodScale = 0.75f; q.detailDensityFar = 0.15f; q.detailShadowDistance = 10.0f;
         q.localShadowResolution = 512;
+        q.volumetricFog = 1;
         break;
     case 3:
         q.shadowResolution = 4096; q.shadowCascades = 3; q.textureStreamDistance = 80.0f;
@@ -481,7 +513,15 @@ bool Renderer::buildPrograms(const std::map<std::string, std::string>& src, Prog
             return false;
         }
     }
-    LOG_INFO("render", "%zu shader programs in %.0f ms (%d from the binary cache)", std::size(entries),
+    for (auto [program, name] : {std::pair{&p.volumeInject, "volumetric_inject.comp"}, std::pair{&p.volumeIntegrate, "volumetric_integrate.comp"}}) {
+        program->id = linkCompute(src, name, error);
+        program->locations.clear();
+        if (!program->id) {
+            destroyPrograms(p);
+            return false;
+        }
+    }
+    LOG_INFO("render", "%zu shader programs in %.0f ms (%d from the binary cache)", std::size(entries) + 2,
              std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count(), cached);
     return true;
 }
@@ -489,7 +529,8 @@ bool Renderer::buildPrograms(const std::map<std::string, std::string>& src, Prog
 void Renderer::destroyPrograms(Programs& p)
 {
     for (Program* program : {&p.mesh, &p.depth, &p.sky, &p.envCapture, &p.prefilter, &p.brdf, &p.ssao, &p.blur, &p.bloomDown,
-                             &p.bloomUp, &p.post, &p.fxaa, &p.copy, &p.grid, &p.hiz, &p.sprite, &p.debug, &p.luminance, &p.exposure, &p.water, &p.underwater}) {
+                             &p.bloomUp, &p.post, &p.fxaa, &p.copy, &p.grid, &p.hiz, &p.sprite, &p.debug, &p.luminance, &p.exposure, &p.water, &p.underwater,
+                             &p.volumeInject, &p.volumeIntegrate}) {
         if (program->id)
             glDeleteProgram(program->id);
         program->id = 0;
@@ -618,6 +659,10 @@ bool Renderer::init(GlLoader loader, std::string* error)
     glCreateTextures(GL_TEXTURE_2D_ARRAY, 1, &shadowDummy_);
     glTextureStorage3D(shadowDummy_, 1, GL_DEPTH_COMPONENT32F, 1, 1, 1);
     glTextureParameteri(shadowDummy_, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+    glCreateTextures(GL_TEXTURE_3D, 1, &volumeDummy_); // no volumetric fog: transmittance 1
+    glTextureStorage3D(volumeDummy_, 1, GL_RGBA16F, 1, 1, 1);
+    const float clearFog[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+    glClearTexImage(volumeDummy_, 0, GL_RGBA, GL_FLOAT, clearFog);
 
     // Split-sum BRDF table, computed once.
     brdfLut_ = makeTexture2D(GL_RG16F, 128, 128, GL_LINEAR);
@@ -690,7 +735,7 @@ void Renderer::shutdown()
     destroyTargets();
     destroyPrograms(programs_);
     for (unsigned* t : {&shadowTex_, &envRaw_, &envMap_, &brdfLut_, &whiteTex_, &shadowDummy_, &localShadowTex_, &lumTex_, &adaptTex_[0],
-                        &adaptTex_[1], &lutTex_})
+                        &adaptTex_[1], &lutTex_, &volumeScatter_[0], &volumeScatter_[1], &volumeIntegrated_, &volumeDummy_})
         if (*t) {
             glDeleteTextures(1, t);
             *t = 0;
@@ -840,6 +885,10 @@ void Renderer::updateEnvironment(const Scene& scene, const RenderView& view)
     b.view = view.view;
     b.proj = view.projection;
     b.invViewProj = glm::inverse(view.projection * view.view);
+    if (volumetricActive(view)) {
+        const float nearDepth = 0.5f, farDepth = std::clamp(e.fogVolumetricRange, 8.0f, 256.0f);
+        b.volumetric = glm::vec4(1.0f, nearDepth, 1.0f / std::log(farDepth / nearDepth), farDepth);
+    }
 
     // Cascade splits: mix of uniform and logarithmic distribution.
     const int cascades = std::clamp(quality_.shadowCascades, 1, 3);
@@ -1644,6 +1693,70 @@ void Renderer::uploadLightClusters(const RenderView& view)
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 8, lightShadowBuffer_);
 }
 
+bool Renderer::volumetricActive(const RenderView& view) const
+{
+    return quality_.volumetricFog > 0 && view.fog && env_ && env_->fogDensity > 0.0f && env_->fogVolumetricRange > 0.0f &&
+           view.projection[3][3] == 0.0f && programs_.volumeInject.id && programs_.volumeIntegrate.id;
+}
+
+void Renderer::renderVolumetricFog(const RenderView& view)
+{
+    if (!volumetricActive(view)) {
+        volumeHistory_ = false;
+        return;
+    }
+    const glm::ivec3 dims = quality_.volumetricFog >= 2 ? glm::ivec3(160, 90, 64) : glm::ivec3(96, 54, 48);
+    if (dims != volumeDims_) {
+        for (unsigned* t : {&volumeScatter_[0], &volumeScatter_[1], &volumeIntegrated_})
+            if (*t)
+                glDeleteTextures(1, t);
+        for (unsigned* t : {&volumeScatter_[0], &volumeScatter_[1], &volumeIntegrated_}) {
+            glCreateTextures(GL_TEXTURE_3D, 1, t);
+            glTextureStorage3D(*t, 1, GL_RGBA16F, dims.x, dims.y, dims.z);
+            glTextureParameteri(*t, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTextureParameteri(*t, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            for (GLenum wrap : {GL_TEXTURE_WRAP_S, GL_TEXTURE_WRAP_T, GL_TEXTURE_WRAP_R})
+                glTextureParameteri(*t, wrap, GL_CLAMP_TO_EDGE);
+        }
+        label(GL_TEXTURE, volumeIntegrated_, "volumetric fog");
+        volumeDims_ = dims;
+        volumeHistory_ = false;
+    }
+    const Environment& e = *env_;
+    const glm::mat4 viewProj = view.projection * view.view;
+    const int previous = volumeCurrent_;
+    volumeCurrent_ ^= 1;
+    ++volumeFrame_;
+    // Slice jitter: a low-discrepancy sequence, so the history converges to the average.
+    const float jitter = std::fmod(static_cast<float>(volumeFrame_) * 0.618034f, 1.0f) - 0.5f;
+    const Program& inject = programs_.volumeInject;
+    glUseProgram(inject.id);
+    glUniform3i(inject.loc("uDims"), dims.x, dims.y, dims.z);
+    glUniform1f(inject.loc("uJitter"), jitter);
+    glUniformMatrix4fv(inject.loc("uInvView"), 1, GL_FALSE, glm::value_ptr(glm::inverse(view.view)));
+    glUniformMatrix4fv(inject.loc("uPrevViewProj"), 1, GL_FALSE, glm::value_ptr(volumePrevViewProj_));
+    glUniform1i(inject.loc("uHistoryValid"), volumeHistory_ ? 1 : 0);
+    glUniform1f(inject.loc("uHistoryWeight"), 0.88f);
+    glUniform4f(inject.loc("uVolumeLight"), e.fogLightShafts, e.fogAnisotropy, e.fogNoise, e.fogLocalLights);
+    glBindTextureUnit(0, volumeScatter_[previous]);
+    glBindTextureUnit(6, shadowTex_ ? shadowTex_ : shadowDummy_);
+    glBindTextureUnit(13, localShadowTex_ ? localShadowTex_ : shadowDummy_);
+    glBindImageTexture(0, volumeScatter_[volumeCurrent_], 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_RGBA16F);
+    glDispatchCompute(static_cast<unsigned>((dims.x + 7) / 8), static_cast<unsigned>((dims.y + 7) / 8), static_cast<unsigned>(dims.z));
+    glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT);
+
+    const Program& integrate = programs_.volumeIntegrate;
+    glUseProgram(integrate.id);
+    glUniform3i(integrate.loc("uDims"), dims.x, dims.y, dims.z);
+    glBindTextureUnit(0, volumeScatter_[volumeCurrent_]);
+    glBindImageTexture(1, volumeIntegrated_, 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_RGBA16F);
+    glDispatchCompute(static_cast<unsigned>((dims.x + 7) / 8), static_cast<unsigned>((dims.y + 7) / 8), 1);
+    glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT);
+    glBindTextureUnit(0, 0);
+    volumePrevViewProj_ = viewProj;
+    volumeHistory_ = true;
+}
+
 void Renderer::renderSsao()
 {
     glDisable(GL_DEPTH_TEST);
@@ -1740,6 +1853,9 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     renderLocalShadows(scene, view);
     endPass();
     uploadLightClusters(view);
+    beginPass(PassVolumetric);
+    renderVolumetricFog(view);
+    endPass();
 
     // Depth pre-pass: SSAO needs depth, and the main pass then shades each pixel once.
     glBindFramebuffer(GL_FRAMEBUFFER, hdrFbo_);
@@ -1787,6 +1903,7 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     glBindTextureUnit(9, brdfLut_);
     glBindTextureUnit(13, localShadowTex_ ? localShadowTex_ : shadowDummy_);
     glBindTextureUnit(14, rainTex_ ? rainTex_ : whiteTex_);
+    glBindTextureUnit(15, volumetricActive(view) && volumeIntegrated_ ? volumeIntegrated_ : volumeDummy_);
     glUniform1i(loc_.shading, static_cast<int>(view.shading));
     const bool wireframe = view.shading == Shading::Wireframe;
     wireframe_ = wireframe;
@@ -3016,7 +3133,7 @@ void Renderer::present()
 
 const char* Renderer::passName(int pass)
 {
-    static const char* names[PassCount] = {"Shadows", "Depth pre-pass", "SSAO", "Opaque + sky", "Transparent", "Post (bloom, tone, FXAA)",
+    static const char* names[PassCount] = {"Shadows", "Volumetric fog", "Depth pre-pass", "SSAO", "Opaque + sky", "Transparent", "Post (bloom, tone, FXAA)",
                                            "First person"};
     return pass >= 0 && pass < PassCount ? names[pass] : "?";
 }

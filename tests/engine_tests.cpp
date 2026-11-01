@@ -20,6 +20,7 @@
 #include <engine/FixedStepClock.h>
 #include <engine/Physics.h>
 #include <engine/PlayerController.h>
+#include <engine/Renderer.h>
 #include <engine/Scene.h>
 #include <engine/Scripting.h>
 #include <engine/JobSystem.h>
@@ -2506,6 +2507,36 @@ void testImpostorSettings()
     fs::remove(file);
 }
 
+void testVolumetricFogSettings()
+{
+    namespace fs = std::filesystem;
+    const fs::path file = fs::absolute("volumetric_fog.level");
+    engine::Scene scene;
+    check(scene.environment.fogVolumetricRange > 0.0f, "volumetric fog is on by default");
+    scene.environment.fogVolumetricRange = 48.0f;
+    scene.environment.fogLightShafts = 2.5f;
+    scene.environment.fogAnisotropy = -0.2f;
+    scene.environment.fogNoise = 0.0f;
+    scene.environment.fogLocalLights = 3.0f;
+    std::string error;
+    check(engine::saveScene(scene, file, &error), "volumetric fog level saves");
+    engine::Scene loaded;
+    check(engine::loadScene(loaded, file, &error), "volumetric fog level loads");
+    const engine::Environment& e = loaded.environment;
+    check(e.fogVolumetricRange == 48.0f && e.fogLightShafts == 2.5f && e.fogAnisotropy == -0.2f && e.fogNoise == 0.0f &&
+              e.fogLocalLights == 3.0f,
+          "volumetric fog settings round-trip");
+    // Defaults write nothing (older levels stay unchanged on save).
+    engine::Scene plain;
+    check(engine::saveScene(plain, file, &error), "plain level saves");
+    std::ifstream in(file);
+    const std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    check(text.find("fog_light_shafts") == std::string::npos, "default volumetric settings are not written");
+    check(engine::RenderQuality::preset(0).volumetricFog == 0 && engine::RenderQuality::preset(2).volumetricFog > 0,
+          "volumetric fog follows the quality preset");
+    fs::remove(file);
+}
+
 void testTaskGraph()
 {
     engine::TaskGraph graph;
@@ -2605,6 +2636,7 @@ int main()
     testPrefabs();
     testRangeAllocator();
     testImpostorSettings();
+    testVolumetricFogSettings();
     testTaskGraph();
     testWorldStreaming();
     std::printf(failures ? "%d test(s) failed\n" : "all tests passed\n", failures);

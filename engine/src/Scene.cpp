@@ -195,6 +195,14 @@ bool writeLevelSettings(std::ostream& out, const Scene& scene, const std::filesy
             f1("adapt_brighten", e.adaptBrighten);
             f1("adapt_darken", e.adaptDarken);
         }
+        if (e.fogVolumetricRange != d.fogVolumetricRange || e.fogLightShafts != d.fogLightShafts ||
+            e.fogAnisotropy != d.fogAnisotropy || e.fogNoise != d.fogNoise || e.fogLocalLights != d.fogLocalLights) {
+            f1("fog_volumetric_range", e.fogVolumetricRange);
+            f1("fog_light_shafts", e.fogLightShafts);
+            f1("fog_anisotropy", e.fogAnisotropy);
+            f1("fog_noise", e.fogNoise);
+            f1("fog_local_lights", e.fogLocalLights);
+        }
         if (e.temperature != d.temperature)
             f1("temperature", e.temperature);
         if (e.greenMagenta != d.greenMagenta)
@@ -629,7 +637,9 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                 {"vignette", &e.vignette}, {"grain", &e.grain}, {"rain", &e.rain}, {"wind", &e.wind}, {"storm", &e.storm}, {"puddles", &e.puddles}, {"wind_direction", &e.windDirection}, {"wind_gusts", &e.windGusts},
                 {"auto_exposure", &e.autoExposure}, {"exposure_min_ev", &e.exposureMinEv}, {"exposure_max_ev", &e.exposureMaxEv},
                 {"adapt_brighten", &e.adaptBrighten}, {"adapt_darken", &e.adaptDarken}, {"temperature", &e.temperature},
-                {"green_magenta", &e.greenMagenta}};
+                {"green_magenta", &e.greenMagenta}, {"fog_volumetric_range", &e.fogVolumetricRange},
+                {"fog_light_shafts", &e.fogLightShafts}, {"fog_anisotropy", &e.fogAnisotropy}, {"fog_noise", &e.fogNoise},
+                {"fog_local_lights", &e.fogLocalLights}};
             if (ok) {
                 if (auto it = vectors.find(name); it != vectors.end())
                     ok = static_cast<bool>(ls >> it->second->x >> it->second->y >> it->second->z);

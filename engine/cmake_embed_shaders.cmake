@@ -2,7 +2,8 @@
 # game ships without loose shader files. The editor can still load edited copies
 # from disk at runtime (Renderer::reloadShaders).
 file(GLOB ENGINE_SHADER_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.glsl"
-     "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.vert" "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.frag")
+     "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.vert" "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.frag"
+     "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.comp")
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${ENGINE_SHADER_FILES})
 set(ENGINE_SHADER_ENTRIES "")
 foreach(shader ${ENGINE_SHADER_FILES})

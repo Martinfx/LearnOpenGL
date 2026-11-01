@@ -350,6 +350,13 @@ struct Environment {
     float fogHeight = 0.0f;                     // fog is densest below this height
     float fogHeightFalloff = 0.08f;
     float fogSunScatter = 1.0f;
+    // Volumetric fog near the camera (when the quality allows it): light shafts through the
+    // sun's shadows, lamps and the flashlight lighting up the fog.
+    float fogVolumetricRange = 64.0f;           // m of view depth, 0 = analytic fog only
+    float fogLightShafts = 1.0f;                // strength of the sun in the fog (0 = no shafts)
+    float fogAnisotropy = 0.5f;                 // phase function g: 0 even, 0.9 bright toward the light
+    float fogNoise = 0.4f;                      // 0 smooth .. 1 patchy fog drifting with the wind
+    float fogLocalLights = 1.0f;                // strength of local lights in the fog
     float exposure = 1.0f;
     float bloomIntensity = 0.06f;
     float bloomThreshold = 1.2f;

@@ -2293,6 +2293,10 @@ void MainWindow::buildDocks()
     occlusionCheck->setToolTip(tr("Skip objects hidden behind nearer ones (depth of a recent frame, read back without stalls)"));
     occlusionCheck->setChecked(viewport_->quality().occlusionCulling);
     frameOptions->addWidget(occlusionCheck);
+    auto* volumetricCheck = new QCheckBox(tr("Volumetric fog"), framePanel);
+    volumetricCheck->setToolTip(tr("Light shafts, lamps and the flashlight in the fog near the camera (compute shaders)"));
+    volumetricCheck->setChecked(viewport_->quality().volumetricFog > 0);
+    frameOptions->addWidget(volumetricCheck);
     frameOptions->addStretch();
     frameLayout->addLayout(frameOptions);
     auto* frameLabel = new QLabel(framePanel);
@@ -2300,14 +2304,17 @@ void MainWindow::buildDocks()
     frameLabel->setAlignment(Qt::AlignTop | Qt::AlignLeft);
     frameLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
     frameLayout->addWidget(frameLabel, 1);
-    auto applyFrameOption = [this, instancingCheck, shadowCacheCheck, occlusionCheck] {
+    auto applyFrameOption = [this, instancingCheck, shadowCacheCheck, occlusionCheck, volumetricCheck] {
         engine::RenderQuality q = viewport_->quality();
+        if (volumetricCheck->isChecked() != (q.volumetricFog > 0))
+            q.volumetricFog = volumetricCheck->isChecked() ? 2 : 0;
         q.occlusionCulling = occlusionCheck->isChecked();
         q.instancing = instancingCheck->isChecked();
         q.shadowCache = shadowCacheCheck->isChecked();
         viewport_->setQuality(q);
     };
     connect(instancingCheck, &QCheckBox::toggled, this, applyFrameOption);
+    connect(volumetricCheck, &QCheckBox::toggled, this, applyFrameOption);
     connect(shadowCacheCheck, &QCheckBox::toggled, this, applyFrameOption);
     connect(occlusionCheck, &QCheckBox::toggled, this, applyFrameOption);
     auto* frameScroll = new QScrollArea(this);
@@ -2319,7 +2326,7 @@ void MainWindow::buildDocks()
     addDockWidget(Qt::BottomDockWidgetArea, frameDock);
     tabifyDockWidget(logDock_, frameDock);
     auto* frameTimer = new QTimer(this);
-    connect(frameTimer, &QTimer::timeout, this, [this, frameLabel, frameDock, instancingCheck, shadowCacheCheck] {
+    connect(frameTimer, &QTimer::timeout, this, [this, frameLabel, frameDock, instancingCheck, shadowCacheCheck, volumetricCheck] {
         if (!frameDock->isVisible() || frameDock->visibleRegion().isEmpty())
             return;
         instancingCheck->blockSignals(true); // quality presets change these too
@@ -2328,6 +2335,9 @@ void MainWindow::buildDocks()
         shadowCacheCheck->blockSignals(true);
         shadowCacheCheck->setChecked(viewport_->quality().shadowCache);
         shadowCacheCheck->blockSignals(false);
+        volumetricCheck->blockSignals(true);
+        volumetricCheck->setChecked(viewport_->quality().volumetricFog > 0);
+        volumetricCheck->blockSignals(false);
         const engine::Renderer::FrameStats& f = viewport_->frameStats();
         const auto ms = [](double v) { return QString::number(v, 'f', 2); };
         QString html = "<table cellspacing='2'><tr><td><b>" + tr("Pass") + "</b></td><td align='right'>&nbsp;&nbsp;<b>CPU ms</b></td>"

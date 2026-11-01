@@ -13,5 +13,10 @@ void main() {
     color = mix(color, uFogColor.rgb, horizon * haze * 0.8);
     // Below the horizon there is no modeled terrain: fade the ground into the fog.
     color = mix(color, uFogColor.rgb * 0.8, haze * 0.85 * smoothstep(0.02, -0.08, dir.y));
+    // Volumetric fog over its whole range (lamps and the flashlight glow against the sky too).
+    if (uVolumetric.x > 0.5) {
+        vec4 volume = texture(uVolumeFog, vec3(vUV, 1.0));
+        color = color * volume.a + volume.rgb;
+    }
     fragColor = vec4(color, 1.0);
 }

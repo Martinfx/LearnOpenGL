@@ -138,6 +138,9 @@ struct RenderQuality {
     // (a spot light 1, a point light 6), 0 = no local shadows.
     int localShadowResolution = 1024;
     int localShadowLayers = 12;
+    // Volumetric fog (light shafts, lamps and the flashlight in the fog) near the camera:
+    // 0 off (analytic height fog only), 1 medium froxel grid, 2 fine grid.
+    int volumetricFog = 2;
 
     static RenderQuality preset(int level); // 0 low, 1 medium, 2 high, 3 ultra
 };
@@ -189,7 +192,7 @@ public:
 
     // Frame profile: CPU time to record each pass and GPU time to execute it
     // (timer queries, a couple of frames behind), plus what was drawn.
-    enum Pass { PassShadows, PassDepth, PassSsao, PassOpaque, PassTransparent, PassPost, PassOverlay, PassCount };
+    enum Pass { PassShadows, PassVolumetric, PassDepth, PassSsao, PassOpaque, PassTransparent, PassPost, PassOverlay, PassCount };
     static const char* passName(int pass);
     struct FrameStats {
         double cpuMs[PassCount] = {};
@@ -275,7 +278,7 @@ private:
     };
     struct Programs {
         Program mesh, depth, sky, envCapture, prefilter, brdf, ssao, blur, bloomDown, bloomUp, post, fxaa, copy, grid, hiz, sprite, debug,
-            luminance, exposure, water, underwater;
+            luminance, exposure, water, underwater, volumeInject, volumeIntegrate;
     };
     // Uniform locations of the program that draws geometry right now.
     struct MeshLocations {
@@ -302,6 +305,8 @@ private:
     // Rain occlusion: depth seen from above around the camera (roofs keep the rain off).
     void renderRainMap(const Scene& scene, const RenderView& view);
     void uploadLightClusters(const RenderView& view);
+    bool volumetricActive(const RenderView& view) const;
+    void renderVolumetricFog(const RenderView& view);
     // Draws what intersects the frustum of `cull` (view-projection); skipNear keeps
     // shadow casters between the light and the cascade.
     void drawGeometry(const Scene& scene, const RenderView& view, bool depthOnly, const glm::mat4& cull, bool skipNear = false);
@@ -507,6 +512,14 @@ private:
     std::size_t envHash_ = 0;
     unsigned whiteTex_ = 0;             // stand-in when SSAO is off
     unsigned shadowDummy_ = 0;          // stand-in when shadows are off
+    // Volumetric fog: froxel light + density (ping-pong with the previous frame) and the
+    // integrated result read by applyFog (unit 15).
+    unsigned volumeScatter_[2] = {0, 0}, volumeIntegrated_ = 0, volumeDummy_ = 0;
+    glm::ivec3 volumeDims_{0};
+    int volumeCurrent_ = 0;
+    unsigned volumeFrame_ = 0;
+    bool volumeHistory_ = false;
+    glm::mat4 volumePrevViewProj_{1.0f};
     unsigned rainTex_ = 0, rainFbo_ = 0;   // rain occlusion depth (top-down)
     glm::mat4 rainMatrix_{1.0f};
     glm::vec3 rainCenter_{1e9f};

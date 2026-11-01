@@ -426,6 +426,8 @@ int main(int argc, char** argv)
     if (std::getenv("FPS_ENGINE_NO_INSTANCING") || std::getenv("FPS_ENGINE_NO_OCCLUSION") || std::getenv("FPS_ENGINE_NO_IMPOSTORS")) {
         engine::RenderQuality q = renderer.quality();
         q.instancing = !std::getenv("FPS_ENGINE_NO_INSTANCING");
+        if (std::getenv("FPS_ENGINE_NO_VOLUMETRIC"))
+            q.volumetricFog = 0;
         q.impostors = !std::getenv("FPS_ENGINE_NO_IMPOSTORS");
         q.occlusionCulling = !std::getenv("FPS_ENGINE_NO_OCCLUSION");
         renderer.setQuality(q);
@@ -858,6 +860,8 @@ int main(int argc, char** argv)
                 q.renderScale = cvars.find("r_scale") ? cvars.find("r_scale")->number() : 1.0f;
                 // Comparing optimisations (FPS_ENGINE_STATS=1): the switches outlive the preset.
                 q.instancing = q.instancing && !std::getenv("FPS_ENGINE_NO_INSTANCING");
+                if (std::getenv("FPS_ENGINE_NO_VOLUMETRIC"))
+                    q.volumetricFog = 0;
                 q.impostors = q.impostors && !std::getenv("FPS_ENGINE_NO_IMPOSTORS");
                 q.occlusionCulling = q.occlusionCulling && !std::getenv("FPS_ENGINE_NO_OCCLUSION");
                 renderer.setQuality(q);

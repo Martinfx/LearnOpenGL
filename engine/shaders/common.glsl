@@ -21,7 +21,11 @@ layout(std140, binding = 1) uniform Environment {
     mat4 uRainMatrix;      // world -> rain occlusion map (depth seen from above)
     vec4 uWeather;         // x: wetness, y: lightning flash, z: 1 = rain map valid, w: puddles
     vec4 uWind;            // xz: direction the wind blows, y: strength 0..1, w: gusts 0..1
+    vec4 uVolumetric;      // volumetric fog: x 1 = on, y: near (m), z: 1 / log(far / near), w: far (m)
 };
+// Volumetric fog up to uVolumetric.w (view depth): rgb light scattered toward the eye,
+// a: transmittance, both from the eye to the froxel (volumetric_*.comp).
+layout(binding = 15) uniform sampler3D uVolumeFog;
 
 const float PI = 3.14159265;
 
@@ -193,20 +197,40 @@ float rainExposure(vec3 worldPos) {
 #endif
 
 // Exponential height fog along the view ray, tinted toward the sun.
-vec3 applyFog(vec3 color, vec3 worldPos) {
+// Analytic height fog over [start, dist] of the ray from the camera: optical depth.
+float heightFogDepth(vec3 dir, float start, float dist) {
     float density = uFogColor.w;
-    if (density <= 0.0)
+    float falloff = max(uFogParams.y, 1e-4);
+    float startHeight = uCameraPos.y + dir.y * start - uFogParams.x;
+    float len = max(dist - start, 0.0);
+    float amount = abs(dir.y) < 1e-3 ? density * exp(-falloff * startHeight) * len
+                                     : density * exp(-falloff * startHeight) * (1.0 - exp(-falloff * dir.y * len)) / (falloff * dir.y);
+    return max(amount, 0.0);
+}
+
+vec3 analyticFogColor(vec3 dir) {
+    float sun = pow(max(dot(dir, -normalize(uSunDir.xyz)), 0.0), 8.0) * uFogParams.z;
+    return uFogColor.rgb + uSunColor.rgb * uSunDir.w * 0.08 * sun + vec3(0.5, 0.55, 0.7) * uWeather.y * 0.12;
+}
+
+// Fog between the camera and a surface: the volumetric fog (light shafts, lamps and the
+// flashlight in the fog) near the camera, the analytic height fog beyond its range.
+vec3 applyFog(vec3 color, vec3 worldPos) {
+    if (uFogColor.w <= 0.0)
         return color;
     vec3 ray = worldPos - uCameraPos.xyz;
     float dist = length(ray);
     vec3 dir = ray / max(dist, 1e-4);
-    float falloff = max(uFogParams.y, 1e-4);
-    float startHeight = uCameraPos.y - uFogParams.x;
-    float fogAmount = density * exp(-falloff * startHeight) * (1.0 - exp(-falloff * dir.y * dist)) / (falloff * dir.y);
-    if (abs(dir.y) < 1e-3)
-        fogAmount = density * exp(-falloff * startHeight) * dist;
-    float f = 1.0 - exp(-max(fogAmount, 0.0));
-    float sun = pow(max(dot(dir, -normalize(uSunDir.xyz)), 0.0), 8.0) * uFogParams.z;
-    vec3 fogColor = uFogColor.rgb + uSunColor.rgb * uSunDir.w * 0.08 * sun + vec3(0.5, 0.55, 0.7) * uWeather.y * 0.12;
-    return mix(color, fogColor, f);
+    if (uVolumetric.x < 0.5)
+        return mix(color, analyticFogColor(dir), 1.0 - exp(-heightFogDepth(dir, 0.0, dist)));
+    vec4 clip = uProj * (uView * vec4(worldPos, 1.0));
+    float depth = max(clip.w, 1e-4); // view depth (perspective)
+    vec2 uv = clip.xy / depth * 0.5 + 0.5;
+    float z = log(max(depth, uVolumetric.y) / uVolumetric.y) * uVolumetric.z;
+    vec4 volume = texture(uVolumeFog, vec3(uv, min(z, 1.0)));
+    if (depth > uVolumetric.w) {
+        float start = dist * uVolumetric.w / depth; // where the ray leaves the volume
+        color = mix(color, analyticFogColor(dir), 1.0 - exp(-heightFogDepth(dir, start, dist)));
+    }
+    return color * volume.a + volume.rgb;
 }

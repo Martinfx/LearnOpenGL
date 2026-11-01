@@ -1,0 +1,30 @@
+#version 450 core
+// Volumetric fog, step 2: march every froxel column away from the eye and store, per
+// froxel, the light scattered toward the eye so far and the transmittance (applyFog reads it).
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+#include "common.glsl"
+layout(binding = 0) uniform sampler3D uScatter;
+layout(rgba16f, binding = 1) writeonly uniform image3D uOut;
+uniform ivec3 uDims;
+
+float sliceDepth(float z) { return uVolumetric.y * exp(z / uVolumetric.z); }
+
+void main() {
+    ivec2 xy = ivec2(gl_GlobalInvocationID.xy);
+    if (any(greaterThanEqual(xy, uDims.xy)))
+        return;
+    vec2 ndc = (vec2(xy) + 0.5) / vec2(uDims.xy) * 2.0 - 1.0;
+    float stretch = length(vec3((ndc.x + uProj[2][0]) / uProj[0][0], (ndc.y + uProj[2][1]) / uProj[1][1], 1.0)); // ray length per view depth
+    vec3 scattered = vec3(0.0);
+    float transmittance = 1.0;
+    float prevDepth = 0.0;
+    for (int z = 0; z < uDims.z; ++z) {
+        float depth = sliceDepth((float(z) + 0.5) / float(uDims.z));
+        vec4 v = texelFetch(uScatter, ivec3(xy, z), 0);
+        float t = exp(-max(v.a, 0.0) * (depth - prevDepth) * stretch);
+        scattered += transmittance * v.rgb * (1.0 - t);
+        transmittance *= t;
+        prevDepth = depth;
+        imageStore(uOut, ivec3(xy, z), vec4(scattered, transmittance));
+    }
+}
