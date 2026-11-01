@@ -1,159 +1,299 @@
 # FPS engine level
-version 5
-player_start 0 0 20
-sun -0.45 -0.75 -0.3
-env sun_color 1 0.86 0.68
-env sun_intensity 2.4
-env sky_zenith 0.38 0.42 0.44
-env sky_horizon 0.68 0.66 0.58
-env ground_color 0.26 0.24 0.2
-env cloud_cover 0.72
-env ambient_intensity 0.8
-env fog_color 0.6 0.6 0.54
-env fog_density 0.018
-env fog_height 1
-env fog_height_falloff 0.12
-env fog_sun_scatter 1.2
-env exposure 1
-env bloom_intensity 0.05
-env bloom_threshold 1.3
-env ssao_radius 0.6
-env ssao_intensity 1.1
-env shadow_distance 60
-env saturation 0.72
-env contrast 1.1
-env tint 1.02 1 0.9
-env vignette 0.35
-env grain 0.035
+version 6
+player_start 0 -0.49 30
+sun 0.3 -0.8 -0.5
+env sun_color 0.92 0.92 0.9
+env sun_intensity 1.3
+env sky_zenith 0.42 0.47 0.53
+env sky_horizon 0.68 0.7 0.72
+env ground_color 0.3 0.29 0.25
+env cloud_cover 0.85
+env ambient_intensity 1.15
+env fog_color 0.62 0.65 0.68
+env fog_density 0.006
+env fog_height 2
+env fog_height_falloff 0.04
+env fog_sun_scatter 0.3
+env exposure 1.05
+env bloom_intensity 0.03
+env bloom_threshold 1.4
+env ssao_radius 0.8
+env ssao_intensity 1.2
+env shadow_distance 80
+env saturation 0.85
+env contrast 1.05
+env tint 1 1 1
+env vignette 0.2
+env grain 0.025
+env rain 0
+env wind 0
+map_bounds -96 -96 192
+terrain "anomaly_test.terrain"
+terrain_layer 0 "../materials/skrunda/terrain_meadow.material" 0.4
+terrain_layer 1 "../materials/skrunda/terrain_dry.material" 0.5
+terrain_layer 2 "../materials/skrunda/terrain_lush.material" 0.5
+terrain_layer 3 "../materials/skrunda/terrain_dirt.material" 0.5
+foliage_type "../models/zone/skrunda/veg/birch_a_spring.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/skrunda/veg/birch_a_spring_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../models/zone/skrunda/veg/pine_b.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/skrunda/veg/pine_b_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../models/zone/skrunda/veg/spruce_a.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/skrunda/veg/spruce_a_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../models/zone/skrunda/veg/spruce_b.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/skrunda/veg/spruce_b_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../models/zone/skrunda/veg/birch_a.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/skrunda/veg/birch_a_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../models/zone/skrunda/veg/broadleaf_b_spring.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/skrunda/veg/broadleaf_b_spring_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../models/zone/skrunda/veg/pine_a.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/skrunda/veg/pine_a_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../models/zone/skrunda/veg/birch_b_spring.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/skrunda/veg/birch_b_spring_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../models/zone/skrunda/veg/broadleaf_a.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/skrunda/veg/broadleaf_a_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../models/zone/skrunda/veg/birch_b.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/skrunda/veg/birch_b_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../models/zone/skrunda/veg/spruce_young.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/skrunda/veg/spruce_young_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../models/zone/skrunda/veg/birch_young.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/skrunda/veg/birch_young_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../models/zone/vegetation/bush_b.glb" 0.02 0.85 1.15 110 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/bush_b_lod1.glb" 20
+foliage_type "../models/zone/vegetation/bush_a.glb" 0.02 0.85 1.15 110 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/bush_a_lod1.glb" 20
+foliage_type "../models/zone/vegetation/bush_wide_a.glb" 0.02 0.85 1.15 110 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/bush_wide_a_lod1.glb" 20
+foliage_type "../models/zone/vegetation/bush_c.glb" 0.02 0.85 1.15 110 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/bush_c_lod1.glb" 20
+foliage_type "../models/zone/vegetation/bush_dense_a.glb" 0.02 0.85 1.15 110 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/bush_dense_a_lod1.glb" 20
+foliage_type "../models/zone/vegetation/nettle_medium_a.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/nettle_medium_a_lod1.glb" 8
+foliage_type "../models/zone/vegetation/nettle_tall_a.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/nettle_tall_a_lod1.glb" 8
+foliage_type "../models/zone/vegetation/weed_patch.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/weed_patch_lod1.glb" 8
+foliage_lod "../models/zone/skrunda/veg/weed_patch_far.glb" 16
+foliage_type "../models/zone/vegetation/grass_patch_tall.glb" 0.25 0.85 1.15 55 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/grass_patch_tall_lod1.glb" 8
+foliage_lod "../models/zone/skrunda/veg/grass_patch_far.glb" 18
+foliage_type "../models/zone/vegetation/grass_tall_a.glb" 0.3 0.85 1.15 55 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/grass_tall_a_lod1.glb" 8
+foliage_type "../models/zone/vegetation/grass_dry_a.glb" 0.3 0.85 1.15 55 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/grass_dry_a_lod1.glb" 8
+foliage_type "../models/zone/skrunda/veg/grass_dry.glb" 0.25 0.85 1.15 55 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/skrunda/veg/grass_dry_lod1.glb" 8
+foliage_lod "../models/zone/skrunda/veg/grass_dry_far.glb" 18
+foliage_type "../models/zone/vegetation/grass_short_a.glb" 0.3 0.85 1.15 55 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/grass_short_a_lod1.glb" 8
+foliage_type "../models/zone/vegetation/grass_tall_b.glb" 0.2 0.85 1.15 55 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/grass_tall_b_lod1.glb" 8
+foliage_type "../models/zone/vegetation/grass_tall_a.glb" 0.2 0.85 1.15 55 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/grass_tall_a_lod1.glb" 8
+foliage_type "../models/zone/vegetation/grass_clump_a.glb" 0.3 0.85 1.15 55 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/grass_clump_a_lod1.glb" 8
+foliage_type "../models/zone/vegetation/weed_a.glb" 0.3 0.85 1.15 55 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/weed_a_lod1.glb" 8
 loading_image "../textures/ui/loading_zone.jpg"
-loading_title "Zóna: zkušební polygon anomálií"
-loading_hint "G hází šroub. Detektor pípá u anomálií, geiger cvaká v radiaci."
-weapon "../weapons/ak74.weapon"
-weapon "../weapons/pistol.weapon"
-weapon "../weapons/knife.weapon"
-group "Ground" ""
-group "Walls" "Ground"
-group "Props" ""
+loading_title "Zóna: anomálie na opuštěném statku"
+loading_hint "G hází šroub. Detektor pípá u anomálií, geiger cvaká v radiaci. Každá anomálie je tam, kde by v zóně vznikla."
+group "Farm" ""
+group "Junk" ""
 group "Anomalies" ""
 group "Enemies" ""
 group "Map markers" ""
 group "Ambience" ""
-box "Floor" 0 -0.5 0 56 1 64 0.5 0.48 0.42
-  parent "Ground"
-  material "../materials/pbr/dry_ground_01.material"
-box "Wall N" 0 1.5 -32 56 3 1 0.5 0.5 0.5
-  parent "Walls"
-  material "../materials/concrete.material"
-box "Wall S" 0 1.5 32 56 3 1 0.5 0.5 0.5
-  parent "Walls"
-  material "../materials/concrete.material"
-box "Wall W" -28 1.5 0 1 3 64 0.5 0.5 0.5
-  parent "Walls"
-  material "../materials/concrete.material"
-box "Wall E" 28 1.5 0 1 3 64 0.5 0.5 0.5
-  parent "Walls"
-  material "../materials/concrete.material"
-box "Divider 1" -6 0.6 0 1 1.2 8 0.55 0.53 0.5
-  parent "Walls"
-  material "../materials/concrete.material"
-box "Divider 2" 6 0.6 0 1 1.2 8 0.55 0.53 0.5
-  parent "Walls"
-  material "../materials/concrete.material"
-box "Divider 3" 0 0.6 -12 10 1.2 1 0.55 0.53 0.5
-  parent "Walls"
-  material "../materials/concrete.material"
-box "Divider 4" -18 0.6 -4 8 1.2 1 0.55 0.53 0.5
-  parent "Walls"
-  material "../materials/concrete.material"
-box "Divider 5" 18 0.6 -4 8 1.2 1 0.55 0.53 0.5
-  parent "Walls"
-  material "../materials/concrete.material"
-box "Crate crusher A" -14.5 0.4 9 0.8 0.8 0.8 0.6 0.45 0.25
-  parent "Props"
-  material "../materials/prototype_orange.material"
-box "Crate crusher B" -9 0.4 4 0.8 0.8 0.8 0.6 0.45 0.25
-  parent "Props"
-  material "../materials/prototype_orange.material"
-box "Pylon base" 0 0.15 6 0.6 0.3 0.6 0.4 0.4 0.42
-  parent "Props"
-  material "../materials/metal_plate.material"
-box "Pylon" 0 2.3 6 0.2 4 0.2 0.4 0.4 0.42
-  parent "Props"
-  material "../materials/metal_plate.material"
-box "Vent slab 1" 13.503508193257453 0.05 6.54723222932107 1.4 0.1 0.9 0.35 0.33 0.3
-  parent "Props"
-  rotation 0 20 0
-  material "../materials/concrete.material"
-box "Vent slab 2" 11.45276777067893 0.05 7.503508193257454 1.4 0.1 0.9 0.35 0.33 0.3
-  parent "Props"
-  rotation 0 110 0
-  material "../materials/concrete.material"
-box "Vent slab 3" 10.496491806742547 0.05 5.45276777067893 1.4 0.1 0.9 0.35 0.33 0.3
-  parent "Props"
-  rotation 0 200 0
-  material "../materials/concrete.material"
-box "Vent slab 4" 12.54723222932107 0.05 4.496491806742546 1.4 0.1 0.9 0.35 0.33 0.3
-  parent "Props"
-  rotation 0 290 0
-  material "../materials/concrete.material"
-box "Exit platform" 16 1 -20 5 2 5 0.5 0.5 0.5
-  parent "Props"
-  material "../materials/concrete.material"
-box "Barrel hot" -20 0.45 -24 0.6 0.9 0.6 0.45 0.45 0.2
-  parent "Props"
-  material "../materials/metal_plate.material"
-box "Barrel hot 2" -19.2 0.45 -24.6 0.6 0.9 0.6 0.45 0.45 0.2
-  parent "Props"
-  material "../materials/metal_plate.material"
-entity "Crusher 1" "anomaly" -12 0 6 0 5 3 5 0.55 0.5 0.75 ""
+box "Concrete apron" -2 -0.43559 -2 26 0.8 18 0.6 0.6 0.6
+  parent "Farm"
+  id cce88672b9d0c47b
+  material "../materials/pbr/gravel_concrete_03.material"
+box "Vent slab 1" 13.5035 -0.0355902 -7.45277 1.4 0.12 0.9 0.6 0.6 0.6
+  parent "Junk"
+  id 0100d37e71f9cf72
+  rotation 4 20 3
+  material "../materials/pbr/concrete_floor_worn_001.material"
+box "Vent slab 2" 11.4528 -0.0355902 -6.49649 1.4 0.12 0.9 0.6 0.6 0.6
+  parent "Junk"
+  id eac8f04815acc68f
+  rotation 4 110 3
+  material "../materials/pbr/concrete_floor_worn_001.material"
+box "Vent slab 3" 10.4965 -0.0355902 -8.54723 1.4 0.12 0.9 0.6 0.6 0.6
+  parent "Junk"
+  id fa57d5db625fa2f6
+  rotation 4 200 3
+  material "../materials/pbr/concrete_floor_worn_001.material"
+box "Vent slab 4" 12.5472 -0.0355902 -9.50351 1.4 0.12 0.9 0.6 0.6 0.6
+  parent "Junk"
+  id cf39cf8320378d2a
+  rotation 4 290 3
+  material "../materials/pbr/concrete_floor_worn_001.material"
+model "Barn" "../models/zone/gen/factory_hall.glb" -21 0.12 -24
+  parent "Farm"
+  id 123064f0c84ea9f9
+  lod "../models/zone/gen/factory_hall_lod1.glb" 70
+model "Fallen pole" "../models/zone/gen/lamp_post_leaning.glb" 2 -0.06 2
+  parent "Junk"
+  id 97f0f65c8cde94fc
+  transform 0 160 0 1
+model "Crushed car" "../models/zone/gen/car_burnt.glb" -12.5 -0.31 4.5
+  parent "Junk"
+  id 653420a78fd501af
+  transform 0 35 0 1
+  lod "../models/zone/gen/car_burnt_lod1.glb" 70
+model "Crushed bricks" "../models/props/clutter/rubble_pile_large.glb" -10.6 -0.08 2.5
+  parent "Junk"
+  id 2d3e852501936641
+  transform 0 126.7 0 1
+  cull_distance 45
+model "Leaking barrel" "../models/props/Barrel_01/Barrel_01.gltf" 27.5 0.4 -23.5
+  parent "Junk"
+  id a77b2bd541de85b9
+  transform 0 154.9 0 1
+  cull_distance 70
+model "Leaking barrel 2" "../models/props/barrel_03/barrel_03.gltf" 28.2 0.45 -24.3
+  parent "Junk"
+  id 2f11f6aabe28c774
+  transform 0 163.3 0 1
+  cull_distance 70
+model "Leaking barrel 3" "../models/props/barrel_03/barrel_03.gltf" 27 0.43 -24.8
+  parent "Junk"
+  id 568d419ca3bcc65d
+  transform 80 123.6 0 1
+  cull_distance 70
+model "Broken wall" "../models/zone/skrunda/fence_po2_x5_broken.glb" -34 0.11 7.5
+  parent "Farm"
+  id 6fef9117f6d8d6f1
+  lod "../models/zone/skrunda/fence_po2_x5_broken_lod1.glb" 70
+model "Fuel store container" "../models/zone/shipping_container.glb" -26 0.8 -41.5
+  parent "Junk"
+  id 1386c102e4e9a647
+  transform 0 8 0 1
+model "Rad barrel" "../models/props/barrel_03/barrel_03.gltf" -22.5 0.68 -38.5
+  parent "Junk"
+  id a7fc7c42274a3a41
+  transform 0 184.5 0 1
+  cull_distance 70
+model "Rad barrel 2" "../models/props/Barrel_02/Barrel_02.gltf" -23.2 0.67 -37.8
+  parent "Junk"
+  id 9607ce08be4d9023
+  transform 0 141.3 0 1
+  cull_distance 70
+model "Warning sign" "../models/zone/gen/warning_sign.glb" -1 0.33 -28.5
+  parent "Junk"
+  id 7c9e76fab4c6d71e
+  transform 0 10 0 1
+model "Old bus" "../models/zone/gen/bus_small_cream.glb" 18 -0.06 10
+  parent "Junk"
+  id aadf9b468282f65f
+  transform 0 -60 0 1
+  lod "../models/zone/gen/bus_small_cream_lod1.glb" 70
+model "Hay rubble" "../models/zone/gen/rubble_a.glb" 22 -0.03 -14
+  parent "Junk"
+  id 9091dd0d238bd4a9
+  transform 0 30 0 1
+  lod "../models/zone/gen/rubble_a_lod1.glb" 70
+model "Pallets" "../models/props/clutter/wooden_pallet_broken.glb" -4 -0.08 -10
+  parent "Junk"
+  id 3fc52888f48dd15e
+  transform 0 14.7 0 1
+  cull_distance 45
+model "Tyre" "../models/props/old_tyre/old_tyre.gltf" 6.5 -0.06 7.5
+  parent "Junk"
+  id 5a8b9eff48115396
+  transform 90 150.7 0 1
+  cull_distance 70
+model "Tyre 2" "../models/props/old_tyre/old_tyre.gltf" 7.2 0.19 7.1
+  parent "Junk"
+  id 24aa2411c57bad26
+  transform 90 8.5 0 1
+  cull_distance 70
+model "Bricks" "../models/props/clutter/brick_pile.glb" -15.5 -0.07 -12.6
+  parent "Junk"
+  id ed9d6418a10df480
+  transform 0 36.9 0 1
+  cull_distance 45
+player 5 8.5 5.5 18 0.15 1.8 1.7 0.4 45 100
+player_sounds "../sounds/player/step_gravel.sound" "../sounds/player/land.sound" "../sounds/player/hurt.sound"
+navmesh 1 0.25 0.1 0.35 1.8 0.4 45 32 4
+weapon "../weapons/ak74.weapon"
+weapon "../weapons/pistol.weapon"
+weapon "../weapons/knife.weapon"
+entity "Discharge 1" "anomaly" 3 -0.06 1 0 3.5 3 3.5 0.35 0.6 1 ""
   parent "Anomalies"
-  prop "kind" "crusher"
-entity "Discharge 1" "anomaly" 0 0 6 0 3.5 3 3.5 0.35 0.6 1 ""
-  parent "Anomalies"
+  id 712422516e1a5e63
   prop "kind" "discharge"
-entity "Vent 1" "anomaly" 12 0 6 0 2 5 2 1 0.45 0.15 ""
+entity "Crusher 1" "anomaly" -12 -0.06 4 0 5 3 5 0.55 0.5 0.75 ""
   parent "Anomalies"
+  id c28f0ea29188c234
+  prop "kind" "crusher"
+entity "Vent 1" "anomaly" 12 -0.06 -8 0 2 5 2 1 0.45 0.15 ""
+  parent "Anomalies"
+  id a767519bc9b7264a
   prop "kind" "vent"
   prop "period" "6"
-entity "Acid pool 1" "anomaly" -12 0 -14 0 6 1 6 0.45 0.85 0.2 ""
+entity "Acid pool 1" "anomaly" 31 0.33 -20 0 6 1 6 0.45 0.85 0.2 ""
   parent "Anomalies"
+  id a748ec2a733b762c
   prop "kind" "acid"
-entity "Rift 1" "anomaly" 10 0 -14 0 2.5 2.5 2.5 0.75 0.4 0.95 ""
+entity "Rift 1" "anomaly" -24 -0.04 6 0 2.5 2.5 2.5 0.75 0.4 0.95 ""
   parent "Anomalies"
+  id 0ba74162b14ba53d
   prop "kind" "rift"
   prop "link" "Rift exit"
-entity "Rift exit" "particle" 16 2 -20 0 0.4 0.4 0.4 0.75 0.4 0.95 ""
+entity "Rift exit" "particle" -21 14.72 -24 0 0.4 0.4 0.4 0.75 0.4 0.95 ""
   parent "Anomalies"
+  id 709ee54449364aed
   prop "effect" "particles/anomaly_rift_idle.particle"
-entity "Radiation hotspot" "anomaly" -20 0 -24 0 8 4 8 0.9 0.85 0.2 ""
+entity "Radiation hotspot" "anomaly" -26 0.76 -40 0 8 4 8 0.9 0.85 0.2 ""
   parent "Anomalies"
-  prop "kind" "radiation"
+  id 265ae0b17614db48
   prop "intensity" "30"
-entity "Radiation area" "anomaly" 0 0 -24 0 10 4 8 0.9 0.85 0.2 ""
-  parent "Anomalies"
   prop "kind" "radiation"
+entity "Radiation area" "anomaly" 2 0.32 -36 0 12 4 10 0.9 0.85 0.2 ""
+  parent "Anomalies"
+  id 4cf6351b88a655fd
   prop "area" "1"
-  prop "intensity" "4"
   prop "fade" "3"
-entity "Guard" "enemy" 0 0 -4 90 0.6 1.8 0.6 0.55 0.5 0.5 "../scripts/enemy.lua"
+  prop "intensity" "4"
+  prop "kind" "radiation"
+entity "Guard" "enemy" 0 -0.06 -6 90 0.6 1.8 0.6 0.55 0.5 0.5 "../scripts/enemy.lua"
   parent "Enemies"
+  id ded02da71989812f
   character "../models/characters/humans/bandit.glb" 1 0 "Idle_Loop"
   animgraph "../animgraphs/human.animgraph"
-entity "Drtič" "map_marker" -12 0 6 0 1 1 1 0.85 0.3 0.2 ""
+entity "Drtič" "map_marker" -12 -0.06 4 0 1 1 1 0.85 0.3 0.2 ""
   parent "Map markers"
-entity "Výboj" "map_marker" 0 0 6 0 1 1 1 0.85 0.3 0.2 ""
+  id 20ee0a4c551a731c
+entity "Výboj" "map_marker" 3 -0.06 1 0 1 1 1 0.85 0.3 0.2 ""
   parent "Map markers"
-entity "Výheň" "map_marker" 12 0 6 0 1 1 1 0.85 0.3 0.2 ""
+  id 2b3adad351989a06
+entity "Výheň" "map_marker" 12 -0.06 -8 0 1 1 1 0.85 0.3 0.2 ""
   parent "Map markers"
-entity "Žíravina" "map_marker" -12 0 -14 0 1 1 1 0.85 0.3 0.2 ""
+  id 4438b60dd760f23f
+entity "Žíravina" "map_marker" 31 0.33 -20 0 1 1 1 0.85 0.3 0.2 ""
   parent "Map markers"
-entity "Zlom" "map_marker" 10 0 -14 0 1 1 1 0.85 0.3 0.2 ""
+  id aadd096d03141e7d
+entity "Zlom" "map_marker" -24 -0.04 6 0 1 1 1 0.85 0.3 0.2 ""
   parent "Map markers"
-entity "Radiace" "map_marker" -20 0 -24 0 1 1 1 0.85 0.3 0.2 ""
+  id 55a3e303dab34e46
+entity "Radiace" "map_marker" -26 0.76 -40 0 1 1 1 0.85 0.3 0.2 ""
   parent "Map markers"
-player_sounds "../sounds/player/step_gravel.sound" "../sounds/player/land.sound" "../sounds/player/hurt.sound"
+  id 9d8b2111851eef56
 entity "Zone drone" "sound" 0 -50 0 0 400 200 400 0.25 0.55 0.95 ""
   parent "Ambience"
+  id f1fa8ee8284fce3a
+  prop "fade" "20"
   prop "sound" "sounds/ambient/zone_drone.sound"
   prop "zone" "1"
-  prop "fade" "20"

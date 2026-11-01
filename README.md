@@ -89,6 +89,15 @@ silikátová cihla, prázdná okna, stékající špína pod parapety a střecho
 z `skrunda.make_grime()`), nepořádek ve skupině Clutter (papíry v bytech, suť pod balkony, kořist banditů).
 Barvu zemních vrstev ladí materiály `assets/materials/skrunda/terrain_*.material` (editovatelné v editoru).
 
+**Testovací levely** (`water_test`, `physics_test`, `anomaly_test`, `lights_test`, `io_test`): každý je malé
+navržené místo v Zóně, které ukazuje jednu funkci enginu. Kanál s čerpací stanicí (voda), garáže s dvorem
+z panelů (fyzikální bedny, sudy a pneumatiky), opuštěný statek (jedna anomálie od každého druhu tam, kde by
+vznikla), noční jídelna s táborem u ohně (světla) a obchod „Venta" za soumraku (triggery a výstupy entit).
+Mají terén s kopci, trávou, keři, háji a nepořádkem jako Skrunda. Generuje je
+`python3 -I assets/levels/source/make_test_levels.py [jméno …]` (společný kód `zone_place.py`); po vygenerování
+level otevři a ulož v editoru (doplní `bounds` pro streaming). Jména entit drží unit testy a golden snímky,
+proto je při úpravách neměň. `test.level` zůstává jednoduchý, unit testy kontrolují jeho přesný obsah.
+
 ## Skriptování a AI (Lua)
 
 Entity (nepřátelé, pickupy, triggery…) se přidávají v editoru (Ctrl+E přidá nepřítele) a každá může mít

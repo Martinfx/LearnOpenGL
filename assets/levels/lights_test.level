@@ -1,14 +1,14 @@
 # FPS engine level
 version 6
-player_start 0 0 7
+player_start 0 0.79 4
 sun -0.45 -0.75 -0.3
 env sun_color 0.6 0.7 1
-env sun_intensity 0.03
+env sun_intensity 0.05
 env sky_zenith 0.02 0.025 0.04
-env sky_horizon 0.04 0.045 0.06
+env sky_horizon 0.05 0.055 0.07
 env ground_color 0.02 0.02 0.02
 env cloud_cover 0.8
-env ambient_intensity 0.15
+env ambient_intensity 0.18
 env fog_color 0.03 0.035 0.045
 env fog_density 0.01
 env fog_height 1
@@ -25,80 +25,287 @@ env contrast 1.1
 env tint 1 1 1
 env vignette 0.35
 env grain 0.035
-loading_title "Test: lokální světla"
-loading_hint "Bodová a reflektorová světla, stíny, blikající zářivka."
-weapon "../weapons/pistol.weapon"
-group "Room" ""
+env rain 0
+env wind 0
+map_bounds -96 -96 192
+terrain "lights_test.terrain"
+terrain_layer 0 "../materials/skrunda/terrain_meadow.material" 0.4
+terrain_layer 1 "../materials/skrunda/terrain_dry.material" 0.5
+terrain_layer 2 "../materials/skrunda/terrain_lush.material" 0.5
+terrain_layer 3 "../materials/skrunda/terrain_dirt.material" 0.5
+foliage_type "../models/zone/skrunda/veg/spruce_b.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/skrunda/veg/spruce_b_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../models/zone/skrunda/veg/spruce_a.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/skrunda/veg/spruce_a_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../models/zone/skrunda/veg/birch_a_spring.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/skrunda/veg/birch_a_spring_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../models/zone/skrunda/veg/pine_b.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/skrunda/veg/pine_b_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../models/zone/skrunda/veg/pine_a.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/skrunda/veg/pine_a_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../models/zone/skrunda/veg/birch_a.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/skrunda/veg/birch_a_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../models/zone/skrunda/veg/birch_b_spring.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/skrunda/veg/birch_b_spring_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../models/zone/skrunda/veg/birch_b.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/skrunda/veg/birch_b_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../models/zone/skrunda/veg/broadleaf_a.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/skrunda/veg/broadleaf_a_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../models/zone/skrunda/veg/broadleaf_b_spring.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/skrunda/veg/broadleaf_b_spring_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../models/zone/skrunda/veg/birch_young.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/skrunda/veg/birch_young_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../models/zone/skrunda/veg/spruce_young.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/skrunda/veg/spruce_young_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../models/zone/vegetation/bush_wide_a.glb" 0.02 0.85 1.15 110 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/bush_wide_a_lod1.glb" 20
+foliage_type "../models/zone/vegetation/bush_a.glb" 0.02 0.85 1.15 110 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/bush_a_lod1.glb" 20
+foliage_type "../models/zone/vegetation/bush_dense_a.glb" 0.02 0.85 1.15 110 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/bush_dense_a_lod1.glb" 20
+foliage_type "../models/zone/vegetation/bush_b.glb" 0.02 0.85 1.15 110 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/bush_b_lod1.glb" 20
+foliage_type "../models/zone/vegetation/bush_c.glb" 0.02 0.85 1.15 110 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/bush_c_lod1.glb" 20
+foliage_type "../models/zone/skrunda/veg/grass_dry.glb" 0.25 0.85 1.15 55 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/skrunda/veg/grass_dry_lod1.glb" 8
+foliage_lod "../models/zone/skrunda/veg/grass_dry_far.glb" 18
+foliage_type "../models/zone/vegetation/grass_tall_a.glb" 0.3 0.85 1.15 55 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/grass_tall_a_lod1.glb" 8
+foliage_type "../models/zone/vegetation/grass_patch_tall.glb" 0.25 0.85 1.15 55 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/grass_patch_tall_lod1.glb" 8
+foliage_lod "../models/zone/skrunda/veg/grass_patch_far.glb" 18
+foliage_type "../models/zone/vegetation/grass_short_a.glb" 0.3 0.85 1.15 55 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/grass_short_a_lod1.glb" 8
+foliage_type "../models/zone/vegetation/grass_dry_a.glb" 0.3 0.85 1.15 55 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/grass_dry_a_lod1.glb" 8
+loading_image "../textures/ui/loading_zone.jpg"
+loading_title "Test: lokální světla – jídelna v noci"
+loading_hint "Stalkeři přespávají ve staré jídelně: žárovka, reflektor, blikající zářivka, oheň v sudu a u táboráku, baterka hlídky."
+group "Building" ""
 group "Lights" ""
 group "Campfire" ""
-box "Floor" 0 -0.5 0 16 1 20 0.62 0.6 0.56
-  parent "Room"
-  material "../materials/concrete.material"
-box "Ceiling" 0 4.5 0 16 1 20 0.5 0.5 0.5
-  parent "Room"
-  material "../materials/concrete.material"
-box "Wall North" 0 2 -10 16 4 1 0.48 0.52 0.58
-  parent "Room"
-  material "../materials/bricks.material"
-box "Wall South" 0 2 10 16 4 1 0.48 0.52 0.58
-  parent "Room"
-  material "../materials/bricks.material"
-box "Wall West" -8 2 0 1 4 20 0.48 0.52 0.58
-  parent "Room"
-  material "../materials/bricks.material"
-box "Wall East" 8 2 0 1 4 20 0.48 0.52 0.58
-  parent "Room"
-  material "../materials/bricks.material"
-box "Pillar" -2.5 2 -3 0.8 4 0.8 0.6 0.6 0.6
-  parent "Room"
-  material "../materials/concrete.material"
-box "Crate A" 2 0.5 -4 1 1 1 0.55 0.42 0.28
-  parent "Room"
-  material "../materials/metal_plate.material"
-box "Crate B" 2.6 0.4 -2.8 0.8 0.8 0.8 0.55 0.42 0.28
-  parent "Room"
-  rotation 0 25 0
-box "Shelf" -6.5 1 -6 1 2 3 0.4 0.4 0.42
-  parent "Room"
-  material "../materials/metal_plate.material"
-entity "Bulb" "light" -2.5 2.6 -0.5 0 0.3 0.3 0.3 1 0.72 0.42 ""
+group "Camp" ""
+group "Junk" ""
+model "Canteen" "../models/zone/skrunda/canteen.glb" 0 0.14 0
+  parent "Building"
+  id fbaee1424ac5f993
+  lod "../models/zone/skrunda/canteen_lod1.glb" 70
+model "Searchlight" "../models/props/portable_searchlight/portable_searchlight.gltf" 9.5 0.74 6.2
+  parent "Camp"
+  id 65920a3657ba387b
+  transform 0 225 0 1
+  cull_distance 70
+model "Fire barrel" "../models/props/barrel_stove/barrel_stove.gltf" 6 0.74 -0.5
+  parent "Camp"
+  id d12be63f5345de99
+  transform 0 209.1 0 1
+  cull_distance 70
+model "stone_fire_pit" "../models/props/stone_fire_pit/stone_fire_pit.gltf" -5 0.19 12.55
+  parent "Campfire"
+  id a9b492230ff752c5
+  cull_distance 70
+model "Seat crate" "../models/props/wooden_military_crate/wooden_military_crate.gltf" -6.6 0.21 12.95
+  parent "Campfire"
+  id 84803f7bf69e9825
+  transform 0 80 0 1
+  cull_distance 70
+model "Seat crate 2" "../models/props/wooden_military_crate/wooden_military_crate.gltf" -3.5 0.17 11.95
+  parent "Campfire"
+  id b8bcce683cb18ad6
+  transform 0 260 0 1
+  cull_distance 70
+model "Camp table" "../models/props/WoodenTable_01/WoodenTable_01.gltf" -2.5 0.74 1
+  parent "Camp"
+  id 70973dc3858dd495
+  transform 0 5 0 1
+  cull_distance 40
+model "Radio" "../models/props/vintage_radio_transceiver/vintage_radio_transceiver.gltf" -2.6 1.29 1
+  parent "Camp"
+  id 6072518bbfe9429a
+  transform 0 185 0 1
+  cull_distance 70
+  collision 0
+model "Lantern" "../models/props/vintage_oil_lamp/vintage_oil_lamp.gltf" -2 1.29 1.2
+  parent "Camp"
+  id 9de225ed1e3e87df
+  transform 0 74.1 0 1
+  cull_distance 70
+  collision 0
+model "Bedroll" "../models/props/clutter/cardboard_flattened.glb" -6.5 0.75 4.5
+  parent "Camp"
+  id 80c39fa54a2851db
+  transform 0 94.3 0 1
+  cull_distance 45
+  collision 0
+  cast_shadows 0
+model "Rag" "../models/props/clutter/rag_a.glb" -6.1 0.76 4.2
+  parent "Camp"
+  id d715f2bcdba58f2e
+  transform 0 340.7 0 1
+  cull_distance 45
+  collision 0
+  cast_shadows 0
+model "Bedroll 2" "../models/props/clutter/cardboard_flattened.glb" -4.5 0.75 5.2
+  parent "Camp"
+  id b5a92cab6e710906
+  transform 0 76.2 0 1
+  cull_distance 45
+  collision 0
+  cast_shadows 0
+model "Rag 2" "../models/props/clutter/rag_a.glb" -4.1 0.76 4.9
+  parent "Camp"
+  id fb0d58d38d812278
+  transform 0 161.8 0 1
+  cull_distance 45
+  collision 0
+  cast_shadows 0
+model "Bedroll 3" "../models/props/clutter/cardboard_flattened.glb" 2.5 0.75 4.8
+  parent "Camp"
+  id 2a3711e30a16220a
+  transform 0 85.6 0 1
+  cull_distance 45
+  collision 0
+  cast_shadows 0
+model "Rag 3" "../models/props/clutter/rag_a.glb" 2.9 0.76 4.5
+  parent "Camp"
+  id 6106f1f0d5778fb0
+  transform 0 103.7 0 1
+  cull_distance 45
+  collision 0
+  cast_shadows 0
+model "Supplies" "../models/props/plastic_crate_01/plastic_crate_01.gltf" 11 0.74 1.2
+  parent "Camp"
+  id 49c7a24db27ef205
+  transform 0 315.7 0 1
+  cull_distance 70
+model "Supplies 2" "../models/props/russian_food_cans_01/russian_food_cans_01.gltf" 11.2 0.74 1.9
+  parent "Camp"
+  id 2124f91780b95813
+  transform 0 348 0 1
+  cull_distance 70
+model "Jerrycan" "../models/props/metal_jerrycan/metal_jerrycan.gltf" 10.4 0.74 2.2
+  parent "Camp"
+  id 6451c6d53c343ece
+  transform 0 289.4 0 1
+  cull_distance 70
+model "Generator" "../models/props/portable_generator/portable_generator.gltf" 12.5 0.74 5.5
+  parent "Camp"
+  id 9958b4ad26e10521
+  transform 0 150.9 0 1
+  cull_distance 70
+model "Paper" "../models/props/clutter/newspaper_sheet_a.glb" 0.5 0.75 3
+  parent "Junk"
+  id 63fe315756bf5fe1
+  transform 0 313.9 0 1
+  cull_distance 45
+  collision 0
+  cast_shadows 0
+model "Paper 2" "../models/props/clutter/newspaper_sheet_b.glb" -8 0.75 2
+  parent "Junk"
+  id 7344ee60e84bd733
+  transform 0 37.7 0 1
+  cull_distance 45
+  collision 0
+  cast_shadows 0
+model "Boxes" "../models/props/clutter/cardboard_box_crushed.glb" -11.5 0.74 5.5
+  parent "Junk"
+  id b61482f1528af43d
+  transform 0 176.3 0 1
+  cull_distance 45
+model "Rubble" "../models/props/clutter/rubble_pile_small.glb" 13 0.74 -1.5
+  parent "Junk"
+  id 84b206566122cafb
+  transform 0 169.2 0 1
+  cull_distance 45
+model "Burnt car" "../models/zone/gen/car_burnt.glb" 14 0.14 14
+  parent "Junk"
+  id d11d470abd8b7f6c
+  transform 0 -25 0 1
+  lod "../models/zone/gen/car_burnt_lod1.glb" 70
+model "Trash bag" "../models/props/trashbag/trashbag.gltf" -12 0.14 9.15
+  parent "Junk"
+  id d1faaf96a0d37d02
+  transform 0 26.4 0 1
+  cull_distance 70
+model "Pallets" "../models/props/clutter/wooden_pallet_broken.glb" 17.15 0.07 -4
+  parent "Junk"
+  id 65ee41eeae3d1ac9
+  transform 0 199.3 0 1
+  cull_distance 45
+player 5 8.5 5.5 18 0.15 1.8 1.7 0.4 45 100
+player_sounds "../sounds/player/step_gravel.sound" "../sounds/player/land.sound" "../sounds/player/hurt.sound"
+navmesh 1 0.25 0.1 0.35 1.8 0.4 45 32 4
+weapon "../weapons/pistol.weapon"
+entity "Interior Canteen" "interior" 0 0.59 0 0 29.3 4.4 15.1 0.85 0.55 0.25 ""
+  parent "Building"
+  id e74c8ba4b5571f6b
+  prop "fade" "0.3"
+  prop "fog" "0.2"
+  prop "preset" "room"
+  prop "sky" "0.12"
+entity "Bulb" "light" -2.5 4.14 1 0 0.3 0.3 0.3 1 0.72 0.42 ""
   parent "Lights"
+  id e6c0003ee35f1a93
   prop "intensity" "18"
   prop "range" "9"
   prop "shadows" "1"
-entity "Spot" "light" 4 3.8 -6 135 0.3 0.3 0.3 0.75 0.85 1 ""
+entity "Spot" "light" 9.5 4.34 6.2 225 0.3 0.3 0.3 0.75 0.85 1 ""
   parent "Lights"
-  prop "light" "spot"
-  prop "intensity" "60"
-  prop "range" "12"
-  prop "pitch" "-55"
+  id 3b14e8699a06e420
   prop "inner" "18"
+  prop "intensity" "60"
+  prop "light" "spot"
   prop "outer" "30"
+  prop "pitch" "-55"
+  prop "range" "12"
   prop "shadows" "1"
-entity "Tube" "light" -5 3.8 5 0 0.3 0.3 0.3 0.8 1 0.85 ""
+entity "Tube" "light" -9 4.64 -0.5 0 0.3 0.3 0.3 0.8 1 0.85 ""
   parent "Lights"
+  id beb4382ec49a9fe6
+  prop "flicker" "fluorescent"
   prop "intensity" "10"
   prop "range" "7"
-  prop "flicker" "fluorescent"
-entity "Barrel fire" "light" 5.5 0.8 5 0 0.3 0.3 0.3 1 0.5 0.15 ""
+entity "Barrel fire" "light" 6 1.69 -0.5 0 0.3 0.3 0.3 1 0.5 0.15 ""
   parent "Lights"
+  id 737667e446eb2fb3
+  prop "flicker" "fire"
   prop "intensity" "14"
   prop "range" "7"
-  prop "flicker" "fire"
-entity "Guard" "npc" 6 0 -3 120 0.6 1.8 0.6 0.4 0.42 0.38 ""
+entity "Barrel flames" "particle" 6 1.64 -0.5 0 0.4 0.4 0.4 0.95 0.55 0.2 ""
   parent "Lights"
+  id b99b8b37f6820e69
+  prop "effect" "particles/fire.particle"
+entity "Guard" "npc" 8.5 0.74 1.5 200 0.6 1.8 0.6 0.55 0.5 0.5 ""
+  parent "Lights"
+  id 58a960d641d568a9
+  character "../models/characters/humans/stalker.glb" 1 0 "Idle_Loop"
+  animgraph "../animgraphs/human.animgraph"
   prop "flashlight" "1"
-model "stone_fire_pit" "../models/props/stone_fire_pit/stone_fire_pit.gltf" -3 0 6
+entity "Campfire light" "light" -5 0.79 12.55 0 0.3 0.3 0.3 1 0.55 0.25 ""
   parent "Campfire"
-entity "Campfire light" "light" -3 0.6 6 0 0.3 0.3 0.3 1 0.55 0.25 ""
-  parent "Campfire"
+  id 435016026749a0a8
+  prop "flicker" "fire"
   prop "intensity" "22"
   prop "range" "10"
   prop "shadows" "1"
-  prop "flicker" "fire"
-entity "Campfire flames" "particle" -3 0.15 6 0 0.4 0.4 0.4 0.95 0.55 0.2 ""
+entity "Campfire flames" "particle" -5 0.34 12.55 0 0.4 0.4 0.4 0.95 0.55 0.2 ""
   parent "Campfire"
+  id a3076667d2428cd0
   prop "effect" "particles/fire.particle"
-entity "Campfire crackle" "sound" -3 0.3 6 0 1 1 1 0.25 0.55 0.95 ""
+entity "Campfire crackle" "sound" -5 0.49 12.55 0 1 1 1 0.25 0.55 0.95 ""
   parent "Campfire"
+  id 0e9a551a9107ab85
   prop "sound" "sounds/ambient/campfire.sound"

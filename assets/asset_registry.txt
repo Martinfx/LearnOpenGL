@@ -1,9 +1,13 @@
 # Asset GUIDs (engine/AssetRegistry.h): kept when an asset is renamed in the editor.
 f4f50d2af90b2308 levels/anomaly_test.level
+07aec73e8a819f2c levels/anomaly_test.terrain
 b639b748eaa99f15 levels/hospital_street.level
 445fc50ee5c09d1b levels/io_test.level
+2d88df5b0e8fd10d levels/io_test.terrain
 e4d934740cc114f2 levels/lights_test.level
+d6829d839834d54d levels/lights_test.terrain
 75977116bd816e29 levels/physics_test.level
+aa7ef36058a496a3 levels/physics_test.terrain
 cc87059dd5e2a443 levels/skrunda1.level
 089772fcf6cdbe37 levels/skrunda1.terrain
 917803baa0dbdce3 levels/source/hospital_street_map.png
@@ -11,6 +15,7 @@ cc87059dd5e2a443 levels/skrunda1.level
 04ae7082748a0b8e levels/source/zone_map.png
 c977985b1b77c564 levels/test.level
 d71fdc253874d2f4 levels/water_test.level
+5c73bcb3e054f39e levels/water_test.terrain
 cd8cd79746c9f3e5 levels/zone.level
 795312dd3622823e materials/bricks.material
 386a2c09e258b16f materials/concrete.material
@@ -1550,6 +1555,9 @@ f1b1e865c5700aaa models/zone/textures/corrugated_normal.jpg
 2748c08c51218698 models/zone/textures/facade_albedo.jpg
 766bcbadefe1bbbf models/zone/textures/facade_normal.jpg
 8a1626f48e9d497e models/zone/textures/facade_orm.jpg
+01674037140a392f models/zone/textures/flat_floor_albedo.jpg
+f8863adfa41c4ced models/zone/textures/flat_floor_normal.jpg
+b167b148419f6b9c models/zone/textures/flat_floor_orm.jpg
 d2ad9e484934cee5 models/zone/textures/gravel_albedo.jpg
 6578cc3be67680de models/zone/textures/gravel_normal.jpg
 6cf059a69c741299 models/zone/textures/gravel_orm.jpg
