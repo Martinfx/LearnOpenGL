@@ -46,6 +46,19 @@ Bez Qt jde postavit jen hra: `-DENGINE_BUILD_EDITOR=OFF`.
 
 Výstupy jsou v `build/bin/`.
 
+### Vydání (balíček)
+
+- `tools/package.sh` (Linux, FreeBSD) a `tools/package.ps1` (Windows) postaví hru s LTO a ladicími
+  informacemi, assety zabalí do `game.pak` a vytvoří `FpsEngine-<verze>-<OS>` archiv. Symboly jdou zvlášť
+  (`-symbols`: soubory `.debug` s `.gnu_debuglink` v binárkách, na Windows `.pdb`), takže crash z vydané
+  verze jde rozluštit. `PAK=OFF tools/package.sh` přibalí volné assety a editor (pro modding).
+- Verze je `git describe` při každém buildu (ne jen při konfiguraci): je v logu, v menu, v crash reportu.
+- Ručně: `-DENGINE_LTO=ON`, `-DENGINE_PACKAGE_PAK=ON`, pak `cmake --install build --component game --prefix out`
+  nebo `cpack`. V balíčku leží `fps_game`, `fps_pack`, OpenAL (hra ho najde vedle sebe), `game.pak` nebo
+  `assets/`, prázdná složka `mods/`, `LICENSE` a `licenses/`.
+- CI ověří při každém pushi instalaci (OpenAL přes `$ORIGIN`, obsah `game.pak`). Balíčky pro Linux a Windows
+  staví úloha `package` pro tagy a ruční spuštění (Actions > build > Run workflow).
+
 ## Ovládání
 
 **Hra** (`fps_game [soubor.level]`): WASD pohyb, myš rozhlížení, mezerník skok, Shift sprint,

@@ -236,7 +236,12 @@ Hotovo, když: zóna 1 × 1 km jde projít bez načítací obrazovky a paměť d
   glTF, `.bin` a obrázků; načtení zóny o 10 až 35 % rychleji), komprimované textury (BC1/3/5 z M0), kontrola
   chybějících a nepoužitých assetů (`asset_check`, Assets > Validate assets). Assets > Clear cooked cache.
   Balení do archivů se dělá s VFS (další bod), kde se archivy i čtou.*
-- [ ] Balíček pro Windows/Linux/FreeBSD, verze buildu z `git describe` (log, menu, crash report), symboly ke každému vydání, release s LTO, artefakty z CI.
+- [x] Balíček pro Windows/Linux/FreeBSD, verze buildu z `git describe` (log, menu, crash report), symboly ke každému vydání, release s LTO, artefakty z CI.
+  *Hotovo (2026-11-01): cmake/Packaging.cmake (install pravidla, CPack TGZ/ZIP, volby `ENGINE_LTO`,
+  `ENGINE_PACKAGE_PAK`, `$ORIGIN` rpath), `tools/package.sh` a `tools/package.ps1` (LTO + RelWithDebInfo, symboly
+  zvlášť přes `objcopy --only-keep-debug` / `.pdb`), verze z `git describe` při každém buildu (cmake/Version.cmake),
+  CI kontrola instalace při každém pushi a úloha `package` s artefakty pro tagy a ruční běh. Ověřeno lokálně:
+  instalace najde OpenAL vedle hry; celý balíček se tu nevešel na disk, poprvé ho postaví CI.*
 - [x] VFS s mount pointy: volné soubory → archiv → složka `mods/` přepisující soubory podle cesty.
   *Hotovo (2026-11-01): engine/Vfs (vrstvy assets → `*.pak` → `mods/*` složky i archivy, read/exists/list,
   `diskPath` rozbalí soubor z archivu pro knihovny, které otevírají soubory jménem, `identity` pro klíče cache),

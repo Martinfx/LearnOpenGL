@@ -40,3 +40,4 @@ endif()
 if(BUILD_TESTING)
     add_subdirectory(tests) # after game: the level smoke tests run fps_game
 endif()
+include(cmake/Packaging.cmake) # install rules, CPack, LTO option

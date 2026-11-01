@@ -66,17 +66,15 @@ target_include_directories(engine PUBLIC include)
 find_package(Threads REQUIRED)
 target_link_libraries(engine PUBLIC glm::glm Threads::Threads tracy_client PRIVATE glad Jolt::Jolt lua_static sol2::sol2 cgltf_headers stb_headers miniaudio recastnav OpenAL::OpenAL)
 target_compile_definitions(engine PRIVATE SOL_ALL_SAFETIES_ON=1)
-# Build version for logs and crash reports.
-find_package(Git QUIET)
-set(ENGINE_VERSION "dev")
-if(GIT_FOUND)
-    execute_process(COMMAND ${GIT_EXECUTABLE} describe --always --dirty --tags WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-                    OUTPUT_VARIABLE ENGINE_GIT_VERSION OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-    if(ENGINE_GIT_VERSION)
-        set(ENGINE_VERSION "${ENGINE_GIT_VERSION}")
-    endif()
-endif()
-set_source_files_properties(src/Crash.cpp PROPERTIES COMPILE_DEFINITIONS "ENGINE_VERSION=\"${ENGINE_VERSION}\"")
+# Build version for logs, the menu, crash reports and packages: `git describe` at every build
+# (cmake/Version.cmake rewrites the header only when the commit or the dirty flag changed).
+add_custom_target(engine_version
+    COMMAND ${CMAKE_COMMAND} -DSOURCE_DIR=${PROJECT_SOURCE_DIR} -DOUT=${CMAKE_CURRENT_BINARY_DIR}/generated/EngineVersion.h
+            -P ${PROJECT_SOURCE_DIR}/cmake/Version.cmake
+    BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/generated/EngineVersion.h
+    COMMENT "Build version from git")
+add_dependencies(engine engine_version)
+target_include_directories(engine PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
 if(CMAKE_SYSTEM_NAME MATCHES "FreeBSD|OpenBSD|NetBSD")
     target_link_libraries(engine PRIVATE execinfo) # backtrace() for crash reports
 endif()

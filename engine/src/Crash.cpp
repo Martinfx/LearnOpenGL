@@ -27,6 +27,9 @@
 #include <unistd.h>
 #endif
 
+#if __has_include("EngineVersion.h")
+#include "EngineVersion.h" // generated at build time (cmake/Version.cmake)
+#endif
 #ifndef ENGINE_VERSION
 #define ENGINE_VERSION "dev"
 #endif
