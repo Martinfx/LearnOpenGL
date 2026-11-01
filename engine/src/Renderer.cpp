@@ -836,7 +836,7 @@ void Renderer::ensureTargets(int width, int height)
         glTextureParameteri(tex, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTextureParameteri(tex, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     }
-    ssaoTex_ = makeTexture2D(GL_R8, width, height, GL_LINEAR);
+    ssaoTex_ = makeTexture2D(GL_RG16F, width, height, GL_NEAREST); // visibility, linear depth
     ssaoFbo_ = makeFbo(ssaoTex_);
     ssaoBlurTex_ = makeTexture2D(GL_R8, width, height, GL_LINEAR);
     ssaoBlurFbo_ = makeFbo(ssaoBlurTex_);
@@ -1987,6 +1987,8 @@ void Renderer::renderSsao()
     glUseProgram(programs_.ssao.id);
     glUniform1f(programs_.ssao.loc("uRadius"), env_ ? env_->ssaoRadius : 0.6f);
     glUniformMatrix4fv(programs_.ssao.loc("uInvProj"), 1, GL_FALSE, glm::value_ptr(glm::inverse(projection_)));
+    // With TAA the slices turn every frame and the history averages them.
+    glUniform1f(programs_.ssao.loc("uFrame"), taaActive_ ? static_cast<float>(taaFrame_ % 64) : 0.0f);
     glBindTextureUnit(0, depthTex_);
     glDrawArrays(GL_TRIANGLES, 0, 3);
     glBindFramebuffer(GL_FRAMEBUFFER, ssaoBlurFbo_);
