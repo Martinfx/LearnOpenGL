@@ -89,6 +89,7 @@ private:
     QCheckBox* stream_ = nullptr;
     QComboBox* group_ = nullptr;
     QSpinBox* maxInstances_ = nullptr;
+    QLineEdit* caption_ = nullptr;
     QLabel* info_ = nullptr;
     QLabel* waveInfo_ = nullptr;
     WaveformView* waveform_ = nullptr;

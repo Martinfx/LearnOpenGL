@@ -589,6 +589,20 @@ void testLocalization()
             }
     }
     check(unknown.empty(), "keys used by the game exist in cs.strings" + (unknown.empty() ? std::string() : ": " + unknown.front()));
+
+    // Sound captions (subtitles) name keys that exist.
+    std::vector<std::string> noCaption;
+    int captioned = 0;
+    for (const auto& entry : fs::recursive_directory_iterator(ENGINE_TEST_ASSETS "/sounds")) {
+        engine::SoundDef sound;
+        if (entry.path().extension() != ".sound" || !engine::loadSoundFile(sound, entry.path()) || sound.caption.empty())
+            continue;
+        ++captioned;
+        if (sound.caption[0] == '@' && !shipped.texts.count(sound.caption.substr(1)))
+            noCaption.push_back(entry.path().filename().string() + ": " + sound.caption);
+    }
+    check(captioned > 10 && noCaption.empty(),
+          "sound captions exist in cs.strings" + (noCaption.empty() ? std::string() : ": " + noCaption.front()));
 }
 
 void testScriptDebugger()
@@ -2371,9 +2385,11 @@ void testAudio()
     copy.pitchMin = 0.8f;
     copy.maxDistance = 123.0f;
     copy.group = engine::AudioGroup::Music;
+    copy.caption = "@caption.test \"x\"";
     engine::SoundDef back;
     check(engine::saveSoundFile(copy, tmp) && engine::loadSoundFile(back, tmp) && back.files == copy.files &&
-              back.pitchMin == 0.8f && back.maxDistance == 123.0f && back.group == engine::AudioGroup::Music,
+              back.pitchMin == 0.8f && back.maxDistance == 123.0f && back.group == engine::AudioGroup::Music &&
+              back.caption == copy.caption,
           ".sound save/load round trip");
     fs::remove(tmp);
 

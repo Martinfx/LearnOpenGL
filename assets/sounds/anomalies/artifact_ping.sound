@@ -9,3 +9,4 @@ stream 0
 spatial 0
 group ui
 max_instances 3
+caption "@caption.artifact"

@@ -24,6 +24,7 @@
 #include <engine/Scene.h>
 #include <engine/Ui2D.h>
 
+#include "UiScale.h"
 #include "GameAnomalies.h"
 #include "GameAudio.h"
 #include "GameEffects.h"
@@ -408,11 +409,18 @@ float smoothAim(const engine::Weapon& weapon)
     return a * a * (3.0f - 2.0f * a);
 }
 
+float viewBobScale()
+{
+    const engine::CVar* v = engine::CVarRegistry::global().find("cl_viewbob");
+    return v ? std::clamp(static_cast<float>(v->number()), 0.0f, 1.0f) : 1.0f;
+}
+
 glm::mat4 weaponTransform(const engine::Weapon& weapon, float time, float moveSpeed, float lowered)
 {
-    // Aiming brings the sights to the eye and steadies the walk bob.
+    // Aiming brings the sights to the eye and steadies the walk bob; cl_viewbob scales
+    // it (0 = still, for players who get motion sick).
     const float aim = smoothAim(weapon);
-    const float bob = std::min(moveSpeed / 5.0f, 1.5f) * (1.0f - 0.85f * aim);
+    const float bob = std::min(moveSpeed / 5.0f, 1.5f) * (1.0f - 0.85f * aim) * viewBobScale();
     glm::vec3 offset = glm::mix(weapon.settings.viewOffset, weapon.settings.aimOffset, aim);
     offset.y -= lowered * 0.35f; // weapon switch
     offset.x += std::sin(time * 9.0f) * 0.012f * bob;
@@ -868,6 +876,15 @@ int main(int argc, char** argv)
     // Audio: mixing runs on miniaudio's device thread, files decode on its job thread.
     GameAudio audio;
     audio.init(std::filesystem::path(argv[0]).parent_path() / "assets");
+    // Subtitles (cl_subtitles): sounds with a caption that are close enough to be heard.
+    audio.system().setCaptionListener([&hud, &audio](const std::string& caption, const glm::vec3* position, const engine::SoundDef& sound) {
+        const engine::CVar* on = engine::CVarRegistry::global().find("cl_subtitles");
+        if (!on || !on->boolean())
+            return;
+        if (position && glm::distance(*position, audio.system().listenerPosition()) > sound.maxDistance)
+            return;
+        hud.caption(engine::localization().localize(caption));
+    });
 
     // Navigation mesh: built from the level collision in the background (tiles in
     // parallel); enemies walk straight lines until it is ready.
@@ -1209,6 +1226,10 @@ int main(int argc, char** argv)
         cvars.add("snd_duck", CVarType::Float, "1", "How much gunfire ducks the ambience and music (0 = not at all)", engine::CVarConfig, 0.0, 1.0);
         cvars.add("snd_occlusion", CVarType::Bool, "1", "Walls muffle the sounds behind them", engine::CVarConfig);
         cvars.add("cl_showfps", CVarType::Bool, "0", "Frame rate in the corner", engine::CVarConfig);
+        cvars.add("cl_viewbob", CVarType::Float, "1", "Weapon bob while walking (0 = off, against motion sickness)", engine::CVarConfig, 0.0, 1.0);
+        cvars.add("cl_subtitles", CVarType::Bool, "0", "Captions for sounds and speech at the bottom of the screen", engine::CVarConfig);
+        cvars.add("ui_scale", CVarType::Float, "1", "Size of texts and HUD (1 = normal)", engine::CVarConfig, 0.75, 1.75)
+            .onChange = [](const engine::CVar& v) { uiScale() = std::clamp(static_cast<float>(v.number()), 0.75f, 1.75f); };
         cvars.add("language", CVarType::String, engine::Localization::kBase, "Language of the texts (assets/text/<language>.strings)",
                   engine::CVarConfig)
             .onChange = [textDir = std::filesystem::path(argv[0]).parent_path() / "assets" / "text"](const engine::CVar& v) {
@@ -1372,7 +1393,8 @@ int main(int argc, char** argv)
                 return engine::ConsoleResult{true, "storm fading"};
             }
             if (!a.empty()) {
-                anomalyStorm.trigger(s, std::max(0.0f, static_cast<float>(std::atof(a[0].c_str()))));
+                // Through the request, like game.start_storm(): the siren and the warning come too.
+                scene.environment.anomalyStormNow.request = std::max(0.0f, static_cast<float>(std::atof(a[0].c_str())));
                 return engine::ConsoleResult{true, "storm warning " + a[0] + " s"};
             }
             char line[160];
@@ -2805,7 +2827,7 @@ int main(int argc, char** argv)
                 } else if (talk.active()) {
                     talk.draw(ui, width, height, talkHover);
                 } else if (artifactTarget >= 0 && artifactTarget < static_cast<int>(artifacts.lying().size())) {
-                    const float H = static_cast<float>(height), size = std::round(std::clamp(H * 0.022f, 12.0f, 26.0f));
+                    const float H = static_cast<float>(height), size = uiSize(H, 0.022f, 12.0f, 26.0f);
                     const engine::CVar* key = cvars.find("in_use");
                     const std::string line = (key ? key->value : std::string("E")) + "   Sebrat: " +
                                              artifacts.name(artifacts.lying()[static_cast<std::size_t>(artifactTarget)].id);
@@ -2814,7 +2836,7 @@ int main(int argc, char** argv)
                     ui.rect(at - glm::vec2(size * 0.6f, size * 0.3f), {w + size * 1.2f, size * 1.6f}, {0.05f, 0.055f, 0.045f, 0.7f});
                     ui.text(line, at, size, {0.6f, 0.9f, 1.0f, 1.0f}, true);
                 } else if (useTarget >= 0) { // "E  Mluvit: Sidor"
-                    const float H = static_cast<float>(height), size = std::round(std::clamp(H * 0.022f, 12.0f, 26.0f));
+                    const float H = static_cast<float>(height), size = uiSize(H, 0.022f, 12.0f, 26.0f);
                     const engine::CVar* key = cvars.find("in_use");
                     const engine::Entity& target = scene.entities[static_cast<std::size_t>(useTarget)];
                     const std::string line = (key ? key->value : std::string("E")) + (target.properties.count("dialog") ? "   Mluvit: " : "   Obchodovat: ") +
@@ -2827,12 +2849,12 @@ int main(int argc, char** argv)
                 if (const auto phase = anomalyStorm.phase();
                     phase == engine::AnomalyStorm::Phase::Warning || phase == engine::AnomalyStorm::Phase::Storm) {
                     // Storm banner: countdown to the storm / how long it lasts, red while outdoors.
-                    const float H = static_cast<float>(height), text = std::round(std::clamp(H * 0.024f, 12.0f, 28.0f));
+                    const float H = static_cast<float>(height), text = uiSize(H, 0.024f, 12.0f, 28.0f);
                     const int s = static_cast<int>(std::ceil(anomalyStorm.secondsLeft()));
                     char line[96];
                     std::snprintf(line, sizeof line, phase == engine::AnomalyStorm::Phase::Warning ? "BOUŘE ZA %d:%02d" : "BOUŘE %d:%02d", s / 60, s % 60);
                     const std::string where = sheltered ? "v úkrytu" : "VENKU - HLEDEJ ÚKRYT";
-                    const float w = std::max(ui.textWidth(line, text), ui.textWidth(where, text * 0.8f)) + text * 1.6f;
+                    const float w = std::max(ui.textWidth(line, text, true), ui.textWidth(where, text * 0.8f, true)) + text * 1.6f;
                     const glm::vec2 at(std::round((static_cast<float>(width) - w) * 0.5f), std::round(H * 0.11f));
                     const float pulse = sheltered ? 0.0f : 0.5f + 0.5f * std::sin(static_cast<float>(scripts.time()) * 6.0f);
                     ui.rect(at, {w, text * 2.6f}, glm::vec4(0.12f + 0.25f * pulse, 0.04f, 0.03f, 0.8f));

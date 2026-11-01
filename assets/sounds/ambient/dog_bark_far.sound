@@ -14,3 +14,4 @@ stream 0
 spatial 1
 group ambient
 max_instances 2
+caption "@caption.dog_bark"

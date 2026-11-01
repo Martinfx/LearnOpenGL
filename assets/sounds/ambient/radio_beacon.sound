@@ -10,3 +10,4 @@ stream 1
 spatial 1
 group ambient
 max_instances 4
+caption "@caption.radio_beacon"

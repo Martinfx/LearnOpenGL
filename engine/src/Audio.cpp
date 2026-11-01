@@ -126,6 +126,8 @@ bool saveSoundFile(const SoundDef& sound, const std::filesystem::path& file, std
         << "spatial " << (sound.spatial ? 1 : 0) << '\n'
         << "group " << audioGroupName(sound.group) << '\n'
         << "max_instances " << sound.maxInstances << '\n';
+    if (!sound.caption.empty())
+        out << "caption " << std::quoted(sound.caption) << '\n';
     if (!out) {
         setError(error, "Write failed: " + file.string());
         return false;
@@ -178,6 +180,8 @@ bool loadSoundFile(SoundDef& sound, const std::filesystem::path& file, std::stri
             result.group = audioGroupFromName(g);
         } else if (key == "max_instances") {
             ok = static_cast<bool>(ls >> result.maxInstances);
+        } else if (key == "caption") {
+            ok = static_cast<bool>(ls >> std::quoted(result.caption));
         } // unknown keys are skipped (newer files stay readable)
         if (!ok) {
             setError(error, file.string() + ":" + std::to_string(lineNo) + ": invalid line: " + line);
@@ -341,6 +345,7 @@ const std::vector<std::string>& reverbPresetNames()
 // ------------------------------------------------------------------ playback
 
 struct AudioSystem::Impl {
+    AudioSystem::CaptionListener captionListener;
     enum ClipState { Loading, Decoded, Ready, Failed };
     struct Clip {
         std::atomic<int> state{Loading};
@@ -987,12 +992,21 @@ void AudioSystem::preload(const SoundDef& sound)
 
 AudioSystem::Handle AudioSystem::play(const SoundDef& sound, glm::vec3 position, float volume)
 {
+    if (!sound.caption.empty() && impl_->captionListener)
+        impl_->captionListener(sound.caption, &position, sound);
     return impl_->start(sound, &position, volume);
 }
 
 AudioSystem::Handle AudioSystem::play2D(const SoundDef& sound, float volume)
 {
+    if (!sound.caption.empty() && impl_->captionListener)
+        impl_->captionListener(sound.caption, nullptr, sound);
     return impl_->start(sound, nullptr, volume);
+}
+
+void AudioSystem::setCaptionListener(CaptionListener listener)
+{
+    impl_->captionListener = std::move(listener);
 }
 
 void AudioSystem::stop(Handle handle, float fadeSeconds)

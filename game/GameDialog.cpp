@@ -1,3 +1,4 @@
+#include "UiScale.h"
 #include "GameDialog.h"
 
 #include <engine/Quests.h>
@@ -78,7 +79,7 @@ void GameDialog::draw(engine::Ui2D& ui, int width, int height, int hover) const
     if (!node)
         return;
     const float W = static_cast<float>(width), H = static_cast<float>(height);
-    const float text = std::round(std::clamp(H * 0.024f, 13.0f, 28.0f));
+    const float text = uiSize(H, 0.024f, 13.0f, 28.0f);
     const float panelW = std::round(std::min(W - text * 2.0f, text * 46.0f));
     const float inner = panelW - text * 2.0f;
     const glm::vec4 frame(0.05f, 0.055f, 0.045f, 0.88f), bone(0.88f, 0.84f, 0.74f, 1.0f), amber(0.93f, 0.62f, 0.2f, 1.0f),

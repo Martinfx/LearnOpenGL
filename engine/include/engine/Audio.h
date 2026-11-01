@@ -30,6 +30,7 @@ struct SoundDef {
     bool spatial = true;          // 3D positioned; false = plays in the listener's head (UI, music)
     AudioGroup group = AudioGroup::Sfx;
     int maxInstances = 8;         // more plays at once steal the oldest one
+    std::string caption;          // subtitle shown when it plays ("@key" = localized); empty = none
 };
 
 // Volume of an ambient zone (a box) heard at `p`: 1 inside, falling smoothly to 0
@@ -96,6 +97,10 @@ public:
 
     Handle play(const SoundDef& sound, glm::vec3 position, float volume = 1.0f);
     Handle play2D(const SoundDef& sound, float volume = 1.0f);
+    // Subtitles: called on every play of a sound that has a caption, with its text
+    // (unlocalized) and position (null for 2D sounds). Main thread.
+    using CaptionListener = std::function<void(const std::string& caption, const glm::vec3* position, const SoundDef& sound)>;
+    void setCaptionListener(CaptionListener listener);
     void stop(Handle handle, float fadeSeconds = 0.0f);
     void stopAll();
     bool playing(Handle handle) const;

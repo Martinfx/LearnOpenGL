@@ -1,3 +1,4 @@
+#include "UiScale.h"
 #include "MapHud.h"
 
 #include <algorithm>
@@ -141,7 +142,7 @@ void MapHud::drawFullMap(engine::Ui2D& ui, int width, int height, glm::vec3 play
     for (float g = std::ceil(min_.y / 50.0f) * 50.0f; g < min_.y + size_; g += 50.0f)
         ui.rect({pos.x, pos.y + (g - min_.y) * metre}, {side, 1.0f}, {0.0f, 0.0f, 0.0f, 0.25f});
     auto toScreen = [&](glm::vec2 world) { return pos + (world - min_) * metre; };
-    const float textSize = std::round(std::clamp(H * 0.022f, 12.0f, 26.0f));
+    const float textSize = uiSize(H, 0.022f, 12.0f, 26.0f);
     // Labels go right of the dot; if that overlaps an earlier label try left, below, above.
     std::vector<glm::vec4> placed; // x, y, w, h
     for (const Marker& m : markers_) {

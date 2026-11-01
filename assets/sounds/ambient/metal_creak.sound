@@ -13,3 +13,4 @@ stream 0
 spatial 1
 group ambient
 max_instances 3
+caption "@caption.metal_creak"

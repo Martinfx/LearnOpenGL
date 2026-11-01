@@ -1,3 +1,4 @@
+#include "UiScale.h"
 #include "GameArtifacts.h"
 #include "GameAudio.h"
 
@@ -195,7 +196,7 @@ void GameArtifacts::drawHud(engine::Ui2D& ui, int width, int height) const
     // A row above the detector / radiation box: artifact LED and signal.
     const float H = static_cast<float>(height);
     const float margin = std::round(H * 0.025f);
-    const float text = std::round(std::clamp(H * 0.022f, 12.0f, 26.0f));
+    const float text = uiSize(H, 0.022f, 12.0f, 26.0f);
     const float barW = std::round(text * 7.0f), barH = std::max(4.0f, std::round(text * 0.35f));
     const glm::vec2 pos(margin, H - margin - text * 4.2f - text * 1.9f);
     const glm::vec2 size(barW + text * 4.6f, text * 1.7f);

@@ -1,3 +1,4 @@
+#include "UiScale.h"
 #include "GameHud.h"
 
 #include <algorithm>
@@ -11,6 +12,23 @@ void GameHud::update(float dt, float health)
     lastHealth_ = health;
     hurt_ = std::max(0.0f, hurt_ - dt * 1.5f);
     messageTime_ = std::max(0.0f, messageTime_ - dt);
+    for (Caption& c : captions_)
+        c.time -= dt;
+    std::erase_if(captions_, [](const Caption& c) { return c.time <= 0.0f; });
+}
+
+void GameHud::caption(const std::string& text, float seconds)
+{
+    if (text.empty())
+        return;
+    for (Caption& c : captions_)
+        if (c.text == text) {
+            c.time = std::max(c.time, seconds);
+            return;
+        }
+    if (captions_.size() >= 4)
+        captions_.erase(captions_.begin());
+    captions_.push_back({text, seconds});
 }
 
 void GameHud::notify(const std::string& text)
@@ -37,13 +55,26 @@ void GameHud::draw(engine::Ui2D& ui, int width, int height, const HudState& s) c
     }
 
     const float margin = std::round(H * 0.025f);
-    const float text = std::round(std::clamp(H * 0.022f, 12.0f, 26.0f));
+    const float text = uiSize(H, 0.022f, 12.0f, 26.0f);
     if (messageTime_ > 0.0f) { // fades out in its last half second
         const float a = std::min(1.0f, messageTime_ * 2.0f);
         const float tw = ui.textWidth(message_, text, true);
         const glm::vec2 p(std::round((W - tw) * 0.5f), std::round(H * 0.12f));
         ui.rect(p - glm::vec2(text * 0.8f, text * 0.4f), glm::vec2(tw + text * 1.6f, text * 1.8f), {0.06f, 0.065f, 0.05f, 0.75f * a});
         ui.text(message_, p, text, {0.93f, 0.62f, 0.2f, a}, true);
+    }
+    // Subtitles: newest at the bottom, above the HUD panels, each on a dark plate.
+    if (!captions_.empty()) {
+        const float size = std::round(text * 1.05f), lineH = std::round(size * 1.5f);
+        float y = H - margin - text * 4.2f - text * 1.2f - lineH * static_cast<float>(captions_.size());
+        for (const Caption& c : captions_) {
+            const float a = std::min(1.0f, c.time * 2.0f);
+            const float tw = ui.textWidth(c.text, size);
+            const glm::vec2 p(std::round((W - tw) * 0.5f), std::round(y));
+            ui.rect(p - glm::vec2(size * 0.5f, size * 0.2f), glm::vec2(tw + size, size * 1.35f), {0.0f, 0.0f, 0.0f, 0.6f * a});
+            ui.text(c.text, p, size, {0.95f, 0.93f, 0.86f, a});
+            y += lineH;
+        }
     }
     const glm::vec4 frame(0.06f, 0.065f, 0.05f, 0.75f), bone(0.86f, 0.82f, 0.72f, 1.0f), dim(0.55f, 0.55f, 0.5f, 1.0f);
     const float panelW = std::round(text * 12.0f), panelH = std::round(text * 4.2f);

@@ -1,3 +1,4 @@
+#include "UiScale.h"
 #include "GameMenu.h"
 #include <engine/Vfs.h>
 #include <engine/Localization.h>
@@ -71,6 +72,9 @@ const std::vector<SettingInfo>& settingInfos()
         {"snd_ambient", "setting.snd_ambient", 2, {}},
         {"snd_music", "setting.snd_music", 2, {}},
         {"language", "setting.language", 3, {}},
+        {"cl_subtitles", "setting.cl_subtitles", 3, {}},
+        {"ui_scale", "setting.ui_scale", 3, {}},
+        {"cl_viewbob", "setting.cl_viewbob", 3, {}},
     };
     return infos;
 }
@@ -298,7 +302,7 @@ void GameMenu::draw(engine::Ui2D& ui, int width, int height, double time)
     default: break;
     }
     // Version in the corner of every menu (bug reports).
-    const float small = std::round(std::clamp(h * 0.018f, 11.0f, 18.0f));
+    const float small = uiSize(h, 0.018f, 11.0f, 18.0f);
     const std::string version = engine::trf("menu.version", std::string(engine::engineVersion()));
     ui.text(version, {w - ui.textWidth(version, small) - small, h - small * 1.8f}, small, kDim);
     pressed_ = released_ = false;
@@ -320,9 +324,9 @@ void GameMenu::drawMain(engine::Ui2D& ui, float w, float h, double time)
     const float flicker = std::fmod(time, 7.0) < 0.12 ? 0.55f : 1.0f;
     ui.text(title_, {x, h * 0.16f}, titleSize, kBone * glm::vec4(flicker, flicker, flicker, 1.0f), true);
     if (!subtitle_.empty())
-        ui.text(subtitle_, {x, h * 0.16f + titleSize * 1.15f}, std::round(std::clamp(h * 0.026f, 13.0f, 28.0f)), kAmber);
+        ui.text(subtitle_, {x, h * 0.16f + titleSize * 1.15f}, uiSize(h, 0.026f, 13.0f, 28.0f), kAmber);
 
-    const float bh = std::round(std::clamp(h * 0.06f, 34.0f, 64.0f));
+    const float bh = uiSize(h, 0.06f, 34.0f, 64.0f);
     const glm::vec2 size(panelW - x, bh);
     float y = h * 0.42f;
     if (started_ && button(ui, {x - bh * 0.45f, y}, size, "Pokračovat"))
@@ -353,7 +357,7 @@ void GameMenu::drawMain(engine::Ui2D& ui, float w, float h, double time)
 void GameMenu::drawPause(engine::Ui2D& ui, float w, float h)
 {
     ui.rect({0, 0}, {w, h}, kShade);
-    const float bh = std::round(std::clamp(h * 0.055f, 32.0f, 58.0f));
+    const float bh = uiSize(h, 0.055f, 32.0f, 58.0f);
     const glm::vec2 panel(std::max(w * 0.26f, 340.0f), bh * 9.8f);
     const glm::vec2 pos = glm::round((glm::vec2(w, h) - panel) * 0.5f);
     ui.rect(pos, panel, kPanel);
@@ -388,7 +392,7 @@ void GameMenu::drawPause(engine::Ui2D& ui, float w, float h)
 void GameMenu::drawSettings(engine::Ui2D& ui, float w, float h)
 {
     ui.rect({0, 0}, {w, h}, kShade);
-    const float row = std::round(std::clamp(h * 0.055f, 30.0f, 56.0f));
+    const float row = uiSize(h, 0.055f, 30.0f, 56.0f);
     const float text = std::round(row * 0.45f);
     const glm::vec2 panel(std::min(w - row, std::max(w * 0.5f, 640.0f)), std::min(h - row, row * 13.5f));
     const glm::vec2 pos = glm::round((glm::vec2(w, h) - panel) * 0.5f);
@@ -544,7 +548,7 @@ void GameMenu::drawSettings(engine::Ui2D& ui, float w, float h)
 void GameMenu::drawCredits(engine::Ui2D& ui, float w, float h)
 {
     ui.rect({0, 0}, {w, h}, {0.03f, 0.03f, 0.025f, 0.94f});
-    const float line = std::round(std::clamp(h * 0.024f, 13.0f, 24.0f));
+    const float line = uiSize(h, 0.024f, 13.0f, 24.0f);
     const float x = std::round(w * 0.08f);
     const float top = line * 6.0f, bottom = h - line * 4.5f;
     ui.text(engine::tr("menu.credits_title"), {x, line * 1.5f}, std::round(line * 1.8f), kBone, true);
@@ -599,7 +603,7 @@ void GameMenu::drawDeath(engine::Ui2D& ui, float w, float h, double time)
     ui.text(title, {std::round((w - ui.textWidth(title, big, true)) * 0.5f), h * 0.3f}, big, glm::vec4(0.85f, 0.2f, 0.15f, t), true);
     if (t < 1.0f)
         return;
-    const float bh = std::round(std::clamp(h * 0.055f, 32.0f, 58.0f));
+    const float bh = uiSize(h, 0.055f, 32.0f, 58.0f);
     const glm::vec2 size(std::max(w * 0.22f, 300.0f), bh);
     const float x = std::round((w - size.x) * 0.5f);
     float y = h * 0.3f + big * 2.0f;
@@ -627,7 +631,7 @@ void GameMenu::drawDeath(engine::Ui2D& ui, float w, float h, double time)
 void GameMenu::drawLevels(engine::Ui2D& ui, float w, float h)
 {
     ui.rect({0, 0}, {w, h}, kShade);
-    const float row = std::round(std::clamp(h * 0.07f, 40.0f, 72.0f));
+    const float row = uiSize(h, 0.07f, 40.0f, 72.0f);
     const float text = std::round(row * 0.38f);
     const glm::vec2 panel(std::min(w - row, std::max(w * 0.5f, 640.0f)), std::min(h - row, row * (static_cast<float>(levels_.size()) + 2.8f)));
     const glm::vec2 pos = glm::round((glm::vec2(w, h) - panel) * 0.5f);
@@ -661,7 +665,7 @@ void GameMenu::drawLevels(engine::Ui2D& ui, float w, float h)
 void GameMenu::drawSaves(engine::Ui2D& ui, float w, float h, bool saving)
 {
     ui.rect({0, 0}, {w, h}, kShade);
-    const float row = std::round(std::clamp(h * 0.07f, 40.0f, 72.0f));
+    const float row = uiSize(h, 0.07f, 40.0f, 72.0f);
     const float text = std::round(row * 0.38f);
     // Saving: the three numbered slots (filled or empty). Loading: every save, newest first.
     std::vector<SaveInfo> rows;

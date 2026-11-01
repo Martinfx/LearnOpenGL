@@ -253,7 +253,8 @@ Hotovo, když: zóna 1 × 1 km jde projít bez načítací obrazovky a paměť d
   `@klíč` v datech), cvar `language` a volba v Nastavení, přeložené menu, nastavení a ukládání (cs + en).
   Editor Assets > Texts and translations, `asset_check` hlásí nepřeložené, test hlídá klíče z kódu.
   Zbývá převést další texty HUD, obchodu, dialogů a úkolů na klíče (infrastruktura je hotová).*
-- [ ] Přístupnost: titulky, FOV, vypnutí houpání kamery a motion bluru, velikost textu.
+- [x] Přístupnost: titulky, FOV, vypnutí houpání kamery a motion bluru, velikost textu.
+  *Hotovo (2026-11-01): `cl_viewbob`, `ui_scale` (HUD, dialogy, obchod, mapa, menu), titulky zvuků (`caption` v .sound, editor, `cl_subtitles`, 20 zvuků otitulkováno), vše v Nastavení > Ostatní.*
 - [ ] Souhrn licencí třetích stran (OpenAL Soft LGPL: dynamické linkování a text licence).
 - [ ] Credits a licence všech assetů ve hře.
 

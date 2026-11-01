@@ -338,6 +338,16 @@ Explicitní `self:play(klip)` graf dočasně přebije, `self:use_graph()` vrát�
   filtr „Only untranslated“, přidání klíče a jazyka. `asset_check` hlásí nepřeložené klíče jako varování
   a test hlídá, že každý klíč použitý v kódu hry je v `cs.strings`.
 
+## Přístupnost
+
+V Nastavení hry (Grafika a Ostatní):
+- **Zorné pole** (`fov`) a **rozmazání pohybem** (`r_motionblur`, výchozí vypnuto).
+- **Houpání zbraně při chůzi** (`cl_viewbob` 0–1, 0 = zbraň v klidu, proti nevolnosti z pohybu).
+- **Velikost textu** (`ui_scale` 0,75–1,75): HUD, dialogy, obchod, mapa a menu.
+- **Titulky** (`cl_subtitles`): zvuky s titulkem ukážou dole uprostřed popis („[vzdálená střelba]“), jen když
+  jsou v doslechu. Titulek je pole `caption` v `.sound` (editor zvuku: Caption), obvykle `@caption.<klíč>`
+  z `assets/text/*.strings`; test hlídá, že klíče existují.
+
 ## Demo a benchmark
 
 - **Záznam:** `fps_game level.level --record trasa.demo` (v editoru Game > Demo > Record demo). Ukládá se, co

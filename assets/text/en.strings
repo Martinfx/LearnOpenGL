@@ -44,6 +44,9 @@ save.saved = Saved: {0}
 save.slot = Slot {0}
 
 setting.cl_showfps = Show FPS
+setting.cl_subtitles = Subtitles
+setting.ui_scale = Text size
+setting.cl_viewbob = Weapon bob when walking
 setting.fov = Field of view (FOV)
 setting.fps_max = Frame limit (0 = none)
 setting.in_aim = Aim
@@ -87,3 +90,23 @@ setting.snd_music = Music
 setting.snd_sfx = Effects
 setting.snd_volume = Master volume
 setting.vsync = Vertical sync
+
+# Sound subtitles (cl_subtitles), used by the caption field of .sound files
+caption.alarm = [alarm siren]
+caption.anomaly_acid = [acid hisses]
+caption.anomaly_crusher = [anomaly crushes]
+caption.anomaly_discharge = [anomaly discharges]
+caption.anomaly_rift = [anomaly rift tears]
+caption.anomaly_vent = [anomaly vents fire]
+caption.artifact = [detector: artifact nearby]
+caption.crow = [crow caws]
+caption.dog_bark = [a dog barks in the distance]
+caption.dog_whine = [a dog whines in the distance]
+caption.gunfire_far = [distant gunfire]
+caption.metal_creak = [metal creaks]
+caption.radio_beacon = [radio beacon beeping]
+caption.radio_music = [a waltz plays on the radio]
+caption.ricochet = [bullet ricochet]
+caption.storm_siren = [siren - storm approaching]
+caption.thunder = [thunder]
+caption.thunder_far = [distant thunder]

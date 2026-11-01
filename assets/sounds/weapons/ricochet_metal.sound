@@ -13,3 +13,4 @@ stream 0
 spatial 1
 group sfx
 max_instances 8
+caption "@caption.ricochet"

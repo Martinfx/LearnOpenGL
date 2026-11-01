@@ -44,6 +44,9 @@ save.saved = Uloženo: {0}
 save.slot = Pozice {0}
 
 setting.cl_showfps = Zobrazit FPS
+setting.cl_subtitles = Titulky
+setting.ui_scale = Velikost textu
+setting.cl_viewbob = Houpání zbraně při chůzi
 setting.fov = Zorné pole (FOV)
 setting.fps_max = Omezení snímků (0 = bez)
 setting.in_aim = Míření
@@ -87,3 +90,23 @@ setting.snd_music = Hudba
 setting.snd_sfx = Efekty
 setting.snd_volume = Celková hlasitost
 setting.vsync = Vertikální synchronizace
+
+# Titulky zvuků (cl_subtitles), používá pole caption v .sound
+caption.alarm = [siréna poplachu]
+caption.anomaly_acid = [syčení kyseliny]
+caption.anomaly_crusher = [anomálie drtí]
+caption.anomaly_discharge = [výboj anomálie]
+caption.anomaly_rift = [trhlina anomálie]
+caption.anomaly_vent = [anomálie vychrlí plamen]
+caption.artifact = [detektor: artefakt poblíž]
+caption.crow = [krákání vrány]
+caption.dog_bark = [v dálce štěká pes]
+caption.dog_whine = [v dálce kňučí pes]
+caption.gunfire_far = [vzdálená střelba]
+caption.metal_creak = [skřípění kovu]
+caption.radio_beacon = [pípání rádiového majáku]
+caption.radio_music = [z rádia hraje valčík]
+caption.ricochet = [odraz kulky]
+caption.storm_siren = [siréna - blíží se bouře]
+caption.thunder = [hrom]
+caption.thunder_far = [vzdálené hřmění]

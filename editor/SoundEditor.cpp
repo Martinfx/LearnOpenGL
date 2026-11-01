@@ -525,6 +525,11 @@ SoundEditor::SoundEditor(QWidget* parent) : QWidget(parent)
     maxInstances_->setRange(1, 64);
     maxInstances_->setToolTip(tr("Plays at once; another play stops the oldest"));
     connect(maxInstances_, &QSpinBox::valueChanged, this, &SoundEditor::edited);
+    caption_ = new QLineEdit(this);
+    caption_->setPlaceholderText(tr("none"));
+    caption_->setToolTip(tr("Subtitle shown when this sound plays (players with subtitles on).\n"
+                            "@key takes the text from assets/text/<language>.strings, e.g. @caption.gunshot"));
+    connect(caption_, &QLineEdit::textEdited, this, &SoundEditor::edited);
     for (QCheckBox* c : {spatial_, loop_, stream_})
         connect(c, &QCheckBox::toggled, this, &SoundEditor::edited);
     connect(group_, &QComboBox::currentIndexChanged, this, &SoundEditor::edited);
@@ -550,6 +555,7 @@ SoundEditor::SoundEditor(QWidget* parent) : QWidget(parent)
     form->addRow(QString(), stream_);
     form->addRow(tr("Mixer group"), group_);
     form->addRow(tr("Max instances"), maxInstances_);
+    form->addRow(tr("Caption"), caption_);
     info_ = new QLabel(this);
     info_->setObjectName("dim");
     info_->setWordWrap(true);
@@ -723,6 +729,7 @@ void SoundEditor::showSound()
     stream_->setChecked(sound_.stream);
     group_->setCurrentIndex(static_cast<int>(sound_.group));
     maxInstances_->setValue(sound_.maxInstances);
+    caption_->setText(QString::fromStdString(sound_.caption));
     for (QWidget* w : std::initializer_list<QWidget*>{minDistance_, maxDistance_, rolloff_})
         w->setEnabled(sound_.spatial);
     info_->setText(sound_.files.empty() ? tr("No variations yet: add .wav / .ogg files.")
@@ -811,6 +818,7 @@ void SoundEditor::edited()
     sound_.stream = stream_->isChecked();
     sound_.group = static_cast<engine::AudioGroup>(group_->currentIndex());
     sound_.maxInstances = maxInstances_->value();
+    sound_.caption = caption_->text().trimmed().toStdString();
     for (QWidget* w : std::initializer_list<QWidget*>{minDistance_, maxDistance_, rolloff_})
         w->setEnabled(sound_.spatial);
     attenuation_->setSound(sound_);

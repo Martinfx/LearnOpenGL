@@ -1,3 +1,4 @@
+#include "UiScale.h"
 #include "GameAnomalies.h"
 #include "GameAudio.h"
 
@@ -431,7 +432,7 @@ void GameAnomalies::drawHud(engine::Ui2D& ui, int width, int height) const
     (void)width;
     const float H = static_cast<float>(height);
     const float margin = std::round(H * 0.025f);
-    const float text = std::round(std::clamp(H * 0.022f, 12.0f, 26.0f));
+    const float text = uiSize(H, 0.022f, 12.0f, 26.0f);
     const float barW = std::round(text * 7.0f), barH = std::max(4.0f, std::round(text * 0.35f));
     const glm::vec4 frame(0.06f, 0.065f, 0.05f, 0.75f), bone(0.86f, 0.82f, 0.72f, 1.0f), dim(0.55f, 0.55f, 0.5f, 1.0f);
     glm::vec2 pos(margin, H - margin - text * 4.2f);

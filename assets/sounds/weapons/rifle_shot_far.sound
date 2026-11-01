@@ -10,3 +10,4 @@ stream 0
 spatial 1
 group sfx
 max_instances 6
+caption "@caption.gunfire_far"

@@ -10,3 +10,4 @@ stream 1
 spatial 0
 group sfx
 max_instances 1
+caption "@caption.storm_siren"
