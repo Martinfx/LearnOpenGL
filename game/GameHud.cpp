@@ -51,6 +51,20 @@ void GameHud::draw(engine::Ui2D& ui, int width, int height, const HudState& s) c
     ui.rect(pos, {panelW, panelH}, frame);
     const float x = pos.x + text * 0.6f, innerW = panelW - text * 1.2f;
 
+    // Flashlight battery: a thin strip above the panel while the light is on or recharging.
+    if (s.battery >= 0.0f && (s.flashlightOn || s.battery < 0.999f)) {
+        const float h = std::round(text * 1.3f);
+        const glm::vec2 strip(pos.x, pos.y - h - text * 0.3f);
+        ui.rect(strip, {panelW, h}, frame);
+        const float small = std::round(text * 0.75f);
+        ui.text("BATERKA", {x, strip.y + (h - small) * 0.5f}, small, s.flashlightOn ? bone : dim, true);
+        const float labelW = ui.textWidth("BATERKA", small, true) + text * 0.6f;
+        const glm::vec2 bar(x + labelW, strip.y + h * 0.5f - 2.5f);
+        const float barW = innerW - labelW;
+        const float f = std::clamp(s.battery, 0.0f, 1.0f);
+        ui.rect(bar, {barW, 5.0f}, {0.15f, 0.15f, 0.13f, 0.9f});
+        ui.rect(bar, {barW * f, 5.0f}, f > 0.15f ? glm::vec4(0.93f, 0.82f, 0.45f, 0.95f) : glm::vec4(0.85f, 0.3f, 0.15f, 0.95f));
+    }
     // Health: green-grey bar turning red when low, the number on the right.
     {
         const float y = pos.y + text * 0.5f;

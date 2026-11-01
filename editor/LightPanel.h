@@ -34,6 +34,7 @@ private:
     QDoubleSpinBox* outer_ = nullptr;
     QDoubleSpinBox* pitch_ = nullptr;
     QCheckBox* shadows_ = nullptr;
+    QCheckBox* cookie_ = nullptr;
     QComboBox* flicker_ = nullptr;
     QDoubleSpinBox* flickerSpeed_ = nullptr;
     QCheckBox* enabled_ = nullptr;

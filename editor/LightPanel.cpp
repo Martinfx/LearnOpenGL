@@ -31,6 +31,8 @@ LightPanel::LightPanel(QWidget* parent) : QWidget(parent)
     pitch_ = spin(-90.0, 90.0, 5.0, QStringLiteral("°"), tr("Spot: tilt of the axis, -90 = straight down; the heading is the entity's Yaw"));
     shadows_ = new QCheckBox(tr("Casts shadows"), this);
     shadows_->setToolTip(tr("The nearest shadow-casting lights in view get shadows (a spot light costs one shadow map, a point light six)"));
+    cookie_ = new QCheckBox(tr("Reflector pattern (flashlight)"), this);
+    cookie_->setToolTip(tr("Spot: bright centre with rings like a flashlight reflector instead of an even cone"));
     flicker_ = new QComboBox(this);
     flicker_->addItem(tr("Steady"));
     flicker_->addItem(tr("Fire"));
@@ -47,6 +49,7 @@ LightPanel::LightPanel(QWidget* parent) : QWidget(parent)
     form_->addRow(tr("Outer angle"), outer_);
     form_->addRow(tr("Pitch"), pitch_);
     form_->addRow(QString(), shadows_);
+    form_->addRow(QString(), cookie_);
     form_->addRow(tr("Flicker"), flicker_);
     form_->addRow(tr("Flicker speed"), flickerSpeed_);
     form_->addRow(QString(), enabled_);
@@ -54,7 +57,7 @@ LightPanel::LightPanel(QWidget* parent) : QWidget(parent)
         connect(s, &QDoubleSpinBox::valueChanged, this, &LightPanel::apply);
     for (QComboBox* c : {type_, flicker_})
         connect(c, &QComboBox::currentIndexChanged, this, &LightPanel::apply);
-    for (QCheckBox* c : {shadows_, enabled_})
+    for (QCheckBox* c : {shadows_, cookie_, enabled_})
         connect(c, &QCheckBox::toggled, this, &LightPanel::apply);
     setEntity(nullptr);
 }
@@ -77,6 +80,7 @@ void LightPanel::refresh()
     outer_->setValue(s.outerAngle);
     pitch_->setValue(s.pitch);
     shadows_->setChecked(s.castShadows);
+    cookie_->setChecked(s.cookie);
     flicker_->setCurrentIndex(static_cast<int>(s.flicker));
     flickerSpeed_->setValue(s.flickerSpeed);
     flickerSpeed_->setEnabled(s.flicker != engine::LightFlicker::None);
@@ -85,6 +89,7 @@ void LightPanel::refresh()
     form_->setRowVisible(inner_, spot);
     form_->setRowVisible(outer_, spot);
     form_->setRowVisible(pitch_, spot);
+    form_->setRowVisible(cookie_, spot);
     updating_ = false;
 }
 
@@ -100,6 +105,7 @@ void LightPanel::apply()
     s.innerAngle = std::min(static_cast<float>(inner_->value()), s.outerAngle);
     s.pitch = static_cast<float>(pitch_->value());
     s.castShadows = shadows_->isChecked();
+    s.cookie = cookie_->isChecked();
     s.flicker = static_cast<engine::LightFlicker>(flicker_->currentIndex());
     s.flickerSpeed = static_cast<float>(flickerSpeed_->value());
     s.enabled = enabled_->isChecked();

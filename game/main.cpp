@@ -23,6 +23,7 @@
 #include "GameHud.h"
 #include "GameMenu.h"
 #include "GameSave.h"
+#include "Flashlight.h"
 #include "KeyNames.h"
 #include "MapHud.h"
 #include <engine/Scripting.h>
@@ -167,6 +168,7 @@ constexpr Binding kBindings[] = {
     {"in_reload", "R", "Přebití", static_cast<int>(engine::Action::Reload)},
     {"in_bolt", "G", "Hodit šroub", -1},
     {"in_map", "M", "Mapa", -1},
+    {"in_flashlight", "F", "Baterka", -1},
     {"in_quicksave", "F5", "Rychlé uložení", -1},
     {"in_quickload", "F9", "Rychlé načtení", -1},
 };
@@ -649,6 +651,10 @@ int main(int argc, char** argv)
     GameAnomalies anomalies;
     anomalies.init(std::filesystem::path(argv[0]).parent_path() / "assets", audio);
     anomalies.startLevel(scene);
+    // Flashlight (F), settings from the level's player.
+    Flashlight flashlight;
+    flashlight.reset(scene.player);
+    bool flashlightHeld = false;
     bool boltHeld = false;
     bool wasReloading = false;
     if (const int errors = scripts.start())
@@ -785,6 +791,15 @@ int main(int argc, char** argv)
             exitRequest = {LevelExit::Change, file};
             return engine::ConsoleResult{true, "changing to " + file.filename().string()};
         });
+        cvars.addCommand("flashlight", "flashlight [0|1]: switch the flashlight", [&](const std::vector<std::string>& a) {
+            if (!scene.player.flashlight)
+                return engine::ConsoleResult{false, "no flashlight in this level"};
+            if (a.empty())
+                flashlight.toggle();
+            else
+                flashlight.setOn(a[0] != "0");
+            return engine::ConsoleResult{true, flashlight.on() ? "flashlight on" : "flashlight off"};
+        });
         cvars.addCommand("give", "give health|ammo|all", [&](const std::vector<std::string>& a) {
             const std::string what = a.empty() ? "all" : a[0];
             if (what == "health" || what == "all")
@@ -872,6 +887,8 @@ int main(int argc, char** argv)
         for (const engine::Weapon& w : weapons)
             save.ammo.push_back(w.ammo());
         save.kills = kills;
+        save.flashlightOn = flashlight.on();
+        save.flashlightCharge = flashlight.charge();
         save.entities = scripts.saveEntities();
         return save;
     };
@@ -896,6 +913,8 @@ int main(int argc, char** argv)
         camera.pitchDegrees = loadFrom->pitch;
         scripts.setPlayerHealth(loadFrom->health);
         anomalies.setDose(loadFrom->dose);
+        flashlight.setCharge(loadFrom->flashlightCharge);
+        flashlight.setOn(loadFrom->flashlightOn);
         for (std::size_t w = 0; w < weapons.size() && w < loadFrom->ammo.size(); ++w)
             weapons[w].setAmmo(loadFrom->ammo[w]);
         if (loadFrom->weapon < weapons.size()) {
@@ -1030,6 +1049,12 @@ int main(int argc, char** argv)
         if (mKey && !mapHeld)
             mapOpen = !mapOpen;
         mapHeld = mKey;
+        {
+            const bool fKey = captured && !console.open() && keyDown(window, boundKey("in_flashlight"));
+            if (fKey && !flashlightHeld && !flashlight.toggle() && scene.player.flashlight)
+                hud.notify("Baterka je vybitá");
+            flashlightHeld = fKey;
+        }
 
         // Look is applied every frame for responsiveness; movement runs at a fixed rate.
         if (cvInvert.boolean())
@@ -1247,6 +1272,9 @@ int main(int argc, char** argv)
         audio.update(static_cast<float>(frameTime), scene, camera.position, camera.forward());
         effects.update(static_cast<float>(simTime), scene, physics, camera.position, audio);
         anomalies.update(static_cast<float>(simTime), physics, camera.position);
+        flashlight.update(static_cast<float>(simTime), now, camera);
+        if (flashlight.justEmptied())
+            hud.notify("Baterka je vybitá");
 
         int width = 0, height = 0;
         glfwGetFramebufferSize(window, &width, &height);
@@ -1270,6 +1298,8 @@ int main(int argc, char** argv)
             engine::OverlayPass effectsOverlay; // muzzle flashes, drawn with the weapon below
             effects.fill(view, view.view, effectsOverlay);
             anomalies.fill(view, view.view);
+            flashlight.fill(view);
+            addCharacterFlashlights(scene, view);
             // Debug lines from code and scripts (DebugDraw), with their texts drawn in the HUD below.
             engine::DebugGeometry debugLines;
             std::vector<engine::DebugDraw::Text> debugTexts;
@@ -1329,6 +1359,8 @@ int main(int argc, char** argv)
                 hs.magazine = w.settings.magazineSize;
                 hs.melee = w.settings.melee();
                 hs.reload = w.reloading() ? w.reloadProgress() : -1.0f;
+                hs.battery = flashlight.hasBattery() ? flashlight.charge() : -1.0f;
+                hs.flashlightOn = flashlight.on();
                 hud.draw(ui, width, height, hs);
             }
             if (cvShowFps.boolean()) {
@@ -1441,7 +1473,7 @@ int main(int argc, char** argv)
         navBuilder.join();
     map.release(); // GL objects go while the context exists
     // Console bindings that point at this level's objects go with it.
-    for (const char* command : {"quit", "pos", "config_save", "give", "teleport", "map", "changelevel", "save", "load"})
+    for (const char* command : {"quit", "pos", "config_save", "give", "teleport", "map", "changelevel", "save", "load", "flashlight"})
         cvars.removeCommand(command);
     cvars.clearCallbacks();
     engine::DebugDraw::global().clear();

@@ -270,6 +270,16 @@ struct PlayerSettings {
     // Radiation (anomalies of kind "radiation"): the dose drains health and wears off slowly.
     float radiationDamage = 1.0f; // hit points per second per 100 rad of dose
     float radiationDecay = 0.5f;  // rad per second the dose drops by itself
+    // Flashlight (key F): a spot light at the eye that follows the view with a small lag.
+    bool flashlight = true;              // the player has one in this level
+    bool flashlightShadows = true;
+    glm::vec3 flashlightColor{1.0f, 0.93f, 0.82f}; // sRGB, slightly warm
+    float flashlightIntensity = 70.0f;
+    float flashlightRange = 28.0f;       // m
+    float flashlightAngle = 26.0f;       // degrees from the axis to the edge of the beam
+    float flashlightLag = 0.07f;         // seconds the beam trails behind the view
+    float flashlightBattery = 0.0f;      // seconds of light on a full battery, 0 = endless
+    float flashlightRecharge = 90.0f;    // seconds to recharge an empty battery while off
 };
 
 // Look of the level: sun, sky, fog, ambient light and post-processing.

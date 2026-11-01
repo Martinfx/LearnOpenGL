@@ -95,6 +95,7 @@ LightSettings lightSettings(const Entity& e)
     s.innerAngle = std::clamp(propFloat(e, "inner", s.innerAngle), 0.0f, s.outerAngle);
     s.pitch = std::clamp(propFloat(e, "pitch", s.pitch), -90.0f, 90.0f);
     s.castShadows = prop(e, "shadows") == "1";
+    s.cookie = prop(e, "cookie") == "flashlight";
     s.flicker = lightFlickerFromName(prop(e, "flicker"));
     s.flickerSpeed = std::clamp(propFloat(e, "flicker_speed", s.flickerSpeed), 0.05f, 10.0f);
     s.enabled = prop(e, "enabled") != "0";
@@ -117,6 +118,7 @@ void setLightSettings(Entity& e, const LightSettings& s)
     set("outer", s.outerAngle == d.outerAngle, number(s.outerAngle));
     set("pitch", s.pitch == d.pitch, number(s.pitch));
     set("shadows", s.castShadows == d.castShadows, s.castShadows ? "1" : "0");
+    set("cookie", s.cookie == d.cookie, s.cookie ? "flashlight" : "");
     set("flicker", s.flicker == d.flicker, lightFlickerName(s.flicker));
     set("flicker_speed", s.flickerSpeed == d.flickerSpeed, number(s.flickerSpeed));
     set("enabled", s.enabled == d.enabled, s.enabled ? "1" : "0");
@@ -175,6 +177,7 @@ bool evaluateLight(const Entity& e, double time, LocalLight& out)
     out.innerAngle = s.innerAngle;
     out.outerAngle = s.outerAngle;
     out.castShadows = s.castShadows;
+    out.cookie = s.cookie;
     out.key = seed;
     return true;
 }

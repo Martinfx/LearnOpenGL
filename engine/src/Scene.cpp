@@ -197,6 +197,16 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
     if (pl.radiationDamage != PlayerSettings{}.radiationDamage || pl.radiationDecay != PlayerSettings{}.radiationDecay)
         out << "player_radiation " << pl.radiationDamage << ' ' << pl.radiationDecay << '\n';
     {
+        const PlayerSettings d;
+        if (pl.flashlight != d.flashlight || pl.flashlightShadows != d.flashlightShadows || pl.flashlightColor != d.flashlightColor ||
+            pl.flashlightIntensity != d.flashlightIntensity || pl.flashlightRange != d.flashlightRange ||
+            pl.flashlightAngle != d.flashlightAngle || pl.flashlightLag != d.flashlightLag ||
+            pl.flashlightBattery != d.flashlightBattery || pl.flashlightRecharge != d.flashlightRecharge)
+            out << "player_flashlight " << pl.flashlight << ' ' << pl.flashlightShadows << ' ' << pl.flashlightColor.r << ' '
+                << pl.flashlightColor.g << ' ' << pl.flashlightColor.b << ' ' << pl.flashlightIntensity << ' ' << pl.flashlightRange << ' '
+                << pl.flashlightAngle << ' ' << pl.flashlightLag << ' ' << pl.flashlightBattery << ' ' << pl.flashlightRecharge << '\n';
+    }
+    {
         auto rel = [&](const std::filesystem::path& p) {
             if (p.empty())
                 return std::string();
@@ -579,6 +589,11 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                                       >> pl.height >> pl.eyeHeight >> pl.stepHeight >> pl.maxSlopeDegrees >> pl.maxHealth);
         } else if (key == "player_radiation") {
             ok = static_cast<bool>(ls >> result.player.radiationDamage >> result.player.radiationDecay);
+        } else if (key == "player_flashlight") {
+            PlayerSettings& pl = result.player;
+            ok = static_cast<bool>(ls >> pl.flashlight >> pl.flashlightShadows >> pl.flashlightColor.r >> pl.flashlightColor.g >>
+                                   pl.flashlightColor.b >> pl.flashlightIntensity >> pl.flashlightRange >> pl.flashlightAngle >>
+                                   pl.flashlightLag >> pl.flashlightBattery >> pl.flashlightRecharge);
         } else if (key == "navmesh") {
             NavSettings& n = result.nav;
             int enabled = 1;

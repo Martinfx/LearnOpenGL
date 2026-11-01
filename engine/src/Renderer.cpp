@@ -1177,7 +1177,7 @@ struct GpuLight {
     glm::vec4 posRange;  // xyz, w: range
     glm::vec4 colorType; // rgb linear * intensity, w: 0 point, 1 spot
     glm::vec4 dirShadow; // xyz spot axis, w: first shadow layer (-1 = none)
-    glm::vec4 cone;      // x: cos outer, y: 1 / (cos inner - cos outer), z: shadow normal offset per m, w: 0
+    glm::vec4 cone;      // x: cos outer, y: 1 / (cos inner - cos outer), z: shadow normal offset per m, w: 1 = flashlight cookie
 };
 } // namespace
 
@@ -1345,7 +1345,8 @@ void Renderer::uploadLightClusters(const RenderView& view)
         g.dirShadow = glm::vec4(glm::normalize(l.direction), static_cast<float>(shadowLayer[i]));
         const float cosOuter = std::cos(glm::radians(l.outerAngle));
         const float cosInner = std::cos(glm::radians(std::min(l.innerAngle, l.outerAngle)));
-        g.cone = glm::vec4(cosOuter, 1.0f / std::max(cosInner - cosOuter, 1e-4f), shadowTexel[i], 0.0f);
+        g.cone = glm::vec4(cosOuter, 1.0f / std::max(cosInner - cosOuter, 1e-4f), shadowTexel[i],
+                           l.cookie && l.type == LightType::Spot ? 1.0f : 0.0f);
         lights.push_back(g);
     }
     if (lights.empty())

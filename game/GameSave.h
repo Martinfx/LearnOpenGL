@@ -24,6 +24,8 @@ struct SaveGame {
     std::size_t weapon = 0;
     std::vector<int> ammo;
     int kills = 0;
+    bool flashlightOn = false;
+    float flashlightCharge = 1.0f;
     std::vector<engine::ScriptSystem::EntityState> entities;
 
     bool write(const std::filesystem::path& file, std::string* error = nullptr) const;

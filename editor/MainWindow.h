@@ -261,6 +261,10 @@ private:
     QComboBox* animationCombo_ = nullptr;
     std::vector<engine::ScriptProperty> scriptProps_;
     std::vector<std::pair<QDoubleSpinBox*, float engine::PlayerSettings::*>> playerSpins_;
+    QCheckBox* flashlightCheck_ = nullptr;
+    QCheckBox* characterFlashlight_ = nullptr;  // entity property "flashlight"
+    QCheckBox* flashlightShadowsCheck_ = nullptr;
+    QPushButton* flashlightColor_ = nullptr;
     // Navigation (Level details): settings, build on the job system, viewport overlay.
     void buildNavMesh();
     void setNavOutOfDate();

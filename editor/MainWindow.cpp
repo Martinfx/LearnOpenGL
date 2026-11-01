@@ -969,6 +969,19 @@ void MainWindow::buildDocks()
     characterForm->addRow(tr("Model scale"), modelScaleSpin_);
     characterForm->addRow(tr("Model yaw"), modelYawSpin_);
     characterForm->addRow(tr("Animation"), animationCombo_);
+    characterFlashlight_ = new QCheckBox(tr("Carries a lit flashlight"), boxPanel_);
+    characterFlashlight_->setToolTip(tr("A spot light from the eyes along the facing while the character lives (property flashlight = 1)"));
+    characterForm->addRow(QString(), characterFlashlight_);
+    connect(characterFlashlight_, &QCheckBox::toggled, this, [this](bool on) {
+        engine::Entity* e = selectedEntity();
+        if (!e)
+            return;
+        if (on)
+            e->properties["flashlight"] = "1";
+        else
+            e->properties.erase("flashlight");
+        markDirty();
+    });
     connect(browseCharacter, &QPushButton::clicked, this, &MainWindow::browseCharacter);
     connect(clearCharacter, &QPushButton::clicked, this, [this] {
         if (auto* e = selectedEntity(); e && !e->modelPath.empty()) {
@@ -1321,6 +1334,12 @@ void MainWindow::buildDocks()
         {"Health", &engine::PlayerSettings::maxHealth, 1, 10000, 10, ""},
         {"Radiation damage", &engine::PlayerSettings::radiationDamage, 0, 100, 0.1, " HP/s per 100 rad"},
         {"Radiation decay", &engine::PlayerSettings::radiationDecay, 0, 100, 0.1, " rad/s"},
+        {"Flashlight intensity", &engine::PlayerSettings::flashlightIntensity, 0, 10000, 5, ""},
+        {"Flashlight range", &engine::PlayerSettings::flashlightRange, 1, 200, 1, " m"},
+        {"Flashlight beam", &engine::PlayerSettings::flashlightAngle, 2, 80, 1, " °"},
+        {"Flashlight lag", &engine::PlayerSettings::flashlightLag, 0, 1, 0.01, " s"},
+        {"Battery", &engine::PlayerSettings::flashlightBattery, 0, 36000, 10, " s (0 = endless)"},
+        {"Battery recharge", &engine::PlayerSettings::flashlightRecharge, 0, 36000, 10, " s"},
     };
     auto* playerTitle = new QLabel(tr("<b>Player</b>"), levelPanel);
     levelForm->addRow(playerTitle);
@@ -1341,6 +1360,34 @@ void MainWindow::buildDocks()
         });
         playerSpins_.emplace_back(spin, member);
     }
+    // Flashlight (key F in the game): on/off for the level, shadows, beam color.
+    flashlightCheck_ = new QCheckBox(tr("Player has a flashlight (F)"), levelPanel);
+    flashlightShadowsCheck_ = new QCheckBox(tr("Flashlight casts shadows"), levelPanel);
+    flashlightColor_ = new QPushButton(levelPanel);
+    levelForm->addRow(QString(), flashlightCheck_);
+    levelForm->addRow(QString(), flashlightShadowsCheck_);
+    levelForm->addRow(tr("Flashlight color"), flashlightColor_);
+    connect(flashlightCheck_, &QCheckBox::toggled, this, [this](bool on) {
+        if (scene_.player.flashlight != on) {
+            scene_.player.flashlight = on;
+            markDirty();
+        }
+    });
+    connect(flashlightShadowsCheck_, &QCheckBox::toggled, this, [this](bool on) {
+        if (scene_.player.flashlightShadows != on) {
+            scene_.player.flashlightShadows = on;
+            markDirty();
+        }
+    });
+    connect(flashlightColor_, &QPushButton::clicked, this, [this] {
+        glm::vec3& color = scene_.player.flashlightColor;
+        const QColor c = QColorDialog::getColor(QColor::fromRgbF(color.r, color.g, color.b), this, tr("Flashlight color"));
+        if (!c.isValid())
+            return;
+        color = {static_cast<float>(c.redF()), static_cast<float>(c.greenF()), static_cast<float>(c.blueF())};
+        flashlightColor_->setStyleSheet(colorStyle(color));
+        markDirty();
+    });
     // Player sounds: footsteps (per stride), landing after a fall, getting hurt.
     const char* playerSoundLabels[] = {"Footsteps", "Landing", "Hurt"};
     for (std::size_t i = 0; i < playerSounds_.size(); ++i) {
@@ -1996,6 +2043,12 @@ void MainWindow::refreshLevelProperties()
         spin->setValue(scene_.player.*member);
         spin->blockSignals(false);
     }
+    {
+        const QSignalBlocker b1(flashlightCheck_), b2(flashlightShadowsCheck_);
+        flashlightCheck_->setChecked(scene_.player.flashlight);
+        flashlightShadowsCheck_->setChecked(scene_.player.flashlightShadows);
+        flashlightColor_->setStyleSheet(colorStyle(scene_.player.flashlightColor));
+    }
     const std::filesystem::path* sounds[] = {&scene_.player.footstepSound, &scene_.player.landSound, &scene_.player.hurtSound};
     for (std::size_t i = 0; i < playerSounds_.size(); ++i)
         playerSounds_[i]->setPath(QString::fromStdU16String(sounds[i]->u16string()));
@@ -2421,6 +2474,15 @@ void MainWindow::refreshCharacter()
     }
     animationCombo_->setEnabled(animationCombo_->count() > 0);
     animationCombo_->blockSignals(false);
+    {
+        const QSignalBlocker block(characterFlashlight_);
+        bool lit = false;
+        if (e)
+            if (const auto it = e->properties.find("flashlight"); it != e->properties.end())
+                lit = it->second == "1";
+        characterFlashlight_->setChecked(lit);
+        characterFlashlight_->setEnabled(e != nullptr);
+    }
 }
 
 void MainWindow::duplicateBox()

@@ -68,7 +68,7 @@ struct LocalLight {
     vec4 posRange;   // xyz, w: range
     vec4 colorType;  // rgb linear * intensity, w: 0 point, 1 spot
     vec4 dirShadow;  // xyz spot axis, w: first shadow layer (-1 = none)
-    vec4 cone;       // x: cos outer, y: 1 / (cos inner - cos outer), z: shadow normal offset per m
+    vec4 cone;       // x: cos outer, y: 1 / (cos inner - cos outer), z: shadow normal offset per m, w: 1 = flashlight cookie
 };
 layout(std430, binding = 5) readonly buffer LocalLights { LocalLight uLights[]; };
 layout(std430, binding = 6) readonly buffer LightGrid {
@@ -197,6 +197,11 @@ vec3 localLights(vec3 worldPos, vec3 n, vec3 geomNormal, vec3 v, vec3 albedo, fl
             float cd = dot(-l, light.dirShadow.xyz);
             float cone = clamp((cd - light.cone.x) * light.cone.y, 0.0, 1.0);
             atten *= cone * cone;
+            if (light.cone.w > 0.5) {
+                // Flashlight reflector: hot centre, a darker ring, a faint bright rim (t = 1 at the edge).
+                float t = acos(clamp(cd, -1.0, 1.0)) / max(acos(light.cone.x), 1e-3);
+                atten *= 0.55 + 0.9 * exp(-t * t * 18.0) - 0.18 * exp(-pow((t - 0.42) * 9.0, 2.0)) + 0.12 * exp(-pow((t - 0.72) * 10.0, 2.0));
+            }
         }
         if (atten <= 0.0)
             continue;

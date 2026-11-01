@@ -71,6 +71,7 @@ bool SaveGame::write(const std::filesystem::path& file, std::string* error) cons
         body << ' ' << a;
     body << "\n";
     body << "kills " << kills << "\n";
+    body << "flashlight " << (flashlightOn ? 1 : 0) << ' ' << flashlightCharge << "\n";
     for (const auto& e : entities) {
         body << "entity " << engine::objectIdToString(e.id) << ' ' << (e.alive ? 1 : 0) << ' ' << e.health << ' ' << e.position.x
              << ' ' << e.position.y << ' ' << e.position.z << ' ' << e.yaw << "\n";
@@ -151,6 +152,10 @@ bool SaveGame::read(const std::filesystem::path& file, std::string* error)
                 ammo.push_back(a);
         } else if (key == "kills") {
             ls >> kills;
+        } else if (key == "flashlight") {
+            int on = 0;
+            ls >> on >> flashlightCharge;
+            flashlightOn = on != 0;
         } else if (key == "entity") {
             engine::ScriptSystem::EntityState e;
             std::string id;

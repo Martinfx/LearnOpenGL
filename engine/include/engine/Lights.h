@@ -32,6 +32,7 @@ struct LightSettings {
     float outerAngle = 40.0f;    // spot: degrees from the axis where the light ends
     float pitch = -90.0f;        // spot: degrees, -90 = straight down; direction yaw is the entity's
     bool castShadows = false;
+    bool cookie = false;         // spot: flashlight pattern (hot centre, rings) instead of an even cone
     LightFlicker flicker = LightFlicker::None;
     float flickerSpeed = 1.0f;   // multiplier on the pattern's tempo
     bool enabled = true;         // property "enabled" = "0": switched off
@@ -51,6 +52,7 @@ struct LocalLight {
     float range = 8.0f;
     float innerAngle = 25.0f, outerAngle = 40.0f; // degrees
     bool castShadows = false;
+    bool cookie = false;   // spot: flashlight pattern
     std::uint64_t key = 0; // stable per light (keeps its shadow slot between frames)
 };
 
