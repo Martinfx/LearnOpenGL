@@ -222,6 +222,7 @@ void MainWindow::buildMenus()
         pickup->addAction(tr("Medkit"), this, [this] { addPickup("medkit", "models/props/pickups/medkit_pouch.glb"); });
         pickup->addAction(tr("Weapon (AK-74)"), this, [this] { addPickup("weapon", "models/weapons/world/ak47.glb"); });
     }
+    edit->addAction(tr("Add &water (river, pond)"), this, [this] { addEntity("water"); });
     edit->addAction(tr("Add re&verb zone"), this, [this] { addEntity("reverb"); });
     edit->addAction(tr("Add ambience &zone"), this, [this] { addEntity("ambience"); });
     edit->addAction(tr("Physics props from the catalogue (crates, barrels...)"), this, &MainWindow::applyPropCatalogueToLevel);
@@ -682,6 +683,7 @@ void MainWindow::buildDocks()
     reverbForm_ = makeSection(tr("Reverb zone"), "Sound");
     ambienceForm_ = makeSection(tr("Ambience zone"), "Sound");
     pickupForm_ = makeSection(tr("Pickup"), "General");
+    waterForm_ = makeSection(tr("Water"), "Rendering");
     nameEdit_ = new QLineEdit(boxPanel_);
     kindLabel_ = new QLabel(boxPanel_);
     generalForm->addRow(tr("Type"), kindLabel_);
@@ -1324,6 +1326,44 @@ void MainWindow::buildDocks()
         connect(pickupWeapon_, &QLineEdit::editingFinished, this, [this, setProp] { setProp("weapon", pickupWeapon_->text().trimmed().toStdString()); });
         connect(pickupName_, &QLineEdit::editingFinished, this, [this, setProp] { setProp("name", pickupName_->text().trimmed().toStdString()); });
     }
+    {
+        auto spinBox = [this](double lo, double hi, double step, int decimals, const QString& suffix, const QString& tip) {
+            auto* s = new QDoubleSpinBox(boxPanel_);
+            s->setRange(lo, hi);
+            s->setSingleStep(step);
+            s->setDecimals(decimals);
+            s->setSuffix(suffix);
+            s->setKeyboardTracking(false);
+            s->setToolTip(tip);
+            return s;
+        };
+        waterClarity_ = spinBox(0.05, 100.0, 0.25, 2, tr(" m"), tr("How far you see into the water: 0.3 muddy puddle, 2 river, 10 clear lake"));
+        waterFlow_ = spinBox(-10.0, 10.0, 0.1, 2, tr(" m/s"), tr("Current along the entity's facing (rivers); 0 still water"));
+        waterWaves_ = spinBox(0.0, 1.0, 0.05, 2, QString(), tr("Ripples: 0 still pond, 1 choppy (the level's wind adds to it)"));
+        waterFoam_ = spinBox(0.0, 1.0, 0.05, 2, QString(), tr("Foam where the water is shallow (banks, around stones)"));
+        waterReflection_ = spinBox(0.0, 1.0, 0.05, 2, QString(), tr("Strength of reflections (screen space, then the sky probe)"));
+        waterForm_->addRow(tr("Clarity"), waterClarity_);
+        waterForm_->addRow(tr("Flow"), waterFlow_);
+        waterForm_->addRow(tr("Waves"), waterWaves_);
+        waterForm_->addRow(tr("Foam"), waterFoam_);
+        waterForm_->addRow(tr("Reflection"), waterReflection_);
+        auto* hint = new QLabel(tr("The box is the water: its top is the surface, Size Y the depth. Color = deep water."), boxPanel_);
+        hint->setObjectName("dim");
+        hint->setWordWrap(true);
+        waterForm_->addRow(hint);
+        const std::pair<QDoubleSpinBox*, const char*> fields[] = {
+            {waterClarity_, "clarity"}, {waterFlow_, "flow"}, {waterWaves_, "waves"}, {waterFoam_, "foam"}, {waterReflection_, "reflection"}};
+        for (const auto& [spin, key] : fields)
+            connect(spin, &QDoubleSpinBox::valueChanged, this, [this, key](double v) {
+                engine::Entity* e = selectedEntity();
+                const std::string value = QString::number(v, 'g', 4).toStdString();
+                if (!e || e->type != "water" || e->properties[key] == value)
+                    return;
+                e->properties[key] = value;
+                markDirty();
+                viewport_->update();
+            });
+    }
     outputsPanel_ = new OutputsPanel(boxPanel_);
     outputsForm_->addRow(outputsPanel_);
     connect(outputsPanel_, &OutputsPanel::edited, this, [this] {
@@ -1560,6 +1600,7 @@ void MainWindow::buildDocks()
         {"Jump speed", &engine::PlayerSettings::jumpSpeed, 0, 50, 0.5, " m/s"},
         {"Gravity", &engine::PlayerSettings::gravity, 0, 100, 1, " m/s²"},
         {"Air control", &engine::PlayerSettings::airControl, 0, 1, 0.05, ""},
+        {"Swim speed", &engine::PlayerSettings::swimSpeed, 0.1, 20, 0.25, " m/s"},
         {"Height", &engine::PlayerSettings::height, 0.5, 4, 0.05, " m"},
         {"Eye height", &engine::PlayerSettings::eyeHeight, 0.3, 4, 0.05, " m"},
         {"Step height", &engine::PlayerSettings::stepHeight, 0, 2, 0.05, " m"},
@@ -2215,6 +2256,18 @@ void MainWindow::refreshProperties()
     anomalyPanel_->setEntity(e && e->type == "anomaly" ? selectedEntity() : nullptr, &scene_);
     lightPanel_->setEntity(e && e->type == "light" ? selectedEntity() : nullptr);
     outputsPanel_->setEntity(selectedEntity(), &scene_);
+    if (e && e->type == "water") {
+        const QSignalBlocker b1(waterClarity_), b2(waterFlow_), b3(waterWaves_), b4(waterFoam_), b5(waterReflection_);
+        auto prop = [e](const char* key, const char* fallback) {
+            const auto it = e->properties.find(key);
+            return QString::fromStdString(it == e->properties.end() ? std::string(fallback) : it->second).toDouble();
+        };
+        waterClarity_->setValue(prop("clarity", "2"));
+        waterFlow_->setValue(prop("flow", "0"));
+        waterWaves_->setValue(prop("waves", "0.3"));
+        waterFoam_->setValue(prop("foam", "0.5"));
+        waterReflection_->setValue(prop("reflection", "1"));
+    }
     if (e && e->type == "pickup") {
         const QSignalBlocker b1(pickupItem_), b2(pickupAmmoType_), b3(pickupAmount_), b4(pickupWeapon_), b5(pickupName_);
         auto prop = [e](const char* key, const char* fallback) {
@@ -2762,7 +2815,8 @@ void MainWindow::addEntity(const QString& type)
     engine::Entity e;
     e.type = type.toStdString();
     e.name = engine::uniqueNodeName(scene_, (type == "enemy" ? "Enemy " : type == "sound" ? "Sound " : type == "particle" ? "Effect " : type == "light" ? "Light " :
-                                             type == "trigger" ? "Trigger " : type == "relay" ? "Relay " : type == "reverb" ? "Reverb " : type == "ambience" ? "Ambience " : "Entity ") +
+                                             type == "trigger" ? "Trigger " : type == "relay" ? "Relay " : type == "reverb" ? "Reverb " : type == "ambience" ? "Ambience " :
+                                             type == "water" ? "Water " : "Entity ") +
                                                 std::to_string(scene_.entities.size() + 1));
     if (type == "sound") {
         e.size = {1.0f, 1.0f, 1.0f};
@@ -2810,6 +2864,10 @@ void MainWindow::addEntity(const QString& type)
         e.size = {10.0f, 4.0f, 10.0f};
         e.color = {0.4f, 0.85f, 0.5f};
         e.properties["set"] = "sounds/ambience/interior.ambience";
+    } else if (type == "water") {
+        e.size = {12.0f, 1.5f, 6.0f};
+        e.color = {0.16f, 0.2f, 0.17f}; // murky green-brown
+        e.position.y = -1.4f;           // surface 10 cm above the ground plane; lower it into a dug bed
     } else if (type == "reverb") {
         e.size = {8.0f, 4.0f, 8.0f};
         e.color = {0.3f, 0.75f, 0.9f};
@@ -4145,6 +4203,8 @@ void MainWindow::updateDetailsVisibility()
             relevant = e != nullptr && e->type == "reverb";
         if (d.form == ambienceForm_)
             relevant = e != nullptr && e->type == "ambience";
+        if (d.form == waterForm_)
+            relevant = e != nullptr && e->type == "water";
         if (d.form == pickupForm_)
             relevant = e != nullptr && e->type == "pickup";
         bool shown = relevant && (category == "All" || category == d.category);

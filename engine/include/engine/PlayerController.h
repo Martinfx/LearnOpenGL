@@ -32,6 +32,13 @@ public:
     void push(glm::vec3 velocityChange);
     void drift(glm::vec3 velocity) { drift_ += velocity; }
     void slow(float amount) { slow_ = amount; }
+    // Water around the player for the next step: surface height and current (m/s).
+    // Wading slows walking with depth; deeper than the chest the player swims
+    // (Jump up, Crouch down, forward follows the view, floats with the head out).
+    void setWater(float surfaceY, glm::vec2 flow) { water_ = true; waterLevel_ = surfaceY; waterFlow_ = flow; }
+    bool swimming() const { return swimming_; }
+    float waterDepth() const { return inWater_ ? waterLevel_ - feet_.y : 0.0f; } // at the feet, 0 when dry
+    bool headUnderwater() const { return inWater_ && eye().y < waterLevel_; }
     // Moves the player (keeps the spawn point).
     void teleport(glm::vec3 feet);
 
@@ -49,6 +56,9 @@ private:
     glm::vec3 drift_{0.0f};
     float slow_ = 0.0f;
     bool freshPush_ = false;
+    bool water_ = false, inWater_ = false, swimming_ = false;
+    float waterLevel_ = 0.0f;
+    glm::vec2 waterFlow_{0.0f};
 };
 
 } // namespace engine

@@ -1,4 +1,5 @@
 #include "engine/Renderer.h"
+#include "engine/Water.h"
 
 #include <glad/gl.h>
 #include "engine/JobSystem.h"
@@ -465,7 +466,9 @@ bool Renderer::buildPrograms(const std::map<std::string, std::string>& src, Prog
                              {&p.sprite, "sprite.vert", "sprite.frag"},
                              {&p.debug, "debug.vert", "debug.frag"},
                              {&p.luminance, "fullscreen.vert", "luminance.frag"},
-                             {&p.exposure, "fullscreen.vert", "exposure.frag"}};
+                             {&p.exposure, "fullscreen.vert", "exposure.frag"},
+                             {&p.water, "water.vert", "water.frag"},
+                             {&p.underwater, "fullscreen.vert", "underwater.frag"}};
     const auto start = std::chrono::steady_clock::now();
     int cached = 0;
     for (const Entry& e : entries) {
@@ -486,7 +489,7 @@ bool Renderer::buildPrograms(const std::map<std::string, std::string>& src, Prog
 void Renderer::destroyPrograms(Programs& p)
 {
     for (Program* program : {&p.mesh, &p.depth, &p.sky, &p.envCapture, &p.prefilter, &p.brdf, &p.ssao, &p.blur, &p.bloomDown,
-                             &p.bloomUp, &p.post, &p.fxaa, &p.copy, &p.grid, &p.hiz, &p.sprite, &p.debug, &p.luminance, &p.exposure}) {
+                             &p.bloomUp, &p.post, &p.fxaa, &p.copy, &p.grid, &p.hiz, &p.sprite, &p.debug, &p.luminance, &p.exposure, &p.water, &p.underwater}) {
         if (program->id)
             glDeleteProgram(program->id);
         program->id = 0;
@@ -722,7 +725,7 @@ void Renderer::shutdown()
 
 void Renderer::destroyTargets()
 {
-    for (unsigned* t : {&hdrColor_, &depthTex_, &ssaoTex_, &ssaoBlurTex_, &ldrTex_})
+    for (unsigned* t : {&hdrColor_, &depthTex_, &ssaoTex_, &ssaoBlurTex_, &ldrTex_, &sceneColorCopy_, &sceneDepthCopy_})
         if (*t) {
             glDeleteTextures(1, t);
             *t = 0;
@@ -752,6 +755,12 @@ void Renderer::ensureTargets(int width, int height)
     hdrColor_ = makeTexture2D(GL_RGBA16F, width, height, GL_LINEAR);
     depthTex_ = makeTexture2D(GL_DEPTH_COMPONENT32F, width, height, GL_NEAREST);
     hdrFbo_ = makeFbo(hdrColor_, depthTex_);
+    sceneColorCopy_ = makeTexture2D(GL_RGBA16F, width, height, GL_LINEAR);
+    sceneDepthCopy_ = makeTexture2D(GL_DEPTH_COMPONENT32F, width, height, GL_NEAREST);
+    for (unsigned tex : {sceneColorCopy_, sceneDepthCopy_}) {
+        glTextureParameteri(tex, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTextureParameteri(tex, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    }
     ssaoTex_ = makeTexture2D(GL_R8, width, height, GL_LINEAR);
     ssaoFbo_ = makeFbo(ssaoTex_);
     ssaoBlurTex_ = makeTexture2D(GL_R8, width, height, GL_LINEAR);
@@ -1155,7 +1164,7 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         if (!e.alive)
             continue;
         if (e.type == "sound" || e.type == "particle" || e.type == "anomaly" || e.type == "light" || e.type == "trigger" ||
-            e.type == "relay" || e.type == "reverb" || e.type == "ambience") { // marker cube; a sound zone itself is the entity size
+            e.type == "relay" || e.type == "reverb" || e.type == "ambience" || e.type == "water") { // marker cube; a sound zone itself is the entity size
             const Aabb m = e.markerBounds();
             const bool glow = e.type == "light" && !depthOnly; // a bulb: unlit, in the light's color
             if (glow)
@@ -1180,6 +1189,80 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         drawBox(scene.playerStart + glm::vec3(0.0f, 0.9f, 0.0f), glm::vec3(0.6f, 1.8f, 0.6f), glm::vec3(0.2f, 0.8f, 0.3f), 0.0f);
     }
     depthOnly_ = false;
+}
+
+void Renderer::copySceneForWater()
+{
+    glCopyImageSubData(hdrColor_, GL_TEXTURE_2D, 0, 0, 0, 0, sceneColorCopy_, GL_TEXTURE_2D, 0, 0, 0, 0, width_, height_, 1);
+    glCopyImageSubData(depthTex_, GL_TEXTURE_2D, 0, 0, 0, 0, sceneDepthCopy_, GL_TEXTURE_2D, 0, 0, 0, 0, width_, height_, 1);
+}
+
+void Renderer::drawWater(const Scene& scene, const RenderView& view, const glm::mat4& viewProj)
+{
+    const std::vector<WaterBody> bodies = waterBodies(scene);
+    if (bodies.empty())
+        return;
+    beginPass(PassTransparent);
+    copySceneForWater();
+    const Program& p = programs_.water;
+    glUseProgram(p.id);
+    glUniformMatrix4fv(p.loc("uViewProj"), 1, GL_FALSE, glm::value_ptr(viewProj));
+    glBindTextureUnit(0, sceneColorCopy_);
+    glBindTextureUnit(1, sceneDepthCopy_);
+    glBindTextureUnit(8, envMap_);
+    glBindVertexArray(emptyVao_);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
+    glDepthMask(GL_TRUE); // later transparent things sort against the surface
+    glDisable(GL_CULL_FACE); // seen from below too
+    for (const WaterBody& w : bodies) {
+        const Aabb box{glm::vec3(w.surface * glm::vec4(-0.5f, 0.0f, -0.5f, 1.0f)), glm::vec3(w.surface * glm::vec4(0.5f, 0.0f, 0.5f, 1.0f))};
+        Aabb b{glm::min(box.min, box.max) - glm::vec3(0.0f, 0.01f, 0.0f), glm::max(box.min, box.max) + glm::vec3(0.0f, 0.01f, 0.0f)};
+        // Rotated: grow to the other two corners as well.
+        for (glm::vec2 c : {glm::vec2(-0.5f, 0.5f), glm::vec2(0.5f, -0.5f)}) {
+            const glm::vec3 q(w.surface * glm::vec4(c.x, 0.0f, c.y, 1.0f));
+            b.min = glm::min(b.min, q);
+            b.max = glm::max(b.max, q);
+        }
+        if (!visible(b))
+            continue;
+        glUniformMatrix4fv(p.loc("uWaterModel"), 1, GL_FALSE, glm::value_ptr(w.surface));
+        glUniform3fv(p.loc("uWaterColor"), 1, glm::value_ptr(w.color));
+        glUniform1f(p.loc("uClarity"), w.clarity);
+        glUniform2fv(p.loc("uFlow"), 1, glm::value_ptr(w.flow));
+        glUniform1f(p.loc("uWaves"), w.waves);
+        glUniform1f(p.loc("uFoam"), w.foam);
+        glUniform1f(p.loc("uReflection"), w.reflection);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        ++drawCalls_;
+    }
+    glEnable(GL_CULL_FACE);
+    glDepthFunc(GL_LESS);
+    endPass();
+    (void)view;
+}
+
+void Renderer::drawUnderwater(const Scene& scene, const RenderView& view)
+{
+    WaterBody w;
+    if (!waterAt(scene, view.cameraPosition, &w))
+        return;
+    beginPass(PassTransparent);
+    copySceneForWater();
+    const Program& p = programs_.underwater;
+    glUseProgram(p.id);
+    glBindTextureUnit(0, sceneColorCopy_);
+    glBindTextureUnit(1, sceneDepthCopy_);
+    glUniform3fv(p.loc("uWaterColor"), 1, glm::value_ptr(w.color));
+    glUniform1f(p.loc("uClarity"), w.clarity);
+    glUniform1f(p.loc("uSurface"), w.level);
+    glDisable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
+    glBindVertexArray(emptyVao_);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    glDepthMask(GL_TRUE);
+    glEnable(GL_DEPTH_TEST);
+    endPass();
 }
 
 void Renderer::renderRainMap(const Scene& scene, const RenderView& view)
@@ -1704,6 +1787,8 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     glDepthMask(GL_TRUE);
     glDepthFunc(GL_LESS);
     endPass(); // opaque + sky
+    if (!wireframe)
+        drawWater(scene, view, viewProj);
     if (!transparent_.empty()) {
         beginPass(PassTransparent);
         useMeshProgram(programs_.mesh);
@@ -1720,6 +1805,9 @@ void Renderer::render(const Scene& scene, const RenderView& view)
         drawSprites(view.sprites, viewProj, view.shading, false);
         endPass();
     }
+
+    if (!wireframe)
+        drawUnderwater(scene, view);
 
     if (!view.debug.empty()) {
         beginPass(PassTransparent);

@@ -3,6 +3,7 @@
 
 #include <engine/Anomaly.h>
 #include <engine/Lights.h>
+#include <engine/Water.h>
 
 #include <filesystem>
 
@@ -253,10 +254,29 @@ void Viewport::addIoHelpers(engine::RenderView& view) const
     };
     for (std::size_t i = 0; i < scene_->entities.size(); ++i) {
         const engine::Entity& e = scene_->entities[i];
-        if (e.type != "trigger" && e.type != "reverb" && e.type != "ambience") // volumes: triggers, reverb and ambience zones
+        if (e.type != "trigger" && e.type != "reverb" && e.type != "ambience" && e.type != "water") // volumes: triggers, zones, water
             continue;
         const bool selected = selected_ == first + static_cast<int>(i);
-        const glm::vec4 c = selected ? glm::vec4(1.0f, 0.75f, 0.2f, 0.95f) : glm::vec4(e.color, 0.6f);
+        const glm::vec4 c = selected ? glm::vec4(1.0f, 0.75f, 0.2f, 0.95f) : glm::vec4(e.type == "water" ? glm::vec3(0.3f, 0.7f, 1.0f) : e.color, 0.6f);
+        if (e.type == "water") { // turned box: the water volume
+            const engine::WaterBody w = engine::waterBody(e);
+            glm::vec3 q[8];
+            for (int k = 0; k < 4; ++k) {
+                const glm::vec2 corner(k == 1 || k == 2 ? 0.5f : -0.5f, k >= 2 ? 0.5f : -0.5f);
+                q[k + 4] = glm::vec3(w.surface * glm::vec4(corner.x, 0.0f, corner.y, 1.0f));
+                q[k] = q[k + 4] - glm::vec3(0.0f, w.level - w.bottom, 0.0f);
+            }
+            for (int k = 0; k < 4; ++k) {
+                line(q[k], q[(k + 1) % 4], c);
+                line(q[k + 4], q[(k + 1) % 4 + 4], c);
+                line(q[k], q[k + 4], c);
+            }
+            if (glm::length(w.flow) > 0.0f) { // flow direction on the surface
+                const glm::vec3 mid(w.surface * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+                arrow(mid, mid + glm::vec3(w.flow.x, 0.0f, w.flow.y) / glm::length(w.flow) * 2.0f, c);
+            }
+            continue;
+        }
         const engine::Aabb b = e.bounds();
         const glm::vec3 p[8] = {{b.min.x, b.min.y, b.min.z}, {b.max.x, b.min.y, b.min.z}, {b.max.x, b.min.y, b.max.z}, {b.min.x, b.min.y, b.max.z},
                                 {b.min.x, b.max.y, b.min.z}, {b.max.x, b.max.y, b.min.z}, {b.max.x, b.max.y, b.max.z}, {b.min.x, b.max.y, b.max.z}};

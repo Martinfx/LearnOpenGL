@@ -1,4 +1,5 @@
 #include "engine/Weapon.h"
+#include "engine/Water.h"
 #include "engine/Physics.h"
 
 #include <algorithm>
@@ -38,6 +39,24 @@ ShotHit traceShot(const Scene& scene, const PhysicsWorld& physics, glm::vec3 ori
             best.model = -1;
         }
     }
+    // Water stops a shot from above at its surface (a splash; shallow angles may skip off it).
+    if (dir.y < -1e-4f)
+        for (const WaterBody& w : waterBodies(scene)) {
+            if (origin.y <= w.level)
+                continue;
+            const float t = (w.level - origin.y) / dir.y;
+            if (t < 0.0f || t > range || (best.hit && t >= best.distance))
+                continue;
+            const glm::vec3 p = origin + dir * t;
+            if (!w.contains(p - glm::vec3(0.0f, 0.01f, 0.0f)))
+                continue;
+            best = ShotHit{};
+            best.hit = true;
+            best.point = p;
+            best.distance = t;
+            best.normal = {0.0f, 1.0f, 0.0f};
+            best.surface = "water";
+        }
     return best;
 }
 

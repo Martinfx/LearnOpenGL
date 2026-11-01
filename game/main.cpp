@@ -26,6 +26,7 @@
 #include "Flashlight.h"
 #include "GameWeather.h"
 #include "Inventory.h"
+#include <engine/Water.h>
 #include "KeyNames.h"
 #include "MapHud.h"
 #include <engine/Scripting.h>
@@ -1314,6 +1315,8 @@ int main(int argc, char** argv)
             const float dt = static_cast<float>(clock.step());
             // Debug shapes age per simulation step: "this frame" shapes from scripts stay until the next step redraws them.
             engine::DebugDraw::global().tick(dt);
+            if (engine::WaterBody water; engine::waterAt(scene, player.feet(), &water))
+                player.setWater(water.level, water.flow);
             player.fixedUpdate(input, camera, dt);
             // Pickups the player touches (ammo, medkits, weapons).
             for (const PickupResult& r : collectPickups(scene, player.feet(), inventory, weapons, current, assetRoot)) {
@@ -1455,7 +1458,10 @@ int main(int argc, char** argv)
                 if (player.grounded())
                     if (auto under = physics.raycast(player.feet() + glm::vec3(0.0f, 0.3f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f), 1.0f))
                         ground = under->surface;
+                if (player.waterDepth() > 0.05f)
+                    ground = "water"; // wading: splashing steps
                 audio.walk(scene.player, player.feet(), player.velocity(), player.grounded(), dt, ground);
+                audio.water(player.feet(), player.velocity(), player.waterDepth() > 0.0f, player.swimming(), player.headUnderwater(), dt);
             }
             physics.step(dt);
             physics.syncDynamic(scene); // props the player, shots and blasts moved

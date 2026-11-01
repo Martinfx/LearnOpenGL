@@ -1,0 +1,61 @@
+# FPS engine level
+version 6
+player_start 0 0 6
+sun -0.45 -0.75 -0.3
+env sun_color 1 0.86 0.68
+env sun_intensity 2.4
+env sky_zenith 0.38 0.42 0.44
+env sky_horizon 0.68 0.66 0.58
+env ground_color 0.26 0.24 0.2
+env cloud_cover 0.72
+env ambient_intensity 0.8
+env fog_color 0.6 0.6 0.54
+env fog_density 0.018
+env fog_height 1
+env fog_height_falloff 0.12
+env fog_sun_scatter 1.2
+env exposure 1
+env bloom_intensity 0.05
+env bloom_threshold 1.3
+env ssao_radius 0.6
+env ssao_intensity 1.1
+env shadow_distance 60
+env saturation 0.72
+env contrast 1.1
+env tint 1.02 1 0.9
+env vignette 0.35
+env grain 0.035
+loading_title "Test: voda"
+loading_hint "Odvodňovací kanál s tekoucí vodou. Vlez do vody, ponoř se, střílej do hladiny."
+weapon "../weapons/ak74.weapon"
+weapon "../weapons/pistol.weapon"
+group "Canal" ""
+box "Ground north" 0 -1.5 -9 40 3 14 0.5 0.48 0.44
+  parent "Canal"
+  material "../materials/concrete.material"
+box "Ground south" 0 -1.5 9 40 3 14 0.5 0.48 0.44
+  parent "Canal"
+  material "../materials/concrete.material"
+box "Canal bed" 0 -2.75 0 40 0.5 4 0.36 0.34 0.3
+  parent "Canal"
+  material "../materials/concrete.material"
+box "Fallen slab" 3 -1.4 0.6 1.6 2.2 1.1 0.45 0.44 0.42
+  parent "Canal"
+  material "../materials/concrete.material"
+box "Step low" -6 -2.05 1.4 1.6 0.9 1.2 0.45 0.44 0.42
+  parent "Canal"
+  material "../materials/concrete.material"
+box "Steps" -6 -1.5 2.6 1.6 2.0 1.2 0.45 0.44 0.42
+  parent "Canal"
+  material "../materials/concrete.material"
+box "Wall" 0 1.5 -12 24 3 0.6 0.5 0.5 0.48
+  parent "Canal"
+  material "../materials/concrete.material"
+model "Crate" "../models/props/wooden_crate_01/wooden_crate_01.gltf" -2 0.0 -4
+  parent "Canal"
+entity "Canal water" "water" 0 -2.5 0 0 40 2.2 4 0.13 0.16 0.12 ""
+  parent "Canal"
+  prop "clarity" "1.2"
+  prop "flow" "0.6"
+  prop "waves" "0.35"
+  prop "foam" "0.6"

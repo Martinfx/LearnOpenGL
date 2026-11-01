@@ -89,7 +89,7 @@ void GameAudio::startLevel(const engine::Scene& scene)
     audio_.stop(rain_);
     audio_.stop(wind_);
     audio_.stop(rainRoof_);
-    rain_ = wind_ = rainRoof_ = 0;
+    rain_ = wind_ = rainRoof_ = underwater_ = 0;
     startAmbience(scene);
     // Weather loops run all the time; update() sets their volume from the environment.
     const engine::Environment& env = scene.environment;
@@ -104,6 +104,9 @@ void GameAudio::startLevel(const engine::Scene& scene)
     rain_ = weather(env.rainSound, "sounds/ambient/rain.sound");
     wind_ = weather(env.windSound, "sounds/ambient/wind_storm.sound");
     rainRoof_ = weather({}, "sounds/ambient/rain_roof.sound"); // rain drumming on the roof above
+    underwater_ = weather({}, "sounds/ambient/underwater.sound");
+    preload((assetDir_ / "sounds/player/swim.sound").lexically_normal());
+    preload((assetDir_ / "sounds/player/splash.sound").lexically_normal());
     for (std::size_t i = 0; i < scene.entities.size(); ++i) {
         const engine::Entity& e = scene.entities[i];
         // Sounds scripts will play (e.g. enemy.lua sound_shot) decode now, so the first play is not clipped.
@@ -169,9 +172,12 @@ void GameAudio::update(float dt, const engine::Scene& scene, glm::vec3 eye, glm:
     const engine::Environment env = engine::environmentAt(scene.environment, scene.sunDirection); // weather keys by hour
     shelterMix_ += ((sheltered_ ? 1.0f : 0.0f) - shelterMix_) * std::min(1.0f, dt * 3.0f);
     const float rainLevel = std::sqrt(std::clamp(env.rain, 0.0f, 1.0f));
-    audio_.setVolume(rain_, rainLevel * (1.0f - 0.6f * shelterMix_), 0.5f);
-    audio_.setVolume(rainRoof_, rainLevel * shelterMix_, 0.5f);
-    audio_.setVolume(wind_, std::sqrt(std::clamp(env.wind, 0.0f, 1.0f)) * (1.0f - 0.45f * shelterMix_), 0.5f);
+    underMix_ += ((headUnder_ ? 1.0f : 0.0f) - underMix_) * std::min(1.0f, dt * 6.0f);
+    const float above = 1.0f - 0.85f * underMix_; // the world above is barely heard under water
+    audio_.setVolume(rain_, rainLevel * (1.0f - 0.6f * shelterMix_) * above, 0.5f);
+    audio_.setVolume(rainRoof_, rainLevel * shelterMix_ * above, 0.5f);
+    audio_.setVolume(wind_, std::sqrt(std::clamp(env.wind, 0.0f, 1.0f)) * (1.0f - 0.45f * shelterMix_) * above, 0.5f);
+    audio_.setVolume(underwater_, underMix_, 0.2f);
     audio_.update(dt);
 }
 
@@ -181,6 +187,24 @@ void GameAudio::step(const engine::PlayerSettings& player, glm::vec3 feet, float
         play(t->footstep, feet, volume * t->stepVolume);
     else
         play(player.footstepSound, feet, volume);
+}
+
+void GameAudio::water(glm::vec3 feet, glm::vec3 velocity, bool inWater, bool swimming, bool headUnder, float dt)
+{
+    headUnder_ = headUnder;
+    if (inWater && !wasInWater_ && velocity.y < -2.5f) // fell or jumped in
+        play((assetDir_ / "sounds/player/splash.sound").lexically_normal(), feet, std::clamp(-velocity.y / 8.0f, 0.4f, 1.0f));
+    wasInWater_ = inWater;
+    const float speed = glm::length(velocity);
+    if (!swimming || speed < 0.4f) {
+        strokeTimer_ = std::min(strokeTimer_, 0.3f);
+        return;
+    }
+    strokeTimer_ -= dt;
+    if (strokeTimer_ <= 0.0f) { // a stroke about every second, faster when swimming hard
+        strokeTimer_ = std::clamp(1.4f - speed * 0.2f, 0.6f, 1.2f);
+        play((assetDir_ / "sounds/player/swim.sound").lexically_normal(), feet, std::clamp(0.4f + speed * 0.15f, 0.4f, 1.0f) * (headUnder ? 0.5f : 1.0f));
+    }
 }
 
 void GameAudio::impact(glm::vec3 point, const std::string& surface, const std::filesystem::path& fallback)
@@ -264,6 +288,12 @@ void GameAudio::updateReverb(const engine::Scene& scene, glm::vec3 eye)
     if (a != audio_.reverb(0) && (a == audio_.reverb(1) || b == audio_.reverb(0))) {
         std::swap(a, b);
         std::swap(amountA, amountB);
+    }
+    if (headUnder_) { // under water everything gets the underwater reverb
+        a = "underwater";
+        amountA = 1.0f;
+        b.clear();
+        amountB = 0.0f;
     }
     if (a != audio_.reverb(0) || b != audio_.reverb(1))
         LOG_INFO("audio", "reverb: %s %.2f + %s %.2f", a.c_str(), amountA, b.c_str(), amountB);

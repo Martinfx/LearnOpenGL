@@ -36,6 +36,8 @@
 #include <cmath>
 #include <cstdio>
 #include <engine/CVars.h>
+#include <engine/Water.h>
+#include <engine/PlayerController.h>
 
 #include <functional>
 #include <string>
@@ -2020,6 +2022,55 @@ void testAssetPalette()
     check(!entries.empty() && entries[0].stats.pixels > 0, "glTF model palette");
 }
 
+void testWater()
+{
+    // A 10 x 4 m canal, 2 m deep, turned 90 degrees (runs along Z), flowing at 1 m/s.
+    engine::Scene s;
+    engine::Entity e;
+    e.type = "water";
+    e.name = "Canal";
+    e.position = {0.0f, -2.0f, 0.0f};
+    e.size = {10.0f, 2.0f, 4.0f};
+    e.yawDegrees = 90.0f;
+    e.properties["flow"] = "1";
+    e.properties["clarity"] = "0.5";
+    s.entities.push_back(e);
+    engine::WaterBody w;
+    check(engine::waterAt(s, {0.0f, -1.0f, 4.5f}, &w) && !engine::waterAt(s, {4.5f, -1.0f, 0.0f}) &&
+              !engine::waterAt(s, {0.0f, 0.5f, 0.0f}) && std::abs(w.level) < 1e-5f && std::abs(w.flow.y - 1.0f) < 1e-4f &&
+              w.clarity == 0.5f,
+          "water: box, yaw, flow along the facing");
+    // Shots from above stop at the surface; from below they do not.
+    engine::PhysicsWorld physics;
+    physics.setLevel(s);
+    const engine::ShotHit down = engine::traceShot(s, physics, {0.0f, 3.0f, 2.0f}, glm::normalize(glm::vec3(0.0f, -1.0f, 0.2f)), 50.0f);
+    check(down.hit && down.surface == "water" && std::abs(down.point.y) < 1e-4f, "water: shot splashes on the surface");
+    const engine::ShotHit up = engine::traceShot(s, physics, {0.0f, -1.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, 50.0f);
+    check(!up.hit || up.surface != "water", "water: shot from below goes through");
+    // Swimming: deep water holds the player near the surface instead of sinking.
+    engine::Box floor;
+    floor.position = {0.0f, -2.5f, 0.0f};
+    floor.size = {40.0f, 1.0f, 40.0f};
+    engine::Scene pool = s;
+    pool.boxes.push_back(floor);
+    pool.entities[0].size = {20.0f, 2.0f, 20.0f};
+    engine::PhysicsWorld world;
+    world.setLevel(pool);
+    engine::PlayerController player;
+    player.spawn(world, {0.0f, -1.9f, 0.0f});
+    engine::InputState input;
+    engine::FpsCamera camera;
+    for (int i = 0; i < 240; ++i) {
+        if (engine::WaterBody b; engine::waterAt(pool, player.feet(), &b))
+            player.setWater(b.level, b.flow);
+        player.fixedUpdate(input, camera, 1.0f / 60.0f);
+        world.step(1.0f / 60.0f);
+    }
+    check(player.swimming() && std::abs(player.eye().y - 0.2f) < 0.35f,
+          "water: player floats with the head out (eye " + std::to_string(player.eye().y) + ")");
+    check(std::abs(player.feet().z) > 0.5f, "water: the current carries the player");
+}
+
 int main()
 {
     // Hermetic cook cache for the tests.
@@ -2073,6 +2124,7 @@ int main()
     testEntityIO();
     testTimeOfDay();
     testAssetPalette();
+    testWater();
     std::printf(failures ? "%d test(s) failed\n" : "all tests passed\n", failures);
     return failures ? 1 : 0;
 }

@@ -249,7 +249,7 @@ private:
     };
     struct Programs {
         Program mesh, depth, sky, envCapture, prefilter, brdf, ssao, blur, bloomDown, bloomUp, post, fxaa, copy, grid, hiz, sprite, debug,
-            luminance, exposure;
+            luminance, exposure, water, underwater;
     };
     // Uniform locations of the program that draws geometry right now.
     struct MeshLocations {
@@ -446,6 +446,10 @@ private:
     int width_ = 0, height_ = 0;          // render targets (output size x render scale)
     int outWidth_ = 0, outHeight_ = 0;    // the view's size in the target framebuffer
     unsigned hdrFbo_ = 0, hdrColor_ = 0, depthTex_ = 0;
+    unsigned sceneColorCopy_ = 0, sceneDepthCopy_ = 0; // water: what lies behind the surface
+    void copySceneForWater();
+    void drawWater(const Scene& scene, const RenderView& view, const glm::mat4& viewProj);
+    void drawUnderwater(const Scene& scene, const RenderView& view);
     unsigned ssaoFbo_ = 0, ssaoTex_ = 0, ssaoBlurFbo_ = 0, ssaoBlurTex_ = 0;
     std::vector<unsigned> bloomTex_, bloomFbo_;
     std::vector<glm::ivec2> bloomSize_;

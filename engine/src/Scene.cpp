@@ -244,6 +244,8 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
     out << "player " << pl.walkSpeed << ' ' << pl.sprintSpeed << ' ' << pl.jumpSpeed << ' ' << pl.gravity << ' '
         << pl.airControl << ' ' << pl.height << ' ' << pl.eyeHeight << ' ' << pl.stepHeight << ' '
         << pl.maxSlopeDegrees << ' ' << pl.maxHealth << '\n';
+    if (pl.swimSpeed != PlayerSettings{}.swimSpeed)
+        out << "player_swim " << pl.swimSpeed << '\n';
     if (pl.radiationDamage != PlayerSettings{}.radiationDamage || pl.radiationDecay != PlayerSettings{}.radiationDecay)
         out << "player_radiation " << pl.radiationDamage << ' ' << pl.radiationDecay << '\n';
     {
@@ -709,6 +711,8 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
             PlayerSettings& pl = result.player;
             ok = static_cast<bool>(ls >> pl.walkSpeed >> pl.sprintSpeed >> pl.jumpSpeed >> pl.gravity >> pl.airControl
                                       >> pl.height >> pl.eyeHeight >> pl.stepHeight >> pl.maxSlopeDegrees >> pl.maxHealth);
+        } else if (key == "player_swim") {
+            ok = static_cast<bool>(ls >> result.player.swimSpeed);
         } else if (key == "player_radiation") {
             ok = static_cast<bool>(ls >> result.player.radiationDamage >> result.player.radiationDecay);
         } else if (key == "player_flashlight") {

@@ -224,6 +224,12 @@ private:
     class OutputsPanel* outputsPanel_ = nullptr;  // entity I/O connections
     QFormLayout* outputsForm_ = nullptr;
     QFormLayout* reverbForm_ = nullptr;           // entity type "reverb"
+    QFormLayout* waterForm_ = nullptr;            // entity type "water"
+    QDoubleSpinBox* waterClarity_ = nullptr;
+    QDoubleSpinBox* waterFlow_ = nullptr;
+    QDoubleSpinBox* waterWaves_ = nullptr;
+    QDoubleSpinBox* waterFoam_ = nullptr;
+    QDoubleSpinBox* waterReflection_ = nullptr;
     QFormLayout* pickupForm_ = nullptr;           // entity type "pickup"
     QComboBox* pickupItem_ = nullptr;
     QLineEdit* pickupAmmoType_ = nullptr;

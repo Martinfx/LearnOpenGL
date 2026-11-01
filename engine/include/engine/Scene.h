@@ -257,7 +257,8 @@ struct Entity {
     // Editor-only helpers (sound sources and zones, map markers): not drawn in the
     // game and not hit by weapons.
     bool helper() const { return type == "sound" || type == "map_marker" || type == "particle" || type == "anomaly" || type == "light" ||
-                                 type == "sit_point" || type == "trigger" || type == "relay" || type == "reverb" || type == "ambience"; }
+                                 type == "sit_point" || type == "trigger" || type == "relay" || type == "reverb" || type == "ambience" ||
+                                 type == "water"; }
     // What the editor draws and picks: a sound zone can span the whole level, so
     // it is shown as a small speaker cube at its position; the zone is its size.
     Aabb markerBounds() const
@@ -266,6 +267,8 @@ struct Entity {
             return {position, position + glm::vec3(type == "sound" ? 0.6f : 0.4f)};
         if (type == "relay" || type == "trigger" || type == "reverb" || type == "ambience") // a node; a volume (its size) is drawn as lines
             return {position - glm::vec3(0.2f, 0.0f, 0.2f), position + glm::vec3(0.2f, 0.4f, 0.2f)};
+        if (type == "water") // a node at the middle of the surface; the surface is drawn as water
+            return {position + glm::vec3(-0.25f, size.y - 0.05f, -0.25f), position + glm::vec3(0.25f, size.y + 0.25f, 0.25f)};
         if (type == "light") // the light itself is at `position`
             return {position - glm::vec3(0.15f), position + glm::vec3(0.15f)};
         if (type == "anomaly") // the field (size) is drawn as rings by the editor
@@ -287,6 +290,7 @@ struct PlayerSettings {
     float stepHeight = 0.4f;    // stairs up to this height are climbed automatically
     float maxSlopeDegrees = 45.0f;
     float killY = -50.0f;       // respawn when falling below this
+    float swimSpeed = 3.0f;     // m/s in deep water (wading slows walking by depth)
     float maxHealth = 100.0f;
     // Sounds (absolute paths of .sound or audio files, empty = silent).
     std::filesystem::path footstepSound; // one play per stride while walking
