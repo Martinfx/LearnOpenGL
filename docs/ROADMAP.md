@@ -255,7 +255,8 @@ Hotovo, když: zóna 1 × 1 km jde projít bez načítací obrazovky a paměť d
   Zbývá převést další texty HUD, obchodu, dialogů a úkolů na klíče (infrastruktura je hotová).*
 - [x] Přístupnost: titulky, FOV, vypnutí houpání kamery a motion bluru, velikost textu.
   *Hotovo (2026-11-01): `cl_viewbob`, `ui_scale` (HUD, dialogy, obchod, mapa, menu), titulky zvuků (`caption` v .sound, editor, `cl_subtitles`, 20 zvuků otitulkováno), vše v Nastavení > Ostatní.*
-- [ ] Souhrn licencí třetích stran (OpenAL Soft LGPL: dynamické linkování a text licence).
+- [x] Souhrn licencí třetích stran (OpenAL Soft LGPL: dynamické linkování a text licence).
+  *Hotovo (2026-11-01): `cmake/Licenses.cmake` kopíruje plné texty licencí všech knihoven do `licenses/` u hry (i do balíčku), tabulka `3rdparty/README.md` doplněná o OpenAL Soft a sekci, jak engine plní LGPL (vždy sdílená knihovna vedle hry, nezměněný zdroj 1.24.3, text licence), poznámka ke Qt v editoru; test hlídá, že každá knihovna ve `3rdparty/` má řádek i licenci.*
 - [ ] Credits a licence všech assetů ve hře.
 
 ## 3. Co záměrně neděláme

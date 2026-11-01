@@ -27,6 +27,7 @@ option(ENGINE_USE_SYSTEM_DEPS "Prefer system packages (pkg/apt/vcpkg) over downl
 option(ENGINE_USE_SYSTEM_JOLT "Use a system Jolt package instead of 3rdparty/jolt" OFF)
 
 include(cmake/Dependencies.cmake)
+include(cmake/Licenses.cmake) # third-party licence texts into bin/licenses
 
 add_subdirectory(engine)
 

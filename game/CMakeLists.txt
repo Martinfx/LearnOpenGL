@@ -16,8 +16,7 @@ add_custom_target(fps_game_assets ALL
     COMMAND ${CMAKE_COMMAND} -E ${ENGINE_COPY_DIR} ${PROJECT_SOURCE_DIR}/assets ${CMAKE_BINARY_DIR}/bin/assets
     COMMENT "Copying changed assets")
 add_dependencies(fps_game_assets fps_game)
-# Third-party licences for the credits screen.
-configure_file(${PROJECT_SOURCE_DIR}/3rdparty/README.md ${CMAKE_BINARY_DIR}/bin/licenses/THIRD_PARTY.md COPYONLY)
+# Third-party licences for the credits screen: bin/licenses (cmake/Licenses.cmake).
 
 # Function names in crash report stacks (backtrace_symbols needs exported symbols).
 if(NOT WIN32)

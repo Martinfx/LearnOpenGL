@@ -605,6 +605,30 @@ void testLocalization()
           "sound captions exist in cs.strings" + (noCaption.empty() ? std::string() : ": " + noCaption.front()));
 }
 
+void testThirdPartyLicenses()
+{
+    namespace fs = std::filesystem;
+    // Every library in 3rdparty/ is listed in its README table and ships its licence text.
+    const fs::path root = fs::path(ENGINE_TEST_ASSETS).parent_path();
+    auto readAll = [](const fs::path& p) {
+        std::ifstream in(p, std::ios::binary);
+        return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    };
+    const std::string table = readAll(root / "3rdparty" / "README.md");
+    const std::string cmake = readAll(root / "cmake" / "Licenses.cmake");
+    check(!table.empty() && !cmake.empty(), "3rdparty/README.md and cmake/Licenses.cmake exist");
+    int libraries = 0;
+    for (const auto& entry : fs::directory_iterator(root / "3rdparty")) {
+        if (!entry.is_directory())
+            continue;
+        ++libraries;
+        const std::string name = entry.path().filename().string();
+        check(table.find("| `" + name + "/` |") != std::string::npos, "3rdparty/README.md has a row for " + name);
+        check(cmake.find("${T}/" + name + "/") != std::string::npos, "cmake/Licenses.cmake ships the licence of " + name);
+    }
+    check(libraries >= 10, "3rdparty libraries found");
+}
+
 void testScriptDebugger()
 {
     check(engine::ScriptDebugger::fileKey("@/home/x/assets/scripts/enemy.lua") == "scripts/enemy.lua" &&
@@ -4147,6 +4171,7 @@ int main()
         {"testMeshCache", testMeshCache},
         {"testVfs", testVfs},
         {"testLocalization", testLocalization},
+        {"testThirdPartyLicenses", testThirdPartyLicenses},
         {"testWorldStreaming", testWorldStreaming},
     };
     for (const auto& [name, run] : tests)
