@@ -501,7 +501,8 @@ bool Renderer::buildPrograms(const std::map<std::string, std::string>& src, Prog
                              {&p.luminance, "fullscreen.vert", "luminance.frag"},
                              {&p.exposure, "fullscreen.vert", "exposure.frag"},
                              {&p.water, "water.vert", "water.frag"},
-                             {&p.underwater, "fullscreen.vert", "underwater.frag"}};
+                             {&p.underwater, "fullscreen.vert", "underwater.frag"},
+                             {&p.distort, "sprite.vert", "distort.frag"}};
     const auto start = std::chrono::steady_clock::now();
     int cached = 0;
     for (const Entry& e : entries) {
@@ -530,7 +531,7 @@ bool Renderer::buildPrograms(const std::map<std::string, std::string>& src, Prog
 void Renderer::destroyPrograms(Programs& p)
 {
     for (Program* program : {&p.mesh, &p.depth, &p.sky, &p.envCapture, &p.prefilter, &p.brdf, &p.ssao, &p.blur, &p.bloomDown,
-                             &p.bloomUp, &p.post, &p.fxaa, &p.copy, &p.grid, &p.hiz, &p.sprite, &p.debug, &p.luminance, &p.exposure, &p.water, &p.underwater,
+                             &p.bloomUp, &p.post, &p.fxaa, &p.copy, &p.grid, &p.hiz, &p.sprite, &p.debug, &p.luminance, &p.exposure, &p.water, &p.underwater, &p.distort,
                              &p.volumeInject, &p.volumeIntegrate}) {
         if (program->id)
             glDeleteProgram(program->id);
@@ -780,12 +781,12 @@ void Renderer::shutdown()
 
 void Renderer::destroyTargets()
 {
-    for (unsigned* t : {&hdrColor_, &depthTex_, &ssaoTex_, &ssaoBlurTex_, &ldrTex_, &sceneColorCopy_, &sceneDepthCopy_})
+    for (unsigned* t : {&hdrColor_, &depthTex_, &ssaoTex_, &ssaoBlurTex_, &ldrTex_, &sceneColorCopy_, &sceneDepthCopy_, &distortTex_})
         if (*t) {
             glDeleteTextures(1, t);
             *t = 0;
         }
-    for (unsigned* f : {&hdrFbo_, &ssaoFbo_, &ssaoBlurFbo_, &ldrFbo_})
+    for (unsigned* f : {&hdrFbo_, &ssaoFbo_, &ssaoBlurFbo_, &ldrFbo_, &distortFbo_})
         if (*f) {
             glDeleteFramebuffers(1, f);
             *f = 0;
@@ -822,6 +823,9 @@ void Renderer::ensureTargets(int width, int height)
     ssaoBlurFbo_ = makeFbo(ssaoBlurTex_);
     ldrTex_ = makeTexture2D(GL_RGBA8, width, height, GL_LINEAR);
     ldrFbo_ = makeFbo(ldrTex_);
+    distortTex_ = makeTexture2D(GL_RG16F, width, height, GL_LINEAR);
+    distortFbo_ = makeFbo(distortTex_, depthTex_);
+    label(GL_TEXTURE, distortTex_, "Air distortion");
     label(GL_TEXTURE, hdrColor_, "HDR colour");
     label(GL_TEXTURE, depthTex_, "Scene depth");
     label(GL_FRAMEBUFFER, hdrFbo_, "HDR");
@@ -1988,6 +1992,11 @@ void Renderer::render(const Scene& scene, const RenderView& view)
 
     if (!wireframe)
         drawUnderwater(scene, view);
+    if (!wireframe) {
+        beginPass(PassTransparent);
+        renderDistortion(view, viewProj); // after everything that writes scene depth
+        endPass();
+    }
 
     if (!view.debug.empty()) {
         beginPass(PassTransparent);
@@ -2736,7 +2745,7 @@ void Renderer::drawSprites(const std::vector<SpriteBatch>& batches, const glm::m
     order.reserve(batches.size());
     std::size_t total = 0;
     for (const SpriteBatch& b : batches)
-        if (!b.instances.empty()) {
+        if (!b.instances.empty() && b.blend != SpriteBlend::Distort) { // distortion: renderDistortion()
             order.push_back(&b);
             total += b.instances.size();
         }
@@ -2962,31 +2971,88 @@ void Renderer::renderBloom()
 
 void Renderer::collectDistortions(const RenderView& view)
 {
-    distortions_.clear();
+    // Anomaly warps become camera-facing quads of their radius, drawn with the distortion
+    // particles (depth tested, so walls in front hide them). color: g strength, b < 0 lens.
+    distortionSprites_.clear();
     overlayDrawn_ = false;
-    aspect_ = static_cast<float>(std::max(1, view.viewportWidth)) / static_cast<float>(std::max(1, view.viewportHeight));
-    const glm::mat4 viewProj = view.projection * view.view;
-    struct Candidate {
-        glm::vec4 data;
-        float weight;
-    };
-    std::vector<Candidate> found;
+    const glm::vec3 right(view.view[0][0], view.view[1][0], view.view[2][0]);
+    const glm::vec3 up(view.view[0][1], view.view[1][1], view.view[2][1]);
     for (const ScreenDistortion& d : view.distortions) {
-        if (d.strength <= 0.0f || d.radius <= 0.0f)
+        if (d.strength <= 0.0f || d.radius <= 0.0f || distortionSprites_.size() >= 64)
             continue;
-        const glm::vec4 clip = viewProj * glm::vec4(d.position, 1.0f);
-        if (clip.w <= 0.05f)
-            continue;
-        const glm::vec2 ndc = glm::vec2(clip) / clip.w;
-        const float r = d.radius * view.projection[1][1] / clip.w; // NDC height units
-        if (std::abs(ndc.x) - r * 2.0f > 1.0f || std::abs(ndc.y) - r * 2.0f > 1.0f || r < 0.002f)
-            continue;
-        const float rUv = std::min(r * 0.5f, 1.5f);
-        found.push_back({glm::vec4(ndc * 0.5f + 0.5f, rUv, d.lens ? -d.strength : d.strength), d.strength * rUv});
+        SpriteInstance s;
+        s.position = d.position;
+        s.axisX = right * d.radius;
+        s.axisY = up * d.radius;
+        s.color = glm::vec4(0.0f, d.strength, d.lens ? -1.0f : 0.0f, 1.0f);
+        distortionSprites_.push_back(s);
     }
-    std::sort(found.begin(), found.end(), [](const Candidate& a, const Candidate& b) { return a.weight > b.weight; });
-    for (std::size_t i = 0; i < found.size() && i < 8; ++i)
-        distortions_.push_back(found[i].data);
+}
+
+void Renderer::renderDistortion(const RenderView& view, const glm::mat4& viewProj)
+{
+    distortDrawn_ = false;
+    std::pmr::vector<const SpriteBatch*> batches(&frameArena_);
+    std::size_t total = distortionSprites_.size();
+    for (const SpriteBatch& b : view.sprites)
+        if (b.blend == SpriteBlend::Distort && !b.instances.empty()) {
+            batches.push_back(&b);
+            total += b.instances.size();
+        }
+    if (total == 0 || !distortFbo_ || !programs_.distort.id)
+        return;
+    if (!distortBuffer_ || total > distortCapacity_) {
+        if (distortBuffer_)
+            glDeleteBuffers(1, &distortBuffer_);
+        distortCapacity_ = std::max<std::size_t>(total * 3 / 2, 256);
+        glCreateBuffers(1, &distortBuffer_);
+        glNamedBufferData(distortBuffer_, static_cast<GLsizeiptr>(distortCapacity_ * sizeof(SpriteInstance)), nullptr, GL_DYNAMIC_DRAW);
+    }
+    std::pmr::vector<SpriteInstance> all(&frameArena_);
+    all.reserve(total);
+    all.insert(all.end(), distortionSprites_.begin(), distortionSprites_.end());
+    std::pmr::vector<int> bases(&frameArena_);
+    for (const SpriteBatch* b : batches) {
+        bases.push_back(static_cast<int>(all.size()));
+        all.insert(all.end(), b->instances.begin(), b->instances.end());
+    }
+    glNamedBufferSubData(distortBuffer_, 0, static_cast<GLsizeiptr>(all.size() * sizeof(SpriteInstance)), all.data());
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, distortBuffer_);
+    glBindFramebuffer(GL_FRAMEBUFFER, distortFbo_);
+    glViewport(0, 0, width_, height_);
+    const float zero[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+    glClearBufferfv(GL_COLOR, 0, zero);
+    const Program& p = programs_.distort;
+    glUseProgram(p.id);
+    glUniformMatrix4fv(p.loc("uSpriteViewProj"), 1, GL_FALSE, glm::value_ptr(viewProj));
+    glUniform1f(p.loc("uDecalLift"), 0.0f);
+    glBindVertexArray(emptyVao_);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_ONE, GL_ONE); // offsets add up
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
+    glDepthMask(GL_FALSE);
+    glDisable(GL_CULL_FACE);
+    auto draw = [&](unsigned tex, int columns, int rows, int base, std::size_t count) {
+        glBindTextureUnit(0, tex ? tex : whiteTex_);
+        glUniform1i(p.loc("uSpriteHasTexture"), tex ? 1 : 0);
+        glUniform2i(p.loc("uSpriteGrid"), std::max(1, columns), std::max(1, rows));
+        glUniform1i(p.loc("uSpriteBase"), base);
+        glDrawArraysInstanced(GL_TRIANGLES, 0, 6, static_cast<GLsizei>(count));
+        ++drawCalls_;
+    };
+    if (!distortionSprites_.empty())
+        draw(0, 1, 1, 0, distortionSprites_.size());
+    for (std::size_t i = 0; i < batches.size(); ++i) {
+        const SpriteBatch& b = *batches[i];
+        const unsigned tex = b.texture && b.texture->texture && b.texture->texture->valid() ? texture(*b.texture->texture) : 0u;
+        draw(tex, b.columns, b.rows, bases[i], b.instances.size());
+    }
+    glDisable(GL_BLEND);
+    glDepthMask(GL_TRUE);
+    glEnable(GL_CULL_FACE);
+    glBindFramebuffer(GL_FRAMEBUFFER, hdrFbo_);
+    distortDrawn_ = true;
 }
 
 void Renderer::updateExposure(const Environment& e)
@@ -3136,11 +3202,9 @@ void Renderer::present()
     glUniform1f(post.loc("uGrain"), e.grain);
     glUniform1f(post.loc("uTime"), time_);
     glUniform1i(post.loc("uLumaAlpha"), fxaa ? 1 : 0);
-    glUniform1i(post.loc("uDistortCount"), static_cast<int>(distortions_.size()));
-    if (!distortions_.empty())
-        glUniform4fv(post.loc("uDistort"), static_cast<int>(distortions_.size()), glm::value_ptr(distortions_[0]));
-    glUniform1f(post.loc("uAspect"), aspect_);
+    glUniform1i(post.loc("uDistortOn"), distortDrawn_ ? 1 : 0);
     glUniform1i(post.loc("uDistortMask"), overlayDrawn_ ? 1 : 0);
+    glBindTextureUnit(5, distortDrawn_ ? distortTex_ : whiteTex_);
     glBindTextureUnit(0, hdrColor_);
     glBindTextureUnit(1, bloomTex_.empty() ? whiteTex_ : bloomTex_[0]);
     glBindTextureUnit(2, depthTex_);

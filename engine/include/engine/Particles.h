@@ -26,7 +26,9 @@ struct SpriteInstance {
     glm::vec4 color{1.0f};       // linear rgb (may exceed 1 for glow) and alpha
 };
 
-enum class SpriteBlend : std::uint8_t { Alpha, Additive };
+// Distort: not drawn; the particles bend the image behind them (heat haze over fire, exhausts):
+// strength = alpha × intensity, shape = the texture's alpha (soft dot without a texture).
+enum class SpriteBlend : std::uint8_t { Alpha, Additive, Distort };
 
 // Quads sharing a texture and blend mode, drawn after the opaque scene (the
 // renderer sorts batches back to front; instances are drawn in the given order).

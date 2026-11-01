@@ -2561,6 +2561,24 @@ void testInteriorVolumes()
     check(engine::interiorVolumes(scene).empty(), "a disabled interior does nothing");
 }
 
+void testDistortParticles()
+{
+    namespace fs = std::filesystem;
+    const fs::path file = fs::absolute("distort_test.particle");
+    engine::ParticleEffect fx;
+    engine::ParticleEmitter e;
+    e.name = "Heat haze";
+    e.blend = engine::SpriteBlend::Distort;
+    fx.emitters.push_back(e);
+    std::string error;
+    check(engine::saveParticleFile(fx, file, &error), "distort particle saves");
+    engine::ParticleEffect loaded;
+    check(engine::loadParticleFile(loaded, file, &error) && loaded.emitters.size() == 1 &&
+              loaded.emitters[0].blend == engine::SpriteBlend::Distort,
+          "distort blend round-trips");
+    fs::remove(file);
+}
+
 void testTaskGraph()
 {
     engine::TaskGraph graph;
@@ -2662,6 +2680,7 @@ int main()
     testImpostorSettings();
     testVolumetricFogSettings();
     testInteriorVolumes();
+    testDistortParticles();
     testTaskGraph();
     testWorldStreaming();
     std::printf(failures ? "%d test(s) failed\n" : "all tests passed\n", failures);

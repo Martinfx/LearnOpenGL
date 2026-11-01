@@ -131,7 +131,7 @@ bool loadParticleFile(ParticleEffect& effect, const std::filesystem::path& file,
         else if (key == "blend") {
             std::string v;
             ok = static_cast<bool>(ls >> v);
-            e->blend = v == "additive" ? SpriteBlend::Additive : SpriteBlend::Alpha;
+            e->blend = v == "additive" ? SpriteBlend::Additive : v == "distort" ? SpriteBlend::Distort : SpriteBlend::Alpha;
         } else if (key == "lit") ok = static_cast<bool>(ls >> e->lit);
         else if (key == "stretch") ok = static_cast<bool>(ls >> e->stretch >> e->stretchFactor);
         else if (key == "sheltered") ok = static_cast<bool>(ls >> e->sheltered);
@@ -202,7 +202,7 @@ bool saveParticleFile(const ParticleEffect& effect, const std::filesystem::path&
             out << "texture " << std::quoted(toUtf8(rel.empty() ? e.texture : rel)) << '\n';
         }
         out << "flipbook " << e.columns << ' ' << e.rows << ' ' << e.frameRate << ' ' << e.randomFrame << '\n';
-        out << "blend " << (e.blend == SpriteBlend::Additive ? "additive" : "alpha") << '\n';
+        out << "blend " << (e.blend == SpriteBlend::Additive ? "additive" : e.blend == SpriteBlend::Distort ? "distort" : "alpha") << '\n';
         out << "lit " << e.lit << '\n';
         out << "stretch " << e.stretch << ' ' << e.stretchFactor << '\n';
         if (e.sheltered)

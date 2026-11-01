@@ -65,3 +65,21 @@ color_key 0.1 1 1 1 0.55
 color_key 1 1 1 1 0
 rotation 0 360
 spin -20 20
+emitter "Heat haze"
+blend distort
+lit 0
+rate 12
+max 48
+life 1 1.8
+shape disc 0.2 0 0
+direction 0 1 0
+spread 6
+speed 0.7 1.1
+gravity -0.03
+size 0.8 1.2
+size_key 0 0.6
+size_key 1 1.6
+intensity 1.5
+color_key 0 1 1 1 0
+color_key 0.15 1 1 1 1
+color_key 1 1 1 1 0

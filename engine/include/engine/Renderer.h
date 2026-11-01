@@ -225,7 +225,8 @@ public:
 
 private:
     FrameArena frameArena_{1024 * 1024}; // per-frame scratch arrays (light clusters, sprites)
-    void collectDistortions(const RenderView& view); // anomaly warps of this frame into screen space
+    void collectDistortions(const RenderView& view); // anomaly warps of this frame as quads
+    void renderDistortion(const RenderView& view, const glm::mat4& viewProj); // particles + warps -> distortTex_
     // Every mesh lives in one shared vertex and index buffer (the mesh pool), so
     // meshes with the same material can be drawn by one glMultiDrawElementsIndirect.
     struct GpuMesh {
@@ -278,7 +279,7 @@ private:
     };
     struct Programs {
         Program mesh, depth, sky, envCapture, prefilter, brdf, ssao, blur, bloomDown, bloomUp, post, fxaa, copy, grid, hiz, sprite, debug,
-            luminance, exposure, water, underwater, volumeInject, volumeIntegrate;
+            luminance, exposure, water, underwater, distort, volumeInject, volumeIntegrate;
     };
     // Uniform locations of the program that draws geometry right now.
     struct MeshLocations {
@@ -562,8 +563,11 @@ private:
     Environment resolvedEnv_;           // the scene's environment at its time of day
     SkyState sky_;                      // light direction, moon, stars of resolvedEnv_
     float time_ = 0.0f;
-    std::vector<glm::vec4> distortions_;  // this frame: uv center, radius (uv height), signed strength (<0 lens)
-    float aspect_ = 1.0f;
+    std::vector<SpriteInstance> distortionSprites_; // this frame: anomaly warps as camera-facing quads
+    unsigned distortTex_ = 0, distortFbo_ = 0;      // screen offsets in pixels (rg), scene depth for the test
+    unsigned distortBuffer_ = 0;
+    std::size_t distortCapacity_ = 0;
+    bool distortDrawn_ = false;
     bool overlayDrawn_ = false;           // first-person layer in the depth buffer (masks the distortion)
     int targetFbo_ = 0;                 // framebuffer to present into
     int targetX_ = 0, targetY_ = 0;     // where in it

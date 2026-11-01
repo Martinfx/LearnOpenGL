@@ -503,7 +503,7 @@ ParticleEditor::ParticleEditor(QWidget* parent) : QWidget(parent)
     randomFrame_->setToolTip(tr("Each particle shows one random cell (debris, variants)"));
     form->addRow(tr("Frame rate"), pair(frameRate_, randomFrame_, form_));
     blend_ = new QComboBox(form_);
-    blend_->addItems({tr("Alpha (smoke, dust)"), tr("Additive (fire, sparks, glow)")});
+    blend_->addItems({tr("Alpha (smoke, dust)"), tr("Additive (fire, sparks, glow)"), tr("Distort (heat haze: bends the image, strength = alpha x intensity)")});
     form->addRow(tr("Blend"), blend_);
     lit_ = new QCheckBox(tr("Lit by sun and sky"), form_);
     form->addRow(QString(), lit_);
@@ -799,7 +799,7 @@ void ParticleEditor::showEmitter()
     rows_->setValue(e->rows);
     frameRate_->setValue(e->frameRate);
     randomFrame_->setChecked(e->randomFrame);
-    blend_->setCurrentIndex(e->blend == engine::SpriteBlend::Additive ? 1 : 0);
+    blend_->setCurrentIndex(e->blend == engine::SpriteBlend::Additive ? 1 : e->blend == engine::SpriteBlend::Distort ? 2 : 0);
     lit_->setChecked(e->lit);
     stretch_->setChecked(e->stretch);
     sheltered_->setChecked(e->sheltered);
@@ -849,7 +849,9 @@ void ParticleEditor::edited()
     e->rows = rows_->value();
     e->frameRate = static_cast<float>(frameRate_->value());
     e->randomFrame = randomFrame_->isChecked();
-    e->blend = blend_->currentIndex() == 1 ? engine::SpriteBlend::Additive : engine::SpriteBlend::Alpha;
+    e->blend = blend_->currentIndex() == 1   ? engine::SpriteBlend::Additive
+               : blend_->currentIndex() == 2 ? engine::SpriteBlend::Distort
+                                             : engine::SpriteBlend::Alpha;
     e->lit = lit_->isChecked();
     e->stretch = stretch_->isChecked();
     e->sheltered = sheltered_->isChecked();
