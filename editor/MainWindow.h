@@ -238,6 +238,7 @@ private:
     // false when the catalogue does not list the model.
     bool applyPropCatalogue(engine::Model& model);
     QCheckBox* shadowsCheck_ = nullptr;
+    QDoubleSpinBox* swaySpin_ = nullptr;      // Model::sway
     QDoubleSpinBox* uvSpins_[5] = {};   // scale U, V, shift U, V, rotation
     QComboBox* activeMaterial_ = nullptr;
     QLabel* selectionInfo_ = nullptr;   // Select mode page

@@ -77,6 +77,7 @@ private:
     std::vector<Source> sources_;
     engine::SurfaceTable surfaces_;
     engine::AudioSystem::Handle rain_ = 0, wind_ = 0; // weather loops, volume follows Environment::rain / wind
+    engine::AudioSystem::Handle rainRoof_ = 0;        // rain on the roof, while sheltered
     bool sheltered_ = false;
     float shelterMix_ = 0.0f;   // 0 open .. 1 sheltered, eased
     float stride_ = 0.0f;       // metres walked since the last footstep

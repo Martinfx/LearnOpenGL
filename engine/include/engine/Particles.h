@@ -81,6 +81,7 @@ struct ParticleEmitter {
     float gravity = 0.0f;                   // multiples of 9.81 m/s² down (smoke: slightly negative = rises)
     float drag = 0.0f;                      // 1/s, velocity lost per second
     glm::vec3 wind{0.0f};                   // m/s added drift
+    float levelWind = 0.0f;                 // 0..1 how much the level's wind (Environment) carries the particles
     float attract = 0.0f;                   // m/s² toward the effect's vertical axis (negative = away): vortices, anomalies
     float orbit = 0.0f;                     // m/s² around that axis (swirl), positive = counter-clockwise seen from above
     bool worldSpace = true;                 // particles stay where they were born when the effect moves
@@ -130,6 +131,7 @@ public:
     Handle spawn(std::shared_ptr<const ParticleEffect> effect, glm::vec3 position, const glm::mat3& rotation = glm::mat3(1.0f));
     void setTransform(Handle h, glm::vec3 position, const glm::mat3& rotation = glm::mat3(1.0f));
     void setRateScale(Handle h, float scale); // multiplies every emitter's rate (rain by weather)
+    void setWind(glm::vec3 metresPerSecond);  // the level's wind (Environment), scaled per emitter by levelWind
     void stop(Handle h);   // stops emitting; live particles finish
     void kill(Handle h);   // removes at once
     void clear();

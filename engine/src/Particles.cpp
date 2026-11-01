@@ -149,6 +149,7 @@ bool loadParticleFile(ParticleEffect& effect, const std::filesystem::path& file,
         else if (key == "speed") ok = static_cast<bool>(ls >> e->speedMin >> e->speedMax);
         else if (key == "gravity") ok = static_cast<bool>(ls >> e->gravity);
         else if (key == "drag") ok = static_cast<bool>(ls >> e->drag);
+        else if (key == "level_wind") ok = static_cast<bool>(ls >> e->levelWind);
         else if (key == "wind") ok = static_cast<bool>(ls >> e->wind.x >> e->wind.y >> e->wind.z);
         else if (key == "attract") ok = static_cast<bool>(ls >> e->attract >> e->orbit);
         else if (key == "world_space") ok = static_cast<bool>(ls >> e->worldSpace);
@@ -218,6 +219,8 @@ bool saveParticleFile(const ParticleEffect& effect, const std::filesystem::path&
         out << "gravity " << e.gravity << '\n';
         out << "drag " << e.drag << '\n';
         out << "wind " << e.wind.x << ' ' << e.wind.y << ' ' << e.wind.z << '\n';
+        if (e.levelWind != 0.0f)
+            out << "level_wind " << e.levelWind << '\n';
         if (e.attract != 0.0f || e.orbit != 0.0f)
             out << "attract " << e.attract << ' ' << e.orbit << '\n';
         out << "world_space " << e.worldSpace << '\n';
@@ -316,6 +319,7 @@ struct ParticleSystem::Impl {
     std::vector<Instance> instances;
     Handle nextId = 1;
     std::uint32_t seed = 12345;
+    glm::vec3 wind{0.0f};
 
     Instance* find(Handle h)
     {
@@ -427,11 +431,14 @@ float range(float a, float b, std::mt19937& rng)
 
 } // namespace
 
+void ParticleSystem::setWind(glm::vec3 metresPerSecond) { impl_->wind = metresPerSecond; }
+
 void ParticleSystem::update(float dt)
 {
     if (dt <= 0.0f)
         return;
-    auto simulate = [dt](Impl::Instance& inst) {
+    const glm::vec3 levelWind = impl_->wind;
+    auto simulate = [dt, levelWind](Impl::Instance& inst) {
         inst.time += dt;
         const ParticleEffect& fx = *inst.effect;
         if (inst.emitters.size() != fx.emitters.size())
@@ -456,7 +463,7 @@ void ParticleSystem::update(float dt)
                     }
                 }
                 p.velocity = p.velocity * damp + a * dt;
-                p.position += (p.velocity + e.wind) * dt;
+                p.position += (p.velocity + e.wind + levelWind * e.levelWind) * dt;
                 p.rotation += p.spin * dt;
             }
             std::erase_if(st.particles, [](const Particle& p) { return p.age >= p.life; });

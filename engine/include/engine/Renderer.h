@@ -257,7 +257,7 @@ private:
         int tiling = -1, worldUv = -1, grid = -1, emissiveColor = -1, roughness = -1, metallic = -1;
         int normalStrength = -1, roughnessChannel = -1, metallicChannel = -1, overlay = -1, envRotation = -1;
         int overlaySun = -1, uvScale = -1, uvOffset = -1, uvRotation = -1, shading = -1;
-        int alphaMode = -1, alphaCutoff = -1, opacity = -1, instanced = -1, instanceBase = -1;
+        int alphaMode = -1, alphaCutoff = -1, opacity = -1, instanced = -1, instanceBase = -1, sway = -1;
         int hasMap[6] = {-1, -1, -1, -1, -1, -1};
     };
 
@@ -364,6 +364,7 @@ private:
         const Model* model = nullptr;
         std::vector<glm::mat4> transforms;
         float distance = 1e30f;
+        float sway = 0.0f; // bending in the wind (Model::sway, FoliageType::sway)
     };
     std::vector<InstanceBatch> batches_;
     std::unordered_map<std::uint64_t, std::size_t> batchIndex_;

@@ -13,6 +13,7 @@ direction 0 -1 0
 spread 3
 speed 9 11
 wind 0.6 0 0.2
+level_wind 0.5
 size 0.01 0.014
 color 0.75 0.78 0.82
 color_key 0 1 1 1 0.5

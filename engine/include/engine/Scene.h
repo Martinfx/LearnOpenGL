@@ -193,6 +193,7 @@ struct Model {
     float cullDistance = 0.0f;
     bool collision = true;
     bool castShadows = true;          // off for grass and small plants: the shadow pass is the costliest one
+    float sway = 0.0f;                // bending in the level's wind: 0 rigid, ~0.3 trees, 1 grass and bushes
     // Physics prop (crates, barrels, cans): a rigid body the player, bullets and blasts push.
     // The collider is fitted to localBounds. Ignored for animated models.
     bool dynamic = false;
@@ -354,6 +355,10 @@ struct Environment {
     std::filesystem::path windSound;
     std::filesystem::path rainEffect;  // rain particles around the camera, empty = particles/rain.particle
     float storm = 0.0f;                // 0 none .. 1 frequent lightning (flash and thunder)
+    // Wind: `wind` (0 calm .. 1 storm, ~20 m/s) blowing toward `windDirection` (degrees,
+    // 0 = +X, 90 = +Z) drives vegetation sway, particles with "level wind" and the wind sound.
+    float windDirection = 30.0f;
+    float windGusts = 0.5f;            // 0 steady .. 1 strong gusts
     float puddles = 0.6f;              // 0..1 how much water collects on flat ground when wet
     std::filesystem::path thunderSound; // empty = sounds/ambient/thunder.sound
     // Room reverb of the whole level (engine/Audio.h reverbPresetNames()); reverb

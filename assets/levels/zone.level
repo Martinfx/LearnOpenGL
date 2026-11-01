@@ -2218,2045 +2218,2603 @@ box "Ground far" 0 -0.52 -640 1000 1 340 0.5 0.5 0.5
   parent "Terrain"
   material "../materials/pbr/forest_ground_04.material"
 model "birch_c" "../models/zone/gen/birch_dead.glb" -16.20 0.00 -164.12
+  sway 0.15
   parent "Vegetation"
   transform 0.0 307.7 0.0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 45
 model "birch_a" "../models/zone/gen/dead_tree_b.glb" -29.56 0.00 167.14
+  sway 0.12
   parent "Vegetation"
   transform 0.0 131.1 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "dead_tree_b" "../models/zone/gen/dead_tree_a.glb" -26.84 0.00 193.29
+  sway 0.12
   parent "Vegetation"
   transform 0.0 56.1 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "birch_b" "../models/zone/gen/birch_a.glb" -19.56 0.00 87.00
+  sway 0.3
   parent "Vegetation"
   transform 0.0 327.7 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_a 2" "../models/zone/gen/birch_b.glb" -43.68 0.00 220.21
+  sway 0.3
   parent "Vegetation"
   transform 0.0 25.3 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_b 2" "../models/zone/gen/dead_tree_a.glb" -42.84 0.00 244.88
+  sway 0.12
   parent "Vegetation"
   transform 0.0 70.4 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "birch_c 2" "../models/zone/gen/birch_b.glb" -25.29 0.00 185.44
+  sway 0.3
   parent "Vegetation"
   transform 0.0 57.5 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "dead_tree_a" "../models/zone/gen/birch_b.glb" -29.57 0.00 -13.49
+  sway 0.3
   parent "Vegetation"
   transform 0.0 35.8 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_b 3" "../models/zone/gen/birch_dead.glb" -39.05 0.00 36.22
+  sway 0.15
   parent "Vegetation"
   transform 0.0 214.2 0.0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 45
 model "birch_c 3" "../models/zone/gen/birch_a.glb" -41.00 0.00 66.83
+  sway 0.3
   parent "Vegetation"
   transform 0.0 153.3 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_b 4" "../models/zone/gen/dead_tree_a.glb" -17.34 0.00 211.97
+  sway 0.12
   parent "Vegetation"
   transform 0.0 225.5 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "birch_a 3" "../models/zone/gen/birch_dead.glb" -31.40 0.00 227.72
+  sway 0.15
   parent "Vegetation"
   transform 0.0 56.8 0.0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 45
 model "birch_c 4" "../models/zone/gen/birch_a.glb" -34.38 0.00 195.64
+  sway 0.3
   parent "Vegetation"
   transform 0.0 302.0 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_a 4" "../models/zone/gen/dead_tree_a.glb" -30.14 0.00 236.56
+  sway 0.12
   parent "Vegetation"
   transform 0.0 116.7 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "birch_b 5" "../models/zone/gen/birch_b.glb" -27.34 0.00 -48.26
+  sway 0.3
   parent "Vegetation"
   transform 0.0 108.8 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "dead_tree_b 2" "../models/zone/gen/birch_b.glb" -20.99 0.00 100.97
+  sway 0.3
   parent "Vegetation"
   transform 0.0 117.8 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_c 5" "../models/zone/gen/birch_a.glb" -40.24 0.00 115.25
+  sway 0.3
   parent "Vegetation"
   transform 0.0 1.1 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_dead" "../models/zone/gen/birch_b.glb" -25.40 0.00 -96.08
+  sway 0.3
   parent "Vegetation"
   transform 0.0 139.5 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_a 5" "../models/zone/gen/birch_a.glb" -17.27 0.00 -124.88
+  sway 0.3
   parent "Vegetation"
   transform 0.0 140.1 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_b 6" "../models/zone/gen/dead_tree_a.glb" -20.38 0.00 128.84
+  sway 0.12
   parent "Vegetation"
   transform 0.0 210.6 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "birch_a 6" "../models/zone/gen/birch_b.glb" -32.45 0.00 148.32
+  sway 0.3
   parent "Vegetation"
   transform 0.0 338.2 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_dead 2" "../models/zone/gen/dead_tree_a.glb" -31.63 0.00 57.80
+  sway 0.12
   parent "Vegetation"
   transform 0.0 125.6 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "birch_c 6" "../models/zone/gen/birch_dead.glb" -31.81 0.00 -59.09
+  sway 0.15
   parent "Vegetation"
   transform 0.0 331.0 0.0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 45
 model "birch_b 7" "../models/zone/gen/birch_dead.glb" -21.20 0.00 11.78
+  sway 0.15
   parent "Vegetation"
   transform 0.0 142.4 0.0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 45
 model "birch_a 7" "../models/zone/gen/birch_a.glb" -39.12 0.00 56.38
+  sway 0.3
   parent "Vegetation"
   transform 0.0 174.7 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_b 8" "../models/zone/gen/birch_b.glb" -43.59 0.00 -25.18
+  sway 0.3
   parent "Vegetation"
   transform 0.0 275.5 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "dead_tree_a 2" "../models/zone/gen/birch_a.glb" -41.00 0.00 -119.49
+  sway 0.3
   parent "Vegetation"
   transform 0.0 222.8 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_a 8" "../models/zone/gen/dead_tree_b.glb" -25.67 0.00 249.69
+  sway 0.12
   parent "Vegetation"
   transform 0.0 323.2 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "birch_b 9" "../models/zone/gen/birch_b.glb" -22.69 0.00 -6.71
+  sway 0.3
   parent "Vegetation"
   transform 0.0 162.8 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "dead_tree_a 3" "../models/zone/gen/birch_b.glb" -29.31 0.00 29.46
+  sway 0.3
   parent "Vegetation"
   transform 0.0 219.7 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_dead 3" "../models/zone/gen/birch_b.glb" -22.18 0.00 33.59
+  sway 0.3
   parent "Vegetation"
   transform 0.0 110.2 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_b 10" "../models/zone/gen/birch_b.glb" -43.66 0.00 -96.75
+  sway 0.3
   parent "Vegetation"
   transform 0.0 337.7 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_b 11" "../models/zone/gen/birch_b.glb" -23.16 0.00 57.14
+  sway 0.3
   parent "Vegetation"
   transform 0.0 324.6 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_b 12" "../models/zone/gen/birch_b.glb" -36.27 0.00 180.37
+  sway 0.3
   parent "Vegetation"
   transform 0.0 103.0 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_dead 4" "../models/zone/gen/birch_a.glb" -30.84 0.00 -65.75
+  sway 0.3
   parent "Vegetation"
   transform 0.0 88.5 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_b 13" "../models/zone/gen/birch_c.glb" -34.51 0.00 9.36
+  sway 0.3
   parent "Vegetation"
   transform 0.0 48.8 0.0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 45
 model "birch_a 9" "../models/zone/gen/birch_c.glb" -27.04 0.00 46.18
+  sway 0.3
   parent "Vegetation"
   transform 0.0 70.2 0.0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 45
 model "dead_tree_b 3" "../models/zone/gen/birch_c.glb" -31.75 0.00 -126.25
+  sway 0.3
   parent "Vegetation"
   transform 0.0 344.4 0.0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 45
 model "birch_a 10" "../models/zone/gen/birch_a.glb" -18.20 0.00 135.44
+  sway 0.3
   parent "Vegetation"
   transform 0.0 223.6 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_b 14" "../models/zone/gen/birch_a.glb" -29.18 0.00 213.87
+  sway 0.3
   parent "Vegetation"
   transform 0.0 286.7 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_b 15" "../models/zone/gen/birch_b.glb" -41.44 0.00 -54.19
+  sway 0.3
   parent "Vegetation"
   transform 0.0 99.7 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_a 11" "../models/zone/gen/birch_b.glb" -38.32 0.00 -156.29
+  sway 0.3
   parent "Vegetation"
   transform 0.0 65.0 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "dead_tree_a 4" "../models/zone/gen/birch_b.glb" -33.80 0.00 85.40
+  sway 0.3
   parent "Vegetation"
   transform 0.0 177.2 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_dead 5" "../models/zone/gen/birch_a.glb" -21.23 0.00 240.72
+  sway 0.3
   parent "Vegetation"
   transform 0.0 314.3 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_c 7" "../models/zone/gen/birch_a.glb" -26.53 0.00 7.82
+  sway 0.3
   parent "Vegetation"
   transform 0.0 217.2 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "dead_tree_b 4" "../models/zone/gen/birch_a.glb" -40.31 0.00 -169.58
+  sway 0.3
   parent "Vegetation"
   transform 0.0 212.8 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_c 8" "../models/zone/gen/birch_b.glb" -34.95 0.00 24.29
+  sway 0.3
   parent "Vegetation"
   transform 0.0 288.9 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_b 16" "../models/zone/gen/birch_a.glb" -32.05 0.00 39.85
+  sway 0.3
   parent "Vegetation"
   transform 0.0 284.0 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "dead_tree_b 5" "../models/zone/gen/dead_tree_a.glb" -20.99 0.00 -46.57
+  sway 0.12
   parent "Vegetation"
   transform 0.0 122.3 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "dead_tree_a 5" "../models/zone/gen/dead_tree_a.glb" -35.35 0.00 -44.66
+  sway 0.12
   parent "Vegetation"
   transform 0.0 118.4 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "birch_a 12" "../models/zone/gen/birch_a.glb" 33.59 0.00 -126.40
+  sway 0.3
   parent "Vegetation"
   transform 0.0 295.5 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_b 17" "../models/zone/gen/birch_b.glb" 42.44 0.00 235.21
+  sway 0.3
   parent "Vegetation"
   transform 0.0 50.5 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_b 18" "../models/zone/gen/birch_b.glb" 16.87 0.00 -26.37
+  sway 0.3
   parent "Vegetation"
   transform 0.0 184.6 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_a 13" "../models/zone/gen/birch_c.glb" 25.94 0.00 -100.78
+  sway 0.3
   parent "Vegetation"
   transform 0.0 98.8 0.0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 45
 model "dead_tree_b 6" "../models/zone/gen/birch_b.glb" 21.43 0.00 -50.54
+  sway 0.3
   parent "Vegetation"
   transform 0.0 354.3 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "dead_tree_b 7" "../models/zone/gen/birch_b.glb" 41.00 0.00 245.13
+  sway 0.3
   parent "Vegetation"
   transform 0.0 75.6 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_a 14" "../models/zone/gen/birch_dead.glb" 40.20 0.00 134.18
+  sway 0.15
   parent "Vegetation"
   transform 0.0 34.3 0.0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 45
 model "birch_b 19" "../models/zone/gen/birch_b.glb" 43.90 0.00 -31.56
+  sway 0.3
   parent "Vegetation"
   transform 0.0 251.9 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "dead_tree_b 8" "../models/zone/gen/birch_b.glb" 17.49 0.00 229.51
+  sway 0.3
   parent "Vegetation"
   transform 0.0 331.8 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_a 15" "../models/zone/gen/birch_b.glb" 21.38 0.00 234.84
+  sway 0.3
   parent "Vegetation"
   transform 0.0 61.5 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "dead_tree_b 9" "../models/zone/gen/birch_a.glb" 33.48 0.00 -18.71
+  sway 0.3
   parent "Vegetation"
   transform 0.0 146.9 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_dead 6" "../models/zone/gen/birch_b.glb" 19.94 0.00 -90.44
+  sway 0.3
   parent "Vegetation"
   transform 0.0 129.3 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_dead 7" "../models/zone/gen/birch_c.glb" 43.93 0.00 -172.51
+  sway 0.3
   parent "Vegetation"
   transform 0.0 328.3 0.0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 45
 model "birch_b 20" "../models/zone/gen/birch_c.glb" 27.12 0.00 -117.82
+  sway 0.3
   parent "Vegetation"
   transform 0.0 134.7 0.0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 45
 model "birch_c 9" "../models/zone/gen/dead_tree_b.glb" 30.45 0.00 -50.01
+  sway 0.12
   parent "Vegetation"
   transform 0.0 189.0 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "dead_tree_a 6" "../models/zone/gen/dead_tree_b.glb" 44.73 0.00 74.44
+  sway 0.12
   parent "Vegetation"
   transform 0.0 258.0 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "birch_c 10" "../models/zone/gen/birch_b.glb" 23.06 0.00 -62.43
+  sway 0.3
   parent "Vegetation"
   transform 0.0 34.8 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_c 11" "../models/zone/gen/birch_b.glb" 28.84 0.00 -61.29
+  sway 0.3
   parent "Vegetation"
   transform 0.0 18.0 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_b 21" "../models/zone/gen/birch_a.glb" 42.39 0.00 -24.41
+  sway 0.3
   parent "Vegetation"
   transform 0.0 358.1 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_a 16" "../models/zone/gen/dead_tree_b.glb" 37.75 0.00 -56.64
+  sway 0.12
   parent "Vegetation"
   transform 0.0 318.8 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "birch_b 22" "../models/zone/gen/birch_dead.glb" 23.76 0.00 205.73
+  sway 0.15
   parent "Vegetation"
   transform 0.0 46.5 0.0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 45
 model "dead_tree_b 10" "../models/zone/gen/birch_c.glb" 20.87 0.00 -110.03
+  sway 0.3
   parent "Vegetation"
   transform 0.0 349.5 0.0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 45
 model "dead_tree_a 7" "../models/zone/gen/dead_tree_b.glb" 26.50 0.00 -25.77
+  sway 0.12
   parent "Vegetation"
   transform 0.0 219.6 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "dead_tree_a 8" "../models/zone/gen/birch_a.glb" 41.70 0.00 116.00
+  sway 0.3
   parent "Vegetation"
   transform 0.0 299.9 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_a 17" "../models/zone/gen/birch_b.glb" 43.16 0.00 10.91
+  sway 0.3
   parent "Vegetation"
   transform 0.0 171.7 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_b 23" "../models/zone/gen/dead_tree_a.glb" 28.63 0.00 -153.17
+  sway 0.12
   parent "Vegetation"
   transform 0.0 337.6 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "dead_tree_b 11" "../models/zone/gen/birch_dead.glb" 27.44 0.00 246.04
+  sway 0.15
   parent "Vegetation"
   transform 0.0 99.7 0.0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 45
 model "birch_b 24" "../models/zone/gen/birch_b.glb" 23.67 0.00 213.14
+  sway 0.3
   parent "Vegetation"
   transform 0.0 55.7 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_b 25" "../models/zone/gen/birch_dead.glb" 16.61 0.00 224.05
+  sway 0.15
   parent "Vegetation"
   transform 0.0 303.1 0.0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 45
 model "birch_a 18" "../models/zone/gen/birch_a.glb" 36.91 0.00 153.11
+  sway 0.3
   parent "Vegetation"
   transform 0.0 68.4 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_a 19" "../models/zone/gen/birch_b.glb" 33.21 0.00 183.92
+  sway 0.3
   parent "Vegetation"
   transform 0.0 255.7 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_b 26" "../models/zone/gen/dead_tree_a.glb" 35.96 0.00 229.52
+  sway 0.12
   parent "Vegetation"
   transform 0.0 296.5 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "birch_a 20" "../models/zone/gen/dead_tree_b.glb" 21.46 0.00 49.15
+  sway 0.12
   parent "Vegetation"
   transform 0.0 159.3 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "birch_b 27" "../models/zone/gen/birch_b.glb" 27.10 0.00 19.99
+  sway 0.3
   parent "Vegetation"
   transform 0.0 123.9 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_dead 8" "../models/zone/gen/birch_b.glb" 38.87 0.00 -182.03
+  sway 0.3
   parent "Vegetation"
   transform 0.0 180.9 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "dead_tree_b 12" "../models/zone/gen/dead_tree_a.glb" 31.83 0.00 32.00
+  sway 0.12
   parent "Vegetation"
   transform 0.0 240.6 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "birch_a 21" "../models/zone/gen/birch_b.glb" 34.06 0.00 119.54
+  sway 0.3
   parent "Vegetation"
   transform 0.0 137.3 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_b 28" "../models/zone/gen/dead_tree_a.glb" 27.53 0.00 -85.77
+  sway 0.12
   parent "Vegetation"
   transform 0.0 32.1 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "birch_b 29" "../models/zone/gen/birch_b.glb" 28.82 0.00 228.70
+  sway 0.3
   parent "Vegetation"
   transform 0.0 104.6 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "dead_tree_a 9" "../models/zone/gen/birch_a.glb" 29.08 0.00 213.85
+  sway 0.3
   parent "Vegetation"
   transform 0.0 63.1 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_dead 9" "../models/zone/gen/birch_a.glb" 19.61 0.00 193.82
+  sway 0.3
   parent "Vegetation"
   transform 0.0 245.7 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_a 22" "../models/zone/gen/birch_a.glb" 38.54 0.00 99.13
+  sway 0.3
   parent "Vegetation"
   transform 0.0 351.2 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_dead 10" "../models/zone/gen/birch_c.glb" 27.37 0.00 -172.53
+  sway 0.3
   parent "Vegetation"
   transform 0.0 34.1 0.0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 45
 model "dead_tree_a 10" "../models/zone/gen/birch_dead.glb" 26.24 0.00 -143.61
+  sway 0.15
   parent "Vegetation"
   transform 0.0 157.1 0.0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 45
 model "dead_tree_a 11" "../models/zone/gen/birch_a.glb" 20.92 0.00 -33.07
+  sway 0.3
   parent "Vegetation"
   transform 0.0 110.0 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_a 23" "../models/zone/gen/birch_a.glb" 38.03 0.00 163.81
+  sway 0.3
   parent "Vegetation"
   transform 0.0 77.1 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "dead_tree_b 13" "../models/zone/gen/birch_a.glb" 31.06 0.00 -42.70
+  sway 0.3
   parent "Vegetation"
   transform 0.0 29.7 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_dead 11" "../models/zone/gen/birch_a.glb" 19.64 0.00 158.65
+  sway 0.3
   parent "Vegetation"
   transform 0.0 120.6 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_b 30" "../models/zone/gen/birch_dead.glb" 24.85 0.00 -126.60
+  sway 0.15
   parent "Vegetation"
   transform 0.0 207.5 0.0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 45
 model "dead_tree_a 12" "../models/zone/gen/dead_tree_a.glb" 34.72 0.00 11.79
+  sway 0.12
   parent "Vegetation"
   transform 0.0 179.1 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "birch_a 24" "../models/zone/gen/birch_a.glb" -108.92 0.00 83.44
+  sway 0.3
   parent "Vegetation"
   transform 0.0 190.0 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_a 25" "../models/zone/gen/birch_b.glb" -102.07 0.00 -88.97
+  sway 0.3
   parent "Vegetation"
   transform 0.0 171.0 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_dead 12" "../models/zone/gen/birch_a.glb" -108.26 0.00 -142.06
+  sway 0.3
   parent "Vegetation"
   transform 0.0 320.0 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "dead_tree_b 14" "../models/zone/gen/birch_a.glb" -101.79 0.00 89.39
+  sway 0.3
   parent "Vegetation"
   transform 0.0 289.4 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "dead_tree_b 15" "../models/zone/gen/birch_b.glb" -103.92 0.00 -147.43
+  sway 0.3
   parent "Vegetation"
   transform 0.0 100.1 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_dead 13" "../models/zone/gen/birch_a.glb" -109.66 0.00 27.16
+  sway 0.3
   parent "Vegetation"
   transform 0.0 50.6 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "dead_tree_b 16" "../models/zone/gen/birch_a.glb" -59.77 0.00 -59.41
+  sway 0.3
   parent "Vegetation"
   transform 0.0 312.6 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_dead 14" "../models/zone/gen/birch_a.glb" -60.42 0.00 13.22
+  sway 0.3
   parent "Vegetation"
   transform 0.0 90.4 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_dead 15" "../models/zone/gen/dead_tree_a.glb" -102.86 0.00 -152.49
+  sway 0.12
   parent "Vegetation"
   transform 0.0 351.2 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "birch_b 31" "../models/zone/gen/birch_b.glb" -58.66 0.00 -99.54
+  sway 0.3
   parent "Vegetation"
   transform 0.0 259.6 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "dead_tree_b 17" "../models/zone/gen/dead_tree_a.glb" -100.38 0.00 143.88
+  sway 0.12
   parent "Vegetation"
   transform 0.0 142.5 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "dead_tree_a 13" "../models/zone/gen/birch_a.glb" -62.21 0.00 -154.40
+  sway 0.3
   parent "Vegetation"
   transform 0.0 289.7 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_a 26" "../models/zone/gen/dead_tree_b.glb" -107.67 0.00 -54.14
+  sway 0.12
   parent "Vegetation"
   transform 0.0 343.5 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "birch_b 32" "../models/zone/gen/birch_a.glb" -58.15 0.00 96.02
+  sway 0.3
   parent "Vegetation"
   transform 0.0 198.0 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_a 27" "../models/zone/gen/dead_tree_a.glb" -109.20 0.00 117.19
+  sway 0.12
   parent "Vegetation"
   transform 0.0 323.3 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "birch_c 12" "../models/zone/gen/birch_b.glb" -107.54 0.00 91.05
+  sway 0.3
   parent "Vegetation"
   transform 0.0 103.0 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_b 33" "../models/zone/gen/dead_tree_a.glb" -60.58 0.00 145.15
+  sway 0.12
   parent "Vegetation"
   transform 0.0 283.6 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "dead_tree_a 14" "../models/zone/gen/birch_a.glb" -101.94 0.00 -103.58
+  sway 0.3
   parent "Vegetation"
   transform 0.0 100.3 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_b 34" "../models/zone/gen/dead_tree_b.glb" -107.94 0.00 -127.88
+  sway 0.12
   parent "Vegetation"
   transform 0.0 10.8 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "dead_tree_b 18" "../models/zone/gen/dead_tree_b.glb" -109.79 0.00 98.64
+  sway 0.12
   parent "Vegetation"
   transform 0.0 238.5 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "birch_c 13" "../models/zone/gen/birch_a.glb" -108.01 0.00 -44.03
+  sway 0.3
   parent "Vegetation"
   transform 0.0 282.1 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "dead_tree_b 19" "../models/zone/gen/dead_tree_b.glb" -60.00 0.00 84.42
+  sway 0.12
   parent "Vegetation"
   transform 0.0 114.2 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "birch_b 35" "../models/zone/gen/dead_tree_a.glb" -62.44 0.00 99.89
+  sway 0.12
   parent "Vegetation"
   transform 0.0 70.1 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "dead_tree_a 15" "../models/zone/gen/birch_b.glb" -108.05 0.00 -71.85
+  sway 0.3
   parent "Vegetation"
   transform 0.0 150.1 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_b 36" "../models/zone/gen/birch_dead.glb" -109.75 0.00 -18.96
+  sway 0.15
   parent "Vegetation"
   transform 0.0 264.4 0.0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 45
 model "birch_a 28" "../models/zone/gen/birch_b.glb" -107.56 0.00 126.17
+  sway 0.3
   parent "Vegetation"
   transform 0.0 111.8 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_dead 16" "../models/zone/gen/birch_b.glb" -101.89 0.00 5.95
+  sway 0.3
   parent "Vegetation"
   transform 0.0 78.6 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "dead_tree_a 16" "../models/zone/gen/birch_b.glb" -63.33 0.00 -53.59
+  sway 0.3
   parent "Vegetation"
   transform 0.0 214.7 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "dead_tree_a 17" "../models/zone/gen/dead_tree_b.glb" -108.74 0.00 5.28
+  sway 0.12
   parent "Vegetation"
   transform 0.0 16.4 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "birch_b 37" "../models/zone/gen/dead_tree_b.glb" -105.40 0.00 53.15
+  sway 0.12
   parent "Vegetation"
   transform 0.0 134.4 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "birch_a 29" "../models/zone/gen/dead_tree_b.glb" -108.61 0.00 -114.66
+  sway 0.12
   parent "Vegetation"
   transform 0.0 56.2 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "dead_tree_a 18" "../models/zone/gen/dead_tree_b.glb" -109.86 0.00 -96.72
+  sway 0.12
   parent "Vegetation"
   transform 0.0 253.0 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "birch_b 38" "../models/zone/gen/birch_a.glb" -102.85 0.00 -79.97
+  sway 0.3
   parent "Vegetation"
   transform 0.0 281.5 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_dead 17" "../models/zone/gen/birch_b.glb" -103.65 0.00 58.60
+  sway 0.3
   parent "Vegetation"
   transform 0.0 80.6 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_dead 18" "../models/zone/gen/birch_b.glb" -59.51 0.00 62.61
+  sway 0.3
   parent "Vegetation"
   transform 0.0 84.5 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_b 39" "../models/zone/gen/birch_b.glb" -107.72 0.00 -9.67
+  sway 0.3
   parent "Vegetation"
   transform 0.0 114.0 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "dead_tree_a 19" "../models/zone/gen/birch_a.glb" 16.62 0.00 114.06
+  sway 0.3
   parent "Vegetation"
   transform 0.0 343.0 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_b 40" "../models/zone/gen/birch_a.glb" 53.64 0.00 105.74
+  sway 0.3
   parent "Vegetation"
   transform 0.0 221.6 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_dead 19" "../models/zone/gen/birch_b.glb" 114.24 0.00 124.51
+  sway 0.3
   parent "Vegetation"
   transform 0.0 48.2 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_b 41" "../models/zone/gen/birch_b.glb" 181.88 0.00 212.29
+  sway 0.3
   parent "Vegetation"
   transform 0.0 8.9 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "dead_tree_a 20" "../models/zone/gen/birch_dead.glb" 205.67 0.00 129.55
+  sway 0.15
   parent "Vegetation"
   transform 0.0 236.5 0.0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 45
 model "birch_c 14" "../models/zone/gen/birch_c.glb" 75.08 0.00 120.10
+  sway 0.3
   parent "Vegetation"
   transform 0.0 216.7 0.0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 45
 model "dead_tree_b 20" "../models/zone/gen/birch_a.glb" 52.89 0.00 132.66
+  sway 0.3
   parent "Vegetation"
   transform 0.0 44.3 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_c 15" "../models/zone/gen/birch_b.glb" 80.90 0.00 119.08
+  sway 0.3
   parent "Vegetation"
   transform 0.0 112.4 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_a 30" "../models/zone/gen/birch_b.glb" 152.54 0.00 114.50
+  sway 0.3
   parent "Vegetation"
   transform 0.0 12.8 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_b 42" "../models/zone/gen/birch_c.glb" 211.34 0.00 206.66
+  sway 0.3
   parent "Vegetation"
   transform 0.0 30.8 0.0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 45
 model "birch_b 43" "../models/zone/gen/birch_a.glb" 205.98 0.00 112.93
+  sway 0.3
   parent "Vegetation"
   transform 0.0 263.6 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_c 16" "../models/zone/gen/birch_a.glb" 50.81 0.00 208.96
+  sway 0.3
   parent "Vegetation"
   transform 0.0 250.5 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_a 31" "../models/zone/gen/dead_tree_b.glb" 16.08 0.00 207.00
+  sway 0.12
   parent "Vegetation"
   transform 0.0 208.4 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "birch_c 17" "../models/zone/gen/dead_tree_b.glb" 228.05 0.00 190.25
+  sway 0.12
   parent "Vegetation"
   transform 0.0 197.7 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "birch_b 44" "../models/zone/gen/birch_b.glb" 188.84 0.00 108.24
+  sway 0.3
   parent "Vegetation"
   transform 0.0 274.2 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "dead_tree_b 21" "../models/zone/gen/birch_a.glb" 156.48 0.00 224.39
+  sway 0.3
   parent "Vegetation"
   transform 0.0 243.0 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "dead_tree_b 22" "../models/zone/gen/dead_tree_a.glb" 23.11 0.00 200.30
+  sway 0.12
   parent "Vegetation"
   transform 0.0 154.8 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "birch_dead 20" "../models/zone/gen/birch_b.glb" 223.94 0.00 211.60
+  sway 0.3
   parent "Vegetation"
   transform 0.0 20.3 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_b 45" "../models/zone/gen/dead_tree_a.glb" 154.40 0.00 218.65
+  sway 0.12
   parent "Vegetation"
   transform 0.0 354.5 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "birch_a 32" "../models/zone/gen/birch_b.glb" 109.19 0.00 121.59
+  sway 0.3
   parent "Vegetation"
   transform 0.0 195.7 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_c 18" "../models/zone/gen/dead_tree_a.glb" 186.76 0.00 119.83
+  sway 0.12
   parent "Vegetation"
   transform 0.0 348.1 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "dead_tree_b 23" "../models/zone/gen/birch_dead.glb" 213.11 0.00 123.19
+  sway 0.15
   parent "Vegetation"
   transform 0.0 107.8 0.0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 45
 model "dead_tree_b 24" "../models/zone/gen/birch_b.glb" 225.55 0.00 104.04
+  sway 0.3
   parent "Vegetation"
   transform 0.0 6.2 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_b 46" "../models/zone/gen/birch_a.glb" 217.52 0.00 111.40
+  sway 0.3
   parent "Vegetation"
   transform 0.0 195.0 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_c 19" "../models/zone/gen/birch_dead.glb" 201.21 0.00 120.68
+  sway 0.15
   parent "Vegetation"
   transform 0.0 221.1 0.0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 45
 model "birch_a 33" "../models/zone/gen/birch_b.glb" 123.20 0.00 198.29
+  sway 0.3
   parent "Vegetation"
   transform 0.0 196.6 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "dead_tree_a 21" "../models/zone/gen/birch_dead.glb" 69.26 0.00 127.83
+  sway 0.15
   parent "Vegetation"
   transform 0.0 107.2 0.0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 45
 model "birch_b 47" "../models/zone/gen/birch_dead.glb" 138.89 0.00 120.67
+  sway 0.15
   parent "Vegetation"
   transform 0.0 240.7 0.0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 45
 model "dead_tree_b 25" "../models/zone/gen/dead_tree_a.glb" 153.61 0.00 125.41
+  sway 0.12
   parent "Vegetation"
   transform 0.0 258.1 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "dead_tree_a 22" "../models/zone/gen/dead_tree_a.glb" 204.92 0.00 105.41
+  sway 0.12
   parent "Vegetation"
   transform 0.0 308.0 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "birch_c 20" "../models/zone/gen/birch_a.glb" 36.86 0.00 139.48
+  sway 0.3
   parent "Vegetation"
   transform 0.0 11.8 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_b 48" "../models/zone/gen/birch_b.glb" 110.66 0.00 222.01
+  sway 0.3
   parent "Vegetation"
   transform 0.0 11.9 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "dead_tree_b 26" "../models/zone/gen/birch_b.glb" 227.53 0.00 133.41
+  sway 0.3
   parent "Vegetation"
   transform 0.0 100.1 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_b 49" "../models/zone/gen/dead_tree_a.glb" 179.27 0.00 110.90
+  sway 0.12
   parent "Vegetation"
   transform 0.0 215.8 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "birch_a 34" "../models/zone/gen/birch_a.glb" 176.92 0.00 104.12
+  sway 0.3
   parent "Vegetation"
   transform 0.0 94.3 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_dead 21" "../models/zone/gen/birch_dead.glb" 214.81 0.00 210.43
+  sway 0.15
   parent "Vegetation"
   transform 0.0 309.3 0.0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 45
 model "birch_b 50" "../models/zone/gen/birch_c.glb" 25.65 0.00 128.08
+  sway 0.3
   parent "Vegetation"
   transform 0.0 275.5 0.0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 45
 model "dead_tree_a 23" "../models/zone/gen/birch_c.glb" 32.23 0.00 150.77
+  sway 0.3
   parent "Vegetation"
   transform 0.0 325.8 0.0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 45
 model "dead_tree_b 27" "../models/zone/gen/birch_b.glb" 129.40 0.00 217.10
+  sway 0.3
   parent "Vegetation"
   transform 0.0 76.5 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_a 35" "../models/zone/gen/dead_tree_a.glb" 27.14 0.00 160.60
+  sway 0.12
   parent "Vegetation"
   transform 0.0 293.3 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "birch_b 51" "../models/zone/gen/dead_tree_a.glb" 193.02 0.00 211.72
+  sway 0.12
   parent "Vegetation"
   transform 0.0 180.4 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "birch_a 36" "../models/zone/gen/birch_b.glb" 226.89 0.00 224.37
+  sway 0.3
   parent "Vegetation"
   transform 0.0 278.0 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "dead_tree_b 28" "../models/zone/gen/birch_a.glb" 62.06 0.00 130.54
+  sway 0.3
   parent "Vegetation"
   transform 0.0 14.4 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_dead 22" "../models/zone/gen/birch_c.glb" 142.93 0.00 216.18
+  sway 0.3
   parent "Vegetation"
   transform 0.0 175.4 0.0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 45
 model "birch_c 21" "../models/zone/gen/dead_tree_a.glb" 116.40 0.00 119.09
+  sway 0.12
   parent "Vegetation"
   transform 0.0 225.0 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "birch_a 37" "../models/zone/gen/dead_tree_b.glb" 24.33 0.00 14.08
+  sway 0.12
   parent "Vegetation"
   transform 0.0 357.5 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "birch_c 22" "../models/zone/gen/birch_dead.glb" 60.49 0.00 18.93
+  sway 0.15
   parent "Vegetation"
   transform 0.0 180.8 0.0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 45
 model "birch_c 23" "../models/zone/gen/birch_dead.glb" 75.79 0.00 12.99
+  sway 0.15
   parent "Vegetation"
   transform 0.0 44.4 0.0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 45
 model "birch_a 38" "../models/zone/gen/birch_c.glb" 88.63 0.00 3.74
+  sway 0.3
   parent "Vegetation"
   transform 0.0 270.7 0.0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 45
 model "dead_tree_a 24" "../models/zone/gen/birch_a.glb" 21.62 0.00 8.60
+  sway 0.3
   parent "Vegetation"
   transform 0.0 47.4 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_dead 23" "../models/zone/gen/birch_b.glb" 69.18 0.00 42.15
+  sway 0.3
   parent "Vegetation"
   transform 0.0 205.7 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_a 39" "../models/zone/gen/birch_a.glb" 116.03 0.00 19.30
+  sway 0.3
   parent "Vegetation"
   transform 0.0 207.7 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_b 52" "../models/zone/gen/birch_a.glb" 74.45 0.00 37.21
+  sway 0.3
   parent "Vegetation"
   transform 0.0 115.2 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_b 53" "../models/zone/gen/birch_a.glb" 77.74 0.00 25.10
+  sway 0.3
   parent "Vegetation"
   transform 0.0 259.8 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_a 40" "../models/zone/gen/birch_a.glb" 140.77 0.00 12.97
+  sway 0.3
   parent "Vegetation"
   transform 0.0 131.8 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "dead_tree_a 25" "../models/zone/gen/birch_dead.glb" 109.45 0.00 15.30
+  sway 0.15
   parent "Vegetation"
   transform 0.0 107.5 0.0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 45
 model "birch_a 41" "../models/zone/gen/birch_b.glb" 146.48 0.00 30.66
+  sway 0.3
   parent "Vegetation"
   transform 0.0 286.3 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_b 54" "../models/zone/gen/birch_dead.glb" 228.81 0.00 49.30
+  sway 0.15
   parent "Vegetation"
   transform 0.0 303.2 0.0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 45
 model "birch_dead 24" "../models/zone/gen/birch_c.glb" 25.22 0.00 38.67
+  sway 0.3
   parent "Vegetation"
   transform 0.0 209.6 0.0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 45
 model "birch_c 24" "../models/zone/gen/birch_b.glb" 142.47 0.00 49.14
+  sway 0.3
   parent "Vegetation"
   transform 0.0 237.5 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_a 42" "../models/zone/gen/birch_b.glb" 76.07 0.00 19.16
+  sway 0.3
   parent "Vegetation"
   transform 0.0 121.7 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "dead_tree_b 29" "../models/zone/gen/birch_b.glb" 95.65 0.00 32.51
+  sway 0.3
   parent "Vegetation"
   transform 0.0 325.5 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_b 55" "../models/zone/gen/birch_dead.glb" 88.64 0.00 13.35
+  sway 0.15
   parent "Vegetation"
   transform 0.0 215.4 0.0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 45
 model "birch_a 43" "../models/zone/gen/dead_tree_b.glb" 242.07 0.00 -84.93
+  sway 0.12
   parent "Vegetation"
   transform 0.0 39.6 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "birch_c 25" "../models/zone/gen/birch_dead.glb" 205.64 0.00 -159.22
+  sway 0.15
   parent "Vegetation"
   transform 0.0 83.5 0.0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 45
 model "birch_c 26" "../models/zone/gen/birch_b.glb" 188.85 0.00 -47.42
+  sway 0.3
   parent "Vegetation"
   transform 0.0 164.7 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_b 56" "../models/zone/gen/birch_a.glb" 208.89 0.00 -193.82
+  sway 0.3
   parent "Vegetation"
   transform 0.0 91.4 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "dead_tree_b 30" "../models/zone/gen/birch_a.glb" 183.16 0.00 -81.58
+  sway 0.3
   parent "Vegetation"
   transform 0.0 278.5 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_c 27" "../models/zone/gen/birch_b.glb" 147.33 0.00 -173.22
+  sway 0.3
   parent "Vegetation"
   transform 0.0 189.9 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_b 57" "../models/zone/gen/birch_b.glb" 248.52 0.00 -113.53
+  sway 0.3
   parent "Vegetation"
   transform 0.0 333.4 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_c 28" "../models/zone/gen/birch_a.glb" 190.56 0.00 -35.95
+  sway 0.3
   parent "Vegetation"
   transform 0.0 352.2 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_b 58" "../models/zone/gen/birch_a.glb" 166.09 0.00 -36.08
+  sway 0.3
   parent "Vegetation"
   transform 0.0 325.3 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_b 59" "../models/zone/gen/birch_b.glb" 172.59 0.00 -32.51
+  sway 0.3
   parent "Vegetation"
   transform 0.0 191.2 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "dead_tree_b 31" "../models/zone/gen/birch_b.glb" 214.65 0.00 -180.59
+  sway 0.3
   parent "Vegetation"
   transform 0.0 226.7 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_b 60" "../models/zone/gen/birch_a.glb" 212.20 0.00 -163.95
+  sway 0.3
   parent "Vegetation"
   transform 0.0 17.3 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_b 61" "../models/zone/gen/dead_tree_a.glb" 56.64 0.00 -110.96
+  sway 0.12
   parent "Vegetation"
   transform 0.0 152.2 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "birch_b 62" "../models/zone/gen/birch_dead.glb" 172.88 0.00 -186.29
+  sway 0.15
   parent "Vegetation"
   transform 0.0 3.1 0.0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 45
 model "birch_dead 25" "../models/zone/gen/birch_c.glb" 74.94 0.00 -194.48
+  sway 0.3
   parent "Vegetation"
   transform 0.0 152.2 0.0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 45
 model "dead_tree_b 32" "../models/zone/gen/birch_c.glb" 146.26 0.00 -134.43
+  sway 0.3
   parent "Vegetation"
   transform 0.0 245.3 0.0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 45
 model "birch_a 44" "../models/zone/gen/birch_a.glb" 180.65 0.00 -169.39
+  sway 0.3
   parent "Vegetation"
   transform 0.0 107.0 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_b 63" "../models/zone/gen/birch_b.glb" 69.15 0.00 -116.10
+  sway 0.3
   parent "Vegetation"
   transform 0.0 175.4 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_b 64" "../models/zone/gen/dead_tree_a.glb" 243.99 0.00 -122.15
+  sway 0.12
   parent "Vegetation"
   transform 0.0 342.8 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "birch_a 45" "../models/zone/gen/birch_b.glb" 66.73 0.00 -75.96
+  sway 0.3
   parent "Vegetation"
   transform 0.0 59.3 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_a 46" "../models/zone/gen/dead_tree_b.glb" 211.77 0.00 -153.10
+  sway 0.12
   parent "Vegetation"
   transform 0.0 146.7 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "dead_tree_a 26" "../models/zone/gen/birch_b.glb" 142.85 0.00 -111.09
+  sway 0.3
   parent "Vegetation"
   transform 0.0 277.2 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_c 29" "../models/zone/gen/dead_tree_b.glb" 147.50 0.00 -102.25
+  sway 0.12
   parent "Vegetation"
   transform 0.0 349.6 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "birch_dead 26" "../models/zone/gen/birch_a.glb" 52.79 0.00 -133.56
+  sway 0.3
   parent "Vegetation"
   transform 0.0 38.5 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_b 65" "../models/zone/gen/birch_b.glb" 186.28 0.00 -75.11
+  sway 0.3
   parent "Vegetation"
   transform 0.0 55.5 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_b 66" "../models/zone/gen/birch_a.glb" 242.32 0.00 -135.11
+  sway 0.3
   parent "Vegetation"
   transform 0.0 120.0 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_b 67" "../models/zone/gen/birch_a.glb" 58.30 0.00 -152.08
+  sway 0.3
   parent "Vegetation"
   transform 0.0 226.4 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_a 47" "../models/zone/gen/dead_tree_a.glb" 152.11 0.00 -166.23
+  sway 0.12
   parent "Vegetation"
   transform 0.0 111.5 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "birch_dead 27" "../models/zone/gen/birch_a.glb" 184.31 0.00 -34.84
+  sway 0.3
   parent "Vegetation"
   transform 0.0 302.6 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_b 68" "../models/zone/gen/birch_a.glb" 151.15 0.00 -180.89
+  sway 0.3
   parent "Vegetation"
   transform 0.0 269.8 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_a 48" "../models/zone/gen/birch_c.glb" 58.05 0.00 -175.87
+  sway 0.3
   parent "Vegetation"
   transform 0.0 255.1 0.0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 45
 model "birch_a 49" "../models/zone/gen/birch_b.glb" 239.35 0.00 -188.53
+  sway 0.3
   parent "Vegetation"
   transform 0.0 219.1 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_c 30" "../models/zone/gen/dead_tree_b.glb" 238.68 0.00 -171.71
+  sway 0.12
   parent "Vegetation"
   transform 0.0 333.2 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "birch_c 31" "../models/zone/gen/dead_tree_a.glb" 108.68 0.00 -86.77
+  sway 0.12
   parent "Vegetation"
   transform 0.0 162.8 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "birch_a 50" "../models/zone/gen/birch_a.glb" 238.15 0.00 -131.83
+  sway 0.3
   parent "Vegetation"
   transform 0.0 266.9 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_dead 28" "../models/zone/gen/birch_dead.glb" 235.79 0.00 -143.82
+  sway 0.15
   parent "Vegetation"
   transform 0.0 108.2 0.0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 45
 model "birch_a 51" "../models/zone/gen/birch_a.glb" 107.80 0.00 -69.15
+  sway 0.3
   parent "Vegetation"
   transform 0.0 2.2 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_a 52" "../models/zone/gen/birch_a.glb" 63.61 0.00 -97.34
+  sway 0.3
   parent "Vegetation"
   transform 0.0 171.9 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_c 32" "../models/zone/gen/birch_b.glb" 98.59 0.00 -97.75
+  sway 0.3
   parent "Vegetation"
   transform 0.0 26.6 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_c 33" "../models/zone/gen/birch_c.glb" 216.53 0.00 -85.65
+  sway 0.3
   parent "Vegetation"
   transform 0.0 301.0 0.0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 45
 model "birch_a 53" "../models/zone/gen/dead_tree_b.glb" -121.89 0.00 64.06
+  sway 0.12
   parent "Vegetation"
   transform 0.0 189.5 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "birch_a 54" "../models/zone/gen/dead_tree_b.glb" -248.53 0.00 80.06
+  sway 0.12
   parent "Vegetation"
   transform 0.0 236.6 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "birch_dead 29" "../models/zone/gen/birch_b.glb" -132.92 0.00 92.39
+  sway 0.3
   parent "Vegetation"
   transform 0.0 141.4 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "dead_tree_a 27" "../models/zone/gen/birch_a.glb" -209.86 0.00 -67.86
+  sway 0.3
   parent "Vegetation"
   transform 0.0 263.4 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_c 34" "../models/zone/gen/birch_b.glb" -191.63 0.00 221.43
+  sway 0.3
   parent "Vegetation"
   transform 0.0 248.7 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "dead_tree_a 28" "../models/zone/gen/birch_dead.glb" -152.28 0.00 -131.41
+  sway 0.15
   parent "Vegetation"
   transform 0.0 109.6 0.0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 45
 model "birch_c 35" "../models/zone/gen/dead_tree_a.glb" -207.71 0.00 64.80
+  sway 0.12
   parent "Vegetation"
   transform 0.0 94.9 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "birch_b 69" "../models/zone/gen/birch_a.glb" -178.60 0.00 158.34
+  sway 0.3
   parent "Vegetation"
   transform 0.0 347.9 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_dead 30" "../models/zone/gen/birch_b.glb" -234.53 0.00 97.63
+  sway 0.3
   parent "Vegetation"
   transform 0.0 274.2 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_c 36" "../models/zone/gen/birch_a.glb" -227.85 0.00 14.80
+  sway 0.3
   parent "Vegetation"
   transform 0.0 294.6 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_b 70" "../models/zone/gen/birch_dead.glb" -220.96 0.00 193.68
+  sway 0.15
   parent "Vegetation"
   transform 0.0 99.6 0.0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 45
 model "dead_tree_a 29" "../models/zone/gen/birch_dead.glb" -176.42 0.00 -41.95
+  sway 0.15
   parent "Vegetation"
   transform 0.0 81.2 0.0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 45
 model "birch_a 55" "../models/zone/gen/birch_dead.glb" -176.61 0.00 -175.58
+  sway 0.15
   parent "Vegetation"
   transform 0.0 252.1 0.0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 45
 model "dead_tree_b 33" "../models/zone/gen/birch_b.glb" -223.98 0.00 122.31
+  sway 0.3
   parent "Vegetation"
   transform 0.0 209.2 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_a 56" "../models/zone/gen/birch_b.glb" -184.09 0.00 195.98
+  sway 0.3
   parent "Vegetation"
   transform 0.0 84.3 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "dead_tree_b 34" "../models/zone/gen/dead_tree_b.glb" -222.80 0.00 239.75
+  sway 0.12
   parent "Vegetation"
   transform 0.0 53.3 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "birch_b 71" "../models/zone/gen/birch_b.glb" -186.58 0.00 -47.45
+  sway 0.3
   parent "Vegetation"
   transform 0.0 234.8 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "dead_tree_b 35" "../models/zone/gen/birch_b.glb" -221.36 0.00 233.91
+  sway 0.3
   parent "Vegetation"
   transform 0.0 75.5 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_dead 31" "../models/zone/gen/birch_b.glb" -145.57 0.00 -50.09
+  sway 0.3
   parent "Vegetation"
   transform 0.0 25.1 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_a 57" "../models/zone/gen/birch_a.glb" -230.43 0.00 119.92
+  sway 0.3
   parent "Vegetation"
   transform 0.0 166.3 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "dead_tree_a 30" "../models/zone/gen/dead_tree_b.glb" -169.82 0.00 -181.36
+  sway 0.12
   parent "Vegetation"
   transform 0.0 214.8 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "birch_b 72" "../models/zone/gen/dead_tree_a.glb" -224.08 0.00 -140.18
+  sway 0.12
   parent "Vegetation"
   transform 0.0 124.5 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "dead_tree_b 36" "../models/zone/gen/dead_tree_a.glb" -168.50 0.00 -186.29
+  sway 0.12
   parent "Vegetation"
   transform 0.0 344.3 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "birch_dead 32" "../models/zone/gen/dead_tree_a.glb" -209.17 0.00 -4.23
+  sway 0.12
   parent "Vegetation"
   transform 0.0 344.5 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "birch_b 73" "../models/zone/gen/birch_a.glb" -195.87 0.00 -131.25
+  sway 0.3
   parent "Vegetation"
   transform 0.0 168.8 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_c 37" "../models/zone/gen/birch_dead.glb" -164.99 0.00 10.52
+  sway 0.15
   parent "Vegetation"
   transform 0.0 319.1 0.0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 45
 model "birch_b 74" "../models/zone/gen/birch_a.glb" -192.24 0.00 134.70
+  sway 0.3
   parent "Vegetation"
   transform 0.0 135.7 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "dead_tree_b 37" "../models/zone/gen/dead_tree_b.glb" -204.55 0.00 156.89
+  sway 0.12
   parent "Vegetation"
   transform 0.0 324.5 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "birch_b 75" "../models/zone/gen/birch_b.glb" -212.70 0.00 191.31
+  sway 0.3
   parent "Vegetation"
   transform 0.0 284.0 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_dead 33" "../models/zone/gen/dead_tree_b.glb" -238.85 0.00 -149.83
+  sway 0.12
   parent "Vegetation"
   transform 0.0 326.7 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "birch_a 58" "../models/zone/gen/birch_a.glb" -247.25 0.00 188.51
+  sway 0.3
   parent "Vegetation"
   transform 0.0 66.5 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_c 38" "../models/zone/gen/birch_dead.glb" -189.01 0.00 74.10
+  sway 0.15
   parent "Vegetation"
   transform 0.0 210.6 0.0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 45
 model "dead_tree_a 31" "../models/zone/gen/birch_a.glb" -212.39 0.00 42.37
+  sway 0.3
   parent "Vegetation"
   transform 0.0 311.6 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_c 39" "../models/zone/gen/birch_a.glb" -133.47 0.00 -136.62
+  sway 0.3
   parent "Vegetation"
   transform 0.0 186.2 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "dead_tree_b 38" "../models/zone/gen/dead_tree_b.glb" -225.96 0.00 73.41
+  sway 0.12
   parent "Vegetation"
   transform 0.0 102.2 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "birch_dead 34" "../models/zone/gen/birch_a.glb" -118.87 0.00 36.08
+  sway 0.3
   parent "Vegetation"
   transform 0.0 57.2 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_dead 35" "../models/zone/gen/dead_tree_b.glb" -157.67 0.00 95.85
+  sway 0.12
   parent "Vegetation"
   transform 0.0 197.0 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "birch_dead 36" "../models/zone/gen/birch_b.glb" -198.39 0.00 194.88
+  sway 0.3
   parent "Vegetation"
   transform 0.0 23.4 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_a 59" "../models/zone/gen/birch_b.glb" -127.68 0.00 220.93
+  sway 0.3
   parent "Vegetation"
   transform 0.0 202.3 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "dead_tree_a 32" "../models/zone/gen/birch_b.glb" -185.61 0.00 227.70
+  sway 0.3
   parent "Vegetation"
   transform 0.0 96.6 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_a 60" "../models/zone/gen/dead_tree_a.glb" -221.48 0.00 -152.82
+  sway 0.12
   parent "Vegetation"
   transform 0.0 177.0 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "birch_c 40" "../models/zone/gen/dead_tree_b.glb" -126.46 0.00 -180.23
+  sway 0.12
   parent "Vegetation"
   transform 0.0 70.7 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "birch_b 76" "../models/zone/gen/birch_dead.glb" -214.77 0.00 111.60
+  sway 0.15
   parent "Vegetation"
   transform 0.0 208.0 0.0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 45
 model "dead_tree_b 39" "../models/zone/gen/dead_tree_a.glb" -201.16 0.00 177.93
+  sway 0.12
   parent "Vegetation"
   transform 0.0 190.1 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "birch_b 77" "../models/zone/gen/dead_tree_b.glb" -118.76 0.00 182.64
+  sway 0.12
   parent "Vegetation"
   transform 0.0 15.7 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "birch_a 61" "../models/zone/gen/birch_c.glb" -248.39 0.00 -77.85
+  sway 0.3
   parent "Vegetation"
   transform 0.0 2.4 0.0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 45
 model "birch_a 62" "../models/zone/gen/birch_c.glb" -233.55 0.00 -135.65
+  sway 0.3
   parent "Vegetation"
   transform 0.0 133.6 0.0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 45
 model "birch_c 41" "../models/zone/gen/birch_c.glb" -245.83 0.00 136.55
+  sway 0.3
   parent "Vegetation"
   transform 0.0 72.1 0.0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 45
 model "birch_dead 37" "../models/zone/gen/birch_a.glb" -196.40 0.00 -90.98
+  sway 0.3
   parent "Vegetation"
   transform 0.0 326.7 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "dead_tree_a 33" "../models/zone/gen/dead_tree_a.glb" -157.72 0.00 -120.25
+  sway 0.12
   parent "Vegetation"
   transform 0.0 340.0 0.0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 45
 model "birch_c 42" "../models/zone/gen/dead_tree_b.glb" 12.88 0.00 -440.72
+  sway 0.12
   parent "Vegetation"
   transform 0.0 310.8 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "birch_c 43" "../models/zone/gen/birch_b.glb" -39.02 0.00 -395.47
+  sway 0.3
   parent "Vegetation"
   transform 0.0 141.3 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "dead_tree_a 34" "../models/zone/gen/dead_tree_b.glb" -12.93 0.00 -410.36
+  sway 0.12
   parent "Vegetation"
   transform 0.0 252.7 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "birch_b 78" "../models/zone/gen/dead_tree_b.glb" -17.23 0.00 -393.88
+  sway 0.12
   parent "Vegetation"
   transform 0.0 324.1 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "dead_tree_b 40" "../models/zone/gen/dead_tree_b.glb" -58.95 0.00 -365.89
+  sway 0.12
   parent "Vegetation"
   transform 0.0 87.2 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "birch_a 63" "../models/zone/gen/dead_tree_b.glb" 56.76 0.00 -394.83
+  sway 0.12
   parent "Vegetation"
   transform 0.0 268.4 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "birch_b 79" "../models/zone/gen/birch_b.glb" 17.61 0.00 -296.58
+  sway 0.3
   parent "Vegetation"
   transform 0.0 343.9 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_a 64" "../models/zone/gen/birch_b.glb" -41.52 0.00 -318.50
+  sway 0.3
   parent "Vegetation"
   transform 0.0 106.1 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "birch_b 80" "../models/zone/gen/birch_c.glb" -48.46 0.00 -398.36
+  sway 0.3
   parent "Vegetation"
   transform 0.0 38.2 0.0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 45
 model "birch_b 81" "../models/zone/gen/birch_dead.glb" 58.53 0.00 -445.90
+  sway 0.15
   parent "Vegetation"
   transform 0.0 61.9 0.0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 45
 model "birch_b 82" "../models/zone/gen/birch_c.glb" 55.19 0.00 -416.01
+  sway 0.3
   parent "Vegetation"
   transform 0.0 142.6 0.0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 45
 model "birch_b 83" "../models/zone/gen/birch_b.glb" -15.57 0.00 -381.18
+  sway 0.3
   parent "Vegetation"
   transform 0.0 171.9 0.0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 45
 model "dead_tree_a 35" "../models/zone/gen/birch_a.glb" -16.70 0.00 -296.39
+  sway 0.3
   parent "Vegetation"
   transform 0.0 72.6 0.0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 45
 model "birch_c 44" "../models/zone/gen/dead_tree_b.glb" -13.81 0.00 -427.97
+  sway 0.12
   parent "Vegetation"
   transform 0.0 189.6 0.0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 45
 model "bush_a" "../models/zone/gen/bush_a.glb" 6.10 0.00 229.83
+  sway 0.7
   parent "Vegetation"
   transform 0.0 4.6 0.0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 45
 model "bush_a 2" "../models/zone/gen/bush_a.glb" 13.52 0.00 -119.84
+  sway 0.7
   parent "Vegetation"
   transform 0.0 199.0 0.0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 45
 model "bush_a 3" "../models/zone/gen/bush_a.glb" -33.44 0.00 211.99
+  sway 0.7
   parent "Vegetation"
   transform 0.0 9.5 0.0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 45
 model "bush_a 4" "../models/zone/gen/bush_a.glb" -28.36 0.00 116.67
+  sway 0.7
   parent "Vegetation"
   transform 0.0 172.9 0.0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 45
 model "bush_a 5" "../models/zone/gen/bush_b.glb" -14.05 0.00 -3.87
+  sway 0.7
   parent "Vegetation"
   transform 0.0 40.7 0.0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 45
 model "bush_b" "../models/zone/gen/bush_b.glb" 36.70 0.00 130.16
+  sway 0.7
   parent "Vegetation"
   transform 0.0 230.4 0.0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 45
 model "bush_a 6" "../models/zone/gen/bush_a.glb" 36.87 0.00 -166.59
+  sway 0.7
   parent "Vegetation"
   transform 0.0 255.7 0.0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 45
 model "bush_a 7" "../models/zone/gen/bush_a.glb" -16.66 0.00 151.59
+  sway 0.7
   parent "Vegetation"
   transform 0.0 257.0 0.0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 45
 model "bush_b 2" "../models/zone/gen/bush_b.glb" 34.77 0.00 -28.09
+  sway 0.7
   parent "Vegetation"
   transform 0.0 113.8 0.0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 45
 model "bush_a 8" "../models/zone/gen/bush_a.glb" -10.83 0.00 55.51
+  sway 0.7
   parent "Vegetation"
   transform 0.0 121.6 0.0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 45
 model "bush_b 3" "../models/zone/gen/bush_a.glb" 10.55 0.00 203.59
+  sway 0.7
   parent "Vegetation"
   transform 0.0 227.7 0.0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 45
 model "bush_a 9" "../models/zone/gen/bush_a.glb" 27.12 0.00 -161.06
+  sway 0.7
   parent "Vegetation"
   transform 0.0 343.0 0.0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 45
 model "bush_b 4" "../models/zone/gen/bush_a.glb" -37.68 0.00 94.65
+  sway 0.7
   parent "Vegetation"
   transform 0.0 38.2 0.0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 45
 model "bush_b 5" "../models/zone/gen/bush_a.glb" 17.44 0.00 107.45
+  sway 0.7
   parent "Vegetation"
   transform 0.0 265.3 0.0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 45
 model "bush_b 6" "../models/zone/gen/bush_a.glb" -38.97 0.00 -103.53
+  sway 0.7
   parent "Vegetation"
   transform 0.0 74.9 0.0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 45
 model "bush_b 7" "../models/zone/gen/bush_b.glb" -26.89 0.00 -37.20
+  sway 0.7
   parent "Vegetation"
   transform 0.0 263.5 0.0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 45
 model "bush_b 8" "../models/zone/gen/bush_b.glb" -5.92 0.00 195.70
+  sway 0.7
   parent "Vegetation"
   transform 0.0 286.5 0.0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 45
 model "bush_a 10" "../models/zone/gen/bush_b.glb" -32.73 0.00 -147.02
+  sway 0.7
   parent "Vegetation"
   transform 0.0 179.4 0.0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 45
 model "bush_b 9" "../models/zone/gen/bush_a.glb" 39.44 0.00 223.18
+  sway 0.7
   parent "Vegetation"
   transform 0.0 28.9 0.0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 45
 model "bush_a 11" "../models/zone/gen/bush_a.glb" -23.16 0.00 -178.41
+  sway 0.7
   parent "Vegetation"
   transform 0.0 233.2 0.0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 45
 model "bush_a 12" "../models/zone/gen/bush_b.glb" 19.30 0.00 -179.65
+  sway 0.7
   parent "Vegetation"
   transform 0.0 37.0 0.0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 45
 model "bush_b 10" "../models/zone/gen/bush_b.glb" -19.41 0.00 172.04
+  sway 0.7
   parent "Vegetation"
   transform 0.0 58.5 0.0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 45
 model "bush_a 13" "../models/zone/gen/bush_b.glb" -13.38 0.00 243.08
+  sway 0.7
   parent "Vegetation"
   transform 0.0 213.5 0.0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 45
 model "bush_a 14" "../models/zone/gen/bush_a.glb" -32.97 0.00 -159.62
+  sway 0.7
   parent "Vegetation"
   transform 0.0 339.4 0.0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 45
 model "bush_a 15" "../models/zone/gen/bush_b.glb" -13.26 0.00 249.85
+  sway 0.7
   parent "Vegetation"
   transform 0.0 232.4 0.0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 45
 model "bush_a 16" "../models/zone/gen/bush_a.glb" 33.78 0.00 -54.94
+  sway 0.7
   parent "Vegetation"
   transform 0.0 17.4 0.0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 45
 model "bush_a 17" "../models/zone/gen/bush_b.glb" 11.22 0.00 171.46
+  sway 0.7
   parent "Vegetation"
   transform 0.0 326.8 0.0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 45
 model "bush_b 11" "../models/zone/gen/bush_a.glb" -6.07 0.00 244.96
+  sway 0.7
   parent "Vegetation"
   transform 0.0 332.3 0.0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 45
 model "bush_b 12" "../models/zone/gen/bush_b.glb" -15.16 0.00 -98.98
+  sway 0.7
   parent "Vegetation"
   transform 0.0 162.9 0.0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 45
 model "bush_a 18" "../models/zone/gen/bush_b.glb" -37.06 0.00 42.43
+  sway 0.7
   parent "Vegetation"
   transform 0.0 298.3 0.0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 45
 model "bush_a 19" "../models/zone/gen/bush_a.glb" -25.74 0.00 102.41
+  sway 0.7
   parent "Vegetation"
   transform 0.0 124.0 0.0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 45
 model "bush_a 20" "../models/zone/gen/bush_b.glb" 15.42 0.00 188.64
+  sway 0.7
   parent "Vegetation"
   transform 0.0 354.3 0.0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 45
 model "bush_b 13" "../models/zone/gen/bush_b.glb" 38.75 0.00 88.86
+  sway 0.7
   parent "Vegetation"
   transform 0.0 16.0 0.0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 45
 model "bush_a 21" "../models/zone/gen/bush_a.glb" -22.06 0.00 -99.45
+  sway 0.7
   parent "Vegetation"
   transform 0.0 359.1 0.0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 45
 model "bush_a 22" "../models/zone/gen/bush_a.glb" 25.24 0.00 177.21
+  sway 0.7
   parent "Vegetation"
   transform 0.0 341.8 0.0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 45
 model "bush_b 14" "../models/zone/gen/bush_b.glb" -28.28 0.00 175.49
+  sway 0.7
   parent "Vegetation"
   transform 0.0 318.7 0.0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 45
 model "bush_b 15" "../models/zone/gen/bush_a.glb" -21.69 0.00 -71.37
+  sway 0.7
   parent "Vegetation"
   transform 0.0 295.5 0.0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 45
 model "bush_b 16" "../models/zone/gen/bush_b.glb" 34.50 0.00 0.69
+  sway 0.7
   parent "Vegetation"
   transform 0.0 276.5 0.0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 45
 model "bush_b 17" "../models/zone/gen/bush_a.glb" 16.60 0.00 -31.59
+  sway 0.7
   parent "Vegetation"
   transform 0.0 146.4 0.0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 45
 model "bush_a 23" "../models/zone/gen/bush_b.glb" -18.64 0.00 7.08
+  sway 0.7
   parent "Vegetation"
   transform 0.0 157.0 0.0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 45
 model "bush_b 18" "../models/zone/gen/bush_a.glb" -32.65 0.00 138.64
+  sway 0.7
   parent "Vegetation"
   transform 0.0 198.7 0.0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 45
 model "bush_a 24" "../models/zone/gen/bush_b.glb" -104.76 0.00 -184.49
+  sway 0.7
   parent "Vegetation"
   transform 0.0 304.3 0.0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 45
 model "bush_b 19" "../models/zone/gen/bush_a.glb" 115.42 0.00 -57.04
+  sway 0.7
   parent "Vegetation"
   transform 0.0 297.2 0.0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 45
 model "bush_b 20" "../models/zone/gen/bush_b.glb" -28.57 0.00 153.88
+  sway 0.7
   parent "Vegetation"
   transform 0.0 333.8 0.0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 45
 model "bush_b 21" "../models/zone/gen/bush_a.glb" 198.40 0.00 -34.31
+  sway 0.7
   parent "Vegetation"
   transform 0.0 261.7 0.0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 45
 model "bush_b 22" "../models/zone/gen/bush_b.glb" 14.01 0.00 -181.47
+  sway 0.7
   parent "Vegetation"
   transform 0.0 197.5 0.0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 45
 model "bush_b 23" "../models/zone/gen/bush_a.glb" -42.61 0.00 203.31
+  sway 0.7
   parent "Vegetation"
   transform 0.0 8.7 0.0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 45
 model "bush_b 24" "../models/zone/gen/bush_b.glb" 143.13 0.00 124.53
+  sway 0.7
   parent "Vegetation"
   transform 0.0 138.8 0.0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 45
 model "bush_a 25" "../models/zone/gen/bush_b.glb" -86.09 0.00 188.41
+  sway 0.7
   parent "Vegetation"
   transform 0.0 184.9 0.0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 45
 model "bush_b 25" "../models/zone/gen/bush_b.glb" 133.69 0.00 19.74
+  sway 0.7
   parent "Vegetation"
   transform 0.0 190.9 0.0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 45
 model "bush_a 26" "../models/zone/gen/bush_b.glb" -35.93 0.00 -145.31
+  sway 0.7
   parent "Vegetation"
   transform 0.0 247.6 0.0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 45
 model "bush_a 27" "../models/zone/gen/bush_b.glb" 116.83 0.00 110.14
+  sway 0.7
   parent "Vegetation"
   transform 0.0 265.9 0.0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 45
 model "bush_b 26" "../models/zone/gen/bush_b.glb" 88.24 0.00 -57.50
+  sway 0.7
   parent "Vegetation"
   transform 0.0 311.8 0.0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 45
 model "bush_b 27" "../models/zone/gen/bush_b.glb" -15.13 0.00 9.15
+  sway 0.7
   parent "Vegetation"
   transform 0.0 18.5 0.0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 45
 model "bush_a 28" "../models/zone/gen/bush_a.glb" 28.85 0.00 -129.75
+  sway 0.7
   parent "Vegetation"
   transform 0.0 277.6 0.0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 45
 model "bush_a 29" "../models/zone/gen/bush_a.glb" -14.42 0.00 -178.63
+  sway 0.7
   parent "Vegetation"
   transform 0.0 27.6 0.0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 45
 model "bush_a 30" "../models/zone/gen/bush_b.glb" 44.48 0.00 -54.27
+  sway 0.7
   parent "Vegetation"
   transform 0.0 320.0 0.0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 45
 model "bush_b 28" "../models/zone/gen/bush_a.glb" -30.91 0.00 -178.42
+  sway 0.7
   parent "Vegetation"
   transform 0.0 267.7 0.0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 45
 model "bush_b 29" "../models/zone/gen/bush_a.glb" 62.10 0.00 -182.19
+  sway 0.7
   parent "Vegetation"
   transform 0.0 359.8 0.0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 45
 model "bush_a 31" "../models/zone/gen/bush_a.glb" -14.79 0.00 172.14
+  sway 0.7
   parent "Vegetation"
   transform 0.0 43.5 0.0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 45
 model "bush_a 32" "../models/zone/gen/bush_a.glb" 85.81 0.00 50.75
+  sway 0.7
   parent "Vegetation"
   transform 0.0 165.1 0.0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 45
 model "bush_b 30" "../models/zone/gen/bush_b.glb" -51.16 0.00 85.03
+  sway 0.7
   parent "Vegetation"
   transform 0.0 264.9 0.0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 45
 model "bush_b 31" "../models/zone/gen/bush_b.glb" 96.67 0.00 -44.02
+  sway 0.7
   parent "Vegetation"
   transform 0.0 308.5 0.0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 45
 model "bush_b 32" "../models/zone/gen/bush_a.glb" -17.82 0.00 -32.57
+  sway 0.7
   parent "Vegetation"
   transform 0.0 34.8 0.0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 45
 model "bush_a 33" "../models/zone/gen/bush_b.glb" 145.92 0.00 86.50
+  sway 0.7
   parent "Vegetation"
   transform 0.0 153.6 0.0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 45
 model "grass_patch_dry" "../models/zone/gen/grass_patch_dry.glb" -5.56 0.00 124.59
+  sway 1.0
   parent "Vegetation"
   transform 0.0 59.2 0.0 1
 model "grass_crack" "../models/zone/gen/grass_patch_dry.glb" -10.13 0.00 -94.55
+  sway 1.0
   parent "Vegetation"
   transform 0.0 83.7 0.0 1
 model "grass_crack 2" "../models/zone/gen/grass_crack.glb" -8.08 0.00 160.68
+  sway 1.0
   parent "Vegetation"
   transform 0.0 296.9 0.0 1
 model "grass_crack 3" "../models/zone/gen/grass_crack.glb" -5.86 0.00 -93.58
+  sway 1.0
   parent "Vegetation"
   transform 0.0 191.0 0.0 1
 model "grass_patch" "../models/zone/gen/grass_patch.glb" -8.84 0.00 -161.74
+  sway 1.0
   parent "Vegetation"
   transform 0.0 351.5 0.0 1
 model "grass_patch_dry 2" "../models/zone/gen/grass_patch_dry.glb" -10.45 0.00 -105.58
+  sway 1.0
   parent "Vegetation"
   transform 0.0 51.3 0.0 1
 model "grass_patch_dry 3" "../models/zone/gen/grass_patch_dry.glb" 9.67 0.00 120.01
+  sway 1.0
   parent "Vegetation"
   transform 0.0 301.6 0.0 1
 model "grass_crack 4" "../models/zone/gen/grass_crack.glb" -8.39 0.00 224.44
+  sway 1.0
   parent "Vegetation"
   transform 0.0 213.6 0.0 1
 model "grass_patch_dry 4" "../models/zone/gen/grass_patch_dry.glb" 8.55 0.00 211.43
+  sway 1.0
   parent "Vegetation"
   transform 0.0 38.6 0.0 1
 model "grass_patch_dry 5" "../models/zone/gen/grass_patch.glb" -6.78 0.00 235.76
+  sway 1.0
   parent "Vegetation"
   transform 0.0 305.7 0.0 1
 model "grass_patch_dry 6" "../models/zone/gen/grass_crack.glb" 6.75 0.00 130.04
+  sway 1.0
   parent "Vegetation"
   transform 0.0 299.3 0.0 1
 model "grass_patch_dry 7" "../models/zone/gen/grass_patch.glb" 2.65 0.00 217.84
+  sway 1.0
   parent "Vegetation"
   transform 0.0 117.2 0.0 1
 model "grass_patch 2" "../models/zone/gen/grass_patch.glb" -2.95 0.00 202.31
+  sway 1.0
   parent "Vegetation"
   transform 0.0 70.0 0.0 1
 model "grass_patch 3" "../models/zone/gen/grass_patch.glb" 8.51 0.00 170.33
+  sway 1.0
   parent "Vegetation"
   transform 0.0 43.3 0.0 1
 model "grass_patch_dry 8" "../models/zone/gen/grass_patch_dry.glb" 8.97 0.00 125.89
+  sway 1.0
   parent "Vegetation"
   transform 0.0 346.1 0.0 1
 model "grass_patch 4" "../models/zone/gen/grass_patch.glb" -8.95 0.00 232.60
+  sway 1.0
   parent "Vegetation"
   transform 0.0 167.0 0.0 1
 model "grass_patch 5" "../models/zone/gen/grass_patch_dry.glb" 10.39 0.00 -157.26
+  sway 1.0
   parent "Vegetation"
   transform 0.0 60.9 0.0 1
 model "grass_patch_dry 9" "../models/zone/gen/grass_crack.glb" -2.64 0.00 217.68
+  sway 1.0
   parent "Vegetation"
   transform 0.0 161.1 0.0 1
 model "grass_crack 5" "../models/zone/gen/grass_patch.glb" -8.39 0.00 121.65
+  sway 1.0
   parent "Vegetation"
   transform 0.0 233.6 0.0 1
 model "grass_crack 6" "../models/zone/gen/grass_crack.glb" -7.64 0.00 53.30
+  sway 1.0
   parent "Vegetation"
   transform 0.0 263.5 0.0 1
 model "grass_patch_dry 10" "../models/zone/gen/grass_crack.glb" -6.81 0.00 173.13
+  sway 1.0
   parent "Vegetation"
   transform 0.0 171.6 0.0 1
 model "grass_patch_dry 11" "../models/zone/gen/grass_patch.glb" -7.73 0.00 -188.91
+  sway 1.0
   parent "Vegetation"
   transform 0.0 208.9 0.0 1
 model "grass_patch 6" "../models/zone/gen/grass_patch_dry.glb" -3.37 0.00 123.39
+  sway 1.0
   parent "Vegetation"
   transform 0.0 106.6 0.0 1
 model "grass_patch_dry 12" "../models/zone/gen/grass_patch_dry.glb" 8.43 0.00 213.87
+  sway 1.0
   parent "Vegetation"
   transform 0.0 42.6 0.0 1
 model "grass_crack 7" "../models/zone/gen/grass_patch_dry.glb" -8.49 0.00 60.90
+  sway 1.0
   parent "Vegetation"
   transform 0.0 149.6 0.0 1
 model "grass_patch 7" "../models/zone/gen/grass_patch_dry.glb" -10.61 0.00 114.52
+  sway 1.0
   parent "Vegetation"
   transform 0.0 226.8 0.0 1
 model "grass_patch_dry 13" "../models/zone/gen/grass_crack.glb" -9.53 0.00 235.92
+  sway 1.0
   parent "Vegetation"
   transform 0.0 173.1 0.0 1
 model "grass_patch_dry 14" "../models/zone/gen/grass_patch.glb" -4.82 0.00 94.11
+  sway 1.0
   parent "Vegetation"
   transform 0.0 272.9 0.0 1
 model "grass_patch_dry 15" "../models/zone/gen/grass_patch_dry.glb" 4.79 0.00 216.68
+  sway 1.0
   parent "Vegetation"
   transform 0.0 20.4 0.0 1
 model "grass_patch_dry 16" "../models/zone/gen/grass_patch_dry.glb" -9.68 0.00 100.30
+  sway 1.0
   parent "Vegetation"
   transform 0.0 149.8 0.0 1
 model "grass_crack 8" "../models/zone/gen/grass_patch_dry.glb" -10.50 0.00 239.04
+  sway 1.0
   parent "Vegetation"
   transform 0.0 2.6 0.0 1
 model "grass_patch 8" "../models/zone/gen/grass_patch_dry.glb" 7.61 0.00 118.96
+  sway 1.0
   parent "Vegetation"
   transform 0.0 352.2 0.0 1
 model "grass_crack 9" "../models/zone/gen/grass_patch_dry.glb" 8.05 0.00 19.53
+  sway 1.0
   parent "Vegetation"
   transform 0.0 262.8 0.0 1
 model "grass_crack 10" "../models/zone/gen/grass_crack.glb" -10.91 0.00 -175.90
+  sway 1.0
   parent "Vegetation"
   transform 0.0 302.5 0.0 1
 model "grass_patch 9" "../models/zone/gen/grass_crack.glb" 8.93 0.00 128.58
+  sway 1.0
   parent "Vegetation"
   transform 0.0 51.9 0.0 1
 model "grass_patch_dry 17" "../models/zone/gen/grass_patch_dry.glb" -5.61 0.00 121.93
+  sway 1.0
   parent "Vegetation"
   transform 0.0 278.0 0.0 1
 model "grass_crack 11" "../models/zone/gen/grass_patch_dry.glb" 3.62 0.00 95.04
+  sway 1.0
   parent "Vegetation"
   transform 0.0 211.4 0.0 1
 model "grass_patch 10" "../models/zone/gen/grass_patch.glb" 10.02 0.00 221.25
+  sway 1.0
   parent "Vegetation"
   transform 0.0 87.8 0.0 1
 model "grass_patch 11" "../models/zone/gen/grass_patch.glb" -8.57 0.00 188.20
+  sway 1.0
   parent "Vegetation"
   transform 0.0 10.9 0.0 1
 model "grass_patch_dry 18" "../models/zone/gen/grass_patch_dry.glb" -2.58 0.00 211.65
+  sway 1.0
   parent "Vegetation"
   transform 0.0 91.4 0.0 1
 model "grass_patch 12" "../models/zone/gen/grass_crack.glb" 3.87 0.00 231.32
+  sway 1.0
   parent "Vegetation"
   transform 0.0 265.0 0.0 1
 model "grass_patch 13" "../models/zone/gen/grass_patch.glb" -7.14 0.00 123.29
+  sway 1.0
   parent "Vegetation"
   transform 0.0 311.8 0.0 1
 model "grass_crack 12" "../models/zone/gen/grass_crack.glb" 6.91 0.00 225.40
+  sway 1.0
   parent "Vegetation"
   transform 0.0 188.6 0.0 1
 model "grass_patch 14" "../models/zone/gen/grass_patch.glb" -6.52 0.00 211.46
+  sway 1.0
   parent "Vegetation"
   transform 0.0 192.1 0.0 1
 model "grass_crack 13" "../models/zone/gen/grass_crack.glb" 10.32 0.00 182.46
+  sway 1.0
   parent "Vegetation"
   transform 0.0 255.8 0.0 1
 model "grass_patch 15" "../models/zone/gen/grass_crack.glb" -7.77 0.00 209.62
+  sway 1.0
   parent "Vegetation"
   transform 0.0 111.2 0.0 1
 model "grass_patch_dry 19" "../models/zone/gen/grass_patch.glb" 4.38 0.00 -18.97
+  sway 1.0
   parent "Vegetation"
   transform 0.0 143.7 0.0 1
 model "grass_crack 14" "../models/zone/gen/grass_crack.glb" 2.79 0.00 185.44
+  sway 1.0
   parent "Vegetation"
   transform 0.0 46.9 0.0 1
 model "grass_patch_dry 20" "../models/zone/gen/grass_patch.glb" 10.56 0.00 -88.64
+  sway 1.0
   parent "Vegetation"
   transform 0.0 356.7 0.0 1
 model "grass_crack 15" "../models/zone/gen/grass_patch.glb" 5.56 0.00 171.48
+  sway 1.0
   parent "Vegetation"
   transform 0.0 62.0 0.0 1
 model "grass_patch 16" "../models/zone/gen/grass_patch_dry.glb" 8.04 0.00 238.95
+  sway 1.0
   parent "Vegetation"
   transform 0.0 6.5 0.0 1
 model "grass_patch_dry 21" "../models/zone/gen/grass_crack.glb" 6.82 0.00 183.58
+  sway 1.0
   parent "Vegetation"
   transform 0.0 225.6 0.0 1
 model "grass_patch_dry 22" "../models/zone/gen/grass_patch.glb" -7.80 0.00 -34.49
+  sway 1.0
   parent "Vegetation"
   transform 0.0 242.9 0.0 1
 model "grass_crack 16" "../models/zone/gen/grass_patch.glb" -7.99 0.00 227.27
+  sway 1.0
   parent "Vegetation"
   transform 0.0 233.5 0.0 1
 model "grass_patch_dry 23" "../models/zone/gen/grass_patch_dry.glb" 9.98 0.00 94.51
+  sway 1.0
   parent "Vegetation"
   transform 0.0 317.2 0.0 1
 model "grass_patch 17" "../models/zone/gen/grass_patch.glb" 6.07 0.00 139.58
+  sway 1.0
   parent "Vegetation"
   transform 0.0 114.9 0.0 1
 model "grass_patch_dry 24" "../models/zone/gen/grass_patch_dry.glb" -4.78 0.00 180.63
+  sway 1.0
   parent "Vegetation"
   transform 0.0 281.9 0.0 1
 model "grass_patch 18" "../models/zone/gen/grass_crack.glb" 8.45 0.00 96.10
+  sway 1.0
   parent "Vegetation"
   transform 0.0 329.2 0.0 1
 model "grass_patch_dry 25" "../models/zone/gen/grass_patch_dry.glb" -7.38 0.00 240.33
+  sway 1.0
   parent "Vegetation"
   transform 0.0 54.4 0.0 1
 model "grass_patch_dry 26" "../models/zone/gen/grass_patch.glb" 9.98 0.00 -32.31
+  sway 1.0
   parent "Vegetation"
   transform 0.0 47.0 0.0 1
 model "grass_crack 17" "../models/zone/gen/grass_patch_dry.glb" -10.38 0.00 167.92
+  sway 1.0
   parent "Vegetation"
   transform 0.0 11.6 0.0 1
 model "grass_crack 18" "../models/zone/gen/grass_patch.glb" -2.26 0.00 239.14
+  sway 1.0
   parent "Vegetation"
   transform 0.0 224.6 0.0 1
 model "grass_patch_dry 27" "../models/zone/gen/grass_patch_dry.glb" 2.82 0.00 215.79
+  sway 1.0
   parent "Vegetation"
   transform 0.0 63.6 0.0 1
 model "grass_patch_dry 28" "../models/zone/gen/grass_patch_dry.glb" 6.50 0.00 -65.67
+  sway 1.0
   parent "Vegetation"
   transform 0.0 318.4 0.0 1
 model "grass_patch 19" "../models/zone/gen/grass_patch_dry.glb" 10.81 0.00 196.45
+  sway 1.0
   parent "Vegetation"
   transform 0.0 229.6 0.0 1
 model "grass_patch 20" "../models/zone/gen/grass_patch.glb" -2.82 0.00 199.54
+  sway 1.0
   parent "Vegetation"
   transform 0.0 264.3 0.0 1
 model "grass_crack 19" "../models/zone/gen/grass_patch.glb" -10.18 0.00 79.02
+  sway 1.0
   parent "Vegetation"
   transform 0.0 103.6 0.0 1
 model "grass_patch_dry 29" "../models/zone/gen/grass_crack.glb" 2.12 0.00 -75.35
+  sway 1.0
   parent "Vegetation"
   transform 0.0 252.1 0.0 1
 model "grass_patch_dry 30" "../models/zone/gen/grass_patch_dry.glb" 10.33 0.00 233.35
+  sway 1.0
   parent "Vegetation"
   transform 0.0 322.3 0.0 1
 model "grass_patch 21" "../models/zone/gen/grass_crack.glb" -9.88 0.00 242.79
+  sway 1.0
   parent "Vegetation"
   transform 0.0 144.2 0.0 1
 model "grass_crack 20" "../models/zone/gen/grass_patch.glb" -2.45 0.00 -90.40
+  sway 1.0
   parent "Vegetation"
   transform 0.0 138.4 0.0 1
 model "grass_patch 22" "../models/zone/gen/grass_crack.glb" 9.73 0.00 -183.69
+  sway 1.0
   parent "Vegetation"
   transform 0.0 85.1 0.0 1
 model "grass_patch 23" "../models/zone/gen/grass_crack.glb" 8.52 0.00 180.30
+  sway 1.0
   parent "Vegetation"
   transform 0.0 169.5 0.0 1
 model "grass_patch_dry 31" "../models/zone/gen/grass_crack.glb" -6.92 0.00 -183.94
+  sway 1.0
   parent "Vegetation"
   transform 0.0 66.0 0.0 1
 model "grass_patch 24" "../models/zone/gen/grass_crack.glb" -4.24 0.00 219.34
+  sway 1.0
   parent "Vegetation"
   transform 0.0 127.7 0.0 1
 model "grass_patch_dry 32" "../models/zone/gen/grass_patch_dry.glb" -4.38 0.00 204.82
+  sway 1.0
   parent "Vegetation"
   transform 0.0 27.1 0.0 1
 model "grass_crack 21" "../models/zone/gen/grass_patch_dry.glb" -6.78 0.00 230.29
+  sway 1.0
   parent "Vegetation"
   transform 0.0 188.7 0.0 1
 model "grass_patch 25" "../models/zone/gen/grass_patch.glb" 2.97 0.00 195.23
+  sway 1.0
   parent "Vegetation"
   transform 0.0 270.2 0.0 1
 model "grass_patch_dry 33" "../models/zone/gen/grass_patch.glb" 9.48 0.00 -165.22
+  sway 1.0
   parent "Vegetation"
   transform 0.0 31.5 0.0 1
 model "grass_patch 26" "../models/zone/gen/grass_patch.glb" -10.45 0.00 -125.95
+  sway 1.0
   parent "Vegetation"
   transform 0.0 163.3 0.0 1
 model "grass_patch_dry 34" "../models/zone/gen/grass_patch_dry.glb" 9.55 0.00 88.70
+  sway 1.0
   parent "Vegetation"
   transform 0.0 274.6 0.0 1
 model "grass_crack 22" "../models/zone/gen/grass_patch.glb" -3.64 0.00 166.09
+  sway 1.0
   parent "Vegetation"
   transform 0.0 242.3 0.0 1
 model "grass_patch_dry 35" "../models/zone/gen/grass_crack.glb" 6.28 0.00 248.60
+  sway 1.0
   parent "Vegetation"
   transform 0.0 168.2 0.0 1
 model "grass_crack 23" "../models/zone/gen/grass_crack.glb" -3.17 0.00 224.68
+  sway 1.0
   parent "Vegetation"
   transform 0.0 276.5 0.0 1
 model "grass_crack 24" "../models/zone/gen/grass_crack.glb" -9.50 0.00 170.79
+  sway 1.0
   parent "Vegetation"
   transform 0.0 346.4 0.0 1
 model "grass_patch_dry 36" "../models/zone/gen/grass_crack.glb" -10.45 0.00 180.61
+  sway 1.0
   parent "Vegetation"
   transform 0.0 70.9 0.0 1
 model "grass_patch 27" "../models/zone/gen/grass_crack.glb" 10.80 0.00 -104.10
+  sway 1.0
   parent "Vegetation"
   transform 0.0 119.9 0.0 1
 model "grass_patch 28" "../models/zone/gen/grass_patch.glb" 3.70 0.00 180.35
+  sway 1.0
   parent "Vegetation"
   transform 0.0 160.6 0.0 1
 model "grass_patch 29" "../models/zone/gen/grass_patch_dry.glb" -4.34 0.00 -167.88
+  sway 1.0
   parent "Vegetation"
   transform 0.0 58.1 0.0 1
 model "grass_patch 30" "../models/zone/gen/grass_patch_dry.glb" 5.02 0.00 211.86
+  sway 1.0
   parent "Vegetation"
   transform 0.0 146.2 0.0 1
 model "grass_patch_dry 37" "../models/zone/gen/grass_patch.glb" 142.95 0.00 127.62
+  sway 1.0
   parent "Vegetation"
   transform 0.0 262.0 0.0 1
 model "grass_patch_dry 38" "../models/zone/gen/grass_patch_dry.glb" 82.02 0.00 -172.46
+  sway 1.0
   parent "Vegetation"
   transform 0.0 166.3 0.0 1
 model "grass_patch_dry 39" "../models/zone/gen/grass_patch_dry.glb" 166.58 0.00 88.80
+  sway 1.0
   parent "Vegetation"
   transform 0.0 235.5 0.0 1
 model "grass_patch 31" "../models/zone/gen/grass_patch_dry.glb" 124.64 0.00 145.46
+  sway 1.0
   parent "Vegetation"
   transform 0.0 296.0 0.0 1
 model "grass_patch 32" "../models/zone/gen/grass_patch_dry.glb" 38.08 0.00 -94.89
+  sway 1.0
   parent "Vegetation"
   transform 0.0 246.6 0.0 1
 model "grass_patch_dry 40" "../models/zone/gen/grass_patch_dry.glb" 34.66 0.00 74.79
+  sway 1.0
   parent "Vegetation"
   transform 0.0 100.5 0.0 1
 model "grass_patch_dry 41" "../models/zone/gen/grass_patch_dry.glb" 43.73 0.00 -107.62
+  sway 1.0
   parent "Vegetation"
   transform 0.0 22.2 0.0 1
 model "grass_patch 33" "../models/zone/gen/grass_patch_dry.glb" 70.48 0.00 11.02
+  sway 1.0
   parent "Vegetation"
   transform 0.0 232.0 0.0 1
 model "grass_patch_dry 42" "../models/zone/gen/grass_patch_dry.glb" 150.61 0.00 210.56
+  sway 1.0
   parent "Vegetation"
   transform 0.0 270.8 0.0 1
 model "grass_patch_dry 43" "../models/zone/gen/grass_patch_dry.glb" 44.64 0.00 -12.77
+  sway 1.0
   parent "Vegetation"
   transform 0.0 344.2 0.0 1
 model "grass_patch 34" "../models/zone/gen/grass_patch_dry.glb" 121.49 0.00 202.31
+  sway 1.0
   parent "Vegetation"
   transform 0.0 95.9 0.0 1
 model "grass_patch_dry 44" "../models/zone/gen/grass_patch_dry.glb" -10.98 0.00 -31.21
+  sway 1.0
   parent "Vegetation"
   transform 0.0 289.0 0.0 1
 model "grass_patch 35" "../models/zone/gen/grass_patch_dry.glb" 186.95 0.00 102.13
+  sway 1.0
   parent "Vegetation"
   transform 0.0 316.4 0.0 1
 model "grass_patch 36" "../models/zone/gen/grass_patch.glb" -52.36 0.00 153.25
+  sway 1.0
   parent "Vegetation"
   transform 0.0 340.5 0.0 1
 model "grass_patch_dry 45" "../models/zone/gen/grass_patch_dry.glb" 148.15 0.00 145.69
+  sway 1.0
   parent "Vegetation"
   transform 0.0 185.0 0.0 1
 model "grass_patch 37" "../models/zone/gen/grass_patch.glb" -55.74 0.00 -187.89
+  sway 1.0
   parent "Vegetation"
   transform 0.0 323.3 0.0 1
 model "grass_patch 38" "../models/zone/gen/grass_patch_dry.glb" -37.20 0.00 199.49
+  sway 1.0
   parent "Vegetation"
   transform 0.0 315.5 0.0 1
 model "grass_patch_dry 46" "../models/zone/gen/grass_patch_dry.glb" 199.22 0.00 -64.70
+  sway 1.0
   parent "Vegetation"
   transform 0.0 97.0 0.0 1
 model "grass_patch 39" "../models/zone/gen/grass_patch.glb" -22.94 0.00 -77.28
+  sway 1.0
   parent "Vegetation"
   transform 0.0 162.1 0.0 1
 model "grass_patch_dry 47" "../models/zone/gen/grass_patch_dry.glb" 154.88 0.00 -152.30
+  sway 1.0
   parent "Vegetation"
   transform 0.0 296.3 0.0 1
 model "grass_patch 40" "../models/zone/gen/grass_patch.glb" -38.69 0.00 214.19
+  sway 1.0
   parent "Vegetation"
   transform 0.0 67.0 0.0 1
 model "grass_patch 41" "../models/zone/gen/grass_patch.glb" 62.85 0.00 5.65
+  sway 1.0
   parent "Vegetation"
   transform 0.0 123.0 0.0 1
 model "grass_patch 42" "../models/zone/gen/grass_patch.glb" -36.38 0.00 -107.75
+  sway 1.0
   parent "Vegetation"
   transform 0.0 30.6 0.0 1
 model "grass_patch_dry 48" "../models/zone/gen/grass_patch_dry.glb" 145.77 0.00 -185.49
+  sway 1.0
   parent "Vegetation"
   transform 0.0 3.4 0.0 1
 model "grass_patch_dry 49" "../models/zone/gen/grass_patch_dry.glb" 24.04 0.00 145.24
+  sway 1.0
   parent "Vegetation"
   transform 0.0 282.9 0.0 1
 model "grass_patch_dry 50" "../models/zone/gen/grass_patch_dry.glb" 9.08 0.00 -153.49
+  sway 1.0
   parent "Vegetation"
   transform 0.0 189.1 0.0 1
 model "grass_patch 43" "../models/zone/gen/grass_patch.glb" -49.00 0.00 142.14
+  sway 1.0
   parent "Vegetation"
   transform 0.0 185.4 0.0 1
 model "grass_patch_dry 51" "../models/zone/gen/grass_patch.glb" -85.13 0.00 -171.28
+  sway 1.0
   parent "Vegetation"
   transform 0.0 349.7 0.0 1
 model "grass_patch 44" "../models/zone/gen/grass_patch.glb" -46.41 0.00 -131.93
+  sway 1.0
   parent "Vegetation"
   transform 0.0 157.7 0.0 1
 model "grass_patch 45" "../models/zone/gen/grass_patch.glb" -33.13 0.00 -73.99
+  sway 1.0
   parent "Vegetation"
   transform 0.0 284.5 0.0 1
 model "grass_patch 46" "../models/zone/gen/grass_patch_dry.glb" 183.38 0.00 113.79
+  sway 1.0
   parent "Vegetation"
   transform 0.0 132.8 0.0 1
 model "grass_patch_dry 52" "../models/zone/gen/grass_patch.glb" 229.50 0.00 204.59
+  sway 1.0
   parent "Vegetation"
   transform 0.0 153.2 0.0 1
 model "grass_patch 47" "../models/zone/gen/grass_patch.glb" 86.32 0.00 -177.76
+  sway 1.0
   parent "Vegetation"
   transform 0.0 109.1 0.0 1
 model "grass_patch_dry 53" "../models/zone/gen/grass_patch.glb" 201.84 0.00 -169.11
+  sway 1.0
   parent "Vegetation"
   transform 0.0 108.8 0.0 1
 model "grass_patch 48" "../models/zone/gen/grass_patch_dry.glb" 47.12 0.00 212.61
+  sway 1.0
   parent "Vegetation"
   transform 0.0 345.0 0.0 1
 model "grass_patch 49" "../models/zone/gen/grass_patch_dry.glb" -36.54 0.00 124.20
+  sway 1.0
   parent "Vegetation"
   transform 0.0 208.8 0.0 1
 model "grass_patch_dry 54" "../models/zone/gen/grass_patch_dry.glb" 182.00 0.00 -63.84
+  sway 1.0
   parent "Vegetation"
   transform 0.0 227.6 0.0 1
 model "grass_patch_dry 55" "../models/zone/gen/grass_patch.glb" 155.45 0.00 -22.19
+  sway 1.0
   parent "Vegetation"
   transform 0.0 199.7 0.0 1
 model "grass_patch_dry 56" "../models/zone/gen/grass_patch_dry.glb" 148.74 0.00 123.47
+  sway 1.0
   parent "Vegetation"
   transform 0.0 149.1 0.0 1
 model "grass_patch 50" "../models/zone/gen/grass_patch_dry.glb" 40.29 0.00 122.65
+  sway 1.0
   parent "Vegetation"
   transform 0.0 270.8 0.0 1
 model "grass_patch_dry 57" "../models/zone/gen/grass_patch_dry.glb" 183.37 0.00 122.64
+  sway 1.0
   parent "Vegetation"
   transform 0.0 350.3 0.0 1
 model "grass_patch 51" "../models/zone/gen/grass_patch_dry.glb" 37.77 0.00 7.39
+  sway 1.0
   parent "Vegetation"
   transform 0.0 331.8 0.0 1
 model "grass_patch 52" "../models/zone/gen/grass_patch.glb" -5.82 0.00 209.18
+  sway 1.0
   parent "Vegetation"
   transform 0.0 152.0 0.0 1
 model "grass_patch_dry 58" "../models/zone/gen/grass_patch_dry.glb" -29.05 0.00 -155.09
+  sway 1.0
   parent "Vegetation"
   transform 0.0 145.7 0.0 1
 model "grass_patch 53" "../models/zone/gen/grass_patch_dry.glb" 3.06 0.00 154.58
+  sway 1.0
   parent "Vegetation"
   transform 0.0 258.4 0.0 1
 model "grass_patch_dry 59" "../models/zone/gen/grass_patch_dry.glb" 103.61 0.00 33.35
+  sway 1.0
   parent "Vegetation"
   transform 0.0 321.6 0.0 1
 model "grass_patch_dry 60" "../models/zone/gen/grass_patch.glb" 143.68 0.00 166.99
+  sway 1.0
   parent "Vegetation"
   transform 0.0 138.5 0.0 1
 model "grass_patch 54" "../models/zone/gen/grass_patch.glb" 7.03 0.00 144.24
+  sway 1.0
   parent "Vegetation"
   transform 0.0 279.0 0.0 1
 model "grass_patch_dry 61" "../models/zone/gen/grass_patch_dry.glb" 67.57 0.00 -87.41
+  sway 1.0
   parent "Vegetation"
   transform 0.0 85.3 0.0 1
 model "grass_patch_dry 62" "../models/zone/gen/grass_patch_dry.glb" 60.32 0.00 -171.85
+  sway 1.0
   parent "Vegetation"
   transform 0.0 40.1 0.0 1
 model "grass_patch_dry 63" "../models/zone/gen/grass_patch_dry.glb" -108.34 0.00 -87.40
+  sway 1.0
   parent "Vegetation"
   transform 0.0 229.2 0.0 1
 model "grass_patch 55" "../models/zone/gen/grass_patch_dry.glb" 228.56 0.00 -136.30
+  sway 1.0
   parent "Vegetation"
   transform 0.0 358.1 0.0 1
 model "grass_patch_dry 64" "../models/zone/gen/grass_patch_dry.glb" -66.48 0.00 213.15
+  sway 1.0
   parent "Vegetation"
   transform 0.0 3.9 0.0 1
 model "grass_patch_dry 65" "../models/zone/gen/grass_patch_dry.glb" 125.96 0.00 94.58
+  sway 1.0
   parent "Vegetation"
   transform 0.0 288.7 0.0 1
 model "grass_patch_dry 66" "../models/zone/gen/grass_patch_dry.glb" -11.21 0.00 -101.46
+  sway 1.0
   parent "Vegetation"
   transform 0.0 90.8 0.0 1
 model "grass_patch_dry 67" "../models/zone/gen/grass_patch_dry.glb" 152.91 0.00 69.13
+  sway 1.0
   parent "Vegetation"
   transform 0.0 208.4 0.0 1
 model "grass_patch 56" "../models/zone/gen/grass_patch_dry.glb" 179.10 0.00 97.82
+  sway 1.0
   parent "Vegetation"
   transform 0.0 183.5 0.0 1
 model "grass_patch 57" "../models/zone/gen/grass_patch.glb" 46.93 0.00 79.13
+  sway 1.0
   parent "Vegetation"
   transform 0.0 51.8 0.0 1
 model "grass_patch_dry 68" "../models/zone/gen/grass_patch_dry.glb" 146.31 0.00 72.10
+  sway 1.0
   parent "Vegetation"
   transform 0.0 2.8 0.0 1
 model "grass_patch 58" "../models/zone/gen/grass_patch_dry.glb" -87.00 0.00 225.47
+  sway 1.0
   parent "Vegetation"
   transform 0.0 164.3 0.0 1
 model "grass_patch 59" "../models/zone/gen/grass_patch_dry.glb" 96.97 0.00 -56.00
+  sway 1.0
   parent "Vegetation"
   transform 0.0 290.3 0.0 1
 model "grass_patch_dry 69" "../models/zone/gen/grass_patch_dry.glb" -60.71 0.00 -87.75
+  sway 1.0
   parent "Vegetation"
   transform 0.0 219.1 0.0 1
 model "grass_patch_dry 70" "../models/zone/gen/grass_patch.glb" 96.09 0.00 222.00
+  sway 1.0
   parent "Vegetation"
   transform 0.0 22.0 0.0 1
 model "grass_patch_dry 71" "../models/zone/gen/grass_patch_dry.glb" -87.52 0.00 200.79
+  sway 1.0
   parent "Vegetation"
   transform 0.0 175.5 0.0 1
 model "grass_patch_dry 72" "../models/zone/gen/grass_patch.glb" 33.63 0.00 -3.44
+  sway 1.0
   parent "Vegetation"
   transform 0.0 32.4 0.0 1
 model "grass_patch_dry 73" "../models/zone/gen/grass_patch.glb" 23.05 0.00 -145.26
+  sway 1.0
   parent "Vegetation"
   transform 0.0 291.1 0.0 1
 model "grass_patch 60" "../models/zone/gen/grass_patch_dry.glb" 46.36 0.00 141.96
+  sway 1.0
   parent "Vegetation"
   transform 0.0 58.8 0.0 1
 model "grass_patch 61" "../models/zone/gen/grass_patch_dry.glb" 191.04 0.00 100.64
+  sway 1.0
   parent "Vegetation"
   transform 0.0 306.7 0.0 1
 model "grass_patch 62" "../models/zone/gen/grass_patch_dry.glb" -44.33 0.00 117.44
+  sway 1.0
   parent "Vegetation"
   transform 0.0 259.8 0.0 1
 model "grass_patch_dry 74" "../models/zone/gen/grass_patch_dry.glb" -60.08 0.00 33.77
+  sway 1.0
   parent "Vegetation"
   transform 0.0 119.0 0.0 1
 model "grass_patch_dry 75" "../models/zone/gen/grass_crack.glb" -5.37 0.00 -400.89
+  sway 1.0
   parent "Vegetation"
   transform 0.0 213.6 0.0 1
 model "grass_crack 25" "../models/zone/gen/grass_patch_dry.glb" -4.21 0.00 -372.91
+  sway 1.0
   parent "Vegetation"
   transform 0.0 289.2 0.0 1
 model "grass_patch_dry 76" "../models/zone/gen/grass_crack.glb" 4.86 0.00 -339.56
+  sway 1.0
   parent "Vegetation"
   transform 0.0 104.6 0.0 1
 model "grass_crack 26" "../models/zone/gen/grass_patch_dry.glb" -10.55 0.00 -454.35
+  sway 1.0
   parent "Vegetation"
   transform 0.0 251.4 0.0 1
 model "grass_patch_dry 77" "../models/zone/gen/grass_patch_dry.glb" -7.62 0.00 -450.89
+  sway 1.0
   parent "Vegetation"
   transform 0.0 134.8 0.0 1
 model "grass_patch_dry 78" "../models/zone/gen/grass_patch_dry.glb" -7.54 0.00 -374.71
+  sway 1.0
   parent "Vegetation"
   transform 0.0 153.1 0.0 1
 model "grass_patch_dry 79" "../models/zone/gen/grass_crack.glb" 10.11 0.00 -340.89
+  sway 1.0
   parent "Vegetation"
   transform 0.0 345.1 0.0 1
 model "grass_patch_dry 80" "../models/zone/gen/grass_patch_dry.glb" 4.63 0.00 -397.01
+  sway 1.0
   parent "Vegetation"
   transform 0.0 150.5 0.0 1
 model "grass_crack 27" "../models/zone/gen/grass_crack.glb" 11.94 0.00 -300.21
+  sway 1.0
   parent "Vegetation"
   transform 0.0 273.4 0.0 1
 model "grass_patch_dry 81" "../models/zone/gen/grass_crack.glb" -5.48 0.00 -339.18
+  sway 1.0
   parent "Vegetation"
   transform 0.0 156.0 0.0 1
 model "grass_patch_dry 82" "../models/zone/gen/grass_patch_dry.glb" 9.79 0.00 -455.10
+  sway 1.0
   parent "Vegetation"
   transform 0.0 341.3 0.0 1
 model "grass_crack 28" "../models/zone/gen/grass_crack.glb" 12.00 0.00 -399.59
+  sway 1.0
   parent "Vegetation"
   transform 0.0 283.5 0.0 1
 model "grass_patch_dry 83" "../models/zone/gen/grass_crack.glb" 3.41 0.00 -319.43
+  sway 1.0
   parent "Vegetation"
   transform 0.0 115.4 0.0 1
 model "grass_crack 29" "../models/zone/gen/grass_crack.glb" 6.25 0.00 -290.58
+  sway 1.0
   parent "Vegetation"
   transform 0.0 318.5 0.0 1
 model "grass_patch_dry 84" "../models/zone/gen/grass_patch_dry.glb" 2.30 0.00 -382.32
+  sway 1.0
   parent "Vegetation"
   transform 0.0 20.2 0.0 1
 model "grass_patch_dry 85" "../models/zone/gen/grass_crack.glb" 6.23 0.00 -341.53
+  sway 1.0
   parent "Vegetation"
   transform 0.0 333.4 0.0 1
 model "grass_crack 30" "../models/zone/gen/grass_patch_dry.glb" -3.17 0.00 -375.60
+  sway 1.0
   parent "Vegetation"
   transform 0.0 27.9 0.0 1
 model "grass_patch_dry 86" "../models/zone/gen/grass_patch_dry.glb" 10.28 0.00 -350.14
+  sway 1.0
   parent "Vegetation"
   transform 0.0 149.0 0.0 1
 model "grass_patch_dry 87" "../models/zone/gen/grass_patch_dry.glb" 9.44 0.00 -422.90
+  sway 1.0
   parent "Vegetation"
   transform 0.0 200.8 0.0 1
 model "grass_crack 31" "../models/zone/gen/grass_crack.glb" -8.85 0.00 -285.81
+  sway 1.0
   parent "Vegetation"
   transform 0.0 24.9 0.0 1
 model "grass_crack 32" "../models/zone/gen/grass_crack.glb" 10.88 0.00 -434.33
+  sway 1.0
   parent "Vegetation"
   transform 0.0 269.1 0.0 1
 model "grass_patch_dry 88" "../models/zone/gen/grass_crack.glb" -7.67 0.00 -292.43
+  sway 1.0
   parent "Vegetation"
   transform 0.0 51.6 0.0 1
 model "grass_patch_dry 89" "../models/zone/gen/grass_crack.glb" -10.45 0.00 -364.97
+  sway 1.0
   parent "Vegetation"
   transform 0.0 146.8 0.0 1
 model "grass_patch_dry 90" "../models/zone/gen/grass_crack.glb" 3.63 0.00 -334.50
+  sway 1.0
   parent "Vegetation"
   transform 0.0 88.8 0.0 1
 model "grass_crack 33" "../models/zone/gen/grass_crack.glb" -9.30 0.00 -339.77
+  sway 1.0
   parent "Vegetation"
   transform 0.0 230.4 0.0 1
 model "grass_crack 34" "../models/zone/gen/grass_crack.glb" -5.87 0.00 -298.18
+  sway 1.0
   parent "Vegetation"
   transform 0.0 0.7 0.0 1
 model "grass_crack 35" "../models/zone/gen/grass_crack.glb" 8.51 0.00 -365.42
+  sway 1.0
   parent "Vegetation"
   transform 0.0 36.8 0.0 1
 model "grass_patch_dry 91" "../models/zone/gen/grass_patch_dry.glb" 11.18 0.00 -412.13
+  sway 1.0
   parent "Vegetation"
   transform 0.0 309.8 0.0 1
 model "grass_crack 36" "../models/zone/gen/grass_patch_dry.glb" 11.02 0.00 -372.30
+  sway 1.0
   parent "Vegetation"
   transform 0.0 310.4 0.0 1
 model "grass_patch_dry 92" "../models/zone/gen/grass_crack.glb" -5.07 0.00 -330.92
+  sway 1.0
   parent "Vegetation"
   transform 0.0 187.8 0.0 1
 model "rubble_a" "../models/zone/gen/rubble_a.glb" 14.06 0.00 30.57

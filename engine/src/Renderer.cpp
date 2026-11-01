@@ -136,6 +136,7 @@ struct EnvironmentBlock {
     glm::vec4 sunPos;     // xyz toward the sun (the main light may be the moon)
     glm::mat4 rainMatrix; // world -> rain occlusion map (top-down)
     glm::vec4 weather;    // x: wetness, y: lightning flash, z: 1 = rain map valid, w: puddles
+    glm::vec4 wind;       // xz: direction the wind blows, y: strength 0..1, w: gusts 0..1
 };
 
 constexpr int kEnvSize = 128;  // environment cubemap face size
@@ -542,6 +543,7 @@ void Renderer::useMeshProgram(const Program& p)
     loc_.overlaySun = p.loc("uOverlaySunDir");
     loc_.alphaMode = p.loc("uAlphaMode");
     loc_.instanced = p.loc("uInstanced");
+    loc_.sway = p.loc("uSway");
     loc_.instanceBase = p.loc("uInstanceBase");
     loc_.alphaCutoff = p.loc("uAlphaCutoff");
     loc_.opacity = p.loc("uOpacity");
@@ -808,6 +810,8 @@ void Renderer::updateEnvironment(const Scene& scene, const RenderView& view)
     b.skyParams = glm::vec4(sky_.stars, sky_.twilight, sky_.cloudShadows, e.time.enabled ? 1.0f : 0.0f);
     b.sunPos = glm::vec4(e.time.enabled ? sunPosition(e.time, e.time.hour) : -sky_.lightDirection, 0.0f);
     b.rainMatrix = rainMatrix_;
+    const float windAngle = glm::radians(e.windDirection);
+    b.wind = glm::vec4(std::cos(windAngle), std::clamp(e.wind, 0.0f, 1.0f), std::sin(windAngle), std::clamp(e.windGusts, 0.0f, 1.0f));
     b.weather = glm::vec4(wetness_, lightning_, rainActive_ && rainTex_ ? 1.0f : 0.0f, std::clamp(e.puddles, 0.0f, 1.0f));
     b.sunColor = glm::vec4(linear(e.sunColor), quality_.shadowResolution > 0 ? 1.0f : 0.0f);
     b.skyZenith = glm::vec4(linear(e.skyZenith), e.cloudCover);
@@ -1084,16 +1088,20 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
                 keepAliveLods(model, draw);
         }
         if (!quality_.instancing || selected || draw->skeleton || draw->parts.empty()) {
+            glUniform1f(loc_.sway, model.sway);
             drawModel(*draw, model.transform(), selected ? 1.0f : 0.0f);
+            glUniform1f(loc_.sway, 0.0f);
             continue;
         }
-        // Batch with other copies: same shared mesh list and the same material overrides.
+        // Batch with other copies: same shared mesh list, material overrides and sway.
         std::uint64_t key = reinterpret_cast<std::uintptr_t>(&draw->parts[0]);
         for (const auto& [slot, material] : draw->overrideMaterials)
             key = key * 1099511628211ull ^ reinterpret_cast<std::uintptr_t>(material.get());
+        if (model.sway > 0.0f)
+            key = key * 1099511628211ull ^ static_cast<std::uint64_t>(model.sway * 1000.0f + 1.0f);
         auto [it, added] = batchIndex_.emplace(key, batches_.size());
         if (added)
-            batches_.push_back({draw, {}, drawDistance_});
+            batches_.push_back({draw, {}, drawDistance_, model.sway});
         InstanceBatch& batch = batches_[it->second];
         batch.transforms.push_back(model.transform());
         batch.distance = std::min(batch.distance, drawDistance_);
@@ -2040,10 +2048,12 @@ void Renderer::addFoliage(const Terrain& t, const RenderView& view)
                 if (shadowCascade_ >= 0 && level == 0 && levelCount > 1)
                     level = 1; // shadows: the simpler copy
                 const Model* draw = levels[level];
-                const std::uint64_t key = reinterpret_cast<std::uintptr_t>(&draw->parts[0]);
+                std::uint64_t key = reinterpret_cast<std::uintptr_t>(&draw->parts[0]);
+                if (type.sway > 0.0f)
+                    key = key * 1099511628211ull ^ static_cast<std::uint64_t>(type.sway * 1000.0f + 1.0f);
                 auto [it, added] = batchIndex_.emplace(key, batches_.size());
                 if (added)
-                    batches_.push_back({draw, {}, cellDistance});
+                    batches_.push_back({draw, {}, cellDistance, type.sway});
                 InstanceBatch& batch = batches_[it->second];
                 batch.distance = std::min(batch.distance, cellDistance);
                 batch.transforms.push_back(c.transforms[i]);
@@ -2081,6 +2091,7 @@ void Renderer::flushInstances()
     for (std::size_t i = 0; i < batches_.size(); ++i) {
         const InstanceBatch& b = batches_[i];
         drawDistance_ = b.distance;
+        glUniform1f(loc_.sway, b.sway);
         if (ranges[i].first < 0) {
             drawModel(*b.model, b.transforms.front(), 0.0f);
         } else {
@@ -2089,6 +2100,7 @@ void Renderer::flushInstances()
                 instanced_ += ranges[i].second;
         }
     }
+    glUniform1f(loc_.sway, 0.0f);
     batches_.clear();
     batchIndex_.clear();
 }

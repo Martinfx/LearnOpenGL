@@ -916,6 +916,19 @@ void MainWindow::buildDocks()
     shadowsCheck_ = new QCheckBox(tr("Cast shadows"), boxPanel_);
     shadowsCheck_->setToolTip(tr("Off for grass and small plants: shadow maps are the most expensive pass"));
     renderingForm->addRow(tr("Shadows"), shadowsCheck_);
+    swaySpin_ = new QDoubleSpinBox(boxPanel_);
+    swaySpin_->setRange(0.0, 3.0);
+    swaySpin_->setSingleStep(0.05);
+    swaySpin_->setDecimals(2);
+    swaySpin_->setKeyboardTracking(false);
+    swaySpin_->setToolTip(tr("Bending in the level's wind (Environment > Wind): 0 rigid, about 0.3 trees, 1 grass and bushes"));
+    renderingForm->addRow(tr("Wind sway"), swaySpin_);
+    connect(swaySpin_, &QDoubleSpinBox::valueChanged, this, [this](double v) {
+        if (auto* m = selectedModel(); m && m->sway != static_cast<float>(v)) {
+            m->sway = static_cast<float>(v);
+            markDirty();
+        }
+    });
     connect(shadowsCheck_, &QCheckBox::toggled, this, [this](bool on) {
         if (auto* m = selectedModel(); m && m->castShadows != on) {
             m->castShadows = on;
@@ -2108,6 +2121,10 @@ void MainWindow::refreshProperties()
     shadowsCheck_->blockSignals(true);
     shadowsCheck_->setChecked(m ? m->castShadows : true);
     shadowsCheck_->blockSignals(false);
+    swaySpin_->setEnabled(m != nullptr);
+    swaySpin_->blockSignals(true);
+    swaySpin_->setValue(m ? m->sway : 0.0);
+    swaySpin_->blockSignals(false);
     nameEdit_->setEnabled(b || m || e);
     {
         const bool sound = e && e->type == "sound";

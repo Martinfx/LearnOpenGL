@@ -169,6 +169,7 @@ private:
     QDoubleSpinBox* orbit_ = nullptr;
     QDoubleSpinBox* drag_ = nullptr;
     class Vec3Editor* wind_ = nullptr;
+    QDoubleSpinBox* levelWind_ = nullptr;
     QCheckBox* worldSpace_ = nullptr;
     QDoubleSpinBox* lifeMin_ = nullptr;
     QDoubleSpinBox* lifeMax_ = nullptr;

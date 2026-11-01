@@ -236,7 +236,10 @@ EnvironmentPanel::EnvironmentPanel(engine::Scene* scene, QWidget* parent)
     addFloat(form, tr("Film grain"), &E::grain, 0, 0.3, 0.005, 3);
     section(tr("Weather"));
     addFloat(form, tr("Rain"), &E::rain, 0, 1, 0.05, 2, tr("0 dry, 1 downpour: rain sound volume"));
-    addFloat(form, tr("Wind"), &E::wind, 0, 1, 0.05, 2, tr("0 calm, 1 storm: gusting wind sound volume"));
+    addFloat(form, tr("Wind"), &E::wind, 0, 1, 0.05, 2,
+             tr("0 calm, 1 storm (~20 m/s): wind sound, vegetation sway (Wind sway of models and foliage) and particles with Level wind"));
+    addFloat(form, tr("Wind direction"), &E::windDirection, -360, 360, 5, 0, tr("Degrees the wind blows toward: 0 = +X, 90 = +Z"));
+    addFloat(form, tr("Gusts"), &E::windGusts, 0, 1, 0.05, 2, tr("0 steady wind .. 1 strong gusts rolling across the level"));
     addFloat(form, tr("Storm"), &E::storm, 0, 1, 0.05, 2,
              tr("Lightning: 0 none, 1 a strike every few seconds (flash of the sky and light, thunder delayed by distance)"));
     addFloat(form, tr("Puddles"), &E::puddles, 0, 1, 0.05, 2, tr("How much water collects on flat ground open to the sky when wet"));

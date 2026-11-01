@@ -147,6 +147,11 @@ void GameEffects::shot(const engine::WeaponSettings& weapon, const glm::mat4& vi
 
 void GameEffects::update(float dt, const engine::Scene& scene, const engine::PhysicsWorld& physics, glm::vec3 eye, GameAudio& audio)
 {
+    { // the level's wind carries particles with "level wind" (rain, smoke, dust): wind 1 = 12 m/s
+        const engine::Environment& env = scene.environment;
+        const float a = glm::radians(env.windDirection);
+        world_.setWind(glm::vec3(std::cos(a), 0.0f, std::sin(a)) * std::clamp(env.wind, 0.0f, 1.0f) * 12.0f);
+    }
     if (rain_) {
         world_.setTransform(rain_, eye + glm::vec3(0.0f, 9.0f, 0.0f));
         world_.setRateScale(rain_, engine::environmentAt(scene.environment, scene.sunDirection).rain);

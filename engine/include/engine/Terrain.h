@@ -44,6 +44,8 @@ struct FoliageType {
     // Fraction left at the cull distance (thinning from 30 % of it on; 1 = no thinning).
     // Low ground cover without collision also thins by the quality preset (detailDensityFar).
     float farDensity = 1.0f;
+    // Bending in the level's wind: 1 grass, ~0.3 trees, 0 rigid (rocks, wrecks).
+    float sway = 1.0f;
 };
 
 struct FoliageInstance {

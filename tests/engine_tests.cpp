@@ -1897,12 +1897,21 @@ void testTimeOfDay()
     s.environment.time.latitude = 56.0f;
     s.environment.time.dayOfYear = 280;
     s.environment.time.moonPhase = 0.25f;
+    std::string err;
     keys[0].storm = 0.7f;
     s.environment.time.keys = keys;
     s.environment.storm = 0.4f;
     s.environment.puddles = 0.3f;
+    s.environment.windDirection = 135.0f;
+    s.environment.windGusts = 0.8f;
+    {
+        engine::Model m;
+        check(engine::loadModelFile(m, ENGINE_TEST_ASSETS "/models/ramp.gltf", &err), "load ramp for sway: " + err);
+        m.name = "Bush";
+        m.sway = 0.7f;
+        s.models.push_back(m);
+    }
     s.environment.thunderSound = std::filesystem::absolute("thunder_custom.sound");
-    std::string err;
     check(engine::saveScene(s, "time_of_day.level", &err), "save time: " + err);
     engine::Scene l;
     check(engine::loadScene(l, "time_of_day.level", &err), "load time: " + err);
@@ -1912,13 +1921,16 @@ void testTimeOfDay()
     check(r.keys.size() == 2 && r.keys[0].hour == 22.0f && r.keys[0].rain == 1.0f && r.keys[0].storm == 0.7f, "weather keys round trip");
     check(l.environment.storm == 0.4f && l.environment.puddles == 0.3f && l.environment.thunderSound.filename() == "thunder_custom.sound",
           "storm settings round trip");
+    check(l.environment.windDirection == 135.0f && l.environment.windGusts == 0.8f, "wind round trip");
+    check(!l.models.empty() && l.models.back().sway == 0.7f, "model sway round trip");
     {
         engine::ParticleEffect fx;
         fx.emitters.emplace_back();
         fx.emitters[0].sheltered = true;
+        fx.emitters[0].levelWind = 0.6f;
         check(engine::saveParticleFile(fx, "sheltered.particle", &err), "save particle: " + err);
         engine::ParticleEffect loaded;
-        check(engine::loadParticleFile(loaded, "sheltered.particle", &err) && !loaded.emitters.empty() && loaded.emitters[0].sheltered,
+        check(engine::loadParticleFile(loaded, "sheltered.particle", &err) && !loaded.emitters.empty() && loaded.emitters[0].sheltered && loaded.emitters[0].levelWind == 0.6f,
               "particle sheltered round trip");
     }
     char text[8];

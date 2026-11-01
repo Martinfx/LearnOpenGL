@@ -551,6 +551,8 @@ ParticleEditor::ParticleEditor(QWidget* parent) : QWidget(parent)
     form->addRow(tr("Drag"), drag_);
     wind_ = new Vec3Editor(-50, 50, 0.1, form_);
     form->addRow(tr("Wind m/s"), wind_);
+    levelWind_ = number(0, 2, 0.05, 2, form_, tr("How much the level's wind (Environment > Wind) carries the particles: rain, smoke, dust"));
+    form->addRow(tr("Level wind"), levelWind_);
     attract_ = number(-100, 100, 0.5, 2, form_, tr("m/s² toward the effect's vertical axis; negative pushes away (vortex, anomaly pull)"));
     form->addRow(tr("Attract"), attract_);
     orbit_ = number(-100, 100, 0.5, 2, form_, tr("m/s² around the effect's vertical axis (swirl)"));
@@ -592,7 +594,7 @@ ParticleEditor::ParticleEditor(QWidget* parent) : QWidget(parent)
     connect(name_, &QLineEdit::editingFinished, this, changed);
     for (QSpinBox* s : {columns_, rows_, burst_, max_})
         connect(s, &QSpinBox::valueChanged, this, changed);
-    for (QDoubleSpinBox* s : {frameRate_, stretchFactor_, rate_, duration_, delay_, spread_, speedMin_, speedMax_, gravity_, drag_, attract_, orbit_,
+    for (QDoubleSpinBox* s : {frameRate_, stretchFactor_, rate_, duration_, delay_, spread_, speedMin_, speedMax_, gravity_, drag_, levelWind_, attract_, orbit_,
                               lifeMin_, lifeMax_, sizeMin_, sizeMax_, intensity_, rotationMin_, rotationMax_, spinMin_, spinMax_})
         connect(s, &QDoubleSpinBox::valueChanged, this, changed);
     for (QCheckBox* c : {randomFrame_, lit_, stretch_, sheltered_, worldSpace_})
@@ -817,6 +819,7 @@ void ParticleEditor::showEmitter()
     attract_->setValue(e->attract);
     orbit_->setValue(e->orbit);
     drag_->setValue(e->drag);
+    levelWind_->setValue(e->levelWind);
     wind_->setValue(e->wind);
     worldSpace_->setChecked(e->worldSpace);
     lifeMin_->setValue(e->lifeMin);
@@ -866,6 +869,7 @@ void ParticleEditor::edited()
     e->attract = static_cast<float>(attract_->value());
     e->orbit = static_cast<float>(orbit_->value());
     e->drag = static_cast<float>(drag_->value());
+    e->levelWind = static_cast<float>(levelWind_->value());
     e->wind = wind_->value();
     e->worldSpace = worldSpace_->isChecked();
     e->lifeMin = static_cast<float>(lifeMin_->value());

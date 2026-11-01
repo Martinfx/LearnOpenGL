@@ -20,6 +20,7 @@ layout(std140, binding = 1) uniform Environment {
     vec4 uSunPos;          // xyz toward the sun (the main light is the moon at night)
     mat4 uRainMatrix;      // world -> rain occlusion map (depth seen from above)
     vec4 uWeather;         // x: wetness, y: lightning flash, z: 1 = rain map valid, w: puddles
+    vec4 uWind;            // xz: direction the wind blows, y: strength 0..1, w: gusts 0..1
 };
 
 const float PI = 3.14159265;

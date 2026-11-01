@@ -88,7 +88,8 @@ void GameAudio::startLevel(const engine::Scene& scene)
     sources_.clear();
     audio_.stop(rain_);
     audio_.stop(wind_);
-    rain_ = wind_ = 0;
+    audio_.stop(rainRoof_);
+    rain_ = wind_ = rainRoof_ = 0;
     startAmbience(scene);
     // Weather loops run all the time; update() sets their volume from the environment.
     const engine::Environment& env = scene.environment;
@@ -102,6 +103,7 @@ void GameAudio::startLevel(const engine::Scene& scene)
     };
     rain_ = weather(env.rainSound, "sounds/ambient/rain.sound");
     wind_ = weather(env.windSound, "sounds/ambient/wind_storm.sound");
+    rainRoof_ = weather({}, "sounds/ambient/rain_roof.sound"); // rain drumming on the roof above
     for (std::size_t i = 0; i < scene.entities.size(); ++i) {
         const engine::Entity& e = scene.entities[i];
         // Sounds scripts will play (e.g. enemy.lua sound_shot) decode now, so the first play is not clipped.
@@ -166,7 +168,9 @@ void GameAudio::update(float dt, const engine::Scene& scene, glm::vec3 eye, glm:
     // Weather: louder than linear at low intensity so a drizzle is still heard.
     const engine::Environment env = engine::environmentAt(scene.environment, scene.sunDirection); // weather keys by hour
     shelterMix_ += ((sheltered_ ? 1.0f : 0.0f) - shelterMix_) * std::min(1.0f, dt * 3.0f);
-    audio_.setVolume(rain_, std::sqrt(std::clamp(env.rain, 0.0f, 1.0f)) * (1.0f - 0.6f * shelterMix_), 0.5f);
+    const float rainLevel = std::sqrt(std::clamp(env.rain, 0.0f, 1.0f));
+    audio_.setVolume(rain_, rainLevel * (1.0f - 0.6f * shelterMix_), 0.5f);
+    audio_.setVolume(rainRoof_, rainLevel * shelterMix_, 0.5f);
     audio_.setVolume(wind_, std::sqrt(std::clamp(env.wind, 0.0f, 1.0f)) * (1.0f - 0.45f * shelterMix_), 0.5f);
     audio_.update(dt);
 }

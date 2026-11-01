@@ -89,6 +89,7 @@ struct TerrainUi : QObject {
     QCheckBox* align = nullptr;
     QCheckBox* shadows = nullptr;
     QDoubleSpinBox* farDensity = nullptr;
+    QDoubleSpinBox* sway = nullptr;
     QLineEdit* lods = nullptr;
     QDoubleSpinBox* foliageRadius = nullptr;
     QRadioButton* erase = nullptr;
@@ -349,6 +350,9 @@ void MainWindow::buildTerrainPages()
         ui.farDensity = spin(ui.typeProps, 0.0, 1.0, 0.05, 1.0, 2);
         ui.farDensity->setToolTip(tr("Share left at the cull distance (thins out from 30 % of it); 1 = no thinning"));
         props->addRow(tr("Far density"), ui.farDensity);
+        ui.sway = spin(ui.typeProps, 0.0, 3.0, 0.05, 1.0, 2);
+        ui.sway->setToolTip(tr("Bending in the level's wind (Environment > Wind): 1 grass, about 0.3 trees, 0 rigid"));
+        props->addRow(tr("Wind sway"), ui.sway);
         auto* lodRow = new QHBoxLayout;
         ui.lods = new QLineEdit(ui.typeProps);
         ui.lods->setReadOnly(true);
@@ -426,6 +430,7 @@ void MainWindow::buildTerrainPages()
         connect(ui.align, &QCheckBox::toggled, this, [editType](bool on) { editType([on](auto& ft) { ft.alignToSlope = on; }); });
         connect(ui.shadows, &QCheckBox::toggled, this, [editType](bool on) { editType([on](auto& ft) { ft.castShadows = on; }); });
         connect(ui.farDensity, &QDoubleSpinBox::valueChanged, this, [editType](double x) { editType([x](auto& ft) { ft.farDensity = static_cast<float>(x); }); });
+        connect(ui.sway, &QDoubleSpinBox::valueChanged, this, [editType](double x) { editType([x](auto& ft) { ft.sway = static_cast<float>(x); }); });
         connect(ui.types, &QListWidget::currentRowChanged, this, [this] {
             if (!terrainUi_->refreshing)
                 refreshTerrainPanel();
@@ -599,6 +604,7 @@ void MainWindow::refreshTerrainPanel()
             ui.align->setChecked(ft.alignToSlope);
             ui.shadows->setChecked(ft.castShadows);
             ui.farDensity->setValue(ft.farDensity);
+            ui.sway->setValue(ft.sway);
             QStringList lods;
             for (const engine::FoliageType::Lod& lod : ft.lods)
                 lods << QString("%1 @ %2 m%3")
