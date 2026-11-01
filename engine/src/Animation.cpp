@@ -209,6 +209,7 @@ void resolveGraph(const Skeleton& skeleton, const AnimGraph& g, AnimGraphState& 
     const bool sameGraph = previousGraph == &g;
     st.resolvedFor = &skeleton;
     st.resolvedGraph = &g;
+    st.resolvedRevision = g.revision;
     st.stateBase.clear();
     st.clips.clear();
     st.maskNode.clear();
@@ -302,7 +303,7 @@ void fireEvents(const Skeleton& skeleton, const AnimGraph& g, AnimGraphState& st
 
 void updateGraph(const Skeleton& skeleton, const AnimGraph& g, AnimGraphState& st, float dt)
 {
-    if (st.resolvedFor != &skeleton || st.resolvedGraph != &g)
+    if (st.resolvedFor != &skeleton || st.resolvedGraph != &g || st.resolvedRevision != g.revision)
         resolveGraph(skeleton, g, st);
     st.events.clear();
     std::vector<float> w;
@@ -443,7 +444,7 @@ glm::quat rotationOf(const glm::mat4& m)
 
 void applyIk(const Skeleton& skeleton, const AnimGraph& g, const AnimGraphState& st, std::vector<glm::mat4>& globals)
 {
-    if (st.ikNodes.size() != g.ik.size() || st.ikWeight.size() != g.ik.size())
+    if (st.ikNodes.size() != g.ik.size() || st.ikWeight.size() != g.ik.size() || st.resolvedRevision != g.revision)
         return;
     std::vector<char> scratch;
     // Feet: the body drops for the lower foot, then each leg reaches its own ground.
@@ -526,8 +527,8 @@ void blendInto(std::vector<Local>& dst, const std::vector<Local>& src, float w, 
 
 void evaluateGraph(const Skeleton& skeleton, const AnimGraph& g, const AnimGraphState& st, std::vector<Local>& locals)
 {
-    if (st.resolvedFor != &skeleton || st.resolvedGraph != &g || st.layers.size() != g.layers.size())
-        return; // not updated yet: rest pose
+    if (st.resolvedFor != &skeleton || st.resolvedGraph != &g || st.resolvedRevision != g.revision || st.layers.size() != g.layers.size())
+        return; // not updated since the graph changed: rest pose
     const std::vector<Local> rest = locals;
     std::vector<Local> pose, from;
     std::vector<char> mask;

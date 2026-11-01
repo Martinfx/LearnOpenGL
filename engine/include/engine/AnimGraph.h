@@ -81,6 +81,7 @@ struct AnimGraph {
     };
 
     std::filesystem::path sourcePath;
+    unsigned revision = 0;          // bumped by every edit (Animation editor): animators re-resolve
     std::vector<Param> params;
     std::vector<IkChain> ik;
     float footMaxAdjust = 0.45f;    // m: largest step up / down the feet adapt to
@@ -92,6 +93,9 @@ struct AnimGraph {
 };
 
 const char* animOpText(AnimGraph::Op op); // "", "!", ">", "<", ">=", "<=", "==", "!="
+// Transition conditions as text: "dead !aim speed > 2" (all must hold). False on a bad comparison value.
+bool parseAnimConditions(const std::string& text, std::vector<AnimGraph::Condition>& out);
+std::string animConditionsText(const std::vector<AnimGraph::Condition>& conditions);
 
 bool loadAnimGraphFile(AnimGraph& graph, const std::filesystem::path& file, std::string* error = nullptr);
 bool saveAnimGraphFile(const AnimGraph& graph, const std::filesystem::path& file, std::string* error = nullptr);
@@ -111,6 +115,7 @@ struct AnimGraphState {
     std::vector<std::string> events;    // fired during the last update (the next update clears them)
     const void* resolvedFor = nullptr;  // skeleton the indices below belong to (nullptr = resolve again)
     const void* resolvedGraph = nullptr;
+    unsigned resolvedRevision = 0;
     std::vector<int> stateBase;         // per layer: index of its first state in `clips`
     std::vector<std::vector<int>> clips; // per state (stateBase[layer] + state): clip index per sample
     std::vector<int> maskNode;          // per layer: mask bone node, -1 = all bones

@@ -29,6 +29,7 @@
 #include "SoundEditor.h"
 #include "SurfacesEditor.h"
 #include "ParticleEditor.h"
+#include "AnimGraphEditor.h"
 #include "EditorUi.h"
 #include "ViewportPanel.h"
 
@@ -292,6 +293,13 @@ void MainWindow::buildMenus()
             openParticleEditor(path);
     });
     assets->addAction(tr("&New particle effect..."), this, [this] { newParticleEffect(QString()); });
+    assets->addAction(tr("&Animation graph..."), this, [this] {
+        const QString path = QFileDialog::getOpenFileName(this, tr("Open animation graph"), assetPath("animgraphs"),
+                                                          tr("Animation graphs (*.animgraph)"));
+        if (!path.isEmpty())
+            openAnimGraphEditor(path);
+    });
+    assets->addAction(tr("New animation &graph..."), this, [this] { newAnimGraph(QString()); });
     assets->addAction(tr("Check albedo &palette..."), this, [this] {
         auto* dialog = new PaletteDialog(
             [this](const QString& path) {
@@ -1194,11 +1202,18 @@ void MainWindow::buildDocks()
         animGraphEdit_->setPlaceholderText(tr("none (plays the clip above)"));
         auto* browse = new QPushButton(tr("..."), animGraphRow_);
         auto* clear = new QPushButton(tr("x"), animGraphRow_);
+        auto* edit = new QPushButton(tr("Edit"), animGraphRow_);
         browse->setFixedWidth(32);
         clear->setFixedWidth(32);
+        edit->setToolTip(tr("Open the graph in the Animation editor"));
         row->addWidget(animGraphEdit_);
         row->addWidget(browse);
         row->addWidget(clear);
+        row->addWidget(edit);
+        connect(edit, &QPushButton::clicked, this, [this] {
+            if (auto* e = selectedEntity(); e && !e->animGraphPath.empty())
+                openAnimGraphEditor(QString::fromStdU16String(e->animGraphPath.u16string()));
+        });
         animGraphRow_->setToolTip(tr("Animation graph: the script sets its parameters (speed, aim, dead...) and the graph picks "
                                      "and blends the clips. Without one the Animation clip loops."));
         connect(browse, &QPushButton::clicked, this, [this] {
@@ -3348,6 +3363,7 @@ void MainWindow::openAsset(const QString& path, int type)
     case AssetType::Sound: openSoundEditor(path); break;
     case AssetType::Audio: previewSound(path); break;
     case AssetType::Particle: openParticleEditor(path); break;
+    case AssetType::AnimGraph: openAnimGraphEditor(path); break;
     case AssetType::Ambience: openAmbienceEditor(path); break;
     case AssetType::Level:
         if (confirmDiscard())
@@ -4358,6 +4374,24 @@ bool MainWindow::closeScriptTab(int index)
         w->deleteLater();
         return true;
     }
+    if (auto* ag = qobject_cast<AnimGraphEditor*>(w)) {
+        if (ag->isModified()) {
+            tabs_->setCurrentIndex(index);
+            const auto answer = QMessageBox::question(this, tr("Unsaved changes"), tr("Save changes to %1?").arg(ag->path()),
+                                                      QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
+            if (answer == QMessageBox::Cancel)
+                return false;
+            QString error;
+            // Discard reloads the file: characters in the level share the edited graph.
+            if (!(answer == QMessageBox::Save ? ag->save(&error) : ag->revert(&error))) {
+                QMessageBox::warning(this, tr("Animation graph"), error);
+                return false;
+            }
+        }
+        tabs_->removeTab(index);
+        w->deleteLater();
+        return true;
+    }
     if (!se && !te && !me)
         return false; // the 3D view stays
     const bool modified = se ? se->isModified() : te ? te->isModified() : me->hasUnsaved();
@@ -4400,6 +4434,9 @@ bool MainWindow::saveAllScripts()
             path = te->path();
         } else if (auto* me = qobject_cast<MaterialEditor*>(w); me && me->hasUnsaved()) {
             ok = me->saveModified(&error);
+        } else if (auto* ag = qobject_cast<AnimGraphEditor*>(w); ag && ag->isModified()) {
+            ok = ag->save(&error);
+            path = ag->path();
         }
         if (!ok) {
             QMessageBox::warning(this, tr("Save"), tr("%1\n%2").arg(path, error));
@@ -4422,6 +4459,8 @@ bool MainWindow::confirmCloseScripts()
             modified = me->hasUnsaved();
         else if (auto* sh = qobject_cast<ShaderEditor*>(w))
             modified = sh->isModified();
+        else if (auto* ag = qobject_cast<AnimGraphEditor*>(w))
+            modified = ag->isModified();
         if (modified && !closeScriptTab(i))
             return false;
     }
@@ -4513,6 +4552,59 @@ void MainWindow::openParticleEditor(const QString& path)
         if (const int i = tabs_->indexOf(pe); i >= 0)
             tabs_->setTabText(i, pe->title());
     });
+}
+
+void MainWindow::openAnimGraphEditor(const QString& path)
+{
+    const QString absolute = QFileInfo(path).absoluteFilePath();
+    for (int i = 1; i < tabs_->count(); ++i)
+        if (auto* ag = qobject_cast<AnimGraphEditor*>(tabs_->widget(i)); ag && ag->path() == absolute) {
+            tabs_->setCurrentIndex(i);
+            return;
+        }
+    auto* ag = new AnimGraphEditor(tabs_);
+    QString error;
+    if (!ag->load(absolute, &error)) {
+        delete ag;
+        QMessageBox::warning(this, tr("Animation graph"), error);
+        return;
+    }
+    const int index = tabs_->addTab(ag, ag->title());
+    tabs_->setTabToolTip(index, absolute);
+    tabs_->setCurrentIndex(index);
+    connect(ag, &AnimGraphEditor::modificationChanged, this, [this, ag] {
+        if (const int i = tabs_->indexOf(ag); i >= 0)
+            tabs_->setTabText(i, ag->title());
+    });
+}
+
+void MainWindow::newAnimGraph(const QString& folder)
+{
+    const QString start = folder.isEmpty() ? assetPath("animgraphs") : folder;
+    QString path = QFileDialog::getSaveFileName(this, tr("New animation graph"), QDir(start).filePath("character.animgraph"),
+                                                tr("Animation graphs (*.animgraph)"));
+    if (path.isEmpty())
+        return;
+    if (!path.endsWith(".animgraph"))
+        path += ".animgraph";
+    // Starts as idle / walk / run by speed: the usual first layer.
+    engine::AnimGraph g;
+    g.params.push_back({"speed", engine::AnimGraph::ParamType::Float, 0.0f});
+    engine::AnimGraph::Layer base;
+    engine::AnimGraph::State loco;
+    loco.name = "Locomotion";
+    loco.kind = engine::AnimGraph::StateKind::Blend1D;
+    loco.paramX = "speed";
+    loco.samples = {{"Idle_Loop", 0.0f, 0.0f, 1.0f}, {"Walk_Loop", 1.4f, 0.0f, 1.0f}, {"Jog_Fwd_Loop", 4.0f, 0.0f, 1.0f}};
+    base.states.push_back(loco);
+    g.layers.push_back(base);
+    std::string error;
+    if (!engine::saveAnimGraphFile(g, std::filesystem::path(path.toStdU16String()), &error)) {
+        QMessageBox::warning(this, tr("Animation graph"), QString::fromStdString(error));
+        return;
+    }
+    assets_->rescan();
+    openAnimGraphEditor(path);
 }
 
 void MainWindow::newParticleEffect(const QString& folder)
@@ -4660,6 +4752,8 @@ void MainWindow::saveCurrent()
         ok = su->save(&error);
     else if (auto* pe = qobject_cast<ParticleEditor*>(tabs_->currentWidget()))
         ok = pe->save(&error);
+    else if (auto* ag = qobject_cast<AnimGraphEditor*>(tabs_->currentWidget()))
+        ok = ag->save(&error);
     else if (auto* ae = qobject_cast<AmbienceEditor*>(tabs_->currentWidget()))
         ok = ae->save(&error);
     else {

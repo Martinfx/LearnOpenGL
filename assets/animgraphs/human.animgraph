@@ -33,14 +33,14 @@ sample "Idle_Loop" 0 0 1
 sample "Walk_Loop" 1.4 0 1
 sample "Jog_Fwd_Loop" 4 0 1
 sample "Sprint_Loop" 6.5 0 1
-state "Crouch" blend1d "speed" "" loop 1 speed 1 at 0 160
+state "Crouch" blend1d "speed" "" loop 1 speed 1 at 0 130
 sample "Crouch_Idle_Loop" 0 0 1
 sample "Crouch_Fwd_Loop" 1.2 0 1
-state "Sit" clip "" "" loop 1 speed 1 at -220 0
+state "Sit" clip "" "" loop 1 speed 1 at -190 0
 sample "Sitting_Idle_Loop" 0 0 1
-state "Hit" clip "" "" loop 0 speed 1 at 220 0
+state "Hit" clip "" "" loop 0 speed 1 at 190 0
 sample "Hit_Chest" 0 0 1
-state "Death" clip "" "" loop 0 speed 1 at 220 160
+state "Death" clip "" "" loop 0 speed 1 at 190 130
 sample "Death01" 0 0 1
 transition "*" "Death" 0.15 -1 dead
 transition "Locomotion" "Crouch" 0.25 -1 crouch !dead
@@ -54,13 +54,13 @@ transition "Hit" "Locomotion" 0.2 0.85
 layer "Upper body" "Bip01 Spine1" 1 ""
 entry "Off"
 state "Off" empty "" "" loop 1 speed 1 at 0 0
-state "Aim" blend1d "aim_pitch" "" loop 1 speed 1 at 220 0
+state "Aim" blend1d "aim_pitch" "" loop 1 speed 1 at 190 0
 sample "Pistol_Aim_Down" -1 0 1
 sample "Pistol_Aim_Neutral" 0 0 1
 sample "Pistol_Aim_Up" 1 0 1
-state "Shoot" clip "" "" loop 0 speed 1 at 440 0
+state "Shoot" clip "" "" loop 0 speed 1 at 380 0
 sample "Pistol_Shoot" 0 0 1
-state "Reload" clip "" "" loop 0 speed 1 at 220 160
+state "Reload" clip "" "" loop 0 speed 1 at 190 130
 sample "Pistol_Reload" 0 0 1
 transition "*" "Off" 0.1 -1 dead
 transition "Off" "Aim" 0.2 -1 aim !dead

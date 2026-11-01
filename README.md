@@ -164,6 +164,14 @@ pro všechny lidi se stejným rigem; nově přidaný nepřítel ho dostane sám)
   nejvýš `foot_max_adjust` m), levá ruka drží odstup od pravé ruky z referenčního klipu (`Pistol_Aim_Neutral`),
   takže úchop zbraně vydrží i při míření nahoru a dolů. Váha řetězce může jít z parametru (`grip`).
 
+**Animation editor** (Assets > Animation graph, dvojklik na `.animgraph` v Content Browseru, nebo Edit u grafu postavy):
+uprostřed graf stavů vrstvy (táhnout uzly, kolečko zoom, dvojklik přidá stav, pravé tlačítko přidá přechod, nastaví
+vstupní stav nebo maže), pod ním časová osa klipu, který vrstva právě hraje (klik posouvá, dvojklik přidá událost,
+pravé tlačítko ji smaže). Vlevo parametry (sloupec Preview řídí náhled: rychlost, zaškrtávátka, Fire u triggerů) a IK
+řetězce, vpravo náhled postavy (volba modelu, pauza, zpomalení, schod pro foot IK) a detaily vybraného stavu
+(klipy blend space s polohou X/Y), přechodu (prolnutí, exit time, podmínky jako text) nebo vrstvy (maska, váha).
+Úpravy se hned projeví i na postavách v levelu; Save uloží soubor, zavření bez uložení vrátí stav ze souboru.
+
 Explicitní `self:play(klip)` graf dočasně přebije, `self:use_graph()` vrátí řízení grafu. V levelu je to řádek `  animgraph "cesta"`.
 
 ## Načítání

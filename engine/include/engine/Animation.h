@@ -78,9 +78,7 @@ struct Animator {
     bool setParam(const std::string& name, float value); // false if the graph has no such parameter
     float param(const std::string& name) const;
     bool trigger(const std::string& name);               // sets a trigger; a transition using it consumes it
-    std::string stateName(int layer = 0) const;
-    // Re-reads clip and bone names after the graph was edited (keeps parameters and states when possible).
-    void graphChanged() { graphState.resolvedFor = nullptr; }
+    std::string stateName(int layer = 0) const; // edits of the graph bump AnimGraph::revision: re-resolved on the next update
 };
 
 // Model-space matrix of every node for the animator's current pose

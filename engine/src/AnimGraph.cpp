@@ -72,6 +72,52 @@ const char* animOpText(AnimGraph::Op op)
     }
 }
 
+bool parseAnimConditions(const std::string& text, std::vector<AnimGraph::Condition>& out)
+{
+    out.clear();
+    std::istringstream in(text);
+    std::vector<std::string> tokens;
+    for (std::string t; in >> t;)
+        if (t != "and" && t != "if")
+            tokens.push_back(t);
+    for (std::size_t i = 0; i < tokens.size(); ++i) {
+        AnimGraph::Condition c;
+        c.param = tokens[i];
+        if (!c.param.empty() && c.param[0] == '!') {
+            c.param.erase(0, 1);
+            c.op = AnimGraph::Op::IsFalse;
+        } else if (i + 2 < tokens.size() && parseOp(tokens[i + 1], c.op)) {
+            try {
+                c.value = std::stof(tokens[i + 2]);
+            } catch (...) {
+                return false;
+            }
+            i += 2;
+        } else if (i + 1 < tokens.size() && parseOp(tokens[i + 1], c.op)) {
+            return false; // comparison without a value
+        }
+        if (!c.param.empty())
+            out.push_back(c);
+    }
+    return true;
+}
+
+std::string animConditionsText(const std::vector<AnimGraph::Condition>& conditions)
+{
+    std::ostringstream out;
+    for (const AnimGraph::Condition& c : conditions) {
+        if (out.tellp() > 0)
+            out << ' ';
+        if (c.op == AnimGraph::Op::IsTrue)
+            out << c.param;
+        else if (c.op == AnimGraph::Op::IsFalse)
+            out << '!' << c.param;
+        else
+            out << c.param << ' ' << animOpText(c.op) << ' ' << c.value;
+    }
+    return out.str();
+}
+
 int AnimGraph::findParam(const std::string& name) const
 {
     for (std::size_t i = 0; i < params.size(); ++i)
@@ -187,25 +233,10 @@ bool loadAnimGraphFile(AnimGraph& graph, const std::filesystem::path& file, std:
             PendingTransition p{static_cast<int>(g.layers.size()) - 1, {}, {}, {}};
             if (!(ls >> std::quoted(p.from) >> std::quoted(p.to) >> p.t.duration >> p.t.exitTime))
                 return fail("bad transition line");
-            std::vector<std::string> tokens;
-            for (std::string t; ls >> t;)
-                tokens.push_back(t);
-            for (std::size_t i = 0; i < tokens.size(); ++i) {
-                AnimGraph::Condition c;
-                c.param = tokens[i];
-                if (!c.param.empty() && c.param[0] == '!') {
-                    c.param.erase(0, 1);
-                    c.op = AnimGraph::Op::IsFalse;
-                } else if (i + 2 < tokens.size() + 0 && parseOp(tokens[i + 1], c.op)) {
-                    try {
-                        c.value = std::stof(tokens[i + 2]);
-                    } catch (...) {
-                        return fail("bad condition value");
-                    }
-                    i += 2;
-                }
-                p.t.conditions.push_back(c);
-            }
+            std::string rest;
+            std::getline(ls, rest);
+            if (!parseAnimConditions(rest, p.t.conditions))
+                return fail("bad condition value");
             if (p.t.conditions.empty() && p.t.exitTime < 0.0f)
                 p.t.exitTime = 1.0f; // no condition: leaves when the clip is done
             pending.push_back(std::move(p));
@@ -267,14 +298,8 @@ bool saveAnimGraphFile(const AnimGraph& g, const std::filesystem::path& file, st
                 return i >= 0 && i < static_cast<int>(l.states.size()) ? l.states[static_cast<std::size_t>(i)].name : std::string("*");
             };
             out << "transition " << std::quoted(name(t.from)) << ' ' << std::quoted(name(t.to)) << ' ' << t.duration << ' ' << t.exitTime;
-            for (const AnimGraph::Condition& c : t.conditions) {
-                if (c.op == AnimGraph::Op::IsTrue)
-                    out << ' ' << c.param;
-                else if (c.op == AnimGraph::Op::IsFalse)
-                    out << " !" << c.param;
-                else
-                    out << ' ' << c.param << ' ' << animOpText(c.op) << ' ' << c.value;
-            }
+            if (!t.conditions.empty())
+                out << ' ' << animConditionsText(t.conditions);
             out << '\n';
         }
     }

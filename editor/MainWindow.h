@@ -141,6 +141,8 @@ private:
     SoundEditor* openSoundEditor(const QString& path);
     void openSurfacesEditor();
     void openParticleEditor(const QString& path);
+    void openAnimGraphEditor(const QString& path);
+    void newAnimGraph(const QString& folder);
     void newParticleEffect(const QString& folder);
     void newSound(const QString& folder);
     void newAmbience(const QString& folder);

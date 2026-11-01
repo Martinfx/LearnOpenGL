@@ -20,7 +20,7 @@ class QOpenGLFramebufferObject;
 class QSlider;
 
 // Kinds of files the browser shows.
-enum class AssetType { Model, Material, Texture, Script, Weapon, Level, Sound, Audio, Particle, Ambience, Prefab, Other };
+enum class AssetType { Model, Material, Texture, Script, Weapon, Level, Sound, Audio, Particle, Ambience, Prefab, AnimGraph, Other };
 AssetType assetTypeOf(const QString& path);
 
 // Renders model and material thumbnails with the engine renderer in an
