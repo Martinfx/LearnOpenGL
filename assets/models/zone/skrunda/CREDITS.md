@@ -8,4 +8,7 @@ All models in this folder (buildings, fences, sandbags, terrain tiles) are gener
   https://www.openstreetmap.org/copyright. Raw extract: `assets/levels/source/osm/skrunda1.osm`.
 - **Textures**: Poly Haven photo-scan sets (CC0), listed in `assets/textures/pbr/CREDITS.md`; the
   derived zone textures are in `assets/models/zone/textures/`.
+- Wall writing (`graffiti_*.glb`, atlas `zone/textures/graffiti_albedo.png`, `zonegen/graffiti.py`) and ground debris
+  (`debris_*.glb`, `zonegen/debris.py`) are original designs made for this project (CC0). The slogans are common
+  Soviet-era phrases ("ЦОЙ ЖИВ", "ДМБ-91"), not copied artwork.
 - Sign texts are real place names of the town (shop "Venta", Novaya street) and generic Soviet signage.

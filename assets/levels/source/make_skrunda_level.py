@@ -95,7 +95,8 @@ FOLIAGE_TYPES = {}       # (file, lod_dist, cull, collision, shadows) -> type in
 FOLIAGE = []             # (x, y, z, yaw, scale, type)
 # brush density (instances / m2) and far density per kind, used when painting more in the editor
 FOLIAGE_KIND = {'Tree': (0.03, 1.0), 'Bush': (0.02, 0.8), 'Tall grass': (0.25, 0.5), 'Weeds': (0.1, 0.6),
-                'Grass tuft': (0.3, 0.5), 'Crack grass': (0.2, 0.5)}
+                'Grass tuft': (0.3, 0.5), 'Crack grass': (0.2, 0.5), 'Rubble': (0.15, 0.5), 'Litter': (0.06, 0.5),
+                'Twigs': (0.1, 0.5)}
 
 
 def veg(name, file, x, z, parent, lod_dist=25, cull=60, collision=False, yaw=None, scale=1.0, dy=-0.03, shadows=False):
@@ -111,6 +112,9 @@ def foliage_lines():
     out = []
     for (name, file, lod_dist, cull, collision, shadows), _ in sorted(FOLIAGE_TYPES.items(), key=lambda kv: kv[1]):
         dens, far = FOLIAGE_KIND.get(name, (0.1, 1.0))
+        if file.startswith('debris:'):      # ground debris (zonegen/debris.py): low poly, no LOD
+            out.append(f'foliage_type "{SK}debris_{file[7:]}.glb" {dens:g} 0.8 1.2 {cull:g} 0 0 0 {far:g}')
+            continue
         base = SK + 'veg/' + file[3:] if file.startswith('sk:') else V + file
         out.append(f'foliage_type "{base}.glb" {dens:g} 0.85 1.15 {cull:g} {int(collision)} 0 {int(shadows)} {far:g}')
         out.append(f'foliage_lod "{base}_lod1.glb" {lod_dist:g}')
@@ -245,7 +249,7 @@ L += [
 ]
 for g, p in (('Terrain', ''), ('Buildings', ''), ('Blocks', 'Buildings'), ('Public', 'Buildings'), ('Small', 'Buildings'),
              ('Fences', ''), ('Street', ''), ('Wrecks', 'Street'), ('Lamps', 'Street'), ('Camp', ''), ('Bandit base', ''),
-             ('Clutter', ''), ('Flats', 'Clutter'),
+             ('Clutter', ''), ('Flats', 'Clutter'), ('Wall writing', 'Clutter'), ('Dust', 'Clutter'), ('Radios', 'Clutter'),
              ('Vegetation', ''), ('Forest', 'Vegetation'), ('Trees', 'Vegetation'), ('Bushes', 'Vegetation'),
              ('Grass', 'Vegetation'), ('Weeds', 'Vegetation'), ('Debris', ''), ('Loot', ''), ('Markers', ''),
              ('NPC', ''), ('Stalkers', 'NPC'), ('Bandits', 'NPC')):
@@ -799,6 +803,183 @@ entity('Bandit at the tower', 'enemy', x, h(x, z), z, 200, 'bandit', 'Bandits', 
 L.append('player_sounds "../sounds/player/step_gravel.sound" "../sounds/player/land.sound" "../sounds/player/hurt.sound"')
 L.append('entity "Ambience wind" "sound" 0 -100 0 0 4000 400 4000 0.25 0.55 0.95 ""')
 L += ['  prop "sound" "sounds/ambient/wind.sound"', '  prop "zone" "1"', '  prop "fade" "50"']
+
+# ---------------------------------------------------------------------------- ground debris (terrain foliage)
+# Paintable with the Foliage brush: brick and plaster fallen off the walls, broken glass under the windows, cans
+# and bottles at the entrances and kerbs where people sat, twigs under the trees. Own random stream.
+drng = random.Random(2024)
+
+
+def debris(kind, name, x, z, scale=1.0):
+    veg(kind, 'debris:' + name, x, z, 'Debris', cull=40, yaw=drng.uniform(0, 360), scale=scale, dy=-0.01)
+
+
+def pick(table):
+    r, acc = drng.random(), 0.0
+    for name, p in table:
+        acc += p
+        if r < acc:
+            return name
+    return table[-1][0]
+
+
+WALL = [('silicate_bricks', 0.33), ('plaster_chunks', 0.35), ('glass_shards', 0.2), ('concrete_chunks', 0.12)]
+KERB = [('tin_cans', 0.35), ('bottles', 0.25), ('glass_shards', 0.2), ('concrete_chunks', 0.2)]
+YARD = [('concrete_chunks', 0.3), ('plaster_chunks', 0.2), ('tin_cans', 0.2), ('bottles', 0.15), ('silicate_bricks', 0.15)]
+for _ in range(42000):
+    x, z = drng.uniform(TOWN[0], TOWN[2]), drng.uniform(TOWN[1], TOWN[3])
+    if in_hq_yard(x, z, 0.0) or near_route(x, z, 1.0):
+        continue
+    d = T.field('bdist', x, z)
+    on_hard = T.field('road', x, z) > -0.3 or T.field('path', x, z) > -0.2
+    if 0.15 < d < 2.6 and not on_hard:
+        if drng.random() < 0.55 * (1.0 - d / 3.0):
+            debris('Rubble', pick(WALL), x, z, drng.uniform(0.8, 1.2))
+    elif -1.2 < T.field('road', x, z) < -0.1:
+        if drng.random() < 0.1:
+            debris('Litter', pick(KERB), x, z)
+    elif drng.random() < 0.012 and free(x, z, 0.5):
+        debris('Litter', pick(YARD), x, z)
+# where people sat: entrances of the blocks
+for bid, b in BUILD.items():
+    if not b['model'].startswith('block'):
+        continue
+    sec = int(b['model'].split('_')[-1][:-1])
+    for s_ in range(sec):
+        cx = -b['length'] / 2 + b['length'] / sec * (s_ + 0.5)
+        for _ in range(drng.randint(1, 3)):
+            x, _y, z = to_world(bid, cx + drng.uniform(-2.5, 2.5), 0, b['width'] / 2 + drng.uniform(1.4, 4.0))
+            debris('Litter', pick(KERB), x, z)
+# twigs under the trees
+TREE_TYPES = {i for (kind, *_), i in FOLIAGE_TYPES.items() if kind == 'Tree'}
+for fx, fy, fz, *_r, ft in list(FOLIAGE):
+    if ft in TREE_TYPES and drng.random() < 0.45:
+        for _ in range(drng.randint(1, 2)):
+            a, r = drng.uniform(0, 2 * math.pi), drng.uniform(0.8, 3.0)
+            debris('Twigs', 'twigs', fx + r * math.cos(a), fz + r * math.sin(a), drng.uniform(0.8, 1.3))
+
+# ---------------------------------------------------------------------------- wall writing and stains
+# Decal quads (zonegen/graffiti.py, build_skrunda.py decals) 2 cm off the walls, no collision. Each one has a
+# reason: the last conscripts' slogans and the entrance numbers from Soviet times, soot over the flats that
+# burnt, damp where the roof leaks, stalker marks along Lyokha's way to the hospital, the bandits' warnings
+# at the Venta. Own random stream, so the rest of the level does not move.
+wrng = random.Random(1991)
+
+
+def writing(design, bid, lx, ly, lz, turn, scale=1.0, ground=False):
+    """Decal on a building wall: building-local point (bottom centre), turn 0 = faces +Z, 180 = -Z,
+    90 = +X, -90 = -X; ground=True puts ly above the ground outside the wall instead of the building origin."""
+    x, y, z = to_world(bid, lx, ly, lz)
+    if ground:
+        a = math.radians(BUILD[bid]['yaw'] + turn)
+        y = h(x + 0.6 * math.sin(a), z + 0.6 * math.cos(a)) + ly
+    model(design.replace('_', ' ').capitalize(), SK + f'graffiti_{design}.glb', x, y, z, 'Wall writing',
+          BUILD[bid]['yaw'] + turn, scale=scale, collision=False, cull=70, shadows=False)
+
+
+SLOGANS = ['no_exit', 'tsoi', 'dmb', 'tsoi', 'no_exit']
+OFF = 0.02
+for bid, b in BUILD.items():
+    if not b['model'].startswith('block'):
+        continue
+    sec = int(b['model'].split('_')[-1][:-1])
+    L_, W_ = b['length'], b['width']
+    sw = L_ / sec
+    k = sw / 13.0
+    hx, hz = L_ / 2, W_ / 2
+    floors = 5
+    if sec >= 2:                       # entrance 2, flats 11-20, stencilled beside the door
+        writing('entrance', bid, -hx + sw * 1.5 + 1.2, floor_y(0) + 1.25, hz + OFF, 0)
+    # slogans low on the plinth under the ground-floor windows, between the entrances or on the balcony side
+    for _ in range(wrng.choice((1, 1, 2))):
+        side = wrng.choice((1, -1))
+        s = wrng.randrange(sec)
+        cx = -hx + sw * (s + 0.5)
+        lx = cx + wrng.choice((-1, 1)) * 3.4 * k             # clear of the door, under the window sills
+        writing(wrng.choice(SLOGANS), bid, lx, 0.22, side * (hz + OFF), 0 if side > 0 else 180, ground=True, scale=1.25)
+    # gable ends: the windowless strip in the middle (windows sit 3 m off the centre line)
+    for gx in (-1, 1):
+        r = wrng.random()
+        turn = 90 if gx > 0 else -90
+        if r < 0.35:                   # the roof leaks down the gable
+            writing('leak', bid, gx * (hx + OFF), floor_y(floors) - 2.2, wrng.uniform(-0.8, 0.8), turn,
+                    scale=wrng.uniform(0.9, 1.2))
+        elif r < 0.6:
+            writing('damp', bid, gx * (hx + OFF), floor_y(0) + wrng.uniform(0.2, 0.6), wrng.uniform(-0.6, 0.6), turn,
+                    scale=wrng.uniform(0.7, 0.9))
+        elif r < 0.8:
+            writing(wrng.choice(SLOGANS), bid, gx * (hx + OFF), 0.4, wrng.uniform(-0.6, 0.6), turn, ground=True,
+                    scale=wrng.uniform(1.5, 1.9))
+    # two or three flats burnt out: soot over the window, below the window of the flat above
+    for _ in range(wrng.randint(2, 3)):
+        f = wrng.randrange(floors - 1)
+        s = wrng.randrange(sec)
+        cx = -hx + sw * (s + 0.5)
+        if wrng.random() < 0.5:
+            lx = cx + wrng.choice((-4.6, -2.5, 2.5, 4.6)) * k
+            writing('soot', bid, lx, floor_y(f) + 2.28, hz + OFF, 0, scale=0.55)
+        else:
+            lx = cx + wrng.choice((-1.6, 1.6)) * k
+            writing('soot', bid, lx, floor_y(f) + 2.28, -(hz + OFF), 180, scale=0.55)
+
+# the bandits mark their base, Lyokha marked his way to the hospital, a warning at the X-ray end
+b = BUILD[VENTA]
+OFFP = 0.1                             # public buildings: their models are rounded up and clad, stand further off
+writing('keep_out', VENTA, -b['length'] / 2 - OFFP, 0.5, 0.0, -90, ground=True, scale=1.6)
+writing('cross', VENTA, -b['length'] / 2 - OFFP, 2.0, -4.5, -90, ground=True, scale=1.4)
+b = BUILD[HOSP]
+writing('lyokha', HOSP, -b['length'] / 2 - OFF, 0.9, 1.3, -90, ground=True, scale=1.7)
+writing('arrow_clear', HOSP, -b['length'] / 2 - OFF, 0.4, -1.6, -90, ground=True, scale=1.5)
+writing('radiation', HOSP, b['length'] / 2 + OFF, 0.5, 0.0, 90, ground=True, scale=1.5)
+b = BUILD[HQ]
+writing('dmb', HQ, b['length'] / 2 + OFFP, 0.5, 0.0, 90, ground=True, scale=1.8)
+writing('damp', HQ, -b['length'] / 2 - OFFP, 0.3, 0.0, -90, ground=True, scale=0.8)
+b = BUILD[TOWER]
+for ang in (40.0,):                    # on the brick shaft beside the door (round: 7 cm off so the edges stay out)
+    a = math.radians(ang)
+    writing('radiation', TOWER, math.sin(a) * (2.95 + 0.07), 0.9, math.cos(a) * (2.95 + 0.07), ang, ground=True)
+
+# ---------------------------------------------------------------------------- radios and dust in the light
+# Radios left on (assets/sounds/source/radio.py): the stalkers' set in the camp plays an old waltz, the bandits
+# have one in the Venta, and in an empty flat of the sniper's block a set hisses on a dead band with a beacon.
+RADIO = 'sounds/ambient/radio_waltz.sound'
+b = BUILD[HQ]
+x, y, z = to_world(HQ, -5.0, floor_y(0) + 0.85, -3.0)
+entity('Camp radio', 'sound', x, y, z, 0, None, 'Radios', script='', props=(('sound', RADIO),), size=(0.4, 0.4, 0.4))
+b = BUILD[VENTA]
+x, y, z = to_world(VENTA, -b['length'] / 2 + 3.2, floor_y(0), -b['width'] / 2 + 1.0)
+prop('Bandit radio', 'vintage_radio_transceiver', x, y, z, 'Radios', yaw=b['yaw'] + 160, collision=False)
+entity('Bandit radio sound', 'sound', x, y + 0.3, z, 0, None, 'Radios', script='', props=(('sound', RADIO),),
+       size=(0.4, 0.4, 0.4))
+b = BUILD[SNIPER_BLOCK]
+x, y, z = to_world(SNIPER_BLOCK, -b['length'] / 2 + 3.4, floor_y(1), -b['width'] / 2 + 1.6)
+prop('Abandoned radio', 'vintage_radio_transceiver', x, y, z, 'Radios', yaw=b['yaw'] + 25, collision=False)
+entity('Abandoned radio sound', 'sound', x, y + 0.3, z, 0, None, 'Radios', script='',
+       props=(('sound', 'sounds/ambient/radio_beacon.sound'),), size=(0.4, 0.4, 0.4))
+
+# dust floating in the rooms (lit particles: they show where the sun comes through the windows)
+DUST = 'particles/dust_motes.particle'
+
+
+def dust(bid, lx, ly, lz):
+    x, y, z = to_world(bid, lx, ly, lz)
+    entity('Dust', 'particle', x, y, z, 0, None, 'Dust', script='', props=(('effect', DUST),), size=(0.4, 0.4, 0.4))
+
+
+for bid, b in BUILD.items():
+    if not b['model'].startswith('block'):
+        continue
+    sec = int(b['model'].split('_')[-1][:-1])
+    sw = b['length'] / sec
+    for _ in range(2):                 # two rooms per block, behind the windows on either side
+        cx = -b['length'] / 2 + sw * (wrng.randrange(sec) + 0.5)
+        side = wrng.choice((1, -1))
+        dust(bid, cx + wrng.choice((-1, 1)) * 2.5 * sw / 13.0, floor_y(wrng.randrange(5)) + 0.9, side * (b['width'] / 2 - 2.2))
+for bid, n, floors in ((HOSP, 4, 3), (HQ, 3, 3), (CANTEEN, 2, 1), (VENTA, 1, 1)):
+    b = BUILD[bid]
+    for i in range(n):
+        lx = -b['length'] / 2 + b['length'] * (i + 0.5) / n
+        dust(bid, lx, floor_y(i % floors) + 0.9, wrng.choice((1, -1)) * (b['width'] / 2 - 2.5))
 
 # interior volumes (dark rooms, sheltered rain, room reverb) were sized in the editor: carried over from the
 # current level file, like other hand-made entities, so regenerating keeps them

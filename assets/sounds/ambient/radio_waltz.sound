@@ -1,0 +1,12 @@
+# Sound: variations (one is picked at random per play) and playback settings
+# Radio left on: an old waltz from a far-away station through a small speaker (loop, heard up to ~16 m).
+file "radio_waltz_loop.ogg"
+volume 0.8
+pitch 1 1
+distance 1 16
+rolloff 1.2
+loop 1
+stream 1
+spatial 1
+group ambient
+max_instances 4

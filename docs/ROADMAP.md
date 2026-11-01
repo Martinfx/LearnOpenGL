@@ -213,7 +213,7 @@ Hotovo, když: zóna 1 × 1 km jde projít bez načítací obrazovky a paměť d
 - [ ] Obchod, peníze, opotřebení zbraní a zbroje, váha inventáře.
 - [ ] Anomálie a artefakty (vlastní design): trigger + VFX + zvuk + poškození, detektor. **[atm]** Distorze z M3, hučení, reakce na hozený předmět.
   - [x] Anomálie (2026-10-31): Drtič, Výboj, Výheň, Žíravina, Zlom, Radiace; šrouby (G), detektor, geiger, dávka a HUD; zkreslení obrazu v post-processu (zatím zjednodušené, bez zápisu z částic); editor + `anomaly_test.level` + 8 ve Skrundě. Artefakty zbývají.
-- [ ] **[atm] Detaily zóny**: rozptyl odpadků, suti a malých meshů štětcem (Foliage režim), decaly nápisů a skvrn, rádia s filtrovaným zvukem, prach v kuželech světla.
+- [x] **[atm] Detaily zóny**: rozptyl odpadků, suti a malých meshů štětcem (Foliage režim), decaly nápisů a skvrn, rádia s filtrovaným zvukem, prach v kuželech světla. *Hotovo (2026-11-01) ve Skrundě-1: 7 typů drobné suti a odpadků jako foliage terénu (podle pravidel u zdí, obrubníků, vchodů a pod stromy, domalovat štětcem), 12 vlastních nápisů a skvrn jako decal modely bez kolize (atlas `graffiti_albedo.png`), rádia s vlastní nahrávkou přes filtr malého reproduktoru (valčík, maják), lit částice prachu v místnostech. Filtr rádia je zapečený ve zvuku, ne v enginu.*
 - [ ] Debugger Lua (breakpointy, proměnné) a hot reload skriptů za běhu.
 - [ ] Datové třídy s dědičností (`base ak74` v `.weapon`, NPC, předměty, frakce), editor ukáže zděděné hodnoty.
 - [ ] Demo záznam vstupů a semínek náhody, přehrání jako benchmark trasy zónou (průměr a 1 % low FPS) a pro reprodukci chyb.

@@ -92,6 +92,10 @@ Světlo v budovách: každé patro má objem irradiance sond (skupina Light prob
 z objemů interiérů), takže místnosti svítí od oken a sluneční skvrny na podlaze odrážejí teplé světlo na stěny.
 Upečené sondy jsou v `skrunda1.probes` (po přesunu budovy znovu Render › Bake lighting probes). Automatická
 expozice (Environment, `auto_exposure`) nechá oko přivyknout šeru uvnitř, okna se přepálí jako ve skutečnosti.
+Detaily zóny: nápisy a skvrny na zdech (skupina Wall writing, vlastní graffiti v azbuce, čísla vchodů, saze nad
+vyhořelými byty, zatékání, Ljochovy značky k nemocnici; `build_skrunda.py decals`), drobný nepořádek jako foliage
+terénu (cihly, omítka, sklo, plechovky, lahve, větvičky; `build_skrunda.py debris`, v režimu Foliage se dá
+domalovat štětcem), rádia s chrčivým zvukem (`assets/sounds/source/radio.py`) a prach ve světle v místnostech.
 
 **Testovací levely** (`water_test`, `physics_test`, `anomaly_test`, `lights_test`, `io_test`): každý je malé
 navržené místo v Zóně, které ukazuje jednu funkci enginu. Kanál s čerpací stanicí (voda), garáže s dvorem
