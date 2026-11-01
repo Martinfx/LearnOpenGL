@@ -1,3 +1,4 @@
+#include "engine/Demo.h"
 #include "engine/NavMesh.h"
 
 #include "engine/JobSystem.h"
@@ -180,7 +181,7 @@ void emitTerrain(const Terrain& t, glm::vec3 lo, glm::vec3 hi, TileGeometry& geo
 
 float frand()
 {
-    thread_local std::mt19937 rng{std::random_device{}()};
+    thread_local std::mt19937 rng{seedFor("nav")};
     return std::uniform_real_distribution<float>(0.0f, 1.0f)(rng);
 }
 

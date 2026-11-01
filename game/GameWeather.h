@@ -1,4 +1,5 @@
 #pragma once
+#include <engine/Demo.h>
 #include <engine/Scene.h>
 
 #include <glm/vec3.hpp>
@@ -36,5 +37,5 @@ private:
     float pendingStrike_ = -1.0f;
     struct Thunder { float delay; float volume; bool near; };
     std::vector<Thunder> thunder_;
-    std::mt19937 rng_{std::random_device{}()};
+    std::mt19937 rng_{engine::seedFor("weather")};
 };

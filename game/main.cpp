@@ -41,6 +41,7 @@
 #include <engine/FileWatcher.h>
 #include <engine/HotReload.h>
 #include <engine/WorldStreaming.h>
+#include <engine/Demo.h>
 #include <limits>
 #include "KeyNames.h"
 #include "MapHud.h"
@@ -173,10 +174,10 @@ std::vector<engine::Weapon> loadLoadout(const engine::Scene& scene, const std::f
     return weapons;
 }
 
-// Ricochet dice (gameplay randomness, not reproducible on purpose).
+// Ricochet dice (seeded from the game seed, so a demo replays the same ricochets).
 std::mt19937& ricochetRng()
 {
-    static std::mt19937 rng{std::random_device{}()};
+    static std::mt19937 rng{engine::seedFor("ricochet")};
     return rng;
 }
 bool ricochetRoll(float chance)
@@ -231,13 +232,72 @@ int boundKey(const char* cvar)
     return code;
 }
 
-bool keyDown(GLFWwindow* window, int code)
+// Demo recording and playback (--record x.demo, --play x.demo [--benchmark]): every key, button
+// and cursor read of a frame goes through keyHeld / cursorPos, so a recording holds exactly what
+// the game asked for and a replay answers the same.
+struct DemoState {
+    enum Mode { Off, Record, Play } mode = Off;
+    engine::Demo demo;
+    std::filesystem::path file;
+    bool benchmark = false;       // play, print the frame statistics and quit
+    std::size_t next = 0;         // next frame to play
+    engine::DemoFrame current;    // the frame being recorded or played
+    std::vector<float> realFrames; // measured frame times while playing
+    double lastReal = 0.0;
+    long desyncFrame = -1;        // first frame where the player left the recorded path
+    float desyncDistance = 0.0f;
+    float maxDistance = 0.0f;
+    bool replayedSettings = false; // the demo's settings were applied: do not save them as the player's
+};
+DemoState& demoState()
 {
-    if (code < 0)
-        return false;
+    static DemoState state;
+    return state;
+}
+constexpr int kDemoFocus = 999; // pseudo key: the window has the focus
+// Settings that change what the same input does; a demo stores and replays them.
+const char* const kDemoCVars[] = {"m_sensitivity", "m_invert_y", "god", "noclip", "freecam", "timescale", "fov"};
+
+bool rawHeld(GLFWwindow* window, int code)
+{
+    if (code == kDemoFocus)
+        return glfwGetWindowAttrib(window, GLFW_FOCUSED) != 0;
     if (code >= kMouseBase)
         return glfwGetMouseButton(window, code - kMouseBase) == GLFW_PRESS;
     return glfwGetKey(window, code) == GLFW_PRESS;
+}
+
+bool keyHeld(GLFWwindow* window, int code)
+{
+    if (code < 0)
+        return false;
+    DemoState& demo = demoState();
+    auto& keys = demo.current.keys;
+    const bool listed = std::find(keys.begin(), keys.end(), static_cast<std::uint16_t>(code)) != keys.end();
+    if (demo.mode == DemoState::Play)
+        return listed;
+    const bool down = rawHeld(window, code);
+    if (demo.mode == DemoState::Record && down && !listed)
+        keys.push_back(static_cast<std::uint16_t>(code));
+    return down;
+}
+
+void cursorPos(GLFWwindow* window, double* x, double* y)
+{
+    DemoState& demo = demoState();
+    if (demo.mode == DemoState::Play) {
+        *x = demo.current.cursor.x;
+        *y = demo.current.cursor.y;
+        return;
+    }
+    glfwGetCursorPos(window, x, y);
+    if (demo.mode == DemoState::Record)
+        demo.current.cursor = glm::vec2(static_cast<float>(*x), static_cast<float>(*y));
+}
+
+bool keyDown(GLFWwindow* window, int code)
+{
+    return keyHeld(window, code);
 }
 
 void readInput(GLFWwindow* window, engine::InputState& input)
@@ -536,9 +596,46 @@ int main(int argc, char** argv)
         } else if (arg == "--shaders" && i + 1 < argc) {
             if (!renderer.reloadShaders(argv[++i], &error))
                 LOG_WARN("shaders", "%s\n", error.c_str());
+        } else if ((arg == "--record" || arg == "--play") && i + 1 < argc) {
+            DemoState& demo = demoState();
+            demo.file = argv[++i];
+            if (arg == "--record") {
+                demo.mode = DemoState::Record;
+            } else if (std::string demoError; engine::loadDemo(demo.demo, demo.file, &demoError)) {
+                demo.mode = DemoState::Play;
+                engine::setGameSeed(demo.demo.seed); // the same dice as the recording
+                demo.replayedSettings = true;
+                for (const auto& [name, value] : demo.demo.cvars) {
+                    cvarArgs.push_back("+" + name);
+                    cvarArgs.push_back(value);
+                }
+            } else {
+                LOG_ERROR("demo", "%s", demoError.c_str());
+            }
+        } else if (arg == "--benchmark") {
+            demoState().benchmark = true;
         } else if (arg.rfind("--", 0) != 0) { // options like --no-menu are read elsewhere
             levelPath = arg;
         }
+    }
+    if (DemoState& demo = demoState(); demo.mode == DemoState::Play) {
+        std::filesystem::path level(std::u8string(demo.demo.level.begin(), demo.demo.level.end()));
+        levelPath = level.is_relative() ? std::filesystem::path(argv[0]).parent_path() / "assets" / level : level;
+        LOG_INFO("demo", "playing %s: %zu frames, %.1f s, level %s, seed %u", demo.file.string().c_str(), demo.demo.frames.size(),
+                 demo.demo.duration(), demo.demo.level.c_str(), demo.demo.seed);
+    } else if (demo.mode == DemoState::Record) {
+        // Relative to the assets folder the level is in (the game's or the editor's source copy),
+        // so the demo replays on another machine; else the absolute path.
+        const auto full = std::filesystem::absolute(levelPath).lexically_normal();
+        std::filesystem::path stored = full;
+        for (auto dir = full.parent_path(); !dir.empty() && dir != dir.root_path(); dir = dir.parent_path())
+            if (dir.filename() == "assets") {
+                stored = full.lexically_relative(dir);
+                break;
+            }
+        const std::u8string level = stored.generic_u8string();
+        demo.demo.level.assign(level.begin(), level.end());
+        demo.demo.seed = engine::gameSeed();
     }
 
     // Level: command line argument, else the bundled sample, else built-in default.
@@ -563,12 +660,14 @@ int main(int argc, char** argv)
     mouse.menu = &menu;
     glfwSetWindowUserPointer(window, &mouse);
     glfwSetCharCallback(window, [](GLFWwindow* w, unsigned codepoint) {
+        if (demoState().mode == DemoState::Play)
+            return; // a replay ignores the keyboard
         if (auto* m = static_cast<Mouse*>(glfwGetWindowUserPointer(w)); m->console)
             m->console->onChar(codepoint);
     });
     glfwSetKeyCallback(window, [](GLFWwindow* w, int key, int, int action, int mods) {
         auto* m = static_cast<Mouse*>(glfwGetWindowUserPointer(w));
-        if (!m->console)
+        if (!m->console || demoState().mode == DemoState::Play)
             return;
         if (m->menu && m->menu->capturingKey() && action == GLFW_PRESS && !m->console->open()) {
             m->menu->keyEvent(key);
@@ -599,6 +698,7 @@ int main(int argc, char** argv)
     bool noMenu = false;
     for (int i = 1; i < argc; ++i)
         noMenu = noMenu || std::string(argv[i]) == "--no-menu";
+    noMenu = noMenu || demoState().mode != DemoState::Off; // a demo starts in the level
     // FPS_ENGINE_FRAMES=N quits after N frames (used for smoke tests in CI).
     const char* frameLimitEnv = std::getenv("FPS_ENGINE_FRAMES");
     const long frameLimit = frameLimitEnv ? std::strtol(frameLimitEnv, nullptr, 10) : -1;
@@ -764,6 +864,7 @@ int main(int argc, char** argv)
     engine::NavMesh navmesh;
     std::thread navBuilder;
     std::atomic<bool> navCancel{false};
+    std::atomic<bool> navDone{!scene.nav.enabled};
     if (scene.nav.enabled) {
         // The builder reads its own copy of the level geometry (mesh data is shared, not
         // copied): the world streamer and dynamic props change scene.models meanwhile.
@@ -799,6 +900,7 @@ int main(int argc, char** argv)
             else if (!navCancel) // leaving the level early is not a problem
                 LOG_WARN("navmesh", "%s", navError.c_str());
             std::fflush(stdout);
+            navDone = true;
         });
     }
 
@@ -1012,7 +1114,8 @@ int main(int argc, char** argv)
         LOG_ERROR("script", "%d script error(s), see above", errors);
     // A-life: squads far from the player live on as records (engine/ALife.h).
     engine::ALife alife;
-    alife.start(scene, static_cast<std::uint32_t>(std::hash<std::string>{}(levelPath.string())));
+    // Seeded by the level file name (not its path): the same zone life wherever the game is installed, and in demos.
+    alife.start(scene, static_cast<std::uint32_t>(std::hash<std::string>{}(levelPath.filename().string())));
     const engine::ALife::Snap navSnap = [&navmesh](glm::vec3 p, float radius) -> std::optional<glm::vec3> {
         if (!navmesh.ready())
             return std::nullopt;
@@ -1793,12 +1896,74 @@ int main(int argc, char** argv)
         }
     };
 
+    if (demoState().mode != DemoState::Off) {
+        // Enemies walk straight lines until the navmesh is ready; when that happens depends on the
+        // machine, so a demo starts only with it (the window keeps answering meanwhile).
+        while (!navDone && !glfwWindowShouldClose(window)) {
+            glfwPollEvents();
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        lastTime = fixedDt > 0.0 ? 0.0 : glfwGetTime();
+    }
+    if (DemoState& demo = demoState(); demo.mode == DemoState::Record) {
+        for (const char* name : kDemoCVars)
+            if (const engine::CVar* v = cvars.find(name))
+                demo.demo.cvars[name] = v->value;
+        LOG_INFO("demo", "recording to %s (level %s, seed %u)", demo.file.string().c_str(), demo.demo.level.c_str(), demo.demo.seed);
+    }
+    // The end of a demo replay: frame statistics (benchmark), then quit or hand over to the player.
+    auto finishDemo = [&](bool complete) {
+        DemoState& demo = demoState();
+        const engine::FrameStats st = engine::frameStats(demo.realFrames);
+        std::string result = engine::formatFrameStats(st);
+        if (!complete)
+            result += " (stopped early)";
+        result += demo.desyncFrame < 0 ? " | in sync"
+                                       : " | desync at frame " + std::to_string(demo.desyncFrame) + " (" +
+                                             std::to_string(demo.desyncDistance) + " m off)";
+        LOG_INFO("demo", "%s: %s", demo.file.filename().string().c_str(), result.c_str());
+        int width = 0, height = 0;
+        glfwGetFramebufferSize(window, &width, &height);
+        std::printf("@bench %s | quality %s | %dx%d\n", result.c_str(),
+                    cvars.find("r_quality") ? cvars.find("r_quality")->value.c_str() : "?", width, height);
+        std::fflush(stdout);
+        if (std::ofstream log(engine::userDirectory("benchmarks") / (demo.file.stem().string() + ".txt"), std::ios::app); log) {
+            const std::time_t t = std::time(nullptr);
+            char date[32];
+            std::strftime(date, sizeof date, "%Y-%m-%d %H:%M", std::localtime(&t));
+            log << date << " | " << result << " | quality " << (cvars.find("r_quality") ? cvars.find("r_quality")->value : "?")
+                << " | " << width << 'x' << height << " | " << renderer.glInfo() << '\n';
+        }
+        if (demo.benchmark)
+            glfwSetWindowShouldClose(window, GLFW_TRUE);
+        else if (complete)
+            hud.notify("Konec záznamu: ovládáš hráče");
+        demo.mode = DemoState::Off;
+        demo.current = {};
+    };
+
     while (!glfwWindowShouldClose(window) && (frameLimit < 0 || frame < frameLimit) && exitRequest.kind == LevelExit::None) {
         const double now = fixedDt > 0.0 ? lastTime + fixedDt : glfwGetTime();
-        const double frameTime = now - lastTime;
+        double frameTime = now - lastTime;
         lastTime = now;
 
         glfwPollEvents();
+        if (DemoState& demo = demoState(); demo.mode == DemoState::Play) {
+            demo.current = demo.demo.frames[demo.next];
+            frameTime = demo.current.dt; // the simulation runs the recorded frames
+            mouse.delta = demo.current.mouseDelta;
+            mouse.scroll = demo.current.scroll;
+            const double real = glfwGetTime();
+            if (demo.next > 0)
+                demo.realFrames.push_back(static_cast<float>(real - demo.lastReal));
+            demo.lastReal = real;
+        } else if (demo.mode == DemoState::Record) {
+            demo.current = {};
+            demo.current.dt = static_cast<float>(frameTime);
+            frameTime = demo.current.dt; // stored as float: the replay gets bit-identical steps
+            demo.current.mouseDelta = mouse.delta;
+            demo.current.scroll = static_cast<float>(mouse.scroll);
+        }
         if (DebugChannel& dbg = debugChannel(); dbg.on)
             while (auto line = dbg.take())
                 dbg.handle(*line, scripts.debugger()); // breakpoints set while running, "dbg pause"
@@ -1808,7 +1973,7 @@ int main(int argc, char** argv)
             consoleWasOpen = console.open();
             escHeld = true; // the Esc that closed the console does nothing else
         }
-        const bool esc = glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS && !console.open();
+        const bool esc = keyHeld(window, GLFW_KEY_ESCAPE) && !console.open();
         if (esc && !escHeld) {
             if (menu.active())
                 menu.back();
@@ -1826,20 +1991,20 @@ int main(int argc, char** argv)
             // Menus get the mouse in framebuffer pixels (HiDPI windows differ from window coordinates).
             double cx = 0.0, cy = 0.0;
             int ww = 1, wh = 1, fw = 1, fh = 1;
-            glfwGetCursorPos(window, &cx, &cy);
+            cursorPos(window, &cx, &cy);
             glfwGetWindowSize(window, &ww, &wh);
             glfwGetFramebufferSize(window, &fw, &fh);
             const glm::vec2 scale(static_cast<float>(fw) / static_cast<float>(std::max(ww, 1)),
                                   static_cast<float>(fh) / static_cast<float>(std::max(wh, 1)));
             menu.mouse(glm::vec2(static_cast<float>(cx), static_cast<float>(cy)) * scale,
-                       !console.open() && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS,
+                       !console.open() && keyHeld(window, kMouseBase + GLFW_MOUSE_BUTTON_LEFT),
                        menu.active() ? mouse.scroll : 0.0);
             if (menu.active())
                 mouse.scroll = 0.0;
         }
         // The mouse looks around only while playing (no menu, no console, window focused).
         const bool wantCapture =
-            !menu.active() && !console.open() && !talk.active() && !trade.active() && glfwGetWindowAttrib(window, GLFW_FOCUSED);
+            !menu.active() && !console.open() && !talk.active() && !trade.active() && keyHeld(window, kDemoFocus);
         if (wantCapture != captured) {
             captured = wantCapture;
             setCaptured(window, captured);
@@ -1862,7 +2027,7 @@ int main(int argc, char** argv)
         {
             int pick = -1;
             for (int k = 0; k < 9; ++k) {
-                const bool d = glfwGetKey(window, GLFW_KEY_1 + k) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_KP_1 + k) == GLFW_PRESS;
+                const bool d = keyHeld(window, GLFW_KEY_1 + k) || keyHeld(window, GLFW_KEY_KP_1 + k);
                 if (d && !digitHeld[static_cast<std::size_t>(k)])
                     pick = k;
                 digitHeld[static_cast<std::size_t>(k)] = d;
@@ -1870,12 +2035,12 @@ int main(int argc, char** argv)
             if (talk.active() && !menu.active() && !console.open()) {
                 double cx = 0.0, cy = 0.0;
                 int ww = 1, wh = 1, fw = 1, fh = 1;
-                glfwGetCursorPos(window, &cx, &cy);
+                cursorPos(window, &cx, &cy);
                 glfwGetWindowSize(window, &ww, &wh);
                 glfwGetFramebufferSize(window, &fw, &fh);
                 talkHover = talk.hit({static_cast<float>(cx) * static_cast<float>(fw) / static_cast<float>(std::max(ww, 1)),
                                       static_cast<float>(cy) * static_cast<float>(fh) / static_cast<float>(std::max(wh, 1))});
-                const bool click = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+                const bool click = keyHeld(window, kMouseBase + GLFW_MOUSE_BUTTON_LEFT);
                 if (click && !talkClickHeld && talkHover >= 0)
                     pick = talkHover;
                 talkClickHeld = click;
@@ -1884,15 +2049,15 @@ int main(int argc, char** argv)
             } else if (trade.active() && !menu.active() && !console.open()) {
                 double cx = 0.0, cy = 0.0;
                 int ww = 1, wh = 1, fw = 1, fh = 1;
-                glfwGetCursorPos(window, &cx, &cy);
+                cursorPos(window, &cx, &cy);
                 glfwGetWindowSize(window, &ww, &wh);
                 glfwGetFramebufferSize(window, &fw, &fh);
                 const glm::vec2 m(static_cast<float>(cx) * static_cast<float>(fw) / static_cast<float>(std::max(ww, 1)),
                                   static_cast<float>(cy) * static_cast<float>(fh) / static_cast<float>(std::max(wh, 1)));
                 trade.hover(m);
-                const bool click = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+                const bool click = keyHeld(window, kMouseBase + GLFW_MOUSE_BUTTON_LEFT);
                 if (click && !talkClickHeld) {
-                    const bool many = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+                    const bool many = keyHeld(window, GLFW_KEY_LEFT_SHIFT) || keyHeld(window, GLFW_KEY_RIGHT_SHIFT);
                     trade.click(m, inventory, weapons, current, items, tradeHooks, many);
                     // The trader keeps what it got (saved with the game).
                     if (trade.entity() >= 0)
@@ -1900,7 +2065,7 @@ int main(int argc, char** argv)
                 }
                 talkClickHeld = click;
             } else {
-                talkClickHeld = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS; // the click that ends a talk does not shoot
+                talkClickHeld = keyHeld(window, kMouseBase + GLFW_MOUSE_BUTTON_LEFT); // the click that ends a talk does not shoot
             }
             auto openTrade = [&](int index) {
                 engine::Entity& e = scene.entities[static_cast<std::size_t>(index)];
@@ -2067,7 +2232,7 @@ int main(int argc, char** argv)
 
         // Weapon selection: 1-9 or the mouse wheel.
         for (int i = 0; i < 9; ++i) {
-            const bool pressed = glfwGetKey(window, GLFW_KEY_1 + i) == GLFW_PRESS;
+            const bool pressed = keyHeld(window, GLFW_KEY_1 + i);
             const bool down = captured && pressed;
             if (down && !slotHeld[static_cast<std::size_t>(i)] && static_cast<std::size_t>(i) < weapons.size())
                 next = static_cast<std::size_t>(i);
@@ -2189,7 +2354,7 @@ int main(int argc, char** argv)
             if (shots > 0) {
                 weapon.condition = std::max(0.0f, weapon.condition - weapon.settings.wearPerShot * static_cast<float>(shots));
                 if (!cvGod.boolean()) {
-                    static std::mt19937 jamRng{std::random_device{}()};
+                    static std::mt19937 jamRng{engine::seedFor("jam")};
                     if (std::uniform_real_distribution<float>(0.0f, 1.0f)(jamRng) < engine::jamProbability(weapon.settings, weapon.condition))
                         jammed[current] = 1;
                 }
@@ -2722,6 +2887,20 @@ int main(int argc, char** argv)
             }
         }
 
+        if (DemoState& demo = demoState(); demo.mode == DemoState::Record) {
+            demo.current.player = player.feet();
+            demo.demo.frames.push_back(demo.current);
+        } else if (demo.mode == DemoState::Play) {
+            const float off = glm::distance(player.feet(), demo.current.player);
+            demo.maxDistance = std::max(demo.maxDistance, off);
+            if (off > 0.05f && demo.desyncFrame < 0) {
+                demo.desyncFrame = static_cast<long>(demo.next);
+                demo.desyncDistance = off;
+                LOG_WARN("demo", "desync at frame %zu: player %.2f m from the recorded path", demo.next, off);
+            }
+            if (++demo.next >= demo.demo.frames.size())
+                finishDemo(true);
+        }
         ++frame;
         ++fpsFrames;
         fpsTimer += frameTime;
@@ -2775,7 +2954,19 @@ int main(int argc, char** argv)
                  s.loadedCells, s.cells, s.loadingCells, s.residentModels, s.deferredModels,
                  static_cast<double>(s.meshBytes) / (1024.0 * 1024.0));
     }
-    cvars.saveConfig((engine::userDirectory("config") / "game.cfg").string());
+    if (DemoState& demo = demoState(); demo.mode == DemoState::Record) {
+        // The recording covers this level session; a level change ends it.
+        std::string demoError;
+        if (engine::saveDemo(demo.demo, demo.file, &demoError))
+            LOG_INFO("demo", "saved %s: %zu frames, %.1f s", demo.file.string().c_str(), demo.demo.frames.size(), demo.demo.duration());
+        else
+            LOG_ERROR("demo", "%s", demoError.c_str());
+        demo.mode = DemoState::Off;
+    } else if (demo.mode == DemoState::Play) {
+        finishDemo(false);
+    }
+    if (!demoState().replayedSettings) // a replay's settings are the recording's, not the player's
+        cvars.saveConfig((engine::userDirectory("config") / "game.cfg").string());
     navCancel = true;
     if (navBuilder.joinable())
         navBuilder.join();

@@ -50,6 +50,7 @@ add_library(engine STATIC
     src/Quests.cpp
     src/Dialog.cpp
     src/ScriptDebug.cpp
+    src/Demo.cpp
     src/Items.cpp
     src/Log.cpp
     src/Paths.cpp

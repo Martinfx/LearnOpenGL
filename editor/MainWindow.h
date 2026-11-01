@@ -127,6 +127,9 @@ private:
     bool saveTo(const QString& path);
     bool confirmDiscard();
     void playLevel();
+    void startGame(const QStringList& extraArgs); // Play with options (demo recording / replay)
+    void recordDemo();
+    void playDemo(bool benchmark);
 
     // Script editor tabs (next to the 3D view).
     ScriptEditor* currentScript() const;

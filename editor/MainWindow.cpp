@@ -354,6 +354,13 @@ void MainWindow::buildMenus()
     QAction* play = game->addAction(tr("&Play level"), QKeySequence(Qt::Key_F5), this, &MainWindow::playLevel);
     playAction_ = play;
     game->addSeparator();
+    // Demos: the game records what the player does (inputs, random seed, settings) and replays it
+    // the same way: a benchmark route through the level or a bug to reproduce.
+    QMenu* demoMenu = game->addMenu(tr("&Demo"));
+    demoMenu->addAction(tr("&Record demo..."), this, &MainWindow::recordDemo);
+    demoMenu->addAction(tr("&Play demo..."), this, [this] { playDemo(false); });
+    demoMenu->addAction(tr("&Benchmark demo..."), this, [this] { playDemo(true); });
+    game->addSeparator();
     QMenu* debugMenu = game->addMenu(tr("Script &debugger"));
     debugMenu->addAction(tr("&Continue"), QKeySequence(Qt::Key_F8), this, [this] { debugCommand("continue"); });
     debugMenu->addAction(tr("Step &over"), QKeySequence(Qt::Key_F10), this, [this] { debugCommand("next"); });
@@ -4340,6 +4347,41 @@ bool MainWindow::saveTo(const QString& path)
 
 void MainWindow::playLevel()
 {
+    startGame({});
+}
+
+void MainWindow::recordDemo()
+{
+    // The demo names its level file, so it has to be a saved level (not the Play snapshot).
+    if (currentFile_.isEmpty() || dirty_) {
+        if (QMessageBox::question(this, tr("Record demo"), tr("The level has to be saved before recording a demo. Save it now?")) !=
+                QMessageBox::Yes ||
+            !save())
+            return;
+    }
+    QDir().mkpath(assetPath("demos"));
+    const QString suggested = QDir(assetPath("demos")).filePath(QFileInfo(currentFile_).completeBaseName() + ".demo");
+    const QString file = QFileDialog::getSaveFileName(this, tr("Record demo"), suggested, tr("Demo (*.demo)"));
+    if (file.isEmpty())
+        return;
+    appendLog(tr("Recording a demo: play, then close the game (or change the level) to save %1").arg(file), 0);
+    startGame({currentFile_, "--record", file});
+}
+
+void MainWindow::playDemo(bool benchmark)
+{
+    const QString file = QFileDialog::getOpenFileName(this, benchmark ? tr("Benchmark demo") : tr("Play demo"), assetPath("demos"),
+                                                      tr("Demo (*.demo)"));
+    if (file.isEmpty())
+        return;
+    QStringList args{"--play", file};
+    if (benchmark)
+        args << "--benchmark"; // quits at the end and reports average and 1 % low FPS
+    startGame(args);
+}
+
+void MainWindow::startGame(const QStringList& extraArgs)
+{
     // The game runs as a separate process on a snapshot of the current level,
     // so a crash in gameplay code never takes the editor down.
     const QString tempDir = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
@@ -4362,6 +4404,7 @@ void MainWindow::playLevel()
     const QString exe = QDir(QCoreApplication::applicationDirPath()).filePath("fps_game");
 #endif
     QStringList args{snapshot, "--debug"}; // the script debugger talks on stdin / stdout
+    args << extraArgs; // a level given here (demo recording) comes after the snapshot and wins
     if (customShaders_)
         args << "--shaders" << shaderRoot(); // the game runs the shaders edited here
     if (!QFileInfo::exists(exe)) {
@@ -4376,6 +4419,12 @@ void MainWindow::playLevel()
     connect(game_, &QProcess::readyReadStandardOutput, this, [this, process = game_] {
         const QString text = QString::fromLocal8Bit(process->readAllStandardOutput());
         for (const QString& line : text.split('\n', Qt::SkipEmptyParts)) {
+            if (line.startsWith(QLatin1String("@bench "))) { // a finished demo replay
+                const QString result = line.mid(7).trimmed();
+                appendLog(tr("Benchmark: %1").arg(result), result.contains(QLatin1String("desync")) ? 1 : 0);
+                statusBar()->showMessage(tr("Benchmark: %1").arg(result), 30000);
+                continue;
+            }
             if (line.startsWith(QLatin1String("@dbg"))) { // the script debugger's protocol (engine/ScriptDebug.h)
                 const std::string l = line.trimmed().toStdString();
                 if (l == "@dbg resumed")

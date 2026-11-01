@@ -300,6 +300,20 @@ Explicitní `self:play(klip)` graf dočasně přebije, `self:use_graph()` vrát�
 - **Editor:** při startu se ukáže úvodní obrazovka s progressbarem, dokud se nenačte první level. Při otevírání levelu je progress nad 3D pohledem a ve stavovém řádku.
 - **Písmo:** DejaVu Sans v `assets/fonts` (licence v `LICENSE-DejaVu.txt`), vykreslené přes stb_truetype.
 
+## Demo a benchmark
+
+- **Záznam:** `fps_game level.level --record trasa.demo` (v editoru Game > Demo > Record demo). Ukládá se, co
+  hra za každý snímek přečetla z klávesnice a myši, délka snímku, semínko náhody (počasí, odrazy, zasekávání
+  zbraní, `math.random` v Lua) a nastavení, která mění účinek vstupu (citlivost myši, god, noclip, timescale).
+  Záznam končí zavřením hry nebo změnou levelu.
+- **Přehrání:** `fps_game --play trasa.demo` (Game > Demo > Play demo). Hra jede po stejných snímcích se
+  stejnými vstupy. Na konci převezme hráče ovládání, takže demo poslouží i k reprodukci chyby.
+- **Benchmark:** `fps_game --play trasa.demo --benchmark` (Game > Demo > Benchmark demo) na konci vypíše
+  průměrné FPS, 1 % low, medián a nejhorší snímek a skončí. Výsledek jde do Output Logu editoru, na stdout
+  jako řádek `@bench` a do `benchmarks/<demo>.txt` v uživatelské složce (s kvalitou, rozlišením a GPU).
+- **Kontrola rozjetí:** demo nese polohu hráče po každém snímku. Když se přehrání odchýlí o víc než 5 cm,
+  hlásí to (`desync at frame N`). Konzole a gamepad se nenahrávají.
+
 ## Mapa (PDA)
 
 - **Minimapa** vpravo nahoře se otáčí s hráčem (poloměr 60 m), ukazuje značky a souřadnice.

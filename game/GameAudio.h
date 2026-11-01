@@ -1,4 +1,5 @@
 #pragma once
+#include <engine/Demo.h>
 #include <engine/Ambience.h>
 #include <engine/Audio.h>
 #include <engine/Scene.h>
@@ -64,7 +65,7 @@ private:
         float weight = 0.0f;
     };
     std::vector<Ambience> ambiences_;
-    std::mt19937 rng_{std::random_device{}()};
+    std::mt19937 rng_{engine::seedFor("audio")};
     struct Source {
         std::size_t entity = 0;
         engine::AudioSystem::Handle handle = 0;

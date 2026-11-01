@@ -1,5 +1,6 @@
 // Headless tests for the engine core (no OpenGL needed).
 #include <engine/Log.h>
+#include <engine/Demo.h>
 #include <cstring>
 #include <set>
 #include <engine/Assert.h>
@@ -351,6 +352,66 @@ void testScriptApi()
     runAi(s, 1.0f);
     check(s.entities[0].position.x < 7.5f, "scripted entity walks toward the player");
     check(std::abs(s.entities[0].yawDegrees - 180.0f) < 1.0f, "face() turns it toward the player");
+}
+
+void testDemo()
+{
+    // Round trip of a recording.
+    engine::Demo demo;
+    demo.level = "levels/zone.level";
+    demo.seed = 1234567u;
+    demo.cvars["m_sensitivity"] = "0.12";
+    for (int i = 0; i < 300; ++i) {
+        engine::DemoFrame f;
+        f.dt = 1.0f / 60.0f;
+        f.mouseDelta = glm::vec2(float(i % 7) - 3.0f, 0.5f);
+        f.cursor = glm::vec2(640.0f, 360.0f);
+        f.scroll = i == 10 ? 1.0f : 0.0f;
+        if (i % 3)
+            f.keys = {87, static_cast<std::uint16_t>(engine::kDemoMouseBase + 0)};
+        f.player = glm::vec3(0.0f, 0.0f, -0.08f * float(i));
+        demo.frames.push_back(f);
+    }
+    const auto file = std::filesystem::temp_directory_path() / "engine_test.demo";
+    std::string error;
+    check(engine::saveDemo(demo, file, &error), "demo saves: " + error);
+    engine::Demo back;
+    check(engine::loadDemo(back, file, &error), "demo loads: " + error);
+    check(back.level == demo.level && back.seed == demo.seed && back.cvars == demo.cvars, "demo header round trip");
+    bool same = back.frames.size() == demo.frames.size();
+    for (std::size_t i = 0; same && i < back.frames.size(); ++i) {
+        const auto &a = demo.frames[i], &b = back.frames[i];
+        same = a.dt == b.dt && a.mouseDelta == b.mouseDelta && a.cursor == b.cursor && a.scroll == b.scroll && a.keys == b.keys &&
+               a.player == b.player;
+    }
+    check(same, "demo frames round trip bit for bit");
+    check(std::abs(back.duration() - 5.0f) < 1e-3f, "300 frames at 60 Hz last 5 s");
+    {
+        std::ofstream cut(file, std::ios::binary | std::ios::trunc);
+        cut << "FPSDEMO1";
+    }
+    check(!engine::loadDemo(back, file, &error) && !error.empty(), "a damaged demo is an error");
+    std::filesystem::remove(file);
+
+    // Seeds: the same game seed gives the same streams, streams differ from each other.
+    const std::uint32_t old = engine::gameSeed();
+    engine::setGameSeed(42u);
+    const std::uint32_t a = engine::seedFor("weather"), b = engine::seedFor("jam");
+    engine::setGameSeed(43u);
+    check(engine::seedFor("weather") != a, "another game seed changes the streams");
+    engine::setGameSeed(42u);
+    check(engine::seedFor("weather") == a && a != b, "streams are reproducible and independent");
+    engine::setGameSeed(old);
+
+    // Benchmark statistics: 99 frames of 10 ms and one of 50 ms.
+    std::vector<float> times(99, 0.010f);
+    times.push_back(0.050f);
+    const engine::FrameStats st = engine::frameStats(times);
+    check(st.frames == 100 && std::abs(st.seconds - 1.04) < 1e-4, "frame count and time");
+    check(std::abs(st.averageFps - 100.0 / 1.04) < 0.01, "average FPS");
+    check(std::abs(st.low1Fps - 20.0) < 0.01 && std::abs(st.worstMs - 50.0) < 0.01, "1 % low is the slowest frame");
+    check(std::abs(st.medianMs - 10.0) < 0.01, "median frame time");
+    check(engine::formatFrameStats(st).find("1% low 20.0 FPS") != std::string::npos, "formatted statistics");
 }
 
 void testScriptDebugger()
@@ -3889,6 +3950,7 @@ int main()
         {"testQuestsAndDialogs", testQuestsAndDialogs},
         {"testTradeAndWear", testTradeAndWear},
         {"testScriptDebugger", testScriptDebugger},
+        {"testDemo", testDemo},
         {"testWorldStreaming", testWorldStreaming},
     };
     for (const auto& [name, run] : tests)

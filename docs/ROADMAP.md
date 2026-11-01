@@ -222,7 +222,12 @@ Hotovo, když: zóna 1 × 1 km jde projít bez načítací obrazovky a paměť d
   řetěz do hloubky 8, smyčka je chyba. Editor Weapons: pole Base (nabízí jen soubory bez smyčky), tučné popisky u
   přepsaných hodnot, Reset na základ; ukládá základy před variantami. Ukázka `ak74_old.weapon` (v nabídce Griši).
   NPC šablony pokrývají prefaby s přepisy; předměty a frakce jsou jednořádkové záznamy, kde dědění nic nepřináší.*
-- [ ] Demo záznam vstupů a semínek náhody, přehrání jako benchmark trasy zónou (průměr a 1 % low FPS) a pro reprodukci chyb.
+- [x] Demo záznam vstupů a semínek náhody, přehrání jako benchmark trasy zónou (průměr a 1 % low FPS) a pro reprodukci chyb.
+  *Hotovo (2026-11-01): engine/Demo (formát `.demo`: vstupy každého snímku, délka snímku, semínko, nastavení vstupu,
+  poloha hráče), `engine::seedFor` pro počasí, odrazy, zasekávání, navigaci a Lua `math.random`. Hra `--record`,
+  `--play`, `--benchmark` (průměr, 1 % low, medián, nejhorší snímek; `@bench` na stdout a `benchmarks/*.txt`),
+  hlášení rozjetí od 5 cm; demo začíná až s hotovým navmeshem (jinak se AI rozjede). Editor Game > Demo (Record / Play / Benchmark), výsledek v Output Logu.
+  Ověřeno: záznam 150 snímků s chůzí a střelbou na test.level se přehrál se stejnou polohou i HP („in sync“).*
 
 ### M5 – Vydání (~3–4 týdny)
 

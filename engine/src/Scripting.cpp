@@ -1,3 +1,4 @@
+#include "engine/Demo.h"
 #include "engine/Log.h"
 #include "engine/Scripting.h"
 #include "engine/CVars.h"
@@ -472,6 +473,7 @@ void ScriptSystem::Impl::updateTriggers()
 void ScriptSystem::Impl::bindApi()
 {
     lua.open_libraries(sol::lib::base, sol::lib::math, sol::lib::string, sol::lib::table, sol::lib::coroutine);
+    lua["math"]["randomseed"](static_cast<lua_Integer>(seedFor("lua"))); // demos replay the same math.random
 
     // vec3 value type
     lua.new_usertype<glm::vec3>("vec3",
