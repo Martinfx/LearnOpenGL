@@ -1,6 +1,12 @@
 add_executable(engine_tests engine_tests.cpp)
 target_link_libraries(engine_tests PRIVATE engine)
 add_test(NAME engine_tests COMMAND engine_tests WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+# Windows has no rpath: the DLLs it links (OpenAL) go next to the test executable.
+if(WIN32)
+    add_custom_command(TARGET engine_tests POST_BUILD
+                       COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_RUNTIME_DLLS:engine_tests> $<TARGET_FILE_DIR:engine_tests>
+                       COMMAND_EXPAND_LISTS)
+endif()
 target_compile_definitions(engine_tests PRIVATE ENGINE_TEST_ASSETS="${PROJECT_SOURCE_DIR}/assets")
 
 # Asset validation (missing references; `asset_check --models` also checks the scale).
