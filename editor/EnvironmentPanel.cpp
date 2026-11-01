@@ -192,6 +192,8 @@ EnvironmentPanel::EnvironmentPanel(engine::Scene* scene, QWidget* parent)
     addFloat(form, tr("Bloom threshold"), &E::bloomThreshold, 0, 10, 0.1, 2);
     addFloat(form, tr("AO radius"), &E::ssaoRadius, 0.05, 5, 0.05, 2, tr("Ambient occlusion radius (m)"));
     addFloat(form, tr("AO strength"), &E::ssaoIntensity, 0, 4, 0.05, 2);
+    addFloat(form, tr("Reflections (SSR)"), &E::ssrIntensity, 0, 1, 0.05, 2,
+             tr("Screen-space reflections on smooth and wet surfaces (needs the SSR quality option)"));
     addFloat(form, tr("Shadow distance"), &E::shadowDistance, 5, 500, 5, 0, tr("Meters covered by sun shadows"));
     addFloat(form, tr("Saturation"), &E::saturation, 0, 2, 0.02, 2);
     addFloat(form, tr("Contrast"), &E::contrast, 0.5, 2, 0.02, 2);

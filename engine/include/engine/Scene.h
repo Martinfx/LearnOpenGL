@@ -367,6 +367,7 @@ struct Environment {
     float bloomThreshold = 1.2f;
     float ssaoRadius = 0.6f;
     float ssaoIntensity = 1.0f;
+    float ssrIntensity = 1.0f;                  // screen-space reflections 0..1 (quality option "ssr")
     float shadowDistance = 60.0f;               // m covered by the cascades
     float saturation = 1.0f;
     float contrast = 1.05f;

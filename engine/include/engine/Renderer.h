@@ -120,6 +120,7 @@ struct RenderQuality {
     // Temporal anti-aliasing in continuous views (RenderView::temporal); elsewhere FXAA
     // takes over when this is on.
     bool taa = true;
+    bool ssr = true; // screen-space reflections (wet ground, glass, polished floors)
     int textureUploadsPerFrame = 6; // new textures sent to the GPU per frame, 0 = all at once
     // Memory. Textures larger than textureMaxSize drop their top mip levels (0 = full size).
     // Texture streaming: objects farther than textureStreamDistance get a small copy
@@ -292,7 +293,7 @@ private:
         int loc(const char* name) const;
     };
     struct Programs {
-        Program mesh, depth, sky, envCapture, prefilter, brdf, ssao, blur, bloomDown, bloomUp, post, fxaa, taa, copy, grid, hiz, sprite, debug,
+        Program mesh, depth, sky, envCapture, prefilter, brdf, ssao, blur, bloomDown, bloomUp, post, fxaa, taa, ssrHistory, copy, grid, hiz, sprite, debug,
             luminance, exposure, water, underwater, distort, volumeInject, volumeIntegrate;
     };
     // Uniform locations of the program that draws geometry right now.
@@ -604,6 +605,12 @@ private:
     glm::vec2 taaJitterUV_{0.0f};
     glm::mat4 taaViewProj_{1.0f}, taaPrevViewProj_{1.0f}, taaJitteredViewProj_{1.0f};
     unsigned sceneTex_ = 0; // what post-processing reads: hdrColor_ or the TAA result
+    // Screen-space reflections: the previous frame's HDR image (mipmapped) they read from.
+    unsigned ssrColor_ = 0, ssrFbo_ = 0;
+    bool ssrRecord_ = false, ssrValid_ = false;
+    glm::mat4 ssrViewProj_{1.0f};     // camera of the frame in ssrColor_ (no jitter)
+    glm::mat4 ssrPrevViewProj_{1.0f}; // this frame's, until it is recorded
+    void recordSsrColor();
     void resolveTaa();
     std::string glInfo_;
     std::array<glm::vec4, 6> frustum_{}; // planes of the pass being drawn

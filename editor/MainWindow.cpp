@@ -368,10 +368,11 @@ void MainWindow::buildMenus()
     quality.ssao = settings.value("render/ssao", quality.ssao).toBool();
     quality.bloom = settings.value("render/bloom", quality.bloom).toBool();
     quality.fxaa = settings.value("render/fxaa", quality.fxaa).toBool();
+    quality.ssr = settings.value("render/ssr", quality.ssr).toBool();
     render->addAction(tr("&Bake lighting probes"), this, &MainWindow::bakeProbes);
     render->addSeparator();
     QMenu* qualityMenu = render->addMenu(tr("&Quality"));
-    auto toggles = std::make_shared<std::array<QAction*, 3>>(); // SSAO, bloom, FXAA
+    auto toggles = std::make_shared<std::array<QAction*, 4>>(); // SSAO, bloom, FXAA, SSR
     for (int i = 0; i < 4; ++i) {
         QAction* a = qualityMenu->addAction(tr(qualityNames[i]));
         a->setCheckable(true);
@@ -385,16 +386,17 @@ void MainWindow::buildMenus()
             (*toggles)[0]->setChecked(q.ssao);
             (*toggles)[1]->setChecked(q.bloom);
             (*toggles)[2]->setChecked(q.fxaa);
+            (*toggles)[3]->setChecked(q.ssr);
             for (QAction* t : *toggles)
                 t->blockSignals(false);
             setRenderQuality(q);
         });
     }
-    const char* toggleNames[3] = {"Ambient occlusion (SSAO)", "Bloom", "Anti-aliasing (FXAA)"};
-    const char* toggleKeys[3] = {"render/ssao", "render/bloom", "render/fxaa"};
-    bool engine::RenderQuality::*toggleMembers[3] = {&engine::RenderQuality::ssao, &engine::RenderQuality::bloom,
-                                                     &engine::RenderQuality::fxaa};
-    for (int i = 0; i < 3; ++i) {
+    const char* toggleNames[4] = {"Ambient occlusion (GTAO)", "Bloom", "Anti-aliasing (FXAA)", "Screen-space reflections (SSR)"};
+    const char* toggleKeys[4] = {"render/ssao", "render/bloom", "render/fxaa", "render/ssr"};
+    bool engine::RenderQuality::*toggleMembers[4] = {&engine::RenderQuality::ssao, &engine::RenderQuality::bloom,
+                                                     &engine::RenderQuality::fxaa, &engine::RenderQuality::ssr};
+    for (int i = 0; i < 4; ++i) {
         (*toggles)[static_cast<std::size_t>(i)] = render->addAction(tr(toggleNames[i]));
         (*toggles)[static_cast<std::size_t>(i)]->setCheckable(true);
         (*toggles)[static_cast<std::size_t>(i)]->setChecked(quality.*toggleMembers[i]);
@@ -4680,7 +4682,7 @@ void MainWindow::buildStatusBar()
     auto* completer = new QCompleter(QStringList{"help", "play", "stop", "pause", "save", "view perspective", "view top", "view front",
                                                  "view side", "view quad", "shading lit", "shading unlit", "shading lighting",
                                                  "shading wireframe", "quality 0", "quality 1", "quality 2", "quality 3", "r.ssao 0",
-                                                 "r.ssao 1", "r.bloom 0", "r.bloom 1", "r.fxaa 0", "r.fxaa 1", "select ", "focus",
+                                                 "r.ssao 1", "r.bloom 0", "r.bloom 1", "r.fxaa 0", "r.fxaa 1", "r.ssr 0", "r.ssr 1", "select ", "focus",
                                                  "tool select", "tool move", "tool rotate", "tool scale", "camspeed ", "stat",
                                                  "reloadshaders", "mode select", "mode place", "mode model", "clear"},
                                      cmd);
@@ -4756,7 +4758,7 @@ void MainWindow::runCommand(const QString& command)
     };
     if (name == "help") {
         appendLog(tr("Commands: play, stop, pause, save, view perspective|top|front|side|quad, "
-                     "shading lit|unlit|lighting|wireframe, quality 0-3, r.ssao|r.bloom|r.fxaa 0|1, select NAME, focus, "
+                     "shading lit|unlit|lighting|wireframe, quality 0-3, r.ssao|r.bloom|r.fxaa|r.ssr 0|1, select NAME, focus, "
                      "tool select|move|rotate|scale, camspeed M/S, mode select|place|model, stat, reloadshaders, clear; "
                      "engine variables: cvars [prefix], NAME [VALUE]"),
                   0);
@@ -4799,6 +4801,8 @@ void MainWindow::runCommand(const QString& command)
         setToggle(&engine::RenderQuality::bloom, "render/bloom");
     } else if (name == "r.fxaa") {
         setToggle(&engine::RenderQuality::fxaa, "render/fxaa");
+    } else if (name == "r.ssr") {
+        setToggle(&engine::RenderQuality::ssr, "render/ssr");
     } else if (name == "select") {
         const std::string wanted = command.section(' ', 1).trimmed().toStdString();
         int found = -1;

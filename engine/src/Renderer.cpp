@@ -142,6 +142,8 @@ struct EnvironmentBlock {
     glm::vec4 wind;       // xz: direction the wind blows, y: strength 0..1, w: gusts 0..1
     glm::vec4 volumetric; // x: 1 = on, y: near, z: 1 / log(far / near), w: far
     glm::vec4 probes;     // x: 1 = baked probes on, y: reflection cube max mip
+    glm::mat4 prevViewProj; // previous frame, no jitter (SSR)
+    glm::vec4 ssr;          // x: on, y: max distance, z: intensity, w: max roughness
 };
 
 constexpr int kEnvSize = 128;  // environment cubemap face size
@@ -447,6 +449,7 @@ RenderQuality RenderQuality::preset(int level)
         q.lodScale = 0.5f; q.detailDensityFar = 0.1f; q.detailShadowDistance = 0.0f;
         q.localShadowResolution = 512; q.localShadowLayers = 6;
         q.volumetricFog = 0;
+        q.ssr = false;
         break;
     case 1:
         q.shadowResolution = 1024; q.shadowCascades = 3; q.ssao = true; q.bloom = true;
@@ -454,6 +457,7 @@ RenderQuality RenderQuality::preset(int level)
         q.lodScale = 0.75f; q.detailDensityFar = 0.15f; q.detailShadowDistance = 10.0f;
         q.localShadowResolution = 512;
         q.taa = false; // FXAA
+        q.ssr = false;
         q.volumetricFog = 1;
         break;
     case 3:
@@ -497,7 +501,7 @@ bool Renderer::buildPrograms(const std::map<std::string, std::string>& src, Prog
                              {&p.ssao, "fullscreen.vert", "ssao.frag"},   {&p.blur, "fullscreen.vert", "blur.frag"},
                              {&p.bloomDown, "fullscreen.vert", "bloom_down.frag"},
                              {&p.bloomUp, "fullscreen.vert", "bloom_up.frag"}, {&p.post, "fullscreen.vert", "post.frag"},
-                             {&p.fxaa, "fullscreen.vert", "fxaa.frag"},   {&p.taa, "fullscreen.vert", "taa.frag"},
+                             {&p.fxaa, "fullscreen.vert", "fxaa.frag"},   {&p.taa, "fullscreen.vert", "taa.frag"}, {&p.ssrHistory, "fullscreen.vert", "ssr_history.frag"},
                              {&p.copy, "fullscreen.vert", "copy.frag"},
                              {&p.grid, "fullscreen.vert", "grid.frag"}, {&p.hiz, "fullscreen.vert", "hiz.frag"},
                              {&p.sprite, "sprite.vert", "sprite.frag"},
@@ -535,7 +539,7 @@ bool Renderer::buildPrograms(const std::map<std::string, std::string>& src, Prog
 void Renderer::destroyPrograms(Programs& p)
 {
     for (Program* program : {&p.mesh, &p.depth, &p.sky, &p.envCapture, &p.prefilter, &p.brdf, &p.ssao, &p.blur, &p.bloomDown,
-                             &p.bloomUp, &p.post, &p.fxaa, &p.taa, &p.copy, &p.grid, &p.hiz, &p.sprite, &p.debug, &p.luminance, &p.exposure, &p.water, &p.underwater, &p.distort,
+                             &p.bloomUp, &p.post, &p.fxaa, &p.taa, &p.ssrHistory, &p.copy, &p.grid, &p.hiz, &p.sprite, &p.debug, &p.luminance, &p.exposure, &p.water, &p.underwater, &p.distort,
                              &p.volumeInject, &p.volumeIntegrate}) {
         if (program->id)
             glDeleteProgram(program->id);
@@ -800,12 +804,12 @@ void Renderer::shutdown()
 void Renderer::destroyTargets()
 {
     for (unsigned* t : {&hdrColor_, &depthTex_, &ssaoTex_, &ssaoBlurTex_, &ldrTex_, &sceneColorCopy_, &sceneDepthCopy_, &distortTex_,
-                         &taaHistory_[0], &taaHistory_[1], &taaDepth_})
+                         &taaHistory_[0], &taaHistory_[1], &taaDepth_, &ssrColor_})
         if (*t) {
             glDeleteTextures(1, t);
             *t = 0;
         }
-    for (unsigned* f : {&hdrFbo_, &ssaoFbo_, &ssaoBlurFbo_, &ldrFbo_, &distortFbo_, &taaFbo_[0], &taaFbo_[1]})
+    for (unsigned* f : {&hdrFbo_, &ssaoFbo_, &ssaoBlurFbo_, &ldrFbo_, &distortFbo_, &taaFbo_[0], &taaFbo_[1], &ssrFbo_})
         if (*f) {
             glDeleteFramebuffers(1, f);
             *f = 0;
@@ -854,6 +858,18 @@ void Renderer::ensureTargets(int width, int height)
     }
     taaDepth_ = makeTexture2D(GL_DEPTH_COMPONENT32F, width, height, GL_NEAREST);
     taaValid_ = false;
+    {
+        const int levels = 1 + static_cast<int>(std::floor(std::log2(static_cast<float>(std::max(width, height)))));
+        glCreateTextures(GL_TEXTURE_2D, 1, &ssrColor_);
+        glTextureStorage2D(ssrColor_, std::min(levels, 6), GL_RGBA16F, width, height);
+        glTextureParameteri(ssrColor_, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTextureParameteri(ssrColor_, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTextureParameteri(ssrColor_, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTextureParameteri(ssrColor_, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        ssrFbo_ = makeFbo(ssrColor_);
+        label(GL_TEXTURE, ssrColor_, "SSR previous frame");
+        ssrValid_ = false;
+    }
     label(GL_TEXTURE, hdrColor_, "HDR colour");
     label(GL_TEXTURE, depthTex_, "Scene depth");
     label(GL_FRAMEBUFFER, hdrFbo_, "HDR");
@@ -924,6 +940,14 @@ void Renderer::updateEnvironment(const Scene& scene, const RenderView& view)
     b.proj = projection_; // with the TAA jitter, like the depth buffer
     b.invViewProj = glm::inverse(projection_ * view.view);
     b.probes = glm::vec4(view.capture && !captureProbes_ ? 0.0f : 1.0f, static_cast<float>(kEnvMips - 1), 0.0f, 0.0f);
+    // Screen-space reflections: a perspective, lit, continuous view with a previous frame of the same size.
+    const bool ssrView = quality_.ssr && !view.capture && view.shading == Shading::Lit && view.projection[3][3] == 0.0f &&
+                         programs_.ssrHistory.id;
+    ssrRecord_ = ssrView;
+    b.prevViewProj = ssrViewProj_;                     // the frame now in ssrColor_
+    ssrPrevViewProj_ = view.projection * view.view;    // becomes ssrViewProj_ once this frame is recorded
+    if (ssrView && ssrValid_)
+        b.ssr = glm::vec4(1.0f, 60.0f, std::clamp(e.ssrIntensity, 0.0f, 1.0f), 0.6f);
     if (volumetricActive(view)) {
         const float nearDepth = 0.5f, farDepth = std::clamp(e.fogVolumetricRange, 8.0f, 256.0f);
         b.volumetric = glm::vec4(1.0f, nearDepth, 1.0f / std::log(farDepth / nearDepth), farDepth);
@@ -1955,7 +1979,7 @@ void Renderer::renderVolumetricFog(const RenderView& view)
     glUniform3i(inject.loc("uDims"), dims.x, dims.y, dims.z);
     glUniform1f(inject.loc("uJitter"), jitter);
     glUniformMatrix4fv(inject.loc("uInvView"), 1, GL_FALSE, glm::value_ptr(glm::inverse(view.view)));
-    glUniformMatrix4fv(inject.loc("uPrevViewProj"), 1, GL_FALSE, glm::value_ptr(volumePrevViewProj_));
+    glUniformMatrix4fv(inject.loc("uVolumePrevViewProj"), 1, GL_FALSE, glm::value_ptr(volumePrevViewProj_));
     glUniform1i(inject.loc("uHistoryValid"), volumeHistory_ ? 1 : 0);
     glUniform1f(inject.loc("uHistoryWeight"), 0.88f);
     glUniform4f(inject.loc("uVolumeLight"), e.fogLightShafts, e.fogAnisotropy, e.fogNoise, e.fogLocalLights);
@@ -2133,6 +2157,8 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     if (quality_.occlusionCulling && !view.capture)
         captureOcclusion(view);
+    if (ssrRecord_ && ssrValid_) // SSR marches through the opaque depth while the main pass writes it
+        glCopyImageSubData(depthTex_, GL_TEXTURE_2D, 0, 0, 0, 0, sceneDepthCopy_, GL_TEXTURE_2D, 0, 0, 0, 0, width_, height_, 1);
 
     if (quality_.ssao) {
         beginPass(PassSsao);
@@ -2160,6 +2186,8 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     for (int i = 0; i < 3; ++i)
         glBindTextureUnit(16 + i, probeIrradiance_[i] ? probeIrradiance_[i] : probeDummy3d_);
     glBindTextureUnit(19, probeCubes_ ? probeCubes_ : probeDummyCube_);
+    glBindTextureUnit(20, sceneDepthCopy_);
+    glBindTextureUnit(21, ssrColor_);
     glUniform1i(loc_.shading, static_cast<int>(view.shading));
     const bool wireframe = view.shading == Shading::Wireframe;
     wireframe_ = wireframe;
@@ -3387,6 +3415,8 @@ void Renderer::present()
     sceneTex_ = hdrColor_;
     if (taaActive_)
         resolveTaa(); // sceneTex_ = the anti-aliased frame
+    if (ssrRecord_)
+        recordSsrColor();
     if (quality_.bloom)
         renderBloom();
     const Environment defaults;
@@ -3453,6 +3483,22 @@ void Renderer::present()
     glBindVertexArray(0);
     glUseProgram(0);
     endPass();
+}
+
+void Renderer::recordSsrColor()
+{
+    glBindFramebuffer(GL_FRAMEBUFFER, ssrFbo_);
+    glViewport(0, 0, width_, height_);
+    glBindVertexArray(emptyVao_);
+    const Program& p = programs_.ssrHistory;
+    glUseProgram(p.id);
+    glUniform1i(p.loc("uOverlay"), overlayDrawn_ ? 1 : 0);
+    glBindTextureUnit(0, sceneTex_);
+    glBindTextureUnit(1, depthTex_);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    glGenerateTextureMipmap(ssrColor_); // blurrier levels for rough surfaces
+    ssrViewProj_ = ssrPrevViewProj_;
+    ssrValid_ = true;
 }
 
 void Renderer::resolveTaa()

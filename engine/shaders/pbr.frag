@@ -65,6 +65,7 @@ out vec4 fragColor;
 
 #include "lights.glsl"
 #include "probes.glsl"
+#include "ssr.glsl"
 
 float gridLines(vec3 p, vec3 n) {
     vec2 uv = abs(n.y) > 0.5 ? p.xz : (abs(n.x) > 0.5 ? p.zy : p.xy);
@@ -360,6 +361,10 @@ void main() {
         irradiance = mix(irradiance, probeDiffuse, w);
         vec3 probeSpecular = probeReflection(probePos, rWorld, rough, w);
         prefiltered = mix(prefiltered, probeSpecular, w);
+    }
+    if (!uOverlay) { // what the screen shows replaces the probe / sky where the ray finds it
+        vec4 ssr = screenReflection(vWorldPos, rWorld, rough, nv);
+        prefiltered = mix(prefiltered, ssr.rgb, ssr.a);
     }
     vec2 brdf = texture(uBrdfLut, vec2(nv, rough)).rg;
     vec3 Fa = fresnelRoughness(nv, f0, rough);

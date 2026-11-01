@@ -204,6 +204,8 @@ bool writeLevelSettings(std::ostream& out, const Scene& scene, const std::filesy
             f1("fog_noise", e.fogNoise);
             f1("fog_local_lights", e.fogLocalLights);
         }
+        if (e.ssrIntensity != d.ssrIntensity)
+            f1("ssr_intensity", e.ssrIntensity);
         if (e.temperature != d.temperature)
             f1("temperature", e.temperature);
         if (e.greenMagenta != d.greenMagenta)
@@ -633,7 +635,7 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                 {"sun_intensity", &e.sunIntensity}, {"cloud_cover", &e.cloudCover}, {"ambient_intensity", &e.ambientIntensity},
                 {"fog_density", &e.fogDensity}, {"fog_height", &e.fogHeight}, {"fog_height_falloff", &e.fogHeightFalloff},
                 {"fog_sun_scatter", &e.fogSunScatter}, {"exposure", &e.exposure}, {"bloom_intensity", &e.bloomIntensity},
-                {"bloom_threshold", &e.bloomThreshold}, {"ssao_radius", &e.ssaoRadius}, {"ssao_intensity", &e.ssaoIntensity},
+                {"bloom_threshold", &e.bloomThreshold}, {"ssao_radius", &e.ssaoRadius}, {"ssao_intensity", &e.ssaoIntensity}, {"ssr_intensity", &e.ssrIntensity},
                 {"shadow_distance", &e.shadowDistance}, {"saturation", &e.saturation}, {"contrast", &e.contrast},
                 {"vignette", &e.vignette}, {"grain", &e.grain}, {"rain", &e.rain}, {"wind", &e.wind}, {"storm", &e.storm}, {"puddles", &e.puddles}, {"wind_direction", &e.windDirection}, {"wind_gusts", &e.windGusts},
                 {"auto_exposure", &e.autoExposure}, {"exposure_min_ev", &e.exposureMinEv}, {"exposure_max_ev", &e.exposureMaxEv},

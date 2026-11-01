@@ -13,7 +13,7 @@ layout(rgba16f, binding = 0) writeonly uniform image3D uOut;
 uniform ivec3 uDims;
 uniform float uJitter;          // -0.5 .. 0.5 slice offset of this frame
 uniform mat4 uInvView;
-uniform mat4 uPrevViewProj;
+uniform mat4 uVolumePrevViewProj;
 uniform bool uHistoryValid;
 uniform float uHistoryWeight;
 uniform vec4 uVolumeLight;      // x: light shafts, y: anisotropy, z: noise, w: local lights
@@ -108,7 +108,7 @@ void main() {
 
     vec4 result = vec4(light, density);
     if (uHistoryValid) {
-        vec4 prev = uPrevViewProj * vec4(worldPos, 1.0);
+        vec4 prev = uVolumePrevViewProj * vec4(worldPos, 1.0);
         if (prev.w > 1e-3) {
             vec3 p = vec3(prev.xy / prev.w * 0.5 + 0.5, log(max(prev.w, uVolumetric.y) / uVolumetric.y) * uVolumetric.z);
             if (all(greaterThanEqual(p, vec3(0.0))) && all(lessThanEqual(p, vec3(1.0))))

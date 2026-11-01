@@ -23,6 +23,8 @@ layout(std140, binding = 1) uniform Environment {
     vec4 uWind;            // xz: direction the wind blows, y: strength 0..1, w: gusts 0..1
     vec4 uVolumetric;      // volumetric fog: x 1 = on, y: near (m), z: 1 / log(far / near), w: far (m)
     vec4 uProbeParams;     // x: 1 = baked probes on (0 while baking them), y: reflection cube max mip
+    mat4 uPrevViewProj;    // previous frame (no TAA jitter): screen-space reflections reproject into it
+    vec4 uSsr;             // x: 1 = SSR on, y: max distance (m), z: intensity, w: max roughness
 };
 // Volumetric fog up to uVolumetric.w (view depth): rgb light scattered toward the eye,
 // a: transmittance, both from the eye to the froxel (volumetric_*.comp).
