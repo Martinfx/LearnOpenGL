@@ -2658,8 +2658,11 @@ void testVolumetricFogSettings()
     // Defaults write nothing (older levels stay unchanged on save).
     engine::Scene plain;
     check(engine::saveScene(plain, file, &error), "plain level saves");
-    std::ifstream in(file);
-    const std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    std::string text;
+    {
+        std::ifstream in(file); // closed before the remove below (Windows cannot delete an open file)
+        text.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+    }
     check(text.find("fog_light_shafts") == std::string::npos, "default volumetric settings are not written");
     check(engine::RenderQuality::preset(0).volumetricFog == 0 && engine::RenderQuality::preset(2).volumetricFog > 0,
           "volumetric fog follows the quality preset");
@@ -2792,6 +2795,7 @@ void testMaterialInstances()
     check(engine::saveMaterial(*instance, dir / "rusty.material", &error), "an instance saves");
     std::ifstream in(dir / "rusty.material");
     const std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    in.close(); // Windows cannot delete the folder below while the file is open
     check(text.find("parent") != std::string::npos && text.find("metallic 1") != std::string::npos &&
               text.find("roughness 0.3") != std::string::npos && text.find("color") == std::string::npos,
           "an instance file holds only its overrides");
