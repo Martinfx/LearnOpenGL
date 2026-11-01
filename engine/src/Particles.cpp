@@ -1,6 +1,7 @@
 #include "engine/Particles.h"
 
 #include "engine/JobSystem.h"
+#include "engine/Lights.h"
 #include "engine/Material.h"
 
 #include <glm/geometric.hpp>
@@ -51,6 +52,16 @@ const char* emitterShapeName(EmitterShape shape)
     case EmitterShape::Box: return "box";
     case EmitterShape::Disc: return "disc";
     default: return "point";
+    }
+}
+
+const char* particleCollisionName(ParticleCollision c)
+{
+    switch (c) {
+    case ParticleCollision::Bounce: return "bounce";
+    case ParticleCollision::Stop: return "stop";
+    case ParticleCollision::Die: return "die";
+    default: return "none";
     }
 }
 
@@ -167,6 +178,15 @@ bool loadParticleFile(ParticleEffect& effect, const std::filesystem::path& file,
         else if (key == "intensity") ok = static_cast<bool>(ls >> e->intensity);
         else if (key == "rotation") ok = static_cast<bool>(ls >> e->rotationMin >> e->rotationMax);
         else if (key == "spin") ok = static_cast<bool>(ls >> e->spinMin >> e->spinMax);
+        else if (key == "collision") {
+            std::string v;
+            ok = static_cast<bool>(ls >> v >> e->bounce >> e->friction);
+            e->collision = v == "bounce" ? ParticleCollision::Bounce : v == "stop" ? ParticleCollision::Stop
+                         : v == "die"    ? ParticleCollision::Die    : ParticleCollision::None;
+        } else if (key == "on_death") ok = static_cast<bool>(ls >> e->onDeath >> e->onDeathCount);
+        else if (key == "light")
+            ok = static_cast<bool>(ls >> e->light >> e->lightColor.r >> e->lightColor.g >> e->lightColor.b >> e->lightIntensity >>
+                                   e->lightRange >> e->lightFlicker);
         // unknown keys: written by a newer editor, skipped
         if (!ok) {
             setError(error, file.string() + ":" + std::to_string(lineNo) + ": bad '" + key + "' line");
@@ -180,6 +200,9 @@ bool loadParticleFile(ParticleEffect& effect, const std::filesystem::path& file,
         em.columns = std::max(1, em.columns);
         em.rows = std::max(1, em.rows);
         em.maxParticles = std::clamp(em.maxParticles, 1, 10000);
+        if (em.onDeath >= static_cast<int>(result.emitters.size()) || em.onDeath == static_cast<int>(&em - result.emitters.data()))
+            em.onDeath = -1; // no such emitter, or itself (would never end)
+        em.onDeathCount = std::clamp(em.onDeathCount, 1, 64);
     }
     effect = std::move(result);
     return true;
@@ -234,6 +257,13 @@ bool saveParticleFile(const ParticleEffect& effect, const std::filesystem::path&
             out << "color_key " << k.t << ' ' << k.value.r << ' ' << k.value.g << ' ' << k.value.b << ' ' << k.value.a << '\n';
         out << "rotation " << e.rotationMin << ' ' << e.rotationMax << '\n';
         out << "spin " << e.spinMin << ' ' << e.spinMax << '\n';
+        if (e.collision != ParticleCollision::None)
+            out << "collision " << particleCollisionName(e.collision) << ' ' << e.bounce << ' ' << e.friction << '\n';
+        if (e.onDeath >= 0)
+            out << "on_death " << e.onDeath << ' ' << e.onDeathCount << '\n';
+        if (e.light)
+            out << "light 1 " << e.lightColor.r << ' ' << e.lightColor.g << ' ' << e.lightColor.b << ' ' << e.lightIntensity << ' '
+                << e.lightRange << ' ' << e.lightFlicker << '\n';
     }
     if (!out) {
         setError(error, "Cannot write " + file.string());
@@ -345,6 +375,8 @@ struct ParticleSystem::Impl {
         float time = 0.0f;
         bool stopped = false;
         float rateScale = 1.0f;
+        float groundY = 0.0f;     // collision plane (world), see setGroundQuery
+        bool groundKnown = false;
         std::vector<EmitterState> emitters;
         std::mt19937 rng;
     };
@@ -355,6 +387,7 @@ struct ParticleSystem::Impl {
     Handle nextId = 1;
     std::uint32_t seed = 12345;
     glm::vec3 wind{0.0f};
+    std::function<float(glm::vec3)> groundQuery;
 
     Instance* find(Handle h)
     {
@@ -400,6 +433,8 @@ ParticleSystem::Handle ParticleSystem::spawn(std::shared_ptr<const ParticleEffec
 void ParticleSystem::setTransform(Handle h, glm::vec3 position, const glm::mat3& rotation)
 {
     if (Impl::Instance* i = impl_->find(h)) {
+        if (glm::distance(i->position, position) > 0.05f)
+            i->groundKnown = false; // moved: the ground under it again
         i->position = position;
         i->rotation = rotation;
     }
@@ -478,6 +513,29 @@ float range(float a, float b, std::mt19937& rng)
 } // namespace
 
 void ParticleSystem::setWind(glm::vec3 metresPerSecond) { impl_->wind = metresPerSecond; }
+void ParticleSystem::setGroundQuery(std::function<float(glm::vec3)> query) { impl_->groundQuery = std::move(query); }
+
+namespace {
+// One new particle of emitter `e` at `origin` (world): the emitter's shape, cone, speed, life...
+void emitParticle(const ParticleEmitter& e, EmitterState& st, glm::vec3 origin, const glm::mat3& rotation, glm::vec3 effectPosition,
+                  std::mt19937& rng, float back)
+{
+    Particle p;
+    const glm::vec3 local = randomInShape(e, rng);
+    const glm::vec3 dir = randomInCone(e.direction, e.spread, rng);
+    p.position = e.worldSpace ? origin + rotation * local : glm::transpose(rotation) * (origin - effectPosition) + local;
+    p.velocity = (e.worldSpace ? rotation * dir : dir) * range(e.speedMin, e.speedMax, rng);
+    p.life = std::max(0.01f, range(e.lifeMin, e.lifeMax, rng));
+    p.size = range(e.sizeMin, e.sizeMax, rng);
+    p.rotation = glm::radians(range(e.rotationMin, e.rotationMax, rng));
+    p.spin = glm::radians(range(e.spinMin, e.spinMax, rng));
+    const int cells = e.columns * e.rows;
+    p.frame = e.randomFrame && cells > 1 ? static_cast<float>(std::uniform_int_distribution<int>(0, cells - 1)(rng)) : 0.0f;
+    p.age = back;
+    p.position += p.velocity * back;
+    st.particles.push_back(p);
+}
+} // namespace
 
 void ParticleSystem::update(float dt)
 {
@@ -487,6 +545,16 @@ void ParticleSystem::update(float dt)
     impl_->live = particleCount();
     // Over the budget: no new particles this step (the live ones finish).
     const bool full = impl_->budget > 0 && impl_->live >= impl_->budget;
+    // Ground under effects with colliding emitters (serially: the query may use physics).
+    for (Impl::Instance& inst : impl_->instances) {
+        if (inst.groundKnown)
+            continue;
+        inst.groundKnown = true;
+        bool collides = false;
+        for (const ParticleEmitter& e : inst.effect->emitters)
+            collides = collides || e.collision != ParticleCollision::None;
+        inst.groundY = collides && impl_->groundQuery ? impl_->groundQuery(inst.position) : inst.position.y;
+    }
     auto simulate = [dt, levelWind, full](Impl::Instance& inst) {
         inst.time += dt;
         const ParticleEffect& fx = *inst.effect;
@@ -515,6 +583,44 @@ void ParticleSystem::update(float dt)
                 p.position += (p.velocity + e.wind + levelWind * e.levelWind) * dt;
                 p.rotation += p.spin * dt;
             }
+            if (e.collision != ParticleCollision::None) {
+                // The ground plane (local-space emitters: relative to the effect, which stays upright).
+                const float ground = e.worldSpace ? inst.groundY : inst.groundY - inst.position.y;
+                for (Particle& p : st.particles) {
+                    if (p.position.y >= ground)
+                        continue;
+                    p.position.y = ground;
+                    if (e.collision == ParticleCollision::Die) {
+                        p.age = p.life;
+                    } else if (e.collision == ParticleCollision::Stop) {
+                        p.velocity = glm::vec3(0.0f);
+                        p.spin = 0.0f;
+                    } else if (p.velocity.y < 0.0f) {
+                        const float keep = std::clamp(e.bounce, 0.0f, 1.0f);
+                        p.velocity.y = -p.velocity.y * keep;
+                        const float slide = 1.0f - std::clamp(e.friction, 0.0f, 1.0f);
+                        p.velocity.x *= slide;
+                        p.velocity.z *= slide;
+                        if (p.velocity.y < 0.4f) // too slow to hop again: slides on the ground
+                            p.velocity.y = 0.0f;
+                        p.spin *= slide;
+                    }
+                }
+            }
+            // Sub-emitter: dying particles hand over to another emitter.
+            const int child = e.onDeath;
+            if (child >= 0 && child != static_cast<int>(k) && child < static_cast<int>(fx.emitters.size()) &&
+                child < static_cast<int>(inst.emitters.size()) && fx.emitters[static_cast<std::size_t>(child)].enabled) {
+                const ParticleEmitter& ce = fx.emitters[static_cast<std::size_t>(child)];
+                EmitterState& cs = inst.emitters[static_cast<std::size_t>(child)];
+                for (const Particle& p : st.particles) {
+                    if (p.age < p.life)
+                        continue;
+                    const glm::vec3 where = e.worldSpace ? p.position : inst.position + inst.rotation * p.position;
+                    for (int n = 0; n < e.onDeathCount && static_cast<int>(cs.particles.size()) < ce.maxParticles; ++n)
+                        emitParticle(ce, cs, where, inst.rotation, inst.position, inst.rng, 0.0f);
+                }
+            }
             std::erase_if(st.particles, [](const Particle& p) { return p.age >= p.life; });
             if (!e.enabled)
                 continue;
@@ -538,22 +644,9 @@ void ParticleSystem::update(float dt)
             }
             count = std::min(count, e.maxParticles - static_cast<int>(st.particles.size()));
             for (int i = 0; i < count; ++i) {
-                Particle p;
-                const glm::vec3 local = randomInShape(e, inst.rng);
-                const glm::vec3 dir = randomInCone(e.direction, e.spread, inst.rng);
-                p.position = e.worldSpace ? inst.position + inst.rotation * local : local;
-                p.velocity = (e.worldSpace ? inst.rotation * dir : dir) * range(e.speedMin, e.speedMax, inst.rng);
-                p.life = std::max(0.01f, range(e.lifeMin, e.lifeMax, inst.rng));
-                p.size = range(e.sizeMin, e.sizeMax, inst.rng);
-                p.rotation = glm::radians(range(e.rotationMin, e.rotationMax, inst.rng));
-                p.spin = glm::radians(range(e.spinMin, e.spinMax, inst.rng));
-                const int cells = e.columns * e.rows;
-                p.frame = e.randomFrame && cells > 1 ? static_cast<float>(std::uniform_int_distribution<int>(0, cells - 1)(inst.rng)) : 0.0f;
                 // Spread the spawn over the step so a fast emitter makes a continuous stream.
                 const float back = count > 1 ? dt * static_cast<float>(i) / static_cast<float>(count) : 0.0f;
-                p.age = back;
-                p.position += p.velocity * back;
-                st.particles.push_back(p);
+                emitParticle(e, st, inst.position, inst.rotation, inst.position, inst.rng, back);
             }
         }
     };
@@ -666,6 +759,50 @@ void ParticleSystem::appendSprites(glm::vec3 eye, const glm::mat3& camera, std::
             out.push_back(std::move(b));
         }
     }
+}
+
+void ParticleSystem::appendLights(glm::vec3 eye, std::vector<LocalLight>& out, int maxLights) const
+{
+    struct Candidate {
+        float distance;
+        LocalLight light;
+    };
+    std::vector<Candidate> found;
+    for (const Impl::Instance& inst : impl_->instances) {
+        const ParticleEffect& fx = *inst.effect;
+        for (std::size_t k = 0; k < fx.emitters.size() && k < inst.emitters.size(); ++k) {
+            const ParticleEmitter& e = fx.emitters[k];
+            const EmitterState& st = inst.emitters[k];
+            if (!e.light || st.particles.empty() || e.lightIntensity <= 0.0f)
+                continue;
+            // Centre of (up to 32 of) the particles; brightness from how many there are and how young.
+            glm::vec3 center(0.0f);
+            float youth = 0.0f;
+            const std::size_t n = std::min<std::size_t>(st.particles.size(), 32);
+            for (std::size_t i = 0; i < n; ++i) {
+                const Particle& p = st.particles[i];
+                center += e.worldSpace ? p.position : inst.position + inst.rotation * p.position;
+                youth += 1.0f - std::clamp(p.age / p.life, 0.0f, 1.0f);
+            }
+            center /= static_cast<float>(n);
+            youth *= static_cast<float>(st.particles.size()) / static_cast<float>(n);
+            const float expected = std::max({1.0f, static_cast<float>(e.burst), e.rate * inst.rateScale * 0.5f * (e.lifeMin + e.lifeMax)});
+            const float level = std::clamp(youth / (0.5f * expected), 0.0f, 1.0f);
+            const float seed = static_cast<float>(inst.id % 97u) * 1.37f + static_cast<float>(k);
+            const float wave = 0.5f + 0.25f * std::sin(inst.time * 23.0f + seed) + 0.25f * std::sin(inst.time * 7.3f + seed * 2.1f);
+            const float flicker = 1.0f - std::clamp(e.lightFlicker, 0.0f, 1.0f) * wave;
+            LocalLight l;
+            l.type = LightType::Point;
+            l.position = center;
+            l.color = srgbToLinear(e.lightColor) * e.lightIntensity * level * flicker;
+            l.range = std::max(0.1f, e.lightRange);
+            l.key = (static_cast<std::uint64_t>(inst.id) << 8 | k) ^ 0x9A27100000000000ull;
+            found.push_back({glm::distance(center, eye), l});
+        }
+    }
+    std::sort(found.begin(), found.end(), [](const Candidate& a, const Candidate& b) { return a.distance < b.distance; });
+    for (std::size_t i = 0; i < found.size() && static_cast<int>(i) < maxLights; ++i)
+        out.push_back(found[i].light);
 }
 
 int ParticleSystem::instanceCount() const

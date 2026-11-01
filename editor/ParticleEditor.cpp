@@ -97,6 +97,7 @@ ParticlePreview::ParticlePreview(QWidget* parent) : QOpenGLWidget(parent)
     scene_.boxes.emplace_back("Wall", glm::vec3(0.0f, 1.5f, -3.0f), glm::vec3(6.0f, 3.0f, 0.2f), glm::vec3(0.45f, 0.44f, 0.42f));
     scene_.sunDirection = {-0.5f, -0.8f, -0.4f};
     scene_.environment.fogDensity = 0.0f;
+    particles_.setGroundQuery([](glm::vec3) { return 0.0f; }); // the preview's ground plane
     connect(&timer_, &QTimer::timeout, this, [this] { update(); });
     timer_.start(16);
     clock_.start();
@@ -128,6 +129,21 @@ void ParticlePreview::restart()
     particles_.clear();
     handle_ = effect_ ? particles_.spawn(effect_, glm::vec3(0.0f, 0.05f, 0.0f)) : 0;
     idle_ = 0.0f;
+    effectTime_ = 0.0f;
+}
+
+void ParticlePreview::setMoving(bool moving)
+{
+    moving_ = moving;
+    if (!moving_)
+        particles_.setTransform(handle_, glm::vec3(0.0f, 0.05f, 0.0f));
+}
+
+void ParticlePreview::setDark(bool dark)
+{
+    // Night: the effect's own light and glow stand out.
+    scene_.environment.sunIntensity = dark ? 0.02f : 3.0f;
+    scene_.environment.ambientIntensity = dark ? 0.05f : 1.0f;
 }
 
 void ParticlePreview::initializeGL()
@@ -141,8 +157,13 @@ void ParticlePreview::paintGL()
     if (!ready_ || !isVisible())
         return;
     const qint64 now = clock_.elapsed();
-    const float dt = std::clamp(static_cast<float>(now - last_) / 1000.0f, 0.0f, 0.1f);
+    const float dt = paused_ ? 0.0f : std::clamp(static_cast<float>(now - last_) / 1000.0f, 0.0f, 0.1f) * speed_;
     last_ = now;
+    effectTime_ += dt;
+    if (moving_) { // a circle of 1.5 m, once every 5 s
+        const float a = effectTime_ * 1.25f;
+        particles_.setTransform(handle_, glm::vec3(std::cos(a) * 1.5f, 0.05f, std::sin(a) * 1.5f));
+    }
     particles_.update(dt);
     if (effect_ && !particles_.alive(handle_)) { // one-shot effects replay after a pause
         idle_ += dt;
@@ -160,6 +181,7 @@ void ParticlePreview::paintGL()
     view.cameraPosition = eye;
     view.time = static_cast<float>(now) / 1000.0f;
     particles_.appendSprites(eye, glm::mat3(glm::inverse(view.view)), view.sprites);
+    particles_.appendLights(eye, view.lights);
     renderer_.render(scene_, view);
 }
 
@@ -454,14 +476,38 @@ ParticleEditor::ParticleEditor(QWidget* parent) : QWidget(parent)
     preview_ = new ParticlePreview(middle);
     midLayout->addWidget(preview_, 1);
     auto* replay = new QPushButton(tr("Restart"), middle);
+    auto* pause = new QPushButton(tr("Pause"), middle);
+    pause->setCheckable(true);
+    auto* speed = new QComboBox(middle);
+    for (const char* s : {"0.1×", "0.25×", "0.5×", "1×", "2×"})
+        speed->addItem(QString::fromUtf8(s));
+    speed->setCurrentIndex(3);
+    speed->setToolTip(tr("Playback speed (slow motion for sparks and impacts)"));
+    auto* moving = new QCheckBox(tr("Move"), middle);
+    moving->setToolTip(tr("The effect travels in a circle: world space particles stay behind (trails)"));
+    auto* dark = new QCheckBox(tr("Night"), middle);
+    dark->setToolTip(tr("Dark surroundings: lights and glow of the effect stand out"));
     stats_ = new QLabel(middle);
     auto* bar = new QHBoxLayout();
     bar->addWidget(replay);
+    bar->addWidget(pause);
+    bar->addWidget(speed);
+    bar->addWidget(moving);
+    bar->addWidget(dark);
     bar->addWidget(stats_, 1);
+    connect(pause, &QPushButton::toggled, preview_, &ParticlePreview::setPaused);
+    connect(speed, &QComboBox::currentIndexChanged, this, [this](int i) {
+        const float speeds[] = {0.1f, 0.25f, 0.5f, 1.0f, 2.0f};
+        preview_->setSpeed(speeds[std::clamp(i, 0, 4)]);
+    });
+    connect(moving, &QCheckBox::toggled, preview_, &ParticlePreview::setMoving);
+    connect(dark, &QCheckBox::toggled, preview_, &ParticlePreview::setDark);
     midLayout->addLayout(bar);
     auto* statsTimer = new QTimer(this);
     connect(statsTimer, &QTimer::timeout, this, [this] {
-        stats_->setText(tr("%1 particles · drag to orbit, wheel to zoom").arg(preview_->particleCount()));
+        stats_->setText(tr("%1 s · %2 particles · drag to orbit, wheel to zoom")
+                            .arg(preview_->effectTime(), 0, 'f', 1)
+                            .arg(preview_->particleCount()));
     });
     statsTimer->start(250);
 
@@ -581,6 +627,36 @@ ParticleEditor::ParticleEditor(QWidget* parent) : QWidget(parent)
     spinMax_ = number(-3600, 3600, 10, 0, form_);
     form->addRow(tr("Spin °/s"), pair(spinMin_, spinMax_, form_));
 
+    section(tr("Collision"));
+    collision_ = new QComboBox(form_);
+    collision_->addItems({tr("None"), tr("Bounce (sparks, casings)"), tr("Stop (debris settles)"), tr("Die (drops)")});
+    collision_->setToolTip(tr("What particles do on the ground under the effect (level geometry or terrain)"));
+    form->addRow(tr("Ground"), collision_);
+    bounce_ = number(0, 1, 0.05, 2, form_, tr("Share of the speed kept when bouncing"));
+    friction_ = number(0, 1, 0.05, 2, form_, tr("Share of the sideways speed lost per bounce"));
+    form->addRow(tr("Bounce / friction"), pair(bounce_, friction_, form_));
+
+    section(tr("Events"));
+    onDeath_ = new QComboBox(form_);
+    onDeath_->setToolTip(tr("Each dying particle spawns particles of this emitter where it died (spark -> smoke puff). "
+                            "Give that emitter rate 0 and burst 0."));
+    onDeathCount_ = new QSpinBox(form_);
+    onDeathCount_->setRange(1, 64);
+    onDeathCount_->setKeyboardTracking(false);
+    onDeathCount_->setToolTip(tr("Particles spawned per death"));
+    form->addRow(tr("On death spawn"), pair(onDeath_, onDeathCount_, form_));
+
+    section(tr("Light"));
+    light_ = new QCheckBox(tr("Emits light (fire, flares, glow)"), form_);
+    light_->setToolTip(tr("A point light at the particles' centre; brighter with more, younger particles"));
+    form->addRow(QString(), light_);
+    lightColor_ = new QPushButton(form_);
+    lightIntensity_ = number(0, 200, 0.5, 1, form_, tr("Brightness of the light"));
+    form->addRow(tr("Color / intensity"), pair(lightColor_, lightIntensity_, form_));
+    lightRange_ = number(0.1, 50, 0.5, 1, form_, tr("Reach in metres"));
+    lightFlicker_ = number(0, 1, 0.05, 2, form_, tr("0 = steady, 1 = strong flicker (fire)"));
+    form->addRow(tr("Range m / flicker"), pair(lightRange_, lightFlicker_, form_));
+
     split->addWidget(left);
     split->addWidget(middle);
     split->addWidget(scroll);
@@ -592,14 +668,15 @@ ParticleEditor::ParticleEditor(QWidget* parent) : QWidget(parent)
     // Wiring: every field writes the emitter.
     auto changed = [this] { edited(); };
     connect(name_, &QLineEdit::editingFinished, this, changed);
-    for (QSpinBox* s : {columns_, rows_, burst_, max_})
+    for (QSpinBox* s : {columns_, rows_, burst_, max_, onDeathCount_})
         connect(s, &QSpinBox::valueChanged, this, changed);
     for (QDoubleSpinBox* s : {frameRate_, stretchFactor_, rate_, duration_, delay_, spread_, speedMin_, speedMax_, gravity_, drag_, levelWind_, attract_, orbit_,
-                              lifeMin_, lifeMax_, sizeMin_, sizeMax_, intensity_, rotationMin_, rotationMax_, spinMin_, spinMax_})
+                              lifeMin_, lifeMax_, sizeMin_, sizeMax_, intensity_, rotationMin_, rotationMax_, spinMin_, spinMax_,
+                              bounce_, friction_, lightIntensity_, lightRange_, lightFlicker_})
         connect(s, &QDoubleSpinBox::valueChanged, this, changed);
-    for (QCheckBox* c : {randomFrame_, lit_, stretch_, sheltered_, worldSpace_})
+    for (QCheckBox* c : {randomFrame_, lit_, stretch_, sheltered_, worldSpace_, light_})
         connect(c, &QCheckBox::toggled, this, changed);
-    for (QComboBox* c : {blend_, shape_})
+    for (QComboBox* c : {blend_, shape_, collision_, onDeath_})
         connect(c, &QComboBox::activated, this, changed);
     for (Vec3Editor* v : {shapeSize_, direction_, wind_})
         connect(v, &Vec3Editor::valueEdited, this, changed);
@@ -613,6 +690,17 @@ ParticleEditor::ParticleEditor(QWidget* parent) : QWidget(parent)
         if (!picked.isValid())
             return;
         e->color = {picked.redF(), picked.greenF(), picked.blueF()};
+        showEmitter();
+        edited();
+    });
+    connect(lightColor_, &QPushButton::clicked, this, [this] {
+        engine::ParticleEmitter* e = current();
+        if (!e)
+            return;
+        const QColor picked = QColorDialog::getColor(QColor::fromRgbF(e->lightColor.r, e->lightColor.g, e->lightColor.b), this, tr("Light color"));
+        if (!picked.isValid())
+            return;
+        e->lightColor = {picked.redF(), picked.greenF(), picked.blueF()};
         showEmitter();
         edited();
     });
@@ -671,6 +759,9 @@ ParticleEditor::ParticleEditor(QWidget* parent) : QWidget(parent)
         engine::ParticleEmitter copy = *e;
         copy.name += " copy";
         const int row = list_->currentRow() + 1;
+        shiftEventTargets(row, 1);
+        if (copy.onDeath >= row)
+            ++copy.onDeath;
         effect_->emitters.insert(effect_->emitters.begin() + row, copy);
         structureChanged();
         list_->setCurrentRow(row);
@@ -680,6 +771,7 @@ ParticleEditor::ParticleEditor(QWidget* parent) : QWidget(parent)
         if (!effect_ || row < 0 || row >= static_cast<int>(effect_->emitters.size()))
             return;
         effect_->emitters.erase(effect_->emitters.begin() + row);
+        shiftEventTargets(row, -1);
         structureChanged();
         list_->setCurrentRow(std::min(row, static_cast<int>(effect_->emitters.size()) - 1));
     });
@@ -786,6 +878,16 @@ void ParticleEditor::structureChanged()
     preview_->restart();
 }
 
+void ParticleEditor::shiftEventTargets(int row, int delta)
+{
+    for (engine::ParticleEmitter& e : effect_->emitters) {
+        if (delta < 0 && e.onDeath == row)
+            e.onDeath = -1; // its target was removed
+        else if (e.onDeath >= row)
+            e.onDeath += delta;
+    }
+}
+
 void ParticleEditor::showEmitter()
 {
     const engine::ParticleEmitter* e = current();
@@ -834,6 +936,28 @@ void ParticleEditor::showEmitter()
     rotationMax_->setValue(e->rotationMax);
     spinMin_->setValue(e->spinMin);
     spinMax_->setValue(e->spinMax);
+    collision_->setCurrentIndex(static_cast<int>(e->collision));
+    bounce_->setValue(e->bounce);
+    friction_->setValue(e->friction);
+    bounce_->setEnabled(e->collision == engine::ParticleCollision::Bounce);
+    friction_->setEnabled(e->collision == engine::ParticleCollision::Bounce);
+    onDeath_->clear();
+    onDeath_->addItem(tr("nothing"), -1);
+    for (std::size_t i = 0; i < effect_->emitters.size(); ++i)
+        if (&effect_->emitters[i] != e)
+            onDeath_->addItem(QString::fromStdString(effect_->emitters[i].name), static_cast<int>(i));
+    onDeath_->setCurrentIndex(std::max(0, onDeath_->findData(e->onDeath)));
+    onDeathCount_->setValue(e->onDeathCount);
+    onDeathCount_->setEnabled(e->onDeath >= 0);
+    light_->setChecked(e->light);
+    lightColor_->setStyleSheet(
+        QString("background-color: %1; min-height: 20px;").arg(QColor::fromRgbF(e->lightColor.r, e->lightColor.g, e->lightColor.b).name()));
+    lightIntensity_->setValue(e->lightIntensity);
+    lightRange_->setValue(e->lightRange);
+    lightFlicker_->setValue(e->lightFlicker);
+    for (QWidget* w : {static_cast<QWidget*>(lightColor_), static_cast<QWidget*>(lightIntensity_), static_cast<QWidget*>(lightRange_),
+                       static_cast<QWidget*>(lightFlicker_)})
+        w->setEnabled(e->light);
     stretchFactor_->setEnabled(e->stretch);
     frameRate_->setEnabled(!e->randomFrame);
     updating_ = false;
@@ -885,6 +1009,21 @@ void ParticleEditor::edited()
     e->rotationMax = static_cast<float>(std::max(rotationMin_->value(), rotationMax_->value()));
     e->spinMin = static_cast<float>(spinMin_->value());
     e->spinMax = static_cast<float>(std::max(spinMin_->value(), spinMax_->value()));
+    e->collision = static_cast<engine::ParticleCollision>(std::clamp(collision_->currentIndex(), 0, 3));
+    e->bounce = static_cast<float>(bounce_->value());
+    e->friction = static_cast<float>(friction_->value());
+    e->onDeath = onDeath_->currentData().toInt();
+    e->onDeathCount = onDeathCount_->value();
+    e->light = light_->isChecked();
+    e->lightIntensity = static_cast<float>(lightIntensity_->value());
+    e->lightRange = static_cast<float>(lightRange_->value());
+    e->lightFlicker = static_cast<float>(lightFlicker_->value());
+    bounce_->setEnabled(e->collision == engine::ParticleCollision::Bounce);
+    friction_->setEnabled(e->collision == engine::ParticleCollision::Bounce);
+    onDeathCount_->setEnabled(e->onDeath >= 0);
+    for (QWidget* w : {static_cast<QWidget*>(lightColor_), static_cast<QWidget*>(lightIntensity_), static_cast<QWidget*>(lightRange_),
+                       static_cast<QWidget*>(lightFlicker_)})
+        w->setEnabled(e->light);
     if (QListWidgetItem* item = list_->currentItem(); item && item->text() != name_->text()) {
         const QSignalBlocker block(list_);
         item->setText(name_->text());

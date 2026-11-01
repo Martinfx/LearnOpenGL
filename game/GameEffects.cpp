@@ -161,7 +161,14 @@ void GameEffects::update(float dt, const engine::Scene& scene, const engine::Phy
     for (const auto& [entity, handle] : entityEffects_) // switched by Enable / Disable: no new particles while off
         if (entity < scene.entities.size())
             world_.setRateScale(handle, scene.entities[entity].alive && engine::entityEnabled(scene.entities[entity]) ? 1.0f : 0.0f);
+    // Ground for colliding particles (sparks, debris): level geometry below the effect, else the terrain.
+    world_.setGroundQuery([&physics, &scene](glm::vec3 p) {
+        if (const auto hit = physics.raycast(p + glm::vec3(0.0f, 0.25f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f), 60.0f))
+            return hit->point.y;
+        return scene.terrain && scene.terrain->valid() ? scene.terrain->heightAt(p.x, p.z) : p.y - 60.0f;
+    });
     world_.update(dt);
+    world_.setGroundQuery(nullptr); // the references above end with this frame
     overlay_.update(dt);
     decals_.update(dt);
     // Spent cases: fall, bounce off what the player collides with, click on the first hits.
@@ -225,6 +232,7 @@ void GameEffects::fill(engine::RenderView& view, const glm::mat4& viewMatrix, en
     const glm::mat3 camera(toWorld);
     decals_.appendSprites(view.cameraPosition, 80.0f, view.sprites);
     world_.appendSprites(view.cameraPosition, camera, view.sprites);
+    world_.appendLights(view.cameraPosition, view.lights, 6); // fires, flares, glowing anomalies
     overlay_.appendSprites(glm::vec3(0.0f), glm::mat3(1.0f), overlay.sprites);
     for (const Casing& c : casings_) {
         if (!c.model)

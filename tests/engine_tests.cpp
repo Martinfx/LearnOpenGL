@@ -2738,6 +2738,64 @@ void testInteriorVolumes()
     check(engine::interiorVolumes(scene).empty(), "a disabled interior does nothing");
 }
 
+void testParticleEvents()
+{
+    // Sparks: a burst falling onto the ground 1 m below the effect, bouncing; each dying spark
+    // spawns two puffs; the sparks emit a light.
+    auto fx = std::make_shared<engine::ParticleEffect>();
+    engine::ParticleEmitter sparks;
+    sparks.name = "Sparks";
+    sparks.rate = 0.0f;
+    sparks.burst = 10;
+    sparks.direction = {0.0f, -1.0f, 0.0f};
+    sparks.spread = 0.0f;
+    sparks.speedMin = sparks.speedMax = 5.0f;
+    sparks.lifeMin = sparks.lifeMax = 0.6f;
+    sparks.collision = engine::ParticleCollision::Bounce;
+    sparks.bounce = 0.5f;
+    sparks.onDeath = 1;
+    sparks.onDeathCount = 2;
+    sparks.light = true;
+    engine::ParticleEmitter puff;
+    puff.name = "Puff";
+    puff.rate = 0.0f;
+    puff.lifeMin = puff.lifeMax = 5.0f;
+    puff.speedMin = puff.speedMax = 0.0f;
+    fx->emitters = {sparks, puff};
+    engine::ParticleSystem ps;
+    ps.setGroundQuery([](glm::vec3 p) { return p.y - 1.0f; });
+    const auto h = ps.spawn(fx, {0.0f, 2.0f, 0.0f});
+    for (int i = 0; i < 20; ++i)
+        ps.update(0.02f); // 0.4 s: the sparks have reached the ground and bounced
+    std::vector<engine::SpriteBatch> batches;
+    ps.appendSprites({0.0f, 2.0f, 5.0f}, glm::mat3(1.0f), batches);
+    bool above = !batches.empty();
+    for (const engine::SpriteBatch& b : batches)
+        for (const engine::SpriteInstance& s : b.instances)
+            above = above && s.position.y >= 1.0f - 1e-4f;
+    check(above, "colliding particles stay above the ground");
+    std::vector<engine::LocalLight> lights;
+    ps.appendLights({0.0f, 2.0f, 5.0f}, lights);
+    check(lights.size() == 1 && glm::length(lights[0].color) > 0.0f, "an emitter with light adds a point light");
+    for (int i = 0; i < 15; ++i)
+        ps.update(0.02f); // past the sparks' life
+    check(ps.alive(h) && ps.particleCount() == 20, "every dying spark spawns its sub-emitter's particles");
+    lights.clear();
+    ps.appendLights({0.0f, 2.0f, 5.0f}, lights);
+    check(lights.empty(), "the light goes out with its particles");
+
+    const std::filesystem::path file = std::filesystem::absolute("events_test.particle");
+    std::string error;
+    check(engine::saveParticleFile(*fx, file, &error), "save particle events: " + error);
+    engine::ParticleEffect back;
+    check(engine::loadParticleFile(back, file, &error) && back.emitters.size() == 2 &&
+              back.emitters[0].collision == engine::ParticleCollision::Bounce && back.emitters[0].bounce == 0.5f &&
+              back.emitters[0].onDeath == 1 && back.emitters[0].onDeathCount == 2 && back.emitters[0].light &&
+              back.emitters[1].collision == engine::ParticleCollision::None && back.emitters[1].onDeath == -1,
+          "collision, sub-emitter and light survive save + load");
+    std::filesystem::remove(file);
+}
+
 void testDistortParticles()
 {
     namespace fs = std::filesystem;
@@ -2876,6 +2934,7 @@ int main()
         {"testProbes", testProbes},
         {"testMaterialInstances", testMaterialInstances},
         {"testVertexPaint", testVertexPaint},
+        {"testParticleEvents", testParticleEvents},
         {"testDistortParticles", testDistortParticles},
         {"testTaskGraph", testTaskGraph},
         {"testWorldStreaming", testWorldStreaming},

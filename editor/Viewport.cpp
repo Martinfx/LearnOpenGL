@@ -438,6 +438,11 @@ void Viewport::syncParticles(float dt)
         particles_.kill(rain_);
         rain_ = 0;
     }
+    // Colliding particles: the terrain, else the level of the effect (particle entities sit on the floor).
+    const engine::Scene* scene = scene_;
+    particles_.setGroundQuery([scene](glm::vec3 p) {
+        return scene->terrain && scene->terrain->valid() ? std::max(scene->terrain->heightAt(p.x, p.z), p.y - 60.0f) : p.y;
+    });
     particles_.update(dt);
 }
 
@@ -516,6 +521,7 @@ void Viewport::paintGL()
         }
         if (pane.mode == ViewMode::Perspective && shading_ != engine::Shading::Wireframe)
             particles_.appendSprites(view.cameraPosition, glm::mat3(glm::inverse(view.view)), view.sprites);
+            particles_.appendLights(view.cameraPosition, view.lights, 6);
         addAnomalyHelpers(view, pane.mode == ViewMode::Perspective && shading_ != engine::Shading::Wireframe);
         addLightHelpers(view);
         addIoHelpers(view);

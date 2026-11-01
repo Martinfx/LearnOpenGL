@@ -1,5 +1,6 @@
 # Bullet hitting metal: a shower of sparks and a little smoke.
 emitter "Sparks"
+collision bounce 0.35 0.4
 texture "../textures/particles/spark.png"
 blend additive
 lit 0

@@ -27,6 +27,12 @@ public:
     void setEffect(std::shared_ptr<engine::ParticleEffect> effect);
     void restart();
     int particleCount() const { return particles_.particleCount(); }
+    // Playback: pause, slow motion, the effect moving on a circle (world space trails), night.
+    void setPaused(bool paused) { paused_ = paused; }
+    void setSpeed(float speed) { speed_ = speed; }
+    void setMoving(bool moving);
+    void setDark(bool dark);
+    float effectTime() const { return effectTime_; }
 
 protected:
     void initializeGL() override;
@@ -48,6 +54,9 @@ private:
     QElapsedTimer clock_;
     qint64 last_ = 0;
     float idle_ = 0.0f; // seconds the effect has been finished (one-shot effects replay)
+    bool paused_ = false, moving_ = false;
+    float speed_ = 1.0f;
+    float effectTime_ = 0.0f; // seconds since the effect started
     float yaw_ = 0.6f, pitch_ = 0.35f, distance_ = 4.0f;
     QPoint dragFrom_;
 };
@@ -130,6 +139,7 @@ private:
     void showEmitter();
     void edited();          // form -> emitter
     void structureChanged(); // emitters added/removed
+    void shiftEventTargets(int row, int delta); // sub-emitter indices after an insert (+1) or removal (-1)
     engine::ParticleEmitter* current();
 
     QString path_;
@@ -183,4 +193,14 @@ private:
     QDoubleSpinBox* rotationMax_ = nullptr;
     QDoubleSpinBox* spinMin_ = nullptr;
     QDoubleSpinBox* spinMax_ = nullptr;
+    QComboBox* collision_ = nullptr;
+    QDoubleSpinBox* bounce_ = nullptr;
+    QDoubleSpinBox* friction_ = nullptr;
+    QComboBox* onDeath_ = nullptr;
+    QSpinBox* onDeathCount_ = nullptr;
+    QCheckBox* light_ = nullptr;
+    QPushButton* lightColor_ = nullptr;
+    QDoubleSpinBox* lightIntensity_ = nullptr;
+    QDoubleSpinBox* lightRange_ = nullptr;
+    QDoubleSpinBox* lightFlicker_ = nullptr;
 };

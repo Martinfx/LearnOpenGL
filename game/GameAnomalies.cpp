@@ -342,6 +342,7 @@ void GameAnomalies::fill(engine::RenderView& view, const glm::mat4& viewMatrix) 
 {
     const glm::mat3 camera(glm::inverse(viewMatrix));
     particles_.appendSprites(view.cameraPosition, camera, view.sprites);
+    particles_.appendLights(view.cameraPosition, view.lights, 4);
     const auto& states = field_.anomalies();
     for (std::size_t i = 0; i < states.size() && i < live_.size(); ++i) {
         const auto& s = states[i];

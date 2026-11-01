@@ -19,6 +19,7 @@ intensity 16
 color_key 0 1 1 1 1
 color_key 1 0.6 0.7 1 0
 emitter "Flash"
+light 1 0.6 0.75 1 25 8 0.6
 blend additive
 lit 0
 burst 2

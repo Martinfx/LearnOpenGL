@@ -4,6 +4,7 @@
 #include <glm/mat3x3.hpp>
 #include <cstdint>
 #include <filesystem>
+#include <functional>
 #include <memory>
 #include <random>
 #include <string>
@@ -12,6 +13,7 @@
 namespace engine {
 
 struct TextureAsset;
+struct LocalLight;
 
 // ------------------------------------------------------------------ drawing
 
@@ -51,6 +53,9 @@ struct ParticleKey {
 };
 
 enum class EmitterShape : std::uint8_t { Point, Sphere, Box, Disc };
+// What a particle does when it reaches the ground under the effect (sparks bounce, debris stops, drops die).
+enum class ParticleCollision : std::uint8_t { None, Bounce, Stop, Die };
+const char* particleCollisionName(ParticleCollision c); // "none", "bounce", "stop", "die"
 const char* emitterShapeName(EmitterShape shape); // "point", "sphere", "box", "disc"
 
 // One stream of particles. Directions are in the effect's space (+Y up, -Z forward);
@@ -96,6 +101,21 @@ struct ParticleEmitter {
     float intensity = 1.0f;                 // brightness (fire, sparks > 1 glow with bloom)
     float rotationMin = 0.0f, rotationMax = 0.0f;       // degrees at birth
     float spinMin = 0.0f, spinMax = 0.0f;               // degrees per second
+    // Ground collision (the ground under the effect: terrain or level geometry, found when it spawns).
+    ParticleCollision collision = ParticleCollision::None;
+    float bounce = 0.4f;                    // share of the speed kept off the ground (Bounce)
+    float friction = 0.3f;                  // share of the sideways speed lost per bounce
+    // Sub-emitter: every particle that dies spawns `onDeathCount` particles of another emitter of
+    // the effect where it died (spark -> puff of smoke). -1 = none. That emitter usually has rate 0.
+    int onDeath = -1;
+    int onDeathCount = 1;
+    // A point light at the particles' centre while the emitter has particles (fire, muzzle flash,
+    // anomaly glow); brightness follows the particle count, flicker 0..1.
+    bool light = false;
+    glm::vec3 lightColor{1.0f, 0.6f, 0.3f}; // sRGB
+    float lightIntensity = 4.0f;
+    float lightRange = 5.0f;                // m
+    float lightFlicker = 0.3f;
 };
 
 // A .particle file: several emitters played together (e.g. fire = flames + smoke + embers).
@@ -141,7 +161,12 @@ public:
     void clear();
     bool alive(Handle h) const;
 
+    // Ground height under a point (terrain, physics raycast): asked once per effect with a
+    // colliding emitter when it spawns or moves. No query = the effect's own height.
+    void setGroundQuery(std::function<float(glm::vec3)> query);
     void update(float dt);
+    // Lights of emitters with `light` on, nearest to the camera first (at most maxLights).
+    void appendLights(glm::vec3 cameraPosition, std::vector<LocalLight>& out, int maxLights = 8) const;
     void appendSprites(glm::vec3 cameraPosition, const glm::mat3& cameraBasis, std::vector<struct SpriteBatch>& out) const;
 
     int instanceCount() const;
