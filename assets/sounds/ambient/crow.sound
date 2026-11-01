@@ -1,0 +1,17 @@
+# Sound: variations (one is picked at random per play) and playback settings
+file "crow_1.wav"
+file "crow_2.wav"
+file "crow_3.wav"
+file "crow_4.wav"
+file "crow_5.wav"
+file "crow_6.wav"
+file "crow_7.wav"
+volume 0.8
+pitch 0.93 1.07
+distance 15 250
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group ambient
+max_instances 2

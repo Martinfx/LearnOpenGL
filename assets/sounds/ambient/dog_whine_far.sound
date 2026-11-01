@@ -1,0 +1,12 @@
+# Sound: variations (one is picked at random per play) and playback settings
+file "dog_whine_far_1.wav"
+file "dog_whine_far_2.wav"
+volume 0.7
+pitch 0.95 1.05
+distance 30 300
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group ambient
+max_instances 2
