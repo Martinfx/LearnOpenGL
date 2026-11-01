@@ -176,6 +176,7 @@ private:
     void addAnomaly(int kind); // engine::AnomalyKind
     void addLight(bool spot);
     void addCampfire(); // group: fire pit model, flames, flickering light, crackle, sit points
+    void addDogPack();  // group: a lair (A-life point) and four feral dogs sharing a Group
     void applyPropCatalogueToLevel(); // every model the catalogue lists
     void browseScript();
     void browseCharacter();

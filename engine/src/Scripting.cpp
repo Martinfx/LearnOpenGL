@@ -177,6 +177,12 @@ struct ScriptSystem::Impl {
     std::uint64_t queueOrder = 0;
     double time = 0.0;
     int errors = 0;
+    struct Noise {
+        glm::vec3 at{0.0f};
+        float radius = 0.0f;
+        double time = 0.0;
+    };
+    std::vector<Noise> noises; // the last second's loud sounds
     FactionTable ownFactions = defaultFactions();
     FactionTable* factions = &ownFactions;
 
@@ -650,6 +656,21 @@ void ScriptSystem::Impl::bindApi()
     });
     game.set_function("change_goodwill", [this](const std::string& f, float delta) { factions->changeGoodwill(f, delta); });
     game.set_function("player_faction", [this] { return factions->playerFaction; });
+    // Loud sounds of the last second: game.make_noise(pos, radius) (shots), game.noise_near(pos)
+    // -> where the nearest one heard at pos came from, or nil.
+    game.set_function("make_noise", [this](const glm::vec3& at, float radius) { noises.push_back({at, radius, time}); });
+    game.set_function("noise_near", [this](const glm::vec3& at) -> sol::optional<glm::vec3> {
+        const Noise* best = nullptr;
+        float bestDistance = 1e30f;
+        for (const Noise& n : noises)
+            if (const float d = glm::distance(n.at, at); d <= n.radius && d < bestDistance) {
+                best = &n;
+                bestDistance = d;
+            }
+        if (!best)
+            return sol::nullopt;
+        return best->at;
+    });
     game.set_function("faction_name", [this](const std::string& f) {
         const Faction* faction = factions->find(f);
         return faction ? faction->name : f;
@@ -868,6 +889,7 @@ void ScriptSystem::fixedUpdate(float dt)
 {
     Impl& d = *impl_;
     d.time += dt;
+    std::erase_if(d.noises, [&d](const Impl::Noise& n) { return d.time - n.time > 1.0; });
     d.updateTriggers();
     // Due inputs, oldest first; inputs they cause with no delay run in this step too.
     for (int guard = 0; guard < 64 && !d.queue.empty(); ++guard) {
@@ -949,6 +971,11 @@ void ScriptSystem::teleportEntity(int entityIndex, glm::vec3 feet)
 void ScriptSystem::damageEntity(int entityIndex, float amount, int attacker)
 {
     impl_->damage(entityIndex, amount, attacker);
+}
+
+void ScriptSystem::makeNoise(glm::vec3 at, float radius)
+{
+    impl_->noises.push_back({at, radius, impl_->time});
 }
 
 void ScriptSystem::setFactions(FactionTable* table) { impl_->factions = table ? table : &impl_->ownFactions; }

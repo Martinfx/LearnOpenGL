@@ -88,6 +88,8 @@ methods `:length()`, `:normalized()`, `:flat()` (y = 0), `:dot(other)`.
 | `game.set_relation(a, b, value)` | Changes the relation of two factions for this game |
 | `game.goodwill(faction)`, `game.change_goodwill(faction, delta)` | The player's standing with a faction (saved; shooting its members lowers it) |
 | `game.player_faction()`, `game.faction_name(id)` | The player's faction id; a faction's display name |
+| `game.make_noise(position, radius)` | A loud sound (a shot) heard within `radius` m for the next second |
+| `game.noise_near(position)` | Where the nearest loud sound heard at `position` in the last second came from (`vec3`), or `nil`; the player's shots are noises too |
 | `game.entities_near(position, radius, [type])` | Living entities within `radius`, nearest first |
 | `game.characters_near(position, radius)` | Living entities that belong to a faction (people, mutants), nearest first |
 | `game.nav_ready()` | `true` once the level's navmesh is built (it builds in the background after loading) |

@@ -48,6 +48,9 @@ public:
     // Factions (engine/Factions.h): the table scripts ask (game.attitude...). Defaults to
     // defaultFactions(); the game sets its own (loaded from assets/factions.cfg, goodwill saved).
     void setFactions(FactionTable* table); // null = the built-in one
+    // A loud sound (a shot) heard within `radius` m for the next second: game.noise_near() in
+    // scripts (NPCs come to look, crows take off).
+    void makeNoise(glm::vec3 at, float radius);
     FactionTable& factions();
 
     // Outside forces on an entity for the next fixedUpdate (anomalies): a one-off

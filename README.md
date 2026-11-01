@@ -138,6 +138,18 @@ skupina se objeví tam, kam došla (mrtví leží na místě), a online dojde k 
 Stav putujících skupin je v uložené hře. Konzole: `alife` vypíše skupiny, `alife_debug 1` (s
 `r_debugdraw 1`) je ukáže ve světě i s cíli. Zóna má čtyři body a skupinu banditů „drifters“.
 
+### Fauna
+
+**Psi** (`assets/scripts/dog.lua`, model `models/characters/animals/wolf.glb`): Place > Dog pack přidá
+doupě (A-life bod s rolí `lair`) a čtyři psy typu `mutant` v jedné skupině. Psi se potulují kolem doupěte,
+kořist (hráče i NPC, mutanti jsou nepřátelští všem) vidí před sebou a čichem cítí všude kolem, zaštěkají
+a zavolají smečku, přibíhají každý z jiné strany, kousnou a odskočí; těžce zraněný pes uteče do doupěte.
+**Vrány** (`crow.lua`, `crow.glb`): Place > Crow flock je jedna entita, ze které hra při načtení udělá
+`count` vran. Na zemi poskakují; když se přiblíží člověk (`startle_range`) nebo padne výstřel, celé
+hejno vzlétne, krouží nad místem jako boidy (drží se pohromadě, letí stejným směrem, nepřibližují se
+k sobě) a po chvíli klidu přistane. Výstřely hráče i NPC slyší skripty přes `game.noise_near`; klidní
+NPC jdou místo výstřelu prozkoumat. V zóně je smečka u doupěte severně od tábora a dvě hejna vran.
+
 ### Script editor
 
 Skripty se píšou přímo v editoru: tlačítko **Edit script** u entity nebo menu Script (New script,

@@ -46,6 +46,7 @@ local state, timer, home, last_seen, patrol_target, next_attack
 local target            -- what it fights: "player", another entity or nil
 local grudges = {}      -- handles of entities that attacked it (fought even when not hostile)
 local look_timer = 0    -- next look around for enemies
+local walked = 0        -- seconds walking to the search spot
 local hurt_flash = 0
 local reacting = 0      -- seconds left of the hit reaction clip
 local moving = false   -- set by walk_to, picks walk/run vs. idle animation
@@ -155,6 +156,7 @@ local function set_state(self, s)
     if state == "rest" and s ~= "rest" then release_seat(self) end
     -- Entity I/O: the moment it goes after the player (connect e.g. to an alarm in the editor).
     if s == "chase" and state ~= "chase" and state ~= "attack" and state ~= "search" then self:fire_output("OnSpotted") end
+    if s == "search" then walked = 0 end
     state, timer = s, 0
 end
 
@@ -332,6 +334,14 @@ function on_update(self, dt)
             if calm then alert_group(self, found) end
         end
     end
+    -- A shot heard while calm: go and look where it came from.
+    if not visible and (state == "patrol" or state == "rest" or state == "return") then
+        local heard = game.noise_near(self.position)
+        if heard then
+            last_seen = heard
+            set_state(self, "search")
+        end
+    end
     if visible then
         last_seen = t_pos(target)
         if state ~= "chase" and state ~= "attack" then set_state(self, "chase") end
@@ -383,6 +393,7 @@ function on_update(self, dt)
                 -- Hit chance falls off with distance; misses still make noise and keep the player moving.
                 local chance = math.min(0.95, math.max(0.05, props.accuracy * 10 / math.max(dist, 1)))
                 if math.random() < chance then hit(props.shot_damage) end
+                game.make_noise(self:eye(), 60) -- others hear the shot (crows, NPCs)
                 if props.sound_shot ~= "" then
                     local p = self.position
                     game.play_sound(props.sound_shot, vec3(p.x, p.y + 1.4, p.z))
@@ -396,6 +407,9 @@ function on_update(self, dt)
         if not last_seen or walk_to(self, last_seen, props.walk_speed) then
             -- Look around on the spot.
             self.yaw = self.yaw + 90 * dt
+        else
+            walked = walked + dt -- still on the way there: the search starts on arrival (gives up after 40 s)
+            if walked < 40 then timer = 0 end
         end
         if timer > props.search_time then target = nil; set_state(self, "return") end
     elseif state == "return" then

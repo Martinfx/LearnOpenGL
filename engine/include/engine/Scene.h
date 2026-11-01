@@ -294,7 +294,7 @@ struct Entity {
     bool helper() const { return type == "sound" || type == "map_marker" || type == "particle" || type == "anomaly" || type == "light" ||
                                  type == "sit_point" || type == "trigger" || type == "relay" || type == "reverb" || type == "ambience" ||
                                  type == "water" || type == "interior" || type == "reflection_probe" || type == "irradiance_volume" ||
-                                 type == "alife_point"; }
+                                 type == "alife_point" || type == "crow_flock"; }
     // What the editor draws and picks: a sound zone can span the whole level, so
     // it is shown as a small speaker cube at its position; the zone is its size.
     Aabb markerBounds() const

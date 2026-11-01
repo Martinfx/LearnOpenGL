@@ -2,6 +2,7 @@
 // Usage: fps_game [level-file]
 #include <engine/ALife.h>
 #include <engine/EntityIO.h>
+#include <engine/Fauna.h>
 #include <engine/ProbeBaker.h>
 #include <engine/JobSystem.h>
 #include <engine/Log.h>
@@ -560,6 +561,7 @@ int main(int argc, char** argv)
             loaded = engine::loadScene(scene, levelPath, &loadError, &progress, &streamFrom);
             if (!loaded)
                 scene = engine::makeDefaultScene();
+            engine::expandFlocks(scene); // a crow flock entity becomes its birds
             progress.setStep("physics");
             ragdolls.clear(); // setLevel removes their bodies
             killShots.clear();
@@ -1618,6 +1620,8 @@ int main(int argc, char** argv)
             weapon.aim(dt, ready && input.isDown(engine::Action::Aim));
             if (shots > 0) {
                 audio.play(weapon.settings.soundFire, player.eye() + camera.forward() * 0.5f);
+                if (!weapon.settings.melee())
+                    scripts.makeNoise(player.eye(), 80.0f); // NPCs and crows hear it
                 if (const float duck = cvars.find("snd_duck")->number(); duck > 0.0f && !weapon.settings.melee()) {
                     // Gunfire pushes the ambience and music down for a moment, so the shot and what follows are heard.
                     audio.system().duck(engine::AudioGroup::Ambient, 1.0f - 0.55f * duck, 0.35f, 1.6f);
@@ -1708,8 +1712,7 @@ int main(int argc, char** argv)
             alife.update(scene, scripts, factions, player.feet(), dt, navSnap);
             for (const engine::ALife::Event& ev : alife.takeEvents())
                 if (ev.kind == engine::ALife::Event::Gunfire) // a fight out of sight: shots from that direction
-                    for (int shot = 0; shot < 3; ++shot)
-                        audio.playAsset("sounds/weapons/rifle_shot_far.sound", &ev.position, 0.9f);
+                    audio.playAsset("sounds/ambient/distant_gunfire.sound", &ev.position, 0.9f);
             if (cvars.find("alife_debug")->boolean())
                 for (const engine::ALife::Squad& s : alife.squads()) {
                     if (s.living == 0)

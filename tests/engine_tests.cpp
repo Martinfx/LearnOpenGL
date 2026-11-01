@@ -5,6 +5,7 @@
 #include <engine/Assert.h>
 #include <engine/ALife.h>
 #include <engine/Anomaly.h>
+#include <engine/Fauna.h>
 #include <engine/Lights.h>
 #include <engine/EntityIO.h>
 #include <engine/Ambience.h>
@@ -1039,6 +1040,106 @@ void testALife()
     check(saved.size() == 1 && saved[0].name == "raiders", "roaming squads are saved");
     for (const std::string& m : log)
         check(m.find("[script]") != 0, "no script errors: " + m);
+}
+
+void testFauna()
+{
+    // A crow flock entity becomes its crows; they take off when the player comes close.
+    {
+        auto s = flatFloor();
+        s.playerStart = {-40, 0, 0};
+        engine::Entity flock;
+        flock.type = "crow_flock";
+        flock.name = "Crows";
+        flock.id = 0x1234;
+        flock.size = {0.35f, 0.3f, 0.35f};
+        flock.scriptPath = ENGINE_TEST_ASSETS "/scripts/crow.lua";
+        flock.properties["count"] = "5";
+        s.entities.push_back(flock);
+        check(engine::expandFlocks(s) == 5 && s.entities.size() == 6 && s.entities[0].scriptPath.empty() &&
+                  s.entities[3].type == "crow" && s.entities[3].properties["flock"] == "Crows" && s.entities[3].id != 0 &&
+                  s.entities[3].id != s.entities[4].id,
+              "a flock of 5 becomes 5 crows with their own ids");
+        engine::PhysicsWorld world;
+        world.setLevel(s);
+        engine::PlayerController player;
+        player.spawn(world, s.playerStart);
+        std::vector<std::string> log;
+        engine::ScriptSystem scripts(s, world, player, [&log](const std::string& m) { log.push_back(m); });
+        check(scripts.start() == 0, "crow scripts start");
+        engine::FpsCamera cam;
+        engine::InputState idle;
+        auto run = [&](float seconds) {
+            for (int i = 0; i < static_cast<int>(seconds * 60.0f); ++i) {
+                player.fixedUpdate(idle, cam, 1.0f / 60.0f);
+                scripts.fixedUpdate(1.0f / 60.0f);
+            }
+        };
+        auto airborne = [&] {
+            int n = 0;
+            for (std::size_t i = 1; i < s.entities.size(); ++i)
+                n += s.entities[i].position.y > 2.0f;
+            return n;
+        };
+        run(3.0f);
+        check(airborne() == 0, "crows stay on the ground while nobody is near");
+        scripts.makeNoise({-30, 1.7f, 0}, 80.0f); // a shot 30 m away
+        run(3.0f);
+        check(airborne() == 5, "a shot sends the whole flock up: " + std::to_string(airborne()));
+        float spread = 0.0f;
+        for (std::size_t i = 1; i < s.entities.size(); ++i)
+            spread = std::max(spread, glm::distance(s.entities[i].position, s.entities[1].position));
+        check(spread < 40.0f, "the flock keeps together in the air");
+        run(60.0f);
+        check(airborne() == 0, "the crows land again when it is quiet");
+        for (const std::string& m : log)
+            check(m.find("[script]") != 0, "no script errors: " + m);
+    }
+
+    // A pack of two dogs smells the player, hunts and bites; a badly hurt dog runs home.
+    {
+        auto s = flatFloor();
+        s.playerStart = {0, 0, 0};
+        for (int i = 0; i < 2; ++i) {
+            engine::Entity dog;
+            dog.type = "mutant";
+            dog.name = "Dog " + std::to_string(i);
+            dog.position = {14.0f, 0, i * 2.0f};
+            dog.yawDegrees = 0.0f; // facing away: it has to smell or hear first
+            dog.size = {0.5f, 0.75f, 0.5f};
+            dog.scriptPath = ENGINE_TEST_ASSETS "/scripts/dog.lua";
+            dog.properties["group"] = "pack";
+            s.entities.push_back(dog);
+        }
+        s.entities[1].properties["smell_range"] = "15"; // only this one notices; it calls the other
+        engine::PhysicsWorld world;
+        world.setLevel(s);
+        engine::PlayerController player;
+        player.spawn(world, s.playerStart);
+        std::vector<std::string> log;
+        engine::ScriptSystem scripts(s, world, player, [&log](const std::string& m) { log.push_back(m); });
+        check(scripts.start() == 0, "dog scripts start");
+        engine::FpsCamera cam;
+        engine::InputState idle;
+        float closest = 1e9f;
+        for (int i = 0; i < 6 * 60; ++i) {
+            player.fixedUpdate(idle, cam, 1.0f / 60.0f);
+            scripts.fixedUpdate(1.0f / 60.0f);
+            closest = std::min(closest, glm::length(glm::vec2(s.entities[0].position.x, s.entities[0].position.z)));
+        }
+        check(closest < 2.0f, "the pack mate was called and came for the player");
+        check(scripts.playerHealth() < 100.0f, "the dogs bite");
+        scripts.damageEntity(0, 45.0f, -1);
+        const glm::vec3 hurt = s.entities[0].position;
+        for (int i = 0; i < 3 * 60; ++i) {
+            player.fixedUpdate(idle, cam, 1.0f / 60.0f);
+            scripts.fixedUpdate(1.0f / 60.0f);
+        }
+        check(glm::length(glm::vec2(s.entities[0].position.x, s.entities[0].position.z)) > glm::length(glm::vec2(hurt.x, hurt.z)) + 3.0f,
+              "a badly hurt dog runs back to its lair");
+        for (const std::string& m : log)
+            check(m.find("[script]") != 0, "no script errors: " + m);
+    }
 }
 
 void testScriptSyntaxCheck()
@@ -3380,6 +3481,7 @@ int main()
         {"testEnemyAnimGraph", testEnemyAnimGraph},
         {"testFactions", testFactions},
         {"testALife", testALife},
+        {"testFauna", testFauna},
         {"testWorldStreaming", testWorldStreaming},
     };
     for (const auto& [name, run] : tests)

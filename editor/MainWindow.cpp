@@ -3492,6 +3492,56 @@ void MainWindow::applyPropCatalogueToLevel()
     notify(tr("Physics props from the catalogue: %1 model(s) changed").arg(changed), 5000);
 }
 
+void MainWindow::addDogPack()
+{
+    const auto& cam = viewport_->camera();
+    glm::vec3 p = cam.position + cam.flatForward() * 10.0f;
+    p = {std::round(p.x * 2.0f) * 0.5f, 0.0f, std::round(p.z * 2.0f) * 0.5f};
+    auto ground = [this](glm::vec3 q) {
+        if (scene_.terrain && scene_.terrain->valid())
+            q.y = scene_.terrain->heightAt(q.x, q.z);
+        return q;
+    };
+    const std::string group = engine::uniqueNodeName(scene_, "Dog pack");
+    scene_.groups.push_back({group, ""});
+    engine::Entity lair;
+    lair.type = "alife_point";
+    lair.name = engine::uniqueNodeName(scene_, group + " lair");
+    lair.parent = group;
+    lair.position = ground(p);
+    lair.size = {1.0f, 2.5f, 1.0f};
+    lair.color = {0.3f, 0.85f, 0.9f};
+    lair.properties["roles"] = "lair";
+    lair.properties["factions"] = "mutant";
+    scene_.entities.push_back(std::move(lair));
+    const QString script = assetPath("scripts/dog.lua");
+    const QString model = assetPath("models/characters/animals/wolf.glb");
+    for (int k = 0; k < 4; ++k) {
+        engine::Entity dog;
+        dog.type = "mutant";
+        dog.name = engine::uniqueNodeName(scene_, group + " dog " + std::to_string(k + 1));
+        dog.parent = group;
+        const float a = 6.2831853f * static_cast<float>(k) / 4.0f;
+        dog.position = ground(p + glm::vec3(std::cos(a), 0.0f, std::sin(a)) * 2.5f);
+        dog.yawDegrees = static_cast<float>(k) * 90.0f;
+        dog.size = {0.5f, 1.04f, 0.5f}; // the model (head up) fits this height; 0.6 m at the withers
+        dog.color = {0.35f, 0.28f, 0.22f};
+        dog.properties["group"] = group;
+        if (QFileInfo::exists(script))
+            dog.scriptPath = std::filesystem::path(script.toStdU16String());
+        if (QFileInfo::exists(model))
+            if (auto m = engine::loadCharacterModel(std::filesystem::path(model.toStdU16String()))) {
+                dog.modelPath = std::filesystem::path(model.toStdU16String());
+                dog.model = m;
+                dog.animation = "Idle_Loop";
+            }
+        scene_.entities.push_back(std::move(dog));
+    }
+    refreshOutliner();
+    select(scene_.objectCount() - 5); // the lair
+    markDirty();
+}
+
 void MainWindow::addCampfire()
 {
     const auto& cam = viewport_->camera();
@@ -3599,7 +3649,7 @@ void MainWindow::addEntity(const QString& type)
     const glm::vec3 p = cam.position + cam.flatForward() * 6.0f;
     engine::Entity e;
     e.type = type.toStdString();
-    e.name = engine::uniqueNodeName(scene_, (type == "enemy" ? "Enemy " : type == "npc" ? "Stalker " : type == "alife_point" ? "Point " : type == "sound" ? "Sound " : type == "particle" ? "Effect " : type == "light" ? "Light " :
+    e.name = engine::uniqueNodeName(scene_, (type == "enemy" ? "Enemy " : type == "npc" ? "Stalker " : type == "alife_point" ? "Point " : type == "crow_flock" ? "Crows " : type == "sound" ? "Sound " : type == "particle" ? "Effect " : type == "light" ? "Light " :
                                              type == "trigger" ? "Trigger " : type == "relay" ? "Relay " : type == "reverb" ? "Reverb " : type == "ambience" ? "Ambience " : type == "interior" ? "Interior " : type == "reflection_probe" ? "Reflection probe " :
                                              type == "irradiance_volume" ? "Irradiance volume " :
                                              type == "water" ? "Water " : "Entity ") +
@@ -3611,6 +3661,20 @@ void MainWindow::addEntity(const QString& type)
     }
     if (type == "anomaly")
         engine::initAnomalyEntity(e, engine::AnomalyKind::Crusher);
+    if (type == "crow_flock") { // becomes `count` crows (scripts/crow.lua) when the game loads the level
+        e.size = {0.35f, 0.3f, 0.35f}; // one crow (the copies keep it); the model fits the height
+        e.color = {0.12f, 0.12f, 0.14f};
+        const QString script = assetPath("scripts/crow.lua");
+        if (QFileInfo::exists(script))
+            e.scriptPath = std::filesystem::path(script.toStdU16String());
+        const QString model = assetPath("models/characters/animals/crow.glb");
+        if (QFileInfo::exists(model))
+            if (auto m = engine::loadCharacterModel(std::filesystem::path(model.toStdU16String()))) {
+                e.modelPath = std::filesystem::path(model.toStdU16String());
+                e.model = m;
+                e.animation = "Idle_Loop";
+            }
+    }
     if (type == "alife_point") { // a place A-life squads travel to
         e.size = {1.0f, 2.5f, 1.0f};
         e.color = {0.3f, 0.85f, 0.9f};
@@ -5460,6 +5524,8 @@ void MainWindow::buildModePanel()
         auto* enemy = toolButton("person", tr("Enemy (random human)"), page);
         auto* npc = toolButton("person", tr("NPC (neutral stalker; faction in Properties > Character)"), page);
         auto* alifePoint = toolButton("select", tr("A-life point (a place squads travel to when the player is away)"), page);
+        auto* dogPack = toolButton("person", tr("Dog pack (lair and four feral dogs)"), page);
+        auto* crows = toolButton("particles", tr("Crow flock (takes off when someone comes close)"), page);
         auto* entity = toolButton("select", tr("Empty entity"), page);
         auto* sound = toolButton("sound", tr("Sound source / ambient zone"), page);
         auto* particles = toolButton("particles", tr("Particle effect (fire, smoke, dust)"), page);
@@ -5491,7 +5557,7 @@ void MainWindow::buildModePanel()
         auto* interior = toolButton("cube", tr("Interior volume (dark building: less sky light and fog, no rain, room reverb)"), page);
         connect(interior, &QPushButton::clicked, this, [this] { addEntity("interior"); });
         auto* model = toolButton("model", tr("glTF model..."), page);
-        for (QPushButton* b : {box, enemy, npc, alifePoint, entity, sound, particles, anomaly, light, campfire, trigger, relay, reverbZone, ambienceZone, interior, model})
+        for (QPushButton* b : {box, enemy, npc, alifePoint, dogPack, crows, entity, sound, particles, anomaly, light, campfire, trigger, relay, reverbZone, ambienceZone, interior, model})
             layout->addWidget(b);
         auto* hint = new QLabel(tr("Or drag a model from the Content Browser into the view: it lands where you drop it."), page);
         hint->setObjectName("dim");
@@ -5502,6 +5568,8 @@ void MainWindow::buildModePanel()
         connect(enemy, &QPushButton::clicked, this, [this] { addEntity("enemy"); });
         connect(npc, &QPushButton::clicked, this, [this] { addEntity("npc"); });
         connect(alifePoint, &QPushButton::clicked, this, [this] { addEntity("alife_point"); });
+        connect(dogPack, &QPushButton::clicked, this, &MainWindow::addDogPack);
+        connect(crows, &QPushButton::clicked, this, [this] { addEntity("crow_flock"); });
         connect(entity, &QPushButton::clicked, this, [this] { addEntity("empty"); });
         connect(sound, &QPushButton::clicked, this, [this] { addEntity("sound"); });
         connect(particles, &QPushButton::clicked, this, [this] { addEntity("particle"); });
