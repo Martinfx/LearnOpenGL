@@ -114,6 +114,8 @@ def foliage_lines():
         out.append(f'foliage_lod "{base}_lod1.glb" {lod_dist:g}')
         if file in FAR_LOD:
             out.append(f'foliage_lod "{FAR_LOD[file][0]}" {FAR_LOD[file][1]:g}')
+        if name == 'Tree':
+            out.append('foliage_impostor 90')     # baked impostor cards beyond 90 m (engine/Impostors)
     return out
 
 
@@ -150,6 +152,7 @@ def entity(name, etype, x, y, z, yaw, char, parent, script='../scripts/enemy.lua
     L.append(f'  parent "{parent}"')
     if char:
         L.append(f'  character "{H}{char}.glb" 1 0 "{clip}"')
+        L.append('  animgraph "../animgraphs/human.animgraph"')
     for k, v in props:
         L.append(f'  prop "{k}" "{v}"')
 
@@ -611,6 +614,10 @@ for bid, b in BUILD.items():
             yaw = b['yaw'] + frng.choice((0, 90, 180, 270)) + frng.uniform(-12, 12)
             x, y, z = to_world(bid, lx, floor_y(f) + 0.01, lz)
             prop('Flat table', 'WoodenTable_01', x, y, z, 'Flats', yaw=yaw, cull=25)
+            for _ in range(frng.randint(2, 4)):     # plaster and bricks fallen off the outer wall, glass under the window
+                f2 = frng.choice(['rubble_pile_small', 'rubble_pile_large', 'brick_pile', 'brick_pile', 'cinder_block_broken'])
+                rx_, ry_, rz_ = to_world(bid, frng.uniform(lx0 - 1.0, lx1 + 1.0), floor_y(f) + 0.01, -b['width'] / 2 + frng.uniform(0.7, 1.1))
+                clutter('Flat debris', f2, rx_, ry_, rz_, 'Flats', yaw=frng.uniform(0, 360), collision=False, cull=25)
             if frng.random() < 0.4:         # a worn bookshelf left standing against the back wall
                 bx, by, bz = to_world(bid, frng.uniform(lx0, lx1), floor_y(f) + 0.01, -b['width'] / 2 + 0.25 + 0.4)
                 prop('Flat bookshelf', 'wooden_bookshelf_worn', bx, by, bz, 'Flats', yaw=b['yaw'] + 90, cull=25)
@@ -787,6 +794,23 @@ L.append('player_sounds "../sounds/player/step_gravel.sound" "../sounds/player/l
 L.append('entity "Ambience wind" "sound" 0 -100 0 0 4000 400 4000 0.25 0.55 0.95 ""')
 L += ['  prop "sound" "sounds/ambient/wind.sound"', '  prop "zone" "1"', '  prop "fade" "50"']
 
+# interior volumes (dark rooms, sheltered rain, room reverb) were sized in the editor: carried over from the
+# current level file, like other hand-made entities, so regenerating keeps them
+if os.path.exists(OUT):
+    keep, prev = False, open(OUT, encoding='utf-8').read().splitlines()
+    kept = []
+    for line in prev:
+        if line.startswith('entity ') and '" "interior" ' in line:
+            keep = True
+        elif not line.startswith('  '):
+            keep = False
+        if keep:
+            kept.append(line)
+    kept += [line for line in prev if line.startswith('streaming ')]      # Level > World streaming settings
+    if kept:
+        if 'group "Interiors" "Buildings"' not in L:
+            L.insert(next(k for k, l in enumerate(L) if l.startswith('group ')), 'group "Interiors" "Buildings"')
+        L += kept
 i = L.index('@FOLIAGE_TYPES@')
 L[i:i + 1] = foliage_lines()
 with open(OUT, 'w', encoding='utf-8') as f:

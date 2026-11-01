@@ -43,7 +43,7 @@ def footprint_models():
         elif b['id'] == '184415657':
             name = 'hq_3floors'
             models[name] = (skrunda.corridor, dict(length=round(L, 1), depth=round(W, 1), floors=3, seed=9, ext='plaster_yellow',
-                                                   inn='plaster_peel', floor_mat='wood_floor', sign_row=4, beds=False), True)
+                                                   inn='plaster_peel', floor_mat='flat_floor', sign_row=4, beds=False), True)
         elif b['id'] == '184415665':
             name = 'canteen'
             models[name] = (skrunda.shop, dict(length=round(L, 1), width=round(W, 1), seed=4, ext='silicate', sign_row=2,

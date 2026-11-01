@@ -278,7 +278,7 @@ def block(length=47.4, sections=4, floors=5, depth=12.0, seed=0, lod=0, ext='sil
     for f in range(floors + 1):
         y = 0.05 + f * STOREY
         holes = holes_all if 0 < f < floors else []
-        fm = 'roof_tar' if f == floors else ('concrete_floor' if f == 0 else 'wood_floor')
+        fm = 'roof_tar' if f == floors else ('concrete_floor' if f == 0 else 'flat_floor')
         slab(m, (-hx + t / 2, -hz + t / 2, hx - t / 2, hz - t / 2), holes, y, SLAB if f else 0.3, fm, 'plaster', inn)
     win = []    # (side, x_or_z centre, width, y0, y1, floor, door)
     for f in range(floors):

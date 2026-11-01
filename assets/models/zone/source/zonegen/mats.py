@@ -34,6 +34,8 @@ SETS = {
     'tiles_floor': ('floor_tiles_06', dict(saturation=0.45, tint=(0.72, 0.7, 0.64))),     # trodden, dusty
     'wood': ('weathered_planks', dict()),
     'wood_floor': ('wood_floor_worn', dict(saturation=0.7)),
+    # abandoned flats: bare screed where the linoleum was torn up, old paint and glue worn through (rubble = clutter props)
+    'flat_floor': ('concrete_floor_painted', dict(saturation=0.5, tint=(0.9, 0.88, 0.84))),
     'wood_dark': ('dark_wooden_planks', dict()),
     'rubber': ('rubber_tiles', dict()),
     'gravel': ('gravel_concrete_03', dict()),
@@ -238,6 +240,7 @@ PALETTE = {
     'tiles_floor': M('tiles_floor', 1.2),
     'wood': M('wood', 1.5),
     'wood_floor': M('wood_floor', 2.0),
+    'flat_floor': M('flat_floor', 2.5),
     'wood_dark': M('wood_dark', 1.5),
     'rubber': M('rubber', 0.6, color=(0.35, 0.35, 0.35)),
     'gravel': M('gravel', 2.0),

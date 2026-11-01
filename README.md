@@ -82,7 +82,8 @@ Zem je terén enginu (`skrunda1.terrain`, 577 × 577 výšek po 1 m, 4 vrstvy te
 jsou jeho foliage, takže se upravují štětci v režimech Landscape a Foliage. Silnice, cesty a rybník jsou
 přehozené overlay modely ve skupině Terrain. Budovy: `python3 -I assets/models/zone/source/build_skrunda.py`,
 overlaye `... build_skrunda.py overlays`, rozložení, terén a foliage `python3 -I assets/levels/source/make_skrunda_level.py`
-(přepíše i ruční úpravy terénu).
+(přepíše i ruční úpravy terénu; objemy interiérů, nastavení streamingu a impostory zachová). Po vygenerování
+level otevři a ulož v editoru, doplní se tím `bounds` modelů pro streaming.
 Vzhled je laděný podle reálných fotek Skrundy-1 (jaro): souvislá loňská slaměná tráva, břízy, světlá
 silikátová cihla, prázdná okna, stékající špína pod parapety a střechou (alfa decaly, atlas `zone/textures/grime_albedo.png`
 z `skrunda.make_grime()`), nepořádek ve skupině Clutter (papíry v bytech, suť pod balkony, kořist banditů).
