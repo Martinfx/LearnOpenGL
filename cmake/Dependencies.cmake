@@ -138,6 +138,11 @@ else()
     # Next to the executables, which find it through their $ORIGIN rpath.
     set_target_properties(OpenAL PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
                                             LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+    # FreeBSD keeps the C11 <threads.h> functions (tss_create, ...) in libstdthreads, which
+    # openal-soft's build does not link: the shared library then fails to load.
+    if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+        target_link_libraries(OpenAL PRIVATE stdthreads)
+    endif()
 endif()
 
 # Recast/Detour: navmesh building and path queries (static library, no warnings).

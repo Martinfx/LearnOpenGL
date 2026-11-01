@@ -2648,8 +2648,8 @@ void MainWindow::refreshProperties()
     {
         QStringList levels;
         if (m)
-            for (const engine::Model::FarLod& far : m->farLods)
-                levels << QString("%1 @ %2 m").arg(QString::fromStdU16String(far.path.filename().u16string())).arg(static_cast<double>(far.distance));
+            for (const engine::Model::FarLod& lod : m->farLods) // not `far`: a windows.h macro
+                levels << QString("%1 @ %2 m").arg(QString::fromStdU16String(lod.path.filename().u16string())).arg(static_cast<double>(lod.distance));
         farLodEdit_->setText(levels.join(", "));
         farLodEdit_->setEnabled(m != nullptr);
     }
@@ -2993,9 +2993,9 @@ void MainWindow::refreshStreamingOverlay()
         const glm::vec2 nearest = glm::clamp(p, glm::vec2(b.min.x, b.min.z), glm::vec2(b.max.x, b.max.z));
         return glm::distance(nearest, p);
     };
-    int near = 0;
+    int nearCells = 0; // not `near`: a windows.h macro
     for (const auto& c : cells)
-        near += distance(c.bounds) <= st.loadRadius ? 1 : 0;
+        nearCells += distance(c.bounds) <= st.loadRadius ? 1 : 0;
     if (!st.enabled)
         streamStatus_->setText(tr("Off: the game loads every model at the start. %1 models would stream in %2 cells.")
                                    .arg(streamed)
@@ -3006,7 +3006,7 @@ void MainWindow::refreshStreamingOverlay()
                                    .arg(cells.size())
                                    .arg(streamed)
                                    .arg(fixed)
-                                   .arg(near));
+                                   .arg(nearCells));
     if (!streamShow_ || !streamShow_->isChecked())
         return;
     // Cell squares following the ground, a little inside so neighbours stay apart.
@@ -4212,8 +4212,10 @@ void MainWindow::shutdownGame()
         return;
     process->disconnect();
     if (process->state() != QProcess::NotRunning) {
-        if (gamePaused_)
+#ifndef _WIN32
+        if (gamePaused_) // a stopped process ignores SIGTERM (on Windows kill() below ends a suspended one)
             ::kill(static_cast<pid_t>(process->processId()), SIGCONT);
+#endif
         process->terminate();
         if (!process->waitForFinished(1500)) {
             process->kill();

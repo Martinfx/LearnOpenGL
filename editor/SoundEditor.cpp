@@ -387,8 +387,8 @@ public:
     // Fits the view to the near field, where direction matters most (wheel zooms out).
     void resetZoom()
     {
-        const float far = sound_.spatial ? sound_.maxDistance * 1.1f : 20.0f;
-        radius_ = std::clamp(std::max(sound_.minDistance * 5.0f, glm::length(pos_) * 1.5f), 5.0f, std::max(5.0f, far));
+        const float farEdge = sound_.spatial ? sound_.maxDistance * 1.1f : 20.0f;
+        radius_ = std::clamp(std::max(sound_.minDistance * 5.0f, glm::length(pos_) * 1.5f), 5.0f, std::max(5.0f, farEdge));
         update();
     }
     glm::vec3 position() const { return pos_; }
