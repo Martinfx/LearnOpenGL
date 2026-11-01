@@ -32,6 +32,8 @@ import build_skrunda                                  # noqa: E402
 from zonegen import skrunda_site as site              # noqa: E402
 from zonegen.skrunda import BASE                      # noqa: E402
 from zonegen.buildings import STOREY                  # noqa: E402
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import skrunda_probes                                 # noqa: E402
 
 OUT = os.path.join(HERE, '..', 'skrunda1.level')
 PLAN = os.path.join(HERE, 'skrunda1_plan.json')
@@ -221,7 +223,7 @@ L += [
     'env fog_height 2',
     'env fog_height_falloff 0.03',
     'env fog_sun_scatter 0.8',
-    'env exposure 1.0',
+    'env exposure 0.85',
     'env bloom_intensity 0.04',
     'env bloom_threshold 1.4',
     'env ssao_radius 0.8',
@@ -232,6 +234,10 @@ L += [
     'env tint 1.0 1.0 1.0',
     'env vignette 0.18',
     'env grain 0.02',
+    # eyes adapt indoors: rooms lit through the windows stay readable, the windows burn out
+    'env auto_exposure 0.8',
+    'env exposure_min_ev -0.5',
+    'env exposure_max_ev 3',
     'weapon "../weapons/ak74.weapon"',
     'weapon "../weapons/pistol.weapon"',
     'weapon "../weapons/knife.weapon"',
@@ -800,7 +806,7 @@ if os.path.exists(OUT):
     keep, prev = False, open(OUT, encoding='utf-8').read().splitlines()
     kept = []
     for line in prev:
-        if line.startswith('entity ') and '" "interior" ' in line:
+        if line.startswith('entity ') and ('" "interior" ' in line or '" "irradiance_volume" ' in line):
             keep = True
         elif not line.startswith('  '):
             keep = False
@@ -810,6 +816,10 @@ if os.path.exists(OUT):
     if kept:
         if 'group "Interiors" "Buildings"' not in L:
             L.insert(next(k for k, l in enumerate(L) if l.startswith('group ')), 'group "Interiors" "Buildings"')
+        # light probe volumes per storey (skrunda_probes.py), made from the interiors when there are none yet
+        if not any('" "irradiance_volume" ' in l for l in kept):
+            kept += skrunda_probes.volumes(kept)
+        L.insert(next(k for k, l in enumerate(L) if l.startswith('group ')), f'group "{skrunda_probes.GROUP}" "Buildings"')
         L += kept
 i = L.index('@FOLIAGE_TYPES@')
 L[i:i + 1] = foliage_lines()

@@ -88,6 +88,10 @@ Vzhled je laděný podle reálných fotek Skrundy-1 (jaro): souvislá loňská s
 silikátová cihla, prázdná okna, stékající špína pod parapety a střechou (alfa decaly, atlas `zone/textures/grime_albedo.png`
 z `skrunda.make_grime()`), nepořádek ve skupině Clutter (papíry v bytech, suť pod balkony, kořist banditů).
 Barvu zemních vrstev ladí materiály `assets/materials/skrunda/terrain_*.material` (editovatelné v editoru).
+Světlo v budovách: každé patro má objem irradiance sond (skupina Light probes, `skrunda_probes.py` je vytvoří
+z objemů interiérů), takže místnosti svítí od oken a sluneční skvrny na podlaze odrážejí teplé světlo na stěny.
+Upečené sondy jsou v `skrunda1.probes` (po přesunu budovy znovu Render › Bake lighting probes). Automatická
+expozice (Environment, `auto_exposure`) nechá oko přivyknout šeru uvnitř, okna se přepálí jako ve skutečnosti.
 
 **Testovací levely** (`water_test`, `physics_test`, `anomaly_test`, `lights_test`, `io_test`): každý je malé
 navržené místo v Zóně, které ukazuje jednu funkci enginu. Kanál s čerpací stanicí (voda), garáže s dvorem
