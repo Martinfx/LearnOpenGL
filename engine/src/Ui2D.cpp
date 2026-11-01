@@ -1,4 +1,5 @@
 #include "engine/Ui2D.h"
+#include "engine/Vfs.h"
 
 #include <glad/gl.h>
 #include <glm/gtc/type_ptr.hpp>
@@ -110,7 +111,7 @@ bool Ui2D::init(const std::filesystem::path& regular, const std::filesystem::pat
     const std::filesystem::path files[2] = {regular, bold};
     for (int f = 0; f < 2; ++f) {
         auto font = std::make_unique<Font>();
-        std::ifstream in(files[f], std::ios::binary);
+        engine::VfsStream in(files[f]);
         font->data.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
         stbtt_fontinfo info;
         if (font->data.empty() || !stbtt_InitFont(&info, font->data.data(), stbtt_GetFontOffsetForIndex(font->data.data(), 0))) {
@@ -295,7 +296,7 @@ float Ui2D::textWidth(const std::string& utf8, float size, bool bold) const
 
 unsigned Ui2D::loadImage(const std::filesystem::path& file, int* width, int* height)
 {
-    std::ifstream in(file, std::ios::binary);
+    engine::VfsStream in(file);
     const std::vector<unsigned char> bytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
     int w = 0, h = 0, channels = 0;
     unsigned char* pixels = bytes.empty() ? nullptr

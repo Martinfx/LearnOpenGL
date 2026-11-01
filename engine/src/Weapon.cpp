@@ -1,4 +1,5 @@
 #include "engine/Weapon.h"
+#include "engine/Vfs.h"
 #include "engine/Water.h"
 #include "engine/Physics.h"
 
@@ -237,7 +238,7 @@ bool saveWeaponFile(const WeaponSettings& w, const std::filesystem::path& file, 
 
 bool loadWeaponFile(WeaponSettings& weapon, const std::filesystem::path& file, std::string* error)
 {
-    std::ifstream in(file);
+    engine::VfsStream in(file);
     if (!in) {
         if (error)
             *error = "Cannot open " + file.string();

@@ -1,4 +1,5 @@
 #include "engine/Surfaces.h"
+#include "engine/Vfs.h"
 #include <cmath>
 #include <glm/trigonometric.hpp>
 #include <glm/geometric.hpp>
@@ -129,7 +130,7 @@ glm::vec3 ricochetDirection(glm::vec3 dir, glm::vec3 normal, float liftDegrees)
 
 bool loadSurfaces(SurfaceTable& table, const std::filesystem::path& file, std::string* error)
 {
-    std::ifstream in(file);
+    engine::VfsStream in(file);
     if (!in) {
         setError(error, "Cannot open " + file.string());
         return false;

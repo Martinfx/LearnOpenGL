@@ -1,4 +1,5 @@
 #include "engine/Log.h"
+#include "engine/Vfs.h"
 #include "engine/Profile.h"
 #include "engine/Audio.h"
 
@@ -134,7 +135,7 @@ bool saveSoundFile(const SoundDef& sound, const std::filesystem::path& file, std
 
 bool loadSoundFile(SoundDef& sound, const std::filesystem::path& file, std::string* error)
 {
-    std::ifstream in(file);
+    engine::VfsStream in(file);
     if (!in) {
         setError(error, "Cannot open " + file.string());
         return false;
@@ -199,7 +200,7 @@ bool decodeAudioFile(const std::filesystem::path& file, AudioClipData& out, std:
     auto open = [&](ma_decoder& dec, ma_uint32 channels) {
         ma_decoder_config config = ma_decoder_config_init(ma_format_s16, channels, 0);
         return withPath(
-            file, [&](const char* p) { return ma_decoder_init_file(p, &config, &dec); },
+            vfs().diskPath(file), [&](const char* p) { return ma_decoder_init_file(p, &config, &dec); },
             [&](const wchar_t* p) { return ma_decoder_init_file_w(p, &config, &dec); });
     };
     ma_decoder dec;
@@ -681,13 +682,13 @@ struct AudioSystem::Impl {
             if (!st.open) {
                 ma_decoder_config config = ma_decoder_config_init(ma_format_s16, v.mono ? 1 : 0, 0);
                 ma_result r = withPath(
-                    v.file, [&](const char* p) { return ma_decoder_init_file(p, &config, &st.decoder); },
+                    vfs().diskPath(v.file), [&](const char* p) { return ma_decoder_init_file(p, &config, &st.decoder); },
                     [&](const wchar_t* p) { return ma_decoder_init_file_w(p, &config, &st.decoder); });
                 if (r == MA_SUCCESS && st.decoder.outputChannels > 2) {
                     ma_decoder_uninit(&st.decoder);
                     config.channels = 2;
                     r = withPath(
-                        v.file, [&](const char* p) { return ma_decoder_init_file(p, &config, &st.decoder); },
+                        vfs().diskPath(v.file), [&](const char* p) { return ma_decoder_init_file(p, &config, &st.decoder); },
                         [&](const wchar_t* p) { return ma_decoder_init_file_w(p, &config, &st.decoder); });
                 }
                 if (r != MA_SUCCESS) {
@@ -935,7 +936,7 @@ std::shared_ptr<const SoundDef> AudioSystem::loadSound(const std::filesystem::pa
             return nullptr;
     } else {
         std::error_code ec;
-        if (!std::filesystem::is_regular_file(key, ec)) {
+        if (!fileExists(key)) {
             setError(error, "Sound not found: " + key.string());
             return nullptr;
         }

@@ -237,7 +237,12 @@ Hotovo, když: zóna 1 × 1 km jde projít bez načítací obrazovky a paměť d
   chybějících a nepoužitých assetů (`asset_check`, Assets > Validate assets). Assets > Clear cooked cache.
   Balení do archivů se dělá s VFS (další bod), kde se archivy i čtou.*
 - [ ] Balíček pro Windows/Linux/FreeBSD, verze buildu z `git describe` (log, menu, crash report), symboly ke každému vydání, release s LTO, artefakty z CI.
-- [ ] VFS s mount pointy: volné soubory → archiv → složka `mods/` přepisující soubory podle cesty.
+- [x] VFS s mount pointy: volné soubory → archiv → složka `mods/` přepisující soubory podle cesty.
+  *Hotovo (2026-11-01): engine/Vfs (vrstvy assets → `*.pak` → `mods/*` složky i archivy, read/exists/list,
+  `diskPath` rozbalí soubor z archivu pro knihovny, které otevírají soubory jménem, `identity` pro klíče cache),
+  `VfsStream` místo `std::ifstream` v loaderech, glTF přes `cgltf` file callbacky, skripty přes `safe_script`
+  se jménem `@cesta`, zvuky přes `diskPath`. Nástroj `fps_pack` (balení, `--skip-unused`, `--list`), archiv bez
+  komprese (textury a zvuky už komprimované jsou). Ověřeno ve hře: mod přejmenoval AK v HUD, archiv s levelem.*
 - [ ] Lokalizace: tabulky řetězců s klíči (čeština, angličtina, plurály), editor tabulek, kontrola nepřeložených.
 - [ ] Přístupnost: titulky, FOV, vypnutí houpání kamery a motion bluru, velikost textu.
 - [ ] Souhrn licencí třetích stran (OpenAL Soft LGPL: dynamické linkování a text licence).

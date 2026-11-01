@@ -1,4 +1,5 @@
 #include "engine/Demo.h"
+#include "engine/Vfs.h"
 #include "engine/Log.h"
 #include "engine/Scripting.h"
 #include "engine/CVars.h"
@@ -21,6 +22,22 @@
 #include <vector>
 
 namespace engine {
+
+namespace {
+// Runs a script file read through the VFS (archives, mods). The chunk is named "@path" like
+// a file loaded by Lua itself, which error messages and the debugger rely on.
+sol::protected_function_result runScriptFile(sol::state& lua, const std::filesystem::path& file, sol::environment* env)
+{
+    const std::u8string u8 = file.u8string();
+    const std::string name(u8.begin(), u8.end());
+    std::string code;
+    if (!readFile(file, code))
+        return env ? lua.safe_script_file(name, *env, sol::script_pass_on_error) : lua.safe_script_file(name, sol::script_pass_on_error);
+    return env ? lua.safe_script(code, *env, sol::script_pass_on_error, "@" + name)
+               : lua.safe_script(code, sol::script_pass_on_error, "@" + name);
+}
+} // namespace
+
 
 namespace {
 
@@ -950,9 +967,7 @@ int ScriptSystem::start()
             continue;
         // Each entity gets its own globals, falling back to the shared ones.
         se->env = sol::environment(d.lua, sol::create, d.lua.globals());
-        const std::u8string u8 = e.scriptPath.u8string();
-        sol::protected_function_result loaded =
-            d.lua.safe_script_file(std::string(u8.begin(), u8.end()), se->env, sol::script_pass_on_error);
+        sol::protected_function_result loaded = runScriptFile(d.lua, e.scriptPath, &se->env);
         if (!loaded.valid()) {
             sol::error err = loaded;
             d.report(*se, err.what());
@@ -1088,8 +1103,7 @@ bool readScriptProperties(const std::filesystem::path& script, std::vector<Scrip
     // Stubs so top-level code that references the API still loads.
     lua.create_named_table("game");
     lua["vec3"] = [](sol::variadic_args) { return 0; };
-    const std::u8string u8 = script.u8string();
-    auto loaded = lua.safe_script_file(std::string(u8.begin(), u8.end()), sol::script_pass_on_error);
+    auto loaded = runScriptFile(lua, script, nullptr);
     if (!loaded.valid()) {
         if (error) {
             sol::error err = loaded;
@@ -1167,9 +1181,7 @@ int ScriptSystem::reloadScript(const std::filesystem::path& file)
         // script keeps (self.data, its globals) stays. on_start is not called again.
         if (!se->env.valid())
             se->env = sol::environment(d.lua, sol::create, d.lua.globals());
-        const std::u8string u8 = e.scriptPath.u8string();
-        sol::protected_function_result loaded =
-            d.lua.safe_script_file(std::string(u8.begin(), u8.end()), se->env, sol::script_pass_on_error);
+        sol::protected_function_result loaded = runScriptFile(d.lua, e.scriptPath, &se->env);
         if (!loaded.valid()) {
             sol::error err = loaded;
             d.report(*se, std::string("reload: ") + err.what());

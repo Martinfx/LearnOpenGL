@@ -1,5 +1,6 @@
 #include "engine/MeshCache.h"
 #include "engine/TextureCook.h"
+#include "engine/Vfs.h"
 
 #include <cstring>
 #include <fstream>
@@ -9,7 +10,7 @@ namespace engine {
 
 namespace {
 
-constexpr char kMagic[8] = {'F', 'P', 'S', 'M', 'E', 'S', 'H', '2'};
+constexpr char kMagic[8] = {'F', 'P', 'S', 'M', 'E', 'S', 'H', '3'};
 
 std::uint64_t fnv1a(const std::string& s)
 {
@@ -25,17 +26,6 @@ std::string utf8(const std::filesystem::path& p)
     return std::string(s.begin(), s.end());
 }
 std::filesystem::path fromUtf8(const std::string& s) { return std::filesystem::path(std::u8string(s.begin(), s.end())); }
-
-// Size and modification time: what a cache entry depends on.
-bool stamp(const std::filesystem::path& file, std::uint64_t& size, std::int64_t& time)
-{
-    std::error_code ec;
-    size = std::filesystem::file_size(file, ec);
-    if (ec)
-        return false;
-    time = static_cast<std::int64_t>(std::filesystem::last_write_time(file, ec).time_since_epoch().count());
-    return !ec;
-}
 
 struct Writer {
     std::ofstream& out;
@@ -118,13 +108,8 @@ bool writeMeshCache(const Model& model, const std::filesystem::path& source, con
         out.write(kMagic, sizeof(kMagic));
         w.put(static_cast<std::uint32_t>(inputs.size()));
         for (const std::filesystem::path& in : inputs) {
-            std::uint64_t size = 0;
-            std::int64_t time = 0;
-            if (!stamp(in, size, time))
-                return false;
             w.str(utf8(std::filesystem::absolute(in)));
-            w.put(size);
-            w.put(time);
+            w.str(vfs().identity(in)); // the layer it came from, size and time
         }
         // Textures once each (parts share them).
         std::map<const Texture*, std::uint32_t> textureIndex;
@@ -192,14 +177,11 @@ bool readMeshCache(Model& model, const std::filesystem::path& source)
     std::uint32_t count = 0;
     r.get(count);
     for (std::uint32_t i = 0; r.ok && i < count; ++i) {
-        std::string path;
-        std::uint64_t size = 0, nowSize = 0;
-        std::int64_t time = 0, nowTime = 0;
+        std::string path, identity;
         r.str(path);
-        r.get(size);
-        r.get(time);
-        if (!r.ok || !stamp(fromUtf8(path), nowSize, nowTime) || nowSize != size || nowTime != time)
-            return false; // an input changed: cook again
+        r.str(identity);
+        if (!r.ok || vfs().identity(fromUtf8(path)) != identity)
+            return false; // an input changed (or a mod replaces it): cook again
     }
     r.get(count);
     std::vector<std::shared_ptr<const Texture>> textures;

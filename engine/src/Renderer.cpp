@@ -1,4 +1,5 @@
 #include "engine/Renderer.h"
+#include "engine/Vfs.h"
 #include "engine/Water.h"
 
 #include <glad/gl.h>
@@ -3416,7 +3417,7 @@ void Renderer::updateLut(const Environment& e)
     if (e.lut.empty())
         return;
     // Strip of N slices side by side (N*N x N): x within a slice = red, y = green (top row 0), slice = blue.
-    std::ifstream in(e.lut, std::ios::binary);
+    engine::VfsStream in(e.lut);
     const std::vector<unsigned char> bytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
     int w = 0, h = 0, comp = 0;
     unsigned char* pixels = bytes.empty() ? nullptr

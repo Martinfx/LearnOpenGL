@@ -1,4 +1,5 @@
 #include "engine/Factions.h"
+#include "engine/Vfs.h"
 
 #include <algorithm>
 #include <cstdio>
@@ -127,7 +128,7 @@ FactionTable defaultFactions()
 
 bool loadFactions(FactionTable& table, const std::filesystem::path& file, std::string* error)
 {
-    std::ifstream in(file);
+    engine::VfsStream in(file);
     if (!in) {
         if (error)
             *error = "cannot open " + file.string();

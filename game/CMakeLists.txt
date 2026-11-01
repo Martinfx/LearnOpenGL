@@ -23,3 +23,8 @@ configure_file(${PROJECT_SOURCE_DIR}/3rdparty/README.md ${CMAKE_BINARY_DIR}/bin/
 if(NOT WIN32)
     set_target_properties(fps_game PROPERTIES ENABLE_EXPORTS ON)
 endif()
+
+# Asset archives for shipping and mods (engine/Vfs.h).
+add_executable(fps_pack fps_pack.cpp)
+target_link_libraries(fps_pack PRIVATE engine)
+set_target_properties(fps_pack PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)

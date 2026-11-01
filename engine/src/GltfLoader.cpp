@@ -2,7 +2,9 @@
 // vertices; animated models keep the node tree, skins and clips (Animation.h).
 #define CGLTF_IMPLEMENTATION
 #include "engine/MeshCache.h"
+#include "engine/Vfs.h"
 #include <cstring>
+#include <cstdlib>
 #include <cgltf.h>
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -91,17 +93,9 @@ std::shared_ptr<const Texture> loadImage(const cgltf_image* image, const std::fi
         const auto* bytes = static_cast<const stbi_uc*>(image->buffer_view->buffer->data) + image->buffer_view->offset;
         pixels = stbi_load_from_memory(bytes, static_cast<int>(image->buffer_view->size), &w, &h, &comp, 4);
     } else {
-        const std::u8string u8 = source.u8string();
-        // stbi_load takes a UTF-8 path on Windows only with STBI_WINDOWS_UTF8; read the bytes ourselves.
-        if (FILE* f = std::fopen(std::string(u8.begin(), u8.end()).c_str(), "rb")) {
-            std::vector<stbi_uc> bytes;
-            stbi_uc buf[65536];
-            std::size_t n;
-            while ((n = std::fread(buf, 1, sizeof buf, f)) > 0)
-                bytes.insert(bytes.end(), buf, buf + n);
-            std::fclose(f);
-            pixels = stbi_load_from_memory(bytes.data(), static_cast<int>(bytes.size()), &w, &h, &comp, 4);
-        }
+        // Read through the VFS (archives, mods); stbi decodes from memory.
+        if (std::string bytes; readFile(source, bytes))
+            pixels = stbi_load_from_memory(reinterpret_cast<const stbi_uc*>(bytes.data()), static_cast<int>(bytes.size()), &w, &h, &comp, 4);
     }
     std::shared_ptr<const Texture> result;
     if (pixels) {
@@ -280,6 +274,21 @@ bool openGltf(GltfFile& gltf, const std::filesystem::path& file, std::string* er
         return false;
     };
     cgltf_options options{};
+    // The .gltf/.glb and its .bin buffers are read through the VFS (archives, mods).
+    options.file.read = [](const cgltf_memory_options*, const cgltf_file_options*, const char* path, cgltf_size* size,
+                           void** data) -> cgltf_result {
+        std::string bytes;
+        if (!readFile(std::filesystem::path(std::u8string(path, path + std::strlen(path))), bytes))
+            return cgltf_result_file_not_found;
+        void* copy = std::malloc(bytes.size() ? bytes.size() : 1);
+        if (!copy)
+            return cgltf_result_out_of_memory;
+        std::memcpy(copy, bytes.data(), bytes.size());
+        *size = bytes.size();
+        *data = copy;
+        return cgltf_result_success;
+    };
+    options.file.release = [](const cgltf_memory_options*, const cgltf_file_options*, void* data) { std::free(data); };
     const std::u8string u8 = file.u8string();
     const std::string path(u8.begin(), u8.end()); // cgltf expects UTF-8
     cgltf_result r = cgltf_parse_file(&options, path.c_str(), &gltf.data);

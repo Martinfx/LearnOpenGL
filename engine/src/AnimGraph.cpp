@@ -1,4 +1,5 @@
 #include "engine/AnimGraph.h"
+#include "engine/Vfs.h"
 
 #include <fstream>
 #include <iomanip>
@@ -139,7 +140,7 @@ int AnimGraph::findState(int layer, const std::string& name) const
 
 bool loadAnimGraphFile(AnimGraph& graph, const std::filesystem::path& file, std::string* error)
 {
-    std::ifstream in(file);
+    engine::VfsStream in(file);
     if (!in) {
         setError(error, "Cannot open " + file.string());
         return false;

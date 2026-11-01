@@ -1,4 +1,5 @@
 #include "engine/AssetPalette.h"
+#include "engine/Vfs.h"
 #include "engine/Material.h"
 
 #include <cgltf.h>
@@ -18,7 +19,7 @@ float toSrgb(float c) { return std::pow(std::clamp(c, 0.0f, 1.0f), 1.0f / 2.2f);
 
 std::vector<std::uint8_t> readBytes(const std::filesystem::path& file)
 {
-    std::ifstream in(file, std::ios::binary);
+    engine::VfsStream in(file);
     return {std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()};
 }
 

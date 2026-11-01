@@ -1,3 +1,4 @@
+#include "engine/Vfs.h"
 #include "engine/Terrain.h"
 #include "engine/Scene.h"
 
@@ -18,6 +19,11 @@ float brushFalloff(float distance, float radius)
         return 0.0f;
     const float x = 1.0f - distance / radius; // 1 in the center, 0 at the edge
     return x * x * (3.0f - 2.0f * x);          // smoothstep
+}
+
+bool readBytes(std::istream& in, void* data, std::size_t bytes)
+{
+    return static_cast<bool>(in.read(static_cast<char*>(data), static_cast<std::streamsize>(bytes)));
 }
 
 FILE* openFile(const std::filesystem::path& file, const char* mode)
@@ -467,14 +473,14 @@ bool saveTerrainData(const Terrain& t, const std::filesystem::path& file, std::s
 
 bool loadTerrainData(Terrain& t, const std::filesystem::path& file, std::string* error)
 {
-    FILE* f = openFile(file, "rb");
+    VfsStream f(file); // through the VFS: archives and mods
     if (!f) {
         if (error)
             *error = "Cannot open " + file.string();
         return false;
     }
     FileHeader h{};
-    bool ok = std::fread(&h, sizeof h, 1, f) == 1 && h.magic == kMagic && (h.version == 1 || h.version == kVersion) && h.resolution >= 2 &&
+    bool ok = readBytes(f, &h, sizeof h) && h.magic == kMagic && (h.version == 1 || h.version == kVersion) && h.resolution >= 2 &&
               h.resolution <= 4097 && h.splatResolution >= 16 && h.splatResolution <= 4096 && h.size > 0.0f;
     if (ok) {
         t.resolution = h.resolution;
@@ -485,8 +491,8 @@ bool loadTerrainData(Terrain& t, const std::filesystem::path& file, std::string*
         const std::size_t pixels = static_cast<std::size_t>(h.splatResolution) * h.splatResolution;
         const int channels = h.version == 1 ? 4 : Terrain::kLayers;
         std::vector<std::uint8_t> stored(pixels * static_cast<std::size_t>(channels));
-        ok = std::fread(t.heights.data(), sizeof(float), t.heights.size(), f) == t.heights.size() &&
-             std::fread(stored.data(), 1, stored.size(), f) == stored.size();
+        ok = readBytes(f, t.heights.data(), sizeof(float) * t.heights.size()) &&
+             readBytes(f, stored.data(), stored.size());
         if (channels == Terrain::kLayers) {
             t.splat = std::move(stored);
         } else { // older file: its four layers, the rest empty
@@ -498,12 +504,11 @@ bool loadTerrainData(Terrain& t, const std::filesystem::path& file, std::string*
         for (std::uint32_t i = 0; ok && i < h.foliageCount; ++i) {
             float v[7];
             std::uint32_t type = 0;
-            ok = std::fread(v, sizeof v, 1, f) == 1 && std::fread(&type, sizeof type, 1, f) == 1;
+            ok = readBytes(f, v, sizeof v) && readBytes(f, &type, sizeof type);
             if (ok)
                 t.foliage.push_back({{v[0], v[1], v[2]}, v[3], v[4], v[5], v[6], static_cast<std::uint16_t>(type)});
         }
     }
-    std::fclose(f);
     if (!ok) {
         if (error)
             *error = file.string() + ": not a terrain file or damaged";

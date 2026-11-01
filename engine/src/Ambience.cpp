@@ -1,4 +1,5 @@
 #include "engine/Ambience.h"
+#include "engine/Vfs.h"
 
 #include <glm/geometric.hpp>
 
@@ -43,7 +44,7 @@ std::string relativeTo(const std::filesystem::path& file, const std::filesystem:
 
 bool loadAmbienceFile(AmbienceSet& set, const std::filesystem::path& file, std::string* error)
 {
-    std::ifstream in(file);
+    engine::VfsStream in(file);
     if (!in) {
         setError(error, "cannot open " + file.string());
         return false;

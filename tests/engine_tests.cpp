@@ -2,6 +2,7 @@
 #include <engine/Log.h>
 #include <engine/Demo.h>
 #include <engine/MeshCache.h>
+#include <engine/Vfs.h>
 #include <cstring>
 #include <set>
 #include <engine/Assert.h>
@@ -471,6 +472,65 @@ void testMeshCache()
     check(!engine::readMeshCache(stale, file), "a changed image invalidates the cooked mesh");
     check(engine::loadModelFile(stale, file, &err) && engine::readMeshCache(cached, file), "the next load cooks it again");
     std::filesystem::remove_all(dir);
+}
+
+void testVfs()
+{
+    namespace fs = std::filesystem;
+    const auto base = fs::temp_directory_path() / "vfs_test";
+    fs::remove_all(base);
+    auto write = [](const fs::path& f, const std::string& text) {
+        fs::create_directories(f.parent_path());
+        std::ofstream(f, std::ios::binary) << text;
+    };
+    const auto assets = base / "assets";
+    write(assets / "a.txt", "loose a");
+    write(assets / "sub" / "b.txt", "loose b");
+    write(assets / "weapons" / "base.weapon", "# FPS engine weapon\nversion 2\nname \"Base\"\ndamage 10\n");
+    // The archive replaces b and adds c and a weapon that inherits from the loose one.
+    const auto packSrc = base / "pack";
+    write(packSrc / "sub" / "b.txt", "packed b");
+    write(packSrc / "sub" / "c.txt", "packed c");
+    write(packSrc / "weapons" / "child.weapon", "# FPS engine weapon\nversion 2\nbase \"base.weapon\"\nname \"Child\"\n");
+    std::string error;
+    check(engine::writeArchive(base / "game.pak", packSrc, {"sub/b.txt", "sub/c.txt", "weapons/child.weapon"}, &error),
+          "archive written: " + error);
+    std::vector<std::pair<std::string, std::uint64_t>> toc;
+    check(engine::listArchive(base / "game.pak", toc) && toc.size() == 3 && toc[0].first == "sub/b.txt" && toc[0].second == 8,
+          "archive table of contents");
+    // A mod folder replaces a and the archive's c.
+    write(base / "mods" / "fix" / "a.txt", "mod a");
+    write(base / "mods" / "fix" / "sub" / "c.txt", "mod c");
+
+    engine::Vfs& v = engine::vfs();
+    v.clear();
+    v.setRoot(assets);
+    check(v.mountArchive(base / "game.pak", &error), "archive mounts: " + error);
+    v.mountFolder(base / "mods" / "fix");
+    std::string text;
+    check(v.read(assets / "a.txt", text) && text == "mod a", "a mod replaces a loose file");
+    check(v.read(assets / "sub" / "b.txt", text) && text == "packed b", "an archive replaces a loose file");
+    check(v.read(assets / "sub" / "c.txt", text) && text == "mod c", "a mod replaces an archived file");
+    check(v.exists(assets / "weapons" / "child.weapon") && !v.exists(assets / "nothing.txt"), "exists sees every layer");
+    const auto listed = v.list(assets / "sub");
+    check(listed.size() == 2 && listed[0] == assets / "sub" / "b.txt" && listed[1] == assets / "sub" / "c.txt",
+          "a folder lists the files of all layers once");
+    check(v.list(assets, true).size() == 5, "recursive listing from the root");
+    engine::WeaponSettings w;
+    check(engine::loadWeaponFile(w, assets / "weapons" / "child.weapon", &error) && w.name == "Child" && w.damage == 10.0f,
+          "a loader reads an archived file that inherits from a loose one: " + error);
+    const auto extracted = v.diskPath(assets / "weapons" / "child.weapon");
+    check(!extracted.empty() && engine::VfsStream(extracted).is_open(), "an archived file can be extracted for libraries");
+    check(v.diskPath(assets / "a.txt") == (base / "mods" / "fix" / "a.txt").lexically_normal(), "disk path of a mod file is the mod's");
+    const std::string before = v.identity(assets / "a.txt");
+    fs::remove(base / "mods" / "fix" / "a.txt");
+    check(v.identity(assets / "a.txt") != before && v.read(assets / "a.txt", text) && text == "loose a",
+          "without the mod file the loose one is back (and cache keys change)");
+    check(!engine::VfsStream(assets / "missing.txt"), "a missing file fails like an ifstream");
+    v.clear();
+    v.setRoot({});
+    fs::remove_all(extracted.parent_path().parent_path());
+    fs::remove_all(base);
 }
 
 void testScriptDebugger()
@@ -4011,6 +4071,7 @@ int main()
         {"testScriptDebugger", testScriptDebugger},
         {"testDemo", testDemo},
         {"testMeshCache", testMeshCache},
+        {"testVfs", testVfs},
         {"testWorldStreaming", testWorldStreaming},
     };
     for (const auto& [name, run] : tests)

@@ -1,4 +1,5 @@
 #include "engine/Particles.h"
+#include "engine/Vfs.h"
 
 #include "engine/JobSystem.h"
 #include "engine/Lights.h"
@@ -102,7 +103,7 @@ glm::vec4 evalColorCurve(const std::vector<ParticleKey>& curve, float t)
 
 bool loadParticleFile(ParticleEffect& effect, const std::filesystem::path& file, std::string* error)
 {
-    std::ifstream in(file);
+    engine::VfsStream in(file);
     if (!in) {
         setError(error, "Cannot open " + file.string());
         return false;
@@ -278,7 +279,7 @@ void loadParticleTextures(ParticleEffect& effect)
     for (std::size_t i = 0; i < effect.emitters.size(); ++i) {
         const std::filesystem::path& p = effect.emitters[i].texture;
         std::error_code ec;
-        if (!p.empty() && std::filesystem::is_regular_file(p, ec))
+        if (!p.empty() && fileExists(p))
             effect.textures[i] = loadTextureAsset(p, nullptr, true);
     }
 }

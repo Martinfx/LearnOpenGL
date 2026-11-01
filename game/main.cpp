@@ -1,6 +1,7 @@
 // Game runtime: GLFW window, fixed 60 Hz simulation, first-person player.
 // Usage: fps_game [level-file]
 #include <engine/ALife.h>
+#include <engine/Vfs.h>
 #include <engine/EntityIO.h>
 #include <engine/Fauna.h>
 #include <engine/ProbeBaker.h>
@@ -119,7 +120,7 @@ void printModelCredits(const std::vector<std::filesystem::path>&, const std::vec
         const std::filesystem::path& model = w.settings.modelPath;
         if (model.empty())
             continue;
-        std::ifstream in(model.parent_path() / "CREDITS.md");
+        engine::VfsStream in(model.parent_path() / "CREDITS.md");
         const std::string name = model.filename().string();
         for (std::string line; std::getline(in, line);)
             if (line.find(name) != std::string::npos && printed.insert(line).second)
@@ -550,6 +551,10 @@ int main(int argc, char** argv)
     engine::openLogFile("game");
     engine::installCrashHandler("game");
     LOG_INFO("game", "Version %s, log file: %s", engine::engineVersion(), engine::logFilePath().string().c_str());
+    // Assets: the folder next to the executable, then its .pak archives, then mods/ (folders and
+    // .pak files) replacing files by path (engine/Vfs.h).
+    for (const std::string& layer : engine::vfs().mountGame(std::filesystem::absolute(std::filesystem::path(argv[0]).parent_path())))
+        LOG_INFO("vfs", "%s", layer.c_str());
     glfwSetErrorCallback([](int code, const char* message) { LOG_WARN("glfw", "%d: %s", code, message); });
     if (!glfwInit())
         return 1;
@@ -1436,7 +1441,7 @@ int main(int argc, char** argv)
             if (a.empty())
                 return engine::ConsoleResult{false, "usage: map NAME"};
             const std::filesystem::path file = levelFile(a[0]);
-            if (!std::filesystem::exists(file))
+            if (!engine::fileExists(file))
                 return engine::ConsoleResult{false, "no level " + file.string()};
             exitRequest = {LevelExit::Load, file};
             return engine::ConsoleResult{true, "loading " + file.filename().string()};
@@ -1446,7 +1451,7 @@ int main(int argc, char** argv)
             if (a.empty())
                 return engine::ConsoleResult{false, "usage: changelevel NAME"};
             const std::filesystem::path file = levelFile(a[0]);
-            if (!std::filesystem::exists(file))
+            if (!engine::fileExists(file))
                 return engine::ConsoleResult{false, "no level " + file.string()};
             exitRequest = {LevelExit::Change, file};
             return engine::ConsoleResult{true, "changing to " + file.filename().string()};
@@ -3015,7 +3020,7 @@ int main(int argc, char** argv)
             const bool readOk = save.read(result.level, &saveError);
             if (readOk && save.level.is_relative())
                 save.level = std::filesystem::path(argv[0]).parent_path() / save.level;
-            if (!readOk || !std::filesystem::exists(save.level)) {
+            if (!readOk || !engine::fileExists(save.level)) {
                 LOG_ERROR("save", "%s: %s", result.level.string().c_str(), saveError.empty() ? "level file missing" : saveError.c_str());
                 continue; // the same level again
             }

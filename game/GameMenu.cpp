@@ -1,4 +1,5 @@
 #include "GameMenu.h"
+#include <engine/Vfs.h>
 
 #include <engine/CVars.h>
 #include <engine/Crash.h>
@@ -107,24 +108,23 @@ void GameMenu::init(const std::filesystem::path& assetDir, const std::filesystem
     credits_.clear();
     levels_.clear();
     std::error_code levelsError;
-    for (const auto& entry : std::filesystem::directory_iterator(assetDir / "levels", levelsError))
-        if (entry.path().extension() == ".level") {
-            const engine::LoadingScreen look = engine::readLoadingScreen(entry.path());
-            levels_.push_back({entry.path(), look.title.empty() ? entry.path().stem().string() : look.title, look.hint});
+    for (const std::filesystem::path& level : engine::vfs().list(assetDir / "levels")) // mods can add levels
+        if (level.extension() == ".level") {
+            const engine::LoadingScreen look = engine::readLoadingScreen(level);
+            levels_.push_back({level, look.title.empty() ? level.stem().string() : look.title, look.hint});
         }
     std::sort(levels_.begin(), levels_.end(), [](const LevelEntry& a, const LevelEntry& b) { return a.title < b.title; });
     std::vector<std::filesystem::path> files;
     std::error_code ec;
-    for (auto it = std::filesystem::recursive_directory_iterator(assetDir, ec); !ec && it != std::filesystem::recursive_directory_iterator();
-         it.increment(ec))
-        if (it->is_regular_file() && it->path().filename() == "CREDITS.md")
-            files.push_back(it->path());
+    for (const std::filesystem::path& f : engine::vfs().list(assetDir, true))
+        if (f.filename() == "CREDITS.md")
+            files.push_back(f);
     std::sort(files.begin(), files.end());
     if (!licenseFile.empty())
         files.push_back(licenseFile);
     // Each file: its title, then the rows of its tables (the attribution CC-BY asks for).
     for (const std::filesystem::path& file : files) {
-        std::ifstream in(file);
+        engine::VfsStream in(file);
         bool titled = false, inTable = false;
         int rows = 0;
         for (std::string line; std::getline(in, line);) {

@@ -1,4 +1,5 @@
 #include "engine/Items.h"
+#include "engine/Vfs.h"
 
 #include <algorithm>
 #include <cmath>
@@ -28,7 +29,7 @@ ItemCatalog defaultItems()
 
 bool loadItems(ItemCatalog& catalog, const std::filesystem::path& file, std::string* error)
 {
-    std::ifstream in(file);
+    engine::VfsStream in(file);
     if (!in) {
         if (error)
             *error = "cannot open " + file.string();

@@ -1,4 +1,5 @@
 #include "engine/Scene.h"
+#include "engine/Vfs.h"
 #include "engine/Probes.h"
 #include <cmath>
 #include <fstream>
@@ -464,7 +465,7 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
 LoadingScreen readLoadingScreen(const std::filesystem::path& file)
 {
     LoadingScreen result;
-    std::ifstream in(file);
+    engine::VfsStream in(file);
     std::string line;
     while (std::getline(in, line)) {
         std::istringstream ls(line);
@@ -486,7 +487,7 @@ LoadingScreen readLoadingScreen(const std::filesystem::path& file)
 
 bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* error, LoadProgress* progress, const glm::vec3* streamFrom)
 {
-    std::ifstream in(file);
+    engine::VfsStream in(file);
     if (!in) {
         setError(error, "Cannot open " + file.string());
         return false;
@@ -516,7 +517,7 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
         StreamingSettings streaming;
         glm::vec3 start(0.0f);
         bool inModel = false;
-        std::ifstream scan(file);
+        engine::VfsStream scan(file);
         std::string scanLine;
         auto resolve = [&](const std::string& path) {
             std::filesystem::path p = pathFromUtf8(path);
@@ -1207,7 +1208,7 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
     {
         const std::filesystem::path baked = probeFile(file);
         std::error_code ec;
-        if (std::filesystem::exists(baked, ec)) {
+        if (fileExists(baked)) {
             auto probes = std::make_shared<ProbeSet>();
             std::string probeError;
             if (loadProbes(*probes, baked, &probeError))
@@ -1503,7 +1504,7 @@ std::filesystem::path findLodFile(const std::filesystem::path& file)
     std::filesystem::path lod = file;
     lod.replace_filename(file.stem().u8string() + u8"_lod1" + file.extension().u8string());
     std::error_code ec;
-    return std::filesystem::exists(lod, ec) ? lod : std::filesystem::path();
+    return fileExists(lod) ? lod : std::filesystem::path();
 }
 
 } // namespace engine

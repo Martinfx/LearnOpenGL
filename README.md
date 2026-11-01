@@ -300,6 +300,20 @@ Explicitní `self:play(klip)` graf dočasně přebije, `self:use_graph()` vrát�
 - **Editor:** při startu se ukáže úvodní obrazovka s progressbarem, dokud se nenačte první level. Při otevírání levelu je progress nad 3D pohledem a ve stavovém řádku.
 - **Písmo:** DejaVu Sans v `assets/fonts` (licence v `LICENSE-DejaVu.txt`), vykreslené přes stb_truetype.
 
+## Archivy a mody (VFS)
+
+- Hra čte assety přes virtuální souborový systém (`engine/Vfs.h`) ve vrstvách, poslední vyhrává:
+  1. složka `assets/` vedle `fps_game` (volné soubory, s nimi pracuje editor),
+  2. archivy `*.pak` vedle `fps_game` (abecedně),
+  3. mody v `mods/`: složky i `.pak` (abecedně), které nahrazují soubory podle cesty nebo přidávají nové.
+- Přes VFS jdou levely, materiály, textury, glTF i jeho `.bin`, zvuky, Lua skripty, terén, zbraně, předměty,
+  frakce, úkoly (i výpis složky), dialogy, částice a credits. Mod tedy přidá level do menu nebo změní zbraň
+  jen tím, že soubor položí na stejnou cestu (např. `mods/muj_mod/weapons/ak74.weapon`).
+- Uvařené textury a meshe mají v klíči cache vrstvu, ze které soubor přišel: textura z modu se uvaří zvlášť.
+- **Balení:** `fps_pack assets game.pak` zabalí assety (bez `.blend`, `sounds/source`, skriptů nástrojů),
+  `--skip-unused` vynechá i to, co `asset_check` hlásí jako nepoužité. `fps_pack game.pak --list` vypíše obsah.
+  Hra vypíše připojené vrstvy do logu (`vfs: archive game.pak`, `vfs: mod muj_mod/`).
+
 ## Demo a benchmark
 
 - **Záznam:** `fps_game level.level --record trasa.demo` (v editoru Game > Demo > Record demo). Ukládá se, co

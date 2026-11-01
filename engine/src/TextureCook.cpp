@@ -1,6 +1,7 @@
 // Texture cooking: mip chain + S3TC/RGTC block compression (stb_dxt), with a
 // disk cache so a texture is compressed once and later loads skip both the
 // PNG/JPEG decode and the compression.
+#include "engine/Vfs.h"
 #include <fstream>
 #include <cstring> // stb_dxt uses memcpy without including it
 #define STB_DXT_IMPLEMENTATION
@@ -381,12 +382,9 @@ CookedTexture cookTexture(const std::uint8_t* rgba, int width, int height, const
 
 std::string textureCacheKey(const std::filesystem::path& source, const std::string& extra, const CookOptions& o)
 {
-    std::error_code ec;
-    const auto size = std::filesystem::file_size(source, ec);
-    const auto time = std::filesystem::last_write_time(source, ec).time_since_epoch().count();
-    const std::u8string path = std::filesystem::absolute(source, ec).lexically_normal().generic_u8string();
-    std::string key(path.begin(), path.end());
-    key += '|' + std::to_string(static_cast<unsigned long long>(size)) + '|' + std::to_string(static_cast<long long>(time)) + '|' + extra + '|' + std::to_string(static_cast<int>(o.usage)) +
+    // Source path, size and time, of the layer that provides it (a mod's copy is another texture).
+    std::string key = vfs().identity(source);
+    key += '|' + extra + '|' + std::to_string(static_cast<int>(o.usage)) +
            (o.srgb ? "s" : "l") + (o.compress ? "c" : "u") + (o.mipmaps ? "m" : "n") + std::to_string(o.maxSize) +
            (o.alphaCoverage > 0.0f ? "a" + std::to_string(static_cast<int>(o.alphaCoverage * 1000.0f + 0.5f)) : std::string()) + "|v" +
            std::to_string(kVersion);

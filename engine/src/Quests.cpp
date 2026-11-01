@@ -1,4 +1,5 @@
 #include "engine/Quests.h"
+#include "engine/Vfs.h"
 
 #include <algorithm>
 #include <fstream>
@@ -61,7 +62,7 @@ const char* questStatusName(Quests::Status s)
 
 bool loadQuest(QuestDef& quest, const std::filesystem::path& file, std::string* error)
 {
-    std::ifstream in(file);
+    engine::VfsStream in(file);
     if (!in) {
         if (error)
             *error = "cannot open " + file.string();
@@ -151,9 +152,9 @@ int Quests::loadFolder(const std::filesystem::path& folder, std::vector<std::str
     int n = 0;
     std::error_code ec;
     std::vector<std::filesystem::path> files;
-    for (std::filesystem::recursive_directory_iterator it(folder, ec), end; !ec && it != end; it.increment(ec))
-        if (it->is_regular_file() && it->path().extension() == ".quest")
-            files.push_back(it->path());
+    for (const std::filesystem::path& f : vfs().list(folder, true)) // loose, archives and mods
+        if (f.extension() == ".quest")
+            files.push_back(f);
     std::sort(files.begin(), files.end());
     for (const auto& f : files) {
         QuestDef d;

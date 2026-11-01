@@ -1,4 +1,5 @@
 #include "engine/Dialog.h"
+#include "engine/Vfs.h"
 #include "engine/Quests.h"
 
 #include <fstream>
@@ -51,7 +52,7 @@ const DialogNode* DialogDef::node(std::string_view id) const
 
 bool loadDialog(DialogDef& dialog, const std::filesystem::path& file, std::string* error)
 {
-    std::ifstream in(file);
+    engine::VfsStream in(file);
     if (!in) {
         if (error)
             *error = "cannot open " + file.string();

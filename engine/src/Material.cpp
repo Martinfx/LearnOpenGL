@@ -1,4 +1,5 @@
 #include "engine/Material.h"
+#include "engine/Vfs.h"
 
 #include <mutex>
 #include "engine/Scene.h"
@@ -42,19 +43,10 @@ std::filesystem::path normalized(const std::filesystem::path& p)
 
 bool readFile(const std::filesystem::path& file, std::vector<unsigned char>& data)
 {
-    const std::u8string u8 = file.u8string();
-    FILE* f = std::fopen(std::string(u8.begin(), u8.end()).c_str(), "rb");
-#ifdef _WIN32
-    if (!f)
-        f = _wfopen(file.wstring().c_str(), L"rb");
-#endif
-    if (!f)
+    std::string bytes;
+    if (!engine::readFile(file, bytes)) // through the VFS: archives and mods
         return false;
-    unsigned char buf[65536];
-    std::size_t n;
-    while ((n = std::fread(buf, 1, sizeof buf, f)) > 0)
-        data.insert(data.end(), buf, buf + n);
-    std::fclose(f);
+    data.insert(data.end(), bytes.begin(), bytes.end());
     return true;
 }
 
@@ -85,7 +77,7 @@ std::filesystem::path textureSettingsPath(const std::filesystem::path& image)
 TextureSettings readTextureSettings(const std::filesystem::path& image, const TextureSettings& defaults)
 {
     TextureSettings s = defaults;
-    std::ifstream in(textureSettingsPath(image));
+    engine::VfsStream in(textureSettingsPath(image));
     std::string line;
     while (std::getline(in, line)) {
         std::istringstream ls(line);
@@ -211,7 +203,7 @@ std::shared_ptr<TextureAsset> loadTextureAsset(const std::filesystem::path& imag
         if (auto shared = it->second.lock())
             return shared;
 
-    if (!std::filesystem::exists(key)) {
+    if (!fileExists(key)) {
         setError(error, "Cannot open " + key.string());
         return nullptr;
     }
@@ -355,7 +347,7 @@ namespace {
 
 bool parseMaterial(Material& m, const std::filesystem::path& file, std::string* error)
 {
-    std::ifstream in(file);
+    engine::VfsStream in(file);
     if (!in) {
         setError(error, "Cannot open " + file.string());
         return false;

@@ -52,6 +52,7 @@ add_library(engine STATIC
     src/ScriptDebug.cpp
     src/Demo.cpp
     src/MeshCache.cpp
+    src/Vfs.cpp
     src/Items.cpp
     src/Log.cpp
     src/Paths.cpp

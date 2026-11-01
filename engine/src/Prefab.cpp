@@ -1,4 +1,5 @@
 #include "engine/Prefab.h"
+#include "engine/Vfs.h"
 #include "engine/SceneGraph.h"
 
 #include <algorithm>
@@ -206,7 +207,7 @@ std::shared_ptr<const Scene> loadPrefab(const std::filesystem::path& file, std::
             *error = "prefabs nested too deep (a prefab inside itself?): " + file.string();
         return nullptr;
     }
-    if (!std::filesystem::exists(k)) {
+    if (!fileExists(k)) {
         if (error)
             *error = "missing prefab " + file.string();
         return nullptr;

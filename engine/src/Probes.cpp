@@ -1,4 +1,5 @@
 #include "engine/Probes.h"
+#include "engine/Vfs.h"
 
 #include "engine/EntityIO.h"
 #include "engine/Scene.h"
@@ -210,7 +211,7 @@ bool saveProbes(const ProbeSet& probes, const std::filesystem::path& file, std::
 
 bool loadProbes(ProbeSet& probes, const std::filesystem::path& file, std::string* error)
 {
-    std::ifstream in(file, std::ios::binary);
+    engine::VfsStream in(file);
     auto fail = [&](const char* why) {
         if (error)
             *error = file.string() + ": " + why;
