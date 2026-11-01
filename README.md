@@ -214,6 +214,15 @@ kontrolu syntaxe při psaní (chybný řádek je červeně podtržený a popsan�
 Ctrl+H nahrazování, Ctrl+G skok na řádek. Ctrl+S uloží skript v aktivní záložce; Play a uložení úrovně
 uloží i otevřené skripty. Po uložení se obnoví parametry skriptu v Properties.
 
+**Debugger:** klik na čísla řádků (nebo F9) dá na řádek breakpoint (červená tečka). Play (F5) spustí hru
+napojenou na editor; když skript dojde na breakpoint, hra se zastaví, editor se ukáže s žlutou šipkou na
+řádku a panel **Script Debugger** dole ukáže, která entita skript běží, zásobník volání a proměnné
+vybraného rámce: lokální, upvalue (proměnné skriptu jako `done`), `props` entity a `self` (jméno, typ,
+poloha, zdraví). F8 pokračovat, F10 krok přes, F11 krok do funkce, Shift+F11 ven z funkce, Break zastaví
+na příštím řádku, který jakýkoli skript spustí (menu Game > Script debugger). Breakpointy jde přidávat a
+mazat i za běhu. Bez breakpointů debugger nic nestojí. Uložený skript se do běžící hry nahraje hned
+(hot reload, stav entit zůstává).
+
 ## Materiály a textury
 
 Renderer je fyzikálně založený (PBR, metal/roughness jako glTF a Blender Principled BSDF): albedo,

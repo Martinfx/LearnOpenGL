@@ -20,6 +20,7 @@
 #include "AssetPaths.h"
 #include "MaterialEditor.h"
 #include "ScriptEditor.h"
+#include "ScriptDebugPanel.h"
 #include "TextureEditor.h"
 #include "Vec3Editor.h"
 #include "Viewport.h"
@@ -258,7 +259,7 @@ void MainWindow::buildMenus()
 
     QMenu* script = menuBar()->addMenu(tr("&Script"));
     script->addAction(tr("&New script..."), this, &MainWindow::newScript);
-    script->addAction(tr("&Open script..."), this, &MainWindow::openScriptDialog);
+    script->addAction(tr("&Open script..."), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_O), this, &MainWindow::openScriptDialog);
     script->addAction(tr("Save &all scripts"), this, [this] { saveAllScripts(); });
     script->addSeparator();
     script->addAction(tr("&Find"), QKeySequence::Find, this, [this] {
@@ -352,6 +353,25 @@ void MainWindow::buildMenus()
     QMenu* game = menuBar()->addMenu(tr("&Game"));
     QAction* play = game->addAction(tr("&Play level"), QKeySequence(Qt::Key_F5), this, &MainWindow::playLevel);
     playAction_ = play;
+    game->addSeparator();
+    QMenu* debugMenu = game->addMenu(tr("Script &debugger"));
+    debugMenu->addAction(tr("&Continue"), QKeySequence(Qt::Key_F8), this, [this] { debugCommand("continue"); });
+    debugMenu->addAction(tr("Step &over"), QKeySequence(Qt::Key_F10), this, [this] { debugCommand("next"); });
+    debugMenu->addAction(tr("Step &into"), QKeySequence(Qt::Key_F11), this, [this] { debugCommand("step"); });
+    debugMenu->addAction(tr("Step o&ut"), QKeySequence(Qt::SHIFT | Qt::Key_F11), this, [this] { debugCommand("out"); });
+    debugMenu->addAction(tr("&Break"), this, [this] { debugCommand("pause"); });
+    debugMenu->addSeparator();
+    debugMenu->addAction(tr("Toggle breakpoint (F9 in a script)"), this, [this] {
+        if (ScriptEditor* se = currentScript())
+            se->editor()->toggleBreakpoint(se->editor()->textCursor().blockNumber() + 1);
+    });
+    debugMenu->addAction(tr("&Remove all breakpoints"), this, [this] {
+        breakpoints_.clear();
+        for (int i = 1; i < tabs_->count(); ++i)
+            if (auto* se = qobject_cast<ScriptEditor*>(tabs_->widget(i)))
+                se->editor()->setBreakpoints({});
+        sendDebug("dbg clearall");
+    });
 
     // View: perspective or orthographic top / front / side, or all four at once.
     QMenu* viewMenu = menuBar()->addMenu(tr("&View"));
@@ -2413,6 +2433,16 @@ void MainWindow::buildDocks()
     logDock_->setWidget(logHost);
     addDockWidget(Qt::BottomDockWidgetArea, logDock_);
     tabifyDockWidget(assetsDock, logDock_);
+    // Script debugger: stack and variables of a paused script of the running game.
+    debugPanel_ = new ScriptDebugPanel(this);
+    connect(debugPanel_, &ScriptDebugPanel::command, this, &MainWindow::debugCommand);
+    connect(debugPanel_, &ScriptDebugPanel::frameSelected, this, [this](const QString& key, int line) { showScriptLine(key, line, false); });
+    debugDock_ = new QDockWidget(tr("Script Debugger"), this);
+    debugDock_->setObjectName("scriptDebugger");
+    debugDock_->setWidget(debugPanel_);
+    addDockWidget(Qt::BottomDockWidgetArea, debugDock_);
+    tabifyDockWidget(logDock_, debugDock_);
+    assetsDock->raise();
     // Engine log (audio, physics, scripts, loading...) shows here too, from any thread.
     for (const engine::LogLine& line : engine::recentLog(200))
         appendLog(QString::fromStdString(line.category + ": " + line.text), line.level >= engine::LogLevel::Error ? 2 : line.level == engine::LogLevel::Warning ? 1 : 0);
@@ -4331,7 +4361,7 @@ void MainWindow::playLevel()
 #else
     const QString exe = QDir(QCoreApplication::applicationDirPath()).filePath("fps_game");
 #endif
-    QStringList args{snapshot};
+    QStringList args{snapshot, "--debug"}; // the script debugger talks on stdin / stdout
     if (customShaders_)
         args << "--shaders" << shaderRoot(); // the game runs the shaders edited here
     if (!QFileInfo::exists(exe)) {
@@ -4345,11 +4375,23 @@ void MainWindow::playLevel()
     game_->setProcessChannelMode(QProcess::MergedChannels);
     connect(game_, &QProcess::readyReadStandardOutput, this, [this, process = game_] {
         const QString text = QString::fromLocal8Bit(process->readAllStandardOutput());
-        for (const QString& line : text.split('\n', Qt::SkipEmptyParts))
+        for (const QString& line : text.split('\n', Qt::SkipEmptyParts)) {
+            if (line.startsWith(QLatin1String("@dbg"))) { // the script debugger's protocol (engine/ScriptDebug.h)
+                const std::string l = line.trimmed().toStdString();
+                if (l == "@dbg resumed")
+                    onScriptResumed();
+                else if (engine::ScriptDebugger::parsePauseLine(l, pendingPause_))
+                    onScriptPaused();
+                continue;
+            }
             appendLog(QStringLiteral("[game] ") + line.trimmed(), 0);
+        }
     });
     connect(game_, &QProcess::finished, this, [this, process = game_](int code) {
         appendLog(tr("[game] exited with code %1").arg(code), code == 0 ? 0 : 1);
+        if (game_ == process)
+            onScriptResumed();
+        debugPanel_->showRunning(false);
         process->deleteLater();
         if (game_ == process)
             game_ = nullptr;
@@ -4363,7 +4405,85 @@ void MainWindow::playLevel()
     appendLog(tr("Play: %1 %2").arg(QDir::toNativeSeparators(exe), args.join(' ')), 0);
     game_->start(exe, args);
     gamePaused_ = false;
+    for (const auto& [file, lines] : breakpoints_)
+        for (int l : lines)
+            sendDebug(QStringLiteral("dbg break \"%1\" %2").arg(QString::fromStdString(file)).arg(l));
+    debugPanel_->showRunning(true);
     updatePlayButtons();
+}
+
+void MainWindow::sendDebug(const QString& line)
+{
+    if (game_ && game_->state() != QProcess::NotRunning)
+        game_->write((line + '\n').toUtf8());
+}
+
+void MainWindow::debugCommand(const QString& word)
+{
+    if (!game_ || game_->state() == QProcess::NotRunning)
+        return;
+    if (word != "pause" && !debugPanel_->paused())
+        return;
+    if (word == "pause" && gamePaused_)
+        pauseGame(); // a stopped process could not answer
+    sendDebug("dbg " + word);
+}
+
+void MainWindow::onScriptPaused()
+{
+    const engine::ScriptDebugPause p = pendingPause_;
+    debugPanel_->showPause(p);
+    debugDock_->show();
+    debugDock_->raise();
+    appendLog(tr("[debug] %1:%2 stopped (%3)").arg(QString::fromStdString(p.file)).arg(p.line).arg(QString::fromStdString(p.reason)), 0);
+    showScriptLine(QString::fromStdString(p.file), p.line, true);
+    raise();
+    activateWindow();
+}
+
+void MainWindow::onScriptResumed()
+{
+    debugPanel_->showRunning(game_ != nullptr);
+    for (int i = 1; i < tabs_->count(); ++i)
+        if (auto* se = qobject_cast<ScriptEditor*>(tabs_->widget(i)))
+            se->editor()->setExecutionLine(0);
+    executionScript_.clear();
+}
+
+void MainWindow::showScriptLine(const QString& key, int line, bool execution)
+{
+    if (key.isEmpty() || key == "[C]")
+        return;
+    const QString path = QDir::isAbsolutePath(key) ? key : assetPath(key);
+    if (!QFileInfo::exists(path))
+        return;
+    ScriptEditor* se = openScript(path);
+    if (!se)
+        return;
+    if (execution) {
+        for (int i = 1; i < tabs_->count(); ++i)
+            if (auto* other = qobject_cast<ScriptEditor*>(tabs_->widget(i)); other && other != se)
+                other->editor()->setExecutionLine(0);
+        se->editor()->setExecutionLine(line);
+        executionScript_ = se->path();
+    } else {
+        se->editor()->goToLine(line);
+    }
+}
+
+void MainWindow::attachBreakpoints(ScriptEditor* se)
+{
+    const std::string key = engine::ScriptDebugger::fileKey(se->path().toStdString());
+    if (const auto it = breakpoints_.find(key); it != breakpoints_.end())
+        se->editor()->setBreakpoints(it->second);
+    connect(se, &ScriptEditor::breakpointToggled, this, [this](const QString& path, int line, bool on) {
+        const std::string k = engine::ScriptDebugger::fileKey(path.toStdString());
+        if (on)
+            breakpoints_[k].insert(line);
+        else if (auto b = breakpoints_.find(k); b != breakpoints_.end() && (b->second.erase(line), b->second.empty()))
+            breakpoints_.erase(b);
+        sendDebug(QStringLiteral("dbg %1 \"%2\" %3").arg(on ? "break" : "clear", QString::fromStdString(k)).arg(line));
+    });
 }
 
 void MainWindow::closeEvent(QCloseEvent* e)
@@ -4500,6 +4620,7 @@ ScriptEditor* MainWindow::openScript(const QString& path)
     const int index = tabs_->addTab(se, se->title());
     tabs_->setTabToolTip(index, absolute);
     tabs_->setCurrentIndex(index);
+    attachBreakpoints(se);
     connect(se, &ScriptEditor::modificationChanged, this, [this, se] {
         if (const int i = tabs_->indexOf(se); i >= 0)
             tabs_->setTabText(i, se->title());

@@ -17,6 +17,8 @@ add_executable(fps_editor
     MaterialEditor.cpp
     MaterialEditor.h
     ScriptEditor.cpp
+    ScriptDebugPanel.cpp
+    ScriptDebugPanel.h
     ShaderEditor.cpp
     ShaderEditor.h
     TextureEditor.cpp

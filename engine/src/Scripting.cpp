@@ -7,6 +7,7 @@
 #include "engine/NavMesh.h"
 #include "engine/Physics.h"
 #include "engine/PlayerController.h"
+#include "engine/ScriptDebug.h"
 
 #include <sol/sol.hpp>
 
@@ -242,10 +243,17 @@ struct ScriptSystem::Impl {
         return it != se->e().properties.end() && it->second == "1";
     }
     static bool isPlayer(const sol::object& o) { return o.is<std::string>() && o.as<std::string>() == "player"; }
+    std::unique_ptr<ScriptDebugger> debugger; // breakpoints and stepping (editor's Play)
+    void running(const ScriptEntity& se)
+    {
+        if (debugger)
+            debugger->setEntity(se.e().name);
+    }
     void callScript(ScriptEntity& se, sol::protected_function& fn, const char* what, auto&&... args)
     {
         if (se.failed || !fn.valid())
             return;
+        running(se);
         auto r = fn(&se, std::forward<decltype(args)>(args)...);
         if (!r.valid()) {
             sol::error err = r;
@@ -894,7 +902,29 @@ ScriptSystem::ScriptSystem(Scene& scene, PhysicsWorld& physics, PlayerController
     : impl_(std::make_unique<Impl>(scene, physics, player, std::move(log)))
 {
     impl_->bindApi();
+    impl_->debugger = std::make_unique<ScriptDebugger>(impl_->lua.lua_state());
+    impl_->debugger->setDescriber([](lua_State* L, int index) -> std::string {
+        if (sol::stack::check<ScriptEntity*>(L, index, sol::no_panic)) {
+            const ScriptEntity* se = sol::stack::get<ScriptEntity*>(L, index);
+            if (!se)
+                return {};
+            const Entity& e = se->e();
+            char buf[160];
+            std::snprintf(buf, sizeof buf, " (%s) at %.1f %.1f %.1f, health %.0f%s", e.type.c_str(), e.position.x, e.position.y, e.position.z,
+                          e.health, e.alive ? "" : ", dead");
+            return "entity \"" + e.name + "\"" + buf;
+        }
+        if (sol::stack::check<glm::vec3>(L, index, sol::no_panic)) {
+            const glm::vec3 v = sol::stack::get<glm::vec3>(L, index);
+            char buf[96];
+            std::snprintf(buf, sizeof buf, "vec3(%.3g, %.3g, %.3g)", v.x, v.y, v.z);
+            return buf;
+        }
+        return {};
+    });
 }
+
+ScriptDebugger& ScriptSystem::debugger() { return *impl_->debugger; }
 
 ScriptSystem::~ScriptSystem() = default;
 
@@ -929,6 +959,7 @@ int ScriptSystem::start()
         }
         buildProps(d.lua, se->env, e);
         if (sol::protected_function onStart = se->env["on_start"]; onStart.valid()) {
+            d.running(*se);
             auto r = onStart(se.get());
             if (!r.valid()) {
                 sol::error err = r;
@@ -976,6 +1007,7 @@ void ScriptSystem::fixedUpdate(float dt)
     for (auto& se : d.entities) {
         if (se->failed || !se->onUpdate.valid() || !se->e().alive || se->e().offline)
             continue;
+        d.running(*se);
         auto r = se->onUpdate(se.get(), dt);
         if (!r.valid()) {
             sol::error err = r;

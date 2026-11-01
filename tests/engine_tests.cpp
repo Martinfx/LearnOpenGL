@@ -54,6 +54,7 @@
 #include <engine/FileWatcher.h>
 #include <engine/HotReload.h>
 #include <engine/Items.h>
+#include <engine/ScriptDebug.h>
 #include <engine/Prefab.h>
 #include <engine/RangeAllocator.h>
 #include <engine/PlayerController.h>
@@ -350,6 +351,87 @@ void testScriptApi()
     runAi(s, 1.0f);
     check(s.entities[0].position.x < 7.5f, "scripted entity walks toward the player");
     check(std::abs(s.entities[0].yawDegrees - 180.0f) < 1.0f, "face() turns it toward the player");
+}
+
+void testScriptDebugger()
+{
+    check(engine::ScriptDebugger::fileKey("@/home/x/assets/scripts/enemy.lua") == "scripts/enemy.lua" &&
+              engine::ScriptDebugger::fileKey("C:\\game\\bin\\assets\\scripts\\dog.lua") == "scripts/dog.lua" &&
+              engine::ScriptDebugger::fileKey("../scripts/crow.lua") == "scripts/crow.lua",
+          "debugger: files are named below assets/");
+    const auto dir = std::filesystem::temp_directory_path() / "dbg_test" / "assets" / "scripts";
+    std::filesystem::create_directories(dir);
+    {
+        std::ofstream f(dir / "dbg.lua");
+        f << "properties = { { \"speed\", 3, \"x\" } }\n"   // 1
+             "local count = 0\n"                            // 2
+             "local function bump(n)\n"                     // 3
+             "    count = count + n\n"                      // 4
+             "    return count\n"                           // 5
+             "end\n"                                        // 6
+             "function on_update(self, dt)\n"               // 7
+             "    local before = count\n"                   // 8
+             "    local after = bump(2)\n"                  // 9
+             "    local done = after * props.speed\n"       // 10
+             "end\n";                                       // 11
+    }
+    auto s = flatFloor();
+    engine::Entity e;
+    e.name = "Debugged";
+    e.scriptPath = dir / "dbg.lua";
+    s.entities.push_back(e);
+    engine::PhysicsWorld world;
+    world.setLevel(s);
+    engine::PlayerController player;
+    player.spawn(world, {0, 0, 0});
+    engine::ScriptSystem scripts(s, world, player, [](const std::string&) {});
+    scripts.start();
+    std::vector<engine::ScriptDebugPause> pauses;
+    const engine::ScriptDebugAction plan[] = {engine::ScriptDebugAction::StepInto, engine::ScriptDebugAction::StepOut,
+                                              engine::ScriptDebugAction::Continue};
+    scripts.debugger().setPauseHandler([&](const engine::ScriptDebugPause& p) {
+        pauses.push_back(p);
+        return pauses.size() <= 3 ? plan[pauses.size() - 1] : engine::ScriptDebugAction::Continue;
+    });
+    scripts.debugger().setBreakpoint((dir / "dbg.lua").string(), 9, true);
+    scripts.fixedUpdate(1.0f / 60.0f);
+    auto var = [](const engine::ScriptDebugFrame& f, const std::string& name) {
+        for (const engine::ScriptDebugVar& v : f.vars)
+            if (v.name == name)
+                return v.scope + ":" + v.value;
+        return std::string("-");
+    };
+    check(pauses.size() == 3, "debugger: breakpoint, step into, step out (" + std::to_string(pauses.size()) + " pauses)");
+    if (pauses.size() == 3) {
+        const auto& a = pauses[0];
+        check(a.reason == "breakpoint" && a.file == "scripts/dbg.lua" && a.line == 9 && a.entity == "Debugged" && a.frames[0].function == "on_update",
+              "debugger: stops at the breakpoint in on_update");
+        check(var(a.frames[0], "before") == "local:0" && var(a.frames[0], "dt").rfind("local:0.01", 0) == 0 &&
+                  var(a.frames[0], "self").find("entity \"Debugged\"") != std::string::npos && var(a.frames[0], "count") == "upvalue:0" &&
+                  var(a.frames[0], "speed") == "props:3",
+              "debugger: locals, the entity, upvalues and props (self = " + var(a.frames[0], "self") + ")");
+        const auto& b = pauses[1];
+        check(b.reason == "step" && b.line == 4 && b.frames.size() > a.frames.size() && var(b.frames[0], "n") == "local:2" &&
+                  b.frames[1].line == 9,
+              "debugger: step into enters bump() with n = 2");
+        const auto& c = pauses[2];
+        check(c.line == 10 && var(c.frames[0], "after") == "local:2", "debugger: step out returns to the caller's next line");
+        // The protocol to the editor carries all of it.
+        engine::ScriptDebugPause back;
+        bool done = false;
+        for (const std::string& line : engine::ScriptDebugger::pauseLines(a))
+            done = engine::ScriptDebugger::parsePauseLine(line, back);
+        check(done && back.file == a.file && back.line == 9 && back.frames.size() == a.frames.size() &&
+                  back.frames[0].vars.size() == a.frames[0].vars.size() && var(back.frames[0], "self") == var(a.frames[0], "self"),
+              "debugger: pause lines round trip");
+    }
+    scripts.debugger().setBreakpoint("scripts/dbg.lua", 9, false);
+    scripts.fixedUpdate(1.0f / 60.0f);
+    check(pauses.size() == 3, "debugger: no stop without breakpoints");
+    scripts.debugger().requestPause();
+    scripts.fixedUpdate(1.0f / 60.0f);
+    check(pauses.size() == 4 && pauses.back().reason == "pause" && pauses.back().line == 8, "debugger: pause stops at the next line");
+    std::filesystem::remove_all(std::filesystem::temp_directory_path() / "dbg_test");
 }
 
 void testScriptErrorIsReported()
@@ -3768,6 +3850,7 @@ int main()
         {"testAnomalyStorm", testAnomalyStorm},
         {"testQuestsAndDialogs", testQuestsAndDialogs},
         {"testTradeAndWear", testTradeAndWear},
+        {"testScriptDebugger", testScriptDebugger},
         {"testWorldStreaming", testWorldStreaming},
     };
     for (const auto& [name, run] : tests)

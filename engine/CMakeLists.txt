@@ -49,6 +49,7 @@ add_library(engine STATIC
     src/AnomalyStorm.cpp
     src/Quests.cpp
     src/Dialog.cpp
+    src/ScriptDebug.cpp
     src/Items.cpp
     src/Log.cpp
     src/Paths.cpp

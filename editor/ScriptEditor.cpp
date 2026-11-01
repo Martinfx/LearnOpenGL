@@ -12,6 +12,8 @@
 #include <QHelpEvent>
 #include <QInputDialog>
 #include <QKeyEvent>
+#include <QMouseEvent>
+#include <QPolygonF>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPainter>
@@ -253,6 +255,12 @@ public:
 
 protected:
     void paintEvent(QPaintEvent* e) override { editor_->paintLineNumbers(e); }
+    void mousePressEvent(QMouseEvent* e) override
+    {
+        if (e->button() == Qt::LeftButton)
+            if (const int line = editor_->lineAtY(qRound(e->position().y())); line > 0)
+                editor_->toggleBreakpoint(line); // a click in the gutter sets or clears a breakpoint
+    }
 
 private:
     CodeEditor* editor_;
@@ -291,7 +299,47 @@ int CodeEditor::lineNumberAreaWidth() const
     int digits = 1;
     for (int max = std::max(1, blockCount()); max >= 10; max /= 10)
         ++digits;
-    return 14 + fontMetrics().horizontalAdvance(QLatin1Char('9')) * std::max(3, digits);
+    return 14 + fontMetrics().height() + fontMetrics().horizontalAdvance(QLatin1Char('9')) * std::max(3, digits); // dot column + numbers
+}
+
+int CodeEditor::lineAtY(int y) const
+{
+    QTextBlock block = firstVisibleBlock();
+    int top = qRound(blockBoundingGeometry(block).translated(contentOffset()).top());
+    while (block.isValid()) {
+        const int bottom = top + qRound(blockBoundingRect(block).height());
+        if (y >= top && y < bottom)
+            return block.blockNumber() + 1;
+        block = block.next();
+        top = bottom;
+    }
+    return 0;
+}
+
+void CodeEditor::setBreakpoints(const std::set<int>& lines)
+{
+    breakpoints_ = lines;
+    lineNumbers_->update();
+}
+
+void CodeEditor::toggleBreakpoint(int line)
+{
+    const bool on = !breakpoints_.count(line);
+    if (on)
+        breakpoints_.insert(line);
+    else
+        breakpoints_.erase(line);
+    lineNumbers_->update();
+    emit breakpointToggled(line, on);
+}
+
+void CodeEditor::setExecutionLine(int line)
+{
+    executionLine_ = line;
+    updateExtraSelections();
+    lineNumbers_->update();
+    if (line > 0)
+        goToLine(line);
 }
 
 void CodeEditor::updateLineNumberArea(const QRect& rect, int dy)
@@ -322,6 +370,20 @@ void CodeEditor::paintLineNumbers(QPaintEvent* e)
         if (block.isVisible() && bottom >= e->rect().top()) {
             if (number == errorLine_)
                 painter.fillRect(0, top, lineNumbers_->width(), bottom - top, QColor(0xff, 0xd6, 0xd6));
+            const int h = fontMetrics().height(), dot = std::max(6, h - 6);
+            if (breakpoints_.count(number)) {
+                painter.setRenderHint(QPainter::Antialiasing, true);
+                painter.setPen(Qt::NoPen);
+                painter.setBrush(QColor(0xd0, 0x30, 0x30));
+                painter.drawEllipse(QRect(4, top + (h - dot) / 2, dot, dot));
+            }
+            if (number == executionLine_) { // the paused script is here: a yellow arrow
+                painter.setRenderHint(QPainter::Antialiasing, true);
+                painter.setPen(QColor(0x80, 0x60, 0x00));
+                painter.setBrush(QColor(0xff, 0xc8, 0x20));
+                const QPointF a(3, top + h * 0.25), b(3 + dot, top + h * 0.5), c(3, top + h * 0.75);
+                painter.drawPolygon(QPolygonF({a, b, c}));
+            }
             painter.setPen(number == current ? QColor(0x20, 0x20, 0x20) : QColor(0x99, 0x99, 0x99));
             painter.drawText(0, top, lineNumbers_->width() - 6, fontMetrics().height(), Qt::AlignRight,
                              QString::number(number));
@@ -361,6 +423,15 @@ void CodeEditor::updateExtraSelections()
     line.cursor = textCursor();
     line.cursor.clearSelection();
     list.append(line);
+    if (executionLine_ > 0) {
+        if (const QTextBlock block = document()->findBlockByNumber(executionLine_ - 1); block.isValid()) {
+            QTextEdit::ExtraSelection ex;
+            ex.format.setBackground(QColor(0x6b, 0x55, 0x10)); // dark amber: the code stays readable
+            ex.format.setProperty(QTextFormat::FullWidthSelection, true);
+            ex.cursor = QTextCursor(block);
+            list.append(ex);
+        }
+    }
 
     if (errorLine_ > 0) {
         const QTextBlock block = document()->findBlockByNumber(errorLine_ - 1);
@@ -537,6 +608,10 @@ void CodeEditor::insertCompletion(const QString& text)
 
 void CodeEditor::keyPressEvent(QKeyEvent* e)
 {
+    if (e->key() == Qt::Key_F9 && e->modifiers() == Qt::NoModifier) {
+        toggleBreakpoint(textCursor().blockNumber() + 1);
+        return;
+    }
     if (completer_->popup()->isVisible()) {
         switch (e->key()) {
         case Qt::Key_Enter:
@@ -633,6 +708,7 @@ ScriptEditor::ScriptEditor(QWidget* parent)
     : QWidget(parent)
 {
     editor_ = new CodeEditor(this);
+    connect(editor_, &CodeEditor::breakpointToggled, this, [this](int line, bool on) { emit breakpointToggled(path_, line, on); });
 
     findBar_ = new QWidget(this);
     auto* findLayout = new QVBoxLayout(findBar_);

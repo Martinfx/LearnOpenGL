@@ -12,6 +12,7 @@ namespace engine {
 
 class PhysicsWorld;
 class NavMesh;
+class ScriptDebugger;
 
 // Result of compiling a script without running it (editor syntax check).
 struct ScriptCheck {
@@ -129,6 +130,8 @@ public:
     std::string takeLevelChange();
     void setPlayerHealth(float health);
     int errorCount() const;
+    // Breakpoints and stepping (engine/ScriptDebug.h); no cost while none is set.
+    ScriptDebugger& debugger();
 
 private:
     struct Impl;

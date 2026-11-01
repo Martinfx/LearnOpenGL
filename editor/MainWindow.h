@@ -1,4 +1,7 @@
 #pragma once
+#include <engine/ScriptDebug.h>
+#include <map>
+#include <set>
 #include <engine/Factions.h>
 #include <array>
 #include <atomic>
@@ -214,6 +217,19 @@ private:
     std::vector<QAction*> modeActions_;
     QProcess* game_ = nullptr;
     bool gamePaused_ = false;
+    // Script debugger: breakpoints by file key ("scripts/enemy.lua"), the pause being read from
+    // the game's output and the panel showing it.
+    std::map<std::string, std::set<int>> breakpoints_;
+    engine::ScriptDebugPause pendingPause_;
+    class ScriptDebugPanel* debugPanel_ = nullptr;
+    QDockWidget* debugDock_ = nullptr;
+    QString executionScript_; // absolute path of the script showing the paused line
+    void sendDebug(const QString& line);
+    void debugCommand(const QString& word);
+    void onScriptPaused();
+    void onScriptResumed();
+    void showScriptLine(const QString& key, int line, bool execution);
+    void attachBreakpoints(class ScriptEditor* se);
     QPlainTextEdit* log_ = nullptr;
     QDockWidget* logDock_ = nullptr;
     QDockWidget* assetsDock_ = nullptr;

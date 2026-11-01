@@ -45,6 +45,7 @@
 #include "KeyNames.h"
 #include "MapHud.h"
 #include <engine/Scripting.h>
+#include <engine/ScriptDebug.h>
 #include <engine/NavMesh.h>
 #include <engine/Weapon.h>
 
@@ -64,6 +65,10 @@
 #include <map>
 #include <optional>
 #include <thread>
+#include <deque>
+#include <iostream>
+#include <mutex>
+#include <set>
 #include <chrono>
 #include <functional>
 #include <array>
@@ -372,6 +377,72 @@ glm::mat4 weaponTransform(const engine::Weapon& weapon, float time, float moveSp
     return glm::scale(m, glm::vec3(weapon.settings.viewScale));
 }
 
+// Script debugging from the editor (Play starts the game with --debug): commands come on
+// stdin ("dbg break scripts/enemy.lua 42", "dbg continue", ...), a reader thread queues them;
+// pauses go to stdout as "@dbg ..." lines (engine/ScriptDebug.h).
+struct DebugChannel {
+    bool on = false;
+    std::mutex mutex;
+    std::deque<std::string> lines;
+    std::map<std::string, std::set<int>> breakpoints; // kept across levels
+
+    void start()
+    {
+        on = true;
+        std::thread([this] {
+            for (std::string line; std::getline(std::cin, line);) {
+                if (!line.empty() && line.back() == '\r')
+                    line.pop_back();
+                std::lock_guard lock(mutex);
+                lines.push_back(line);
+            }
+        }).detach(); // blocks in getline until the editor closes the pipe
+    }
+    std::optional<std::string> take()
+    {
+        std::lock_guard lock(mutex);
+        if (lines.empty())
+            return std::nullopt;
+        std::string l = std::move(lines.front());
+        lines.pop_front();
+        return l;
+    }
+    // Breakpoint commands; returns the step command word for the others ("continue", "step"...).
+    std::string handle(const std::string& line, engine::ScriptDebugger& debugger)
+    {
+        std::istringstream in(line);
+        std::string tag, cmd, file;
+        int at = 0;
+        if (!(in >> tag >> cmd) || tag != "dbg")
+            return {};
+        if ((cmd == "break" || cmd == "clear") && in >> std::quoted(file) >> at) {
+            const bool set = cmd == "break";
+            const std::string key = engine::ScriptDebugger::fileKey(file);
+            if (set)
+                breakpoints[key].insert(at);
+            else
+                breakpoints[key].erase(at);
+            debugger.setBreakpoint(key, at, set);
+            return {};
+        }
+        if (cmd == "clearall") {
+            breakpoints.clear();
+            debugger.clearBreakpoints();
+            return {};
+        }
+        if (cmd == "pause") {
+            debugger.requestPause();
+            return {};
+        }
+        return cmd;
+    }
+};
+DebugChannel& debugChannel()
+{
+    static DebugChannel channel;
+    return channel;
+}
+
 void setCaptured(GLFWwindow* window, bool captured)
 {
     glfwSetInputMode(window, GLFW_CURSOR, captured ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
@@ -460,6 +531,8 @@ int main(int argc, char** argv)
         if (arg.size() > 1 && arg[0] == '+' && i + 1 < argc) {
             cvarArgs.push_back(arg);
             cvarArgs.push_back(argv[++i]);
+        } else if (arg == "--debug") {
+            debugChannel().start(); // the editor's script debugger talks on stdin / stdout
         } else if (arg == "--shaders" && i + 1 < argc) {
             if (!renderer.reloadShaders(argv[++i], &error))
                 LOG_WARN("shaders", "%s\n", error.c_str());
@@ -1600,6 +1673,41 @@ int main(int argc, char** argv)
     // run (golden images) shows the same frame whatever the machine's speed.
     const double fixedDt = std::getenv("FPS_ENGINE_FIXED_DT") ? std::strtod(std::getenv("FPS_ENGINE_FIXED_DT"), nullptr) : 0.0;
     double lastTime = fixedDt > 0.0 ? 0.0 : glfwGetTime();
+    if (DebugChannel& dbg = debugChannel(); dbg.on) {
+        // Breakpoints from the editor; a stop blocks the script (and the game) until it says how to go on.
+        for (const auto& [file, lines] : dbg.breakpoints)
+            for (int l : lines)
+                scripts.debugger().setBreakpoint(file, l, true);
+        scripts.debugger().setPauseHandler([&, window](const engine::ScriptDebugPause& p) {
+            for (const std::string& line : engine::ScriptDebugger::pauseLines(p))
+                std::printf("%s\n", line.c_str());
+            std::fflush(stdout);
+            setCaptured(window, false); // the mouse is free to go to the editor
+            glfwSetWindowTitle(window, ("Skript zastaven: " + p.file + ":" + std::to_string(p.line) + " (pokračuj v editoru)").c_str());
+            const double pausedAt = glfwGetTime();
+            engine::ScriptDebugAction action = engine::ScriptDebugAction::Continue;
+            for (bool waiting = true; waiting && !glfwWindowShouldClose(window);) {
+                glfwWaitEventsTimeout(0.02); // the window stays alive while the script waits
+                while (auto line = dbg.take()) {
+                    const std::string cmd = dbg.handle(*line, scripts.debugger());
+                    if (cmd == "continue")
+                        action = engine::ScriptDebugAction::Continue, waiting = false;
+                    else if (cmd == "step")
+                        action = engine::ScriptDebugAction::StepInto, waiting = false;
+                    else if (cmd == "next")
+                        action = engine::ScriptDebugAction::StepOver, waiting = false;
+                    else if (cmd == "out")
+                        action = engine::ScriptDebugAction::StepOut, waiting = false;
+                }
+            }
+            std::printf("@dbg resumed\n");
+            std::fflush(stdout);
+            glfwSetWindowTitle(window, "FPS Engine");
+            lastTime += glfwGetTime() - pausedAt; // the game does not catch up on the time it stood
+            setCaptured(window, captured);
+            return action;
+        });
+    }
     renderer.setDeterministic(fixedDt > 0.0);
     double fpsTimer = 0.0;
     int fpsFrames = 0;
@@ -1691,6 +1799,9 @@ int main(int argc, char** argv)
         lastTime = now;
 
         glfwPollEvents();
+        if (DebugChannel& dbg = debugChannel(); dbg.on)
+            while (auto line = dbg.take())
+                dbg.handle(*line, scripts.debugger()); // breakpoints set while running, "dbg pause"
         // Esc: closes the console (handled by it), steps back in a menu, closes the map, else pauses.
         static bool consoleWasOpen = false;
         if (console.open() != consoleWasOpen) {

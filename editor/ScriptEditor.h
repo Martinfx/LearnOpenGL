@@ -4,6 +4,8 @@
 #include <QTimer>
 #include <QWidget>
 
+#include <set>
+
 class QCheckBox;
 class QCompleter;
 class QLabel;
@@ -31,10 +33,19 @@ public:
     explicit CodeEditor(QWidget* parent = nullptr);
 
     void setErrorLine(int line, const QString& message); // 0 = no error
+    // Debugger: breakpoints (red dots in the gutter, click or F9) and the line a paused script is on.
+    const std::set<int>& breakpoints() const { return breakpoints_; }
+    void setBreakpoints(const std::set<int>& lines);
+    void toggleBreakpoint(int line);
+    void setExecutionLine(int line); // 0 = none
+    int lineAtY(int y) const;
     void goToLine(int line);
     void toggleComment();
     int lineNumberAreaWidth() const;
     void paintLineNumbers(QPaintEvent* e);
+
+signals:
+    void breakpointToggled(int line, bool on);
 
 protected:
     void keyPressEvent(QKeyEvent* e) override;
@@ -53,6 +64,8 @@ private:
     QStandardItemModel* words_;
     int errorLine_ = 0;
     QString errorMessage_;
+    std::set<int> breakpoints_;
+    int executionLine_ = 0;
 };
 
 // One open .lua file: editor, find/replace bar and live syntax check.
@@ -74,6 +87,7 @@ public:
 signals:
     void modificationChanged(bool modified);
     void saved(const QString& path);
+    void breakpointToggled(const QString& path, int line, bool on);
 
 private:
     void check();
