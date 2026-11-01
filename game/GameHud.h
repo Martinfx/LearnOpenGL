@@ -17,9 +17,12 @@ struct HudState {
 class GameHud {
 public:
     void update(float dt, float health); // hurt flash follows health drops
+    void notify(const std::string& text); // short message in the top centre ("Uloženo")
     void draw(engine::Ui2D& ui, int width, int height, const HudState& state) const;
 
 private:
     float lastHealth_ = -1.0f;
     float hurt_ = 0.0f;
+    std::string message_;
+    float messageTime_ = 0.0f;
 };

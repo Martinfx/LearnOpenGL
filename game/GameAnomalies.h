@@ -41,6 +41,7 @@ public:
     float dose() const { return dose_; }
     float doseRate() const { return doseRate_; }
     void resetDose() { dose_ = 0.0f; }
+    void setDose(float rad) { dose_ = rad; } // loading a saved game
     bool empty() const { return field_.anomalies().empty(); }
 
 private:

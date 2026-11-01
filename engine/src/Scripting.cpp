@@ -592,3 +592,160 @@ std::string ScriptSystem::takeLevelChange()
 int ScriptSystem::errorCount() const { return impl_->errors; }
 
 } // namespace engine
+
+namespace engine {
+
+namespace {
+
+// Lua value -> one-line Lua literal (nil, booleans, numbers, strings, vec3, tables with
+// string / number keys). Functions and other userdata are left out.
+void writeLua(const sol::object& o, std::string& out, int depth)
+{
+    switch (o.get_type()) {
+    case sol::type::boolean: out += o.as<bool>() ? "true" : "false"; break;
+    case sol::type::number: {
+        char buf[40];
+        std::snprintf(buf, sizeof buf, "%.17g", o.as<double>());
+        out += buf;
+        break;
+    }
+    case sol::type::string: {
+        out += '"';
+        for (char c : o.as<std::string>()) {
+            switch (c) {
+            case '"': out += "\\\""; break;
+            case '\\': out += "\\\\"; break;
+            case '\n': out += "\\n"; break;
+            case '\r': out += "\\r"; break;
+            default:
+                if (static_cast<unsigned char>(c) < 32) {
+                    char esc[8];
+                    std::snprintf(esc, sizeof esc, "\\%03d", static_cast<unsigned char>(c));
+                    out += esc;
+                } else {
+                    out += c;
+                }
+            }
+        }
+        out += '"';
+        break;
+    }
+    case sol::type::userdata:
+        if (o.is<glm::vec3>()) {
+            const glm::vec3 v = o.as<glm::vec3>();
+            char buf[96];
+            std::snprintf(buf, sizeof buf, "vec3(%.9g,%.9g,%.9g)", v.x, v.y, v.z);
+            out += buf;
+        } else {
+            out += "nil";
+        }
+        break;
+    case sol::type::table: {
+        if (depth > 16) { // cycles or absurd nesting
+            out += "nil";
+            break;
+        }
+        out += '{';
+        bool first = true;
+        for (const auto& [key, value] : o.as<sol::table>()) {
+            const sol::type kt = key.get_type(), vt = value.get_type();
+            if ((kt != sol::type::string && kt != sol::type::number) || vt == sol::type::function || vt == sol::type::lua_nil)
+                continue;
+            if (!first)
+                out += ',';
+            first = false;
+            out += '[';
+            writeLua(key, out, depth + 1);
+            out += "]=";
+            writeLua(value, out, depth + 1);
+        }
+        out += '}';
+        break;
+    }
+    default: out += "nil"; break;
+    }
+}
+
+} // namespace
+
+std::vector<ScriptSystem::EntityState> ScriptSystem::saveEntities()
+{
+    Impl& d = *impl_;
+    std::vector<EntityState> states;
+    for (auto& se : d.entities) {
+        const Entity& e = se->e();
+        EntityState st;
+        st.id = e.id;
+        st.alive = e.alive;
+        st.health = e.health;
+        st.position = e.position;
+        st.yaw = e.yawDegrees;
+        if (!se->failed && se->env.valid()) {
+            if (sol::protected_function onSave = se->env["on_save"]; onSave.valid()) {
+                auto r = onSave(se.get());
+                if (!r.valid()) {
+                    sol::error err = r;
+                    d.report(*se, std::string("on_save: ") + err.what());
+                } else if (r.return_count() > 0) {
+                    sol::object value = r.get<sol::object>();
+                    if (value.get_type() != sol::type::lua_nil)
+                        writeLua(value, st.data, 0);
+                }
+            }
+        }
+        states.push_back(std::move(st));
+    }
+    return states;
+}
+
+void ScriptSystem::restoreEntities(const std::vector<EntityState>& states)
+{
+    Impl& d = *impl_;
+    for (const EntityState& st : states) {
+        auto it = std::find_if(d.entities.begin(), d.entities.end(), [&](const auto& se) { return se->e().id == st.id; });
+        if (it == d.entities.end())
+            continue; // the level changed since the save: that object is gone
+        ScriptEntity& se = **it;
+        Entity& e = se.e();
+        e.alive = st.alive;
+        e.health = st.health;
+        e.yawDegrees = st.yaw;
+        if (se.body)
+            se.body->teleport(st.position);
+        e.position = st.position;
+        se.path.clear();
+        if (se.failed || !se.env.valid())
+            continue;
+        sol::protected_function onLoad = se.env["on_load"];
+        if (!onLoad.valid())
+            continue;
+        sol::object data = sol::lua_nil;
+        if (!st.data.empty()) {
+            // Read the literal in an environment that knows only vec3.
+            sol::environment readEnv(d.lua, sol::create);
+            readEnv["vec3"] = d.lua["vec3"];
+            auto parsed = d.lua.safe_script("return " + st.data, readEnv, sol::script_pass_on_error);
+            if (parsed.valid())
+                data = parsed.get<sol::object>();
+            else
+                d.report(se, "saved data unreadable");
+        }
+        auto r = onLoad(&se, data);
+        if (!r.valid()) {
+            sol::error err = r;
+            d.report(se, std::string("on_load: ") + err.what());
+        }
+    }
+}
+
+double ScriptSystem::time() const
+{
+    return impl_->time;
+}
+
+void ScriptSystem::setTime(double seconds)
+{
+    impl_->time = seconds;
+}
+
+} // namespace engine

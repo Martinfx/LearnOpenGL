@@ -16,3 +16,7 @@ function on_update(self, dt)
         game.log(props.message)
     end
 end
+
+-- Saved games: a reached objective stays reached.
+function on_save(self) return { done = done } end
+function on_load(self, d) done = d and d.done or false end

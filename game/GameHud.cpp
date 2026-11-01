@@ -10,6 +10,13 @@ void GameHud::update(float dt, float health)
         hurt_ = std::min(1.0f, hurt_ + 0.35f + (lastHealth_ - health) * 0.02f);
     lastHealth_ = health;
     hurt_ = std::max(0.0f, hurt_ - dt * 1.5f);
+    messageTime_ = std::max(0.0f, messageTime_ - dt);
+}
+
+void GameHud::notify(const std::string& text)
+{
+    message_ = text;
+    messageTime_ = 2.5f;
 }
 
 void GameHud::draw(engine::Ui2D& ui, int width, int height, const HudState& s) const
@@ -31,6 +38,13 @@ void GameHud::draw(engine::Ui2D& ui, int width, int height, const HudState& s) c
 
     const float margin = std::round(H * 0.025f);
     const float text = std::round(std::clamp(H * 0.022f, 12.0f, 26.0f));
+    if (messageTime_ > 0.0f) { // fades out in its last half second
+        const float a = std::min(1.0f, messageTime_ * 2.0f);
+        const float tw = ui.textWidth(message_, text, true);
+        const glm::vec2 p(std::round((W - tw) * 0.5f), std::round(H * 0.12f));
+        ui.rect(p - glm::vec2(text * 0.8f, text * 0.4f), glm::vec2(tw + text * 1.6f, text * 1.8f), {0.06f, 0.065f, 0.05f, 0.75f * a});
+        ui.text(message_, p, text, {0.93f, 0.62f, 0.2f, a}, true);
+    }
     const glm::vec4 frame(0.06f, 0.065f, 0.05f, 0.75f), bone(0.86f, 0.82f, 0.72f, 1.0f), dim(0.55f, 0.55f, 0.5f, 1.0f);
     const float panelW = std::round(text * 12.0f), panelH = std::round(text * 4.2f);
     const glm::vec2 pos(W - margin - panelW, H - margin - panelH);

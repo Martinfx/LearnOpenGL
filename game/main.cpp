@@ -22,6 +22,7 @@
 #include "GameConsole.h"
 #include "GameHud.h"
 #include "GameMenu.h"
+#include "GameSave.h"
 #include "KeyNames.h"
 #include "MapHud.h"
 #include <engine/Scripting.h>
@@ -39,6 +40,7 @@
 #include <set>
 #include <algorithm>
 #include <atomic>
+#include <ctime>
 #include <map>
 #include <optional>
 #include <thread>
@@ -63,7 +65,7 @@ struct Mouse {
 
 // How a level session ended, and what a level change carries over.
 struct LevelExit {
-    enum Kind { None, Quit, Load, Change } kind = None;
+    enum Kind { None, Quit, Load, Change, LoadSave } kind = None; // LoadSave: `level` is the save file
     std::filesystem::path level;
 };
 struct Carry {
@@ -165,6 +167,8 @@ constexpr Binding kBindings[] = {
     {"in_reload", "R", "Přebití", static_cast<int>(engine::Action::Reload)},
     {"in_bolt", "G", "Hodit šroub", -1},
     {"in_map", "M", "Mapa", -1},
+    {"in_quicksave", "F5", "Rychlé uložení", -1},
+    {"in_quickload", "F9", "Rychlé načtení", -1},
 };
 
 // Current key of a binding (parsed again only when the variable changed).
@@ -488,8 +492,9 @@ int main(int argc, char** argv)
 
     // One level from loading to leaving it (quit, restart, another level). Everything
     // level-scoped lives in here; the window, renderer, UI, console and menu outlive it.
-    auto playLevel = [&](const std::filesystem::path& levelPath, const Carry* carry, Carry& carryOut) -> LevelExit {
+    auto playLevel = [&](const std::filesystem::path& levelPath, const Carry* carry, Carry& carryOut, const SaveGame* loadFrom) -> LevelExit {
     LevelExit exitRequest; // set to leave the level (menu, console `map`, game.change_level)
+    std::function<bool(const std::string&)> saveGame; // console `save` (set once the level runs)
     engine::setCrashContext("level", levelPath.string());
     engine::Scene scene;
     engine::PhysicsWorld physics;
@@ -749,6 +754,17 @@ int main(int argc, char** argv)
                 file = std::filesystem::path(argv[0]).parent_path() / "assets" / "levels" / file;
             return file;
         };
+        cvars.addCommand("save", "save [slot]: saves the game (quick, slot1..slot3)", [&](const std::vector<std::string>& a) {
+            const std::string slot = a.empty() ? "quick" : a[0];
+            return engine::ConsoleResult{saveGame && saveGame(slot), "save " + slot};
+        });
+        cvars.addCommand("load", "load [slot]: loads a saved game (quick, auto, slot1..slot3)", [&](const std::vector<std::string>& a) {
+            const std::string slot = a.empty() ? "quick" : a[0];
+            if (!std::filesystem::exists(saveFile(slot)))
+                return engine::ConsoleResult{false, "no save " + slot};
+            exitRequest = {LevelExit::LoadSave, saveFile(slot)};
+            return engine::ConsoleResult{true, "loading " + slot};
+        });
         cvars.addCommand("map", "map NAME: loads assets/levels/NAME.level (without anything carried over)",
                          [&exitRequest, levelFile](const std::vector<std::string>& a) {
             if (a.empty())
@@ -833,6 +849,76 @@ int main(int argc, char** argv)
     // Test helpers: FPS_ENGINE_AUTOFIRE=1 holds the trigger, FPS_ENGINE_SCREENSHOT=file.ppm saves the last frame.
     const bool autoFire = std::getenv("FPS_ENGINE_AUTOFIRE") != nullptr;
     const char* screenshotFile = std::getenv("FPS_ENGINE_SCREENSHOT");
+    // Saved game: the player, weapons and every scripted entity as they were.
+    auto makeSave = [&] {
+        SaveGame save;
+        { // relative to the game folder when inside it, so saves survive moving the game
+            const std::filesystem::path exeDir = std::filesystem::absolute(std::filesystem::path(argv[0]).parent_path());
+            const std::filesystem::path rel = std::filesystem::absolute(levelPath).lexically_normal().lexically_relative(exeDir.lexically_normal());
+            save.level = !rel.empty() && *rel.begin() != ".." ? rel : std::filesystem::absolute(levelPath);
+        }
+        save.title = levelTitle;
+        const std::time_t t = std::time(nullptr);
+        char when[32];
+        std::strftime(when, sizeof when, "%Y-%m-%d %H:%M", std::localtime(&t));
+        save.created = when;
+        save.playTime = scripts.time();
+        save.feet = player.feet();
+        save.yaw = camera.yawDegrees;
+        save.pitch = camera.pitchDegrees;
+        save.health = scripts.playerHealth();
+        save.dose = anomalies.dose();
+        save.weapon = current;
+        for (const engine::Weapon& w : weapons)
+            save.ammo.push_back(w.ammo());
+        save.kills = kills;
+        save.entities = scripts.saveEntities();
+        return save;
+    };
+    auto saveTo = [&](const std::string& slot) {
+        std::string saveError;
+        if (scripts.playerHealth() <= 0.0f) {
+            hud.notify("Mrtvý nemůže ukládat");
+            return false;
+        }
+        if (!makeSave().write(saveFile(slot), &saveError)) {
+            LOG_ERROR("save", "%s", saveError.c_str());
+            hud.notify("Uložení selhalo");
+            return false;
+        }
+        LOG_INFO("save", "Saved %s", saveFile(slot).string().c_str());
+        hud.notify(slot == "auto" ? "Automaticky uloženo" : "Uloženo: " + slotLabel(slot));
+        return true;
+    };
+    if (loadFrom) {
+        player.teleport(loadFrom->feet);
+        camera.yawDegrees = loadFrom->yaw;
+        camera.pitchDegrees = loadFrom->pitch;
+        scripts.setPlayerHealth(loadFrom->health);
+        anomalies.setDose(loadFrom->dose);
+        for (std::size_t w = 0; w < weapons.size() && w < loadFrom->ammo.size(); ++w)
+            weapons[w].setAmmo(loadFrom->ammo[w]);
+        if (loadFrom->weapon < weapons.size()) {
+            current = next = loadFrom->weapon;
+            weapons[current].drawn();
+        }
+        kills = loadFrom->kills;
+        scripts.setTime(loadFrom->playTime);
+        scripts.restoreEntities(loadFrom->entities);
+        hud.notify("Načteno");
+    }
+    // Carried over from the previous level (level change): health, weapon, magazines.
+    if (carry) {
+        scripts.setPlayerHealth(std::min(carry->health, scene.player.maxHealth));
+        for (std::size_t w = 0; w < weapons.size() && w < carry->ammo.size(); ++w)
+            weapons[w].setAmmo(carry->ammo[w]);
+        if (carry->weapon < weapons.size()) {
+            current = next = carry->weapon;
+            weapons[current].drawn();
+        }
+        saveTo("auto"); // arriving in a new level
+    }
+    saveGame = saveTo;
     if (firstLevel) { // test hooks
         if (const char* pos = std::getenv("FPS_ENGINE_POS")) { // "x y z" feet position (test hook)
             glm::vec3 p(0.0f);
@@ -878,22 +964,13 @@ int main(int argc, char** argv)
         if (const char* look = std::getenv("FPS_ENGINE_LOOK")) // "yaw pitch" in degrees
             std::sscanf(look, "%f %f", &camera.yawDegrees, &camera.pitchDegrees);
     }
-    // Carried over from the previous level (level change): health, weapon, magazines.
-    if (carry) {
-        scripts.setPlayerHealth(std::min(carry->health, scene.player.maxHealth));
-        for (std::size_t w = 0; w < weapons.size() && w < carry->ammo.size(); ++w)
-            weapons[w].setAmmo(carry->ammo[w]);
-        if (carry->weapon < weapons.size()) {
-            current = next = carry->weapon;
-            weapons[current].drawn();
-        }
-    }
 
     double lastTime = glfwGetTime();
     double fpsTimer = 0.0;
     int fpsFrames = 0;
     bool escHeld = false;
     bool padStartHeld = false, padWeaponHeld = false;
+    bool quickSaveHeld = false, quickLoadHeld = false;
     bool mapOpen = false, mapHeld = false;
 
     while (!glfwWindowShouldClose(window) && (frameLimit < 0 || frame < frameLimit) && exitRequest.kind == LevelExit::None) {
@@ -984,6 +1061,21 @@ int main(int argc, char** argv)
             next = (next + weapons.size() + static_cast<std::size_t>(dir + static_cast<int>(weapons.size()))) % weapons.size();
         }
         mouse.scroll = 0.0;
+        // Quick save (F5) and quick load (F9), rebindable.
+        {
+            const bool qs = captured && keyDown(window, boundKey("in_quicksave"));
+            const bool ql = captured && keyDown(window, boundKey("in_quickload"));
+            if (qs && !quickSaveHeld)
+                saveTo("quick");
+            if (ql && !quickLoadHeld) {
+                if (std::filesystem::exists(saveFile("quick")))
+                    exitRequest = {LevelExit::LoadSave, saveFile("quick")};
+                else
+                    hud.notify("Žádné rychlé uložení");
+            }
+            quickSaveHeld = qs;
+            quickLoadHeld = ql;
+        }
         // G: throw a bolt (finds anomalies and sets them off). FPS_ENGINE_BOLT=1 throws one at the start (test hook).
         {
             static bool testBolt = std::getenv("FPS_ENGINE_BOLT") != nullptr;
@@ -1225,6 +1317,7 @@ int main(int argc, char** argv)
             else
                 map.drawMinimap(ui, width, height, player.feet(), camera.flatForward());
             hud.update(static_cast<float>(frameTime), scripts.playerHealth());
+            menu.setCanSave(scripts.playerHealth() > 0.0f);
             if (!mapOpen && !menu.active()) {
                 anomalies.drawHud(ui, width, height);
                 const engine::Weapon& w = weapons[current];
@@ -1275,6 +1368,11 @@ int main(int argc, char** argv)
             case GameMenu::Action::MainMenu: menu.open(GameMenu::Screen::Main); break;
             case GameMenu::Action::Restart: exitRequest = {LevelExit::Load, levelPath}; break;
             case GameMenu::Action::LoadLevel: exitRequest = {LevelExit::Load, menu.chosenLevel()}; break;
+            case GameMenu::Action::LoadSave: exitRequest = {LevelExit::LoadSave, menu.chosenSave()}; break;
+            case GameMenu::Action::SaveSlot:
+                if (saveTo(menu.chosenSlot()))
+                    menu.close();
+                break;
             case GameMenu::Action::Quit: glfwSetWindowShouldClose(window, GLFW_TRUE); break;
             case GameMenu::Action::None: break;
             }
@@ -1343,7 +1441,7 @@ int main(int argc, char** argv)
         navBuilder.join();
     map.release(); // GL objects go while the context exists
     // Console bindings that point at this level's objects go with it.
-    for (const char* command : {"quit", "pos", "config_save", "give", "teleport", "map", "changelevel"})
+    for (const char* command : {"quit", "pos", "config_save", "give", "teleport", "map", "changelevel", "save", "load"})
         cvars.removeCommand(command);
     cvars.clearCallbacks();
     engine::DebugDraw::global().clear();
@@ -1361,14 +1459,30 @@ int main(int argc, char** argv)
 
     // Levels one after another: restart and level change load a fresh session.
     std::optional<Carry> carry;
+    std::optional<SaveGame> loading;
     for (;;) {
         Carry carryOut;
-        const LevelExit result = playLevel(levelPath, carry ? &*carry : nullptr, carryOut);
+        const LevelExit result = playLevel(levelPath, carry ? &*carry : nullptr, carryOut, loading ? &*loading : nullptr);
         firstLevel = false;
         if (result.kind == LevelExit::Quit || glfwWindowShouldClose(window) || (frameLimit >= 0 && frame >= frameLimit))
             break;
-        levelPath = result.level;
         carry.reset();
+        loading.reset();
+        if (result.kind == LevelExit::LoadSave) {
+            SaveGame save;
+            std::string saveError;
+            const bool readOk = save.read(result.level, &saveError);
+            if (readOk && save.level.is_relative())
+                save.level = std::filesystem::path(argv[0]).parent_path() / save.level;
+            if (!readOk || !std::filesystem::exists(save.level)) {
+                LOG_ERROR("save", "%s: %s", result.level.string().c_str(), saveError.empty() ? "level file missing" : saveError.c_str());
+                continue; // the same level again
+            }
+            levelPath = save.level;
+            loading = std::move(save);
+        } else {
+            levelPath = result.level;
+        }
         if (result.kind == LevelExit::Change)
             carry = carryOut;
         LOG_INFO("game", "Loading %s", levelPath.string().c_str());

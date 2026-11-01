@@ -60,6 +60,8 @@ const std::vector<SettingInfo>& settingInfos()
         {"in_reload", "Přebití", 1, {}},
         {"in_bolt", "Hodit šroub", 1, {}},
         {"in_map", "Mapa", 1, {}},
+        {"in_quicksave", "Rychlé uložení", 1, {}},
+        {"in_quickload", "Rychlé načtení", 1, {}},
         {"snd_volume", "Celková hlasitost", 2, {}},
         {"snd_sfx", "Efekty", 2, {}},
         {"snd_ambient", "Prostředí", 2, {}},
@@ -176,7 +178,11 @@ void GameMenu::setTitle(const std::string& title, const std::string& subtitle)
 
 void GameMenu::open(Screen screen)
 {
-    auto sub = [](Screen s) { return s == Screen::Settings || s == Screen::Credits || s == Screen::Levels; };
+    auto sub = [](Screen s) {
+        return s == Screen::Settings || s == Screen::Credits || s == Screen::Levels || s == Screen::Load || s == Screen::Save;
+    };
+    if (screen == Screen::Load || screen == Screen::Save || screen == Screen::Main || screen == Screen::Death || screen == Screen::Pause)
+        saves_ = listSaves();
     if (sub(screen) && !sub(screen_))
         returnTo_ = screen_ == Screen::None ? Screen::Pause : screen_;
     screen_ = screen;
@@ -219,7 +225,9 @@ void GameMenu::back()
     switch (screen_) {
     case Screen::Settings:
     case Screen::Credits:
-    case Screen::Levels: open(returnTo_); break;
+    case Screen::Levels:
+    case Screen::Load:
+    case Screen::Save: open(returnTo_); break;
     case Screen::Pause: action_ = Action::Resume; break;
     case Screen::Main:
         if (started_)
@@ -280,6 +288,8 @@ void GameMenu::draw(engine::Ui2D& ui, int width, int height, double time)
     case Screen::Credits: drawCredits(ui, w, h); break;
     case Screen::Death: drawDeath(ui, w, h, time); break;
     case Screen::Levels: drawLevels(ui, w, h); break;
+    case Screen::Load: drawSaves(ui, w, h, false); break;
+    case Screen::Save: drawSaves(ui, w, h, true); break;
     default: break;
     }
     // Version in the corner of every menu (bug reports).
@@ -322,7 +332,8 @@ void GameMenu::drawMain(engine::Ui2D& ui, float w, float h, double time)
             open(Screen::Levels);
         y += bh * 1.1f;
     }
-    button(ui, {x - bh * 0.45f, y}, size, "Načíst hru", false); // saving comes next (M1)
+    if (button(ui, {x - bh * 0.45f, y}, size, "Načíst hru", !saves_.empty()))
+        open(Screen::Load);
     y += bh * 1.1f;
     if (button(ui, {x - bh * 0.45f, y}, size, "Nastavení"))
         open(Screen::Settings);
@@ -338,7 +349,7 @@ void GameMenu::drawPause(engine::Ui2D& ui, float w, float h)
 {
     ui.rect({0, 0}, {w, h}, kShade);
     const float bh = std::round(std::clamp(h * 0.055f, 32.0f, 58.0f));
-    const glm::vec2 panel(std::max(w * 0.26f, 340.0f), bh * 7.6f);
+    const glm::vec2 panel(std::max(w * 0.26f, 340.0f), bh * 9.8f);
     const glm::vec2 pos = glm::round((glm::vec2(w, h) - panel) * 0.5f);
     ui.rect(pos, panel, kPanel);
     ui.rect(pos, {panel.x, 3.0f}, kAmber);
@@ -349,6 +360,12 @@ void GameMenu::drawPause(engine::Ui2D& ui, float w, float h)
     const float x = pos.x + bh * 0.15f;
     if (button(ui, {x, y}, size, "Pokračovat"))
         action_ = Action::Resume;
+    y += bh * 1.1f;
+    if (button(ui, {x, y}, size, "Uložit hru", canSave_))
+        open(Screen::Save);
+    y += bh * 1.1f;
+    if (button(ui, {x, y}, size, "Načíst hru", !saves_.empty()))
+        open(Screen::Load);
     y += bh * 1.1f;
     if (button(ui, {x, y}, size, "Nastavení"))
         open(Screen::Settings);
@@ -573,7 +590,16 @@ void GameMenu::drawDeath(engine::Ui2D& ui, float w, float h, double time)
     if (button(ui, {x, y}, size, "Začít lokaci znovu"))
         action_ = Action::Restart;
     y += bh * 1.1f;
-    button(ui, {x, y}, size, "Načíst poslední uložení", false);
+    const SaveInfo* last = nullptr;
+    for (const SaveInfo& s : saves_)
+        if (s.valid) {
+            last = &s;
+            break;
+        }
+    if (button(ui, {x, y}, size, "Načíst poslední uložení", last != nullptr)) {
+        chosenSave_ = last->file;
+        action_ = Action::LoadSave;
+    }
     y += bh * 1.1f;
     if (button(ui, {x, y}, size, "Hlavní menu"))
         action_ = Action::MainMenu;
@@ -605,6 +631,58 @@ void GameMenu::drawLevels(engine::Ui2D& ui, float w, float h)
         if (hover && released_ && !justOpened_) {
             chosenLevel_ = level.file;
             action_ = Action::LoadLevel;
+        }
+        y += row;
+    }
+    const glm::vec2 bsize(row * 2.4f, row * 0.7f);
+    if (button(ui, {pos.x + panel.x - bsize.x - row * 0.2f, pos.y + panel.y - bsize.y - row * 0.2f}, bsize, "Zpět"))
+        open(returnTo_);
+}
+
+void GameMenu::drawSaves(engine::Ui2D& ui, float w, float h, bool saving)
+{
+    ui.rect({0, 0}, {w, h}, kShade);
+    const float row = std::round(std::clamp(h * 0.07f, 40.0f, 72.0f));
+    const float text = std::round(row * 0.38f);
+    // Saving: the three numbered slots (filled or empty). Loading: every save, newest first.
+    std::vector<SaveInfo> rows;
+    if (saving) {
+        for (const char* slot : {"slot1", "slot2", "slot3"}) {
+            auto it = std::find_if(saves_.begin(), saves_.end(), [&](const SaveInfo& s) { return s.slot == slot; });
+            rows.push_back(it != saves_.end() ? *it : SaveInfo{slot, saveFile(slot), "", "", false});
+        }
+    } else {
+        rows = saves_;
+    }
+    const glm::vec2 panel(std::min(w - row, std::max(w * 0.45f, 600.0f)), row * (static_cast<float>(std::max<std::size_t>(rows.size(), 1)) + 2.8f));
+    const glm::vec2 pos = glm::round((glm::vec2(w, h) - panel) * 0.5f);
+    ui.rect(pos, panel, kPanel);
+    ui.rect(pos, {panel.x, 3.0f}, kAmber);
+    ui.text(saving ? "ULOŽIT HRU" : "NAČÍST HRU", {pos.x + row * 0.4f, pos.y + row * 0.3f}, std::round(row * 0.45f), kBone, true);
+    float y = pos.y + row * 1.2f;
+    if (rows.empty())
+        ui.text("Zatím žádné uložené hry.", {pos.x + row * 0.45f, y + row * 0.25f}, text, kDim);
+    for (const SaveInfo& s : rows) {
+        const bool usable = saving || s.valid;
+        const glm::vec2 p(pos.x + row * 0.15f, y), size(panel.x - row * 0.3f, row * 0.95f);
+        const bool hover = usable && mouse_.x >= p.x && mouse_.x < p.x + size.x && mouse_.y >= p.y && mouse_.y < p.y + size.y;
+        if (hover) {
+            ui.rect(p, size, {0.93f, 0.62f, 0.2f, 0.12f});
+            ui.rect(p, {3.0f, size.y}, kAmber);
+        }
+        const bool empty = saving && s.title.empty() && !s.valid;
+        const std::string head = slotLabel(s.slot) + (empty ? "  ·  prázdná" : "  ·  " + s.title);
+        ui.text(head, {p.x + row * 0.3f, p.y + row * 0.12f}, text, hover ? kAmber : usable ? kBone : kDim, true);
+        if (!s.created.empty())
+            ui.text(s.created, {p.x + row * 0.3f, p.y + row * 0.12f + text * 1.25f}, std::round(text * 0.8f), kDim);
+        if (hover && released_ && !justOpened_) {
+            if (saving) {
+                chosenSlot_ = s.slot;
+                action_ = Action::SaveSlot;
+            } else {
+                chosenSave_ = s.file;
+                action_ = Action::LoadSave;
+            }
         }
         y += row;
     }

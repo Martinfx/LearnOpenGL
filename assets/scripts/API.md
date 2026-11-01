@@ -11,6 +11,8 @@ Lua 5.4 with `base`, `math`, `string`, `table` and `coroutine` libraries.
 | `on_update(self, dt)` | Every simulation step (60 Hz, `dt` = 1/60 s) |
 | `on_damage(self, amount)` | Hit by the player's weapon (health already reduced) |
 | `on_death(self)` | Health reached 0; the entity is removed from play |
+| `on_save(self)` | Saving the game: return a table (numbers, strings, booleans, `vec3`, nested tables) to get back later |
+| `on_load(self, data)` | After loading a saved game, with that table (health, position and facing are already restored) |
 
 ## Editor parameters
 

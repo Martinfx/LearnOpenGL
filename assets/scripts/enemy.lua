@@ -98,6 +98,19 @@ function on_start(self)
     set_state(self, "patrol")
 end
 
+-- Saved games: what the AI was doing (the engine keeps health, place and facing).
+function on_save(self)
+    return { state = state, timer = timer, home = home, last_seen = last_seen, patrol_target = patrol_target }
+end
+
+function on_load(self, d)
+    if not d then return end
+    state, timer = d.state or "patrol", d.timer or 0
+    home = d.home or home
+    last_seen, patrol_target = d.last_seen, d.patrol_target or patrol_target
+    next_attack = game.time() + 0.5 -- no shot in the first instant after loading
+end
+
 -- Getting shot reveals where the player is, even from behind.
 function on_damage(self, amount)
     hurt_flash = 0.1

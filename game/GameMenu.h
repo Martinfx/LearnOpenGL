@@ -1,6 +1,8 @@
 #pragma once
 #include <engine/Ui2D.h>
 
+#include "GameSave.h"
+
 #include <glm/vec2.hpp>
 
 #include <filesystem>
@@ -16,8 +18,8 @@
 // from the table in GameMenu.cpp (unknown ones go to "Other").
 class GameMenu {
 public:
-    enum class Screen { None, Main, Pause, Settings, Credits, Death, Levels };
-    enum class Action { None, Play, Resume, Respawn, Restart, LoadLevel, MainMenu, Quit };
+    enum class Screen { None, Main, Pause, Settings, Credits, Death, Levels, Load, Save };
+    enum class Action { None, Play, Resume, Respawn, Restart, LoadLevel, LoadSave, SaveSlot, MainMenu, Quit };
 
     // Reads the credits (CREDITS.md under assets/ and the third-party licences).
     void init(const std::filesystem::path& assetDir, const std::filesystem::path& licenseFile);
@@ -41,6 +43,9 @@ public:
     void draw(engine::Ui2D& ui, int width, int height, double time);
     Action takeAction();
     const std::filesystem::path& chosenLevel() const { return chosenLevel_; } // after Action::LoadLevel
+    const std::filesystem::path& chosenSave() const { return chosenSave_; }   // after Action::LoadSave
+    const std::string& chosenSlot() const { return chosenSlot_; }             // after Action::SaveSlot
+    void setCanSave(bool can) { canSave_ = can; }                             // not while dead
 
 private:
     bool button(engine::Ui2D& ui, glm::vec2 pos, glm::vec2 size, const std::string& label, bool enabled = true);
@@ -50,6 +55,7 @@ private:
     void drawCredits(engine::Ui2D& ui, float w, float h);
     void drawDeath(engine::Ui2D& ui, float w, float h, double time);
     void drawLevels(engine::Ui2D& ui, float w, float h);
+    void drawSaves(engine::Ui2D& ui, float w, float h, bool saving);
 
     Screen screen_ = Screen::None;
     Screen returnTo_ = Screen::Main; // where settings / credits go back to
@@ -82,4 +88,8 @@ private:
     };
     std::vector<LevelEntry> levels_; // assets/levels/*.level
     std::filesystem::path chosenLevel_;
+    std::vector<SaveInfo> saves_; // refreshed when a load / save screen opens
+    std::filesystem::path chosenSave_;
+    std::string chosenSlot_;
+    bool canSave_ = true;
 };

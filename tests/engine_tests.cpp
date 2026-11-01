@@ -335,6 +335,44 @@ void testScriptErrorIsReported()
     check(!log.empty() && log[0].find("Broken") != std::string::npos, "error names the entity");
 }
 
+void testScriptSaveRestore()
+{
+    const char* path = "saver.lua";
+    std::ofstream(path) << "local count = 0\n"
+                           "function on_update(self, dt) count = count + 1 end\n"
+                           "function on_save(self) return { n = count, s = 'a\\\"b\\n', v = vec3(1, 2, 3), t = { 1, 2 }, f = print } end\n"
+                           "function on_load(self, d) count = d.n; self.health = d.n + d.v.y + #d.t; got = d.s end\n";
+    auto s = flatFloor();
+    engine::Entity e;
+    e.name = "Saver";
+    e.id = 0x1234;
+    e.scriptPath = std::filesystem::absolute(path);
+    s.entities.push_back(e);
+    engine::PhysicsWorld world;
+    world.setLevel(s);
+    engine::PlayerController player;
+    player.spawn(world, {0, 0, 0});
+    std::vector<engine::ScriptSystem::EntityState> saved;
+    {
+        auto copy = s;
+        engine::ScriptSystem scripts(copy, world, player, [](const std::string&) {});
+        scripts.start();
+        for (int i = 0; i < 5; ++i)
+            scripts.fixedUpdate(1.0f / 60.0f);
+        copy.entities[0].position = {3, 0, 4};
+        saved = scripts.saveEntities();
+    }
+    check(saved.size() == 1 && saved[0].id == 0x1234 && saved[0].data.find("vec3(") != std::string::npos &&
+              saved[0].data.find("function") == std::string::npos,
+          "on_save table becomes a Lua literal (functions left out)");
+    auto fresh = s;
+    engine::ScriptSystem scripts(fresh, world, player, [](const std::string&) {});
+    scripts.start();
+    scripts.restoreEntities(saved);
+    check(std::abs(fresh.entities[0].health - 9.0f) < 1e-4f, "on_load gets the saved table back");
+    check(glm::distance(fresh.entities[0].position, glm::vec3(3, 0, 4)) < 1e-4f, "restored entity position");
+}
+
 void testEnemyChasesAndAttacks()
 {
     auto s = flatFloor();
@@ -1601,6 +1639,7 @@ int main()
     testNavMesh();
     testObjectIds();
     testCVars();
+    testScriptSaveRestore();
     testLog();
     testEnsure();
     testSurfaces();

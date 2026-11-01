@@ -4,6 +4,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace engine {
 
@@ -54,6 +55,23 @@ public:
 
     // Navigation for self:move_to() and game.find_path(); null or not ready = straight lines.
     void setNavMesh(const NavMesh* nav);
+
+    // Saved games: per entity (matched by ObjectId) whether it lives, its health, place,
+    // facing and what its script's on_save(self) returned (a Lua table written as a
+    // one-line Lua literal). restore() runs after start(): sets them back and calls
+    // on_load(self, data).
+    struct EntityState {
+        ObjectId id = 0;
+        bool alive = true;
+        float health = 100.0f;
+        glm::vec3 position{0.0f};
+        float yaw = 0.0f;
+        std::string data; // Lua literal, "" = nothing
+    };
+    std::vector<EntityState> saveEntities();
+    void restoreEntities(const std::vector<EntityState>& states);
+    double time() const; // seconds of game time (game.time())
+    void setTime(double seconds);
 
     float playerHealth() const;
     // Level file a script asked for with game.change_level() (empty = none); cleared by the call.
