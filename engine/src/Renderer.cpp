@@ -7,7 +7,12 @@
 #include "engine/JobSystem.h"
 #include "engine/Log.h"
 #include "engine/Paths.h"
+#include "engine/Profile.h"
 #include <chrono>
+#include <optional>
+#ifdef TRACY_ENABLE
+#include <tracy/TracyOpenGL.hpp> // after glad: GPU zones use its timer queries
+#endif
 #include <glm/gtc/matrix_transform.hpp>
 #include <cstring>
 #include <stb_image.h>
@@ -712,11 +717,23 @@ bool Renderer::init(GlLoader loader, std::string* error)
     glTextureParameteri(envMap_, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTextureParameteri(envMap_, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+#ifdef TRACY_ENABLE
+    // Tracy has one GPU context: it belongs to the first renderer (the game's, the editor viewport's).
+    if (!tracyGpuOwner()) {
+        tracyGpuOwner() = this;
+        TracyGpuContext;
+        TracyGpuContextName("OpenGL", 6);
+    }
+#endif
     return true;
 }
 
 void Renderer::shutdown()
 {
+#ifdef TRACY_ENABLE
+    if (tracyGpuOwner() == this)
+        tracyGpuOwner() = nullptr;
+#endif
     releaseOcclusion();
     if (rainTex_)
         glDeleteTextures(1, &rainTex_);
@@ -2039,6 +2056,7 @@ void resetGlState()
 
 void Renderer::render(const Scene& scene, const RenderView& view)
 {
+    ENGINE_ZONE("Renderer::render");
     frameArena_.reset(); // scratch arrays of the previous frame
     resetGlState();
     // Free GPU data nothing drew since the previous render() (removed models).
@@ -3491,6 +3509,10 @@ void Renderer::present()
         glBindTextureUnit(0, ldrTex_);
         glDrawArrays(GL_TRIANGLES, 0, 3);
     }
+#ifdef TRACY_ENABLE
+    if (tracyGpuOwner() == this)
+        TracyGpuCollect;
+#endif
     // Leave depth of the scene in the target too, for tools that draw on top.
     glBindFramebuffer(GL_FRAMEBUFFER, static_cast<unsigned>(targetFbo_));
     glEnable(GL_DEPTH_TEST);
@@ -3547,11 +3569,42 @@ const char* Renderer::passName(int pass)
     return pass >= 0 && pass < PassCount ? names[pass] : "?";
 }
 
+#ifdef TRACY_ENABLE
+namespace {
+// The render pass running now, as Tracy CPU and GPU zones (passes don't nest).
+std::optional<tracy::ScopedZone>& tracyPassZone()
+{
+    static std::optional<tracy::ScopedZone> zone;
+    return zone;
+}
+std::optional<tracy::GpuCtxScope>& tracyGpuPassZone()
+{
+    static std::optional<tracy::GpuCtxScope> zone;
+    return zone;
+}
+} // namespace
+
+const Renderer*& Renderer::tracyGpuOwner()
+{
+    static const Renderer* owner = nullptr;
+    return owner;
+}
+#endif
+
 void Renderer::beginPass(int pass)
 {
     if (activePass_ >= 0)
         endPass();
     activePass_ = pass;
+#ifdef TRACY_ENABLE
+    if (tracyGpuOwner() == this) {
+        const char* name = passName(pass);
+        tracyPassZone().emplace(static_cast<std::uint32_t>(__LINE__), __FILE__, std::strlen(__FILE__), "render pass", 11, name,
+                                std::strlen(name), true);
+        tracyGpuPassZone().emplace(static_cast<std::uint32_t>(__LINE__), __FILE__, std::strlen(__FILE__), "render pass", 11, name,
+                                   std::strlen(name), true);
+    }
+#endif
     passStart_ = std::chrono::steady_clock::now();
     glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, static_cast<GLuint>(pass), -1, passName(pass)); // named in RenderDoc
     unsigned& q = queries_[queryFrame_][pass];
@@ -3567,6 +3620,10 @@ void Renderer::endPass()
         return;
     glEndQuery(GL_TIME_ELAPSED);
     glPopDebugGroup();
+#ifdef TRACY_ENABLE
+    tracyGpuPassZone().reset();
+    tracyPassZone().reset();
+#endif
     building_.cpuMs[activePass_] += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - passStart_).count();
     activePass_ = -1;
 }
@@ -4064,11 +4121,12 @@ unsigned Renderer::texture(const Texture& tex)
 
 void Renderer::updateStreaming()
 {
-    const double now = secondsNow();
+    // Deterministic (tests): frames instead of seconds, and reads finish before they are used.
+    const double now = deterministic_ ? static_cast<double>(frameNumber_) / 60.0 : secondsNow();
     int uploads = 0;
     for (auto& [id, g] : textures_) {
         // Finished reads: swap in the new texture.
-        if (g.pending && g.pending->wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+        if (g.pending && (deterministic_ || g.pending->wait_for(std::chrono::seconds(0)) == std::future_status::ready)) {
             if (quality_.textureUploadsPerFrame > 0 && uploads >= quality_.textureUploadsPerFrame)
                 continue;
             const CookedTexture c = g.pending->get();

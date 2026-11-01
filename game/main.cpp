@@ -4,6 +4,7 @@
 #include <engine/ProbeBaker.h>
 #include <engine/JobSystem.h>
 #include <engine/Log.h>
+#include <engine/Profile.h>
 #include <engine/CVars.h>
 #include <engine/DebugDraw.h>
 #include <engine/Paths.h>
@@ -539,6 +540,7 @@ int main(int argc, char** argv)
         std::string loadError;
         bool loaded = false;
         std::thread loader([&] {
+            ENGINE_THREAD_NAME("Level loader");
             // World streaming: far static models are read later, around where the player appears
             // (a save's position, else the level's start: NaN).
             const glm::vec3 streamFrom = loadFrom ? loadFrom->feet : glm::vec3(std::numeric_limits<float>::quiet_NaN());
@@ -653,6 +655,7 @@ int main(int argc, char** argv)
         navScene->terrain = scene.terrain;
         navScene->nav = scene.nav;
         navBuilder = std::thread([&, navScene] {
+            ENGINE_THREAD_NAME("Navmesh builder");
             // Models the streamer has not loaded yet (far cells) still shape the paths:
             // read their meshes here, once per file, and drop them after the build.
             std::map<std::filesystem::path, engine::PartList> meshes;
@@ -1336,7 +1339,11 @@ int main(int argc, char** argv)
         }
     }
 
-    double lastTime = glfwGetTime();
+    // Test hook FPS_ENGINE_FIXED_DT (seconds): a virtual clock from 0 with equal frames, so a test
+    // run (golden images) shows the same frame whatever the machine's speed.
+    const double fixedDt = std::getenv("FPS_ENGINE_FIXED_DT") ? std::strtod(std::getenv("FPS_ENGINE_FIXED_DT"), nullptr) : 0.0;
+    double lastTime = fixedDt > 0.0 ? 0.0 : glfwGetTime();
+    renderer.setDeterministic(fixedDt > 0.0);
     double fpsTimer = 0.0;
     int fpsFrames = 0;
     bool escHeld = false;
@@ -1345,7 +1352,7 @@ int main(int argc, char** argv)
     bool mapOpen = false, mapHeld = false;
 
     while (!glfwWindowShouldClose(window) && (frameLimit < 0 || frame < frameLimit) && exitRequest.kind == LevelExit::None) {
-        const double now = glfwGetTime();
+        const double now = fixedDt > 0.0 ? lastTime + fixedDt : glfwGetTime();
         const double frameTime = now - lastTime;
         lastTime = now;
 
@@ -1500,6 +1507,7 @@ int main(int argc, char** argv)
         const double simTime = menu.active() ? 0.0 : frameTime * cvTimescale.number();
         const int steps = clock.advance(simTime);
         for (int i = 0; i < steps; ++i) {
+            ENGINE_ZONE("Simulation step");
             const float dt = static_cast<float>(clock.step());
             // Debug shapes age per simulation step: "this frame" shapes from scripts stay until the next step redraws them.
             engine::DebugDraw::global().tick(dt);
@@ -1689,7 +1697,10 @@ int main(int argc, char** argv)
                 anomalies.update(sim, physics, camera.position);
                 flashlight.update(sim, now, camera);
             }, {}, true);
-            frameGraph.run();
+            {
+                ENGINE_ZONE("Frame tasks");
+                frameGraph.run();
+            }
         }
         if ((watchTimer -= static_cast<float>(frameTime)) <= 0.0f) {
             watchTimer = 0.5f;
@@ -1863,7 +1874,11 @@ int main(int argc, char** argv)
                 shot.write(reinterpret_cast<const char*>(rgb.data()), static_cast<std::streamsize>(rgb.size()));
             }
         }
-        glfwSwapBuffers(window);
+        {
+            ENGINE_ZONE("Swap buffers");
+            glfwSwapBuffers(window);
+        }
+        ENGINE_FRAME_MARK;
         if (const int maxFps = cvFpsMax.integer(); maxFps > 0) { // frame limiter (sleep, then spin the last bit)
             const double target = now + 1.0 / maxFps;
             while (glfwGetTime() < target - 0.0015)

@@ -1,8 +1,10 @@
 #include "engine/JobSystem.h"
+#include "engine/Profile.h"
 
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <string>
 
 namespace engine {
 
@@ -14,7 +16,12 @@ JobSystem::JobSystem(unsigned threads)
     }
     workers_.reserve(threads);
     for (unsigned i = 0; i < threads; ++i)
-        workers_.emplace_back([this] { workerLoop(); });
+        workers_.emplace_back([this, i] {
+            const std::string name = "Job worker " + std::to_string(i + 1);
+            ENGINE_THREAD_NAME(name.c_str());
+            (void)name;
+            workerLoop();
+        });
 }
 
 JobSystem::~JobSystem()
@@ -69,6 +76,7 @@ void JobSystem::workerLoop()
             job = std::move(queue_.front());
             queue_.pop_front();
         }
+        ENGINE_ZONE("Job");
         job();
     }
 }
@@ -194,7 +202,10 @@ void TaskGraph::run(JobSystem& jobs)
     st->execute = [this, st, &makeReady](Id i) {
         const auto start = std::chrono::steady_clock::now();
         try {
-            tasks_[i].fn();
+            {
+                ENGINE_ZONE_DYNAMIC(tasks_[i].name);
+                tasks_[i].fn();
+            }
         } catch (...) {
             std::lock_guard lock(st->mutex);
             if (!st->error)

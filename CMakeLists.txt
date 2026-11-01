@@ -14,6 +14,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(ENGINE_BUILD_GAME   "Build the game runtime (GLFW)" ON)
 option(ENGINE_BUILD_EDITOR "Build the level editor (Qt 6)" ON)
+option(ENGINE_TRACY "Tracy profiler client: CPU zones per thread and GPU zones (connect with the Tracy UI)" OFF)
 option(ENGINE_USE_SYSTEM_DEPS "Prefer system packages (pkg/apt/vcpkg) over downloading" ON)
 # A system Jolt package exports its CPU flags (often AVX2/FMA, sometimes AVX-512) to every
 # target that links it, so the whole engine would need that CPU. The bundled copy is

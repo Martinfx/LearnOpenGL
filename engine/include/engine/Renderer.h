@@ -176,6 +176,8 @@ public:
     void captureCube(const Scene& scene, glm::vec3 position, int size, std::vector<float>& faces, float time = 0.0f);
     // Probe bake bounces: captures are lit by these probes (earlier bounce) instead of none.
     void setCaptureProbes(std::shared_ptr<const ProbeSet> probes) { captureProbes_ = std::move(probes); }
+    // Tests (golden images): texture streaming by frames, not wall time, and waits for its reads.
+    void setDeterministic(bool on) { deterministic_ = on; }
     void renderOverlay(const RenderView& view, const OverlayPass& pass); // after render(), before present()
     void present(); // post-processing into the framebuffer that was bound when render() was called
     // Reads the bound framebuffer (after present()) as RGB8 rows from the top; for screenshots and tests.
@@ -616,6 +618,10 @@ private:
     glm::mat4 ssrPrevViewProj_{1.0f}; // this frame's, until it is recorded
     void recordSsrColor();
     void resolveTaa();
+    bool deterministic_ = false;
+#ifdef TRACY_ENABLE
+    static const Renderer*& tracyGpuOwner(); // the renderer with Tracy's GPU context
+#endif
     std::string glInfo_;
     std::array<glm::vec4, 6> frustum_{}; // planes of the pass being drawn
     bool frustumSkipNear_ = false;

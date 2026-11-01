@@ -1,4 +1,5 @@
 #include "Viewport.h"
+#include <engine/Profile.h>
 #include <engine/EntityIO.h>
 
 #include <engine/Anomaly.h>
@@ -444,6 +445,8 @@ void Viewport::paintGL()
 {
     if (!ready_)
         return;
+    ENGINE_FRAME_MARK; // the editor draws on demand: one Tracy frame per repaint
+    ENGINE_ZONE("Viewport::paintGL");
     const qreal dpr = devicePixelRatioF();
     while (context()->functions()->glGetError() != GL_NO_ERROR) {
     } // errors left by Qt's own drawing are not ours

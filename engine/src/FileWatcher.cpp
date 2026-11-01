@@ -1,4 +1,5 @@
 #include "engine/FileWatcher.h"
+#include "engine/Profile.h"
 
 #include "engine/AssetRegistry.h"
 
@@ -14,7 +15,10 @@ namespace fs = std::filesystem;
 FileWatcher::FileWatcher(fs::path root, double intervalSeconds)
     : root_(fs::absolute(root).lexically_normal()), interval_(std::max(0.05, intervalSeconds))
 {
-    thread_ = std::thread([this] { run(); });
+    thread_ = std::thread([this] {
+        ENGINE_THREAD_NAME("File watcher");
+        run();
+    });
 }
 
 FileWatcher::~FileWatcher()

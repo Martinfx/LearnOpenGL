@@ -1,0 +1,5 @@
+# Golden image shots: name|level (from the game binary's folder)|camera position|yaw pitch|console commands|frames|image_compare tolerance
+# No semicolons in a line (CMake lists). Update a reference after an intended change of the look: GOLDEN_UPDATE=1 ctest -L golden, check the images, commit.
+lights_room|assets/levels/lights_test.level|0 1.7 6|-90 -5||90|--mean 4 --bad 2 --threshold 48
+anomalies|assets/levels/anomaly_test.level||||90|--mean 4 --bad 2 --threshold 48
+street|assets/levels/hospital_street.level||||90|--mean 4 --bad 2 --threshold 48

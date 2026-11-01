@@ -1,4 +1,5 @@
 #include "engine/Log.h"
+#include "engine/Profile.h"
 #include "engine/Audio.h"
 
 #include "engine/JobSystem.h"
@@ -869,7 +870,10 @@ bool AudioSystem::init(const Options& options, std::string* error)
     }
     m.initialized = true;
     m.stopping = false;
-    m.streamer = std::thread([&m] { m.streamLoop(); });
+    m.streamer = std::thread([&m] {
+        ENGINE_THREAD_NAME("Audio streaming");
+        m.streamLoop();
+    });
     return true;
 }
 

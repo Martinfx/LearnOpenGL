@@ -21,3 +21,18 @@ if(UNIX AND TARGET fps_game AND (XVFB_RUN OR DEFINED ENV{DISPLAY}))
         set_tests_properties(level_smoke_${name} PROPERTIES LABELS smoke TIMEOUT 900)
     endforeach()
 endif()
+
+# Golden images of the renderer (ctest -L golden): a few fixed views compared with
+# tests/golden/*.ppm within a tolerance. GOLDEN_UPDATE=1 ctest -L golden renews them.
+add_executable(image_compare image_compare.cpp)
+if(UNIX AND TARGET fps_game AND (XVFB_RUN OR DEFINED ENV{DISPLAY}))
+    file(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/golden/shots.txt GOLDEN_SHOTS REGEX "^[a-z0-9_]+\\|")
+    foreach(shot ${GOLDEN_SHOTS})
+        string(REGEX MATCH "^[a-z0-9_]+" name "${shot}")
+        add_test(NAME golden_${name}
+                 COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/golden_image.sh $<TARGET_FILE:fps_game> $<TARGET_FILE:image_compare> ${name}
+                         ${CMAKE_CURRENT_BINARY_DIR}/golden)
+        set_tests_properties(golden_${name} PROPERTIES LABELS golden TIMEOUT 600)
+    endforeach()
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/golden/shots.txt)
+endif()

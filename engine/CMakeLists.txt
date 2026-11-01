@@ -50,7 +50,7 @@ add_library(engine STATIC
 )
 target_include_directories(engine PUBLIC include)
 find_package(Threads REQUIRED)
-target_link_libraries(engine PUBLIC glm::glm Threads::Threads PRIVATE glad Jolt::Jolt lua_static sol2::sol2 cgltf_headers stb_headers miniaudio recastnav OpenAL::OpenAL)
+target_link_libraries(engine PUBLIC glm::glm Threads::Threads tracy_client PRIVATE glad Jolt::Jolt lua_static sol2::sol2 cgltf_headers stb_headers miniaudio recastnav OpenAL::OpenAL)
 target_compile_definitions(engine PRIVATE SOL_ALL_SAFETIES_ON=1)
 # Build version for logs and crash reports.
 find_package(Git QUIET)

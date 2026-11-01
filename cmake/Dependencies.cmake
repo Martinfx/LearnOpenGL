@@ -156,6 +156,25 @@ if(UNIX)
     target_link_libraries(miniaudio PUBLIC m)
 endif()
 
+# --- Tracy profiler (client only; the Tracy UI is a separate download) ---------
+# Off: only the headers, every zone macro compiles to nothing. On: the client
+# listens for the Tracy UI (ENGINE_TRACY=ON, then run the game or editor).
+if(ENGINE_TRACY)
+    add_library(tracy_client STATIC ${ENGINE_3RDPARTY}/tracy/TracyClient.cpp)
+    target_compile_definitions(tracy_client PUBLIC TRACY_ENABLE TRACY_ON_DEMAND)
+    target_link_libraries(tracy_client PUBLIC Threads::Threads ${CMAKE_DL_LIBS})
+    if(WIN32)
+        target_link_libraries(tracy_client PUBLIC ws2_32 dbghelp)
+    elseif(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
+        target_link_libraries(tracy_client PUBLIC execinfo)
+    endif()
+    set_target_properties(tracy_client PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    target_include_directories(tracy_client SYSTEM PUBLIC ${ENGINE_3RDPARTY}/tracy)
+else()
+    add_library(tracy_client INTERFACE)
+    target_include_directories(tracy_client SYSTEM INTERFACE ${ENGINE_3RDPARTY}/tracy)
+endif()
+
 # --- Qt 6 (editor) -- always a system/installer package ----------------------
 if(ENGINE_BUILD_EDITOR)
     find_package(Qt6 6.2 COMPONENTS Widgets OpenGLWidgets)
