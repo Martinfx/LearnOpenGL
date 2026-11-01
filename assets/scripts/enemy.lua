@@ -1,6 +1,8 @@
--- Enemy AI (armed human): patrol -> chase -> shoot -> search -> return home.
+-- Human AI (armed stalker, bandit, soldier): patrol -> chase -> shoot -> search -> return home.
 -- While patrolling it sometimes rests at a free sit point nearby (campfire seats).
--- Attach to an entity of type "enemy" in the editor.
+-- Fights whoever its faction is hostile to (the player, other factions; assets/factions.cfg);
+-- neutral ones only fight back when attacked. Members of the same Group (Properties > Character)
+-- call each other for help. Attach to an entity of type "enemy" or "npc" in the editor.
 
 -- Tunables: shown in the editor (Properties > Script parameters) for every
 -- entity using this script. Read them through `props`.
@@ -19,6 +21,7 @@ properties = {
     { "melee_damage",    15,   "Damage of a punch" },
     { "sound_shot",      "sounds/weapons/pistol_shot.sound", "Sound of every shot (path in assets/, empty = silent)" },
     { "search_time",     5.0,  "Seconds spent searching the last known position" },
+    { "alert_range",     40.0, "Calls the members of its group within this distance when it starts a fight, m" },
     { "patrol_radius",   4.0,  "Wanders this far from its start position, m" },
     { "rest_chance",     0.25, "Chance per patrol leg to sit at a free sit point within 3x the patrol radius" },
     { "rest_time",       30.0, "Seconds sitting before patrolling again" },
@@ -39,6 +42,9 @@ properties = {
 }
 
 local state, timer, home, last_seen, patrol_target, next_attack
+local target            -- what it fights: "player", another entity or nil
+local grudges = {}      -- handles of entities that attacked it (fought even when not hostile)
+local look_timer = 0    -- next look around for enemies
 local hurt_flash = 0
 local reacting = 0      -- seconds left of the hit reaction clip
 local moving = false   -- set by walk_to, picks walk/run vs. idle animation
@@ -76,16 +82,58 @@ local function walk_to(self, target, speed)
     return false
 end
 
-local function sees_player(self)
+-- A target is "player" or an entity.
+local function t_alive(t)
+    if t == "player" then return game.player_health() > 0 end
+    return t ~= nil and t.alive
+end
+local function t_eye(t) if t == "player" then return game.player_eye() end return t:eye() end
+local function t_pos(t) if t == "player" then return game.player_position() end return t.position end
+local function t_name(t) if t == "player" then return "!player" end return t.name end
+local function same(a, b)
+    if a == "player" or b == "player" then return a == b end
+    return a ~= nil and b ~= nil and a.handle == b.handle
+end
+
+-- Whether it would fight t: its faction is hostile to t's, or t attacked it.
+local function enemy_of(self, t)
+    if t ~= "player" and grudges[t.handle] then return true end
+    return game.attitude(self, t) == "hostile"
+end
+
+-- In the view cone and range (or close enough to hear) with nothing in between.
+local function sees(self, point)
     local eye = self:eye()
-    local player = game.player_eye()
-    local to = (player - eye)
+    local to = (point - eye)
     local dist = to:length()
-    if dist < props.hear_range then return game.can_see(eye, player) end
+    if dist < props.hear_range then return game.can_see(eye, point) end
     if dist > props.view_range then return false end
     local cos_half = math.cos(math.rad(props.view_angle * 0.5))
     if self:forward():dot(to:flat():normalized()) < cos_half then return false end
-    return game.can_see(eye, player)
+    return game.can_see(eye, point)
+end
+
+-- The nearest living enemy it can see (the player or a character of a hostile faction).
+local function look_for_enemy(self)
+    local best, best_d
+    local function consider(t)
+        if not t_alive(t) or not enemy_of(self, t) or not sees(self, t_eye(t)) then return end
+        local d = distance(self.position, t_pos(t))
+        if not best or d < best_d then best, best_d = t, d end
+    end
+    consider("player")
+    for _, e in ipairs(game.characters_near(self.position, props.view_range)) do
+        if e.handle ~= self.handle then consider(e) end
+    end
+    return best
+end
+
+-- Calls the members of its group (same Group property) to the fight.
+local function alert_group(self, t)
+    if self.group == "" or t == nil then return end
+    for _, m in ipairs(game.characters_near(self.position, props.alert_range)) do
+        if m.handle ~= self.handle and m.group == self.group then game.fire(m.name, "Alert", t_name(t)) end
+    end
 end
 
 local function pick_patrol_target()
@@ -128,10 +176,16 @@ function on_start(self)
     set_state(self, "patrol")
 end
 
--- Saved games: what the AI was doing (the engine keeps health, place and facing).
+-- Saved games: what the AI was doing (the engine keeps health, place, facing and a grudge
+-- against the player).
 function on_save(self)
+    local held = {}
+    for _, e in ipairs(game.characters_near(self.position, 1e6)) do
+        if grudges[e.handle] then held[#held + 1] = e.name end
+    end
     return { state = state, timer = timer, home = home, last_seen = last_seen, patrol_target = patrol_target,
-             seat = seat and seat.name, seated = seated, rest_for = rest_for }
+             seat = seat and seat.name, seated = seated, rest_for = rest_for,
+             target = target == "player" and "!player" or (target and target.name), grudges = held }
 end
 
 function on_load(self, d)
@@ -141,30 +195,54 @@ function on_load(self, d)
     last_seen, patrol_target = d.last_seen, d.patrol_target or patrol_target
     seat, seated, rest_for = d.seat and game.find(d.seat), d.seated, d.rest_for or props.rest_time
     if seat then seat:set_property("occupied", self.name) elseif state == "rest" then state = "patrol" end
+    grudges = {}
+    for _, name in ipairs(d.grudges or {}) do
+        local e = game.find(name)
+        if e then grudges[e.handle] = true end
+    end
+    if d.target == "!player" then target = "player" elseif d.target then target = game.find(d.target) end
     next_attack = game.time() + 0.5 -- no shot in the first instant after loading
 end
 
--- Getting shot reveals where the player is, even from behind.
-function on_damage(self, amount)
+-- Getting hurt reveals the attacker, even from behind: it fights back and calls its group.
+-- attacker: "player", an entity or nil (anomaly, fall, trap).
+function on_damage(self, amount, attacker)
     hurt_flash = 0.1
     self.flash = 0.12
-    last_seen = game.player_position()
+    if attacker ~= nil and not same(attacker, self) then
+        if attacker ~= "player" then grudges[attacker.handle] = true end
+        if not t_alive(target) or state ~= "attack" then target = attacker end
+        last_seen = t_pos(attacker)
+        alert_group(self, attacker)
+    end
     if graph then
         if self.alive then self:anim_trigger("hit"); reacting = 0.35 end
     elseif self.alive and self:play(props.anim_hit, { loop = false, restart = true, fade = 0.05, speed = props.anim_speed }) then
         reacting = 0.35
     end
-    if state ~= "attack" then set_state(self, "chase") end
+    -- Hurt by the Zone itself (anomaly, fall, trap) and fighting nobody: nothing to chase.
+    if target and state ~= "attack" then set_state(self, "chase") end
 end
 
 -- Entity I/O inputs (Outputs table of another entity, or game.fire): "Alert" sends it after
--- the player (an alarm, a tripwire); "Calm" sends it back home.
+-- the player (an alarm, a tripwire) or after the entity named in the parameter (its group
+-- calling for help); "Calm" sends it back home.
 function on_input(self, input, param)
     if not self.alive then return end
     if input == "Alert" then
-        last_seen = game.player_position()
-        if state ~= "attack" and state ~= "chase" then set_state(self, "chase") end
+        local t = "player"
+        if param ~= nil and param ~= "" and param ~= "!player" then t = game.find(param) end
+        if not t_alive(t) or same(t, self) then return end
+        -- Its group is fighting them: it does too, even if it was neutral.
+        if t == "player" then self.hates_player = true else grudges[t.handle] = true end
+        if state == "attack" and t_alive(target) then return end
+        target = t
+        last_seen = t_pos(t)
+        if state ~= "chase" then set_state(self, "chase") end
     elseif input == "Calm" then
+        target = nil
+        grudges = {}
+        self.hates_player = false
         set_state(self, "return")
     end
 end
@@ -187,16 +265,16 @@ local function animate_graph(self, dt)
         self:use_graph()
         punching = false
     end
-    local target = 0
-    if moving then target = state == "chase" and props.run_speed or props.walk_speed end
-    anim_speed = anim_speed + (target - anim_speed) * math.min(1, dt * 8)
+    local want = 0
+    if moving then want = state == "chase" and props.run_speed or props.walk_speed end
+    anim_speed = anim_speed + (want - anim_speed) * math.min(1, dt * 8)
     self:set_anim("speed", anim_speed)
     self:set_anim("sit", state == "rest" and seated == true)
     self:set_anim("aim", state == "attack")
     self:set_anim("grip", state == "attack" and 1 or 0)
-    if state == "attack" then
-        local eye, player = self:eye(), game.player_eye()
-        local pitch = math.atan(player.y - eye.y, math.max(distance(eye, player), 0.5))
+    if state == "attack" and t_alive(target) then
+        local eye, aim = self:eye(), t_eye(target)
+        local pitch = math.atan(aim.y - eye.y, math.max(distance(eye, aim), 0.5))
         self:set_anim("aim_pitch", math.max(-1, math.min(1, pitch / math.rad(45))))
     end
     if props.sound_step ~= "" and self:anim_event("footstep") then
@@ -229,14 +307,28 @@ function on_update(self, dt)
     hurt_flash = math.max(0, hurt_flash - dt)
     reacting = math.max(0, reacting - dt)
     moving = false
-    local player = game.player_position()
+    look_timer = look_timer - dt
 
-    if sees_player(self) then
-        last_seen = player
+    -- Who to fight: the current target while it is in sight, else the nearest enemy it sees
+    -- (looked for a few times a second, not every step).
+    if not t_alive(target) then target = nil end
+    local visible = target ~= nil and sees(self, t_eye(target))
+    if not visible and look_timer <= 0 then
+        look_timer = 0.25 + 0.1 * math.random()
+        local found = look_for_enemy(self)
+        if found then
+            local calm = state ~= "chase" and state ~= "attack" and state ~= "search"
+            target, visible = found, true
+            if calm then alert_group(self, found) end
+        end
+    end
+    if visible then
+        last_seen = t_pos(target)
         if state ~= "chase" and state ~= "attack" then set_state(self, "chase") end
     elseif state == "chase" or state == "attack" then
-        set_state(self, "search")
+        set_state(self, target and "search" or "return")
     end
+    local goal = target and t_pos(target) or last_seen
 
     if state == "patrol" then
         if walk_to(self, patrol_target, props.walk_speed) or timer > 6 then
@@ -258,26 +350,29 @@ function on_update(self, dt)
             set_state(self, "patrol")
         end
     elseif state == "chase" then
-        if distance(self.position, player) <= props.shoot_range then
+        if distance(self.position, goal) <= props.shoot_range then
             set_state(self, "attack")
             next_attack = math.max(next_attack, game.time() + 0.5) -- time to raise the gun
         else
-            walk_to(self, player, props.run_speed)
+            walk_to(self, goal, props.run_speed)
         end
     elseif state == "attack" then
-        self:face(player)
-        local dist = distance(self.position, player)
+        self:face(goal)
+        local dist = distance(self.position, goal)
         if dist > props.shoot_range * 1.2 then
             set_state(self, "chase")
         elseif reacting <= 0 and game.time() >= next_attack then
+            local function hit(amount)
+                if target == "player" then game.damage_player(amount) else game.damage(target, amount, self) end
+            end
             if dist <= props.melee_range then
-                game.damage_player(props.melee_damage)
+                hit(props.melee_damage)
                 next_attack = game.time() + 1.0
                 if self:play(props.anim_attack, { loop = false, restart = true, fade = 0.1, speed = props.anim_speed }) then punching = graph end
             else
                 -- Hit chance falls off with distance; misses still make noise and keep the player moving.
                 local chance = math.min(0.95, math.max(0.05, props.accuracy * 10 / math.max(dist, 1)))
-                if math.random() < chance then game.damage_player(props.shot_damage) end
+                if math.random() < chance then hit(props.shot_damage) end
                 if props.sound_shot ~= "" then
                     local p = self.position
                     game.play_sound(props.sound_shot, vec3(p.x, p.y + 1.4, p.z))
@@ -288,22 +383,24 @@ function on_update(self, dt)
             end
         end
     elseif state == "search" then
-        if walk_to(self, last_seen, props.walk_speed) then
+        if not last_seen or walk_to(self, last_seen, props.walk_speed) then
             -- Look around on the spot.
             self.yaw = self.yaw + 90 * dt
         end
-        if timer > props.search_time then set_state(self, "return") end
+        if timer > props.search_time then target = nil; set_state(self, "return") end
     elseif state == "return" then
         if walk_to(self, home, props.walk_speed) then set_state(self, "patrol") end
     end
 
     animate(self, dt)
 
-    -- ai_debug 1 (console): state, health and the view cone above every enemy.
+    -- ai_debug 1 (console): name, faction, state, health and the view cone above every NPC.
     if game.cvar("ai_debug") == "1" then
         local eye = self:eye()
-        local seen = sees_player(self)
-        game.debug_text(eye + vec3(0, 0.45, 0), string.format("%s  %s  %d hp", self.name, state, math.floor(self.health)),
+        local seen = visible
+        local who = target == "player" and "player" or (target and target.name) or "-"
+        game.debug_text(eye + vec3(0, 0.45, 0), string.format("%s [%s%s] %s -> %s  %d hp", self.name, self.faction,
+                        self.group ~= "" and ("/" .. self.group) or "", state, who, math.floor(self.health)),
                         seen and vec3(1, 0.3, 0.2) or vec3(0.85, 0.85, 0.85))
         local f = self:forward()
         local half = math.rad(props.view_angle * 0.5)
@@ -311,7 +408,7 @@ function on_update(self, dt)
             local d = vec3(f.x * math.cos(a) - f.z * math.sin(a), 0, f.x * math.sin(a) + f.z * math.cos(a))
             game.debug_line(eye, eye + d * props.view_range, vec3(0.9, 0.8, 0.2))
         end
-        if seen then game.debug_line(eye, game.player_eye(), vec3(1, 0.2, 0.1)) end
+        if seen then game.debug_line(eye, t_eye(target), vec3(1, 0.2, 0.1)) end
     end
 
     -- Color shows the state while developing: calm grey, alerted orange, attacking red.

@@ -177,6 +177,8 @@ struct ScriptSystem::Impl {
     std::uint64_t queueOrder = 0;
     double time = 0.0;
     int errors = 0;
+    FactionTable ownFactions = defaultFactions();
+    FactionTable* factions = &ownFactions;
 
     Impl(Scene& s, PhysicsWorld& p, PlayerController& pl, LogFn l)
         : scene(s), physics(p), player(pl), log(std::move(l))
@@ -204,6 +206,34 @@ struct ScriptSystem::Impl {
     void applyInput(int index, const std::string& input, const std::string& parameter, int activator);
     void updateTriggers();
     void kill(ScriptEntity& se, bool notify);
+    void damage(int index, float amount, int attacker);
+    sol::object who(int index) // an attacker / activator for Lua: entity, "player" (-1) or nil
+    {
+        if (index >= 0 && index < static_cast<int>(entities.size()))
+            return sol::make_object(lua, entities[static_cast<std::size_t>(index)].get());
+        return index == -1 ? sol::make_object(lua, "player") : sol::object(sol::lua_nil);
+    }
+    // Lua side of an attitude question: an entity, "player" or a faction id.
+    std::string sideOf(const sol::object& o) const
+    {
+        if (o.is<ScriptEntity*>())
+            if (const ScriptEntity* se = o.as<ScriptEntity*>())
+                return entityFaction(se->e());
+        if (o.is<std::string>())
+            return o.as<std::string>();
+        return {};
+    }
+    static bool grudge(const sol::object& o)
+    {
+        if (!o.is<ScriptEntity*>())
+            return false;
+        const ScriptEntity* se = o.as<ScriptEntity*>();
+        if (!se)
+            return false;
+        const auto it = se->e().properties.find("grudge");
+        return it != se->e().properties.end() && it->second == "1";
+    }
+    static bool isPlayer(const sol::object& o) { return o.is<std::string>() && o.as<std::string>() == "player"; }
     void callScript(ScriptEntity& se, sol::protected_function& fn, const char* what, auto&&... args)
     {
         if (se.failed || !fn.valid())
@@ -293,6 +323,35 @@ void ScriptSystem::Impl::kill(ScriptEntity& se, bool notify)
     se.body.reset();
 }
 
+void ScriptSystem::Impl::damage(int index, float amount, int attacker)
+{
+    if (index < 0 || index >= static_cast<int>(entities.size()))
+        return;
+    ScriptEntity& se = *entities[static_cast<std::size_t>(index)];
+    Entity& e = se.e();
+    if (!e.alive)
+        return;
+    e.health -= amount;
+    const bool dies = e.health <= 0.0f;
+    if (attacker == -1) { // the player hurt it: it holds a grudge, its faction thinks less of the player
+        const std::string faction = entityFaction(e);
+        if (!faction.empty()) {
+            e.properties["grudge"] = "1";
+            se.propertiesChanged = true;
+            factions->changeGoodwill(faction, -0.1f * std::min(amount, 100.0f) - (dies ? 10.0f : 0.0f));
+        }
+    }
+    callScript(se, se.onDamage, "on_damage", amount, who(attacker));
+    fireOutput(index, "OnDamaged", attacker >= 0 ? attacker : -1);
+    if (e.health <= 0.0f && e.alive) {
+        e.health = 0.0f;
+        e.alive = false;
+        callScript(se, se.onDeath, "on_death", who(attacker));
+        se.body.reset(); // removes the capsule from the world
+        fireOutput(index, "OnDeath", attacker >= 0 ? attacker : -1);
+    }
+}
+
 void ScriptSystem::Impl::applyInput(int index, const std::string& input, const std::string& parameter, int activator)
 {
     ScriptEntity& se = *entities[static_cast<std::size_t>(index)];
@@ -314,16 +373,7 @@ void ScriptSystem::Impl::applyInput(int index, const std::string& input, const s
         kill(se, false);
     else if (input == "Damage") {
         const float amount = parameter.empty() ? 100.0f : std::strtof(parameter.c_str(), nullptr);
-        if (e.alive) {
-            e.health -= amount;
-            callScript(se, se.onDamage, "on_damage", amount);
-            fireOutput(index, "OnDamaged", activator);
-            if (e.health <= 0.0f && e.alive) {
-                e.health = 0.0f;
-                kill(se, true);
-                fireOutput(index, "OnDeath", activator);
-            }
-        }
+        damage(index, amount, activator >= 0 ? activator : -2); // a trap, not the player's own hand
     } else if (input == "SetProperty") {
         const std::size_t eq = parameter.find('=');
         if (eq != std::string::npos && eq > 0) {
@@ -429,6 +479,8 @@ void ScriptSystem::Impl::bindApi()
         "name", sol::property([](ScriptEntity& s) { return s.e().name; }),
         "id", sol::property([](ScriptEntity& s) { return objectIdToString(s.e().id); }), // persistent, 16 hex digits
         "type", sol::property([](ScriptEntity& s) { return s.e().type; }),
+        // Index of the entity in this run (unique, unlike id in levels made by hand; not saved).
+        "handle", sol::property([](ScriptEntity& s) { return static_cast<int>(s.index) + 1; }),
         "position", sol::property(
             [](ScriptEntity& s) { return s.e().position; },
             [](ScriptEntity& s, const glm::vec3& p) {
@@ -444,6 +496,26 @@ void ScriptSystem::Impl::bindApi()
         "health", sol::property([](ScriptEntity& s) { return s.e().health; },
                                 [](ScriptEntity& s, float h) { s.e().health = h; }),
         "alive", sol::property([](ScriptEntity& s) { return s.e().alive; }),
+        // Factions: Properties > Character in the editor (or set in play); group = squad name.
+        "faction", sol::property([](ScriptEntity& s) { return entityFaction(s.e()); },
+                                 [](ScriptEntity& s, const std::string& f) {
+                                     s.e().properties["faction"] = f;
+                                     s.propertiesChanged = true;
+                                 }),
+        "group", sol::property([](ScriptEntity& s) {
+            const auto it = s.e().properties.find("group");
+            return it != s.e().properties.end() ? it->second : std::string();
+        }),
+        "hates_player", sol::property([](ScriptEntity& s) {
+            const auto it = s.e().properties.find("grudge");
+            return it != s.e().properties.end() && it->second == "1";
+        }, [](ScriptEntity& s, bool on) {
+            if (on)
+                s.e().properties["grudge"] = "1";
+            else
+                s.e().properties.erase("grudge");
+            s.propertiesChanged = true;
+        }),
         "grounded", sol::property([](ScriptEntity& s) { return s.body && s.body->grounded(); }),
         "eye", [](ScriptEntity& s) { return s.e().position + glm::vec3(0.0f, s.e().size.y * 0.9f, 0.0f); },
         "forward", [](ScriptEntity& s) {
@@ -560,6 +632,62 @@ void ScriptSystem::Impl::bindApi()
         return best;
     });
     game.set_function("player_eye", [this] { return player.eye(); });
+    // Factions (assets/factions.cfg). Sides are entities, "player" or faction ids.
+    // game.attitude(a, b) -> "hostile" / "neutral" / "friendly"; an entity the player hurt hates the player.
+    game.set_function("attitude", [this](sol::object a, sol::object b) -> std::string {
+        if ((isPlayer(a) && grudge(b)) || (isPlayer(b) && grudge(a)))
+            return "hostile";
+        const std::string x = sideOf(a), y = sideOf(b);
+        if (x.empty() || y.empty())
+            return "neutral";
+        return attitudeName(factions->attitude(x, y));
+    });
+    game.set_function("relation", [this](sol::object a, sol::object b) { return factions->relation(sideOf(a), sideOf(b)); });
+    game.set_function("set_relation", [this](const std::string& a, const std::string& b, float v) { factions->setRelation(a, b, v); });
+    game.set_function("goodwill", [this](const std::string& f) {
+        const auto it = factions->goodwill.find(f);
+        return it != factions->goodwill.end() ? it->second : 0.0f;
+    });
+    game.set_function("change_goodwill", [this](const std::string& f, float delta) { factions->changeGoodwill(f, delta); });
+    game.set_function("player_faction", [this] { return factions->playerFaction; });
+    game.set_function("faction_name", [this](const std::string& f) {
+        const Faction* faction = factions->find(f);
+        return faction ? faction->name : f;
+    });
+    // Entities within radius of pos, nearest first: game.entities_near(pos, r [, type]); characters_near
+    // lists only the living ones that belong to a faction (people, mutants).
+    auto near = [this](const glm::vec3& pos, float radius, const std::string* type, bool characters) {
+        std::vector<std::pair<float, ScriptEntity*>> found;
+        for (auto& se : entities) {
+            const Entity& e = se->e();
+            if (!e.alive || e.helper() || (type && e.type != *type) || (characters && entityFaction(e).empty()))
+                continue;
+            const glm::vec3 d = e.position - pos;
+            const float dd = glm::dot(d, d);
+            if (dd <= radius * radius)
+                found.emplace_back(dd, se.get());
+        }
+        std::sort(found.begin(), found.end(), [](const auto& x, const auto& y) { return x.first < y.first; });
+        sol::table t = lua.create_table(static_cast<int>(found.size()), 0);
+        for (std::size_t i = 0; i < found.size(); ++i)
+            t[i + 1] = found[i].second;
+        return t;
+    };
+    game.set_function("entities_near", [near](const glm::vec3& pos, float radius, sol::optional<std::string> type) {
+        return near(pos, radius, type ? &*type : nullptr, false);
+    });
+    game.set_function("characters_near", [near](const glm::vec3& pos, float radius) { return near(pos, radius, nullptr, true); });
+    // game.damage(entity, amount [, attacker]): attacker an entity (its victim may fight back) or "player".
+    game.set_function("damage", [this](ScriptEntity* target, float amount, sol::object attacker) {
+        if (!target)
+            return;
+        int by = -2;
+        if (isPlayer(attacker))
+            by = -1;
+        else if (attacker.is<ScriptEntity*>() && attacker.as<ScriptEntity*>())
+            by = static_cast<int>(attacker.as<ScriptEntity*>()->index);
+        damage(static_cast<int>(target->index), amount, by);
+    });
     game.set_function("player_health", [this] { return playerHealth; });
     game.set_function("play_sound", [this](const std::string& sound, sol::optional<glm::vec3> position, sol::optional<float> volume) {
         if (playSound)
@@ -818,36 +946,13 @@ void ScriptSystem::teleportEntity(int entityIndex, glm::vec3 feet)
     se.path.clear();
 }
 
-void ScriptSystem::damageEntity(int entityIndex, float amount)
+void ScriptSystem::damageEntity(int entityIndex, float amount, int attacker)
 {
-    Impl& d = *impl_;
-    if (entityIndex < 0 || entityIndex >= static_cast<int>(d.entities.size()))
-        return;
-    ScriptEntity& se = *d.entities[static_cast<std::size_t>(entityIndex)];
-    Entity& e = se.e();
-    if (!e.alive)
-        return;
-    e.health -= amount;
-    auto call = [&](sol::protected_function& fn, const char* what, auto&&... args) {
-        if (se.failed || !fn.valid())
-            return;
-        auto r = fn(&se, std::forward<decltype(args)>(args)...);
-        if (!r.valid()) {
-            sol::error err = r;
-            d.report(se, std::string(what) + ": " + err.what());
-            se.failed = true;
-        }
-    };
-    call(se.onDamage, "on_damage", amount);
-    d.fireOutput(entityIndex, "OnDamaged", -1);
-    if (e.health <= 0.0f && e.alive) {
-        e.health = 0.0f;
-        e.alive = false;
-        call(se.onDeath, "on_death");
-        se.body.reset(); // removes the capsule from the world
-        d.fireOutput(entityIndex, "OnDeath", -1);
-    }
+    impl_->damage(entityIndex, amount, attacker);
 }
+
+void ScriptSystem::setFactions(FactionTable* table) { impl_->factions = table ? table : &impl_->ownFactions; }
+FactionTable& ScriptSystem::factions() { return *impl_->factions; }
 
 bool readScriptProperties(const std::filesystem::path& script, std::vector<ScriptProperty>& out, std::string* error)
 {

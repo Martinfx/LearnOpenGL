@@ -9,8 +9,8 @@ Lua 5.4 with `base`, `math`, `string`, `table` and `coroutine` libraries.
 | --- | --- |
 | `on_start(self)` | Once when the level starts |
 | `on_update(self, dt)` | Every simulation step (60 Hz, `dt` = 1/60 s) |
-| `on_damage(self, amount)` | Hit by the player's weapon (health already reduced) |
-| `on_death(self)` | Health reached 0; the entity is removed from play |
+| `on_damage(self, amount, attacker)` | Hurt (health already reduced); `attacker` is `"player"`, the entity that did it, or `nil` (anomaly, trap) |
+| `on_death(self, attacker)` | Health reached 0; the entity is removed from play |
 | `on_save(self)` | Saving the game: return a table (numbers, strings, booleans, `vec3`, nested tables) to get back later |
 | `on_load(self, data)` | After loading a saved game, with that table (health, position and facing are already restored) |
 | `on_input(self, input, parameter, activator)` | Entity I/O: another entity's output (or `game.fire`) sent it `input`; `activator` is the entity that set it off, `nil` for the player. Built-in inputs (`TurnOn`, `Kill`...) arrive here too, after the engine handled them |
@@ -45,6 +45,10 @@ methods `:length()`, `:normalized()`, `:flat()` (y = 0), `:dot(other)`.
 | `height` | Entity height in metres |
 | `health` | Hit points (default 100), read/write |
 | `alive` | `false` after death |
+| `faction` | Faction id (`"stalker"`, `"bandit"`...; Properties > Character, default by type: enemy = bandit, npc = stalker, mutant = mutant), read/write |
+| `group` | Group (squad) name from Properties > Character, `""` = none |
+| `hates_player` | The player hurt it: it is hostile to the player whatever its faction thinks (saved), read/write |
+| `handle` | Number unique to the entity in this run (compare entities with it; not saved) |
 | `grounded` | Standing on the ground (characters only) |
 | `:eye()` | Eye position |
 | `:forward()` | Facing direction |
@@ -78,6 +82,14 @@ methods `:length()`, `:normalized()`, `:flat()` (y = 0), `:dot(other)`.
 | `game.player_position()` / `game.player_eye()` | `vec3` |
 | `game.player_health()` | number 0..100 |
 | `game.damage_player(amount)` | |
+| `game.damage(entity, amount, [attacker])` | Hurts an entity; `attacker` (an entity or `"player"`) is passed to its `on_damage` |
+| `game.attitude(a, b)` | `"hostile"`, `"neutral"` or `"friendly"`; `a` and `b` are entities, `"player"` or faction ids (assets/factions.cfg, editor: Assets > Factions) |
+| `game.relation(a, b)` | Relation -100..100 (the player's includes the goodwill earned) |
+| `game.set_relation(a, b, value)` | Changes the relation of two factions for this game |
+| `game.goodwill(faction)`, `game.change_goodwill(faction, delta)` | The player's standing with a faction (saved; shooting its members lowers it) |
+| `game.player_faction()`, `game.faction_name(id)` | The player's faction id; a faction's display name |
+| `game.entities_near(position, radius, [type])` | Living entities within `radius`, nearest first |
+| `game.characters_near(position, radius)` | Living entities that belong to a faction (people, mutants), nearest first |
 | `game.nav_ready()` | `true` once the level's navmesh is built (it builds in the background after loading) |
 | `game.random_nav_point(center, radius)` | A reachable `vec3` within `radius`, or `nil` |
 | `game.find_path(from, to)` | Table of `vec3` corners along the navmesh (empty when there is no way) |

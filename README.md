@@ -100,6 +100,19 @@ kde stojí, hráče vidí v zorném úhlu (a neprojde přes zdi), pronásleduje 
 hledá ho na posledním známém místě a vrací se zpět. Parametry jsou na začátku skriptu. Chyba ve skriptu
 vypne jen danou entitu a vypíše se do konzole hry.
 
+### Frakce a skupiny
+
+Stalkeři, bandité, armáda a mutanti mají vztahy -100 (nenávist) až 100 (spojenci) v
+[`assets/factions.cfg`](assets/factions.cfg); editor: Assets > Factions (matice vztahů, barvy, hráčova
+frakce, prahy nepřátelský / přátelský). Postava si frakci a skupinu volí v Properties > Character
+(bez nastavení podle typu: `enemy` = bandita, `npc` = stalker). AI v `enemy.lua` napadá každého, koho
+vidí a jeho frakce je vůči ní nepřátelská (hráče i jiné NPC, např. bandité a vojáci se střílejí mezi
+sebou); neutrální postavy (stalkeři v táboře) se brání, až když je někdo napadne. Kdo začne boj nebo
+je zraněn, zavolá ostatní ze své skupiny (`Alert`). Postřelená postava si hráče pamatuje a hráč
+ztrácí u její frakce reputaci (goodwill, ukládá se); po několika zabitých stalkerech jsou nepřátelští
+všichni. Lua: `game.attitude`, `game.relation`, `game.change_goodwill`, `game.characters_near`, `game.damage`.
+Editor: menu Add > NPC (neutrální stalker).
+
 ### Script editor
 
 Skripty se píšou přímo v editoru: tlačítko **Edit script** u entity nebo menu Script (New script,

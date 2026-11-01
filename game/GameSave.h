@@ -25,6 +25,7 @@ struct SaveGame {
     std::size_t weapon = 0;
     std::vector<int> ammo;
     int kills = 0;
+    std::map<std::string, float> goodwill; // the player's standing per faction (engine/Factions.h)
     // Physics props (dynamic models) where they lie now.
     struct Prop {
         engine::ObjectId id = 0;

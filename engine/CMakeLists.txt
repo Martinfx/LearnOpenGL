@@ -43,6 +43,7 @@ add_library(engine STATIC
     src/JobSystem.cpp
     src/SceneGraph.cpp
     src/Surfaces.cpp
+    src/Factions.cpp
     src/Log.cpp
     src/Paths.cpp
     src/Crash.cpp

@@ -28,6 +28,7 @@
 #include "ShaderEditor.h"
 #include "SoundEditor.h"
 #include "SurfacesEditor.h"
+#include "FactionsEditor.h"
 #include "ParticleEditor.h"
 #include "AnimGraphEditor.h"
 #include "EditorUi.h"
@@ -219,6 +220,7 @@ void MainWindow::buildMenus()
     QAction* add = edit->addAction(tr("&Add box"), QKeySequence(Qt::CTRL | Qt::Key_B), this, &MainWindow::addBox);
     QAction* import = edit->addAction(tr("&Import glTF model..."), QKeySequence(Qt::CTRL | Qt::Key_I), this, &MainWindow::importModel);
     QAction* enemy = edit->addAction(tr("Add &enemy"), QKeySequence(Qt::CTRL | Qt::Key_E), this, [this] { addEntity("enemy"); });
+    QAction* npc = edit->addAction(tr("Add &NPC (neutral stalker)"), this, [this] { addEntity("npc"); });
     edit->addAction(tr("Add empty en&tity"), this, [this] { addEntity("empty"); });
     edit->addAction(tr("Add &sound source"), this, [this] { addEntity("sound"); });
     edit->addAction(tr("Add &particle effect"), this, [this] { addEntity("particle"); });
@@ -286,6 +288,7 @@ void MainWindow::buildMenus()
     QMenu* assets = menuBar()->addMenu(tr("&Assets"));
     assets->addAction(tr("&Material editor"), QKeySequence(Qt::CTRL | Qt::Key_M), this, [this] { openMaterialEditor(); });
     assets->addAction(tr("S&urfaces (footsteps, impacts)"), this, [this] { openSurfacesEditor(); });
+    assets->addAction(tr("&Factions (who fights whom)"), this, [this] { openFactionsEditor(); });
     assets->addAction(tr("&Particle effect..."), this, [this] {
         const QString path = QFileDialog::getOpenFileName(this, tr("Open particle effect"), assetPath("particles"),
                                                           tr("Particle effects (*.particle)"));
@@ -457,6 +460,8 @@ void MainWindow::buildMenus()
     import->setIcon(editorIcon("model"));
     addMenu_->addAction(add);
     addMenu_->addAction(enemy);
+    npc->setIcon(editorIcon("person"));
+    addMenu_->addAction(npc);
     addMenu_->addAction(tr("Empty entity"), this, [this] { addEntity("empty"); });
     addMenu_->addAction(tr("Map marker (point on the in-game map)"), this, [this] { addEntity("map_marker"); });
     addMenu_->addSeparator();
@@ -1254,6 +1259,55 @@ void MainWindow::buildDocks()
     characterFlashlight_->setToolTip(tr("A spot light from the eyes along the facing while the character lives "
                                         "(property flashlight = 1, or \"night\": only after dusk with the day/night cycle)"));
     characterForm->addRow(tr("Flashlight"), characterFlashlight_);
+    // Factions (assets/factions.cfg, Assets > Factions): who it fights; group: who it calls for help.
+    {
+        auto* row = new QWidget(boxPanel_);
+        auto* layout = new QHBoxLayout(row);
+        layout->setContentsMargins(0, 0, 0, 0);
+        characterFaction_ = new QComboBox(row);
+        characterFaction_->setToolTip(tr("Faction: whom it attacks on sight, who is neutral (assets/factions.cfg). "
+                                         "Default: by type (enemy = bandit, npc = stalker, mutant = mutant)."));
+        auto* edit = new QPushButton(tr("Edit"), row);
+        edit->setToolTip(tr("Open the faction relations (Assets > Factions)"));
+        layout->addWidget(characterFaction_, 1);
+        layout->addWidget(edit);
+        characterForm->addRow(tr("Faction"), row);
+        connect(edit, &QPushButton::clicked, this, &MainWindow::openFactionsEditor);
+        connect(characterFaction_, &QComboBox::currentIndexChanged, this, [this](int index) {
+            engine::Entity* e = selectedEntity();
+            if (!e || index < 0)
+                return;
+            const std::string id = characterFaction_->itemData(index).toString().toStdString();
+            const auto it = e->properties.find("faction");
+            if ((it == e->properties.end() ? std::string() : it->second) == id)
+                return;
+            if (id.empty())
+                e->properties.erase("faction");
+            else
+                e->properties["faction"] = id;
+            markDirty();
+        });
+        characterGroup_ = new QLineEdit(boxPanel_);
+        characterGroup_->setPlaceholderText(tr("none"));
+        characterGroup_->setToolTip(tr("Group (squad): members with the same group name call each other when one of them "
+                                       "starts a fight or is attacked, e.g. \"camp\", \"checkpoint\"."));
+        characterForm->addRow(tr("Group"), characterGroup_);
+        connect(characterGroup_, &QLineEdit::editingFinished, this, [this] {
+            engine::Entity* e = selectedEntity();
+            if (!e)
+                return;
+            const std::string group = characterGroup_->text().trimmed().toStdString();
+            const auto it = e->properties.find("group");
+            if ((it == e->properties.end() ? std::string() : it->second) == group)
+                return;
+            if (group.empty())
+                e->properties.erase("group");
+            else
+                e->properties["group"] = group;
+            markDirty();
+        });
+        reloadFactionList();
+    }
     connect(characterFlashlight_, &QComboBox::currentIndexChanged, this, [this](int index) {
         engine::Entity* e = selectedEntity();
         if (!e)
@@ -3339,6 +3393,10 @@ void MainWindow::openAssetFile(const QString& path)
         openSurfacesEditor();
         return;
     }
+    if (QFileInfo(path).fileName() == "factions.cfg") {
+        openFactionsEditor();
+        return;
+    }
     openAsset(path, static_cast<int>(assetTypeOf(path)));
 }
 
@@ -3372,6 +3430,8 @@ void MainWindow::openAsset(const QString& path, int type)
     default:
         if (QFileInfo(path).fileName() == "surfaces.cfg")
             openSurfacesEditor();
+        else if (QFileInfo(path).fileName() == "factions.cfg")
+            openFactionsEditor();
         else
             notify(path, 5000);
         break;
@@ -3535,7 +3595,7 @@ void MainWindow::addEntity(const QString& type)
     const glm::vec3 p = cam.position + cam.flatForward() * 6.0f;
     engine::Entity e;
     e.type = type.toStdString();
-    e.name = engine::uniqueNodeName(scene_, (type == "enemy" ? "Enemy " : type == "sound" ? "Sound " : type == "particle" ? "Effect " : type == "light" ? "Light " :
+    e.name = engine::uniqueNodeName(scene_, (type == "enemy" ? "Enemy " : type == "npc" ? "Stalker " : type == "sound" ? "Sound " : type == "particle" ? "Effect " : type == "light" ? "Light " :
                                              type == "trigger" ? "Trigger " : type == "relay" ? "Relay " : type == "reverb" ? "Reverb " : type == "ambience" ? "Ambience " : type == "interior" ? "Interior " : type == "reflection_probe" ? "Reflection probe " :
                                              type == "irradiance_volume" ? "Irradiance volume " :
                                              type == "water" ? "Water " : "Entity ") +
@@ -3557,14 +3617,14 @@ void MainWindow::addEntity(const QString& type)
         e.properties["effect"] = "particles/fire.particle";
     }
     e.position = {std::round(p.x * 2.0f) * 0.5f, 0.0f, std::round(p.z * 2.0f) * 0.5f};
-    if (type == "enemy") {
+    if (type == "enemy" || type == "npc") {
         e.color = {0.55f, 0.5f, 0.5f};
         // Default AI script shipped next to the editor (copied by the game build).
         const QString script = assetPath("scripts/enemy.lua");
         if (QFileInfo::exists(script))
             e.scriptPath = std::filesystem::path(script.toStdU16String());
         // A random human from the bundled characters (stalker, soldier, bandit, ...).
-        QStringList humans = QDir(assetPath("models/characters/humans")).entryList({"*.glb"}, QDir::Files);
+        QStringList humans = QDir(assetPath("models/characters/humans")).entryList({type == "npc" ? "stalker*.glb" : "*.glb"}, QDir::Files);
         const QString human = humans.isEmpty()
                                   ? assetPath("models/characters/library/ual_mannequin.glb")
                                   : assetPath("models/characters/humans/" + humans.at(QRandomGenerator::global()->bounded(humans.size())));
@@ -3751,6 +3811,37 @@ void MainWindow::refreshCharacter()
                 lit = it->second == "1" ? 1 : it->second == "night" ? 2 : 0;
         characterFlashlight_->setCurrentIndex(lit);
         characterFlashlight_->setEnabled(e != nullptr);
+    }
+    if (characterFaction_) {
+        const QSignalBlocker block(characterFaction_);
+        characterFaction_->clear();
+        std::string own;
+        if (e)
+            if (const auto it = e->properties.find("faction"); it != e->properties.end())
+                own = it->second;
+        engine::Entity byType;
+        if (e)
+            byType.type = e->type;
+        const std::string fallback = engine::entityFaction(byType);
+        const engine::Faction* f = factionList_.find(fallback);
+        characterFaction_->addItem(fallback.empty() ? tr("(none: not a character)")
+                                                    : tr("(by type: %1)").arg(QString::fromStdString(f ? f->name : fallback)),
+                                   QString());
+        for (const engine::Faction& faction : factionList_.factions)
+            characterFaction_->addItem(QString::fromStdString(faction.name + " (" + faction.id + ")"), QString::fromStdString(faction.id));
+        int index = characterFaction_->findData(QString::fromStdString(own));
+        if (index < 0) { // a faction the file does not know (yet)
+            characterFaction_->addItem(QString::fromStdString(own + " ?"), QString::fromStdString(own));
+            index = characterFaction_->count() - 1;
+        }
+        characterFaction_->setCurrentIndex(index);
+        characterFaction_->setEnabled(e != nullptr);
+        std::string group;
+        if (e)
+            if (const auto it = e->properties.find("group"); it != e->properties.end())
+                group = it->second;
+        characterGroup_->setText(QString::fromStdString(group));
+        characterGroup_->setEnabled(e != nullptr);
     }
 }
 
@@ -4374,6 +4465,23 @@ bool MainWindow::closeScriptTab(int index)
         w->deleteLater();
         return true;
     }
+    if (auto* fa = qobject_cast<FactionsEditor*>(w)) {
+        if (fa->isModified()) {
+            tabs_->setCurrentIndex(index);
+            const auto answer = QMessageBox::question(this, tr("Unsaved changes"), tr("Save changes to %1?").arg(fa->path()),
+                                                      QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
+            if (answer == QMessageBox::Cancel)
+                return false;
+            QString error;
+            if (answer == QMessageBox::Save && !fa->save(&error)) {
+                QMessageBox::warning(this, tr("Factions"), error);
+                return false;
+            }
+        }
+        tabs_->removeTab(index);
+        w->deleteLater();
+        return true;
+    }
     if (auto* ag = qobject_cast<AnimGraphEditor*>(w)) {
         if (ag->isModified()) {
             tabs_->setCurrentIndex(index);
@@ -4437,6 +4545,9 @@ bool MainWindow::saveAllScripts()
         } else if (auto* ag = qobject_cast<AnimGraphEditor*>(w); ag && ag->isModified()) {
             ok = ag->save(&error);
             path = ag->path();
+        } else if (auto* fa = qobject_cast<FactionsEditor*>(w); fa && fa->isModified()) {
+            ok = fa->save(&error);
+            path = fa->path();
         }
         if (!ok) {
             QMessageBox::warning(this, tr("Save"), tr("%1\n%2").arg(path, error));
@@ -4461,6 +4572,8 @@ bool MainWindow::confirmCloseScripts()
             modified = sh->isModified();
         else if (auto* ag = qobject_cast<AnimGraphEditor*>(w))
             modified = ag->isModified();
+        else if (auto* fa = qobject_cast<FactionsEditor*>(w))
+            modified = fa->isModified();
         if (modified && !closeScriptTab(i))
             return false;
     }
@@ -4646,6 +4759,41 @@ void MainWindow::newParticleEffect(const QString& folder)
     openParticleEditor(path);
 }
 
+void MainWindow::reloadFactionList()
+{
+    factionList_ = engine::defaultFactions();
+    std::string error;
+    if (QFileInfo::exists(assetPath("factions.cfg")) &&
+        !engine::loadFactions(factionList_, std::filesystem::path(assetPath("factions.cfg").toStdU16String()), &error))
+        notify(QString::fromStdString(error), 8000);
+    if (characterFaction_)
+        refreshCharacter();
+}
+
+void MainWindow::openFactionsEditor()
+{
+    for (int i = 0; i < tabs_->count(); ++i)
+        if (qobject_cast<FactionsEditor*>(tabs_->widget(i))) {
+            tabs_->setCurrentIndex(i);
+            return;
+        }
+    auto* fe = new FactionsEditor(tabs_);
+    QString error;
+    if (!fe->load(assetPath("factions.cfg"), &error)) {
+        delete fe;
+        QMessageBox::warning(this, tr("Factions"), error);
+        return;
+    }
+    const int index = tabs_->addTab(fe, fe->title());
+    tabs_->setTabToolTip(index, fe->path());
+    tabs_->setCurrentIndex(index);
+    connect(fe, &FactionsEditor::modificationChanged, this, [this, fe] {
+        if (const int i = tabs_->indexOf(fe); i >= 0)
+            tabs_->setTabText(i, fe->title());
+    });
+    connect(fe, &FactionsEditor::saved, this, &MainWindow::reloadFactionList);
+}
+
 void MainWindow::openSurfacesEditor()
 {
     for (int i = 1; i < tabs_->count(); ++i)
@@ -4750,6 +4898,8 @@ void MainWindow::saveCurrent()
         ok = sd->save(&error);
     else if (auto* su = qobject_cast<SurfacesEditor*>(tabs_->currentWidget()))
         ok = su->save(&error);
+    else if (auto* fa = qobject_cast<FactionsEditor*>(tabs_->currentWidget()))
+        ok = fa->save(&error);
     else if (auto* pe = qobject_cast<ParticleEditor*>(tabs_->currentWidget()))
         ok = pe->save(&error);
     else if (auto* ag = qobject_cast<AnimGraphEditor*>(tabs_->currentWidget()))
@@ -5299,6 +5449,7 @@ void MainWindow::buildModePanel()
         auto* layout = new QVBoxLayout(page);
         auto* box = toolButton("cube", tr("Box"), page);
         auto* enemy = toolButton("person", tr("Enemy (random human)"), page);
+        auto* npc = toolButton("person", tr("NPC (neutral stalker; faction in Properties > Character)"), page);
         auto* entity = toolButton("select", tr("Empty entity"), page);
         auto* sound = toolButton("sound", tr("Sound source / ambient zone"), page);
         auto* particles = toolButton("particles", tr("Particle effect (fire, smoke, dust)"), page);
@@ -5330,7 +5481,7 @@ void MainWindow::buildModePanel()
         auto* interior = toolButton("cube", tr("Interior volume (dark building: less sky light and fog, no rain, room reverb)"), page);
         connect(interior, &QPushButton::clicked, this, [this] { addEntity("interior"); });
         auto* model = toolButton("model", tr("glTF model..."), page);
-        for (QPushButton* b : {box, enemy, entity, sound, particles, anomaly, light, campfire, trigger, relay, reverbZone, ambienceZone, interior, model})
+        for (QPushButton* b : {box, enemy, npc, entity, sound, particles, anomaly, light, campfire, trigger, relay, reverbZone, ambienceZone, interior, model})
             layout->addWidget(b);
         auto* hint = new QLabel(tr("Or drag a model from the Content Browser into the view: it lands where you drop it."), page);
         hint->setObjectName("dim");
@@ -5339,6 +5490,7 @@ void MainWindow::buildModePanel()
         layout->addStretch(1);
         connect(box, &QPushButton::clicked, this, &MainWindow::addBox);
         connect(enemy, &QPushButton::clicked, this, [this] { addEntity("enemy"); });
+        connect(npc, &QPushButton::clicked, this, [this] { addEntity("npc"); });
         connect(entity, &QPushButton::clicked, this, [this] { addEntity("empty"); });
         connect(sound, &QPushButton::clicked, this, [this] { addEntity("sound"); });
         connect(particles, &QPushButton::clicked, this, [this] { addEntity("particle"); });

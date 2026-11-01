@@ -1,4 +1,5 @@
 #pragma once
+#include <engine/Factions.h>
 #include <array>
 #include <atomic>
 #include <memory>
@@ -140,6 +141,8 @@ private:
     TextureEditor* openTexture(const QString& image);
     SoundEditor* openSoundEditor(const QString& path);
     void openSurfacesEditor();
+    void openFactionsEditor();
+    void reloadFactionList(); // Properties > Character > Faction offers the factions of assets/factions.cfg
     void openParticleEditor(const QString& path);
     void openAnimGraphEditor(const QString& path);
     void newAnimGraph(const QString& folder);
@@ -344,6 +347,9 @@ private:
     std::vector<std::pair<QDoubleSpinBox*, float engine::PlayerSettings::*>> playerSpins_;
     QCheckBox* flashlightCheck_ = nullptr;
     QComboBox* characterFlashlight_ = nullptr;  // entity property "flashlight": none / "1" / "night"
+    QComboBox* characterFaction_ = nullptr;     // entity property "faction" (empty = by type)
+    QLineEdit* characterGroup_ = nullptr;       // entity property "group": squad that calls each other for help
+    engine::FactionTable factionList_;
     QCheckBox* flashlightShadowsCheck_ = nullptr;
     QPushButton* flashlightColor_ = nullptr;
     // Navigation (Level details): settings, build on the job system, viewport overlay.

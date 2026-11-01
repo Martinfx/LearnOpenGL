@@ -477,7 +477,7 @@ void testEnemyDiesAndReactsToDamage()
     engine::ScriptSystem scripts(s, world, player, [&](const std::string& m) { log.push_back(m); });
     scripts.start();
     scripts.fixedUpdate(1.0f / 60.0f);
-    scripts.damageEntity(0, 20.0f);
+    scripts.damageEntity(0, 20.0f, -1); // the player shoots it
     bool alerted = false;
     for (const auto& l : log)
         alerted = alerted || l.find("-> chase") != std::string::npos;
@@ -714,7 +714,7 @@ void testScriptPropertiesFromEditor()
     std::vector<engine::ScriptProperty> props;
     std::string err;
     check(engine::readScriptProperties(ENGINE_TEST_ASSETS "/scripts/enemy.lua", props, &err), "read enemy.lua properties: " + err);
-    check(props.size() == 28 && props[0].name == "health" && props[0].defaultValue == "100", "enemy.lua declares 28 tunables, health first");
+    check(props.size() == 29 && props[0].name == "health" && props[0].defaultValue == "100", "enemy.lua declares 29 tunables, health first");
 
     // An editor override changes the behaviour: 40 hp dies after two 20-damage hits.
     auto s = flatFloor();
@@ -885,6 +885,83 @@ void testEnemyAnimGraph()
               loaded.entities[0].animGraphPath == s.entities[0].animGraphPath && loaded.entities[0].animator.graph,
           "animation graph path is saved with the level");
     std::filesystem::remove("graph.level");
+}
+
+void testFactions()
+{
+    // The shipped table: loners neutral to the player, bandits hostile; goodwill moves it.
+    engine::FactionTable t;
+    std::string err;
+    check(engine::loadFactions(t, ENGINE_TEST_ASSETS "/factions.cfg", &err), "load factions.cfg: " + err);
+    check(t.factions.size() == 4 && t.find("military") && t.playerFaction == "stalker", "four factions, the player is a stalker");
+    check(t.relation("bandit", "stalker") == -80.0f && t.relation("stalker", "bandit") == -80.0f, "relations are symmetric");
+    check(t.attitude("player", "bandit") == engine::Attitude::Hostile && t.attitude("player", "stalker") == engine::Attitude::Neutral &&
+              t.attitude("bandit", "bandit") == engine::Attitude::Friendly,
+          "attitudes from the relations");
+    t.changeGoodwill("stalker", -60.0f);
+    check(t.attitude("player", "stalker") == engine::Attitude::Hostile && t.attitude("stalker", "stalker") == engine::Attitude::Neutral,
+          "losing goodwill turns a faction against the player only");
+    t.changeGoodwill("bandit", -500.0f);
+    check(t.relation("player", "bandit") == -100.0f && t.goodwill["bandit"] == -20.0f, "goodwill is clamped");
+    check(engine::saveFactions(t, "factions_test.cfg", &err), "save factions: " + err);
+    engine::FactionTable u;
+    check(engine::loadFactions(u, "factions_test.cfg", &err) && u.relations == t.relations && u.factions.size() == 4 &&
+              u.factions[1].name == t.factions[1].name && u.hostileBelow == t.hostileBelow,
+          "factions round trip: " + err);
+    std::filesystem::remove("factions_test.cfg");
+
+    // A bandit and a soldier see each other: they fight without the player.
+    {
+        auto s = flatFloor();
+        s.playerStart = {0, 0, -60};
+        s.entities.push_back(enemyAt({0, 0, 0}, 0.0f)); // bandit (type enemy), facing +x
+        engine::Entity soldier = enemyAt({14, 0, 0}, 180.0f);
+        soldier.name = "Soldier";
+        soldier.properties["faction"] = "military";
+        s.entities.push_back(soldier);
+        const float playerHealth = runAi(s, 6.0f);
+        check(playerHealth == 100.0f, "the player far away is left alone");
+        check(s.entities[0].health < 100.0f || s.entities[1].health < 100.0f, "bandit and soldier shoot at each other");
+    }
+
+    // Neutral loners in camp ignore the player until one is shot; then its group fights.
+    {
+        auto s = flatFloor();
+        s.playerStart = {0, 0, 0};
+        for (int i = 0; i < 2; ++i) {
+            engine::Entity e = enemyAt({8.0f + i * 1.5f, 0, 0}, i == 0 ? 180.0f : 0.0f); // the second one faces away
+            e.name = i == 0 ? "Loner" : "Loner 2";
+            e.type = "npc";
+            e.properties["group"] = "camp";
+            e.properties["patrol_radius"] = "0";
+            s.entities.push_back(e);
+        }
+        engine::PhysicsWorld world;
+        world.setLevel(s);
+        engine::PlayerController player;
+        player.spawn(world, s.playerStart);
+        std::vector<std::string> log;
+        engine::ScriptSystem scripts(s, world, player, [&log](const std::string& m) { log.push_back(m); });
+        check(scripts.start() == 0, "npc scripts start");
+        auto run = [&](float seconds) {
+            engine::FpsCamera cam;
+            engine::InputState idle;
+            for (int i = 0; i < static_cast<int>(seconds * 60.0f); ++i) {
+                player.fixedUpdate(idle, cam, 1.0f / 60.0f);
+                scripts.fixedUpdate(1.0f / 60.0f);
+            }
+        };
+        run(3.0f);
+        check(scripts.playerHealth() == 100.0f, "neutral loners do not attack the player");
+        scripts.damageEntity(1, 10.0f, -1); // the player shoots the one looking away
+        check(s.entities[1].properties["grudge"] == "1" && scripts.factions().goodwill["stalker"] < 0.0f,
+              "the victim holds a grudge, the faction loses goodwill");
+        run(4.0f);
+        check(s.entities[0].properties["grudge"] == "1", "its group mate was called and turns on the player");
+        check(scripts.playerHealth() < 100.0f, "the camp fights back");
+        for (const std::string& m : log)
+            check(m.find("[script]") != 0, "no script errors: " + m);
+    }
 }
 
 void testScriptSyntaxCheck()
@@ -3220,6 +3297,7 @@ int main()
         {"testAnimIk", testAnimIk},
         {"testRagdoll", testRagdoll},
         {"testEnemyAnimGraph", testEnemyAnimGraph},
+        {"testFactions", testFactions},
         {"testWorldStreaming", testWorldStreaming},
     };
     for (const auto& [name, run] : tests)

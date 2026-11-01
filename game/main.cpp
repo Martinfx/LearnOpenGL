@@ -518,6 +518,14 @@ int main(int argc, char** argv)
     const long frameLimit = frameLimitEnv ? std::strtol(frameLimitEnv, nullptr, 10) : -1;
     long frame = 0;
     bool firstLevel = true;
+    // Factions and the player's standing with them: one table for the whole game (goodwill
+    // carries over level changes and is saved).
+    engine::FactionTable factions = engine::defaultFactions();
+    {
+        std::string factionError;
+        if (!engine::loadFactions(factions, std::filesystem::path(argv[0]).parent_path() / "assets" / "factions.cfg", &factionError))
+            LOG_WARN("factions", "%s (built-in factions used)", factionError.c_str());
+    }
     WindowMode windowMode;
 
     // One level from loading to leaving it (quit, restart, another level). Everything
@@ -692,6 +700,11 @@ int main(int argc, char** argv)
 
     engine::ScriptSystem scripts(scene, physics, player);
     scripts.setNavMesh(&navmesh);
+    scripts.setFactions(&factions);
+    if (loadFrom)
+        factions.goodwill = loadFrom->goodwill;
+    else if (!carry)
+        factions.goodwill.clear(); // a new game
     scripts.setPlayerHealth(scene.player.maxHealth);
     scripts.setSoundHandler([&audio](const std::string& sound, const glm::vec3* position, float volume) {
         audio.playAsset(sound, position, volume);
@@ -1119,7 +1132,7 @@ int main(int argc, char** argv)
                 return engine::ConsoleResult{false, "usage: give health|ammo|medkit|all"};
             return engine::ConsoleResult{true, "gave " + what};
         }, engine::CVarCheat);
-        cvars.addCommand("kill", "kill [radius m]: kills the enemies within the radius (default 15 m), e.g. to look at ragdolls",
+        cvars.addCommand("kill", "kill [radius m]: kills the characters (NPCs, enemies, mutants) within the radius (default 15 m), e.g. to look at ragdolls",
                          [&](const std::vector<std::string>& a) {
             float radius = 15.0f;
             try {
@@ -1131,7 +1144,7 @@ int main(int argc, char** argv)
             int killed = 0;
             for (std::size_t i = 0; i < scene.entities.size(); ++i) {
                 const engine::Entity& e = scene.entities[i];
-                if (e.alive && e.type == "enemy" && glm::distance(e.position, player.feet()) <= radius) {
+                if (e.alive && !e.helper() && !engine::entityFaction(e).empty() && glm::distance(e.position, player.feet()) <= radius) {
                     scripts.damageEntity(static_cast<int>(i), 100000.0f);
                     ++killed;
                 }
@@ -1215,6 +1228,7 @@ int main(int argc, char** argv)
         for (const engine::Weapon& w : weapons)
             save.ammo.push_back(w.ammo());
         save.kills = kills;
+        save.goodwill = factions.goodwill;
         save.flashlightOn = flashlight.on();
         for (const engine::Model& m : scene.models)
             if (m.dynamic)
@@ -1633,7 +1647,7 @@ int main(int argc, char** argv)
                     audio.impact(hit.point, hit.surface, weapon.settings.soundImpact);
                 if (hit.entity >= 0) {
                     const bool wasAlive = scene.entities[static_cast<std::size_t>(hit.entity)].alive;
-                    scripts.damageEntity(hit.entity, damage);
+                    scripts.damageEntity(hit.entity, damage, -1);
                     if (wasAlive && !scene.entities[static_cast<std::size_t>(hit.entity)].alive) {
                         ++kills;
                         killShots[static_cast<std::size_t>(hit.entity)] = {hit.point, dir * damage * (weapon.settings.melee() ? 1.2f : 0.8f)};

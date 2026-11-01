@@ -71,6 +71,8 @@ bool SaveGame::write(const std::filesystem::path& file, std::string* error) cons
         body << ' ' << a;
     body << "\n";
     body << "kills " << kills << "\n";
+    for (const auto& [faction, value] : goodwill)
+        body << "goodwill " << quote(faction) << ' ' << value << "\n";
     for (const std::filesystem::path& f : weaponFiles)
         body << "weapon_file " << quote(f.generic_string()) << "\n";
     for (const auto& [type, rounds] : stock)
@@ -188,6 +190,10 @@ bool SaveGame::read(const std::filesystem::path& file, std::string* error)
                 ammo.push_back(a);
         } else if (key == "kills") {
             ls >> kills;
+        } else if (key == "goodwill" && unquote(ls, str)) {
+            float v = 0.0f;
+            if (ls >> v)
+                goodwill[str] = v;
         } else if (key == "wetness") {
             ls >> wetness;
         } else if (key == "weather" && unquote(ls, str)) {

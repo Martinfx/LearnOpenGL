@@ -35,6 +35,7 @@ add_executable(fps_editor
     OutputsPanel.cpp
     SoundEditor.cpp
     SurfacesEditor.cpp
+    FactionsEditor.cpp
     ParticleEditor.cpp
     AnimGraphEditor.cpp
     SoundEditor.h

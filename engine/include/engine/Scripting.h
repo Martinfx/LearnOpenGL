@@ -1,4 +1,5 @@
 #pragma once
+#include "engine/Factions.h"
 #include "engine/Scene.h"
 #include <glm/vec3.hpp>
 #include <functional>
@@ -39,9 +40,15 @@ public:
     // Calls on_update(self, dt) and moves character entities. Call once per fixed step.
     void fixedUpdate(float dt);
 
-    // Applies weapon damage: calls on_damage(self, amount); at 0 health the
-    // entity dies (on_death(self), no longer drawn or simulated).
-    void damageEntity(int entityIndex, float amount);
+    // Applies damage: calls on_damage(self, amount, attacker); at 0 health the entity dies
+    // (on_death(self, attacker), no longer drawn or simulated). attacker: entity index, -1 = the
+    // player (the victim holds a grudge and the player loses goodwill with its faction), -2 = nobody.
+    void damageEntity(int entityIndex, float amount, int attacker = -2);
+
+    // Factions (engine/Factions.h): the table scripts ask (game.attitude...). Defaults to
+    // defaultFactions(); the game sets its own (loaded from assets/factions.cfg, goodwill saved).
+    void setFactions(FactionTable* table); // null = the built-in one
+    FactionTable& factions();
 
     // Outside forces on an entity for the next fixedUpdate (anomalies): a one-off
     // velocity change, an extra velocity (pull, lift) and 0..1 of its walking speed taken away.
