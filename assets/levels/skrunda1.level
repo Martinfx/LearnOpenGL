@@ -12,34 +12,49 @@ terrain_layer 2 "../materials/skrunda/terrain_lush.material" 0.5
 terrain_layer 3 "../materials/skrunda/terrain_dirt.material" 0.5
 foliage_type "../models/zone/skrunda/veg/birch_b.glb" 0.03 0.85 1.15 230 1 0 1 1
 foliage_lod "../models/zone/skrunda/veg/birch_b_lod1.glb" 30
+foliage_impostor 90
 foliage_type "../models/zone/skrunda/veg/pine_a.glb" 0.03 0.85 1.15 230 1 0 1 1
 foliage_lod "../models/zone/skrunda/veg/pine_a_lod1.glb" 30
+foliage_impostor 90
 foliage_type "../models/zone/skrunda/veg/pine_b.glb" 0.03 0.85 1.15 230 1 0 1 1
 foliage_lod "../models/zone/skrunda/veg/pine_b_lod1.glb" 30
+foliage_impostor 90
 foliage_type "../models/zone/skrunda/veg/spruce_a.glb" 0.03 0.85 1.15 230 1 0 1 1
 foliage_lod "../models/zone/skrunda/veg/spruce_a_lod1.glb" 30
+foliage_impostor 90
 foliage_type "../models/zone/skrunda/veg/birch_a.glb" 0.03 0.85 1.15 230 1 0 1 1
 foliage_lod "../models/zone/skrunda/veg/birch_a_lod1.glb" 30
+foliage_impostor 90
 foliage_type "../models/zone/skrunda/veg/spruce_b.glb" 0.03 0.85 1.15 230 1 0 1 1
 foliage_lod "../models/zone/skrunda/veg/spruce_b_lod1.glb" 30
+foliage_impostor 90
 foliage_type "../models/zone/skrunda/veg/spruce_young.glb" 0.03 0.85 1.15 230 1 0 1 1
 foliage_lod "../models/zone/skrunda/veg/spruce_young_lod1.glb" 30
+foliage_impostor 90
 foliage_type "../models/zone/skrunda/veg/birch_a_spring.glb" 0.03 0.85 1.15 230 1 0 1 1
 foliage_lod "../models/zone/skrunda/veg/birch_a_spring_lod1.glb" 30
+foliage_impostor 90
 foliage_type "../models/zone/vegetation/dead_a.glb" 0.03 0.85 1.15 230 1 0 1 1
 foliage_lod "../models/zone/vegetation/dead_a_lod1.glb" 30
+foliage_impostor 90
 foliage_type "../models/zone/skrunda/veg/broadleaf_b_spring.glb" 0.03 0.85 1.15 230 1 0 1 1
 foliage_lod "../models/zone/skrunda/veg/broadleaf_b_spring_lod1.glb" 30
+foliage_impostor 90
 foliage_type "../models/zone/skrunda/veg/broadleaf_a.glb" 0.03 0.85 1.15 230 1 0 1 1
 foliage_lod "../models/zone/skrunda/veg/broadleaf_a_lod1.glb" 30
+foliage_impostor 90
 foliage_type "../models/zone/skrunda/veg/broadleaf_a_spring.glb" 0.03 0.85 1.15 230 1 0 1 1
 foliage_lod "../models/zone/skrunda/veg/broadleaf_a_spring_lod1.glb" 30
+foliage_impostor 90
 foliage_type "../models/zone/skrunda/veg/birch_young.glb" 0.03 0.85 1.15 230 1 0 1 1
 foliage_lod "../models/zone/skrunda/veg/birch_young_lod1.glb" 30
+foliage_impostor 90
 foliage_type "../models/zone/skrunda/veg/broadleaf_b.glb" 0.03 0.85 1.15 230 1 0 1 1
 foliage_lod "../models/zone/skrunda/veg/broadleaf_b_lod1.glb" 30
+foliage_impostor 90
 foliage_type "../models/zone/skrunda/veg/birch_b_spring.glb" 0.03 0.85 1.15 230 1 0 1 1
 foliage_lod "../models/zone/skrunda/veg/birch_b_spring_lod1.glb" 30
+foliage_impostor 90
 foliage_type "../models/zone/vegetation/bush_dense_a.glb" 0.02 0.85 1.15 110 0 0 1 0.8
 foliage_lod "../models/zone/vegetation/bush_dense_a_lod1.glb" 20
 foliage_type "../models/zone/vegetation/bush_b.glb" 0.02 0.85 1.15 110 0 0 1 0.8

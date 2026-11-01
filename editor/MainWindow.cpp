@@ -1015,6 +1015,21 @@ void MainWindow::buildDocks()
     swaySpin_->setKeyboardTracking(false);
     swaySpin_->setToolTip(tr("Bending in the level's wind (Environment > Wind): 0 rigid, about 0.3 trees, 1 grass and bushes"));
     renderingForm->addRow(tr("Wind sway"), swaySpin_);
+    impostorSpin_ = new QDoubleSpinBox(boxPanel_);
+    impostorSpin_->setRange(0.0, 5000.0);
+    impostorSpin_->setSingleStep(10.0);
+    impostorSpin_->setDecimals(0);
+    impostorSpin_->setSuffix(QStringLiteral(" m"));
+    impostorSpin_->setSpecialValueText(tr("off"));
+    impostorSpin_->setKeyboardTracking(false);
+    impostorSpin_->setToolTip(tr("Beyond this distance a flat stand-in baked from the model is drawn (two crossed quads; for trees)"));
+    renderingForm->addRow(tr("Impostor distance"), impostorSpin_);
+    connect(impostorSpin_, &QDoubleSpinBox::valueChanged, this, [this](double v) {
+        if (auto* m = selectedModel(); m && m->impostorDistance != static_cast<float>(v)) {
+            m->impostorDistance = static_cast<float>(v);
+            markDirty();
+        }
+    });
     connect(swaySpin_, &QDoubleSpinBox::valueChanged, this, [this](double v) {
         if (auto* m = selectedModel(); m && m->sway != static_cast<float>(v)) {
             m->sway = static_cast<float>(v);
@@ -2487,6 +2502,11 @@ void MainWindow::refreshProperties()
     swaySpin_->blockSignals(true);
     swaySpin_->setValue(m ? m->sway : 0.0);
     swaySpin_->blockSignals(false);
+    impostorSpin_->setEnabled(m != nullptr && !m->skeleton);
+    {
+        const QSignalBlocker block(impostorSpin_);
+        impostorSpin_->setValue(m ? m->impostorDistance : 0.0);
+    }
     nameEdit_->setEnabled(b || m || e);
     {
         const bool sound = e && e->type == "sound";

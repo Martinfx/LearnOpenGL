@@ -120,6 +120,7 @@ struct RenderQuality {
     float textureStreamDistance = 40.0f;
     bool releaseCpuTextures = true; // drop CPU pixels once on the GPU (re-read from the cache if needed)
     bool instancing = true;         // copies of one model in one draw call per mesh part
+    bool impostors = true;          // far trees as baked crossed quads (Model/FoliageType impostorDistance)
     // Shadows: the far cascades are re-rendered every 2nd / 4th frame (sooner when the
     // camera leaves their margin or the sun moves); small casters are left out of them.
     bool shadowCache = true;
@@ -237,6 +238,17 @@ private:
     void growMeshPool(std::size_t vertices, std::size_t indices); // room for at least this many more
     void ensureIota(std::size_t count); // per-instance index attribute 0..count-1
     void releaseMesh(const GpuMesh& mesh);
+    // Impostors: flat stand-ins of models, baked on the GPU at the start of a frame.
+    // Keyed by the id of the model's first mesh part (copies share it).
+    std::unordered_map<std::uint64_t, std::shared_ptr<const Model>> impostors_;
+    std::unordered_map<std::uint64_t, Model> impostorQueue_;
+    std::unordered_map<std::uint64_t, int> impostorWait_; // frames waited for textures
+    const Model* impostorFor(const Model& model); // null until baked
+    void bakePendingImpostors();
+public:
+    // Bakes the impostor of a model now (needs the GL context; tests use it directly).
+    std::shared_ptr<const Model> bakeImpostor(const Model& model, int viewSize = 256);
+private:
     struct GpuTexture {
         unsigned handle = 0;
         bool used = false;

@@ -91,6 +91,7 @@ struct TerrainUi : QObject {
     QCheckBox* shadows = nullptr;
     QDoubleSpinBox* farDensity = nullptr;
     QDoubleSpinBox* sway = nullptr;
+    QDoubleSpinBox* impostor = nullptr;
     QDoubleSpinBox* fade = nullptr;
     std::array<QDoubleSpinBox*, engine::FoliageType::kLayerSlots> layerDensity{};
     QFormLayout* typeForm = nullptr;
@@ -428,6 +429,11 @@ void MainWindow::buildTerrainPages()
         ui.sway = spin(ui.typeProps, 0.0, 3.0, 0.05, 1.0, 2);
         ui.sway->setToolTip(tr("Bending in the level's wind (Environment > Wind): 1 grass, about 0.3 trees, 0 rigid"));
         props->addRow(tr("Wind sway"), ui.sway);
+        ui.impostor = spin(ui.typeProps, 0.0, 5000.0, 10.0, 0.0, 0);
+        ui.impostor->setSuffix(QStringLiteral(" m"));
+        ui.impostor->setSpecialValueText(tr("off"));
+        ui.impostor->setToolTip(tr("Beyond this distance a flat stand-in baked from the model is drawn (trees); off = 0"));
+        props->addRow(tr("Impostor distance"), ui.impostor);
         ui.fade = spin(ui.typeProps, 0.0, 1.0, 0.05, 0.15, 2);
         ui.fade->setToolTip(tr("Dissolves over this share of the cull distance instead of popping out; 0 = off"));
         props->addRow(tr("Fade"), ui.fade);
@@ -520,6 +526,8 @@ void MainWindow::buildTerrainPages()
         connect(ui.shadows, &QCheckBox::toggled, this, [editType](bool on) { editType([on](auto& ft) { ft.castShadows = on; }); });
         connect(ui.farDensity, &QDoubleSpinBox::valueChanged, this, [editType](double x) { editType([x](auto& ft) { ft.farDensity = static_cast<float>(x); }); });
         connect(ui.sway, &QDoubleSpinBox::valueChanged, this, [editType](double x) { editType([x](auto& ft) { ft.sway = static_cast<float>(x); }); });
+        connect(ui.impostor, &QDoubleSpinBox::valueChanged, this,
+                [editType](double x) { editType([x](auto& ft) { ft.impostorDistance = static_cast<float>(x); }); });
         connect(ui.fade, &QDoubleSpinBox::valueChanged, this, [editType](double x) { editType([x](auto& ft) { ft.fade = static_cast<float>(x); }); });
         for (int l = 0; l < engine::FoliageType::kLayerSlots; ++l)
             connect(ui.layerDensity[static_cast<std::size_t>(l)], &QDoubleSpinBox::valueChanged, this,
@@ -737,6 +745,7 @@ void MainWindow::refreshTerrainPanel()
             ui.shadows->setChecked(ft.castShadows);
             ui.farDensity->setValue(ft.farDensity);
             ui.sway->setValue(ft.sway);
+            ui.impostor->setValue(ft.impostorDistance);
             ui.fade->setValue(ft.fade);
             for (int l = 0; l < engine::FoliageType::kLayerSlots; ++l) {
                 QDoubleSpinBox* s = ui.layerDensity[static_cast<std::size_t>(l)];

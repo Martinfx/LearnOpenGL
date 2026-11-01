@@ -198,6 +198,9 @@ struct Model {
     bool collision = true;
     bool castShadows = true;          // off for grass and small plants: the shadow pass is the costliest one
     float sway = 0.0f;                // bending in the level's wind: 0 rigid, ~0.3 trees, 1 grass and bushes
+    // Beyond this many metres (times the quality's lodScale) the renderer draws a flat
+    // stand-in baked from the model: two crossed textured quads (trees). 0 = never.
+    float impostorDistance = 0.0f;
     // Physics prop (crates, barrels, cans): a rigid body the player, bullets and blasts push.
     // The collider is fitted to localBounds. Ignored for animated models.
     bool dynamic = false;

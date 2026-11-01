@@ -48,6 +48,8 @@ struct FoliageType {
     float farDensity = 1.0f;
     // Bending in the level's wind: 1 grass, ~0.3 trees, 0 rigid (rocks, wrecks).
     float sway = 1.0f;
+    // Flat stand-in (two crossed quads baked from the model) beyond this many metres; 0 = off.
+    float impostorDistance = 0.0f;
     // Dithered fade over this share of the cull distance before it (0 = pops out).
     float fade = 0.15f;
     // How much of `density` grows on each terrain layer (grass on layer 0, none on asphalt).

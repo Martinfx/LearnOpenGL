@@ -422,9 +422,10 @@ int main(int argc, char** argv)
         return 1;
     }
     // For comparing optimisations (with FPS_ENGINE_STATS=1).
-    if (std::getenv("FPS_ENGINE_NO_INSTANCING") || std::getenv("FPS_ENGINE_NO_OCCLUSION")) {
+    if (std::getenv("FPS_ENGINE_NO_INSTANCING") || std::getenv("FPS_ENGINE_NO_OCCLUSION") || std::getenv("FPS_ENGINE_NO_IMPOSTORS")) {
         engine::RenderQuality q = renderer.quality();
         q.instancing = !std::getenv("FPS_ENGINE_NO_INSTANCING");
+        q.impostors = !std::getenv("FPS_ENGINE_NO_IMPOSTORS");
         q.occlusionCulling = !std::getenv("FPS_ENGINE_NO_OCCLUSION");
         renderer.setQuality(q);
     }
@@ -853,6 +854,10 @@ int main(int argc, char** argv)
             .onChange = [&renderer, &cvars](const engine::CVar& v) {
                 engine::RenderQuality q = engine::RenderQuality::preset(v.integer());
                 q.renderScale = cvars.find("r_scale") ? cvars.find("r_scale")->number() : 1.0f;
+                // Comparing optimisations (FPS_ENGINE_STATS=1): the switches outlive the preset.
+                q.instancing = q.instancing && !std::getenv("FPS_ENGINE_NO_INSTANCING");
+                q.impostors = q.impostors && !std::getenv("FPS_ENGINE_NO_IMPOSTORS");
+                q.occlusionCulling = q.occlusionCulling && !std::getenv("FPS_ENGINE_NO_OCCLUSION");
                 renderer.setQuality(q);
             };
         cvars.add("r_scale", CVarType::Float, "1", "Render resolution (0.5 = half; menus and HUD stay sharp)", engine::CVarConfig, 0.5, 1.0)

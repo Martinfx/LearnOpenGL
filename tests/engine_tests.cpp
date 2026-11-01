@@ -31,6 +31,7 @@
 
 #include <atomic>
 #include <fstream>
+#include <sstream>
 #include <glm/geometric.hpp>
 
 #include <cmath>
@@ -2486,6 +2487,24 @@ void testRangeAllocator()
     check(w && *w == 90 && a.capacity() == 200, "growing adds room at the end");
 }
 
+void testImpostorSettings()
+{
+    namespace fs = std::filesystem;
+    const fs::path file = fs::absolute("impostor_settings.level");
+    std::ofstream(file) << "version 6\nbox \"B\" 0 0 0 1 1 1 1 1 1\n";
+    engine::Scene scene;
+    std::string error;
+    check(engine::loadScene(scene, file, &error), "impostor level loads");
+    engine::Model m;
+    m.name = "Tree";
+    m.sourcePath = fs::absolute("tree.glb");
+    m.impostorDistance = 90.0f;
+    std::ostringstream out;
+    engine::writeModel(out, m, fs::current_path(), false);
+    check(out.str().find("  impostor 90") != std::string::npos, "impostor distance is saved with the model");
+    fs::remove(file);
+}
+
 int main()
 {
     // Hermetic cook cache for the tests.
@@ -2546,6 +2565,7 @@ int main()
     testHotReload();
     testPrefabs();
     testRangeAllocator();
+    testImpostorSettings();
     testWorldStreaming();
     std::printf(failures ? "%d test(s) failed\n" : "all tests passed\n", failures);
     return failures ? 1 : 0;

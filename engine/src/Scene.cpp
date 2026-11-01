@@ -121,6 +121,8 @@ void writeModel(std::ostream& out, const Model& m, const std::filesystem::path& 
         out << "  cast_shadows 0\n";
     if (m.sway > 0.0f)
         out << "  sway " << m.sway << '\n';
+    if (m.impostorDistance > 0.0f)
+        out << "  impostor " << m.impostorDistance << '\n';
     if (m.dynamic)
         out << "  physics " << m.massKg << ' ' << std::quoted(m.collider) << '\n';
     if (withBounds && m.localBounds.min != m.localBounds.max) // lets the game defer far models
@@ -272,6 +274,8 @@ bool writeLevelSettings(std::ostream& out, const Scene& scene, const std::filesy
             out << '\n';
             for (const FoliageType::Lod& lod : f.lods)
                 out << "foliage_lod " << std::quoted(relative(lod.modelPath)) << ' ' << lod.distance << '\n';
+            if (f.impostorDistance > 0.0f)
+                out << "foliage_impostor " << f.impostorDistance << '\n';
         }
     }
     if (!scene.loading.image.empty())
@@ -782,6 +786,12 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                     lod.model = std::move(model);
                 result.terrain->foliageTypes.back().lods.push_back(std::move(lod));
             }
+        } else if (key == "foliage_impostor") {
+            // Flat stand-in beyond this distance for the foliage type above (Renderer impostors).
+            ok = result.terrain && !result.terrain->foliageTypes.empty() &&
+                 static_cast<bool>(ls >> result.terrain->foliageTypes.back().impostorDistance);
+        } else if (key == "impostor") {
+            ok = lastObject == LastObject::Model && static_cast<bool>(ls >> result.models.back().impostorDistance);
         } else if (key == "map_bounds") {
             ok = static_cast<bool>(ls >> result.map.min.x >> result.map.min.y >> result.map.size);
         } else if (key == "loading_image" || key == "loading_title" || key == "loading_hint") {

@@ -1104,6 +1104,10 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
             if (mainPass)
                 keepAliveLods(model, draw);
         }
+        if (quality_.impostors && model.impostorDistance > 0.0f && !model.skeleton && !model.parts.empty() &&
+            glm::distance(view.cameraPosition, (modelBounds.min + modelBounds.max) * 0.5f) > model.impostorDistance * quality_.lodScale)
+            if (const Model* impostor = impostorFor(model))
+                draw = impostor;
         // Dissolve over the last 15 % before the cull distance instead of popping out.
         const glm::vec2 fade = model.cullDistance > 0.0f && !shadowPass ? glm::vec2(model.cullDistance * 0.85f, model.cullDistance) : glm::vec2(0.0f);
         if (!quality_.instancing || selected || draw->skeleton || draw->parts.empty()) {
@@ -1683,6 +1687,7 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     targetFbo_ = target;
     targetX_ = view.viewportX;
     targetY_ = view.viewportY;
+    bakePendingImpostors(); // binds its own target, restores targetFbo_
     resolvedEnv_ = environmentAt(scene.environment, scene.sunDirection, &sky_);
     env_ = &resolvedEnv_;
     time_ = view.time;
@@ -2274,6 +2279,13 @@ void Renderer::addFoliage(const Terrain& t, const RenderView& view)
             if (lod.model && !lod.model->parts.empty() && levelCount < 8) {
                 levels[levelCount] = lod.model.get();
                 from[levelCount++] = lod.distance * quality_.lodScale;
+            }
+        // Farthest: the baked impostor (two crossed quads), once it exists.
+        if (quality_.impostors && type.impostorDistance > 0.0f && type.model && !type.model->parts.empty() && levelCount < 8)
+            if (const Model* impostor = impostorFor(*type.model)) {
+                levels[levelCount] = impostor;
+                from[levelCount] = std::max(type.impostorDistance * quality_.lodScale, from[levelCount - 1]);
+                ++levelCount;
             }
         const float farDensity = detail ? std::min(type.farDensity, quality_.detailDensityFar) : type.farDensity;
         const glm::vec2 fade = type.cullDistance > 0.0f && type.fade > 0.0f && shadowCascade_ < 0
@@ -3055,6 +3067,198 @@ void Renderer::collectQueries()
     }
     building_ = FrameStats{};
     queryFrame_ = (queryFrame_ + 1) % kQueryFrames;
+}
+
+const Model* Renderer::impostorFor(const Model& model)
+{
+    if (model.parts.empty())
+        return nullptr;
+    const std::uint64_t key = model.parts[0].id;
+    if (const auto it = impostors_.find(key); it != impostors_.end())
+        return it->second.get();
+    impostorQueue_.try_emplace(key, model); // baked at the start of the next frame
+    return nullptr;
+}
+
+void Renderer::bakePendingImpostors()
+{
+    // Baked once the model's base colour textures are on the GPU (they stream in), a few
+    // per frame: no hitch when a level with many tree kinds appears.
+    int budget = 8;
+    for (auto it = impostorQueue_.begin(); it != impostorQueue_.end() && budget > 0;) {
+        bool ready = true;
+        const float distance = drawDistance_;
+        drawDistance_ = 0.0f;
+        for (const MeshPart& part : it->second.parts) {
+            const Material* material = it->second.materialFor(part);
+            const Texture* albedo = material ? (material->maps[0] ? material->maps[0]->texture.get() : nullptr) : part.texture.get();
+            if (!albedo || !albedo->valid())
+                continue;
+            ready = ready && texture(*albedo) != 0; // any resident mip is enough for a 256 px view
+        }
+        drawDistance_ = distance;
+        int& waited = impostorWait_[it->first];
+        if (!ready && ++waited < 600) {
+            ++it;
+            continue;
+        }
+        impostorWait_.erase(it->first);
+        impostors_[it->first] = bakeImpostor(it->second); // null (no bounds, animated) is kept: not tried again
+        it = impostorQueue_.erase(it);
+        --budget;
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(targetFbo_));
+}
+
+std::shared_ptr<const Model> Renderer::bakeImpostor(const Model& model, int size)
+{
+    if (model.parts.empty() || model.skeleton)
+        return nullptr;
+    Aabb b = model.localBounds;
+    if (b.min == b.max) {
+        b = {glm::vec3(1e30f), glm::vec3(-1e30f)};
+        for (const MeshPart& part : model.parts)
+            for (const glm::vec3& p : part.positions) {
+                b.min = glm::min(b.min, p);
+                b.max = glm::max(b.max, p);
+            }
+        if (b.min.x > b.max.x)
+            return nullptr;
+    }
+    const glm::vec3 extent = glm::max(b.max - b.min, glm::vec3(0.01f));
+    const glm::vec3 center = (b.min + b.max) * 0.5f;
+    const float reach = glm::length(extent) + 1.0f;
+    const int width = size * 2, height = size;
+
+    // Two orthographic views of the model's base colour (unlit) side by side: from +Z
+    // (left half) and from +X (right half), for two quads crossing at the centre.
+    GLint viewport[4];
+    glGetIntegerv(GL_VIEWPORT, viewport);
+    unsigned color = 0, depth = 0, fbo = 0;
+    glCreateTextures(GL_TEXTURE_2D, 1, &color);
+    glTextureStorage2D(color, 1, GL_RGBA8, width, height);
+    glCreateRenderbuffers(1, &depth);
+    glNamedRenderbufferStorage(depth, GL_DEPTH_COMPONENT24, width, height);
+    glCreateFramebuffers(1, &fbo);
+    glNamedFramebufferTexture(fbo, GL_COLOR_ATTACHMENT0, color, 0);
+    glNamedFramebufferRenderbuffer(fbo, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glDisable(GL_BLEND);
+    glDisable(GL_CULL_FACE);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+    glDepthMask(GL_TRUE);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    useMeshProgram(programs_.mesh);
+    glUniform1i(loc_.shading, 1);
+    glUniform1i(loc_.overlay, 0);
+    glUniform1i(loc_.emissive, 0);
+    glUniform1f(loc_.flash, 0.0f);
+    glUniform1f(loc_.sway, 0.0f);
+    glUniform2f(loc_.fade, 0.0f, 0.0f);
+    glUniform1i(loc_.instanced, 0);
+    const bool depthOnly = depthOnly_, collect = collectTransparent_;
+    depthOnly_ = collectTransparent_ = false;
+    const glm::vec3 up(0.0f, 1.0f, 0.0f);
+    for (int v = 0; v < 2; ++v) {
+        glViewport(v * size, 0, size, size);
+        const glm::vec3 eye = center + (v == 0 ? glm::vec3(0.0f, 0.0f, reach) : glm::vec3(reach, 0.0f, 0.0f));
+        const float halfW = (v == 0 ? extent.x : extent.z) * 0.5f;
+        const glm::mat4 proj = glm::ortho(-halfW, halfW, -extent.y * 0.5f, extent.y * 0.5f, 0.01f, reach * 2.0f);
+        const glm::mat4 vp = proj * glm::lookAt(eye, center, up);
+        glUniformMatrix4fv(loc_.viewProj, 1, GL_FALSE, glm::value_ptr(vp));
+        drawModel(model, glm::mat4(1.0f), 0.0f);
+    }
+    depthOnly_ = depthOnly;
+    collectTransparent_ = collect;
+    glUniform1i(loc_.shading, 0);
+    std::vector<std::uint8_t> pixels(static_cast<std::size_t>(width) * height * 4);
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glGetTextureImage(color, 0, GL_RGBA, GL_UNSIGNED_BYTE, static_cast<GLsizei>(pixels.size()), pixels.data());
+    glDeleteFramebuffers(1, &fbo);
+    glDeleteRenderbuffers(1, &depth);
+    glDeleteTextures(1, &color);
+    glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+
+    // Top row first, linear -> sRGB, and the colour of covered pixels spread into the
+    // empty ones around them (no dark fringe when filtering and mipmapping).
+    auto texture = std::make_shared<Texture>();
+    texture->id = newResourceId();
+    texture->width = width;
+    texture->height = height;
+    texture->wrap = 1;
+    texture->rgba.resize(pixels.size());
+    for (int y = 0; y < height; ++y)
+        for (int x = 0; x < width; ++x) {
+            const std::uint8_t* src = &pixels[(static_cast<std::size_t>(height - 1 - y) * width + x) * 4];
+            std::uint8_t* dst = &texture->rgba[(static_cast<std::size_t>(y) * width + x) * 4];
+            for (int c = 0; c < 3; ++c)
+                dst[c] = static_cast<std::uint8_t>(std::lround(std::pow(src[c] / 255.0f, 1.0f / 2.2f) * 255.0f));
+            dst[3] = src[3] > 0 ? 255 : 0;
+        }
+    std::vector<std::uint8_t>& rgba = texture->rgba;
+    for (int pass = 0; pass < 8; ++pass) {
+        std::vector<std::uint8_t> next = rgba;
+        bool changed = false;
+        for (int y = 0; y < height; ++y)
+            for (int x = 0; x < width; ++x) {
+                const std::size_t i = (static_cast<std::size_t>(y) * width + x) * 4;
+                if (rgba[i + 3] != 0 || next[i] != 0 || next[i + 1] != 0 || next[i + 2] != 0)
+                    continue;
+                int sum[3] = {0, 0, 0}, n = 0;
+                for (int dy = -1; dy <= 1; ++dy)
+                    for (int dx = -1; dx <= 1; ++dx) {
+                        const int nx = x + dx, ny = y + dy;
+                        if (nx < 0 || ny < 0 || nx >= width || ny >= height)
+                            continue;
+                        const std::size_t j = (static_cast<std::size_t>(ny) * width + nx) * 4;
+                        if (rgba[j] == 0 && rgba[j + 1] == 0 && rgba[j + 2] == 0 && rgba[j + 3] == 0)
+                            continue;
+                        for (int c = 0; c < 3; ++c)
+                            sum[c] += rgba[j + c];
+                        ++n;
+                    }
+                if (n > 0) {
+                    for (int c = 0; c < 3; ++c)
+                        next[i + c] = static_cast<std::uint8_t>(std::max(1, sum[c] / n));
+                    changed = true;
+                }
+            }
+        rgba.swap(next);
+        if (!changed)
+            break;
+    }
+
+    MeshPart part;
+    part.id = newResourceId();
+    part.texture = texture;
+    part.alphaMode = AlphaMode::Mask;
+    part.alphaCutoff = 0.5f;
+    part.doubleSided = true;
+    part.color = glm::vec3(1.0f);
+    part.roughness = 0.9f;
+    part.materialName = "impostor";
+    auto quad = [&](glm::vec3 a, glm::vec3 bb, glm::vec3 c, glm::vec3 d, float u0, float u1) {
+        const auto base = static_cast<std::uint32_t>(part.positions.size());
+        for (const glm::vec3& p : {a, bb, c, d})
+            part.positions.push_back(p);
+        // Lit mostly from above, like a crown of leaves, and a little to the side.
+        for (int k = 0; k < 4; ++k)
+            part.normals.push_back(glm::normalize(glm::vec3(0.0f, 1.0f, 0.0f)));
+        part.texcoords.insert(part.texcoords.end(), {{u0, 1.0f}, {u1, 1.0f}, {u1, 0.0f}, {u0, 0.0f}});
+        part.indices.insert(part.indices.end(), {base, base + 1, base + 2, base, base + 2, base + 3});
+    };
+    quad({b.min.x, b.min.y, center.z}, {b.max.x, b.min.y, center.z}, {b.max.x, b.max.y, center.z}, {b.min.x, b.max.y, center.z}, 0.0f, 0.5f);
+    quad({center.x, b.min.y, b.max.z}, {center.x, b.min.y, b.min.z}, {center.x, b.max.y, b.min.z}, {center.x, b.max.y, b.max.z}, 0.5f, 1.0f);
+    auto impostor = std::make_shared<Model>();
+    impostor->name = model.name + " (impostor)";
+    impostor->parts.push_back(std::move(part));
+    impostor->localBounds = b;
+    impostor->castShadows = model.castShadows;
+    impostor->sway = model.sway;
+    return impostor;
 }
 
 void Renderer::growMeshPool(std::size_t vertices, std::size_t indices)
