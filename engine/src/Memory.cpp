@@ -61,9 +61,9 @@ SceneMemory sceneMemory(const Scene& scene)
         addModel(model);
         if (model.lod)
             addModel(*model.lod);
-        for (const Model::FarLod& far : model.farLods)
-            if (far.model)
-                addModel(*far.model);
+        for (const Model::FarLod& farLod : model.farLods)
+            if (farLod.model)
+                addModel(*farLod.model);
     }
     for (const Entity& e : scene.entities)
         if (e.model)

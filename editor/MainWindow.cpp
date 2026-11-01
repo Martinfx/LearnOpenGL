@@ -940,12 +940,12 @@ void MainWindow::buildDocks()
                 const int object = engine::findObject(self->scene_, name);
                 if (object < 0 || !self->scene_.isModel(object))
                     return;
-                engine::Model::FarLod far;
-                far.path = std::filesystem::path(path.toStdU16String());
-                far.model = lod;
-                far.distance = static_cast<float>(distance);
+                engine::Model::FarLod farLod;
+                farLod.path = std::filesystem::path(path.toStdU16String());
+                farLod.model = lod;
+                farLod.distance = static_cast<float>(distance);
                 engine::Model& target = self->scene_.model(object);
-                target.farLods.push_back(std::move(far));
+                target.farLods.push_back(std::move(farLod));
                 std::sort(target.farLods.begin(), target.farLods.end(),
                           [](const auto& a, const auto& b) { return a.distance < b.distance; });
                 self->refreshProperties();
