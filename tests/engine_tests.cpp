@@ -17,6 +17,7 @@
 #include <engine/Ambience.h>
 #include <engine/AssetPalette.h>
 #include <engine/Particles.h>
+#include <engine/AssetCredits.h>
 #include <engine/Audio.h>
 #include <engine/NavMesh.h>
 #include <engine/Surfaces.h>
@@ -627,6 +628,48 @@ void testThirdPartyLicenses()
         check(cmake.find("${T}/" + name + "/") != std::string::npos, "cmake/Licenses.cmake ships the licence of " + name);
     }
     check(libraries >= 10, "3rdparty libraries found");
+}
+
+void testAssetCredits()
+{
+    namespace fs = std::filesystem;
+    using L = std::vector<std::string>;
+    check(engine::licencesIn("| a.glb | x | y | CC0 1.0 |") == L{"CC0"}, "CC0 found");
+    check(engine::licencesIn("licensed under CC-BY-4.0") == L{"CC-BY"}, "CC-BY is not share-alike");
+    check(engine::licencesIn("CC BY-SA 3.0") == L{"CC-BY-SA"}, "CC-BY-SA found");
+    check(engine::licencesIn("CC-BY-NC 4.0") == L{"NC"}, "NonCommercial found");
+    check(engine::licencesIn("under the LGPL") == L{}, "LGPL is not GPL");
+    check(engine::needsCredits("a/B.PNG") && engine::needsCredits("x.ogg") && !engine::needsCredits("x.sound") &&
+              !engine::needsCredits("CREDITS.md"),
+          "media files need credits");
+
+    const fs::path root = fs::temp_directory_path() / "fps_engine_credits_test";
+    fs::remove_all(root);
+    fs::create_directories(root / "models" / "props" / "source");
+    fs::create_directories(root / "sounds");
+    auto write = [](const fs::path& p, const std::string& text) { std::ofstream(p, std::ios::binary) << text; };
+    write(root / "models" / "CREDITS.md", "# Models\n| `crate.glb` | made here | us | CC0 |\n");
+    write(root / "models" / "props" / "crate.glb", "x");
+    write(root / "models" / "props" / "source" / "raw.png", "x"); // not shipped: no credits needed
+    write(root / "sounds" / "bang.wav", "x");
+    write(root / "sounds" / "CREDITS.md", "# Sounds\nThanks to a friend.\n");
+    check(engine::creditsFileFor(root / "models" / "props" / "crate.glb", root) == root / "models" / "CREDITS.md",
+          "credits come from a parent folder");
+    auto issues = engine::checkAssetCredits(root);
+    check(issues.size() == 1 && issues[0].file.filename() == "CREDITS.md" && issues[0].severity == engine::AssetIssue::Severity::Error,
+          "a CREDITS.md without a licence is an error, covered and source files are fine");
+    fs::remove(root / "sounds" / "CREDITS.md");
+    issues = engine::checkAssetCredits(root);
+    check(issues.size() == 1 && issues[0].file.filename() == "bang.wav", "a sound without credits is an error");
+    write(root / "sounds" / "CREDITS.md", "# Sounds\n| `bang.wav` | x | y | CC BY-NC 3.0 |\n");
+    issues = engine::checkAssetCredits(root);
+    check(issues.size() == 1 && issues[0].message.find("NonCommercial") != std::string::npos, "NonCommercial is refused");
+    fs::remove_all(root);
+
+    // The shipped assets: everything credited, no unusable licence.
+    const auto shipped = engine::checkAssetCredits(ENGINE_TEST_ASSETS);
+    check(shipped.empty(), "assets have credits and usable licences" +
+                               (shipped.empty() ? std::string() : ": " + shipped.front().file.string() + " " + shipped.front().message));
 }
 
 void testScriptDebugger()
@@ -3103,6 +3146,7 @@ void testAssetRegistry()
         std::ifstream in(f, std::ios::binary);
         return std::string(std::istreambuf_iterator<char>(in), {});
     };
+    write(root / "CREDITS.md", "| all | made here | us | CC0 |\n"); // credits checks (checkAssetCredits) stay quiet
     write(root / "textures/rust.png", "png");
     write(root / "materials/rust.material", "albedo \"../textures/rust.png\"\nroughness 0.8\n");
     write(root / "models/crate/crate.gltf", "{\"images\":[{\"name\":\"look.png\",\"uri\": \"crate_diff.png\"}]}");
@@ -4172,6 +4216,7 @@ int main()
         {"testVfs", testVfs},
         {"testLocalization", testLocalization},
         {"testThirdPartyLicenses", testThirdPartyLicenses},
+        {"testAssetCredits", testAssetCredits},
         {"testWorldStreaming", testWorldStreaming},
     };
     for (const auto& [name, run] : tests)

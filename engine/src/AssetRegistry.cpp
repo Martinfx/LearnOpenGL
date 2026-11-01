@@ -1,4 +1,5 @@
 #include "engine/AssetRegistry.h"
+#include "engine/AssetCredits.h"
 
 #include "engine/JobSystem.h"
 #include "engine/Paths.h"
@@ -532,6 +533,9 @@ std::vector<AssetIssue> AssetRegistry::validate(bool checkModels, std::atomic<fl
             }
         });
     }
+    // Author and licence of every shipped model, texture, sound and font (CREDITS.md).
+    for (AssetIssue& issue : checkAssetCredits(root_))
+        issues.push_back(std::move(issue));
     std::sort(issues.begin(), issues.end(), [](const AssetIssue& a, const AssetIssue& b) {
         if (a.severity != b.severity)
             return a.severity > b.severity;

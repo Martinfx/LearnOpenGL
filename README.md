@@ -338,6 +338,14 @@ Explicitní `self:play(klip)` graf dočasně přebije, `self:use_graph()` vrát�
   filtr „Only untranslated“, přidání klíče a jazyka. `asset_check` hlásí nepřeložené klíče jako varování
   a test hlídá, že každý klíč použitý v kódu hry je v `cs.strings`.
 
+## Autoři a licence assetů
+
+- Každý model, textura, zvuk a font musí mít `CREDITS.md` ve své složce nebo nad ní (autor, zdroj, licence).
+  Obrazovka Credits ve hře je ukazuje všechny, do balíčku jdou i do `licenses/assets/`.
+- `asset_check` a editor (Assets > Validate assets) hlásí jako chybu soubor bez credits, `CREDITS.md` bez licence
+  a licence NonCommercial / NoDerivatives; CC-BY-SA a GPL jako varování. Složky `source/` se nekontrolují (nejdou do hry).
+- Licence knihoven jsou v `3rdparty/README.md` a plné texty v `licenses/` vedle hry.
+
 ## Přístupnost
 
 V Nastavení hry (Grafika a Ostatní):

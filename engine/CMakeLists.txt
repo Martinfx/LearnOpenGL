@@ -34,6 +34,7 @@ add_library(engine STATIC
     src/Water.cpp
     src/WorldStreaming.cpp
     src/FrameArena.cpp
+    src/AssetCredits.cpp
     src/AssetRegistry.cpp
     src/FileWatcher.cpp
     src/HotReload.cpp

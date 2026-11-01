@@ -4,7 +4,7 @@
 # Package layout (flat, the executables find OpenAL and the assets next to themselves):
 #   fps_game, fps_editor, fps_pack, libopenal / OpenAL32.dll
 #   game.pak (ENGINE_PACKAGE_PAK) or assets/ (loose, for the editor and modding)
-#   LICENSE, licenses/ (third-party), README.md, mods/ (empty, for mods)
+#   LICENSE, licenses/ (third-party texts, assets/**/CREDITS.md), README.md, mods/ (empty, for mods)
 
 option(ENGINE_LTO "Link-time optimization for the engine, game and editor (release packages)" OFF)
 option(ENGINE_PACKAGE_PAK "Package the assets as game.pak instead of a loose assets folder" OFF)
@@ -63,6 +63,9 @@ endif()
 install(DIRECTORY DESTINATION mods COMPONENT game)
 install(FILES ${PROJECT_SOURCE_DIR}/LICENSE ${PROJECT_SOURCE_DIR}/README.md DESTINATION . COMPONENT game)
 install(FILES ${ENGINE_LICENSE_FILES} DESTINATION licenses COMPONENT game) # cmake/Licenses.cmake
+# Asset credits (authors and licences, also on the Credits screen) readable outside game.pak.
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/assets/ DESTINATION licenses/assets COMPONENT game
+        FILES_MATCHING PATTERN "CREDITS.md" PATTERN "LICENSE*" PATTERN "source" EXCLUDE)
 
 set(CPACK_PACKAGE_NAME "FpsEngine")
 set(CPACK_PACKAGE_VENDOR "Martinfx")
