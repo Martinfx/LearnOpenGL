@@ -92,6 +92,9 @@ struct RenderView {
     // Probe bake (captureCube): HDR only (no post-processing), no volumetric fog, no probes,
     // no occlusion culling, full resolution.
     bool capture = false;
+    // A continuous view (the game): temporal anti-aliasing may build on earlier frames.
+    // Views drawn on demand or several per frame (editor panes) use FXAA instead.
+    bool temporal = false;
 };
 
 // First-person layer drawn on top of the world (weapon, muzzle flash, crosshair).
@@ -114,6 +117,9 @@ struct RenderQuality {
     bool ssao = true;
     bool bloom = true;
     bool fxaa = true;
+    // Temporal anti-aliasing in continuous views (RenderView::temporal); elsewhere FXAA
+    // takes over when this is on.
+    bool taa = true;
     int textureUploadsPerFrame = 6; // new textures sent to the GPU per frame, 0 = all at once
     // Memory. Textures larger than textureMaxSize drop their top mip levels (0 = full size).
     // Texture streaming: objects farther than textureStreamDistance get a small copy
@@ -286,7 +292,7 @@ private:
         int loc(const char* name) const;
     };
     struct Programs {
-        Program mesh, depth, sky, envCapture, prefilter, brdf, ssao, blur, bloomDown, bloomUp, post, fxaa, copy, grid, hiz, sprite, debug,
+        Program mesh, depth, sky, envCapture, prefilter, brdf, ssao, blur, bloomDown, bloomUp, post, fxaa, taa, copy, grid, hiz, sprite, debug,
             luminance, exposure, water, underwater, distort, volumeInject, volumeIntegrate;
     };
     // Uniform locations of the program that draws geometry right now.
@@ -589,7 +595,16 @@ private:
     bool pendingPresent_ = false;
     bool wireframe_ = false;
     bool ignoreUploadBudget_ = false;  // preload(): everything at once            // last render() was a wireframe view
-    glm::mat4 view_{1.0f}, projection_{1.0f};
+    glm::mat4 view_{1.0f}, projection_{1.0f}; // projection_ carries the TAA jitter
+    // Temporal AA (taa.frag): two history targets swapped every frame.
+    unsigned taaHistory_[2] = {0, 0}, taaFbo_[2] = {0, 0}, taaDepth_ = 0;
+    int taaIndex_ = 0;
+    bool taaActive_ = false, taaValid_ = false;
+    std::uint64_t taaFrame_ = 0;
+    glm::vec2 taaJitterUV_{0.0f};
+    glm::mat4 taaViewProj_{1.0f}, taaPrevViewProj_{1.0f}, taaJitteredViewProj_{1.0f};
+    unsigned sceneTex_ = 0; // what post-processing reads: hdrColor_ or the TAA result
+    void resolveTaa();
     std::string glInfo_;
     std::array<glm::vec4, 6> frustum_{}; // planes of the pass being drawn
     bool frustumSkipNear_ = false;

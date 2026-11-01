@@ -425,7 +425,7 @@ void MainWindow::buildMenus()
     render->addSeparator();
     render->addAction(tr("&Shader editor"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_H), this, &MainWindow::openShaderEditor);
     render->addAction(tr("&Reload shaders from disk"), QKeySequence(Qt::CTRL | Qt::Key_F5), this, &MainWindow::applyShaders);
-    viewport_->setQuality(quality);
+    setRenderQuality(quality);
 
     // Main tool bar: save, history, add, play controls, quality.
     QToolBar* main = addToolBar(tr("Main"));
@@ -4195,7 +4195,10 @@ ScriptEditor* MainWindow::openScript(const QString& path)
 
 void MainWindow::setRenderQuality(const engine::RenderQuality& quality)
 {
-    viewport_->setQuality(quality);
+    // The viewport is drawn on demand and in several panes: no temporal AA, the FXAA toggle decides.
+    engine::RenderQuality q = quality;
+    q.taa = false;
+    viewport_->setQuality(q);
 }
 
 void MainWindow::openShaderEditor()

@@ -866,12 +866,24 @@ int main(int argc, char** argv)
                     q.volumetricFog = 0;
                 q.impostors = q.impostors && !std::getenv("FPS_ENGINE_NO_IMPOSTORS");
                 q.occlusionCulling = q.occlusionCulling && !std::getenv("FPS_ENGINE_NO_OCCLUSION");
+                if (const engine::CVar* aa = cvars.find("r_aa")) {
+                    q.fxaa = aa->integer() == 1;
+                    q.taa = aa->integer() == 2;
+                }
                 renderer.setQuality(q);
             };
         cvars.add("r_scale", CVarType::Float, "1", "Render resolution (0.5 = half; menus and HUD stay sharp)", engine::CVarConfig, 0.5, 1.0)
             .onChange = [&renderer](const engine::CVar& v) {
                 engine::RenderQuality q = renderer.quality();
                 q.renderScale = v.number();
+                renderer.setQuality(q);
+            };
+        cvars.add("r_aa", CVarType::Int, "2", "Anti-aliasing: 0 off, 1 FXAA, 2 TAA (temporal, sharper on edges and foliage)",
+                  engine::CVarConfig, 0.0, 2.0)
+            .onChange = [&renderer](const engine::CVar& v) {
+                engine::RenderQuality q = renderer.quality();
+                q.fxaa = v.integer() == 1;
+                q.taa = v.integer() == 2;
                 renderer.setQuality(q);
             };
         auto windowChanged = [&](const engine::CVar&) {
@@ -1706,6 +1718,8 @@ int main(int argc, char** argv)
                 camera.fovDegrees = glm::mix(hip, w.canAim() ? w.settings.aimFov : hip, zoom);
                 camera.sensitivity = baseSensitivity * cvSensitivity.number() * camera.fovDegrees / hip;
             }
+            static const float testTurn = std::getenv("FPS_ENGINE_TURN") ? std::strtof(std::getenv("FPS_ENGINE_TURN"), nullptr) : 0.0f;
+            camera.yawDegrees += testTurn; // test hook: degrees per frame (TAA in motion)
             engine::RenderView view;
             view.view = camera.view();
             view.projection = camera.projection(static_cast<float>(width) / static_cast<float>(height));
@@ -1716,6 +1730,7 @@ int main(int argc, char** argv)
             view.wetness = weather.wetness();
             view.lightning = weather.flash();
             view.deferPresent = true; // the weapon layer is drawn before post-processing
+            view.temporal = true;     // one continuous view: TAA can use the earlier frames
             engine::OverlayPass effectsOverlay; // muzzle flashes, drawn with the weapon below
             effects.fill(view, view.view, effectsOverlay);
             anomalies.fill(view, view.view);

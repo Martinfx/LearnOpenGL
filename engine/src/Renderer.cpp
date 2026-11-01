@@ -442,7 +442,7 @@ RenderQuality RenderQuality::preset(int level)
     RenderQuality q;
     switch (level) {
     case 0:
-        q.shadowResolution = 1024; q.shadowCascades = 2; q.ssao = false; q.bloom = false; q.fxaa = true;
+        q.shadowResolution = 1024; q.shadowCascades = 2; q.ssao = false; q.bloom = false; q.fxaa = true; q.taa = false;
         q.textureMaxSize = 1024; q.textureStreamDistance = 20.0f;
         q.lodScale = 0.5f; q.detailDensityFar = 0.1f; q.detailShadowDistance = 0.0f;
         q.localShadowResolution = 512; q.localShadowLayers = 6;
@@ -453,6 +453,7 @@ RenderQuality RenderQuality::preset(int level)
         q.textureMaxSize = 2048; q.textureStreamDistance = 30.0f;
         q.lodScale = 0.75f; q.detailDensityFar = 0.15f; q.detailShadowDistance = 10.0f;
         q.localShadowResolution = 512;
+        q.taa = false; // FXAA
         q.volumetricFog = 1;
         break;
     case 3:
@@ -496,7 +497,8 @@ bool Renderer::buildPrograms(const std::map<std::string, std::string>& src, Prog
                              {&p.ssao, "fullscreen.vert", "ssao.frag"},   {&p.blur, "fullscreen.vert", "blur.frag"},
                              {&p.bloomDown, "fullscreen.vert", "bloom_down.frag"},
                              {&p.bloomUp, "fullscreen.vert", "bloom_up.frag"}, {&p.post, "fullscreen.vert", "post.frag"},
-                             {&p.fxaa, "fullscreen.vert", "fxaa.frag"},   {&p.copy, "fullscreen.vert", "copy.frag"},
+                             {&p.fxaa, "fullscreen.vert", "fxaa.frag"},   {&p.taa, "fullscreen.vert", "taa.frag"},
+                             {&p.copy, "fullscreen.vert", "copy.frag"},
                              {&p.grid, "fullscreen.vert", "grid.frag"}, {&p.hiz, "fullscreen.vert", "hiz.frag"},
                              {&p.sprite, "sprite.vert", "sprite.frag"},
                              {&p.debug, "debug.vert", "debug.frag"},
@@ -533,7 +535,7 @@ bool Renderer::buildPrograms(const std::map<std::string, std::string>& src, Prog
 void Renderer::destroyPrograms(Programs& p)
 {
     for (Program* program : {&p.mesh, &p.depth, &p.sky, &p.envCapture, &p.prefilter, &p.brdf, &p.ssao, &p.blur, &p.bloomDown,
-                             &p.bloomUp, &p.post, &p.fxaa, &p.copy, &p.grid, &p.hiz, &p.sprite, &p.debug, &p.luminance, &p.exposure, &p.water, &p.underwater, &p.distort,
+                             &p.bloomUp, &p.post, &p.fxaa, &p.taa, &p.copy, &p.grid, &p.hiz, &p.sprite, &p.debug, &p.luminance, &p.exposure, &p.water, &p.underwater, &p.distort,
                              &p.volumeInject, &p.volumeIntegrate}) {
         if (program->id)
             glDeleteProgram(program->id);
@@ -797,12 +799,13 @@ void Renderer::shutdown()
 
 void Renderer::destroyTargets()
 {
-    for (unsigned* t : {&hdrColor_, &depthTex_, &ssaoTex_, &ssaoBlurTex_, &ldrTex_, &sceneColorCopy_, &sceneDepthCopy_, &distortTex_})
+    for (unsigned* t : {&hdrColor_, &depthTex_, &ssaoTex_, &ssaoBlurTex_, &ldrTex_, &sceneColorCopy_, &sceneDepthCopy_, &distortTex_,
+                         &taaHistory_[0], &taaHistory_[1], &taaDepth_})
         if (*t) {
             glDeleteTextures(1, t);
             *t = 0;
         }
-    for (unsigned* f : {&hdrFbo_, &ssaoFbo_, &ssaoBlurFbo_, &ldrFbo_, &distortFbo_})
+    for (unsigned* f : {&hdrFbo_, &ssaoFbo_, &ssaoBlurFbo_, &ldrFbo_, &distortFbo_, &taaFbo_[0], &taaFbo_[1]})
         if (*f) {
             glDeleteFramebuffers(1, f);
             *f = 0;
@@ -842,6 +845,15 @@ void Renderer::ensureTargets(int width, int height)
     distortTex_ = makeTexture2D(GL_RG16F, width, height, GL_LINEAR);
     distortFbo_ = makeFbo(distortTex_, depthTex_);
     label(GL_TEXTURE, distortTex_, "Air distortion");
+    for (int i = 0; i < 2; ++i) {
+        taaHistory_[i] = makeTexture2D(GL_RGBA16F, width, height, GL_LINEAR);
+        glTextureParameteri(taaHistory_[i], GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTextureParameteri(taaHistory_[i], GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        taaFbo_[i] = makeFbo(taaHistory_[i]);
+        label(GL_TEXTURE, taaHistory_[i], "TAA history " + std::to_string(i));
+    }
+    taaDepth_ = makeTexture2D(GL_DEPTH_COMPONENT32F, width, height, GL_NEAREST);
+    taaValid_ = false;
     label(GL_TEXTURE, hdrColor_, "HDR colour");
     label(GL_TEXTURE, depthTex_, "Scene depth");
     label(GL_FRAMEBUFFER, hdrFbo_, "HDR");
@@ -909,8 +921,8 @@ void Renderer::updateEnvironment(const Scene& scene, const RenderView& view)
     b.fogParams = glm::vec4(e.fogHeight, e.fogHeightFalloff, e.fogSunScatter, e.ssaoIntensity);
     b.cameraPos = glm::vec4(view.cameraPosition, quality_.ssao ? 1.0f : 0.0f);
     b.view = view.view;
-    b.proj = view.projection;
-    b.invViewProj = glm::inverse(view.projection * view.view);
+    b.proj = projection_; // with the TAA jitter, like the depth buffer
+    b.invViewProj = glm::inverse(projection_ * view.view);
     b.probes = glm::vec4(view.capture && !captureProbes_ ? 0.0f : 1.0f, static_cast<float>(kEnvMips - 1), 0.0f, 0.0f);
     if (volumetricActive(view)) {
         const float nearDepth = 0.5f, farDepth = std::clamp(e.fogVolumetricRange, 8.0f, 256.0f);
@@ -2041,12 +2053,35 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     pollOcclusion();
     view_ = view.view;
     projection_ = view.projection;
+    // Temporal AA: a sub-pixel offset of the projection, new every frame (Halton 2,3, 8 steps).
+    const bool taaWas = taaActive_;
+    taaActive_ = quality_.taa && view.temporal && !view.capture && view.shading != Shading::Wireframe &&
+                 view.projection[3][3] == 0.0f && programs_.taa.id;
+    if (!taaActive_ || !taaWas)
+        taaValid_ = false;
     // Render scale: the scene is drawn at a fraction of the output size and stretched in the
     // final pass (post / FXAA), for slow GPUs; menus and HUD stay sharp.
     outWidth_ = std::max(1, view.viewportWidth);
     outHeight_ = std::max(1, view.viewportHeight);
     const float scale = view.capture ? 1.0f : std::clamp(quality_.renderScale, 0.25f, 1.0f);
     ensureTargets(std::max(1, static_cast<int>(std::lround(outWidth_ * scale))), std::max(1, static_cast<int>(std::lround(outHeight_ * scale))));
+    if (taaActive_) {
+        auto halton = [](std::uint64_t i, int b) {
+            float f = 1.0f, r = 0.0f;
+            for (; i > 0; i /= static_cast<std::uint64_t>(b)) {
+                f /= static_cast<float>(b);
+                r += f * static_cast<float>(i % static_cast<std::uint64_t>(b));
+            }
+            return r;
+        };
+        const std::uint64_t n = (taaFrame_++ % 8) + 1;
+        const glm::vec2 ndc((halton(n, 2) - 0.5f) * 2.0f / static_cast<float>(width_), (halton(n, 3) - 0.5f) * 2.0f / static_cast<float>(height_));
+        taaJitterUV_ = ndc * 0.5f;
+        projection_ = glm::translate(glm::mat4(1.0f), glm::vec3(ndc, 0.0f)) * view.projection;
+        taaPrevViewProj_ = taaViewProj_;
+        taaViewProj_ = view.projection * view.view;
+        taaJitteredViewProj_ = projection_ * view.view;
+    }
 
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, jointBuffer_);
     wetness_ = std::clamp(view.wetness >= 0.0f ? view.wetness : resolvedEnv_.rain, 0.0f, 1.0f);
@@ -2082,7 +2117,7 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     glClear(GL_DEPTH_BUFFER_BIT);
-    const glm::mat4 viewProj = view.projection * view.view;
+    const glm::mat4 viewProj = projection_ * view.view; // jittered with TAA
     useMeshProgram(programs_.depth);
     glUniformMatrix4fv(loc_.viewProj, 1, GL_FALSE, glm::value_ptr(viewProj));
     glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
@@ -3099,6 +3134,8 @@ void Renderer::renderOverlay(const RenderView& view, const OverlayPass& pass)
     // First-person layer: own depth range and projection, so the weapon never clips into walls.
     beginPass(PassOverlay);
     overlayDrawn_ = true;
+    if (taaActive_) // TAA reprojects through the scene depth, which the weapon layer clears
+        glCopyImageSubData(depthTex_, GL_TEXTURE_2D, 0, 0, 0, 0, taaDepth_, GL_TEXTURE_2D, 0, 0, 0, 0, width_, height_, 1);
     glBindFramebuffer(GL_FRAMEBUFFER, hdrFbo_);
     glViewport(0, 0, width_, height_);
     glEnable(GL_DEPTH_TEST);
@@ -3106,7 +3143,9 @@ void Renderer::renderOverlay(const RenderView& view, const OverlayPass& pass)
     glEnable(GL_CULL_FACE);
     glClear(GL_DEPTH_BUFFER_BIT);
     useMeshProgram(programs_.mesh);
-    glUniformMatrix4fv(loc_.viewProj, 1, GL_FALSE, glm::value_ptr(pass.projection));
+    const glm::mat4 overlayProj =
+        taaActive_ ? glm::translate(glm::mat4(1.0f), glm::vec3(taaJitterUV_ * 2.0f, 0.0f)) * pass.projection : pass.projection;
+    glUniformMatrix4fv(loc_.viewProj, 1, GL_FALSE, glm::value_ptr(overlayProj));
     glUniform1i(loc_.overlay, 1);
     const glm::mat3 viewToWorld = glm::transpose(glm::mat3(view.view));
     glUniformMatrix3fv(loc_.envRotation, 1, GL_FALSE, glm::value_ptr(viewToWorld));
@@ -3124,7 +3163,7 @@ void Renderer::renderOverlay(const RenderView& view, const OverlayPass& pass)
         drawCube(glm::scale(glm::translate(glm::mat4(1.0f), b.center), b.size), b.color, 0.0f, b.emissive);
     glUniform1i(loc_.overlay, 0);
     if (!pass.sprites.empty())
-        drawSprites(pass.sprites, pass.projection, view.shading, true);
+        drawSprites(pass.sprites, overlayProj, view.shading, true);
     glBindVertexArray(0);
     endPass();
 }
@@ -3139,7 +3178,7 @@ void Renderer::renderBloom()
         glBindFramebuffer(GL_FRAMEBUFFER, bloomFbo_[i]);
         glViewport(0, 0, bloomSize_[i].x, bloomSize_[i].y);
         glUniform1i(programs_.bloomDown.loc("uFirst"), i == 0 ? 1 : 0);
-        glBindTextureUnit(0, i == 0 ? hdrColor_ : bloomTex_[i - 1]);
+        glBindTextureUnit(0, i == 0 ? sceneTex_ : bloomTex_[i - 1]);
         glDrawArrays(GL_TRIANGLES, 0, 3);
     }
     glUseProgram(programs_.bloomUp.id);
@@ -3267,7 +3306,7 @@ void Renderer::updateExposure(const Environment& e)
     glViewport(0, 0, kSize, kSize);
     glUseProgram(programs_.luminance.id);
     glUniform1i(programs_.luminance.loc("uMaskOverlay"), overlayDrawn_ ? 1 : 0);
-    glBindTextureUnit(0, hdrColor_);
+    glBindTextureUnit(0, sceneTex_);
     glBindTextureUnit(1, depthTex_);
     glDrawArrays(GL_TRIANGLES, 0, 3);
     glGenerateTextureMipmap(lumTex_);
@@ -3343,12 +3382,16 @@ void Renderer::present()
     beginPass(PassPost);
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
+    sceneTex_ = hdrColor_;
+    if (taaActive_)
+        resolveTaa(); // sceneTex_ = the anti-aliased frame
     if (quality_.bloom)
         renderBloom();
     const Environment defaults;
     const Environment& e = env_ ? *env_ : defaults;
     glBindVertexArray(emptyVao_);
-    const bool fxaa = quality_.fxaa && !wireframe_; // FXAA breaks one-pixel lines into dots
+    // FXAA breaks one-pixel lines into dots; with TAA on it covers the views TAA can't.
+    const bool fxaa = (quality_.fxaa || quality_.taa) && !taaActive_ && !wireframe_;
     glBindFramebuffer(GL_FRAMEBUFFER, fxaa ? ldrFbo_ : static_cast<unsigned>(targetFbo_));
     if (fxaa)
         glViewport(0, 0, width_, height_);
@@ -3391,7 +3434,7 @@ void Renderer::present()
     glUniform1i(post.loc("uDistortOn"), distortDrawn_ ? 1 : 0);
     glUniform1i(post.loc("uDistortMask"), overlayDrawn_ ? 1 : 0);
     glBindTextureUnit(5, distortDrawn_ ? distortTex_ : whiteTex_);
-    glBindTextureUnit(0, hdrColor_);
+    glBindTextureUnit(0, sceneTex_);
     glBindTextureUnit(1, bloomTex_.empty() ? whiteTex_ : bloomTex_[0]);
     glBindTextureUnit(2, depthTex_);
     glDrawArrays(GL_TRIANGLES, 0, 3);
@@ -3410,9 +3453,34 @@ void Renderer::present()
     endPass();
 }
 
+void Renderer::resolveTaa()
+{
+    const int next = 1 - taaIndex_;
+    glBindFramebuffer(GL_FRAMEBUFFER, taaFbo_[next]);
+    glViewport(0, 0, width_, height_);
+    glBindVertexArray(emptyVao_);
+    const Program& taa = programs_.taa;
+    glUseProgram(taa.id);
+    const glm::mat4 reproject = taaPrevViewProj_ * glm::inverse(taaJitteredViewProj_);
+    glUniformMatrix4fv(taa.loc("uReproject"), 1, GL_FALSE, glm::value_ptr(reproject));
+    glUniform2fv(taa.loc("uJitterUV"), 1, glm::value_ptr(taaJitterUV_));
+    glUniform1i(taa.loc("uHistoryValid"), taaValid_ ? 1 : 0);
+    glUniform1i(taa.loc("uOverlay"), overlayDrawn_ ? 1 : 0);
+    glUniform1f(taa.loc("uFeedback"), 0.9f);
+    glUniform1f(taa.loc("uSharpen"), 0.5f);
+    glBindTextureUnit(0, hdrColor_);
+    glBindTextureUnit(1, taaHistory_[taaIndex_]);
+    glBindTextureUnit(2, overlayDrawn_ ? taaDepth_ : depthTex_);
+    glBindTextureUnit(3, depthTex_);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    taaIndex_ = next;
+    taaValid_ = true;
+    sceneTex_ = taaHistory_[next];
+}
+
 const char* Renderer::passName(int pass)
 {
-    static const char* names[PassCount] = {"Shadows", "Volumetric fog", "Depth pre-pass", "SSAO", "Opaque + sky", "Transparent", "Post (bloom, tone, FXAA)",
+    static const char* names[PassCount] = {"Shadows", "Volumetric fog", "Depth pre-pass", "SSAO", "Opaque + sky", "Transparent", "Post (TAA, bloom, tone, FXAA)",
                                            "First person"};
     return pass >= 0 && pass < PassCount ? names[pass] : "?";
 }

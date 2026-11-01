@@ -44,6 +44,7 @@ const std::vector<SettingInfo>& settingInfos()
         {"r_fullscreen", "Režim okna", 0, {"Okno", "Bez rámečku", "Celá obrazovka"}},
         {"r_monitor", "Monitor", 0, {"Hlavní", "2", "3", "4", "5", "6", "7", "8"}},
         {"r_scale", "Rozlišení scény", 0, {}},
+        {"r_aa", "Vyhlazování hran", 0, {"Vypnuto", "FXAA", "TAA"}},
         {"m_sensitivity", "Citlivost myši", 1, {}},
         {"m_invert_y", "Obrátit osu Y", 1, {}},
         {"joy_sensitivity", "Citlivost gamepadu", 1, {}},
