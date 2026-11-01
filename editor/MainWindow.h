@@ -220,6 +220,10 @@ private:
     QCheckBox* dynamicCheck_ = nullptr;          // model: physics prop
     class OutputsPanel* outputsPanel_ = nullptr;  // entity I/O connections
     QFormLayout* outputsForm_ = nullptr;
+    QFormLayout* reverbForm_ = nullptr;           // entity type "reverb"
+    QComboBox* reverbPreset_ = nullptr;
+    QDoubleSpinBox* reverbAmount_ = nullptr;
+    QDoubleSpinBox* reverbFade_ = nullptr;
     bool pickingTarget_ = false;                  // next viewport click picks an I/O target
     void addLogicEntity(const QString& type);     // "trigger" volume or "relay"
     QDoubleSpinBox* massSpin_ = nullptr;

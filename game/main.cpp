@@ -629,6 +629,29 @@ int main(int argc, char** argv)
         audio.playAsset(sound, position, volume);
     });
     scripts.setMessageHandler([&hud](const std::string& text) { hud.notify(text); }); // ShowMessage input, game.message()
+    // Sound occlusion: three rays from the ear to the source (straight and 0.5 m to each side
+    // of it); each one a wall stops counts a third. Props and characters do not block.
+    audio.system().setOcclusionTest([&physics](glm::vec3 ear, glm::vec3 source) {
+        const engine::CVar* on = engine::CVarRegistry::global().find("snd_occlusion");
+        if (on && !on->boolean())
+            return 0.0f;
+        const glm::vec3 d = source - ear;
+        const float length = glm::length(d);
+        if (length < 0.5f || length > 150.0f)
+            return 0.0f;
+        const glm::vec3 dir = d / length;
+        glm::vec3 side = glm::cross(dir, glm::vec3(0.0f, 1.0f, 0.0f));
+        side = glm::dot(side, side) > 1e-6f ? glm::normalize(side) * 0.5f : glm::vec3(0.5f, 0.0f, 0.0f);
+        float blocked = 0.0f;
+        for (const glm::vec3 offset : {glm::vec3(0.0f), side, -side}) {
+            const glm::vec3 to = source + offset;
+            const glm::vec3 ray = to - ear;
+            const float rayLength = glm::length(ray);
+            if (auto hit = physics.raycast(ear, ray / rayLength, rayLength - 0.3f); hit && hit->model < 0)
+                blocked += 1.0f / 3.0f;
+        }
+        return blocked;
+    });
 
     // Weapons (credits of the models: CREDITS.md next to each model)
     std::vector<engine::Weapon> weapons = loadLoadout(scene, std::filesystem::path(argv[0]).parent_path());
@@ -708,6 +731,8 @@ int main(int argc, char** argv)
         volume("snd_sfx", "Weapons, footsteps and effects volume", [&audio](float v) { audio.system().setGroupVolume(engine::AudioGroup::Sfx, v); });
         volume("snd_ambient", "Ambience and weather volume", [&audio](float v) { audio.system().setGroupVolume(engine::AudioGroup::Ambient, v); });
         volume("snd_music", "Music volume", [&audio](float v) { audio.system().setGroupVolume(engine::AudioGroup::Music, v); });
+        cvars.add("snd_duck", CVarType::Float, "1", "How much gunfire ducks the ambience and music (0 = not at all)", engine::CVarConfig, 0.0, 1.0);
+        cvars.add("snd_occlusion", CVarType::Bool, "1", "Walls muffle the sounds behind them", engine::CVarConfig);
         cvars.add("cl_showfps", CVarType::Bool, "0", "Frame rate in the corner", engine::CVarConfig);
         cvars.addCommand("quit", "Leaves the game", [window](const std::vector<std::string>&) {
             glfwSetWindowShouldClose(window, GLFW_TRUE);
@@ -1175,6 +1200,11 @@ int main(int argc, char** argv)
             weapon.aim(dt, ready && input.isDown(engine::Action::Aim));
             if (shots > 0) {
                 audio.play(weapon.settings.soundFire, player.eye() + camera.forward() * 0.5f);
+                if (const float duck = cvars.find("snd_duck")->number(); duck > 0.0f && !weapon.settings.melee()) {
+                    // Gunfire pushes the ambience and music down for a moment, so the shot and what follows are heard.
+                    audio.system().duck(engine::AudioGroup::Ambient, 1.0f - 0.55f * duck, 0.35f, 1.6f);
+                    audio.system().duck(engine::AudioGroup::Music, 1.0f - 0.35f * duck, 0.35f, 1.6f);
+                }
                 if (!weapon.settings.melee()) {
                     const glm::vec3 v = player.velocity();
                     const float speed = player.grounded() ? std::sqrt(v.x * v.x + v.z * v.z) : 0.0f;

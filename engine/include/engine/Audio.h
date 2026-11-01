@@ -3,6 +3,7 @@
 #include <array>
 #include <cstdint>
 #include <filesystem>
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -103,7 +104,23 @@ public:
 
     // Room reverb applied to every 3D and 2D sound (EFX). `amount` 0..1 blends it in.
     void setReverb(const std::string& preset, float amount = 1.0f);
+    // Two presets at once (crossing from one reverb zone into another, or a zone and the level's).
+    void setReverbMix(const std::string& a, float amountA, const std::string& b, float amountB);
     std::string reverb() const;
+    std::string reverb(int slot) const; // 0 or 1
+    float reverbAmount(int slot) const;
+
+    // Ducking: turns a group down to `gain` within 50 ms, holds it for `holdSeconds`
+    // and brings it back over `releaseSeconds` (ambience under gunfire). The deepest wins.
+    void duck(AudioGroup group, float gain, float holdSeconds, float releaseSeconds = 1.0f);
+    float duckGain(AudioGroup group) const;
+
+    // Occlusion: how much level geometry blocks the way from the listener to a 3D source,
+    // 0 = clear .. 1 = behind a wall. Asked when a sound starts and a few times per second;
+    // occluded sounds get quieter and duller (low-pass). Unset = no occlusion.
+    using OcclusionTest = std::function<float(glm::vec3 listener, glm::vec3 source)>;
+    void setOcclusionTest(OcclusionTest test);
+    float occlusion(Handle handle) const; // current (smoothed) value of a playing sound
     bool hrtf() const;              // HRTF active (binaural 3D for headphones)
     std::string deviceName() const;
 

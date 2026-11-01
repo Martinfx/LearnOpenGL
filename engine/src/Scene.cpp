@@ -131,6 +131,8 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
         if (!e.rainSound.empty() || !e.windSound.empty())
             out << "weather_sounds " << std::quoted(e.rainSound.empty() ? std::string() : relative(e.rainSound)) << ' '
                 << std::quoted(e.windSound.empty() ? std::string() : relative(e.windSound)) << '\n';
+        if (e.reverb != d.reverb || e.reverbAmount != d.reverbAmount)
+            out << "reverb " << std::quoted(e.reverb) << ' ' << e.reverbAmount << '\n';
     }
     if (!scene.map.image.empty())
         out << "map_image " << std::quoted(relative(scene.map.image)) << '\n';
@@ -409,6 +411,8 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                 else if (auto f = floats.find(name); f != floats.end())
                     ok = static_cast<bool>(ls >> *f->second);
             }
+        } else if (key == "reverb") {
+            ok = static_cast<bool>(ls >> std::quoted(result.environment.reverb) >> result.environment.reverbAmount);
         } else if (key == "color_lut") {
             std::string path;
             ok = static_cast<bool>(ls >> std::quoted(path) >> result.environment.lutStrength);

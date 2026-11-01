@@ -160,6 +160,7 @@ void GameAudio::update(float dt, const engine::Scene& scene, glm::vec3 eye, glm:
             }
         }
     }
+    updateReverb(scene, eye);
     // Weather: louder than linear at low intensity so a drizzle is still heard.
     audio_.setVolume(rain_, std::sqrt(std::clamp(scene.environment.rain, 0.0f, 1.0f)), 0.5f);
     audio_.setVolume(wind_, std::sqrt(std::clamp(scene.environment.wind, 0.0f, 1.0f)), 0.5f);
@@ -210,4 +211,53 @@ void GameAudio::walk(const engine::PlayerSettings& player, glm::vec3 feet, glm::
         stride_ -= strideLength;
         step(player, feet, std::clamp(0.55f + speed * 0.06f, 0.5f, 1.0f), surface);
     }
+}
+
+void GameAudio::updateReverb(const engine::Scene& scene, glm::vec3 eye)
+{
+    // Weighted candidates: every reverb zone around the listener (1 inside, fading to 0 at
+    // `fade` metres outside) and the level's own reverb for what the zones leave over.
+    struct Candidate {
+        std::string preset;
+        float weight;
+        float amount;
+    };
+    std::vector<Candidate> found;
+    float zones = 0.0f;
+    for (const engine::Entity& e : scene.entities) {
+        if (e.type != "reverb" || !e.alive || !engine::entityEnabled(e))
+            continue;
+        auto prop = [&e](const char* key, const char* fallback) {
+            const auto it = e.properties.find(key);
+            return it == e.properties.end() || it->second.empty() ? std::string(fallback) : it->second;
+        };
+        const engine::Aabb box = e.bounds();
+        const float w = engine::zoneGain(box.min, box.max, std::strtof(prop("fade", "2").c_str(), nullptr), eye);
+        if (w <= 0.0f)
+            continue;
+        found.push_back({prop("preset", "room"), w, std::clamp(std::strtof(prop("amount", "1").c_str(), nullptr), 0.0f, 1.0f)});
+        zones = std::max(zones, w);
+    }
+    const engine::Environment& env = scene.environment;
+    if (zones < 1.0f && env.reverb != "none")
+        found.push_back({env.reverb, 1.0f - zones, env.reverbAmount});
+    std::sort(found.begin(), found.end(), [](const Candidate& a, const Candidate& b) { return a.weight > b.weight; });
+    std::string a = "none", b = "none";
+    float amountA = 0.0f, amountB = 0.0f;
+    if (!found.empty()) {
+        a = found[0].preset;
+        amountA = found[0].weight * found[0].amount;
+    }
+    if (found.size() > 1) {
+        b = found[1].preset;
+        amountB = found[1].weight * found[1].amount;
+    }
+    // Keep a preset in the slot it already has, so a crossfade only changes the amounts.
+    if (a != audio_.reverb(0) && (a == audio_.reverb(1) || b == audio_.reverb(0))) {
+        std::swap(a, b);
+        std::swap(amountA, amountB);
+    }
+    if (a != audio_.reverb(0) || b != audio_.reverb(1))
+        LOG_INFO("audio", "reverb: %s %.2f + %s %.2f", a.c_str(), amountA, b.c_str(), amountB);
+    audio_.setReverbMix(a, amountA, b, amountB);
 }

@@ -137,3 +137,12 @@ entity "Bandit" "enemy" 5 0 -12.5 135 0.6 1.8 0.6 0.55 0.5 0.5 "../scripts/enemy
   output "OnDeath" "Alarm" "Disable" "" 1.5 0
   output "OnDeath" "Alarm light" "TurnOff" "" 1.5 0
   output "OnDeath" "!player" "ShowMessage" "Poplach utichl." 2 0
+entity "Hall reverb" "reverb" 0 0 -7 0 16 4 14 0.3 0.75 0.9 ""
+  parent "Logic"
+  prop "preset" "factory_hall"
+  prop "amount" "0.9"
+  prop "fade" "1.5"
+entity "Corridor reverb" "reverb" 0 0 5.5 0 3 4 11 0.3 0.75 0.9 ""
+  parent "Logic"
+  prop "preset" "stonecorridor"
+  prop "fade" "1"

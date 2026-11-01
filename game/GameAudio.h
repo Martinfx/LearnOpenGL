@@ -44,6 +44,7 @@ private:
     std::shared_ptr<const engine::SoundDef> get(const std::filesystem::path& sound);
     void step(const engine::PlayerSettings& player, glm::vec3 feet, float volume, const std::string& surface);
 
+    void updateReverb(const engine::Scene& scene, glm::vec3 eye); // reverb zones + the level's reverb
     struct Source {
         std::size_t entity = 0;
         engine::AudioSystem::Handle handle = 0;

@@ -1,4 +1,5 @@
 #include "EnvironmentPanel.h"
+#include <engine/Audio.h>
 #include "SoundEditor.h"
 #include "Vec3Editor.h"
 #include "AssetPaths.h"
@@ -239,6 +240,19 @@ EnvironmentPanel::EnvironmentPanel(engine::Scene* scene, QWidget* parent)
             [soundEdited](const QString& p) { soundEdited(&engine::Environment::rainSound, p); });
     connect(windSound_, &SoundPicker::pathChanged, this,
             [soundEdited](const QString& p) { soundEdited(&engine::Environment::windSound, p); });
+    section(tr("Sound"));
+    reverb_ = new QComboBox(this);
+    for (const std::string& name : engine::reverbPresetNames())
+        reverb_->addItem(QString::fromStdString(name));
+    reverb_->setToolTip(tr("Room reverb of the whole level; reverb zones (Add > Reverb zone) override it where the player is"));
+    form->addRow(tr("Reverb"), reverb_);
+    connect(reverb_, &QComboBox::currentTextChanged, this, [this](const QString& name) {
+        if (updating_)
+            return;
+        scene_->environment.reverb = name.toStdString();
+        changed();
+    });
+    addFloat(form, tr("Reverb amount"), &E::reverbAmount, 0, 1, 0.05, 2, tr("How strongly the reverb is mixed in"));
     layout->addStretch(1);
     refresh();
 }
@@ -326,6 +340,7 @@ void EnvironmentPanel::refresh()
     sun_->setValue(scene_->sunDirection);
     rainSound_->setPath(QString::fromStdU16String(scene_->environment.rainSound.u16string()));
     windSound_->setPath(QString::fromStdU16String(scene_->environment.windSound.u16string()));
+    reverb_->setCurrentText(QString::fromStdString(scene_->environment.reverb));
     updating_ = false;
 }
 
@@ -338,6 +353,8 @@ void EnvironmentPanel::applyPreset(int index)
     env.rainSound = scene_->environment.rainSound; // presets change the look, not the level's sounds
     env.windSound = scene_->environment.windSound;
     env.lut = scene_->environment.lut;
+    env.reverb = scene_->environment.reverb;
+    env.reverbAmount = scene_->environment.reverbAmount;
     scene_->environment = env;
     scene_->sunDirection = list[static_cast<std::size_t>(index)].sun;
     refresh();

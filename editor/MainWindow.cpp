@@ -7,6 +7,7 @@
 #include "AnomalyPanel.h"
 #include "LightPanel.h"
 #include "OutputsPanel.h"
+#include <engine/Audio.h>
 #include <QFile>
 #include <QJsonObject>
 #include <QJsonDocument>
@@ -211,6 +212,7 @@ void MainWindow::buildMenus()
     edit->addAction(tr("Add &campfire"), this, &MainWindow::addCampfire);
     edit->addAction(tr("Add t&rigger volume"), this, [this] { addLogicEntity("trigger"); });
     edit->addAction(tr("Add rela&y (logic)"), this, [this] { addLogicEntity("relay"); });
+    edit->addAction(tr("Add re&verb zone"), this, [this] { addEntity("reverb"); });
     edit->addAction(tr("Physics props from the catalogue (crates, barrels...)"), this, &MainWindow::applyPropCatalogueToLevel);
     {
         QMenu* anomaly = edit->addMenu(tr("Add a&nomaly"));
@@ -654,6 +656,7 @@ void MainWindow::buildDocks()
     anomalyForm_ = makeSection(tr("Anomaly"), "General");
     lightForm_ = makeSection(tr("Light"), "Rendering");
     outputsForm_ = makeSection(tr("Outputs (entity I/O)"), "Script");
+    reverbForm_ = makeSection(tr("Reverb zone"), "Sound");
     nameEdit_ = new QLineEdit(boxPanel_);
     kindLabel_ = new QLabel(boxPanel_);
     generalForm->addRow(tr("Type"), kindLabel_);
@@ -1180,6 +1183,35 @@ void MainWindow::buildDocks()
     lightPanel_ = new LightPanel(boxPanel_);
     lightForm_->addRow(lightPanel_);
     connect(lightPanel_, &LightPanel::edited, this, &MainWindow::markDirty);
+    {
+        // Reverb zone (type "reverb"): the room sound inside its volume (the entity size).
+        reverbPreset_ = new QComboBox(boxPanel_);
+        for (const std::string& name : engine::reverbPresetNames())
+            reverbPreset_->addItem(QString::fromStdString(name));
+        reverbAmount_ = new QDoubleSpinBox(boxPanel_);
+        reverbAmount_->setRange(0.0, 1.0);
+        reverbAmount_->setSingleStep(0.05);
+        reverbAmount_->setKeyboardTracking(false);
+        reverbFade_ = new QDoubleSpinBox(boxPanel_);
+        reverbFade_->setRange(0.0, 50.0);
+        reverbFade_->setSingleStep(0.5);
+        reverbFade_->setSuffix(tr(" m"));
+        reverbFade_->setKeyboardTracking(false);
+        reverbFade_->setToolTip(tr("Blends into the surrounding reverb over this distance outside the volume"));
+        reverbForm_->addRow(tr("Preset"), reverbPreset_);
+        reverbForm_->addRow(tr("Amount"), reverbAmount_);
+        reverbForm_->addRow(tr("Blend distance"), reverbFade_);
+        auto setProp = [this](const char* key, const std::string& value) {
+            engine::Entity* e = selectedEntity();
+            if (!e || e->type != "reverb" || e->properties[key] == value)
+                return;
+            e->properties[key] = value;
+            markDirty();
+        };
+        connect(reverbPreset_, &QComboBox::currentTextChanged, this, [setProp](const QString& t) { setProp("preset", t.toStdString()); });
+        connect(reverbAmount_, &QDoubleSpinBox::valueChanged, this, [setProp](double v) { setProp("amount", QString::number(v, 'g', 4).toStdString()); });
+        connect(reverbFade_, &QDoubleSpinBox::valueChanged, this, [setProp](double v) { setProp("fade", QString::number(v, 'g', 4).toStdString()); });
+    }
     outputsPanel_ = new OutputsPanel(boxPanel_);
     outputsForm_->addRow(outputsPanel_);
     connect(outputsPanel_, &OutputsPanel::edited, this, [this] {
@@ -2064,6 +2096,16 @@ void MainWindow::refreshProperties()
     anomalyPanel_->setEntity(e && e->type == "anomaly" ? selectedEntity() : nullptr, &scene_);
     lightPanel_->setEntity(e && e->type == "light" ? selectedEntity() : nullptr);
     outputsPanel_->setEntity(selectedEntity(), &scene_);
+    if (e && e->type == "reverb") {
+        const QSignalBlocker b1(reverbPreset_), b2(reverbAmount_), b3(reverbFade_);
+        auto prop = [e](const char* key, const char* fallback) {
+            const auto it = e->properties.find(key);
+            return QString::fromStdString(it == e->properties.end() ? std::string(fallback) : it->second);
+        };
+        reverbPreset_->setCurrentText(prop("preset", "room"));
+        reverbAmount_->setValue(prop("amount", "1").toDouble());
+        reverbFade_->setValue(prop("fade", "2").toDouble());
+    }
     detailsIcon_->setPixmap(editorIcon(b ? "cube" : m ? "model" : e ? "person" : "select").pixmap(18, 18));
     updateDetailsVisibility();
     refreshTransformBox();
@@ -2572,7 +2614,7 @@ void MainWindow::addEntity(const QString& type)
     engine::Entity e;
     e.type = type.toStdString();
     e.name = engine::uniqueNodeName(scene_, (type == "enemy" ? "Enemy " : type == "sound" ? "Sound " : type == "particle" ? "Effect " : type == "light" ? "Light " :
-                                             type == "trigger" ? "Trigger " : type == "relay" ? "Relay " : "Entity ") +
+                                             type == "trigger" ? "Trigger " : type == "relay" ? "Relay " : type == "reverb" ? "Reverb " : "Entity ") +
                                                 std::to_string(scene_.entities.size() + 1));
     if (type == "sound") {
         e.size = {1.0f, 1.0f, 1.0f};
@@ -2616,6 +2658,10 @@ void MainWindow::addEntity(const QString& type)
     } else if (type == "relay") {
         e.size = {0.4f, 0.4f, 0.4f};
         e.color = {0.7f, 0.4f, 1.0f};
+    } else if (type == "reverb") {
+        e.size = {8.0f, 4.0f, 8.0f};
+        e.color = {0.3f, 0.75f, 0.9f};
+        e.properties["preset"] = "room";
     } else if (type != "sound" && type != "particle" && type != "anomaly" && type != "light") {
         e.size = {0.5f, 0.5f, 0.5f};
         e.color = {0.3f, 0.6f, 0.9f};
@@ -3862,6 +3908,8 @@ void MainWindow::updateDetailsVisibility()
             relevant = e != nullptr && e->type == "light";
         if (d.form == outputsForm_)
             relevant = e != nullptr;
+        if (d.form == reverbForm_)
+            relevant = e != nullptr && e->type == "reverb";
         bool shown = relevant && (category == "All" || category == d.category);
         // Search: rows whose label contains every word (a matching section title shows all rows).
         const bool titleMatch = std::all_of(words.begin(), words.end(), [&](const QString& w) { return d.section->title().toLower().contains(w); });
@@ -4039,8 +4087,10 @@ void MainWindow::buildModePanel()
         connect(trigger, &QPushButton::clicked, this, [this] { addLogicEntity("trigger"); });
         auto* relay = toolButton("select", tr("Relay (passes an input on to several entities)"), page);
         connect(relay, &QPushButton::clicked, this, [this] { addLogicEntity("relay"); });
+        auto* reverbZone = toolButton("sound", tr("Reverb zone (room sound of a hall, corridor, cellar)"), page);
+        connect(reverbZone, &QPushButton::clicked, this, [this] { addEntity("reverb"); });
         auto* model = toolButton("model", tr("glTF model..."), page);
-        for (QPushButton* b : {box, enemy, entity, sound, particles, anomaly, light, campfire, trigger, relay, model})
+        for (QPushButton* b : {box, enemy, entity, sound, particles, anomaly, light, campfire, trigger, relay, reverbZone, model})
             layout->addWidget(b);
         auto* hint = new QLabel(tr("Or drag a model from the Content Browser into the view: it lands where you drop it."), page);
         hint->setObjectName("dim");

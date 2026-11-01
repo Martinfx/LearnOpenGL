@@ -1411,6 +1411,23 @@ void testAudio()
     const float near = loudness({0, 0, -2}), far = loudness({0, 0, -150});
     check(near > 0.2f, "a shot 2 m away is heard");
     check(far > 0.0f && far < near * 0.2f, "a shot 150 m away is much quieter");
+    // Occlusion: the same shot behind a wall is quieter and duller.
+    audio.setOcclusionTest([](glm::vec3, glm::vec3) { return 1.0f; });
+    const float walled = loudness({0, 0, -2});
+    audio.setOcclusionTest({});
+    check(walled > 0.0f && walled < near * 0.7f, "a shot behind a wall is muffled");
+    // Ducking: down while held, back up after the release.
+    audio.duck(engine::AudioGroup::Ambient, 0.4f, 0.3f, 0.5f);
+    audio.update(0.1f);
+    check(std::abs(audio.duckGain(engine::AudioGroup::Ambient) - 0.4f) < 1e-3f && audio.duckGain(engine::AudioGroup::Sfx) == 1.0f,
+          "ducking lowers only its group");
+    for (int i = 0; i < 10; ++i)
+        audio.update(0.1f);
+    check(audio.duckGain(engine::AudioGroup::Ambient) == 1.0f, "ducked group comes back after hold + release");
+    // Reverb: two presets blended (zones).
+    audio.setReverbMix("hallway", 0.5f, "cave", 0.25f);
+    check(audio.reverb(0) == "hallway" && audio.reverb(1) == "cave" && audio.reverbAmount(1) == 0.25f, "two reverbs blend");
+    audio.setReverb("none");
     const auto h = audio.play2D(*shot);
     check(audio.playing(h) && audio.activeVoices() == 1, "a playing sound holds a voice");
     for (int i = 0; i < 40; ++i)
@@ -1779,6 +1796,8 @@ void testEntityIO()
 
     // Level file round trip.
     std::string err;
+    s.environment.reverb = "hallway";
+    s.environment.reverbAmount = 0.4f;
     check(engine::saveScene(s, "io_round_trip.level", &err), "save I/O level: " + err);
     engine::Scene loaded;
     check(engine::loadScene(loaded, "io_round_trip.level", &err), "load I/O level: " + err);
@@ -1786,6 +1805,7 @@ void testEntityIO()
               loaded.entities[1].outputs == s.entities[1].outputs && loaded.entities[1].outputs[0].delay == 1.0f &&
               loaded.entities[1].outputs[1].once,
           "outputs survive save + load");
+    check(loaded.environment.reverb == "hallway" && loaded.environment.reverbAmount == 0.4f, "level reverb survives save + load");
 
     // Renaming an entity keeps the connections pointing at it.
     check(engine::renameNode(s, "Lamp", "Hall lamp") && s.entities[1].outputs[0].target == "Hall lamp", "rename updates I/O targets");

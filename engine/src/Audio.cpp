@@ -290,7 +290,12 @@ struct Efx {
     LPALDELETEAUXILIARYEFFECTSLOTS deleteSlots = nullptr;
     LPALAUXILIARYEFFECTSLOTI sloti = nullptr;
     LPALAUXILIARYEFFECTSLOTF slotf = nullptr;
+    LPALGENFILTERS genFilters = nullptr;
+    LPALDELETEFILTERS deleteFilters = nullptr;
+    LPALFILTERI filteri = nullptr;
+    LPALFILTERF filterf = nullptr;
     bool ok = false;
+    bool filters = false; // low-pass filters for occlusion
 
     void load(ALCdevice* device)
     {
@@ -308,6 +313,11 @@ struct Efx {
         sloti = reinterpret_cast<LPALAUXILIARYEFFECTSLOTI>(get("alAuxiliaryEffectSloti"));
         slotf = reinterpret_cast<LPALAUXILIARYEFFECTSLOTF>(get("alAuxiliaryEffectSlotf"));
         ok = genEffects && deleteEffects && effecti && effectf && effectfv && genSlots && deleteSlots && sloti && slotf;
+        genFilters = reinterpret_cast<LPALGENFILTERS>(get("alGenFilters"));
+        deleteFilters = reinterpret_cast<LPALDELETEFILTERS>(get("alDeleteFilters"));
+        filteri = reinterpret_cast<LPALFILTERI>(get("alFilteri"));
+        filterf = reinterpret_cast<LPALFILTERF>(get("alFilterf"));
+        filters = ok && genFilters && deleteFilters && filteri && filterf;
     }
 };
 
@@ -359,6 +369,13 @@ struct AudioSystem::Impl {
         std::unique_ptr<Stream> stream;
         std::filesystem::path file;
         std::uint64_t order = 0;
+        glm::vec3 position{0.0f};  // 3D voices
+        // Occlusion by level geometry: 0 = clear line to the listener, 1 = behind a wall.
+        float occlusion = 0.0f, occlusionTarget = 0.0f, occlusionTimer = 0.0f;
+        ALuint filter = 0;         // low-pass on the direct path, made when first occluded
+    };
+    struct Duck {
+        float gain = 1.0f, target = 1.0f, hold = 0.0f, release = 1.0f;
     };
 
     ALCdevice* device = nullptr;
@@ -368,9 +385,12 @@ struct AudioSystem::Impl {
     bool loopback = false;
     Options options;
     Efx efx;
-    ALuint effect = 0, slot = 0;
-    std::string reverbName = "none";
-    float reverbAmount = 1.0f;
+    // Two reverb slots, blended by amount (reverb zones crossfading; every source sends to both).
+    std::array<ALuint, 2> effects{}, slots{};
+    std::array<std::string, 2> reverbNames{"none", "none"};
+    std::array<float, 2> reverbAmounts{1.0f, 0.0f};
+    std::array<Duck, static_cast<std::size_t>(AudioGroup::Count)> ducks{};
+    OcclusionTest occlusionTest;
     LPALCRENDERSAMPLESSOFT renderSamples = nullptr;
 
     std::mutex mutex; // voices (the stream thread refills stream voices)
@@ -450,6 +470,8 @@ struct AudioSystem::Impl {
         alSourceStop(v.source);
         alSourcei(v.source, AL_BUFFER, 0);
         alDeleteSources(1, &v.source);
+        if (v.filter)
+            efx.deleteFilters(1, &v.filter);
         if (v.stream) {
             alDeleteBuffers(static_cast<ALsizei>(v.stream->buffers.size()), v.stream->buffers.data());
             if (v.stream->open)
@@ -460,7 +482,34 @@ struct AudioSystem::Impl {
 
     void applyGain(Voice& v)
     {
-        alSourcef(v.source, AL_GAIN, std::max(0.0f, v.base * v.fader * groupVolumes[static_cast<std::size_t>(v.group)]));
+        const auto g = static_cast<std::size_t>(v.group);
+        // Without EFX filters occlusion just turns the sound down.
+        const float occluded = efx.filters ? 1.0f : 1.0f - 0.6f * v.occlusion;
+        alSourcef(v.source, AL_GAIN, std::max(0.0f, v.base * v.fader * groupVolumes[g] * ducks[g].gain * occluded));
+    }
+
+    // Muffles a voice behind walls: quieter and much darker (low-pass on the direct sound;
+    // the reverb send stays, so it is still heard through the room).
+    void applyOcclusion(Voice& v)
+    {
+        if (!efx.filters) {
+            applyGain(v);
+            return;
+        }
+        if (!v.filter) {
+            if (v.occlusion < 0.01f)
+                return;
+            alGetError();
+            efx.genFilters(1, &v.filter);
+            if (alGetError() != AL_NO_ERROR) {
+                v.filter = 0;
+                return;
+            }
+            efx.filteri(v.filter, AL_FILTER_TYPE, AL_FILTER_LOWPASS);
+        }
+        efx.filterf(v.filter, AL_LOWPASS_GAIN, std::clamp(1.0f - 0.55f * v.occlusion, 0.0f, 1.0f));
+        efx.filterf(v.filter, AL_LOWPASS_GAINHF, std::clamp(1.0f - 0.93f * v.occlusion, 0.02f, 1.0f));
+        alSourcei(v.source, AL_DIRECT_FILTER, static_cast<ALint>(v.filter)); // re-attach: filters are copied
     }
 
     void makeRoom(const SoundDef& def)
@@ -505,8 +554,11 @@ struct AudioSystem::Impl {
 
     void setSend(ALuint source)
     {
-        if (efx.ok && slot)
-            alSource3i(source, AL_AUXILIARY_SEND_FILTER, static_cast<ALint>(slot), 0, AL_FILTER_NULL);
+        if (!efx.ok)
+            return;
+        for (std::size_t k = 0; k < slots.size(); ++k)
+            if (slots[k])
+                alSource3i(source, AL_AUXILIARY_SEND_FILTER, static_cast<ALint>(slots[k]), static_cast<ALint>(k), AL_FILTER_NULL);
     }
 
     Handle start(const SoundDef& def, const glm::vec3* position, float volume)
@@ -533,6 +585,12 @@ struct AudioSystem::Impl {
         alSourcef(s, AL_PITCH, std::max(0.05f, pitch));
         voice->mono = position && def.spatial;
         if (voice->mono) {
+            voice->position = *position;
+            if (occlusionTest) { // muffled from the first sample (a shot behind a wall)
+                voice->occlusion = voice->occlusionTarget = std::clamp(occlusionTest(listener, *position), 0.0f, 1.0f);
+                voice->occlusionTimer = 0.1f;
+                applyOcclusion(*voice);
+            }
             alSourcei(s, AL_SOURCE_RELATIVE, AL_FALSE);
             alSource3f(s, AL_POSITION, position->x, position->y, position->z);
             alSourcef(s, AL_REFERENCE_DISTANCE, def.minDistance);
@@ -672,8 +730,11 @@ struct AudioSystem::Impl {
 
     // ---- reverb
 
-    void applyReverb()
+    void applyReverb(std::size_t k)
     {
+        const ALuint effect = effects[k], slot = slots[k];
+        const std::string& reverbName = reverbNames[k];
+        const float reverbAmount = reverbAmounts[k];
         if (!efx.ok || !slot)
             return;
         const auto& table = presets();
@@ -787,12 +848,14 @@ bool AudioSystem::init(const Options& options, std::string* error)
     m.efx.load(m.device);
     if (m.efx.ok) {
         alGetError();
-        m.efx.genEffects(1, &m.effect);
-        m.efx.genSlots(1, &m.slot);
-        if (alGetError() != AL_NO_ERROR)
-            m.efx.ok = false;
-        else
-            m.applyReverb();
+        m.efx.genEffects(static_cast<ALsizei>(m.effects.size()), m.effects.data());
+        m.efx.genSlots(static_cast<ALsizei>(m.slots.size()), m.slots.data());
+        if (alGetError() != AL_NO_ERROR) {
+            m.efx.ok = m.efx.filters = false;
+        } else {
+            m.applyReverb(0);
+            m.applyReverb(1);
+        }
     }
     m.initialized = true;
     m.stopping = false;
@@ -822,10 +885,11 @@ void AudioSystem::shutdown()
     }
     m.clips.clear();
     if (m.efx.ok) {
-        m.efx.deleteSlots(1, &m.slot);
-        m.efx.deleteEffects(1, &m.effect);
+        m.efx.deleteSlots(static_cast<ALsizei>(m.slots.size()), m.slots.data());
+        m.efx.deleteEffects(static_cast<ALsizei>(m.effects.size()), m.effects.data());
     }
-    m.slot = m.effect = 0;
+    m.slots = {};
+    m.effects = {};
     alcMakeContextCurrent(nullptr);
     alcDestroyContext(m.context);
     alcCloseDevice(m.device);
@@ -913,8 +977,10 @@ bool AudioSystem::playing(Handle handle) const
 void AudioSystem::setPosition(Handle handle, glm::vec3 p)
 {
     std::lock_guard lock(impl_->mutex);
-    if (Impl::Voice* v = impl_->find(handle))
+    if (Impl::Voice* v = impl_->find(handle)) {
         alSource3f(v->source, AL_POSITION, p.x, p.y, p.z);
+        v->position = p;
+    }
 }
 
 void AudioSystem::setVolume(Handle handle, float volume, float fadeSeconds)
@@ -950,16 +1016,60 @@ glm::vec3 AudioSystem::listenerPosition() const { return impl_->listener; }
 
 void AudioSystem::setReverb(const std::string& preset, float amount)
 {
-    Impl& m = *impl_;
-    if (m.reverbName == preset && m.reverbAmount == amount)
-        return;
-    m.reverbName = preset;
-    m.reverbAmount = amount;
-    if (m.initialized)
-        m.applyReverb();
+    setReverbMix(preset, amount, "none", 0.0f);
 }
 
-std::string AudioSystem::reverb() const { return impl_->reverbName; }
+void AudioSystem::setReverbMix(const std::string& a, float amountA, const std::string& b, float amountB)
+{
+    Impl& m = *impl_;
+    const std::array<std::string, 2> names{a, b};
+    const std::array<float, 2> amounts{amountA, amountB};
+    for (std::size_t k = 0; k < 2; ++k) {
+        if (m.reverbNames[k] == names[k] && std::abs(m.reverbAmounts[k] - amounts[k]) < 1e-3f)
+            continue;
+        const bool sameEffect = m.reverbNames[k] == names[k];
+        m.reverbNames[k] = names[k];
+        m.reverbAmounts[k] = amounts[k];
+        if (!m.initialized || !m.efx.ok || !m.slots[k])
+            continue;
+        if (sameEffect) // only the blend changed: cheap
+            m.efx.slotf(m.slots[k], AL_EFFECTSLOT_GAIN, std::clamp(amounts[k], 0.0f, 1.0f));
+        else
+            m.applyReverb(k);
+    }
+}
+
+std::string AudioSystem::reverb() const { return impl_->reverbNames[0]; }
+std::string AudioSystem::reverb(int slot) const { return impl_->reverbNames[static_cast<std::size_t>(std::clamp(slot, 0, 1))]; }
+float AudioSystem::reverbAmount(int slot) const { return impl_->reverbAmounts[static_cast<std::size_t>(std::clamp(slot, 0, 1))]; }
+
+void AudioSystem::duck(AudioGroup group, float gain, float holdSeconds, float releaseSeconds)
+{
+    const auto g = static_cast<std::size_t>(group);
+    if (g >= impl_->ducks.size())
+        return;
+    Impl::Duck& d = impl_->ducks[g];
+    // The deepest duck wins; a new event extends the hold.
+    if (d.hold <= 0.0f || gain < d.target)
+        d.target = std::clamp(gain, 0.0f, 1.0f);
+    d.hold = std::max(d.hold, holdSeconds);
+    d.release = std::max(0.05f, releaseSeconds);
+}
+
+float AudioSystem::duckGain(AudioGroup group) const
+{
+    const auto g = static_cast<std::size_t>(group);
+    return g < impl_->ducks.size() ? impl_->ducks[g].gain : 1.0f;
+}
+
+void AudioSystem::setOcclusionTest(OcclusionTest test) { impl_->occlusionTest = std::move(test); }
+
+float AudioSystem::occlusion(Handle handle) const
+{
+    std::lock_guard lock(impl_->mutex);
+    const Impl::Voice* v = impl_->find(handle);
+    return v ? v->occlusion : 0.0f;
+}
 
 bool AudioSystem::hrtf() const
 {
@@ -1017,10 +1127,38 @@ void AudioSystem::update(float dt)
     if (!m.initialized)
         return;
     m.uploadClips();
+    // Ducking: down fast (50 ms) while held, back up over `release`.
+    std::array<bool, static_cast<std::size_t>(AudioGroup::Count)> duckChanged{};
+    for (std::size_t g = 0; g < m.ducks.size(); ++g) {
+        Impl::Duck& d = m.ducks[g];
+        const float before = d.gain;
+        if (d.hold > 0.0f) {
+            d.hold -= dt;
+            d.gain = std::max(d.target, d.gain - dt / 0.05f);
+        } else {
+            d.target = 1.0f;
+            d.gain = std::min(1.0f, d.gain + dt / d.release);
+        }
+        duckChanged[g] = d.gain != before;
+    }
     {
         std::lock_guard lock(m.mutex);
         for (std::size_t i = m.voices.size(); i-- > 0;) {
             Impl::Voice& v = *m.voices[i];
+            if (duckChanged[static_cast<std::size_t>(v.group)])
+                m.applyGain(v);
+            if (v.mono && m.occlusionTest) {
+                // A few tests per second (staggered by the timer), smoothed so walls fade the sound in and out.
+                v.occlusionTimer -= dt;
+                if (v.occlusionTimer <= 0.0f) {
+                    v.occlusionTarget = std::clamp(m.occlusionTest(m.listener, v.position), 0.0f, 1.0f);
+                    v.occlusionTimer = 0.08f + 0.04f * static_cast<float>(v.id % 5) / 4.0f;
+                }
+                if (std::abs(v.occlusion - v.occlusionTarget) > 1e-3f) {
+                    v.occlusion += (v.occlusionTarget - v.occlusion) * std::min(1.0f, dt * 6.0f);
+                    m.applyOcclusion(v);
+                }
+            }
             if (!v.stream) {
                 if (v.clip && v.clip->state == Impl::Failed) {
                     m.release(i);

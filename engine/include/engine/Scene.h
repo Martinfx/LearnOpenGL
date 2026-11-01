@@ -255,14 +255,14 @@ struct Entity {
     // Editor-only helpers (sound sources and zones, map markers): not drawn in the
     // game and not hit by weapons.
     bool helper() const { return type == "sound" || type == "map_marker" || type == "particle" || type == "anomaly" || type == "light" ||
-                                 type == "sit_point" || type == "trigger" || type == "relay"; }
+                                 type == "sit_point" || type == "trigger" || type == "relay" || type == "reverb"; }
     // What the editor draws and picks: a sound zone can span the whole level, so
     // it is shown as a small speaker cube at its position; the zone is its size.
     Aabb markerBounds() const
     {
         if (type == "sound" || type == "particle")
             return {position, position + glm::vec3(type == "sound" ? 0.6f : 0.4f)};
-        if (type == "relay" || type == "trigger") // a logic node; a trigger's volume (its size) is drawn as lines
+        if (type == "relay" || type == "trigger" || type == "reverb") // a node; a volume (its size) is drawn as lines
             return {position - glm::vec3(0.2f, 0.0f, 0.2f), position + glm::vec3(0.2f, 0.4f, 0.2f)};
         if (type == "light") // the light itself is at `position`
             return {position - glm::vec3(0.15f), position + glm::vec3(0.15f)};
@@ -352,6 +352,10 @@ struct Environment {
     std::filesystem::path rainSound;
     std::filesystem::path windSound;
     std::filesystem::path rainEffect;  // rain particles around the camera, empty = particles/rain.particle
+    // Room reverb of the whole level (engine/Audio.h reverbPresetNames()); reverb
+    // zones (entities of type "reverb") override it where the listener is.
+    std::string reverb = "none";
+    float reverbAmount = 0.6f;
 };
 
 // Folder in the scene hierarchy (no geometry), e.g. "Building A" or "Enemies".
