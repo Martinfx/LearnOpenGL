@@ -7,6 +7,7 @@
 #include <chrono>
 #include <glm/gtc/matrix_transform.hpp>
 #include <cstring>
+#include <stb_image.h>
 #include <glm/gtc/packing.hpp>
 #include <glm/packing.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -456,7 +457,9 @@ bool Renderer::buildPrograms(const std::map<std::string, std::string>& src, Prog
                              {&p.fxaa, "fullscreen.vert", "fxaa.frag"},   {&p.copy, "fullscreen.vert", "copy.frag"},
                              {&p.grid, "fullscreen.vert", "grid.frag"}, {&p.hiz, "fullscreen.vert", "hiz.frag"},
                              {&p.sprite, "sprite.vert", "sprite.frag"},
-                             {&p.debug, "debug.vert", "debug.frag"}};
+                             {&p.debug, "debug.vert", "debug.frag"},
+                             {&p.luminance, "fullscreen.vert", "luminance.frag"},
+                             {&p.exposure, "fullscreen.vert", "exposure.frag"}};
     const auto start = std::chrono::steady_clock::now();
     int cached = 0;
     for (const Entry& e : entries) {
@@ -477,7 +480,7 @@ bool Renderer::buildPrograms(const std::map<std::string, std::string>& src, Prog
 void Renderer::destroyPrograms(Programs& p)
 {
     for (Program* program : {&p.mesh, &p.depth, &p.sky, &p.envCapture, &p.prefilter, &p.brdf, &p.ssao, &p.blur, &p.bloomDown,
-                             &p.bloomUp, &p.post, &p.fxaa, &p.copy, &p.grid, &p.hiz, &p.sprite, &p.debug}) {
+                             &p.bloomUp, &p.post, &p.fxaa, &p.copy, &p.grid, &p.hiz, &p.sprite, &p.debug, &p.luminance, &p.exposure}) {
         if (program->id)
             glDeleteProgram(program->id);
         program->id = 0;
@@ -663,12 +666,13 @@ void Renderer::shutdown()
     textures_.clear();
     destroyTargets();
     destroyPrograms(programs_);
-    for (unsigned* t : {&shadowTex_, &envRaw_, &envMap_, &brdfLut_, &whiteTex_, &shadowDummy_, &localShadowTex_})
+    for (unsigned* t : {&shadowTex_, &envRaw_, &envMap_, &brdfLut_, &whiteTex_, &shadowDummy_, &localShadowTex_, &lumTex_, &adaptTex_[0],
+                        &adaptTex_[1], &lutTex_})
         if (*t) {
             glDeleteTextures(1, t);
             *t = 0;
         }
-    for (unsigned* f : {&shadowFbo_, &captureFbo_, &localShadowFbo_})
+    for (unsigned* f : {&shadowFbo_, &captureFbo_, &localShadowFbo_, &lumFbo_, &adaptFbo_[0], &adaptFbo_[1]})
         if (*f) {
             glDeleteFramebuffers(1, f);
             *f = 0;
@@ -693,6 +697,9 @@ void Renderer::shutdown()
         }
     shadowRes_ = 0;
     localShadowRes_ = 0;
+    lutSize_ = 0;
+    lutPath_.clear();
+    exposureReset_ = true;
     cascadeCount_ = 0; // cached cascades are gone with the texture
     envHash_ = 0;
 }
@@ -2359,6 +2366,99 @@ void Renderer::collectDistortions(const RenderView& view)
         distortions_.push_back(found[i].data);
 }
 
+void Renderer::updateExposure(const Environment& e)
+{
+    const float dt = lastExposureTime_ < 0.0f ? 0.0f : std::clamp(time_ - lastExposureTime_, 0.0f, 0.5f);
+    if (time_ < lastExposureTime_ - 1.0f)
+        exposureReset_ = true; // time went back: another level or a reload
+    lastExposureTime_ = time_;
+    if (e.autoExposure <= 0.0f) {
+        exposureReset_ = true; // jump to the right value when it is switched on
+        return;
+    }
+    constexpr int kSize = 128, kLevels = 8; // 128 .. 1
+    if (!lumTex_) {
+        lumTex_ = makeTexture2D(GL_RG16F, kSize, kSize, GL_LINEAR_MIPMAP_LINEAR, kLevels);
+        lumFbo_ = makeFbo(lumTex_);
+        for (int i = 0; i < 2; ++i) {
+            adaptTex_[i] = makeTexture2D(GL_R32F, 1, 1, GL_NEAREST);
+            adaptFbo_[i] = makeFbo(adaptTex_[i]);
+        }
+        label(GL_TEXTURE, lumTex_, "exposure metering");
+        exposureReset_ = true;
+    }
+    glBindVertexArray(emptyVao_);
+    glBindFramebuffer(GL_FRAMEBUFFER, lumFbo_);
+    glViewport(0, 0, kSize, kSize);
+    glUseProgram(programs_.luminance.id);
+    glUniform1i(programs_.luminance.loc("uMaskOverlay"), overlayDrawn_ ? 1 : 0);
+    glBindTextureUnit(0, hdrColor_);
+    glBindTextureUnit(1, depthTex_);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    glGenerateTextureMipmap(lumTex_);
+
+    const int next = 1 - adaptIndex_;
+    glBindFramebuffer(GL_FRAMEBUFFER, adaptFbo_[next]);
+    glViewport(0, 0, 1, 1);
+    const Program& p = programs_.exposure;
+    glUseProgram(p.id);
+    glUniform1f(p.loc("uLevel"), static_cast<float>(kLevels - 1));
+    glUniform1f(p.loc("uDt"), dt);
+    glUniform2f(p.loc("uEvRange"), std::min(e.exposureMinEv, e.exposureMaxEv), std::max(e.exposureMinEv, e.exposureMaxEv));
+    glUniform2f(p.loc("uSpeed"), std::max(0.01f, e.adaptBrighten), std::max(0.01f, e.adaptDarken));
+    glUniform1i(p.loc("uReset"), exposureReset_ ? 1 : 0);
+    glBindTextureUnit(0, lumTex_);
+    glBindTextureUnit(1, adaptTex_[adaptIndex_]);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    adaptIndex_ = next;
+    exposureReset_ = false;
+}
+
+void Renderer::updateLut(const Environment& e)
+{
+    if (e.lut == lutPath_)
+        return;
+    lutPath_ = e.lut;
+    if (lutTex_)
+        glDeleteTextures(1, &lutTex_);
+    lutTex_ = 0;
+    lutSize_ = 0;
+    if (e.lut.empty())
+        return;
+    // Strip of N slices side by side (N*N x N): x within a slice = red, y = green (top row 0), slice = blue.
+    std::ifstream in(e.lut, std::ios::binary);
+    const std::vector<unsigned char> bytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    int w = 0, h = 0, comp = 0;
+    unsigned char* pixels = bytes.empty() ? nullptr
+                                          : stbi_load_from_memory(bytes.data(), static_cast<int>(bytes.size()), &w, &h, &comp, 4);
+    if (!pixels || h < 2 || w != h * h) {
+        LOG_WARN("render", "color LUT %s: expected an N*N x N strip (e.g. 1024x32), got %dx%d", e.lut.filename().string().c_str(), w, h);
+        if (pixels)
+            stbi_image_free(pixels);
+        return;
+    }
+    const int n = h;
+    std::vector<unsigned char> volume(static_cast<std::size_t>(n) * n * n * 4);
+    for (int b = 0; b < n; ++b)
+        for (int g = 0; g < n; ++g)
+            for (int r = 0; r < n; ++r) {
+                const unsigned char* src = pixels + (static_cast<std::size_t>(g) * w + static_cast<std::size_t>(b) * n + r) * 4;
+                unsigned char* dst = volume.data() + ((static_cast<std::size_t>(b) * n + g) * n + r) * 4;
+                std::memcpy(dst, src, 4);
+            }
+    stbi_image_free(pixels);
+    glCreateTextures(GL_TEXTURE_3D, 1, &lutTex_);
+    glTextureStorage3D(lutTex_, 1, GL_RGBA8, n, n, n);
+    glTextureSubImage3D(lutTex_, 0, 0, 0, 0, n, n, n, GL_RGBA, GL_UNSIGNED_BYTE, volume.data());
+    glTextureParameteri(lutTex_, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTextureParameteri(lutTex_, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    for (GLenum wrap : {GL_TEXTURE_WRAP_S, GL_TEXTURE_WRAP_T, GL_TEXTURE_WRAP_R})
+        glTextureParameteri(lutTex_, wrap, GL_CLAMP_TO_EDGE);
+    label(GL_TEXTURE, lutTex_, "color LUT");
+    lutSize_ = n;
+    LOG_INFO("render", "color LUT %s (%d^3)", e.lut.filename().string().c_str(), n);
+}
+
 void Renderer::present()
 {
     if (!pendingPresent_)
@@ -2379,9 +2479,32 @@ void Renderer::present()
         glViewport(0, 0, width_, height_);
     else
         glViewport(targetX_, targetY_, outWidth_, outHeight_);
+    updateExposure(e);
+    updateLut(e);
+    glBindFramebuffer(GL_FRAMEBUFFER, fxaa ? ldrFbo_ : static_cast<unsigned>(targetFbo_));
+    if (fxaa)
+        glViewport(0, 0, width_, height_);
+    else
+        glViewport(targetX_, targetY_, outWidth_, outHeight_);
     const Program& post = programs_.post;
     glUseProgram(post.id);
     glUniform1f(post.loc("uExposure"), e.exposure);
+    glUniform1f(post.loc("uAutoExposure"), adaptTex_[0] ? std::clamp(e.autoExposure, 0.0f, 1.0f) : 0.0f);
+    {
+        // White balance: warm/cold along orange-blue, tint along green-magenta, luminance kept.
+        const float t = std::clamp(e.temperature, -1.0f, 1.0f), m = std::clamp(e.greenMagenta, -1.0f, 1.0f);
+        glm::vec3 wb(1.0f + 0.22f * t + 0.06f * m, 1.0f + 0.02f * t - 0.12f * m, 1.0f - 0.22f * t + 0.06f * m);
+        wb /= glm::dot(wb, glm::vec3(0.2126f, 0.7152f, 0.0722f));
+        glUniform3fv(post.loc("uWhiteBalance"), 1, glm::value_ptr(wb));
+    }
+    glUniform3fv(post.loc("uLift"), 1, glm::value_ptr(e.lift));
+    glUniform3fv(post.loc("uGamma"), 1, glm::value_ptr(e.gamma));
+    glUniform3fv(post.loc("uGain"), 1, glm::value_ptr(e.gain));
+    glUniform1f(post.loc("uLutStrength"), lutTex_ ? std::clamp(e.lutStrength, 0.0f, 1.0f) : 0.0f);
+    glUniform1f(post.loc("uLutSize"), static_cast<float>(std::max(lutSize_, 2)));
+    glBindTextureUnit(3, adaptTex_[adaptIndex_] ? adaptTex_[adaptIndex_] : whiteTex_);
+    if (lutTex_)
+        glBindTextureUnit(4, lutTex_);
     glUniform1f(post.loc("uBloomIntensity"), quality_.bloom ? e.bloomIntensity : 0.0f);
     glUniform1f(post.loc("uSaturation"), e.saturation);
     glUniform1f(post.loc("uContrast"), e.contrast);

@@ -105,6 +105,27 @@ bool saveScene(const Scene& scene, const std::filesystem::path& file, std::strin
         v3("tint", e.tint);
         f1("vignette", e.vignette);
         f1("grain", e.grain);
+        const Environment d;
+        if (e.autoExposure != d.autoExposure || e.exposureMinEv != d.exposureMinEv || e.exposureMaxEv != d.exposureMaxEv ||
+            e.adaptBrighten != d.adaptBrighten || e.adaptDarken != d.adaptDarken) {
+            f1("auto_exposure", e.autoExposure);
+            f1("exposure_min_ev", e.exposureMinEv);
+            f1("exposure_max_ev", e.exposureMaxEv);
+            f1("adapt_brighten", e.adaptBrighten);
+            f1("adapt_darken", e.adaptDarken);
+        }
+        if (e.temperature != d.temperature)
+            f1("temperature", e.temperature);
+        if (e.greenMagenta != d.greenMagenta)
+            f1("green_magenta", e.greenMagenta);
+        if (e.lift != d.lift)
+            v3("lift", e.lift);
+        if (e.gamma != d.gamma)
+            v3("gamma", e.gamma);
+        if (e.gain != d.gain)
+            v3("gain", e.gain);
+        if (!e.lut.empty())
+            out << "color_lut " << std::quoted(relative(e.lut)) << ' ' << e.lutStrength << '\n';
         f1("rain", e.rain);
         f1("wind", e.wind);
         if (!e.rainSound.empty() || !e.windSound.empty())
@@ -365,19 +386,32 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
             ok = static_cast<bool>(ls >> name);
             const std::map<std::string, glm::vec3*> vectors = {
                 {"sun_color", &e.sunColor}, {"sky_zenith", &e.skyZenith}, {"sky_horizon", &e.skyHorizon},
-                {"ground_color", &e.groundColor}, {"fog_color", &e.fogColor}, {"tint", &e.tint}};
+                {"ground_color", &e.groundColor}, {"fog_color", &e.fogColor}, {"tint", &e.tint},
+                {"lift", &e.lift}, {"gamma", &e.gamma}, {"gain", &e.gain}};
             const std::map<std::string, float*> floats = {
                 {"sun_intensity", &e.sunIntensity}, {"cloud_cover", &e.cloudCover}, {"ambient_intensity", &e.ambientIntensity},
                 {"fog_density", &e.fogDensity}, {"fog_height", &e.fogHeight}, {"fog_height_falloff", &e.fogHeightFalloff},
                 {"fog_sun_scatter", &e.fogSunScatter}, {"exposure", &e.exposure}, {"bloom_intensity", &e.bloomIntensity},
                 {"bloom_threshold", &e.bloomThreshold}, {"ssao_radius", &e.ssaoRadius}, {"ssao_intensity", &e.ssaoIntensity},
                 {"shadow_distance", &e.shadowDistance}, {"saturation", &e.saturation}, {"contrast", &e.contrast},
-                {"vignette", &e.vignette}, {"grain", &e.grain}, {"rain", &e.rain}, {"wind", &e.wind}};
+                {"vignette", &e.vignette}, {"grain", &e.grain}, {"rain", &e.rain}, {"wind", &e.wind},
+                {"auto_exposure", &e.autoExposure}, {"exposure_min_ev", &e.exposureMinEv}, {"exposure_max_ev", &e.exposureMaxEv},
+                {"adapt_brighten", &e.adaptBrighten}, {"adapt_darken", &e.adaptDarken}, {"temperature", &e.temperature},
+                {"green_magenta", &e.greenMagenta}};
             if (ok) {
                 if (auto it = vectors.find(name); it != vectors.end())
                     ok = static_cast<bool>(ls >> it->second->x >> it->second->y >> it->second->z);
                 else if (auto f = floats.find(name); f != floats.end())
                     ok = static_cast<bool>(ls >> *f->second);
+            }
+        } else if (key == "color_lut") {
+            std::string path;
+            ok = static_cast<bool>(ls >> std::quoted(path) >> result.environment.lutStrength);
+            if (ok && !path.empty()) {
+                std::filesystem::path p = pathFromUtf8(path);
+                if (p.is_relative())
+                    p = std::filesystem::absolute(file).parent_path() / p;
+                result.environment.lut = p.lexically_normal();
             }
         } else if (key == "group") {
             Group g;

@@ -654,6 +654,7 @@ int main(int argc, char** argv)
     // Flashlight (F), settings from the level's player.
     Flashlight flashlight;
     flashlight.reset(scene.player);
+    renderer.resetExposure(); // auto-exposure starts from this level's view
     bool flashlightHeld = false;
     bool boltHeld = false;
     bool wasReloading = false;

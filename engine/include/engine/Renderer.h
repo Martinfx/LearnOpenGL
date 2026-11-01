@@ -208,6 +208,9 @@ public:
 
     std::string glInfo() const { return glInfo_; }
 
+    // Auto-exposure jumps to the new view's brightness on the next frame (level start, teleport).
+    void resetExposure() { exposureReset_ = true; }
+
 private:
     void collectDistortions(const RenderView& view); // anomaly warps of this frame into screen space
     struct GpuMesh {
@@ -241,7 +244,8 @@ private:
         int loc(const char* name) const;
     };
     struct Programs {
-        Program mesh, depth, sky, envCapture, prefilter, brdf, ssao, blur, bloomDown, bloomUp, post, fxaa, copy, grid, hiz, sprite, debug;
+        Program mesh, depth, sky, envCapture, prefilter, brdf, ssao, blur, bloomDown, bloomUp, post, fxaa, copy, grid, hiz, sprite, debug,
+            luminance, exposure;
     };
     // Uniform locations of the program that draws geometry right now.
     struct MeshLocations {
@@ -464,6 +468,20 @@ private:
     unsigned localShadowTex_ = 0, localShadowFbo_ = 0;
     int localShadowRes_ = 0, localShadowLayers_ = 0;
     void ensureLocalShadowMap();
+
+    // Auto-exposure: centre-weighted log luminance (mipmapped to 1 texel) and the adapted
+    // exposure in two 1x1 targets (ping-pong), all on the GPU.
+    void updateExposure(const Environment& e);
+    unsigned lumTex_ = 0, lumFbo_ = 0;
+    unsigned adaptTex_[2] = {0, 0}, adaptFbo_[2] = {0, 0};
+    int adaptIndex_ = 0;
+    bool exposureReset_ = true;
+    float lastExposureTime_ = -1.0f;
+    // Color LUT (3D texture from a strip image), reloaded when the level's file changes.
+    void updateLut(const Environment& e);
+    unsigned lutTex_ = 0;
+    int lutSize_ = 0;
+    std::filesystem::path lutPath_;
 
     RenderQuality quality_;
     const Environment* env_ = nullptr;  // of the scene being rendered

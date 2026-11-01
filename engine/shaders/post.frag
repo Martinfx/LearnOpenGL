@@ -1,10 +1,20 @@
 #version 450 core
-// Final image: exposure, bloom, ACES tone mapping, color grading (saturation,
-// contrast, tint), vignette and film grain, then gamma.
+// Final image: exposure (manual x auto), bloom, ACES tone mapping, color grading
+// (saturation, tint, white balance, contrast, lift/gamma/gain, 3D LUT), vignette
+// and film grain, then gamma.
 in vec2 vUV;
 layout(binding = 0) uniform sampler2D uHdr;
 layout(binding = 1) uniform sampler2D uBloom;
 uniform float uExposure;
+uniform float uAutoExposure;  // 0 manual .. 1 fully automatic
+layout(binding = 3) uniform sampler2D uAdapted; // r: auto-exposure multiplier
+uniform vec3 uWhiteBalance;   // multiplier from temperature and green/magenta tint
+uniform vec3 uLift;           // added to the shadows
+uniform vec3 uGamma;          // midtones (> 1 brighter)
+uniform vec3 uGain;           // multiplies the highlights
+layout(binding = 4) uniform sampler3D uLut;
+uniform float uLutStrength;   // 0 = no LUT
+uniform float uLutSize;
 uniform float uBloomIntensity;
 uniform float uSaturation;
 uniform float uContrast;
@@ -72,16 +82,24 @@ void main() {
     if (any(isnan(color)) || any(isinf(color))) color = vec3(0.0);
     if (any(isnan(bloom)) || any(isinf(bloom))) bloom = vec3(0.0);
     color += bloom * uBloomIntensity;
-    color *= uExposure;
+    float autoExposure = uAutoExposure > 0.0 ? texelFetch(uAdapted, ivec2(0), 0).r : 1.0;
+    color *= uExposure * mix(1.0, autoExposure, uAutoExposure);
     color = aces(color);
     float luma = dot(color, vec3(0.2126, 0.7152, 0.0722));
     color = mix(vec3(luma), color, uSaturation);
-    color *= uTint;
+    color *= uTint * uWhiteBalance;
     vec2 d = vUV - 0.5;
     color *= 1.0 - uVignette * smoothstep(0.2, 0.85, dot(d, d) * 2.0);
     color = pow(clamp(color, 0.0, 1.0), vec3(1.0 / 2.2));
     // Contrast in display space, so dark colors are not crushed to black.
     color = clamp((color - 0.5) * uContrast + 0.5, 0.0, 1.0);
+    // Lift / gamma / gain (display space).
+    color = clamp(uGain * (color + uLift * (1.0 - color)), 0.0, 1.0);
+    color = pow(color, 1.0 / max(uGamma, vec3(0.01)));
+    if (uLutStrength > 0.0) {
+        vec3 graded = texture(uLut, color * ((uLutSize - 1.0) / uLutSize) + 0.5 / uLutSize).rgb;
+        color = mix(color, graded, uLutStrength);
+    }
     color += (hash(gl_FragCoord.xy + fract(uTime) * 1000.0) - 0.5) * uGrain;
     // Luma in alpha for FXAA. The window must get alpha 1: Qt composites the editor view with it.
     fragColor = vec4(color, uLumaAlpha ? dot(color, vec3(0.299, 0.587, 0.114)) : 1.0);

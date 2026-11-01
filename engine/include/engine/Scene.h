@@ -309,6 +309,20 @@ struct Environment {
     glm::vec3 tint{1.0f};                       // multiplied after tone mapping
     float vignette = 0.25f;
     float grain = 0.02f;
+    // Auto-exposure: the camera adapts to the brightness of the view like an eye.
+    float autoExposure = 0.0f;                  // 0 manual (Exposure only) .. 1 fully automatic
+    float exposureMinEv = -2.0f;                // darkest correction, stops (bright scenes)
+    float exposureMaxEv = 2.0f;                 // brightest correction, stops: keep low so nights stay dark
+    float adaptBrighten = 0.8f;                 // 1/s when the view gets darker (slow, like eyes)
+    float adaptDarken = 2.5f;                   // 1/s when the view gets brighter
+    // Grading after tone mapping.
+    float temperature = 0.0f;                   // white balance: -1 cold (blue) .. 1 warm (orange)
+    float greenMagenta = 0.0f;                  // white balance: -1 green .. 1 magenta
+    glm::vec3 lift{0.0f};                       // shadows offset (about -0.2 .. 0.2)
+    glm::vec3 gamma{1.0f};                      // midtones (> 1 brighter)
+    glm::vec3 gain{1.0f};                       // highlights multiplier
+    std::filesystem::path lut;                  // color LUT strip (N*N x N image), empty = none
+    float lutStrength = 1.0f;
     // Weather (0..1): drives the rain and wind sound loops (and rain particles).
     float rain = 0.0f;
     float wind = 0.0f;

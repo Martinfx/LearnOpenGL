@@ -143,12 +143,25 @@ void testSceneRoundTrip()
 {
     engine::Scene s = engine::makeDefaultScene();
     s.boxes[0].name = "Name with \"quotes\" and spaces";
+    s.environment.autoExposure = 0.75f;
+    s.environment.exposureMaxEv = 1.5f;
+    s.environment.temperature = -0.3f;
+    s.environment.lift = {0.01f, 0.0f, 0.02f};
+    s.environment.lut = std::filesystem::absolute("luts/look.png");
+    s.environment.lutStrength = 0.6f;
+    s.player.flashlightBattery = 120.0f;
+    s.player.flashlightColor = {1.0f, 0.9f, 0.7f};
     std::string err;
     check(engine::saveScene(s, "roundtrip.level", &err), "save: " + err);
     engine::Scene t;
     check(engine::loadScene(t, "roundtrip.level", &err), "load: " + err);
     check(t.boxes.size() == s.boxes.size(), "same number of boxes");
     check(!t.boxes.empty() && t.boxes[0].name == s.boxes[0].name, "names survive quoting");
+    const engine::Environment& e = t.environment;
+    check(e.autoExposure == 0.75f && e.exposureMaxEv == 1.5f && e.temperature == -0.3f && e.lift == s.environment.lift &&
+              e.lutStrength == 0.6f && e.lut.filename() == "look.png",
+          "auto-exposure and grading settings survive save/load");
+    check(t.player.flashlightBattery == 120.0f && t.player.flashlightColor == s.player.flashlightColor, "flashlight settings survive save/load");
 }
 
 void testGltfRamp()

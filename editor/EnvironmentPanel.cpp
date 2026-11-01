@@ -1,10 +1,16 @@
 #include "EnvironmentPanel.h"
 #include "SoundEditor.h"
 #include "Vec3Editor.h"
+#include "AssetPaths.h"
 
 #include <QColorDialog>
 #include <QComboBox>
 #include <QDoubleSpinBox>
+#include <QFileDialog>
+#include <QHBoxLayout>
+#include <QImage>
+#include <QLineEdit>
+#include <QMessageBox>
 #include <QFormLayout>
 #include <QLabel>
 #include <QPushButton>
@@ -154,7 +160,14 @@ EnvironmentPanel::EnvironmentPanel(engine::Scene* scene, QWidget* parent)
     addFloat(form, tr("Height falloff"), &E::fogHeightFalloff, 0, 2, 0.01, 3);
     addFloat(form, tr("Sun glow"), &E::fogSunScatter, 0, 5, 0.1, 2, tr("Fog brightens toward the sun"));
     section(tr("Camera and image"));
-    addFloat(form, tr("Exposure"), &E::exposure, 0.05, 10, 0.05, 2);
+    addFloat(form, tr("Exposure"), &E::exposure, 0.05, 10, 0.05, 2, tr("Manual exposure; with auto-exposure it is the compensation"));
+    addFloat(form, tr("Auto exposure"), &E::autoExposure, 0, 1, 0.05, 2,
+             tr("0 manual, 1 the camera adapts to the brightness of the view like an eye"));
+    addFloat(form, tr("Auto min EV"), &E::exposureMinEv, -10, 0, 0.25, 2, tr("Darkest correction in stops (bright scenes)"));
+    addFloat(form, tr("Auto max EV"), &E::exposureMaxEv, 0, 10, 0.25, 2,
+             tr("Brightest correction in stops: keep it low so nights and interiors stay dark"));
+    addFloat(form, tr("Adapt to dark"), &E::adaptBrighten, 0.05, 20, 0.1, 2, tr("Speed (1/s) when the view gets darker"));
+    addFloat(form, tr("Adapt to light"), &E::adaptDarken, 0.05, 20, 0.1, 2, tr("Speed (1/s) when the view gets brighter"));
     addFloat(form, tr("Bloom"), &E::bloomIntensity, 0, 1, 0.01, 3);
     addFloat(form, tr("Bloom threshold"), &E::bloomThreshold, 0, 10, 0.1, 2);
     addFloat(form, tr("AO radius"), &E::ssaoRadius, 0.05, 5, 0.05, 2, tr("Ambient occlusion radius (m)"));
@@ -163,6 +176,48 @@ EnvironmentPanel::EnvironmentPanel(engine::Scene* scene, QWidget* parent)
     addFloat(form, tr("Saturation"), &E::saturation, 0, 2, 0.02, 2);
     addFloat(form, tr("Contrast"), &E::contrast, 0.5, 2, 0.02, 2);
     addColor(form, tr("Tint"), &E::tint);
+    addFloat(form, tr("Temperature"), &E::temperature, -1, 1, 0.02, 2, tr("White balance: -1 cold (blue) .. 1 warm (orange)"));
+    addFloat(form, tr("Green / magenta"), &E::greenMagenta, -1, 1, 0.02, 2, tr("White balance tint"));
+    addVec3(form, tr("Lift"), &E::lift, -0.5, 0.5, 0.01, tr("Shadows: added to dark tones (R, G, B)"));
+    addVec3(form, tr("Gamma"), &E::gamma, 0.2, 3.0, 0.02, tr("Midtones: above 1 brighter (R, G, B)"));
+    addVec3(form, tr("Gain"), &E::gain, 0.0, 3.0, 0.02, tr("Highlights multiplier (R, G, B)"));
+    {
+        // Color LUT: a strip image (N*N x N) applied last; export the neutral one, grade it in Krita/GIMP.
+        lutEdit_ = new QLineEdit(this);
+        lutEdit_->setReadOnly(true);
+        lutEdit_->setPlaceholderText(tr("none"));
+        auto* browse = new QPushButton(tr("..."), this);
+        browse->setMaximumWidth(32);
+        auto* clear = new QPushButton(tr("x"), this);
+        clear->setMaximumWidth(28);
+        auto* row = new QWidget(this);
+        auto* rowLayout = new QHBoxLayout(row);
+        rowLayout->setContentsMargins(0, 0, 0, 0);
+        rowLayout->addWidget(lutEdit_, 1);
+        rowLayout->addWidget(browse);
+        rowLayout->addWidget(clear);
+        form->addRow(tr("Color LUT"), row);
+        connect(browse, &QPushButton::clicked, this, [this] {
+            const QString path = QFileDialog::getOpenFileName(this, tr("Color LUT"), assetPath("textures/luts"),
+                                                              tr("LUT strips (*.png *.jpg)"));
+            if (path.isEmpty())
+                return;
+            scene_->environment.lut = std::filesystem::path(path.toStdU16String());
+            refresh();
+            changed();
+        });
+        connect(clear, &QPushButton::clicked, this, [this] {
+            scene_->environment.lut.clear();
+            refresh();
+            changed();
+        });
+        addFloat(form, tr("LUT strength"), &E::lutStrength, 0, 1, 0.05, 2);
+        auto* exportLut = new QPushButton(tr("Export neutral LUT..."), this);
+        exportLut->setToolTip(tr("Saves an unchanged 32x32x32 LUT strip: grade a screenshot with it in an image editor, "
+                                 "apply the same edits to the strip and pick it as Color LUT"));
+        form->addRow(QString(), exportLut);
+        connect(exportLut, &QPushButton::clicked, this, &EnvironmentPanel::exportNeutralLut);
+    }
     addFloat(form, tr("Vignette"), &E::vignette, 0, 1, 0.02, 2);
     addFloat(form, tr("Film grain"), &E::grain, 0, 0.3, 0.005, 3);
     section(tr("Weather"));
@@ -225,9 +280,45 @@ void EnvironmentPanel::addColor(QFormLayout* form, const QString& label, glm::ve
     });
 }
 
+void EnvironmentPanel::addVec3(QFormLayout* form, const QString& label, glm::vec3 engine::Environment::*member, double min,
+                               double max, double step, const QString& tip)
+{
+    auto* edit = new Vec3Editor(min, max, step, this);
+    edit->setToolTip(tip);
+    form->addRow(label, edit);
+    vectors_.emplace_back(edit, member);
+    connect(edit, &Vec3Editor::valueEdited, this, [this, member](glm::vec3 v) {
+        if (updating_)
+            return;
+        scene_->environment.*member = v;
+        changed();
+    });
+}
+
+void EnvironmentPanel::exportNeutralLut()
+{
+    const QString path = QFileDialog::getSaveFileName(this, tr("Export neutral LUT"), assetPath("textures/luts/neutral_32.png"),
+                                                      tr("PNG (*.png)"));
+    if (path.isEmpty())
+        return;
+    QDir().mkpath(QFileInfo(path).absolutePath());
+    constexpr int n = 32;
+    QImage image(n * n, n, QImage::Format_RGB888);
+    for (int g = 0; g < n; ++g)
+        for (int b = 0; b < n; ++b)
+            for (int r = 0; r < n; ++r)
+                image.setPixel(b * n + r, g, qRgb(r * 255 / (n - 1), g * 255 / (n - 1), b * 255 / (n - 1)));
+    if (!image.save(path))
+        QMessageBox::warning(this, tr("Export neutral LUT"), tr("Cannot write %1").arg(path));
+}
+
 void EnvironmentPanel::refresh()
 {
     updating_ = true;
+    for (auto& [edit, member] : vectors_)
+        edit->setValue(scene_->environment.*member);
+    lutEdit_->setText(QString::fromStdU16String(scene_->environment.lut.filename().u16string()));
+    lutEdit_->setToolTip(QString::fromStdU16String(scene_->environment.lut.u16string()));
     for (const FloatField& f : floats_)
         f.spin->setValue(scene_->environment.*(f.member));
     for (const ColorField& c : colors_)
@@ -246,6 +337,7 @@ void EnvironmentPanel::applyPreset(int index)
     engine::Environment env = list[static_cast<std::size_t>(index)].env;
     env.rainSound = scene_->environment.rainSound; // presets change the look, not the level's sounds
     env.windSound = scene_->environment.windSound;
+    env.lut = scene_->environment.lut;
     scene_->environment = env;
     scene_->sunDirection = list[static_cast<std::size_t>(index)].sun;
     refresh();
