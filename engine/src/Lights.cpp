@@ -159,7 +159,7 @@ float lightFlickerFactor(LightFlicker flicker, float speed, double time, std::ui
 
 bool evaluateLight(const Entity& e, double time, LocalLight& out)
 {
-    if (!e.alive)
+    if (!e.alive || e.offline)
         return false;
     const LightSettings s = lightSettings(e);
     if (!s.enabled || s.intensity <= 0.0f)

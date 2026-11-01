@@ -73,6 +73,9 @@ bool SaveGame::write(const std::filesystem::path& file, std::string* error) cons
     body << "kills " << kills << "\n";
     for (const auto& [faction, value] : goodwill)
         body << "goodwill " << quote(faction) << ' ' << value << "\n";
+    for (const auto& q : squads)
+        body << "squad " << quote(q.name) << ' ' << q.position.x << ' ' << q.position.y << ' ' << q.position.z << ' ' << q.target << ' '
+             << (q.arrived ? 1 : 0) << ' ' << q.wait << "\n";
     for (const std::filesystem::path& f : weaponFiles)
         body << "weapon_file " << quote(f.generic_string()) << "\n";
     for (const auto& [type, rounds] : stock)
@@ -190,6 +193,14 @@ bool SaveGame::read(const std::filesystem::path& file, std::string* error)
                 ammo.push_back(a);
         } else if (key == "kills") {
             ls >> kills;
+        } else if (key == "squad" && unquote(ls, str)) {
+            engine::ALife::SquadState q;
+            q.name = str;
+            int arrived = 1;
+            if (ls >> q.position.x >> q.position.y >> q.position.z >> q.target >> arrived >> q.wait) {
+                q.arrived = arrived != 0;
+                squads.push_back(std::move(q));
+            }
         } else if (key == "goodwill" && unquote(ls, str)) {
             float v = 0.0f;
             if (ls >> v)

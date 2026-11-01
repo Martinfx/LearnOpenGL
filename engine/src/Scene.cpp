@@ -1417,7 +1417,7 @@ void updateAnimations(Scene& scene, float dt, const GroundQuery& ground)
         for (std::size_t i = begin; i < end; ++i) {
             Entity& e = scene.entities[i];
             e.flash = std::max(0.0f, e.flash - dt);
-            if (!e.model || !e.model->skeleton)
+            if (!e.model || !e.model->skeleton || e.offline)
                 continue;
             const Skeleton& skeleton = *e.model->skeleton;
             if (e.animator.current.clip < 0 && !e.animator.graph && !e.animation.empty())

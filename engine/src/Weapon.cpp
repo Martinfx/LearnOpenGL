@@ -28,7 +28,7 @@ ShotHit traceShot(const Scene& scene, const PhysicsWorld& physics, glm::vec3 ori
     // Characters are not rigid bodies, so test entity bounds separately.
     for (std::size_t i = 0; i < scene.entities.size(); ++i) {
         const Entity& e = scene.entities[i];
-        if (!e.alive || e.helper() || e.type == "pickup")
+        if (!e.alive || e.offline || e.helper() || e.type == "pickup")
             continue;
         if (auto t = rayAabb(origin, dir, e.bounds()); t && *t <= range && (!best.hit || *t < best.distance)) {
             best.hit = true;

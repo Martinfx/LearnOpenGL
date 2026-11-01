@@ -22,6 +22,7 @@ properties = {
     { "sound_shot",      "sounds/weapons/pistol_shot.sound", "Sound of every shot (path in assets/, empty = silent)" },
     { "search_time",     5.0,  "Seconds spent searching the last known position" },
     { "alert_range",     40.0, "Calls the members of its group within this distance when it starts a fight, m" },
+    { "alife",           "",   "A-life: \"roam\" = its group travels between A-life points while the player is away; empty = stays" },
     { "patrol_radius",   4.0,  "Wanders this far from its start position, m" },
     { "rest_chance",     0.25, "Chance per patrol leg to sit at a free sit point within 3x the patrol radius" },
     { "rest_time",       30.0, "Seconds sitting before patrolling again" },
@@ -226,7 +227,8 @@ end
 
 -- Entity I/O inputs (Outputs table of another entity, or game.fire): "Alert" sends it after
 -- the player (an alarm, a tripwire) or after the entity named in the parameter (its group
--- calling for help); "Calm" sends it back home.
+-- calling for help); "GoTo" "x y z" moves its home there (A-life squads travelling between
+-- points); "Calm" sends it back home.
 function on_input(self, input, param)
     if not self.alive then return end
     if input == "Alert" then
@@ -239,6 +241,14 @@ function on_input(self, input, param)
         target = t
         last_seen = t_pos(t)
         if state ~= "chase" then set_state(self, "chase") end
+    elseif input == "GoTo" then
+        -- A-life (roaming squad): its new place is "x y z"; it walks there unless fighting.
+        local x, y, z = string.match(param or "", "(%S+)%s+(%S+)%s+(%S+)")
+        if x then
+            home = vec3(tonumber(x), tonumber(y), tonumber(z))
+            patrol_target = home
+            if state ~= "attack" and state ~= "chase" and state ~= "search" then set_state(self, "return") end
+        end
     elseif input == "Calm" then
         target = nil
         grudges = {}

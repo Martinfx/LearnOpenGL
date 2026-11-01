@@ -3,6 +3,7 @@
 #include <cstring>
 #include <set>
 #include <engine/Assert.h>
+#include <engine/ALife.h>
 #include <engine/Anomaly.h>
 #include <engine/Lights.h>
 #include <engine/EntityIO.h>
@@ -714,7 +715,7 @@ void testScriptPropertiesFromEditor()
     std::vector<engine::ScriptProperty> props;
     std::string err;
     check(engine::readScriptProperties(ENGINE_TEST_ASSETS "/scripts/enemy.lua", props, &err), "read enemy.lua properties: " + err);
-    check(props.size() == 29 && props[0].name == "health" && props[0].defaultValue == "100", "enemy.lua declares 29 tunables, health first");
+    check(props.size() == 30 && props[0].name == "health" && props[0].defaultValue == "100", "enemy.lua declares 30 tunables, health first");
 
     // An editor override changes the behaviour: 40 hp dies after two 20-damage hits.
     auto s = flatFloor();
@@ -962,6 +963,82 @@ void testFactions()
         for (const std::string& m : log)
             check(m.find("[script]") != 0, "no script errors: " + m);
     }
+}
+
+void testALife()
+{
+    // Two points 300 m apart; a roaming bandit squad at the first, soldiers holding the second;
+    // the player far away. The bandits go offline, travel, meet the soldiers and fight it out.
+    auto s = flatFloor();
+    s.playerStart = {-2000, 0, 0};
+    for (float x : {0.0f, 300.0f}) {
+        engine::Entity p;
+        p.type = "alife_point";
+        p.name = x == 0.0f ? "Barn" : "Checkpoint";
+        p.position = {x, 0, 0};
+        p.properties["capacity"] = "2"; // room for the soldiers holding it and a visiting squad
+        s.entities.push_back(p);
+    }
+    for (int i = 0; i < 3; ++i) {
+        engine::Entity b = enemyAt({1.0f + i, 0, 2}, 0.0f);
+        b.name = "Bandit " + std::to_string(i);
+        b.properties["group"] = "raiders";
+        b.properties["alife"] = "roam";
+        s.entities.push_back(b);
+    }
+    for (int i = 0; i < 2; ++i) {
+        engine::Entity m = enemyAt({300.0f + i, 0, 2}, 180.0f);
+        m.name = "Soldier " + std::to_string(i);
+        m.properties["faction"] = "military";
+        m.properties["group"] = "post";
+        s.entities.push_back(m);
+    }
+    engine::PhysicsWorld world;
+    world.setLevel(s);
+    engine::PlayerController player;
+    player.spawn(world, s.playerStart);
+    std::vector<std::string> log;
+    engine::ScriptSystem scripts(s, world, player, [&log](const std::string& m) { log.push_back(m); });
+    check(scripts.start() == 0, "squad scripts start");
+    engine::ALife alife;
+    alife.settings.minWait = alife.settings.maxWait = 5.0f;
+    alife.start(s);
+    alife.settings.minWait = alife.settings.maxWait = 1000.0f; // once there, they stay
+    check(alife.points().size() == 2 && alife.squads().size() == 2, "two points, two squads (groups)");
+    check(alife.squads()[0].roams && !alife.squads()[1].roams && alife.squads()[0].target == 0 && alife.squads()[1].target == 1,
+          "the raiders roam, both squads start at their nearest point");
+    int gunfire = 0;
+    auto run = [&](float seconds, glm::vec3 at) {
+        for (int i = 0; i < static_cast<int>(seconds * 10.0f); ++i) {
+            scripts.fixedUpdate(0.1f);
+            alife.update(s, scripts, scripts.factions(), at, 0.1f);
+            for (const auto& ev : alife.takeEvents())
+                gunfire += ev.kind == engine::ALife::Event::Gunfire;
+        }
+    };
+    run(2.0f, s.playerStart);
+    check(s.entities[2].offline && s.entities[5].offline && !alife.squads()[0].online, "far squads go offline (hidden)");
+    run(30.0f, s.playerStart);
+    const auto& raiders = alife.squads()[0];
+    check(!raiders.arrived && raiders.target == 1 && raiders.position.x > 20.0f, "the raiders travel to the other point offline");
+    run(260.0f, s.playerStart);
+    int dead = 0;
+    for (int i = 2; i < 7; ++i)
+        dead += !s.entities[static_cast<std::size_t>(i)].alive;
+    check(gunfire > 0 && dead > 0, "hostile squads that meet offline fight: " + std::to_string(dead) + " dead");
+    // The player comes: the squads there go online where they got to.
+    run(2.0f, {300, 0, 0});
+    check(!s.entities[5].offline && alife.squads()[1].online, "squads near the player come back online");
+    bool placed = true;
+    for (int i = 2; i < 5; ++i)
+        if (s.entities[static_cast<std::size_t>(i)].alive)
+            placed = placed && s.entities[static_cast<std::size_t>(i)].position.x > 250.0f;
+    check(placed, "the raiders stand where their record travelled");
+    check(alife.squads()[0].online || alife.squads()[0].living == 0, "the raiders came online too");
+    const auto saved = alife.save();
+    check(saved.size() == 1 && saved[0].name == "raiders", "roaming squads are saved");
+    for (const std::string& m : log)
+        check(m.find("[script]") != 0, "no script errors: " + m);
 }
 
 void testScriptSyntaxCheck()
@@ -3302,6 +3379,7 @@ int main()
         {"testRagdoll", testRagdoll},
         {"testEnemyAnimGraph", testEnemyAnimGraph},
         {"testFactions", testFactions},
+        {"testALife", testALife},
         {"testWorldStreaming", testWorldStreaming},
     };
     for (const auto& [name, run] : tests)

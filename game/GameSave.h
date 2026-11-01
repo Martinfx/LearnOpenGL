@@ -1,4 +1,5 @@
 #pragma once
+#include <engine/ALife.h>
 #include <engine/Scripting.h>
 
 #include <glm/vec3.hpp>
@@ -46,6 +47,7 @@ struct SaveGame {
     float weatherHold = 0.0f;     // s until the cycle changes it
     std::vector<engine::ScriptSystem::EntityState> entities;
     std::vector<engine::ScriptSystem::PendingInput> pendingInputs; // entity I/O waiting for its delay
+    std::vector<engine::ALife::SquadState> squads;                 // A-life roaming squads
 
     bool write(const std::filesystem::path& file, std::string* error = nullptr) const;
     bool read(const std::filesystem::path& file, std::string* error = nullptr);

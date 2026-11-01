@@ -260,6 +260,8 @@ struct Entity {
     float yawDegrees = 0.0f;             // facing, 0 = +X, 90 = +Z
     float health = 100.0f;               // runtime: changed by weapons and scripts
     bool alive = true;                   // runtime: dead entities are not drawn or simulated
+    bool offline = false;                // runtime: far from the player, simulated by the A-life (engine/ALife.h) only:
+                                         // not drawn, animated, scripted or hit
     glm::vec3 size{0.6f, 1.8f, 0.6f};    // marker box / character capsule size
     glm::vec3 color{0.8f, 0.25f, 0.2f};  // sRGB
     std::filesystem::path scriptPath;    // absolute path to a .lua file, empty = none
@@ -291,7 +293,8 @@ struct Entity {
     // game and not hit by weapons.
     bool helper() const { return type == "sound" || type == "map_marker" || type == "particle" || type == "anomaly" || type == "light" ||
                                  type == "sit_point" || type == "trigger" || type == "relay" || type == "reverb" || type == "ambience" ||
-                                 type == "water" || type == "interior" || type == "reflection_probe" || type == "irradiance_volume"; }
+                                 type == "water" || type == "interior" || type == "reflection_probe" || type == "irradiance_volume" ||
+                                 type == "alife_point"; }
     // What the editor draws and picks: a sound zone can span the whole level, so
     // it is shown as a small speaker cube at its position; the zone is its size.
     Aabb markerBounds() const

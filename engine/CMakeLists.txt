@@ -44,6 +44,7 @@ add_library(engine STATIC
     src/SceneGraph.cpp
     src/Surfaces.cpp
     src/Factions.cpp
+    src/ALife.cpp
     src/Log.cpp
     src/Paths.cpp
     src/Crash.cpp

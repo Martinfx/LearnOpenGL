@@ -2887,6 +2887,10 @@ void MainWindow::refreshScriptParams()
     std::string error;
     if (e && !e->scriptPath.empty() && !engine::readScriptProperties(e->scriptPath, scriptProps_, &error))
         notify(tr("Script error: %1").arg(QString::fromStdString(error)), 8000);
+    if (e && e->scriptPath.empty() && e->type == "alife_point") // engine-side parameters, edited in the same table
+        scriptProps_ = {{"roles", "camp", "What happens here (camp, patrol, lair, trade...): for scripts and the map"},
+                        {"factions", "", "Comma list of factions whose squads come here (empty = anyone)"},
+                        {"capacity", "1", "How many squads may be here or on the way at once"}};
 
     scriptParams_->blockSignals(true);
     scriptParams_->setRowCount(static_cast<int>(scriptProps_.size()));
@@ -3595,7 +3599,7 @@ void MainWindow::addEntity(const QString& type)
     const glm::vec3 p = cam.position + cam.flatForward() * 6.0f;
     engine::Entity e;
     e.type = type.toStdString();
-    e.name = engine::uniqueNodeName(scene_, (type == "enemy" ? "Enemy " : type == "npc" ? "Stalker " : type == "sound" ? "Sound " : type == "particle" ? "Effect " : type == "light" ? "Light " :
+    e.name = engine::uniqueNodeName(scene_, (type == "enemy" ? "Enemy " : type == "npc" ? "Stalker " : type == "alife_point" ? "Point " : type == "sound" ? "Sound " : type == "particle" ? "Effect " : type == "light" ? "Light " :
                                              type == "trigger" ? "Trigger " : type == "relay" ? "Relay " : type == "reverb" ? "Reverb " : type == "ambience" ? "Ambience " : type == "interior" ? "Interior " : type == "reflection_probe" ? "Reflection probe " :
                                              type == "irradiance_volume" ? "Irradiance volume " :
                                              type == "water" ? "Water " : "Entity ") +
@@ -3607,6 +3611,11 @@ void MainWindow::addEntity(const QString& type)
     }
     if (type == "anomaly")
         engine::initAnomalyEntity(e, engine::AnomalyKind::Crusher);
+    if (type == "alife_point") { // a place A-life squads travel to
+        e.size = {1.0f, 2.5f, 1.0f};
+        e.color = {0.3f, 0.85f, 0.9f};
+        e.properties["roles"] = "camp";
+    }
     if (type == "light") {
         e.size = {0.3f, 0.3f, 0.3f};
         e.color = {1.0f, 0.78f, 0.52f}; // warm bulb
@@ -5450,6 +5459,7 @@ void MainWindow::buildModePanel()
         auto* box = toolButton("cube", tr("Box"), page);
         auto* enemy = toolButton("person", tr("Enemy (random human)"), page);
         auto* npc = toolButton("person", tr("NPC (neutral stalker; faction in Properties > Character)"), page);
+        auto* alifePoint = toolButton("select", tr("A-life point (a place squads travel to when the player is away)"), page);
         auto* entity = toolButton("select", tr("Empty entity"), page);
         auto* sound = toolButton("sound", tr("Sound source / ambient zone"), page);
         auto* particles = toolButton("particles", tr("Particle effect (fire, smoke, dust)"), page);
@@ -5481,7 +5491,7 @@ void MainWindow::buildModePanel()
         auto* interior = toolButton("cube", tr("Interior volume (dark building: less sky light and fog, no rain, room reverb)"), page);
         connect(interior, &QPushButton::clicked, this, [this] { addEntity("interior"); });
         auto* model = toolButton("model", tr("glTF model..."), page);
-        for (QPushButton* b : {box, enemy, npc, entity, sound, particles, anomaly, light, campfire, trigger, relay, reverbZone, ambienceZone, interior, model})
+        for (QPushButton* b : {box, enemy, npc, alifePoint, entity, sound, particles, anomaly, light, campfire, trigger, relay, reverbZone, ambienceZone, interior, model})
             layout->addWidget(b);
         auto* hint = new QLabel(tr("Or drag a model from the Content Browser into the view: it lands where you drop it."), page);
         hint->setObjectName("dim");
@@ -5491,6 +5501,7 @@ void MainWindow::buildModePanel()
         connect(box, &QPushButton::clicked, this, &MainWindow::addBox);
         connect(enemy, &QPushButton::clicked, this, [this] { addEntity("enemy"); });
         connect(npc, &QPushButton::clicked, this, [this] { addEntity("npc"); });
+        connect(alifePoint, &QPushButton::clicked, this, [this] { addEntity("alife_point"); });
         connect(entity, &QPushButton::clicked, this, [this] { addEntity("empty"); });
         connect(sound, &QPushButton::clicked, this, [this] { addEntity("sound"); });
         connect(particles, &QPushButton::clicked, this, [this] { addEntity("particle"); });

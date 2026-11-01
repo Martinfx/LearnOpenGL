@@ -136,6 +136,6 @@ seconds, optionally only once*. The cvar `io_debug 1` logs every output and inpu
 
 Targets: an entity name, `!self`, `!activator` (who set the output off) or `!player`
 (inputs `Damage`, `Heal`, `ShowMessage`). Scripts add their own inputs in `on_input` and
-outputs with `:fire_output`; `enemy.lua` understands `Alert` and `Calm` and fires `OnSpotted`.
+outputs with `:fire_output`; `enemy.lua` understands `Alert` (parameter: whom to fight, empty = the player), `Calm` and `GoTo` (`"x y z"`, sent by the A-life to roaming squads) and fires `OnSpotted`. Far from the player the A-life (engine/ALife.h) hides characters and does not run their scripts.
 Entity I/O state (switched lights, used-up triggers, inputs still waiting for their delay)
 is kept in saved games.

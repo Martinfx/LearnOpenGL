@@ -110,7 +110,7 @@ void addCharacterFlashlights(const engine::Scene& scene, engine::RenderView& vie
     engine::environmentAt(scene.environment, scene.sunDirection, &sky);
     const bool dark = sky.night > 0.35f;
     for (const engine::Entity& e : scene.entities) {
-        if (!e.alive)
+        if (!e.alive || e.offline)
             continue;
         // "1" always on, "night" only after dusk (day/night cycle).
         const auto it = e.properties.find("flashlight");

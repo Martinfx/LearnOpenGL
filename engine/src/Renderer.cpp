@@ -1315,6 +1315,8 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
     glBindVertexArray(vao_);
     for (std::size_t i = 0; i < scene.entities.size(); ++i) {
         const Entity& e = scene.entities[i];
+        if (e.offline)
+            continue; // simulated by the A-life far away
         if ((!view.editorHelpers || shadowCascade_ >= 0) && e.helper())
             continue; // map markers, sound sources, lights: editor only, never cast shadows
         if (!e.alive && e.type == "pickup")

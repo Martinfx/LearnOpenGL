@@ -1,5 +1,6 @@
 // Game runtime: GLFW window, fixed 60 Hz simulation, first-person player.
 // Usage: fps_game [level-file]
+#include <engine/ALife.h>
 #include <engine/EntityIO.h>
 #include <engine/ProbeBaker.h>
 #include <engine/JobSystem.h>
@@ -862,6 +863,14 @@ int main(int argc, char** argv)
     bool wasReloading = false;
     if (const int errors = scripts.start())
         LOG_ERROR("script", "%d script error(s), see above", errors);
+    // A-life: squads far from the player live on as records (engine/ALife.h).
+    engine::ALife alife;
+    alife.start(scene, static_cast<std::uint32_t>(std::hash<std::string>{}(levelPath.string())));
+    const engine::ALife::Snap navSnap = [&navmesh](glm::vec3 p, float radius) -> std::optional<glm::vec3> {
+        if (!navmesh.ready())
+            return std::nullopt;
+        return navmesh.nearestPoint(p, glm::vec3(radius, 6.0f, radius));
+    };
     engine::FixedStepClock clock;
     engine::InputState input;
 
@@ -1066,6 +1075,19 @@ int main(int argc, char** argv)
         cvars.add("timescale", CVarType::Float, "1", "Game speed (0.1 slow motion .. 4)", engine::CVarCheat, 0.05, 4.0);
         cvars.add("r_debugdraw", CVarType::Bool, "1", "Show debug lines, boxes and texts from code and scripts", engine::CVarDev);
         cvars.add("ai_debug", CVarType::Bool, "0", "Draw enemy states, paths and sight lines", engine::CVarDev);
+        cvars.add("alife_debug", CVarType::Bool, "0", "Draw A-life squads (online green, offline grey), their targets and points", engine::CVarDev);
+        cvars.addCommand("alife", "alife: lists the A-life squads (online / offline, members alive, target)", [&](const std::vector<std::string>&) {
+            std::string out;
+            for (const engine::ALife::Squad& s : alife.squads()) {
+                char line[256];
+                std::snprintf(line, sizeof line, "%s [%s] %s %d/%zu at %.0f %.0f -> %s%s\n", s.name.c_str(), s.faction.c_str(),
+                              s.online ? "online" : "offline", s.living, s.members.size(), s.position.x, s.position.z,
+                              s.target >= 0 ? alife.points()[static_cast<std::size_t>(s.target)].name.c_str() : "-",
+                              s.roams ? (s.arrived ? " (waiting)" : " (travelling)") : "");
+                out += line;
+            }
+            return engine::ConsoleResult{true, out.empty() ? std::string("no squads") : out};
+        });
         cvars.add("io_debug", CVarType::Bool, "0", "Log entity I/O: outputs fired and inputs received", engine::CVarDev);
         auto levelFile = [&argv](const std::string& name) {
             std::filesystem::path file = name;
@@ -1251,6 +1273,7 @@ int main(int argc, char** argv)
         save.weatherHold = weatherDirector.holdSeconds();
         save.entities = scripts.saveEntities();
         save.pendingInputs = scripts.savePendingInputs();
+        save.squads = alife.save();
         return save;
     };
     auto saveTo = [&](const std::string& slot) {
@@ -1305,6 +1328,7 @@ int main(int argc, char** argv)
         scripts.setTime(loadFrom->playTime);
         scripts.restoreEntities(loadFrom->entities);
         scripts.restorePendingInputs(loadFrom->pendingInputs); // also drops the OnStart inputs of a fresh start
+        alife.restore(loadFrom->squads);
         hud.notify("Načteno");
     }
     // Carried over from the previous level (level change): health, weapon, magazines.
@@ -1681,6 +1705,21 @@ int main(int argc, char** argv)
 
             const float healthBefore = scripts.playerHealth();
             scripts.fixedUpdate(dt);
+            alife.update(scene, scripts, factions, player.feet(), dt, navSnap);
+            for (const engine::ALife::Event& ev : alife.takeEvents())
+                if (ev.kind == engine::ALife::Event::Gunfire) // a fight out of sight: shots from that direction
+                    for (int shot = 0; shot < 3; ++shot)
+                        audio.playAsset("sounds/weapons/rifle_shot_far.sound", &ev.position, 0.9f);
+            if (cvars.find("alife_debug")->boolean())
+                for (const engine::ALife::Squad& s : alife.squads()) {
+                    if (s.living == 0)
+                        continue;
+                    const glm::vec4 color = s.online ? glm::vec4(0.3f, 1.0f, 0.4f, 1.0f) : glm::vec4(0.7f, 0.7f, 0.7f, 1.0f);
+                    const glm::vec3 at = s.position + glm::vec3(0.0f, 3.0f, 0.0f);
+                    engine::DebugDraw::global().text(at, s.name + " [" + s.faction + "] " + std::to_string(s.living), color);
+                    if (s.target >= 0)
+                        engine::DebugDraw::global().arrow(at, alife.points()[static_cast<std::size_t>(s.target)].position + glm::vec3(0.0f, 3.0f, 0.0f), color);
+                }
             if (std::string change = scripts.takeLevelChange(); !change.empty()) { // game.change_level() from a script
                 std::filesystem::path file = change;
                 if (file.is_relative())
@@ -1707,7 +1746,7 @@ int main(int argc, char** argv)
             // Characters that died this step go limp: a ragdoll from their current pose.
             for (std::size_t i = 0; i < scene.entities.size(); ++i) {
                 engine::Entity& e = scene.entities[i];
-                const bool wants = !e.alive && e.animator.graph && e.animator.graph->ragdollOnDeath && !e.animator.graph->ragdoll.empty();
+                const bool wants = !e.alive && !e.offline && e.animator.graph && e.animator.graph->ragdollOnDeath && !e.animator.graph->ragdoll.empty();
                 const auto it = ragdolls.find(i);
                 if (wants && it == ragdolls.end()) {
                     engine::Ragdoll r;

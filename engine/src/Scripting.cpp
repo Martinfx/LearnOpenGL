@@ -431,7 +431,7 @@ void ScriptSystem::Impl::updateTriggers()
             if (!inside && filter != TriggerFilter::Player)
                 for (std::size_t j = 0; j < entities.size() && !inside; ++j) {
                     const Entity& other = entities[j]->e();
-                    if (j != i && other.alive && !other.helper() && overlaps(box, other.bounds())) {
+                    if (j != i && other.alive && !other.offline && !other.helper() && overlaps(box, other.bounds())) {
                         inside = true;
                         activator = static_cast<int>(j);
                     }
@@ -660,7 +660,7 @@ void ScriptSystem::Impl::bindApi()
         std::vector<std::pair<float, ScriptEntity*>> found;
         for (auto& se : entities) {
             const Entity& e = se->e();
-            if (!e.alive || e.helper() || (type && e.type != *type) || (characters && entityFaction(e).empty()))
+            if (!e.alive || e.offline || e.helper() || (type && e.type != *type) || (characters && entityFaction(e).empty()))
                 continue;
             const glm::vec3 d = e.position - pos;
             const float dd = glm::dot(d, d);
@@ -889,7 +889,7 @@ void ScriptSystem::fixedUpdate(float dt)
             d.deliver(q);
     }
     for (auto& se : d.entities) {
-        if (se->failed || !se->onUpdate.valid() || !se->e().alive)
+        if (se->failed || !se->onUpdate.valid() || !se->e().alive || se->e().offline)
             continue;
         auto r = se->onUpdate(se.get(), dt);
         if (!r.valid()) {
@@ -899,7 +899,7 @@ void ScriptSystem::fixedUpdate(float dt)
         }
     }
     for (auto& se : d.entities) {
-        if (!se->e().alive) {
+        if (!se->e().alive || se->e().offline) {
             se->impulse = se->drift = glm::vec3(0.0f);
             continue;
         }

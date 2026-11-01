@@ -122,6 +122,18 @@ ztrácí u její frakce reputaci (goodwill, ukládá se); po několika zabitých
 všichni. Lua: `game.attitude`, `game.relation`, `game.change_goodwill`, `game.characters_near`, `game.damage`.
 Editor: menu Add > NPC (neutrální stalker).
 
+### A-life (život zóny mimo dohled)
+
+Skupiny NPC (stejná Group) jsou do 150 m od hráče online: kreslí se a řídí je skript. Za 170 m se
+z nich stanou záznamy (`engine/ALife.h`): nekreslí se, neanimují a skript neběží. Skupina s parametrem
+skriptu `alife` = `roam` putuje mezi body zájmu (entita **A-life point**, panel Place; parametry
+`roles`, `factions` kdo tam chodí, `capacity` kolik skupin najednou), chvíli na bodu počká a jde dál.
+Nepřátelské skupiny, které se mimo dohled potkají (do 40 m), se střetnou: každou sekundu může na
+každé straně někdo padnout a hráč slyší vzdálenou střelbu ze správného směru. Když se hráč přiblíží,
+skupina se objeví tam, kam došla (mrtví leží na místě), a online dojde k cíli (vstup `GoTo`).
+Stav putujících skupin je v uložené hře. Konzole: `alife` vypíše skupiny, `alife_debug 1` (s
+`r_debugdraw 1`) je ukáže ve světě i s cíli. Zóna má čtyři body a skupinu banditů „drifters“.
+
 ### Script editor
 
 Skripty se píšou přímo v editoru: tlačítko **Edit script** u entity nebo menu Script (New script,
