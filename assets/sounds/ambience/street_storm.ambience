@@ -1,0 +1,11 @@
+# Ambience set: looping layers and random sounds around the listener (paths relative to this file)
+# The overgrown street under the storm: the rain and storm-wind loops come from the level's
+# env rain / wind, so this adds what a dead town sounds like between them. No birds in the rain; crows still call.
+# layer "sound" volume [day night]
+# random "sound" min_interval max_interval min_distance max_distance day_chance night_chance height duck
+layer "../ambient/zone_drone_2.sound" 0.18 0.4 1
+random "../ambient/metal_creak.sound" 10 28 15 70 0.9 1 6 0
+random "../ambient/crow.sound" 25 70 25 120 0.6 0.1 12 0
+random "../ambient/dog_bark_far.sound" 40 120 150 500 0.4 0.8 0 0
+random "../ambient/dog_whine_far.sound" 120 300 80 250 0.1 0.4 0 0
+random "../ambient/distant_gunfire.sound" 45 140 200 500 0.4 0.7 0 0.35

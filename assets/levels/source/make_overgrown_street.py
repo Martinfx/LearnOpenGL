@@ -70,6 +70,8 @@ HOUSES = [('house_a', 36.0, 5, 'st_brick_red', 'pitched', 1), ('house_b', 30.0, 
 DEPTH = 14.0
 # shelled houses (second reference): (from, to) of the break as fractions of the length, first storey gone
 SPOTS = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'overgrown_street_spots.json')  # from --models
+CAMP = (-1.6, 69.0)      # stalkers' fire on the road in the lee of the shelled house_c, in sight from the start
+P = '../models/props/'
 RUINS = {'house_c': (0.55, 0.75, 4), 'house_e': (0.2, 0.36, 5), 'house_i': (0.62, 0.8, 4)}
 
 
@@ -140,13 +142,14 @@ def build():
     nz = Noise(77)
     lv = Level()
     for g, p in (('Houses', ''), ('Street', ''), ('Kerbs', 'Street'), ('Lamps and cables', 'Street'), ('Wrecks', 'Street'),
-                 ('Rubble', 'Street'), ('Barricades', 'Street'), ('Plates', 'Houses'), ('Ivy', 'Houses'), ('Far', '')):
+                 ('Rubble', 'Street'), ('Barricades', 'Street'), ('Plates', 'Houses'), ('Ivy', 'Houses'), ('Camp', 'Street'), ('Far', '')):
         lv.group(g, p)
 
     # ------------------------------------------------------------------ houses along both sides
     houses = []                 # (x0, z0, x1, z1) footprints, for the ground and the vegetation
     order = [h[0] for h in HOUSES if h[0] != 'house_end']
     fronts = []                 # (side, facade x, south corner z) of the houses along the playable street
+    ents_extra = []             # entity blocks (lights, particles, sounds) written after the models
     facades = []                # (side, facade x, centre z, length, house) of every house along the street
     ruins = []                  # (facade x, z from, z to) of the shelled houses: their rubble spills onto the street
 
@@ -249,6 +252,47 @@ def build():
             lv.model('Roof plant', V + key + '.glb', x, WALK + ly, z, irng.uniform(0, 360), sc, group='Ivy',
                      lod=(V + key + '_lod1.glb', 25), cull=120 if kind != 'balcony' or sc > 0.6 else 60,
                      coll=False, shadows=kind != 'balcony', sway=0.7 if key.startswith(('sapling', 'birch')) else 1.0)
+
+    # ------------------------------------------------------------------ people were here: a stalkers' camp
+    # a burning barrel stove in the lee of the shelled house, a table of crates with a radio still playing a waltz,
+    # stools, ammo and food, sandbags against the north; warm flickering light is the only warm colour in the street
+    clearings = [(CAMP[0], CAMP[1], 3.6)]
+    cx, cz = CAMP
+    crng = random.Random(1986)
+
+    def prop(label, name, dx, dy, dz, yaw=0.0, scale=1.0, tilt=(0.0, 0.0), coll=True, shadows=True):
+        lv.model(label, P + f'{name}/{name}.gltf', cx + dx, dy, cz + dz, yaw, scale, group='Camp', cull=60,
+                 coll=coll, shadows=shadows, tilt=tilt)
+    prop('Stove', 'barrel_stove', 0.0, 0.0, 0.0, 20)
+    prop('Table', 'WoodenTable_01', -1.7, 0.0, 0.9, 75)
+    prop('Radio', 'vintage_radio_transceiver', -1.75, 0.66, 0.6, 110, coll=False)
+    prop('Lantern', 'Lantern_01', -1.6, 0.55, 1.4, 0, coll=False)
+    prop('Pot', 'pot_enamel_01', 0.05, 0.86, 0.0, 40, coll=False)
+    for i, (dx, dz, yaw) in enumerate(((-0.9, -1.0, 30), (1.1, -0.6, -40), (0.9, 1.2, 200))):
+        prop('Stool', 'folding_wooden_stool' if i != 1 else 'plastic_crate_01', dx, 0.0, dz, yaw + crng.uniform(-15, 15))
+    prop('Crate', 'wooden_military_crate', -2.4, 0.0, -0.9, 95)
+    prop('Ammo', 'ammo_box', -2.3, 0.4, -1.1, 70, coll=False)
+    prop('Ammo', 'ammo_box', -2.5, 0.4, -0.7, 85, coll=False)
+    for k in range(5):
+        prop('Food', 'long_life_food' if k % 2 else 'can_rusted', -1.9 + crng.uniform(-0.3, 0.3), 0.55,
+             1.05 + crng.uniform(-0.2, 0.2), crng.uniform(0, 360), coll=False, shadows=False)
+    prop('Jerrycan', 'metal_jerrycan', 1.6, 0.0, 0.6, 15)
+    prop('Trash', 'trashbag', 2.2, 0.0, 1.9, 60)
+    prop('Tyre', 'old_tyre', -0.4, 0.08, 2.1, 30, tilt=(90.0, 0.0), coll=False)
+    lv.model('Sandbags', SK + 'sandbags_3m.glb', cx + 0.4, 0.0, cz - 2.6, 0.0, group='Camp', cull=120)
+    lv.model('Sandbags', SK + 'sandbags_3m.glb', cx + 2.6, 0.0, cz - 1.2, 70.0, group='Camp', cull=120)
+    ents_extra.append(f'entity "Camp fire" "particle" {cx:.2f} 0.86 {cz:.2f} 0 0.4 0.4 0.4 1 0.6 0.3 ""\n  parent "Camp"\n'
+                      '  prop "effect" "particles/fire.particle"')
+    ents_extra.append(f'entity "Camp fire light" "light" {cx:.2f} 1.5 {cz:.2f} 0 0.3 0.3 0.3 1 0.55 0.25 ""\n  parent "Camp"\n'
+                      '  prop "intensity" "16"\n  prop "range" "9"\n  prop "flicker" "fire"\n  prop "shadows" "1"')
+    ents_extra.append(f'entity "Camp fire sound" "sound" {cx:.2f} 0.8 {cz:.2f} 0 0.5 0.5 0.5 0.25 0.55 0.95 ""\n  parent "Camp"\n'
+                      '  prop "sound" "sounds/ambient/campfire.sound"')
+    ents_extra.append(f'entity "Camp radio" "sound" {cx - 1.75:.2f} 0.8 {cz + 0.6:.2f} 0 0.3 0.3 0.3 0.25 0.55 0.95 ""\n'
+                      '  parent "Camp"\n  prop "sound" "sounds/ambient/radio_waltz.sound"\n  prop "volume" "0.6"')
+    # smoke of fires somewhere in the town, rising over the roofs: there are others out there
+    for k, (sx_, sy_, sz_) in enumerate(((46.0, 4.0, -70.0), (-60.0, 4.0, 30.0), (30.0, 4.0, -200.0))):
+        ents_extra.append(f'entity "Far smoke" "particle" {sx_:g} {sy_:g} {sz_:g} 0 1 1 1 0.5 0.5 0.5 ""\n  parent "Camp"\n'
+                          '  prop "effect" "particles/smoke_column.particle"')
 
     # enamel plates at the south corner of each house: the street name over the house number (odd west, even east)
     num = {-1: 1, 1: 2}
@@ -383,7 +427,7 @@ def build():
     S = splat(nz, reclaim_pts)
 
     # ------------------------------------------------------------------ vegetation (terrain foliage)
-    inst, types = vegetation(nz, rng, S, H, reclaim_pts, lamps, wrecks, ruins)
+    inst, types = vegetation(nz, rng, S, H, reclaim_pts, lamps, wrecks, ruins, clearings)
 
     # ------------------------------------------------------------------ the street beyond the ground: trees and bushes
     # Past the north barricade the street runs on for 140 m to the house at its end; the terrain stops at z = -195,
@@ -424,6 +468,7 @@ def build():
     head += [f'env {k} {v}' for k, v in env.items()]
     head += ['loading_title "Почтовая улица"', 'loading_hint "Projdi ulicí na sever, k domu na jejím konci."',
              'weapon "../weapons/ak74.weapon"', 'weapon "../weapons/pistol.weapon"', 'weapon "../weapons/knife.weapon"']
+    head.append('ambience "../sounds/ambience/street_storm.ambience"')
     head.append(f'terrain "{NAME}.terrain"')
     head += [f'terrain_layer {i} "{m}" {t:g}' for i, (m, t) in enumerate(LAYERS)]
     for key, _ in sorted(types.items(), key=lambda kv: kv[1]):
@@ -435,7 +480,7 @@ def build():
             head.append(f'foliage_impostor {imp:g}')
     ents = ['entity "Почтовая" "map_marker" 0 0 60 0 1 1 1 0.85 0.3 0.2 ""',
             'entity "Перекрёсток" "map_marker" 0 0 -17 0 1 1 1 0.85 0.3 0.2 ""']
-    text = '\n'.join(head + lv.groups + lv.lines + ents) + '\n'
+    text = '\n'.join(head + lv.groups + lv.lines + ents + ents_extra) + '\n'
     open(os.path.join(LEVELS, NAME + '.level'), 'w', encoding='utf-8').write(text)
     with open(os.path.join(LEVELS, NAME + '.terrain'), 'wb') as f:
         f.write(struct.pack('<IIiifffI', 0x52524554, 2, n, SPLAT_N, X0, Z0, SIZE, len(inst)))
@@ -592,7 +637,7 @@ for _k, _c in DEBRIS.items():
     FOLIAGE['deb_' + _k] = _f(SK + f'debris_{_k}.glb', 0.02, cull=_c, far=0.7, shadows=1 if _k in ('brick_heap', 'sheet', 'planks') else 0)
 
 
-def vegetation(nz, rng, S, H, reclaim_pts, lamps, wrecks, ruins=()):
+def vegetation(nz, rng, S, H, reclaim_pts, lamps, wrecks, ruins=(), clearings=()):
     """Plants from the splat (grass where the ground is soil or grass) and the reclaim field: crack grass and weeds in
     the joints, tall grass and flowers where the slabs are gone, shrubs and young trees where nature has had longest."""
     types, inst = {}, []
@@ -611,9 +656,12 @@ def vegetation(nz, rng, S, H, reclaim_pts, lamps, wrecks, ruins=()):
         return float((H[j, i] * (1 - tx) + H[j, i + 1] * tx) * (1 - tz) + (H[j + 1, i] * (1 - tx) + H[j + 1, i + 1] * tx) * tz)
 
     def put(key, x, z, scale=1.0, sink=0.03):
+        yaw = rng.uniform(0, 360)
+        if any((x - cx) ** 2 + (z - cz) ** 2 < cr * cr for cx, cz, cr in clearings):
+            return                  # trodden: a camp, a path people use
         if key not in types:
             types[key] = len(types)
-        inst.append((x, height(x, z) - sink, z, rng.uniform(0, 360), scale, types[key]))
+        inst.append((x, height(x, z) - sink, z, yaw, scale, types[key]))
 
     occupied = []               # (x, z, r) trunks and wrecks: no tree on top of another
 
