@@ -24,10 +24,10 @@ building "House end" "../models/zone/street/house_end.glb" role tenement length 
 # panel micro-district: 16-storey slab and the five-storey khrushchyovka
 building "Panel block" "../models/zone/panel_block_16.glb" role panel length 72 depth 23.2 front 11.6 floors 16 height 49.3 weight 1 lod "../models/zone/panel_block_16_lod1.glb" 90 cull 1200
 building "Khrushchyovka" "../models/zone/gen/apartment_khrushchevka.glb" role panel length 26 depth 14.7 front 7.6 floors 5 height 13.1 weight 1 lod "../models/zone/gen/apartment_khrushchevka_lod1.glb" 70 cull 700
-# point towers (simple far-view models: landmarks, not for close play)
-building "Tower A" "../models/zone/gen/skyline_tower_a.glb" role tower length 24.4 depth 18.4 front 9.2 floors 22 height 66 weight 1 lod "../models/zone/gen/skyline_tower_a_lod1.glb" 120 cull 1500
-building "Tower B" "../models/zone/gen/skyline_tower_b.glb" role tower length 30.4 depth 15.2 front 7.6 floors 16 height 48 weight 1 lod "../models/zone/gen/skyline_tower_b_lod1.glb" 120 cull 1500
-building "Tower C" "../models/zone/gen/skyline_tower_c.glb" role tower length 18.4 depth 18.4 front 9.2 floors 28 height 84 weight 1 lod "../models/zone/gen/skyline_tower_c_lod1.glb" 120 cull 1500
+# point towers "tochka" (zonegen/panel_tower.py): 3 m panels, loggia stacks, entrance canopy, roof machine room
+building "Tower A" "../models/zone/gen/panel_tower_a.glb" role tower length 24 depth 18 front 9 floors 16 height 46 weight 1 lod "../models/zone/gen/panel_tower_a_lod1.glb" 110 cull 1500
+building "Tower B" "../models/zone/gen/panel_tower_b.glb" role tower length 30 depth 15 front 7.5 floors 12 height 34.8 weight 1 lod "../models/zone/gen/panel_tower_b_lod1.glb" 110 cull 1500
+building "Tower C" "../models/zone/gen/panel_tower_c.glb" role tower length 21 depth 21 front 10.5 floors 22 height 62.8 weight 1 lod "../models/zone/gen/panel_tower_c_lod1.glb" 110 cull 1500
 building "Garages" "../models/zone/garage_block.glb" role garage length 7.74 depth 16.3 front 8.15 floors 1 height 2.85 weight 1 lod "../models/zone/garage_block_lod1.glb" 60 cull 500
 
 prop kerb "../models/zone/street/kerb_6m.glb" size 6 cull 90 collision 0 shadows 0

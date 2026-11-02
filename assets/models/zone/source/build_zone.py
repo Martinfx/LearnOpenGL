@@ -14,6 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from zonegen import mats, glb                         # noqa: E402
 from zonegen import vehicles, structures, buildings, vegetation   # noqa: E402
+from zonegen import panel_tower   # noqa: E402
 
 OUT = os.path.join(mats.ZONE, 'gen')
 
@@ -50,6 +51,9 @@ MODELS = {
     'skyline_tower_a': (buildings.ruined_tower, dict(floors=22, seed=1), True),
     'skyline_tower_b': (buildings.ruined_tower, dict(floors=16, seed=2, w=30, d=15), True),
     'skyline_tower_c': (buildings.ruined_tower, dict(floors=28, seed=3, w=18, d=18), True),
+    'panel_tower_a': (panel_tower.panel_tower, dict(length=24.0, depth=18.0, floors=16, seed=11), True),
+    'panel_tower_b': (panel_tower.panel_tower, dict(length=30.0, depth=15.0, floors=12, seed=12), True),
+    'panel_tower_c': (panel_tower.panel_tower, dict(length=21.0, depth=21.0, floors=22, seed=13, skin='concrete'), True),
     'apartment_khrushchevka': (buildings.apartment, dict(floors=4, sections=2, seed=1), True),
     'hospital': (buildings.hospital, dict(seed=2), True),
     'machine_hall': (buildings.hall, dict(length=48, width=21, height=15, kind='turbine', seed=3), True),
