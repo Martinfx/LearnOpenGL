@@ -2,7 +2,7 @@
 
 Metres, +Y up, base at y = 0, centred on X/Z (see `assets/SCALE.md`). Every model has a `_lod1.glb`
 (about 40 to 60 % of the triangles, textures halved). Foliage materials are **alpha-tested** (`alphaMode MASK`,
-cutoff 0.5, double-sided); render them without back-face culling. Tree foliage cards carry normals that point out
+cutoff 0.5, double-sided); render them without back-face culling. Leaf materials have roughness 1 and low specular so cards do not catch sky reflections at grazing angles. Tree foliage cards carry normals that point out
 of the crown, so they light like a volume rather than flat planes.
 
 ## Trees (procedural, `source/treegen.py`, foliage cards baked from Poly Haven scans)
@@ -17,6 +17,8 @@ of the crown, so they light like a volume rather than flat planes.
 | `snag_a` | broken dead trunk | 3.7 | 320 |
 | `sapling_a`, `sapling_b`, `sapling_c` | self-seeded young broadleaf (maple / ash / locust) from cracks, 2-4 slender stems | 4.5 / 5.6 / 2.8 | 1026 / 1224 / 1120 |
 | `broadleaf_young` | young deciduous tree | 6.7 | 944 |
+| `maple_a`, `maple_b` | middle-aged maple, round full crown (outer leaves light, inner crown darker) | 11.0 / 9.3 | 1964 / 1756 |
+| `ash_a`, `ash_b` | middle-aged ash, taller oval crown | 13.1 / 9.4 | 1680 / 1362 |
 | `log_fallen_a` | fallen dead trunk (Poly Haven scan, decimated) | 4.05 long | 4000 |
 
 ## Ground cover (Poly Haven scans, split per variant)

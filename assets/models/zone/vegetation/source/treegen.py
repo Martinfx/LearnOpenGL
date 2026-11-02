@@ -95,6 +95,38 @@ elif sp=='sapling':   # self-seeded young broadleaf (maple / ash / locust) growi
             if keep(): cross_cluster(at(lp,1.0),csz(R.uniform(0.9,1.4)*max(H/5,0.6)),[0,1,2,3],ctr,nh=j%2==0)
             if keep() and t>0.5: cross_cluster(at(lp,0.5),csz(R.uniform(0.7,1.1)*max(H/5,0.6)),[0,1,2,3],ctr,nh=False)
         cross_cluster(at(st,1.0),csz(1.3*max(H/5,0.6)),[0,1,2,3],ctr)
+elif sp in('maple','ash'):   # middle-aged broadleaf with a full crown: short trunk, scaffold limbs, clusters filling an ellipsoid
+    lean=Vector((R.uniform(-0.03,0.03),R.uniform(-0.03,0.03),1)); r0=0.021*H
+    tb=0.32 if sp=='maple' else 0.4
+    trunk=path(Vector((0,0,0)),lean,H*tb,6 if not LOD else 4,noise=0.03); tube(trunk,r0,r0*0.7,8,'bark')
+    cz=H*(0.6 if sp=='maple' else 0.64); rx=H*(0.34 if sp=='maple' else 0.25); rz=H*(0.36 if sp=='maple' else 0.38)
+    ctr=Vector((0,0,cz)); top=trunk[-1]; limbs=[]
+    nl=R.choice([5,6]) if sp=='maple' else R.choice([4,5])
+    for m in range(nl):
+        a=m*6.28/nl+R.uniform(-0.3,0.3); out=Vector((math.cos(a),math.sin(a),0))
+        tgt=ctr+out*rx*R.uniform(0.6,0.85)+Vector((0,0,rz*R.uniform(-0.1,0.7)))
+        lp=path(top,(tgt-top).normalized(),(tgt-top).length,5,noise=0.08); tube(lp,r0*0.6,r0*0.12,6,'bark'); limbs.append(lp)
+        for j in range(3):   # secondary branches
+            q=at(lp,0.35+0.2*j); b=a+R.uniform(-1.0,1.0); d=Vector((math.cos(b),math.sin(b),R.uniform(0.1,0.8)))
+            sl=path(q,d,rx*R.uniform(0.35,0.6),3,noise=0.15,gravity=0.15); tube(sl,r0*0.18,0.01,4,'bark'); limbs.append(sl)
+    pts=[p_ for l in limbs for p_ in l[1:]]
+    nc=int((60 if sp=='maple' else 50)*(H/10)**1.2); cs=2.0*(H/10)**0.6
+    for i in range(nc):
+        while True:
+            v=Vector((R.uniform(-1,1),R.uniform(-1,1),R.uniform(-1,1)))
+            if 0.3<v.length<=1.0: break
+        c=ctr+Vector((v.x*rx,v.y*rx,v.z*rz)); rr=v.length
+        near=min(pts,key=lambda q:(q-c).length)
+        if (near-c).length>0.4: tube([near,near.lerp(c,0.5),c],0.025,0.006,3,'bark')
+        cmat='leaves' if rr>0.72 else 'leaves_dark'
+        sz=csz(cs*R.uniform(0.85,1.2)*(1.0 if rr>0.72 else 1.15))
+        ang=R.uniform(0,math.pi)
+        for k in range(2):
+            a=ang+k*math.pi/2; u=Vector((math.cos(a),math.sin(a),0)); vv=Quaternion(u.cross(Vector((0,0,1))),R.uniform(-0.3,0.3))@Vector((0,0,1))
+            card(c,u,vv,sz,sz,R.choice([0,1,2,3]),nrm_c=ctr,mat=cmat)
+        if rr>0.72 or i%2==0:
+            a=R.uniform(0,6.28); u=Vector((math.cos(a),math.sin(a),0)); vv=Vector((-math.sin(a),math.cos(a),R.uniform(-0.25,0.25)))
+            card(c+Vector((0,0,sz*0.1)),u,vv,sz,sz,R.choice([0,1,2,3]),nrm_c=ctr,mat=cmat)
 elif sp in('pine','spruce'):
     trunk=path(Vector((0,0,0)),Vector((R.uniform(-0.02,0.02),R.uniform(-0.02,0.02),1)),H,10 if not LOD else 6,noise=0.02 if sp=='spruce' else 0.035)
     r0=(0.22 if sp=='pine' else 0.2)*max(S,0.3); tube(trunk,r0,0.02,8,'bark'); ctr=Vector((0,0,H*(0.8 if sp=='pine' else 0.5)))
@@ -149,9 +181,10 @@ def build_tubes():
                 us=[k/sides*urep,(k+1)/sides*urep,(k+1)/sides*urep,k/sides*urep]; vs=[L[i]/1.6,L[i]/1.6,L[i+1]/1.6,L[i+1]/1.6]
                 for lp,u,v in zip(f.loops,us,vs): lp[uvl].uv=(u,v)
     me=bpy.data.meshes.new('bark'); bm.to_mesh(me); bm.free(); return me
-def build_cards():
+def build_cards(which='leaves'):
     bm=bmesh.new(); uvl=bm.loops.layers.uv.new('UV'); nrms=[]
-    for c,u,v,w,h,cell,ox,oy,ctr,_ in cards:
+    for c,u,v,w,h,cell,ox,oy,ctr,mm in cards:
+        if mm!=which: continue
         col=cell%2; row=cell//2; u0=col*0.5; v0=1-(row+1)*0.5
         cs=[(-ox,-oy),(1-ox,-oy),(1-ox,1-oy),(-ox,1-oy)]
         vs=[bm.verts.new(c+u*(a*w)+v*(b*h)) for a,b in cs]
@@ -169,19 +202,21 @@ def mat(name,diff,nor=None,alpha=False):
     if nor:
         tn=nt.nodes.new('ShaderNodeTexImage'); tn.image=bpy.data.images.load(nor); tn.image.colorspace_settings.name='Non-Color'
         nm=nt.nodes.new('ShaderNodeNormalMap'); nt.links.new(tn.outputs['Color'],nm.inputs['Color']); nt.links.new(nm.outputs['Normal'],b.inputs['Normal'])
-    b.inputs['Roughness'].default_value=0.9 if not alpha else 0.75; b.inputs['Metallic'].default_value=0
+    b.inputs['Roughness'].default_value=0.9 if not alpha else 1.0
+    if alpha and 'Specular IOR Level' in b.inputs: b.inputs['Specular IOR Level'].default_value=0.15; b.inputs['Metallic'].default_value=0
     return m
 objs=[]
 me=build_tubes(); o=bpy.data.objects.new(cfg['name']+'_bark',me); bpy.context.scene.collection.objects.link(o)
 me.materials.append(mat(cfg['name']+'_bark',A['bark'],A.get('bark_nor'))); objs.append(o)
-if cards:
-    me2=build_cards(); o2=bpy.data.objects.new(cfg['name']+'_leaves',me2); bpy.context.scene.collection.objects.link(o2)
-    me2.materials.append(mat(cfg['name']+'_leaves',A['cards'],None,True)); objs.append(o2)
+for which,key in (('leaves','cards'),('leaves_dark','cards_dark')):
+    if not any(c[9]==which for c in cards): continue
+    me2=build_cards(which); o2=bpy.data.objects.new(cfg['name']+'_'+which,me2); bpy.context.scene.collection.objects.link(o2)
+    me2.materials.append(mat(cfg['name']+'_'+which,A.get(key,A['cards']),None,True)); objs.append(o2)
 for x in objs: x.select_set(True)
 bpy.context.view_layer.objects.active=objs[0]; bpy.ops.object.join()
 o=bpy.context.object; o.name=cfg['name']
 for im in bpy.data.images:
-    mx=(1024 if im.filepath==A['cards'] else 512)//(2 if LOD else 1)
+    mx=(1024 if im.filepath in (A['cards'],A.get('cards_dark')) else 512)//(2 if LOD else 1)
     if im.size[0]>mx: im.scale(mx,max(1,im.size[1]*mx//im.size[0]))
 tris=sum(len(p.vertices)-2 for p in o.data.polygons)
 bpy.ops.export_scene.gltf(filepath=cfg['out'],export_format='GLB',use_selection=True,export_yup=True,export_image_format='AUTO')

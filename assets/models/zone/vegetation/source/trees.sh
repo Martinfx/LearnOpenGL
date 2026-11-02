@@ -11,3 +11,6 @@ gen pine pine_a 18 2 "$PINE" & gen pine pine_b 13 9 "$PINE" & gen pine pine_youn
 gen spruce spruce_a 14 1 "$SPR" & gen spruce spruce_b 9 6 "$SPR" & gen spruce spruce_young 3 2 "$SPR" &
 gen broadleaf broadleaf_a 11 4 "$BRD" & gen broadleaf broadleaf_b 8 7 "$BRD" & wait
 gen dead dead_a 10 5 "$DEAD" & gen dead dead_b 7 11 "$DEAD" & gen snag snag_a 6 3 "$DEAD" & wait
+# middle-aged street trees with full crowns (inner crown uses the darkened card atlas)
+MPL="$(bk bark_brown_02),\"cards\":\"$A/leaves_broadleaf.png\",\"cards_dark\":\"$A/leaves_broadleaf_dark.png\""
+gen maple maple_a 11 5 "$MPL" & gen maple maple_b 9 13 "$MPL" & gen ash ash_a 12 17 "$MPL" & gen ash ash_b 8.5 29 "$MPL" & wait
