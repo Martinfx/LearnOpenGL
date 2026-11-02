@@ -419,7 +419,7 @@ def build():
            'fog_density': '0.011', 'fog_height': '6', 'fog_height_falloff': '0.012', 'fog_sun_scatter': '0.25',
            'exposure': '1.05', 'bloom_intensity': '0.05', 'bloom_threshold': '1.2', 'ssao_radius': '0.8', 'ssao_intensity': '1.4',
            'shadow_distance': '110', 'saturation': '0.72', 'contrast': '1.12', 'tint': '0.96 1 1.02', 'vignette': '0.32',
-           'grain': '0.03', 'auto_exposure': '0.5', 'exposure_min_ev': '-0.5', 'exposure_max_ev': '2', 'rain': '0.06',
+           'grain': '0.03', 'auto_exposure': '0.5', 'exposure_min_ev': '-0.5', 'exposure_max_ev': '2', 'rain': '0.45', 'storm': '0.25', 'tonemap': '2',
            'puddles': '0.6', 'wind': '0.55'}
     head += [f'env {k} {v}' for k, v in env.items()]
     head += ['loading_title "Почтовая улица"', 'loading_hint "Projdi ulicí na sever, k domu na jejím konci."',

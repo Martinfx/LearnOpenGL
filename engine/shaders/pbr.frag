@@ -572,7 +572,7 @@ void main() {
             rough = mix(rough, 0.3, wet * 0.8);
             float mask = valueNoise(vWorldPos.xz * 0.3) * 0.7 + valueNoise(vWorldPos.xz * 1.3) * 0.3;
             float puddle = smoothstep(0.74 - uWeather.w * 0.2, 0.79 - uWeather.w * 0.2, mask) * smoothstep(0.9, 0.98, geo.y) *
-                           smoothstep(0.4, 0.9, uWeather.x) * skyOpen;
+                           smoothstep(0.15, 0.55, uWeather.x) * skyOpen;   // a steady drizzle fills them too
             if (puddle > 0.0) {
                 // Ripples: rings spreading from random points in a grid, one drop per cell per cycle.
                 vec2 cellPos = vWorldPos.xz * 3.0;
