@@ -192,6 +192,8 @@ bool writeLevelSettings(std::ostream& out, const Scene& scene, const std::filesy
         }
         if (e.skyOcclusion != Environment{}.skyOcclusion)
             f1("sky_occlusion", e.skyOcclusion);
+        if (e.sunSize != Environment{}.sunSize)
+            f1("sun_size", e.sunSize);
         f1("exposure", e.exposure);
         f1("bloom_intensity", e.bloomIntensity);
         f1("bloom_threshold", e.bloomThreshold);
@@ -668,7 +670,7 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                 {"green_magenta", &e.greenMagenta}, {"fog_volumetric_range", &e.fogVolumetricRange},
                 {"fog_light_shafts", &e.fogLightShafts}, {"fog_anisotropy", &e.fogAnisotropy}, {"fog_noise", &e.fogNoise},
                 {"fog_local_lights", &e.fogLocalLights}, {"atmosphere", &e.atmosphere}, {"atmosphere_haze", &e.atmosphereHaze},
-                {"atmosphere_brightness", &e.atmosphereBrightness}, {"sky_occlusion", &e.skyOcclusion}};
+                {"atmosphere_brightness", &e.atmosphereBrightness}, {"sky_occlusion", &e.skyOcclusion}, {"sun_size", &e.sunSize}};
             if (ok) {
                 if (auto it = vectors.find(name); it != vectors.end())
                     ok = static_cast<bool>(ls >> it->second->x >> it->second->y >> it->second->z);

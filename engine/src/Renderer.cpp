@@ -153,6 +153,7 @@ struct EnvironmentBlock {
     glm::mat4 prevViewProj; // previous frame, no jitter (SSR)
     glm::vec4 ssr;          // x: on, y: max distance, z: intensity, w: max roughness
     glm::vec4 atmosphere;   // x: physical sky 0..1, y: radiance scale
+    glm::vec4 shadowSoft;   // x: PCSS on, y: tan of the sun's angular radius, z: max caster distance, w: max filter radius
 };
 
 constexpr int kEnvSize = 128;  // environment cubemap face size
@@ -460,6 +461,7 @@ RenderQuality RenderQuality::preset(int level)
         q.volumetricFog = 0;
         q.ssr = false;
         q.parallax = false;
+        q.softShadows = false;
         break;
     case 1:
         q.shadowResolution = 1024; q.shadowCascades = 3; q.ssao = true; q.bloom = true;
@@ -693,6 +695,16 @@ bool Renderer::init(GlLoader loader, std::string* error)
     glCreateTextures(GL_TEXTURE_2D_ARRAY, 1, &shadowDummy_);
     glTextureStorage3D(shadowDummy_, 1, GL_DEPTH_COMPONENT32F, 1, 1, 1);
     glTextureParameteri(shadowDummy_, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+    const float farDepth = 1.0f;
+    glClearTexImage(shadowDummy_, 0, GL_DEPTH_COMPONENT, GL_FLOAT, &farDepth);
+    glCreateSamplers(1, &shadowRawSampler_);
+    glSamplerParameteri(shadowRawSampler_, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glSamplerParameteri(shadowRawSampler_, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glSamplerParameteri(shadowRawSampler_, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    glSamplerParameteri(shadowRawSampler_, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+    const float farBorder[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+    glSamplerParameterfv(shadowRawSampler_, GL_TEXTURE_BORDER_COLOR, farBorder);
+    glSamplerParameteri(shadowRawSampler_, GL_TEXTURE_COMPARE_MODE, GL_NONE);
     glCreateBuffers(1, &interiorBuffer_);
     label(GL_BUFFER, interiorBuffer_, "interior volumes");
     const glm::ivec4 noInteriors(0);
@@ -802,6 +814,10 @@ void Renderer::shutdown()
     textures_.clear();
     destroyTargets();
     destroyPrograms(programs_);
+    if (shadowRawSampler_) {
+        glDeleteSamplers(1, &shadowRawSampler_);
+        shadowRawSampler_ = 0;
+    }
     for (unsigned* t : {&shadowTex_, &envRaw_, &envMap_, &brdfLut_, &whiteTex_, &shadowDummy_, &localShadowTex_, &lumTex_, &adaptTex_[0],
                         &adaptTex_[1], &lutTex_, &volumeScatter_[0], &volumeScatter_[1], &volumeIntegrated_, &volumeDummy_, &probeCubes_,
                         &probeIrradiance_[0], &probeIrradiance_[1], &probeIrradiance_[2], &probeDummyCube_, &probeDummy3d_})
@@ -1117,6 +1133,13 @@ void Renderer::updateEnvironment(const Scene& scene, const RenderView& view)
     b.shadowParams.x = 0.0005f;
     b.shadowParams.y = 2.0f * (splits[0]) / static_cast<float>(std::max(1, quality_.shadowResolution)) * 1.5f;
     b.shadowParams.w = static_cast<float>(kEnvMips - 1);
+    {
+        // Soft shadows: the sun's angular radius, widened by clouds (the light comes from a
+        // larger bright patch of sky), so the penumbra grows with the distance to the caster.
+        const float cover = std::clamp(e.cloudCover, 0.0f, 1.0f);
+        const float radius = glm::radians(std::clamp(e.sunSize, 0.0f, 20.0f) * 0.5f) * (1.0f + 3.0f * cover * cover);
+        b.shadowSoft = glm::vec4(quality_.softShadows && e.sunSize > 0.0f ? 1.0f : 0.0f, std::tan(std::min(radius, 0.6f)), 30.0f, 0.6f);
+    }
     b.viewport = glm::vec4(width_, height_, 1.0f / static_cast<float>(width_), 1.0f / static_cast<float>(height_)); // render targets
     glNamedBufferSubData(envBuffer_, 0, sizeof(b), &b);
     glBindBufferBase(GL_UNIFORM_BUFFER, 1, envBuffer_);
@@ -2173,6 +2196,7 @@ void Renderer::renderVolumetricFog(const RenderView& view)
     glUniform4f(inject.loc("uVolumeLight"), e.fogLightShafts, e.fogAnisotropy, e.fogNoise, e.fogLocalLights);
     glBindTextureUnit(0, volumeScatter_[previous]);
     glBindTextureUnit(6, shadowTex_ ? shadowTex_ : shadowDummy_);
+    glBindSampler(6, 0); // comparison sampler of the texture
     glBindTextureUnit(13, localShadowTex_ ? localShadowTex_ : shadowDummy_);
     glBindImageTexture(0, volumeScatter_[volumeCurrent_], 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_RGBA16F);
     glDispatchCompute(static_cast<unsigned>((dims.x + 7) / 8), static_cast<unsigned>((dims.y + 7) / 8), static_cast<unsigned>(dims.z));
@@ -2404,6 +2428,7 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     glUniformMatrix4fv(loc_.viewProj, 1, GL_FALSE, glm::value_ptr(viewProj));
     glUniformMatrix3fv(loc_.envRotation, 1, GL_FALSE, glm::value_ptr(glm::mat3(1.0f)));
     glBindTextureUnit(6, shadowTex_ ? shadowTex_ : shadowDummy_);
+    glBindSampler(6, shadowRawSampler_); // pbr.frag reads raw depth (PCSS)
     glBindTextureUnit(7, quality_.ssao ? ssaoBlurTex_ : whiteTex_);
     glBindTextureUnit(8, envMap_);
     glBindTextureUnit(9, brdfLut_);
@@ -3412,6 +3437,7 @@ void Renderer::renderOverlay(const RenderView& view, const OverlayPass& pass)
     glUniform1i(loc_.skinned, 0);
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, jointBuffer_);
     glBindTextureUnit(6, shadowDummy_);
+    glBindSampler(6, shadowRawSampler_);
     glBindTextureUnit(7, whiteTex_);
     glBindTextureUnit(8, envMap_);
     glBindTextureUnit(9, brdfLut_);
@@ -3699,6 +3725,7 @@ void Renderer::present()
         const glm::mat4 reproject = motionPrevViewProj_ * glm::inverse(projection_ * view_);
         glUniformMatrix4fv(post.loc("uMotionReproject"), 1, GL_FALSE, glm::value_ptr(reproject));
     }
+    glBindSampler(6, 0);
     glBindTextureUnit(6, overlayDrawn_ && (taaActive_ || motionActive_) ? taaDepth_ : depthTex_);
     glBindTextureUnit(0, sceneTex_);
     glBindTextureUnit(1, bloomTex_.empty() ? whiteTex_ : bloomTex_[0]);

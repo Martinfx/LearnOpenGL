@@ -123,6 +123,8 @@ struct RenderQuality {
     bool taa = true;
     bool ssr = true; // screen-space reflections (wet ground, glass, polished floors)
     bool parallax = true; // height maps shift textures with the view angle (Material::heightDepth)
+    // Sun shadows sharp at the contact and softer far from the caster (PCSS, Environment::sunSize).
+    bool softShadows = true;
     float motionBlur = 0.0f; // camera motion blur in continuous views, shutter fraction 0..1 (0 = off)
     int textureUploadsPerFrame = 6; // new textures sent to the GPU per frame, 0 = all at once
     // Memory. Textures larger than textureMaxSize drop their top mip levels (0 = full size).
@@ -593,6 +595,7 @@ private:
     glm::vec3 skyLutZenith_{0.0f}, skyLutHorizon_{0.0f}, skyLutSunTint_{1.0f};
     unsigned whiteTex_ = 0;             // stand-in when SSAO is off
     unsigned shadowDummy_ = 0;          // stand-in when shadows are off
+    unsigned shadowRawSampler_ = 0;     // sun shadow map read as depth (no compare) by the lit pass (PCSS)
     // Volumetric fog: froxel light + density (ping-pong with the previous frame) and the
     // integrated result read by applyFog (unit 15).
     unsigned interiorBuffer_ = 0;       // interior volumes (binding 9)

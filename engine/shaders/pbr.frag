@@ -15,7 +15,7 @@ layout(binding = 2) uniform sampler2D uRoughnessMap;
 layout(binding = 3) uniform sampler2D uMetallicMap;
 layout(binding = 4) uniform sampler2D uOcclusionMap;
 layout(binding = 5) uniform sampler2D uEmissiveMap;
-layout(binding = 6) uniform sampler2DArrayShadow uShadowMap;
+layout(binding = 6) uniform sampler2DArray uShadowMap; // raw depth (sampler object without compare: PCSS reads it)
 layout(binding = 7) uniform sampler2D uSsao;
 layout(binding = 8) uniform samplerCube uEnvMap;
 layout(binding = 9) uniform sampler2D uBrdfLut;
@@ -119,7 +119,26 @@ float terrainBomb(vec2 p, float tiling, float layer, float far, out vec2 uvA, ou
     return mix(k, 0.5 + 0.5 * k, far);
 }
 
-// Cascaded shadow map lookup with a 3x3 PCF kernel and normal offset bias.
+// One bilinear PCF tap from four gathered depths (what a comparison sampler does in hardware).
+float shadowTap(vec2 uv, float layer, float ref, vec2 size) {
+    vec2 st = uv * size - 0.5;
+    vec2 f = fract(st);
+    vec4 lit = step(vec4(ref), textureGather(uShadowMap, vec3((floor(st) + 1.0) / size, layer)));
+    // gather order: x (0,1), y (1,1), z (1,0), w (0,0)
+    return mix(mix(lit.w, lit.z, f.x), mix(lit.x, lit.y, f.x), f.y);
+}
+
+const vec2 kPoisson16[16] = vec2[](
+    vec2(-0.9420, -0.3991), vec2(0.9456, -0.7689), vec2(-0.0942, -0.9294), vec2(0.3450, 0.2939),
+    vec2(-0.9159, 0.4577), vec2(-0.8154, -0.8791), vec2(-0.3828, 0.2768), vec2(0.9748, 0.7565),
+    vec2(0.4432, -0.9751), vec2(0.5374, -0.4737), vec2(-0.2650, -0.4189), vec2(0.7920, 0.1909),
+    vec2(-0.2419, 0.9971), vec2(-0.8141, 0.9144), vec2(0.1998, 0.7864), vec2(0.1438, -0.1410));
+
+// Cascaded sun shadows with a normal offset bias. Near cascades (quality softShadows):
+// percentage-closer soft shadows - the average depth of the casters around the point gives
+// its distance to them, and the filter widens with it by the sun's angular radius
+// (uShadowSoft.y, widened under clouds): sharp at the contact, soft far from the caster.
+// Otherwise 3x3 PCF (cascade 0) or 4 bilinear taps.
 float sunShadow(vec3 worldPos, vec3 n, float nl) {
     if (uSunColor.w < 0.5)
         return 1.0;
@@ -130,27 +149,55 @@ float sunShadow(vec3 worldPos, vec3 n, float nl) {
         if (viewDepth < uCascadeSplits[i]) { cascade = i; break; }
     if (viewDepth > uCascadeSplits[count - 1])
         return 1.0;
-    float texel = uShadowParams.z * float(1 << cascade);
     vec3 offsetPos = worldPos + n * uShadowParams.y * (1.0 + float(cascade)) * (1.0 - nl * 0.5);
     vec4 p = uShadowMatrices[cascade] * vec4(offsetPos, 1.0);
     vec3 c = p.xyz / p.w * 0.5 + 0.5;
     if (c.z >= 1.0)
         return 1.0;
-    float bias = uShadowParams.x * (1.0 + float(cascade));
-    float sum = 0.0;
+    float layer = float(cascade);
+    float ref = c.z - uShadowParams.x * (1.0 + float(cascade));
     vec2 size = vec2(textureSize(uShadowMap, 0).xy);
-    float shadow;
-    if (cascade == 0) {
+    float shadow = 0.0;
+    if (uShadowSoft.x > 0.5 && cascade < 2 && uShadowSoft.y > 0.0) {
+        mat4 m = uShadowMatrices[cascade];
+        float uvPerM = 0.5 * length(vec3(m[0][0], m[1][0], m[2][0]));
+        float depthPerM = 0.5 * length(vec3(m[0][2], m[1][2], m[2][2]));
+        float tanA = uShadowSoft.y;
+        // A tilted receiver drops away from the light across the filter: bias by its slope.
+        float slope = min(sqrt(max(1.0 - nl * nl, 0.0)) / max(nl, 0.05), 6.0) * depthPerM / uvPerM;
+        float angle = 6.2831853 * fract(52.9829189 * fract(dot(gl_FragCoord.xy + 5.588238 * floor(uSkyHorizon.w * 60.0), vec2(0.06711056, 0.00583715))));
+        mat2 rot = mat2(cos(angle), sin(angle), -sin(angle), cos(angle));
+        float searchUv = clamp(tanA * uShadowSoft.z * uvPerM, 1.5 / size.x, 20.0 / size.x);
+        float blockerSum = 0.0, blockers = 0.0;
+        for (int i = 0; i < 16; i += 2) {
+            vec2 o = rot * kPoisson16[i] * searchUv;
+            vec4 d = textureGather(uShadowMap, vec3(c.xy + o, layer));
+            vec4 b = step(d, vec4(ref - slope * length(o)) - 1e-6);
+            blockerSum += dot(d, b);
+            blockers += dot(b, vec4(1.0));
+        }
+        if (blockers < 0.5) {
+            shadow = 1.0;
+        } else {
+            float distM = max(ref - blockerSum / blockers, 0.0) / depthPerM;
+            float r = clamp(distM * tanA * uvPerM, 1.0 / size.x, min(uShadowSoft.w * uvPerM, 48.0 / size.x));
+            for (int i = 0; i < 16; ++i) {
+                vec2 o = rot * kPoisson16[i] * r;
+                shadow += shadowTap(c.xy + o, layer, ref - slope * length(o), size);
+            }
+            shadow /= 16.0;
+        }
+    } else if (cascade == 0) {
         for (int y = -1; y <= 1; ++y)
             for (int x = -1; x <= 1; ++x)
-                sum += texture(uShadowMap, vec4(c.xy + vec2(x, y) / size, float(cascade), c.z - bias));
-        shadow = sum / 9.0;
+                shadow += shadowTap(c.xy + vec2(x, y) / size, layer, ref, size);
+        shadow /= 9.0;
     } else {
         // Far cascades: 4 bilinear PCF taps cover the same 3x3 texel area at half the cost.
         for (int y = 0; y < 2; ++y)
             for (int x = 0; x < 2; ++x)
-                sum += texture(uShadowMap, vec4(c.xy + (vec2(x, y) - 0.5) / size, float(cascade), c.z - bias));
-        shadow = sum * 0.25;
+                shadow += shadowTap(c.xy + (vec2(x, y) - 0.5) / size, layer, ref, size);
+        shadow *= 0.25;
     }
     // Fade out at the far end of the last cascade.
     float fade = smoothstep(uCascadeSplits[count - 1] * 0.85, uCascadeSplits[count - 1], viewDepth);

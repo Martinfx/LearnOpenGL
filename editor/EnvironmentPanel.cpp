@@ -159,6 +159,8 @@ EnvironmentPanel::EnvironmentPanel(engine::Scene* scene, QWidget* parent)
     });
     addColor(form, tr("Color"), &E::sunColor);
     addFloat(form, tr("Intensity"), &E::sunIntensity, 0, 20, 0.1, 2);
+    addFloat(form, tr("Size (soft shadows)"), &E::sunSize, 0, 10, 0.05, 2,
+             tr("Angular diameter of the sun in degrees (0.53 real): shadows are sharp at the contact and softer far from the caster; clouds soften them more"));
     section(tr("Time of day"));
     buildTimeOfDay(form);
     section(tr("Sky"));

@@ -384,6 +384,9 @@ struct Environment {
     // of the sky from the sky light and its reflections (a street canyon is darker at the
     // bottom, a room under a roof gets little sky). Traced in a top-down height map.
     float skyOcclusion = 0.0f;
+    // Angular diameter of the sun in degrees (0.53 real): soft shadows (quality option softShadows)
+    // are sharp at the contact and widen with the distance to the caster; clouds widen them more.
+    float sunSize = 0.53f;
     float exposure = 1.0f;
     float bloomIntensity = 0.06f;
     float bloomThreshold = 1.2f;

@@ -439,10 +439,11 @@ void MainWindow::buildMenus()
     quality.fxaa = settings.value("render/fxaa", quality.fxaa).toBool();
     quality.ssr = settings.value("render/ssr", quality.ssr).toBool();
     quality.parallax = settings.value("render/parallax", quality.parallax).toBool();
+    quality.softShadows = settings.value("render/soft_shadows", quality.softShadows).toBool();
     render->addAction(tr("&Bake lighting probes"), this, &MainWindow::bakeProbes);
     render->addSeparator();
     QMenu* qualityMenu = render->addMenu(tr("&Quality"));
-    auto toggles = std::make_shared<std::array<QAction*, 5>>(); // SSAO, bloom, FXAA, SSR, parallax
+    auto toggles = std::make_shared<std::array<QAction*, 6>>(); // SSAO, bloom, FXAA, SSR, parallax, soft shadows
     for (int i = 0; i < 4; ++i) {
         QAction* a = qualityMenu->addAction(tr(qualityNames[i]));
         a->setCheckable(true);
@@ -458,18 +459,19 @@ void MainWindow::buildMenus()
             (*toggles)[2]->setChecked(q.fxaa);
             (*toggles)[3]->setChecked(q.ssr);
             (*toggles)[4]->setChecked(q.parallax);
+            (*toggles)[5]->setChecked(q.softShadows);
             for (QAction* t : *toggles)
                 t->blockSignals(false);
             setRenderQuality(q);
         });
     }
-    const char* toggleNames[5] = {"Ambient occlusion (GTAO)", "Bloom", "Anti-aliasing (FXAA)", "Screen-space reflections (SSR)",
-                                  "Parallax (height maps)"};
-    const char* toggleKeys[5] = {"render/ssao", "render/bloom", "render/fxaa", "render/ssr", "render/parallax"};
-    bool engine::RenderQuality::*toggleMembers[5] = {&engine::RenderQuality::ssao, &engine::RenderQuality::bloom,
+    const char* toggleNames[6] = {"Ambient occlusion (GTAO)", "Bloom", "Anti-aliasing (FXAA)", "Screen-space reflections (SSR)",
+                                  "Parallax (height maps)", "Soft shadows (PCSS)"};
+    const char* toggleKeys[6] = {"render/ssao", "render/bloom", "render/fxaa", "render/ssr", "render/parallax", "render/soft_shadows"};
+    bool engine::RenderQuality::*toggleMembers[6] = {&engine::RenderQuality::ssao, &engine::RenderQuality::bloom,
                                                      &engine::RenderQuality::fxaa, &engine::RenderQuality::ssr,
-                                                     &engine::RenderQuality::parallax};
-    for (int i = 0; i < 5; ++i) {
+                                                     &engine::RenderQuality::parallax, &engine::RenderQuality::softShadows};
+    for (int i = 0; i < 6; ++i) {
         (*toggles)[static_cast<std::size_t>(i)] = render->addAction(tr(toggleNames[i]));
         (*toggles)[static_cast<std::size_t>(i)]->setCheckable(true);
         (*toggles)[static_cast<std::size_t>(i)]->setChecked(quality.*toggleMembers[i]);

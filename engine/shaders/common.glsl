@@ -26,6 +26,7 @@ layout(std140, binding = 1) uniform Environment {
     mat4 uPrevViewProj;    // previous frame (no TAA jitter): screen-space reflections reproject into it
     vec4 uSsr;             // x: 1 = SSR on, y: max distance (m), z: intensity, w: max roughness
     vec4 uAtmosphere;      // x: physical sky 0..1, y: radiance scale (sun illuminance), z: sky occlusion, w: top-down map top height
+    vec4 uShadowSoft;      // x: 1 = soft sun shadows (PCSS), y: tan of the sun's angular radius, z: max caster distance (m), w: max filter radius (m)
 };
 // Physical sky table (engine/Atmosphere.h): azimuth from the sun by elevation, linear radiance.
 layout(binding = 31) uniform sampler2D uSkyLut;

@@ -3818,12 +3818,15 @@ void testAtmosphere()
     s.environment.atmosphereHaze = 2.5f;
     s.environment.atmosphereBrightness = 1.3f;
     s.environment.skyOcclusion = 0.7f;
+    s.environment.sunSize = 1.5f;
     std::string err;
     engine::Scene r;
     check(engine::saveScene(s, "atmosphere.level", &err) && engine::loadScene(r, "atmosphere.level", &err), "atmosphere level: " + err);
     check(r.environment.atmosphere == 0.8f && r.environment.atmosphereHaze == 2.5f && r.environment.atmosphereBrightness == 1.3f &&
-              r.environment.skyOcclusion == 0.7f,
+              r.environment.skyOcclusion == 0.7f && r.environment.sunSize == 1.5f,
           "atmosphere settings survive save + load");
+    check(engine::RenderQuality::preset(2).softShadows && !engine::RenderQuality::preset(0).softShadows,
+          "soft shadows are on from the medium preset up");
     std::filesystem::remove("atmosphere.level");
 }
 
