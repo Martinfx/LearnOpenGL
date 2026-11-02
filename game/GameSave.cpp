@@ -342,7 +342,7 @@ std::vector<SaveInfo> listSaves()
         info.file = file;
         SaveGame save;
         info.valid = save.read(file);
-        info.title = info.valid ? save.title : "poškozená pozice";
+        info.title = info.valid ? save.title : engine::tr("save.corrupt");
         info.created = save.created;
         found.push_back({std::filesystem::last_write_time(file, ec), info});
     }

@@ -1,6 +1,7 @@
 #include "UiScale.h"
 #include "GameDialog.h"
 
+#include <engine/Localization.h>
 #include <engine/Quests.h>
 
 #include <algorithm>
@@ -90,7 +91,7 @@ void GameDialog::draw(engine::Ui2D& ui, int width, int height, int hover) const
     for (int index : session_.choices())
         answers.push_back(node->choices[static_cast<std::size_t>(index)].text);
     if (answers.empty())
-        answers.push_back("[Odejít]");
+        answers.push_back(engine::tr("dialog.leave"));
     std::vector<std::vector<std::string>> answerLines;
     float answersH = 0.0f;
     for (std::size_t i = 0; i < answers.size(); ++i) {

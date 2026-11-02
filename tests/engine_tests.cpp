@@ -2546,8 +2546,12 @@ void testAudio()
     audio.setReverb("none");
     const auto h = audio.play2D(*shot);
     check(audio.playing(h) && audio.activeVoices() == 1, "a playing sound holds a voice");
-    for (int i = 0; i < 40; ++i)
-        audio.update(0.1f); // 4 s mixed: the 0.8 s shot ends
+    // The 0.8 s shot ends once mixed; it decodes on a worker first, which can take a while
+    // on a busy machine, so mix until it is done (at most ~10 s of waiting).
+    for (int i = 0; i < 1000 && audio.playing(h); ++i) {
+        audio.update(0.1f);
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
     check(!audio.playing(h) && audio.activeVoices() == 0, "a finished sound frees its voice");
     for (int i = 0; i < 20; ++i)
         audio.play2D(*shot);

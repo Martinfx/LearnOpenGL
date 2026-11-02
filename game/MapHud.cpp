@@ -1,6 +1,7 @@
 #include "UiScale.h"
 #include "MapHud.h"
 
+#include <engine/Localization.h>
 #include <algorithm>
 #include <vector>
 #include <cmath>
@@ -204,7 +205,7 @@ void MapHud::drawFullMap(engine::Ui2D& ui, int width, int height, glm::vec3 play
         std::vector<std::pair<std::string, glm::vec4>> rows; // text, colour (titles coloured, stage text plain)
         for (const QuestView& q : quests) {
             const glm::vec4 c = q.active ? kQuest : (q.failed ? glm::vec4(0.7f, 0.35f, 0.3f, 1.0f) : glm::vec4(0.55f, 0.55f, 0.5f, 1.0f));
-            rows.push_back({(q.active ? "" : (q.failed ? "[selhal] " : "[splněn] ")) + q.title, c});
+            rows.push_back({(q.active ? std::string() : engine::tr(q.failed ? "map.quest_failed" : "map.quest_done") + " ") + q.title, c});
             if (q.active)
                 for (const std::string& l : wrap(q.stage, textSize * 0.9f))
                     rows.push_back({"  " + l, kText});
@@ -212,7 +213,7 @@ void MapHud::drawFullMap(engine::Ui2D& ui, int width, int height, glm::vec3 play
         }
         const float h = static_cast<float>(rows.size()) * textSize * 1.2f + textSize * 2.4f;
         ui.rect({x - 8.0f, y - 8.0f}, {w + 16.0f, std::min(h, side + 16.0f)}, {0.05f, 0.055f, 0.045f, 0.85f});
-        ui.text("ÚKOLY", {x, y}, textSize * 1.1f, kText, true);
+        ui.text(engine::tr("map.quests"), {x, y}, textSize * 1.1f, kText, true);
         y += textSize * 2.0f;
         for (const auto& [t, c] : rows) {
             if (y > pos.y + side - textSize)
@@ -227,7 +228,7 @@ void MapHud::drawFullMap(engine::Ui2D& ui, int width, int height, glm::vec3 play
     const glm::vec2 me = toScreen({player.x, player.z});
     arrow(ui, me, forward, std::max(9.0f, side * 0.018f), kPlayer);
     ui.text("PDA", pos + glm::vec2(0.0f, -textSize * 2.2f), textSize * 1.4f, kText, true);
-    const std::string help = "M  zavřít mapu";
+    const std::string help = engine::tr("map.close_hint");
     ui.text(help, pos + glm::vec2(side - ui.textWidth(help, textSize), -textSize * 1.9f), textSize, kText);
     ui.text("N", pos + glm::vec2(side * 0.5f - textSize * 0.4f, 4.0f), textSize, kText, true);
 }

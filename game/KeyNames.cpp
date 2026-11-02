@@ -1,5 +1,7 @@
 #include "KeyNames.h"
 
+#include <engine/Localization.h>
+
 #include <GLFW/glfw3.h>
 
 #include <algorithm>
@@ -83,8 +85,13 @@ int keyCode(const std::string& text)
 std::string keyLabel(int code)
 {
     for (const Named& n : table())
-        if (n.code == code)
-            return n.label ? n.label : n.name;
+        if (n.code == code) {
+            if (!n.label)
+                return n.name;
+            std::string key = "key." + std::string(n.name); // key.LSHIFT, key.MOUSE1 ... in assets/text
+            const std::string text = engine::tr(key);
+            return text != key ? text : n.label;
+        }
     const std::string name = keyName(code);
     return name.empty() ? "?" : name;
 }

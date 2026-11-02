@@ -329,11 +329,11 @@ void GameMenu::drawMain(engine::Ui2D& ui, float w, float h, double time)
     const float bh = uiSize(h, 0.06f, 34.0f, 64.0f);
     const glm::vec2 size(panelW - x, bh);
     float y = h * 0.42f;
-    if (started_ && button(ui, {x - bh * 0.45f, y}, size, "Pokračovat"))
+    if (started_ && button(ui, {x - bh * 0.45f, y}, size, engine::tr("menu.continue")))
         action_ = Action::Resume;
     if (started_)
         y += bh * 1.1f;
-    if (button(ui, {x - bh * 0.45f, y}, size, started_ ? "Začít lokaci znovu" : engine::tr("menu.new_game")))
+    if (button(ui, {x - bh * 0.45f, y}, size, started_ ? engine::tr("menu.restart_location") : engine::tr("menu.new_game")))
         action_ = started_ ? Action::Restart : Action::Play;
     y += bh * 1.1f;
     if (levels_.size() > 1) {
@@ -521,7 +521,7 @@ void GameMenu::drawSettings(engine::Ui2D& ui, float w, float h)
             const bool waiting = capturing_ == v->name;
             const glm::vec2 b(controlX, y + row * 0.12f), bs(controlW, row * 0.76f);
             ui.rect(b, bs, waiting ? glm::vec4(0.93f, 0.62f, 0.2f, 0.25f) : hoverRow ? glm::vec4(0.3f, 0.28f, 0.22f, 1.0f) : kTrack);
-            const std::string shown = waiting ? "Stiskni klávesu…" : keyLabel(keyCode(v->value));
+            const std::string shown = waiting ? engine::tr("menu.press_key") : keyLabel(keyCode(v->value));
             ui.text(shown, {b.x + row * 0.3f, y + (row - text) * 0.5f}, text, waiting ? kAmber : kBone, !waiting);
             if (hoverRow && released_ && !waiting && capturing_.empty())
                 capturing_ = v->name;
@@ -534,7 +534,7 @@ void GameMenu::drawSettings(engine::Ui2D& ui, float w, float h)
     }
 
     const glm::vec2 bsize(row * 3.2f, row * 0.9f);
-    if (button(ui, {pos.x + panel.x - bsize.x - row * 0.3f, pos.y + panel.y - bsize.y - row * 0.3f}, bsize, "Zpět")) {
+    if (button(ui, {pos.x + panel.x - bsize.x - row * 0.3f, pos.y + panel.y - bsize.y - row * 0.3f}, bsize, engine::tr("menu.back"))) {
         const std::string file = (engine::userDirectory("config") / "game.cfg").string();
         cvars.saveConfig(file); // saved now, not only at exit
         open(returnTo_);
@@ -587,9 +587,9 @@ void GameMenu::drawCredits(engine::Ui2D& ui, float w, float h)
     ui.rect({0, top - line}, {w, line}, {0.03f, 0.03f, 0.025f, 0.8f});
     ui.rect({0, bottom}, {w, line}, {0.03f, 0.03f, 0.025f, 0.8f});
     if (maxScroll > 0.0f)
-        ui.text("Posouvání kolečkem myši", {x, bottom + line * 1.2f}, line * 0.8f, kDim);
+        ui.text(engine::tr("menu.scroll_hint"), {x, bottom + line * 1.2f}, line * 0.8f, kDim);
     const glm::vec2 bsize(line * 6.0f, line * 2.0f);
-    if (button(ui, {w - x - bsize.x, bottom + line * 0.8f}, bsize, "Zpět"))
+    if (button(ui, {w - x - bsize.x, bottom + line * 0.8f}, bsize, engine::tr("menu.back")))
         open(returnTo_);
 }
 
@@ -607,10 +607,10 @@ void GameMenu::drawDeath(engine::Ui2D& ui, float w, float h, double time)
     const glm::vec2 size(std::max(w * 0.22f, 300.0f), bh);
     const float x = std::round((w - size.x) * 0.5f);
     float y = h * 0.3f + big * 2.0f;
-    if (button(ui, {x, y}, size, "Zkusit znovu"))
+    if (button(ui, {x, y}, size, engine::tr("menu.respawn")))
         action_ = Action::Respawn;
     y += bh * 1.1f;
-    if (button(ui, {x, y}, size, "Začít lokaci znovu"))
+    if (button(ui, {x, y}, size, engine::tr("menu.restart_location")))
         action_ = Action::Restart;
     y += bh * 1.1f;
     const SaveInfo* last = nullptr;
@@ -619,12 +619,12 @@ void GameMenu::drawDeath(engine::Ui2D& ui, float w, float h, double time)
             last = &s;
             break;
         }
-    if (button(ui, {x, y}, size, "Načíst poslední uložení", last != nullptr)) {
+    if (button(ui, {x, y}, size, engine::tr("menu.load_last"), last != nullptr)) {
         chosenSave_ = last->file;
         action_ = Action::LoadSave;
     }
     y += bh * 1.1f;
-    if (button(ui, {x, y}, size, "Hlavní menu"))
+    if (button(ui, {x, y}, size, engine::tr("menu.main_menu")))
         action_ = Action::MainMenu;
 }
 
@@ -637,7 +637,7 @@ void GameMenu::drawLevels(engine::Ui2D& ui, float w, float h)
     const glm::vec2 pos = glm::round((glm::vec2(w, h) - panel) * 0.5f);
     ui.rect(pos, panel, kPanel);
     ui.rect(pos, {panel.x, 3.0f}, kAmber);
-    ui.text("VYBRAT LOKACI", {pos.x + row * 0.4f, pos.y + row * 0.3f}, std::round(row * 0.45f), kBone, true);
+    ui.text(engine::tr("menu.choose_location_title"), {pos.x + row * 0.4f, pos.y + row * 0.3f}, std::round(row * 0.45f), kBone, true);
     float y = pos.y + row * 1.2f;
     for (const LevelEntry& level : levels_) {
         if (y > pos.y + panel.y - row * 1.6f)
@@ -658,7 +658,7 @@ void GameMenu::drawLevels(engine::Ui2D& ui, float w, float h)
         y += row;
     }
     const glm::vec2 bsize(row * 2.4f, row * 0.7f);
-    if (button(ui, {pos.x + panel.x - bsize.x - row * 0.2f, pos.y + panel.y - bsize.y - row * 0.2f}, bsize, "Zpět"))
+    if (button(ui, {pos.x + panel.x - bsize.x - row * 0.2f, pos.y + panel.y - bsize.y - row * 0.2f}, bsize, engine::tr("menu.back")))
         open(returnTo_);
 }
 
@@ -681,7 +681,7 @@ void GameMenu::drawSaves(engine::Ui2D& ui, float w, float h, bool saving)
     const glm::vec2 pos = glm::round((glm::vec2(w, h) - panel) * 0.5f);
     ui.rect(pos, panel, kPanel);
     ui.rect(pos, {panel.x, 3.0f}, kAmber);
-    ui.text(saving ? "ULOŽIT HRU" : engine::tr("menu.load_title"), {pos.x + row * 0.4f, pos.y + row * 0.3f}, std::round(row * 0.45f), kBone, true);
+    ui.text(saving ? engine::tr("menu.save_title") : engine::tr("menu.load_title"), {pos.x + row * 0.4f, pos.y + row * 0.3f}, std::round(row * 0.45f), kBone, true);
     float y = pos.y + row * 1.2f;
     if (rows.empty())
         ui.text(engine::tr("menu.no_saves"), {pos.x + row * 0.45f, y + row * 0.25f}, text, kDim);
@@ -710,6 +710,6 @@ void GameMenu::drawSaves(engine::Ui2D& ui, float w, float h, bool saving)
         y += row;
     }
     const glm::vec2 bsize(row * 2.4f, row * 0.7f);
-    if (button(ui, {pos.x + panel.x - bsize.x - row * 0.2f, pos.y + panel.y - bsize.y - row * 0.2f}, bsize, "Zpět"))
+    if (button(ui, {pos.x + panel.x - bsize.x - row * 0.2f, pos.y + panel.y - bsize.y - row * 0.2f}, bsize, engine::tr("menu.back")))
         open(returnTo_);
 }

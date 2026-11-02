@@ -1,6 +1,7 @@
 #include "UiScale.h"
 #include "GameHud.h"
 
+#include <engine/Localization.h>
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -88,7 +89,7 @@ void GameHud::draw(engine::Ui2D& ui, int width, int height, const HudState& s) c
         const glm::vec2 strip(pos.x, pos.y - h - text * 0.3f);
         ui.rect(strip, {panelW, h}, frame);
         const float small = std::round(text * 0.75f);
-        ui.text("BATERKA", {x, strip.y + (h - small) * 0.5f}, small, s.flashlightOn ? bone : dim, true);
+        ui.text(engine::tr("hud.battery"), {x, strip.y + (h - small) * 0.5f}, small, s.flashlightOn ? bone : dim, true);
         const float labelW = ui.textWidth("BATERKA", small, true) + text * 0.6f;
         const glm::vec2 bar(x + labelW, strip.y + h * 0.5f - 2.5f);
         const float barW = innerW - labelW;
@@ -114,7 +115,7 @@ void GameHud::draw(engine::Ui2D& ui, int width, int height, const HudState& s) c
     }
     // Medkits: a small count above the panel when the player has any.
     if (s.medkits > 0) {
-        const std::string kits = "LÉKÁRNIČKY " + std::to_string(s.medkits) + "  [H]";
+        const std::string kits = engine::trf("hud.medkits", std::to_string(s.medkits));
         const float small = std::round(text * 0.7f);
         ui.text(kits, {x + innerW - ui.textWidth(kits, small, true), pos.y - small * 1.5f}, small, dim, true);
     }

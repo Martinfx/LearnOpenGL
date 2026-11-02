@@ -1049,16 +1049,16 @@ int main(int argc, char** argv)
         using P = engine::AnomalyStorm::Phase;
         const engine::AnomalyStormSettings& ss = scene.environment.anomalyStorm;
         if (phase == P::Warning) { // the siren wails, the Zone goes quiet, far rumbling
-            hud.notify("Blíží se anomální bouře! Najdi úkryt.");
+            hud.notify(engine::tr("storm.coming"));
             audio.playAsset("sounds/ambient/storm_siren.sound", nullptr, 1.0f);
             audio.system().duck(engine::AudioGroup::Ambient, 0.35f, std::max(2.0f, ss.warningSeconds), 6.0f);
             audio.system().duck(engine::AudioGroup::Music, 0.25f, std::max(2.0f, ss.warningSeconds + ss.durationSeconds), 6.0f);
             weather.strikeNow(2500.0f);
         } else if (phase == P::Storm) {
-            hud.notify("Anomální bouře! Zůstaň pod střechou.");
+            hud.notify(engine::tr("storm.started"));
             weather.strikeNow(350.0f);
         } else if (phase == P::Fading) {
-            hud.notify("Bouře odeznívá");
+            hud.notify(engine::tr("storm.fading"));
         } else if (phase == P::Calm && growArtifacts) {
             growArtifacts(); // the storm leaves new artifacts in the anomalies
         }
@@ -1101,7 +1101,7 @@ int main(int argc, char** argv)
         for (const std::string& line : lines)
             LOG_INFO("reload", "%s", line.c_str());
         if (!lines.empty())
-            hud.notify(lines.size() == 1 ? "Načteno znovu: " + lines.front() : "Načteno znovu: " + std::to_string(lines.size()) + " souborů");
+            hud.notify(lines.size() == 1 ? engine::trf("hud.reloaded", lines.front()) : engine::trn("hud.reloaded_files", static_cast<long>(lines.size())));
     };
     std::array<bool, engine::kMemoryCategories> overBudgetWarned{};
     float memoryTimer = 2.0f;
@@ -1579,7 +1579,7 @@ int main(int argc, char** argv)
     const engine::CVar& cvAiDebug = *cvars.find("ai_debug");
     glm::vec3 freecamPosition{0.0f};
     bool freecamActive = false;
-    menu.setTitle(levelTitle, "Prototyp zóny");
+    menu.setTitle(levelTitle, engine::tr("menu.subtitle"));
     // The game starts in the main menu; test runs (FPS_ENGINE_FRAMES) and --no-menu go straight in.
     // Later levels (restart, level change) start playing at once.
     if (!firstLevel || std::getenv("FPS_ENGINE_FRAMES") || noMenu) {
@@ -1666,12 +1666,12 @@ int main(int argc, char** argv)
     auto saveTo = [&](const std::string& slot) {
         std::string saveError;
         if (scripts.playerHealth() <= 0.0f) {
-            hud.notify("Mrtvý nemůže ukládat");
+            hud.notify(engine::tr("save.dead"));
             return false;
         }
         if (!makeSave().write(saveFile(slot), &saveError)) {
             LOG_ERROR("save", "%s", saveError.c_str());
-            hud.notify("Uložení selhalo");
+            hud.notify(engine::tr("save.failed"));
             return false;
         }
         LOG_INFO("save", "Saved %s", saveFile(slot).string().c_str());
@@ -1741,7 +1741,7 @@ int main(int argc, char** argv)
             anomalyStorm.update(scene.environment.anomalyStorm, 0.0f);
             anomalyStorm.publish(scene.environment.anomalyStormNow);
         }
-        hud.notify("Načteno");
+        hud.notify(engine::tr("save.loaded"));
     }
     // Carried over from the previous level (level change): health, weapon, magazines.
     if (carry) {
@@ -1910,12 +1910,12 @@ int main(int argc, char** argv)
         }
         if (w[0] == "medkits" || w[0] == "medkit") {
             inventory.medkits += num(1);
-            return "+" + std::to_string(num(1)) + " lékárnička";
+            return engine::trf("reward.medkits", std::to_string(num(1)));
         }
         if (w[0] == "ammo" && w.size() >= 3) {
             inventory.ammo[w[1]] += num(2);
             inventory.link(weapons);
-            return "+" + std::to_string(num(2)) + " nábojů " + w[1];
+            return engine::trf("reward.ammo", std::to_string(num(2)), w[1]);
         }
         if (w[0] == "goodwill" && w.size() >= 3) {
             factions.changeGoodwill(w[1], static_cast<float>(num(2)));
@@ -1987,7 +1987,7 @@ int main(int argc, char** argv)
         if (demo.benchmark)
             glfwSetWindowShouldClose(window, GLFW_TRUE);
         else if (complete)
-            hud.notify("Konec záznamu: ovládáš hráče");
+            hud.notify(engine::tr("demo.ended"));
         demo.mode = DemoState::Off;
         demo.current = {};
     };
@@ -2176,7 +2176,7 @@ int main(int argc, char** argv)
                 const std::string id = artifacts.take(artifactTarget);
                 inventory.artifacts.push_back(id);
                 const bool onBelt = static_cast<int>(inventory.artifacts.size()) <= items.beltSlots;
-                hud.notify("Artefakt: " + artifacts.name(id) + (onBelt ? " (na pásu)" : " (v batohu)"));
+                hud.notify(engine::trf(onBelt ? "hud.artifact_belt" : "hud.artifact_pack", artifacts.name(id)));
                 audio.playAsset("sounds/items/pickup_medkit.sound", nullptr, 0.8f);
                 audio.playAsset("sounds/anomalies/artifact_ping.sound", nullptr, 0.6f);
                 artifactTarget = -1;
@@ -2208,7 +2208,7 @@ int main(int argc, char** argv)
                     for (bool& h : digitHeld)
                         h = true; // keys held now do not answer
                 } else {
-                    hud.notify(e.name + " nemá co říct");
+                    hud.notify(engine::trf("hud.nothing_to_say", e.name));
                     LOG_WARN("dialog", "%s: %s", e.name.c_str(), why.c_str());
                 }
             }
@@ -2221,17 +2221,17 @@ int main(int argc, char** argv)
                     continue;
                 std::string line;
                 if (ev.kind == engine::Quests::Event::Started) {
-                    line = "Nový úkol: " + q->title;
+                    line = engine::trf("quest.new", q->title);
                 } else if (ev.kind == engine::Quests::Event::Stage) {
                     const engine::QuestStage* st = q->stage(quests.stage(ev.quest));
                     line = q->title + ": " + (st ? st->text : std::string());
                 } else if (ev.kind == engine::Quests::Event::Completed) {
-                    line = "Úkol splněn: " + q->title;
+                    line = engine::trf("quest.done", q->title);
                     for (const auto& r : q->rewards)
                         if (const std::string got = giveReward(r); !got.empty())
                             line += ", " + got;
                 } else {
-                    line = "Úkol selhal: " + q->title;
+                    line = engine::trf("quest.failed", q->title);
                 }
                 LOG_INFO("quests", "%s", line.c_str());
                 news += (news.empty() ? "" : "  |  ") + line;
@@ -2244,20 +2244,20 @@ int main(int argc, char** argv)
         {
             const bool fKey = captured && !console.open() && keyDown(window, boundKey("in_flashlight"));
             if (fKey && !flashlightHeld && !flashlight.toggle() && scene.player.flashlight)
-                hud.notify("Baterka je vybitá");
+                hud.notify(engine::tr("hud.battery_empty"));
             flashlightHeld = fKey;
             // Medkit (H): +50 health at once, not when full.
             const bool hKey = captured && !console.open() && keyDown(window, boundKey("in_heal"));
             if (hKey && !healHeld && scripts.playerHealth() > 0.0f) {
                 if (inventory.medkits <= 0)
-                    hud.notify("Žádná lékárnička");
+                    hud.notify(engine::tr("hud.no_medkit"));
                 else if (scripts.playerHealth() >= scene.player.maxHealth)
-                    hud.notify("Zdraví je plné");
+                    hud.notify(engine::tr("hud.health_full"));
                 else {
                     --inventory.medkits;
                     scripts.setPlayerHealth(std::min(scene.player.maxHealth, scripts.playerHealth() + 50.0f));
                     audio.playAsset("sounds/items/heal.sound", nullptr, 1.0f);
-                    hud.notify("Lékárnička použita (zbývá " + std::to_string(inventory.medkits) + ")");
+                    hud.notify(engine::trf("hud.medkit_used", std::to_string(inventory.medkits)));
                 }
             }
             healHeld = hKey;
@@ -2304,7 +2304,7 @@ int main(int argc, char** argv)
                 if (std::filesystem::exists(saveFile("quick")))
                     exitRequest = {LevelExit::LoadSave, saveFile("quick")};
                 else
-                    hud.notify("Žádné rychlé uložení");
+                    hud.notify(engine::tr("save.no_quicksave"));
             }
             quickSaveHeld = qs;
             quickLoadHeld = ql;
@@ -2391,7 +2391,7 @@ int main(int argc, char** argv)
                 static bool jamFireHeld = false;
                 if (fireHeld && !jamFireHeld) {
                     audio.play(weapon.settings.soundDryFire, player.eye());
-                    hud.notify("Zbraň se zasekla! R ji uvolní");
+                    hud.notify(engine::tr("hud.jammed"));
                 }
                 jamFireHeld = fireHeld;
                 if (reloadHeld && unjamTimer <= 0.0f) {
@@ -2580,7 +2580,7 @@ int main(int argc, char** argv)
                 player.settings.sprintSpeed = engine::loadAllowsSprint(items, kg) ? scene.player.sprintSpeed : player.settings.walkSpeed;
                 const bool over = kg > items.carryFree;
                 if (over && !overloadedShown)
-                    hud.notify("Jsi přetížený (" + std::to_string(static_cast<int>(std::lround(kg))) + " kg)");
+                    hud.notify(engine::trf("hud.overloaded", std::to_string(static_cast<int>(std::lround(kg)))));
                 overloadedShown = over;
             }
             if (cvGod.boolean() && scripts.playerHealth() < healthBefore) // god: anomalies do not hurt either
@@ -2692,7 +2692,7 @@ int main(int argc, char** argv)
             overBudgetWarned = over;
         }
         if (flashlight.justEmptied())
-            hud.notify("Baterka je vybitá");
+            hud.notify(engine::tr("hud.battery_empty"));
 
         int width = 0, height = 0;
         glfwGetFramebufferSize(window, &width, &height);
@@ -2805,9 +2805,9 @@ int main(int argc, char** argv)
                     if (const engine::ItemDef* ar = inventory.armor.empty() ? nullptr : items.find(engine::ItemDef::Kind::Armor, inventory.armor))
                         st << "   " << ar->name << " " << static_cast<int>(std::lround(inventory.armorCondition * 100.0f)) << " %";
                     if (!inventory.artifacts.empty()) {
-                        st << "   Pás:";
+                        st << "   " << engine::tr("hud.belt") << ":";
                         for (std::size_t a = 0; a < inventory.artifacts.size(); ++a)
-                            st << (a == static_cast<std::size_t>(std::max(0, items.beltSlots)) ? "  | batoh:" : "") << " " << artifacts.name(inventory.artifacts[a]);
+                            st << (a == static_cast<std::size_t>(std::max(0, items.beltSlots)) ? "  | " + engine::tr("hud.backpack") + ":" : "") << " " << artifacts.name(inventory.artifacts[a]);
                     }
                     const glm::vec4 col = kg > items.carryFree ? glm::vec4(1.0f, 0.45f, 0.3f, 1.0f) : glm::vec4(0.95f, 0.8f, 0.45f, 1.0f);
                     ui.text(st.str(), {th, static_cast<float>(height) - th * 2.0f}, th, col, true);
@@ -2861,9 +2861,10 @@ int main(int argc, char** argv)
                     // Storm banner: countdown to the storm / how long it lasts, red while outdoors.
                     const float H = static_cast<float>(height), text = uiSize(H, 0.024f, 12.0f, 28.0f);
                     const int s = static_cast<int>(std::ceil(anomalyStorm.secondsLeft()));
-                    char line[96];
-                    std::snprintf(line, sizeof line, phase == engine::AnomalyStorm::Phase::Warning ? "BOUŘE ZA %d:%02d" : "BOUŘE %d:%02d", s / 60, s % 60);
-                    const std::string where = sheltered ? "v úkrytu" : "VENKU - HLEDEJ ÚKRYT";
+                    char clock[32];
+                    std::snprintf(clock, sizeof clock, "%d:%02d", s / 60, s % 60);
+                    const std::string line = engine::trf(phase == engine::AnomalyStorm::Phase::Warning ? "storm.in" : "storm.left", clock);
+                    const std::string where = engine::tr(sheltered ? "storm.sheltered" : "storm.outside");
                     const float w = std::max(ui.textWidth(line, text, true), ui.textWidth(where, text * 0.8f, true)) + text * 1.6f;
                     const glm::vec2 at(std::round((static_cast<float>(width) - w) * 0.5f), std::round(H * 0.11f));
                     const float pulse = sheltered ? 0.0f : 0.5f + 0.5f * std::sin(static_cast<float>(scripts.time()) * 6.0f);

@@ -1,6 +1,7 @@
 #include "UiScale.h"
 #include "GameTrade.h"
 
+#include <engine/Localization.h>
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -100,7 +101,7 @@ std::vector<GameTrade::Row> GameTrade::rows(const Inventory& inv, const std::vec
         r.index = static_cast<int>(i);
         if (s.kind == Stock::Medkit) {
             const engine::ItemDef* d = items.find(engine::ItemDef::Kind::Medkit);
-            r.label = d ? d->name : "Lékárnička";
+            r.label = d ? d->name : engine::tr("item.medkit");
             r.detail = "× " + std::to_string(s.count);
             r.price = engine::buyPrice(d ? d->price : 250, markup_);
         } else if (s.kind == Stock::Ammo) {
@@ -119,21 +120,21 @@ std::vector<GameTrade::Row> GameTrade::rows(const Inventory& inv, const std::vec
             const std::filesystem::path abs = (assetDir_ / std::filesystem::path(std::u8string(s.id.begin(), s.id.end()))).lexically_normal();
             if (std::find(inv.weaponFiles.begin(), inv.weaponFiles.end(), abs) != inv.weaponFiles.end()) {
                 r.enabled = false;
-                r.detail = "už máš";
+                r.detail = engine::tr("trade.owned");
             }
         } else if (s.kind == Stock::Artifact) {
             const engine::ItemDef* d = items.find(engine::ItemDef::Kind::Artifact, s.id);
             if (!d)
                 continue;
             r.label = d->name;
-            r.detail = "artefakt × " + std::to_string(s.count);
+            r.detail = engine::trf("trade.artifact_count", std::to_string(s.count));
             r.price = engine::buyPrice(d->price, markup_);
         } else {
             const engine::ItemDef* d = items.find(engine::ItemDef::Kind::Armor, s.id);
             if (!d)
                 continue;
             r.label = d->name;
-            r.detail = "ochrana " + percent(d->protection);
+            r.detail = engine::trf("trade.protection", percent(d->protection));
             r.price = engine::buyPrice(d->price, markup_);
         }
         r.enabled = r.enabled && inv.money >= r.price;
@@ -146,7 +147,7 @@ std::vector<GameTrade::Row> GameTrade::rows(const Inventory& inv, const std::vec
         r.index = static_cast<int>(i);
         r.key = "weapon";
         r.label = weapons[i].settings.name;
-        r.detail = i == current ? "v ruce" : "stav " + percent(weapons[i].condition);
+        r.detail = i == current ? engine::tr("trade.in_hand") : engine::trf("trade.condition", percent(weapons[i].condition));
         r.price = engine::sellPrice(weapons[i].settings.price, buyRate_, weapons[i].condition);
         r.enabled = i != current && weapons.size() > 1;
         out.push_back(r);
@@ -169,7 +170,7 @@ std::vector<GameTrade::Row> GameTrade::rows(const Inventory& inv, const std::vec
         Row r;
         r.action = 2;
         r.key = "medkit";
-        r.label = d ? d->name : "Lékárnička";
+        r.label = d ? d->name : engine::tr("item.medkit");
         r.detail = "× " + std::to_string(inv.medkits);
         r.price = engine::sellPrice(d ? d->price : 250, buyRate_);
         out.push_back(r);
@@ -179,7 +180,7 @@ std::vector<GameTrade::Row> GameTrade::rows(const Inventory& inv, const std::vec
         r.action = 2;
         r.key = "armor";
         r.label = d->name;
-        r.detail = "na sobě, stav " + percent(inv.armorCondition);
+        r.detail = engine::trf("trade.worn", percent(inv.armorCondition));
         r.price = engine::sellPrice(d->price, buyRate_, inv.armorCondition);
         out.push_back(r);
     }
@@ -192,7 +193,7 @@ std::vector<GameTrade::Row> GameTrade::rows(const Inventory& inv, const std::vec
         r.key = "artifact";
         r.index = static_cast<int>(a);
         r.label = d->name;
-        r.detail = static_cast<int>(a) < items.beltSlots ? "artefakt, na pásu" : "artefakt";
+        r.detail = static_cast<int>(a) < items.beltSlots ? engine::tr("trade.artifact_belt") : engine::tr("trade.artifact");
         r.price = engine::sellPrice(d->price, buyRate_);
         out.push_back(r);
     }
@@ -200,7 +201,7 @@ std::vector<GameTrade::Row> GameTrade::rows(const Inventory& inv, const std::vec
     if (repairs_ && current < weapons.size() && weapons[current].condition < 0.995f) {
         Row r;
         r.action = 3;
-        r.label = "Opravit " + weapons[current].settings.name + " (" + percent(weapons[current].condition) + ")";
+        r.label = engine::trf("trade.repair", weapons[current].settings.name, percent(weapons[current].condition));
         r.price = std::max(1, engine::repairPrice(weapons[current].settings.price, weapons[current].condition));
         r.enabled = inv.money >= r.price;
         out.push_back(r);
@@ -209,14 +210,14 @@ std::vector<GameTrade::Row> GameTrade::rows(const Inventory& inv, const std::vec
         d && inv.armorCondition < 0.995f) {
         Row r;
         r.action = 4;
-        r.label = "Opravit " + d->name + " (" + percent(inv.armorCondition) + ")";
+        r.label = engine::trf("trade.repair", d->name, percent(inv.armorCondition));
         r.price = std::max(1, engine::repairPrice(d->price, inv.armorCondition));
         r.enabled = inv.money >= r.price;
         out.push_back(r);
     }
     Row close;
     close.action = 5;
-    close.label = "Odejít (Esc)";
+    close.label = engine::tr("trade.leave");
     out.push_back(close);
     return out;
 }
@@ -237,7 +238,7 @@ void GameTrade::click(glm::vec2 mouse, Inventory& inv, std::vector<engine::Weapo
     }
     if (!r.enabled) {
         if (r.action != 2 && inv.money < r.price)
-            message_ = "Na to nemáš dost peněz.";
+            message_ = engine::tr("trade.no_money");
         return;
     }
     const int times = many ? 5 : 1;
@@ -250,7 +251,7 @@ void GameTrade::click(glm::vec2 mouse, Inventory& inv, std::vector<engine::Weapo
                 price = engine::buyPrice((d ? d->price : 3) * std::min(kAmmoLot, s.count), markup_);
             }
             if (inv.money < price) {
-                message_ = "Na to nemáš dost peněz.";
+                message_ = engine::tr("trade.no_money");
                 break;
             }
             if (s.kind == Stock::Medkit) {
@@ -281,7 +282,7 @@ void GameTrade::click(glm::vec2 mouse, Inventory& inv, std::vector<engine::Weapo
                 s.count -= 1;
             }
             inv.money -= price;
-            message_ = "Koupeno: " + r.label;
+            message_ = engine::trf("trade.bought", r.label);
         }
         if (hooks.sound)
             hooks.sound("sounds/items/pickup_ammo.sound");
@@ -325,17 +326,17 @@ void GameTrade::click(glm::vec2 mouse, Inventory& inv, std::vector<engine::Weapo
             addStock(Stock::Armor, inv.armor, 1);
             inv.armor.clear();
         }
-        message_ = "Prodáno: " + r.label;
+        message_ = engine::trf("trade.sold", r.label);
         if (hooks.sound)
             hooks.sound("sounds/items/pickup_ammo.sound");
     } else if (r.action == 3 && current < weapons.size()) {
         inv.money -= r.price;
         weapons[current].condition = 1.0f;
-        message_ = "Zbraň opravena";
+        message_ = engine::tr("trade.weapon_repaired");
     } else if (r.action == 4) {
         inv.money -= r.price;
         inv.armorCondition = 1.0f;
-        message_ = "Zbroj opravena";
+        message_ = engine::tr("trade.armor_repaired");
     }
 }
 
@@ -355,15 +356,16 @@ void GameTrade::draw(engine::Ui2D& ui, int width, int height, const Inventory& i
     ui.rect(pos, {panelW, panelH}, frame);
     ui.rect(pos, {panelW, std::max(2.0f, text * 0.12f)}, amber);
     const float weight = carriedWeight(inv, weapons, items);
-    char head[160];
-    std::snprintf(head, sizeof head, "Peníze: %d RU     Náklad: %.1f / %.0f kg", inv.money, weight, items.carryFree);
-    ui.text("Obchod: " + name_, pos + glm::vec2(text, text * 0.7f), text * 1.1f, amber, true);
+    char load[64];
+    std::snprintf(load, sizeof load, "%.1f / %.0f", weight, items.carryFree);
+    const std::string head = engine::trf("trade.header", std::to_string(inv.money), std::string(load));
+    ui.text(engine::trf("trade.title", name_), pos + glm::vec2(text, text * 0.7f), text * 1.1f, amber, true);
     ui.text(head, pos + glm::vec2(panelW - ui.textWidth(head, text) - text, text * 0.8f), text,
             weight > items.carryFree ? red : bone);
     const float colW = (panelW - text * 3.0f) * 0.5f;
     const float top = pos.y + text * 3.2f;
-    ui.text("Nabízí (klik = koupit, Shift = víc)", {pos.x + text, top}, text * 0.9f, dim, true);
-    ui.text("Máš u sebe (klik = prodat)", {pos.x + text * 2.0f + colW, top}, text * 0.9f, dim, true);
+    ui.text(engine::tr("trade.offers"), {pos.x + text, top}, text * 0.9f, dim, true);
+    ui.text(engine::tr("trade.yours"), {pos.x + text * 2.0f + colW, top}, text * 0.9f, dim, true);
     float y[2] = {top + text * 1.6f, top + text * 1.6f};
     float bottom = pos.y + panelH - text * 1.2f;
     std::vector<Row> list = rows(inv, weapons, current, items);

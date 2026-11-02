@@ -1,5 +1,6 @@
 #include "Inventory.h"
 
+#include <engine/Localization.h>
 #include <engine/EntityIO.h>
 #include <engine/Items.h>
 
@@ -57,12 +58,12 @@ std::vector<PickupResult> collectPickups(engine::Scene& scene, glm::vec3 feet, I
         if (item == "money") {
             const int n = std::max(1, std::atoi(property(e, "amount", "100").c_str()));
             inventory.money += n;
-            r.message = "Sebráno: " + std::to_string(n) + " RU";
+            r.message = engine::trf("pickup.money", std::to_string(n));
             r.sound = property(e, "sound", "sounds/items/pickup_ammo.sound");
         } else if (item == "medkit") {
             const int n = std::max(1, std::atoi(property(e, "amount", "1").c_str()));
             inventory.medkits += n;
-            r.message = n > 1 ? "Sebráno: " + std::to_string(n) + " × lékárnička" : "Sebráno: lékárnička";
+            r.message = n > 1 ? engine::trf("pickup.medkits", std::to_string(n)) : engine::tr("pickup.medkit");
             r.sound = property(e, "sound", "sounds/items/pickup_medkit.sound");
         } else if (item == "weapon") {
             const std::string file = property(e, "weapon");
@@ -75,11 +76,11 @@ std::vector<PickupResult> collectPickups(engine::Scene& scene, glm::vec3 feet, I
                 if (w.settings.ammoType.empty())
                     continue; // nothing to take (knife): leave it lying
                 inventory.ammo[w.settings.ammoType] += w.settings.startReserve;
-                r.message = "Sebráno: " + std::to_string(w.settings.startReserve) + " × " + w.settings.ammoType;
+                r.message = engine::trf("pickup.count", std::to_string(w.settings.startReserve), w.settings.ammoType);
                 r.sound = property(e, "sound", "sounds/items/pickup_ammo.sound");
             } else {
                 r.weapon = path;
-                r.message = "Sebráno: " + property(e, "name", path.stem().string());
+                r.message = engine::trf("pickup.item", property(e, "name", path.stem().string()));
                 r.sound = property(e, "sound", "sounds/items/pickup_weapon.sound");
             }
         } else { // ammo; without a type the rounds of the weapon in hand
@@ -90,7 +91,7 @@ std::vector<PickupResult> collectPickups(engine::Scene& scene, glm::vec3 feet, I
                 continue;
             const int n = std::max(1, std::atoi(property(e, "amount", "30").c_str()));
             inventory.ammo[type] += n;
-            r.message = "Sebráno: " + std::to_string(n) + " × " + type;
+            r.message = engine::trf("pickup.count", std::to_string(n), type);
             r.sound = property(e, "sound", "sounds/items/pickup_ammo.sound");
         }
         e.alive = false;
