@@ -718,6 +718,9 @@ int main(int argc, char** argv)
     bool noMenu = false;
     for (int i = 1; i < argc; ++i)
         noMenu = noMenu || std::string(argv[i]) == "--no-menu";
+    if (demoState().benchmark && demoState().mode != DemoState::Play)
+        LOG_WARN("demo", "--benchmark needs a demo to replay: --play <file.demo> --benchmark (record one with --record <file.demo>); "
+                         "FPS_ENGINE_STATS=1 prints frame statistics every second while playing");
     noMenu = noMenu || demoState().mode != DemoState::Off; // a demo starts in the level
     // FPS_ENGINE_FRAMES=N quits after N frames (used for smoke tests in CI).
     const char* frameLimitEnv = std::getenv("FPS_ENGINE_FRAMES");

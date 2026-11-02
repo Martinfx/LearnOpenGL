@@ -1164,6 +1164,10 @@ void Renderer::updateEnvironment(const Scene& scene, const RenderView& view)
     b.viewport = glm::vec4(width_, height_, 1.0f / static_cast<float>(width_), 1.0f / static_cast<float>(height_)); // render targets
     glNamedBufferSubData(envBuffer_, 0, sizeof(b), &b);
     glBindBufferBase(GL_UNIFORM_BUFFER, 1, envBuffer_);
+    // A CPU copy for the environment capture: reading the buffer back would make the driver
+    // move it out of video memory for good.
+    envBlockCopy_.resize(sizeof(b));
+    std::memcpy(envBlockCopy_.data(), &b, sizeof(b));
 }
 
 void Renderer::updateEnvironmentMap(const Scene& scene)
@@ -1189,7 +1193,8 @@ void Renderer::updateEnvironmentMap(const Scene& scene)
     envHash_ = h;
     // Capture without cloud drift (time 0) so reflections do not need updates every frame.
     EnvironmentBlock captureBlock{};
-    glGetNamedBufferSubData(envBuffer_, 0, sizeof(captureBlock), &captureBlock);
+    if (envBlockCopy_.size() == sizeof(captureBlock))
+        std::memcpy(&captureBlock, envBlockCopy_.data(), sizeof(captureBlock));
     captureBlock.skyHorizon.w = 0.0f;
     glNamedBufferSubData(envBuffer_, 0, sizeof(captureBlock), &captureBlock);
 
@@ -2222,6 +2227,7 @@ void Renderer::renderVolumetricFog(const RenderView& view)
     glBindTextureUnit(13, localShadowTex_ ? localShadowTex_ : shadowDummy_);
     glBindImageTexture(0, volumeScatter_[volumeCurrent_], 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_RGBA16F);
     glDispatchCompute(static_cast<unsigned>((dims.x + 7) / 8), static_cast<unsigned>((dims.y + 7) / 8), static_cast<unsigned>(dims.z));
+    glBindSampler(6, shadowRawSampler_); // back to raw depth: the mesh program (pre-pass too) declares it non-shadow
     glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT);
 
     const Program& integrate = programs_.volumeIntegrate;
@@ -2283,6 +2289,9 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     finishCullJobs(); // culling results of the previous render() (and of overlays after it)
     frameArena_.reset(); // scratch arrays of the previous frame
     resetGlState();
+    // The mesh program reads the sun's shadow map as raw depth (PCSS) in every pass, the
+    // depth pre-pass included: a comparison sampler there is undefined behaviour.
+    glBindSampler(6, shadowRawSampler_);
     // Free GPU data nothing drew since the previous render() (removed models).
     ++frameNumber_;
     releaseUnusedPaint();
