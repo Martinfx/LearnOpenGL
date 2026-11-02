@@ -692,71 +692,85 @@ model "Verge birch_a" "../models/zone/gen/birch_a.glb" -30 0 33
   id 49ab9b656f009b6a
   transform 0 210 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Verge birch_c" "../models/zone/gen/birch_c.glb" -24 0 41
   parent "Greenery"
   id 32218d41e446f925
   transform 0 168 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Verge birch_b" "../models/zone/gen/birch_b.glb" -55 0 30
   parent "Greenery"
   id cdd7362b181164a4
   transform 0 325 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Verge bush_b" "../models/zone/gen/bush_b.glb" -62 0 38
   parent "Greenery"
   id 2d00aab22145e084
   transform 0 314 0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 50
+  sway 0.7
 model "Verge birch_a 2" "../models/zone/gen/birch_a.glb" -70 0 31
   parent "Greenery"
   id 3dc9b21702ed060f
   transform 0 250 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Verge birch_c 2" "../models/zone/gen/birch_c.glb" -85 0 36
   parent "Greenery"
   id 04ffab7313268aa8
   transform 0 175 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Verge birch_b 2" "../models/zone/gen/birch_b.glb" 5 0 40
   parent "Greenery"
   id 74b9c435d65f94b6
   transform 0 265 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Verge bush_a" "../models/zone/gen/bush_a.glb" 12 0 31
   parent "Greenery"
   id 66d8781151a19c56
   transform 0 276 0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 50
+  sway 0.7
 model "Verge birch_a 3" "../models/zone/gen/birch_a.glb" 48 0 33
   parent "Greenery"
   id b80ebb0348581c4e
   transform 0 24 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Verge birch_c 3" "../models/zone/gen/birch_c.glb" 52 0 42
   parent "Greenery"
   id dbf9a0568b0707ec
   transform 0 236 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Verge bush_b 2" "../models/zone/gen/bush_b.glb" -3 0 30
   parent "Greenery"
   id 2143803295eb74b9
   transform 0 201 0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 50
+  sway 0.7
 model "Verge bush_a 2" "../models/zone/gen/bush_a.glb" 40 0 29
   parent "Greenery"
   id fb51a138f721222d
   transform 0 320 0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 50
+  sway 0.7
 model "Verge dead_tree_a" "../models/zone/gen/dead_tree_a.glb" -92 0 30
   parent "Greenery"
   id fc707bc08084c0a3
   transform 0 164 0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 50
+  sway 0.12
 model "Verge dead_tree_b" "../models/zone/gen/dead_tree_b.glb" 20 0 44
   parent "Greenery"
   id f568b865338acbc8
   transform 0 340 0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 50
+  sway 0.12
 model "Verge grass" "../models/zone/gen/grass_patch.glb" -36 0 36
   parent "Greenery"
   id adf6d5a7aa582eb0
@@ -1076,66 +1090,79 @@ model "Old town tree" "../models/zone/gen/birch_b.glb" 76 0 30
   id 0acee790d673baa1
   transform 0 292 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Old town tree 2" "../models/zone/gen/birch_a.glb" 84 0 31
   parent "Greenery"
   id 8bd7dbdad950da55
   transform 0 228 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Old town tree 3" "../models/zone/gen/birch_c.glb" 92 0 30.5
   parent "Greenery"
   id edcb56e37ade51e0
   transform 0 164 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Old town tree 4" "../models/zone/gen/birch_b.glb" 100 0 31
   parent "Greenery"
   id f76c4521175c7d86
   transform 0 100 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Old town tree 5" "../models/zone/gen/birch_a.glb" 108 0 30
   parent "Greenery"
   id 9b5343645db57960
   transform 0 36 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Old town tree 6" "../models/zone/gen/birch_b.glb" 115 0 32
   parent "Greenery"
   id a6a5a3f4429a4618
   transform 0 295 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Old town tree 7" "../models/zone/gen/birch_c.glb" 80 0 40
   parent "Greenery"
   id 677ea720ee081681
   transform 0 80 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Old town tree 8" "../models/zone/gen/birch_c.glb" 98 0 42
   parent "Greenery"
   id 6a23a5c30a1c1878
   transform 0 26 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Old town tree 9" "../models/zone/gen/birch_b.glb" 112 0 41
   parent "Greenery"
   id 73c296cca95ea6fe
   transform 0 184 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Old town tree 10" "../models/zone/gen/birch_b.glb" 82 0 -3
   parent "Greenery"
   id 9f986ecf315eaf8e
   transform 0 154 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Old town tree 11" "../models/zone/gen/birch_c.glb" 110 0 -4
   parent "Greenery"
   id b6e05fb4e3098d78
   transform 0 110 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Old town tree 12" "../models/zone/gen/birch_b.glb" 118 0 10
   parent "Greenery"
   id 3f9adda85dc513a0
   transform 0 46 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Old town tree 13" "../models/zone/gen/birch_b.glb" 118 0 20
   parent "Greenery"
   id f49c668ca48475c5
   transform 0 46 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Cooling tower" "../models/zone/gen/cooling_tower.glb" 70 0 -330
   parent "Backdrop"
   id 8b65dfdda5a6dc48
@@ -1163,181 +1190,217 @@ model "Street tree" "../models/zone/gen/birch_a.glb" -91.83 0 26.03
   id 4696e1c8d68872fc
   transform 0 99 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Street tree 2" "../models/zone/gen/birch_c.glb" -74.33 0 26.74
   parent "Greenery"
   id 280e7e0526f1c260
   transform 0 243.6 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Street tree 3" "../models/zone/gen/birch_dead.glb" -64.53 0 26.09
   parent "Greenery"
   id 53df23ff5b96e424
   transform 0 151.9 0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 50
+  sway 0.15
 model "Street tree 4" "../models/zone/gen/birch_b.glb" -56.56 0 26.22
   parent "Greenery"
   id 2304e25e692b19a1
   transform 0 181.9 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Street tree 5" "../models/zone/gen/birch_c.glb" -47.57 0 26.2
   parent "Greenery"
   id ea692e1e3fea0379
   transform 0 234 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Street tree 6" "../models/zone/gen/birch_a.glb" -37.95 0 26.22
   parent "Greenery"
   id 85f3898df3a3279e
   transform 0 212.1 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Street tree 7" "../models/zone/gen/birch_b.glb" -28.63 0 26.01
   parent "Greenery"
   id 38908e8669c6f81c
   transform 0 290.1 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Street tree 8" "../models/zone/gen/birch_c.glb" -19.76 0 26.34
   parent "Greenery"
   id e56a0b77e320d50e
   transform 0 56 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Street tree 9" "../models/zone/gen/birch_a.glb" -10.45 0 26.34
   parent "Greenery"
   id 54b0de86032066cf
   transform 0 33.4 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Street tree 10" "../models/zone/gen/birch_dead.glb" -2.48 0 26.85
   parent "Greenery"
   id 67b13ddc4986d353
   transform 0 217.3 0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 50
+  sway 0.15
 model "Street tree 11" "../models/zone/gen/birch_c.glb" 7.37 0 26.73
   parent "Greenery"
   id a9fd975155aea8cc
   transform 0 193 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Street tree 12" "../models/zone/gen/birch_a.glb" 16.57 0 26.38
   parent "Greenery"
   id f619b84bc472c27f
   transform 0 198.7 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Street tree 13" "../models/zone/gen/birch_b.glb" 25.4 0 26.62
   parent "Greenery"
   id b48d5b32129c02ab
   transform 0 310.2 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Street tree 14" "../models/zone/gen/birch_c.glb" 34.09 0 26.7
   parent "Greenery"
   id b2ba8fa423693e10
   transform 0 16.5 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Street tree 15" "../models/zone/gen/birch_a.glb" 42.67 0 26.29
   parent "Greenery"
   id 38d7ebbcf841a948
   transform 0 28.7 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Street tree 16" "../models/zone/gen/birch_b.glb" 51.68 0 26.1
   parent "Greenery"
   id 6fbe07f0bcacfdad
   transform 0 100.1 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Street tree 17" "../models/zone/gen/birch_dead.glb" 61.16 0 26.36
   parent "Greenery"
   id e9e3f2e5fcca31bd
   transform 0 133.3 0 1
   lod "../models/zone/gen/birch_dead_lod1.glb" 50
+  sway 0.15
 model "Garden birch_b" "../models/zone/gen/birch_b.glb" -50 0 3
   parent "Greenery"
   id ea48dfe86bc8f00a
   transform 0 75.4 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Garden birch_a" "../models/zone/gen/birch_a.glb" -30 0 3.2
   parent "Greenery"
   id 6be02c8d494091f4
   transform 0 96.1 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Garden bush_b" "../models/zone/gen/bush_b.glb" -23.5 0 2.5
   parent "Greenery"
   id e783313c590c5fc3
   transform 0 337.2 0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 50
+  sway 0.7
 model "Garden bush_a" "../models/zone/gen/bush_a.glb" -52.5 0 2.2
   parent "Greenery"
   id b74cf8793e48137e
   transform 0 233.3 0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 50
+  sway 0.7
 model "Garden bush_a 2" "../models/zone/gen/bush_a.glb" -40 0 2.6
   parent "Greenery"
   id 4a479e69ad52866b
   transform 0 219.3 0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 50
+  sway 0.7
 model "Garden birch_c" "../models/zone/gen/birch_c.glb" -26 0 -12.8
   parent "Greenery"
   id 158384a3eecc7de1
   transform 0 61.6 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Garden birch_a 2" "../models/zone/gen/birch_a.glb" -54.5 0 -12.5
   parent "Greenery"
   id 5b55b8049f0e1fff
   transform 0 262.5 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Courtyard birch_c" "../models/zone/gen/birch_c.glb" -22 0 -20
   parent "Greenery"
   id 31bf21f12c5c672f
   transform 0 58.8 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Courtyard birch_a" "../models/zone/gen/birch_a.glb" -19 0 -8
   parent "Greenery"
   id df940f734b567b4b
   transform 0 136.6 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Courtyard birch_b" "../models/zone/gen/birch_b.glb" -14 0 -24
   parent "Greenery"
   id 7cccbef8f3aec6bf
   transform 0 356.2 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Courtyard bush_b" "../models/zone/gen/bush_b.glb" -21 0 0
   parent "Greenery"
   id e55b23f5488a348a
   transform 0 230.4 0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 50
+  sway 0.7
 model "Courtyard birch_a 2" "../models/zone/gen/birch_a.glb" 2 0 -22
   parent "Greenery"
   id 66cb827aa70fbc32
   transform 0 200.5 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Courtyard birch_b 2" "../models/zone/gen/birch_b.glb" 6 0 -14
   parent "Greenery"
   id ef4f8f9046aced74
   transform 0 246.5 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Courtyard birch_c 2" "../models/zone/gen/birch_c.glb" 9 0 -4
   parent "Greenery"
   id e700efb70bba87be
   transform 0 303.4 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Courtyard bush_a" "../models/zone/gen/bush_a.glb" 0 0 -7
   parent "Greenery"
   id e4c976571aa1c263
   transform 0 279.4 0 1
   lod "../models/zone/gen/bush_a_lod1.glb" 50
+  sway 0.7
 model "Courtyard dead_tree_b" "../models/zone/gen/dead_tree_b.glb" -13 0 -3
   parent "Greenery"
   id cf842618ec8d4285
   transform 0 82.5 0 1
   lod "../models/zone/gen/dead_tree_b_lod1.glb" 50
+  sway 0.12
 model "Courtyard bush_b 2" "../models/zone/gen/bush_b.glb" 3 0 -28
   parent "Greenery"
   id f6f56d0cfee103fc
   transform 0 11.6 0 1
   lod "../models/zone/gen/bush_b_lod1.glb" 50
+  sway 0.7
 model "Courtyard birch_a 3" "../models/zone/gen/birch_a.glb" -18 0 -46
   parent "Greenery"
   id e7f7c4c6777c988d
   transform 0 113.6 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Courtyard birch_c 3" "../models/zone/gen/birch_c.glb" 12 0 -50
   parent "Greenery"
   id 5ef6858c8b950543
   transform 0 96.4 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Courtyard grass" "../models/zone/gen/grass_patch.glb" -16 0 -15
   parent "Greenery"
   id 1aff5548b46dac23
@@ -1543,836 +1606,1003 @@ model "Sapling" "../models/zone/gen/birch_b.glb" -75 0 64.7
   id 5817d3a06a079f9f
   transform 0 53.7 0 0.55
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Sapling 2" "../models/zone/gen/birch_b.glb" -12 0 64.8
   parent "Greenery"
   id 93cba73ee61dd9fc
   transform 0 13 0 0.55
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Sapling 3" "../models/zone/gen/birch_b.glb" 8 0 70.5
   parent "Greenery"
   id f8661b4472aebb70
   transform 0 132.9 0 0.55
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Sapling 4" "../models/zone/gen/birch_b.glb" 74 0 71
   parent "Greenery"
   id 61524dcace173d21
   transform 0 198.9 0 0.55
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Sapling 5" "../models/zone/gen/birch_b.glb" -90 0 72
   parent "Greenery"
   id e9309da0a5968157
   transform 0 154.7 0 0.55
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Sapling 6" "../models/zone/gen/birch_b.glb" 95 0 54
   parent "Greenery"
   id af6115ff6fa8421c
   transform 0 15.1 0 0.55
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Sapling 7" "../models/zone/gen/birch_b.glb" -20 0 53
   parent "Greenery"
   id ae636ec56e2050a8
   transform 0 131.3 0 0.55
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree" "../models/zone/gen/birch_a.glb" -136.81 0 -72.32
   parent "Greenery"
   id 5bcf81adf16d8f4c
   transform 0 89.8 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 2" "../models/zone/gen/birch_a.glb" -141.17 0 -81.52
   parent "Greenery"
   id f7455f00058cf4c2
   transform 0 314.9 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 3" "../models/zone/gen/birch_b.glb" -136.59 0 81.89
   parent "Greenery"
   id ac609d7dea817828
   transform 0 58.5 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 4" "../models/zone/gen/birch_b.glb" -136.95 0 92.2
   parent "Greenery"
   id 54d2ae6c81ab8105
   transform 0 265.2 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 5" "../models/zone/gen/birch_c.glb" -126.74 0 -70.71
   parent "Greenery"
   id 41e29c168ea312fc
   transform 0 241.2 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 6" "../models/zone/gen/birch_b.glb" -130.87 0 -79.7
   parent "Greenery"
   id 214e03d9d74dc8a1
   transform 0 38.9 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 7" "../models/zone/gen/birch_a.glb" -126.13 0 81.78
   parent "Greenery"
   id 2eef43d55709e875
   transform 0 294 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 8" "../models/zone/gen/dead_tree_a.glb" -130.2 0 98.56
   parent "Greenery"
   id 5d8f5bc3ddb2a563
   transform 0 313.7 0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 50
+  sway 0.12
 model "Edge tree 9" "../models/zone/gen/birch_b.glb" -121.81 0 -72.45
   parent "Greenery"
   id d4a0053100ae4368
   transform 0 118.2 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 10" "../models/zone/gen/birch_a.glb" -114.26 0 -83.77
   parent "Greenery"
   id 581c9bd265210b33
   transform 0 230.9 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 11" "../models/zone/gen/dead_tree_a.glb" -116.56 0 86.75
   parent "Greenery"
   id 9fdeb35a613acd13
   transform 0 119.2 0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 50
+  sway 0.12
 model "Edge tree 12" "../models/zone/gen/birch_a.glb" -121.08 0 99.76
   parent "Greenery"
   id c4ea6fe1ee2e5260
   transform 0 64.3 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 13" "../models/zone/gen/birch_c.glb" -110.69 0 -69.23
   parent "Greenery"
   id 93b1d4543017c6ed
   transform 0 124.4 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 14" "../models/zone/gen/birch_c.glb" -107.51 0 -78.13
   parent "Greenery"
   id eed9e77ffdb985d4
   transform 0 41.6 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 15" "../models/zone/gen/birch_b.glb" -108.96 0 85.67
   parent "Greenery"
   id cde25972c9893c03
   transform 0 0.6 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 16" "../models/zone/gen/birch_b.glb" -108.09 0 92.56
   parent "Greenery"
   id 7d9ab4e827f709c5
   transform 0 239.1 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 17" "../models/zone/gen/birch_c.glb" -95.01 0 -68.69
   parent "Greenery"
   id b123abb4213673df
   transform 0 44.9 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 18" "../models/zone/gen/birch_c.glb" -95.94 0 -80.66
   parent "Greenery"
   id c62958cc6c756598
   transform 0 117.4 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 19" "../models/zone/gen/birch_c.glb" -95.56 0 81.53
   parent "Greenery"
   id 4ef340eb764c949a
   transform 0 239.4 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 20" "../models/zone/gen/dead_tree_a.glb" -94.58 0 99.22
   parent "Greenery"
   id cb680ebdd329c2ad
   transform 0 221.6 0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 50
+  sway 0.12
 model "Edge tree 21" "../models/zone/gen/birch_c.glb" -85.75 0 -67.33
   parent "Greenery"
   id 78bf75d3a204211e
   transform 0 109.4 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 22" "../models/zone/gen/birch_b.glb" -85.56 0 -81.36
   parent "Greenery"
   id ec18ba56eb27bc26
   transform 0 235.7 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 23" "../models/zone/gen/dead_tree_a.glb" -85.47 0 85.41
   parent "Greenery"
   id 21486b92b8884286
   transform 0 184 0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 50
+  sway 0.12
 model "Edge tree 24" "../models/zone/gen/birch_b.glb" -83.73 0 94.27
   parent "Greenery"
   id c63808cdfff219b4
   transform 0 239 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 25" "../models/zone/gen/birch_c.glb" -77.25 0 -66.38
   parent "Greenery"
   id 6d21bf35dc0416cd
   transform 0 84.6 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 26" "../models/zone/gen/birch_c.glb" -76.2 0 -84.41
   parent "Greenery"
   id 63ce1a0ca166ca2c
   transform 0 8.8 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 27" "../models/zone/gen/birch_b.glb" -70.13 0 84.89
   parent "Greenery"
   id 572877e8bc370eb4
   transform 0 276.7 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 28" "../models/zone/gen/dead_tree_a.glb" -74.68 0 97.04
   parent "Greenery"
   id f4fe4cd09110b0bb
   transform 0 70 0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 50
+  sway 0.12
 model "Edge tree 29" "../models/zone/gen/dead_tree_a.glb" -63.04 0 -72.05
   parent "Greenery"
   id b47fb629d10132e4
   transform 0 236.2 0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 50
+  sway 0.12
 model "Edge tree 30" "../models/zone/gen/birch_a.glb" -59.86 0 -79.12
   parent "Greenery"
   id d30f0f0c2d07e730
   transform 0 318.8 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 31" "../models/zone/gen/dead_tree_a.glb" -65.25 0 86.43
   parent "Greenery"
   id b785f8cbc1f2673b
   transform 0 250.5 0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 50
+  sway 0.12
 model "Edge tree 32" "../models/zone/gen/dead_tree_a.glb" -66.6 0 93.99
   parent "Greenery"
   id 8836223be344eccc
   transform 0 305.4 0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 50
+  sway 0.12
 model "Edge tree 33" "../models/zone/gen/dead_tree_a.glb" -54.93 0 -70.28
   parent "Greenery"
   id 0d22807ca7058585
   transform 0 191.2 0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 50
+  sway 0.12
 model "Edge tree 34" "../models/zone/gen/birch_c.glb" -48.4 0 -78.87
   parent "Greenery"
   id 07ff6c8699aa9b89
   transform 0 220.6 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 35" "../models/zone/gen/dead_tree_a.glb" -49.36 0 84.38
   parent "Greenery"
   id 21a64c37eb3f5655
   transform 0 323 0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 50
+  sway 0.12
 model "Edge tree 36" "../models/zone/gen/dead_tree_a.glb" -52.4 0 98.01
   parent "Greenery"
   id f251dc82778d4a2f
   transform 0 302.4 0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 50
+  sway 0.12
 model "Edge tree 37" "../models/zone/gen/birch_c.glb" -38.87 0 -69.83
   parent "Greenery"
   id f57fbc9cb80536ff
   transform 0 225.6 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 38" "../models/zone/gen/birch_c.glb" -41.48 0 -80.29
   parent "Greenery"
   id 3134c21bfd7acefc
   transform 0 84.4 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 39" "../models/zone/gen/birch_c.glb" -42.44 0 84.32
   parent "Greenery"
   id f0cf7bd01e51d812
   transform 0 49.8 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 40" "../models/zone/gen/birch_b.glb" -41.94 0 93.22
   parent "Greenery"
   id 753d0e351b85c091
   transform 0 77 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 41" "../models/zone/gen/dead_tree_a.glb" -30.74 0 -69.66
   parent "Greenery"
   id 4d907e7cc6464427
   transform 0 149.7 0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 50
+  sway 0.12
 model "Edge tree 42" "../models/zone/gen/birch_b.glb" -27.34 0 -82.88
   parent "Greenery"
   id 6350933e420f2e37
   transform 0 277.1 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 43" "../models/zone/gen/birch_a.glb" -27.15 0 86.12
   parent "Greenery"
   id 9cbce43ea4227840
   transform 0 136.9 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 44" "../models/zone/gen/birch_a.glb" -26.46 0 94.39
   parent "Greenery"
   id c0e6a1efd2e42b80
   transform 0 140.4 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 45" "../models/zone/gen/dead_tree_a.glb" -18.69 0 -68.12
   parent "Greenery"
   id 300634ba0ff5bb83
   transform 0 288 0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 50
+  sway 0.12
 model "Edge tree 46" "../models/zone/gen/birch_b.glb" -19.09 0 -83.82
   parent "Greenery"
   id 6720c6b9779e1e50
   transform 0 174.8 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 47" "../models/zone/gen/dead_tree_a.glb" -20.31 0 85.43
   parent "Greenery"
   id 5a33656a0e01ecca
   transform 0 145.6 0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 50
+  sway 0.12
 model "Edge tree 48" "../models/zone/gen/birch_b.glb" -16.28 0 99.36
   parent "Greenery"
   id 97d0278a0610f612
   transform 0 353.1 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 49" "../models/zone/gen/birch_a.glb" -4.74 0 -69.26
   parent "Greenery"
   id 557ebdbd17aa3f3e
   transform 0 238.7 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 50" "../models/zone/gen/birch_a.glb" -6.86 0 -84.91
   parent "Greenery"
   id b017837119544c8f
   transform 0 166.2 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 51" "../models/zone/gen/birch_a.glb" -9.92 0 82.62
   parent "Greenery"
   id 59b453c5cd79c1f3
   transform 0 163.7 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 52" "../models/zone/gen/birch_c.glb" -5.91 0 95.03
   parent "Greenery"
   id ff65c9778f3b5c5d
   transform 0 270.7 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 53" "../models/zone/gen/dead_tree_a.glb" 1.02 0 -73.34
   parent "Greenery"
   id 3f7aa9759623c5e9
   transform 0 7 0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 50
+  sway 0.12
 model "Edge tree 54" "../models/zone/gen/birch_a.glb" 7 0 -83.2
   parent "Greenery"
   id 80278aa357eaaf5c
   transform 0 234.1 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 55" "../models/zone/gen/birch_a.glb" 5.03 0 87.6
   parent "Greenery"
   id 64f8d604b8b46fec
   transform 0 71.8 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 56" "../models/zone/gen/birch_a.glb" 3.97 0 93.91
   parent "Greenery"
   id d1e0e52b535cb517
   transform 0 170.5 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 57" "../models/zone/gen/birch_a.glb" 14.51 0 -72.26
   parent "Greenery"
   id 190d2f31f37483bc
   transform 0 251.8 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 58" "../models/zone/gen/birch_c.glb" 11.34 0 -81.14
   parent "Greenery"
   id 84b28a50514d1fdd
   transform 0 269.3 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 59" "../models/zone/gen/birch_a.glb" 16.22 0 81.31
   parent "Greenery"
   id 492166607644ea17
   transform 0 112 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 60" "../models/zone/gen/birch_a.glb" 17.43 0 96.61
   parent "Greenery"
   id 4fa8ef2d7aa80ae4
   transform 0 326.9 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 61" "../models/zone/gen/dead_tree_a.glb" 24.17 0 -68.28
   parent "Greenery"
   id b91072630e5d1788
   transform 0 27.4 0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 50
+  sway 0.12
 model "Edge tree 62" "../models/zone/gen/birch_b.glb" 21.82 0 -79.82
   parent "Greenery"
   id 09bc2c751c058a22
   transform 0 306.1 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 63" "../models/zone/gen/birch_a.glb" 27.37 0 84.53
   parent "Greenery"
   id 38d9addbeb0e50d8
   transform 0 14.8 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 64" "../models/zone/gen/dead_tree_a.glb" 26.29 0 92.55
   parent "Greenery"
   id daffcc0eb81733fc
   transform 0 233.1 0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 50
+  sway 0.12
 model "Edge tree 65" "../models/zone/gen/birch_a.glb" 38.8 0 -67.42
   parent "Greenery"
   id 42843f769aa01a70
   transform 0 38 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 66" "../models/zone/gen/birch_c.glb" 37.08 0 -79.37
   parent "Greenery"
   id f04ce9698914d81d
   transform 0 254.6 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 67" "../models/zone/gen/dead_tree_a.glb" 33.41 0 84.17
   parent "Greenery"
   id e4177472a65c9e38
   transform 0 234.2 0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 50
+  sway 0.12
 model "Edge tree 68" "../models/zone/gen/dead_tree_a.glb" 35.72 0 98.61
   parent "Greenery"
   id 5566e872f762586a
   transform 0 213.3 0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 50
+  sway 0.12
 model "Edge tree 69" "../models/zone/gen/birch_c.glb" 49.81 0 -67.35
   parent "Greenery"
   id d18297880a5fb1f5
   transform 0 31.2 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 70" "../models/zone/gen/dead_tree_a.glb" 44.95 0 -82.28
   parent "Greenery"
   id 3e4e473062781177
   transform 0 219.7 0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 50
+  sway 0.12
 model "Edge tree 71" "../models/zone/gen/dead_tree_a.glb" 45.69 0 83.95
   parent "Greenery"
   id 404a17421c7f295a
   transform 0 117 0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 50
+  sway 0.12
 model "Edge tree 72" "../models/zone/gen/dead_tree_a.glb" 44.7 0 98.38
   parent "Greenery"
   id 0b2336612c695aa2
   transform 0 122.5 0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 50
+  sway 0.12
 model "Edge tree 73" "../models/zone/gen/birch_c.glb" 58.45 0 -69.87
   parent "Greenery"
   id 67d8d45060cdd9cd
   transform 0 68.8 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 74" "../models/zone/gen/birch_b.glb" 59.76 0 -82.09
   parent "Greenery"
   id ed5fd709cf81f422
   transform 0 272.9 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 75" "../models/zone/gen/dead_tree_a.glb" 59.17 0 83.93
   parent "Greenery"
   id ef4864b9e5d6b63f
   transform 0 285.5 0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 50
+  sway 0.12
 model "Edge tree 76" "../models/zone/gen/birch_a.glb" 56.35 0 95.24
   parent "Greenery"
   id ac3bebd936ec976e
   transform 0 87.6 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 77" "../models/zone/gen/birch_c.glb" 68.79 0 -69.75
   parent "Greenery"
   id ff733fe0bfe9ebd8
   transform 0 153.2 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 78" "../models/zone/gen/birch_c.glb" 67.81 0 -82.37
   parent "Greenery"
   id 634f404dd456d6c5
   transform 0 110.4 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 79" "../models/zone/gen/birch_b.glb" 65.97 0 81.54
   parent "Greenery"
   id 7e72c361772c04ba
   transform 0 43 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 80" "../models/zone/gen/birch_b.glb" 66.53 0 97.91
   parent "Greenery"
   id 3fb53177c487c19f
   transform 0 99.5 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 81" "../models/zone/gen/birch_c.glb" 83.84 0 -67.34
   parent "Greenery"
   id e9eba48974eb0bb1
   transform 0 106.6 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 82" "../models/zone/gen/birch_c.glb" 77.44 0 -85.89
   parent "Greenery"
   id 7154fb9a2b6820a8
   transform 0 192.3 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 83" "../models/zone/gen/birch_c.glb" 76.36 0 80.44
   parent "Greenery"
   id 522aed31b56ed09b
   transform 0 105.2 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 84" "../models/zone/gen/birch_b.glb" 81.1 0 98.02
   parent "Greenery"
   id 93286c93a87be65a
   transform 0 36.9 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 85" "../models/zone/gen/birch_a.glb" 91.59 0 -70.24
   parent "Greenery"
   id 595b33ad50acdb05
   transform 0 158.6 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 86" "../models/zone/gen/birch_b.glb" 94.72 0 -83.98
   parent "Greenery"
   id 359c0e49e6ce74f6
   transform 0 310.2 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 87" "../models/zone/gen/birch_a.glb" 93.58 0 83.21
   parent "Greenery"
   id b4e9afcc23691ddb
   transform 0 26.7 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 88" "../models/zone/gen/birch_a.glb" 88.21 0 98.49
   parent "Greenery"
   id 794c1fc6e0f86b95
   transform 0 341.7 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 89" "../models/zone/gen/birch_a.glb" 105.95 0 -73.05
   parent "Greenery"
   id d26631bddc0f757b
   transform 0 275.2 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 90" "../models/zone/gen/birch_b.glb" 104.21 0 -82.96
   parent "Greenery"
   id 089dc8622a2add76
   transform 0 327.1 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 91" "../models/zone/gen/birch_c.glb" 104.88 0 87.92
   parent "Greenery"
   id 7286a6249cfd9dd6
   transform 0 109.9 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 92" "../models/zone/gen/birch_a.glb" 102.88 0 97.92
   parent "Greenery"
   id 7ad660fee0720289
   transform 0 341.1 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 93" "../models/zone/gen/birch_b.glb" 114 0 -71.88
   parent "Greenery"
   id 12a170a0cd95cb49
   transform 0 29.2 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 94" "../models/zone/gen/birch_b.glb" 110.39 0 -85.4
   parent "Greenery"
   id bb35e26fd7ec6979
   transform 0 1 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 95" "../models/zone/gen/dead_tree_a.glb" 114.51 0 83.76
   parent "Greenery"
   id ff64b19668665a4a
   transform 0 11.8 0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 50
+  sway 0.12
 model "Edge tree 96" "../models/zone/gen/birch_c.glb" 114.66 0 97.62
   parent "Greenery"
   id 313b334a21485a7e
   transform 0 163.5 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 97" "../models/zone/gen/birch_b.glb" 127.39 0 -67.7
   parent "Greenery"
   id 12e5b1bf60d27ea2
   transform 0 225 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 98" "../models/zone/gen/birch_b.glb" 123.4 0 -81.64
   parent "Greenery"
   id d1fcdc9c1c20db37
   transform 0 233.1 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 99" "../models/zone/gen/birch_c.glb" 126.61 0 80.57
   parent "Greenery"
   id 0b989756fcf8d287
   transform 0 59.7 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 100" "../models/zone/gen/birch_c.glb" 124.76 0 98.59
   parent "Greenery"
   id 3f59b855de7ecde8
   transform 0 331.6 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 101" "../models/zone/gen/dead_tree_a.glb" 131.99 0 -68.49
   parent "Greenery"
   id 20cf6a5ee2574dc7
   transform 0 251.9 0 1
   lod "../models/zone/gen/dead_tree_a_lod1.glb" 50
+  sway 0.12
 model "Edge tree 102" "../models/zone/gen/birch_c.glb" 135 0 -82.05
   parent "Greenery"
   id 4011decda998ceb3
   transform 0 29 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 103" "../models/zone/gen/birch_a.glb" 138.12 0 85.88
   parent "Greenery"
   id 453470c98344bbb1
   transform 0 217.3 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 104" "../models/zone/gen/birch_a.glb" 131.73 0 99.7
   parent "Greenery"
   id 571417f9fc6d265f
   transform 0 300.9 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 105" "../models/zone/gen/birch_c.glb" -109.48 0 -62.88
   parent "Greenery"
   id 49fc8c71ec22779a
   transform 0 275.3 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 106" "../models/zone/gen/birch_b.glb" -121.54 0 -58.42
   parent "Greenery"
   id 1e34856ecef96567
   transform 0 63.1 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 107" "../models/zone/gen/birch_c.glb" 124.91 0 -57.5
   parent "Greenery"
   id ecd9ed4361ec3741
   transform 0 65.3 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 108" "../models/zone/gen/birch_c.glb" 135.62 0 -58.11
   parent "Greenery"
   id f246ad4e7c44cd27
   transform 0 348.9 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 109" "../models/zone/gen/birch_b.glb" -110.91 0 -51
   parent "Greenery"
   id bdb3e2061855a045
   transform 0 241.2 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 110" "../models/zone/gen/birch_a.glb" -123.02 0 -48.84
   parent "Greenery"
   id 9c83353c3e65a1ea
   transform 0 103.8 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 111" "../models/zone/gen/birch_b.glb" 125.88 0 -49.7
   parent "Greenery"
   id 66b6e61f47e06cf7
   transform 0 163.7 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 112" "../models/zone/gen/birch_b.glb" 134.51 0 -52.3
   parent "Greenery"
   id a37c1eddc2f6f2f6
   transform 0 278.1 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 113" "../models/zone/gen/birch_c.glb" -108.05 0 -42.99
   parent "Greenery"
   id bd17a6c2483fa953
   transform 0 313 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 114" "../models/zone/gen/birch_b.glb" -122.52 0 -41.87
   parent "Greenery"
   id 4b49fec9a89bacd1
   transform 0 130.2 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 115" "../models/zone/gen/birch_b.glb" 124.75 0 -38.44
   parent "Greenery"
   id e622b22e12ee212c
   transform 0 73.3 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 116" "../models/zone/gen/birch_c.glb" 133.79 0 -41.27
   parent "Greenery"
   id c1f57a83017a4ac2
   transform 0 317.1 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 117" "../models/zone/gen/birch_b.glb" -112.27 0 -27.16
   parent "Greenery"
   id 71c01532e9299a03
   transform 0 219.2 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 118" "../models/zone/gen/birch_a.glb" -120.74 0 -31.14
   parent "Greenery"
   id f34bf439fa5adefa
   transform 0 4.9 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 119" "../models/zone/gen/birch_b.glb" 121.56 0 -27.05
   parent "Greenery"
   id d8dd3b033ea74259
   transform 0 328.7 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 120" "../models/zone/gen/birch_b.glb" 138.68 0 -29.11
   parent "Greenery"
   id 240c7264049189c7
   transform 0 55.4 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 121" "../models/zone/gen/birch_c.glb" -111.25 0 -18.77
   parent "Greenery"
   id 00fb48c948e23042
   transform 0 149.6 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 122" "../models/zone/gen/birch_b.glb" -119.12 0 -21.54
   parent "Greenery"
   id f4c84f7200445716
   transform 0 198.5 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 123" "../models/zone/gen/birch_b.glb" 122.14 0 -19.4
   parent "Greenery"
   id 95ed134e63008ca0
   transform 0 268.7 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 124" "../models/zone/gen/birch_a.glb" 138.18 0 -21.34
   parent "Greenery"
   id ff0c0fbbe8e31178
   transform 0 284.4 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 125" "../models/zone/gen/birch_b.glb" -110.96 0 -8.27
   parent "Greenery"
   id 1baee8e799c18b50
   transform 0 96.2 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 126" "../models/zone/gen/birch_a.glb" -123.3 0 -11.21
   parent "Greenery"
   id 26a5ced311094770
   transform 0 211.3 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 127" "../models/zone/gen/birch_c.glb" 123.94 0 -12.11
   parent "Greenery"
   id 0da9813516785b74
   transform 0 193.9 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 128" "../models/zone/gen/birch_b.glb" 134.99 0 -8.42
   parent "Greenery"
   id cc1a97cc2eee5f63
   transform 0 135.8 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 129" "../models/zone/gen/birch_b.glb" -107.78 0 2.88
   parent "Greenery"
   id 59e10cfdd8abc4de
   transform 0 86 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 130" "../models/zone/gen/birch_b.glb" -123.6 0 1.65
   parent "Greenery"
   id ddeb5e91fb2b8f69
   transform 0 15.7 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 131" "../models/zone/gen/birch_c.glb" 123.84 0 2.48
   parent "Greenery"
   id 3c8af4653f5fc5a7
   transform 0 137.2 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 132" "../models/zone/gen/birch_c.glb" 137.75 0 0.91
   parent "Greenery"
   id 52cf7f317138f356
   transform 0 54.8 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 133" "../models/zone/gen/birch_a.glb" -112.24 0 12.79
   parent "Greenery"
   id f21c4ab9eeab23ad
   transform 0 119.5 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 134" "../models/zone/gen/birch_a.glb" -119.75 0 9.64
   parent "Greenery"
   id f92f245a76c28d6c
   transform 0 189.3 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 135" "../models/zone/gen/birch_b.glb" 121.09 0 7.86
   parent "Greenery"
   id a5fb88dab0ab4d86
   transform 0 313.5 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 136" "../models/zone/gen/birch_a.glb" 133.45 0 11.69
   parent "Greenery"
   id 840348c9e11a43dd
   transform 0 95.4 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 137" "../models/zone/gen/birch_c.glb" -108.84 0 20.9
   parent "Greenery"
   id a6388ee4d7daa85e
   transform 0 306.6 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 138" "../models/zone/gen/birch_c.glb" -119.84 0 19.28
   parent "Greenery"
   id 4125f9189fc1a437
   transform 0 114 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 139" "../models/zone/gen/birch_c.glb" 126.32 0 19.93
   parent "Greenery"
   id c6cf1c515b0c8c07
   transform 0 194.8 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 140" "../models/zone/gen/birch_c.glb" 133.41 0 20.79
   parent "Greenery"
   id fdef91877b0b8ea2
   transform 0 331.5 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 141" "../models/zone/gen/birch_a.glb" -108.52 0 29.6
   parent "Greenery"
   id 96dbb0f045c165d0
   transform 0 35.4 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 142" "../models/zone/gen/birch_c.glb" -120.78 0 27.6
   parent "Greenery"
   id 19e69a95a82aa515
   transform 0 59.9 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 143" "../models/zone/gen/birch_b.glb" 126.42 0 27.28
   parent "Greenery"
   id 3cf1994208f8b343
   transform 0 286.6 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 144" "../models/zone/gen/birch_b.glb" 135.15 0 29.58
   parent "Greenery"
   id 4f934f9f57fa32f4
   transform 0 87.9 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 145" "../models/zone/gen/birch_b.glb" -109.6 0 41.76
   parent "Greenery"
   id 155cc8df45b59194
   transform 0 61.2 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 146" "../models/zone/gen/birch_a.glb" -121.34 0 39.3
   parent "Greenery"
   id bc971302cbd92530
   transform 0 245.9 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 147" "../models/zone/gen/birch_b.glb" 126.48 0 37.86
   parent "Greenery"
   id 46a85ddb1af19404
   transform 0 166 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 148" "../models/zone/gen/birch_b.glb" 135.76 0 41
   parent "Greenery"
   id f2c421239eb516ab
   transform 0 323.6 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 149" "../models/zone/gen/birch_b.glb" -107.59 0 51.07
   parent "Greenery"
   id e210350835821944
   transform 0 56.9 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 150" "../models/zone/gen/birch_b.glb" -119.33 0 52.93
   parent "Greenery"
   id 379f76c6710130d1
   transform 0 107.7 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 151" "../models/zone/gen/birch_b.glb" 125.14 0 49.74
   parent "Greenery"
   id bfb54899f15d0965
   transform 0 108.8 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 152" "../models/zone/gen/birch_b.glb" 138.12 0 47.64
   parent "Greenery"
   id 14c9aa9690fc6bc0
   transform 0 137.3 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 153" "../models/zone/gen/birch_b.glb" -109.55 0 62.96
   parent "Greenery"
   id 5809433eb080ca73
   transform 0 106.3 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 154" "../models/zone/gen/birch_c.glb" -122.63 0 57.05
   parent "Greenery"
   id 70bbca157930d2cb
   transform 0 311.4 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 155" "../models/zone/gen/birch_c.glb" 126.84 0 62.46
   parent "Greenery"
   id e3818fe89dc8acf7
   transform 0 268.3 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 156" "../models/zone/gen/birch_b.glb" 137.65 0 58.38
   parent "Greenery"
   id b82ce78b752cfad6
   transform 0 288.7 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Edge tree 157" "../models/zone/gen/birch_a.glb" -109.18 0 70.73
   parent "Greenery"
   id 5f08ac71672d7313
   transform 0 244 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 158" "../models/zone/gen/birch_c.glb" -120.4 0 71.09
   parent "Greenery"
   id 9b341a009f42e3f2
   transform 0 49.2 0 1
   lod "../models/zone/gen/birch_c_lod1.glb" 50
+  sway 0.3
 model "Edge tree 159" "../models/zone/gen/birch_a.glb" 126.42 0 70.88
   parent "Greenery"
   id 163ed70a53e914c1
   transform 0 111.2 0 1
   lod "../models/zone/gen/birch_a_lod1.glb" 50
+  sway 0.3
 model "Edge tree 160" "../models/zone/gen/birch_b.glb" 133.2 0 69.19
   parent "Greenery"
   id 38238e6a23d29eb2
   transform 0 47.3 0 1
   lod "../models/zone/gen/birch_b_lod1.glb" 50
+  sway 0.3
 model "Puddle" "../models/zone/gen/puddle_b.glb" -66 0.02 15.5
   parent "Street"
   id c99ef89e87337e65

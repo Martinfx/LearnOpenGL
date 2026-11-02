@@ -588,4 +588,24 @@ bool readScriptProperties(const std::filesystem::path& script, std::vector<Scrip
 // Object index (see Scene::objectCount) of the first box or model hit by the ray, or -1.
 int pickObject(const Scene& scene, glm::vec3 origin, glm::vec3 dir);
 
+// Plants collide by their wind sway (Model::sway, FoliageType::sway; trees ~0.3, bushes and
+// grass 0.6..1): rigid objects (0) with their mesh, trees only with an upright trunk (the
+// player walks under branches, bullets fly through leaves), bushes and grass not at all.
+// Physics and the navmesh use the same rule, so NPCs walk through bushes too. Painted foliage
+// collides only when its type has collision on (trees): with the mesh when rigid, else the trunk.
+enum class PlantCollider { Mesh, Trunk, None };
+constexpr float kBushSway = 0.6f;
+inline PlantCollider plantCollider(float sway)
+{
+    return sway <= 0.0f ? PlantCollider::Mesh : sway < kBushSway ? PlantCollider::Trunk : PlantCollider::None;
+}
+// The trunk of a tree model in its own space: centre (x, z) of the stem where the mesh crosses 0.5-1.4 m,
+// its radius (0.06..0.6 m) and height (the model's, up to 8 m). Cached per mesh.
+struct Trunk {
+    glm::vec2 center{0.0f};
+    float radius = 0.15f;
+    float height = 3.0f;
+};
+Trunk trunkOf(const Model& model);
+
 } // namespace engine

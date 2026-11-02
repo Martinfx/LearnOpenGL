@@ -131,6 +131,8 @@ bool loadDemo(Demo& demo, const std::filesystem::path& file, std::string* error)
     }
     if (!get(in, count) || count > 100000000u)
         return fail("damaged frames");
+    if (count == 0)
+        return fail("no frames"); // nothing to replay (a replay steps through frames[next])
     d.frames.resize(count);
     for (DemoFrame& f : d.frames) {
         std::uint8_t keys = 0;

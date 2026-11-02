@@ -213,6 +213,14 @@ void PhysicsWorld::Impl::addStatic(const JPH::ShapeRefC& shape, glm::vec3 positi
         staticBodies.push_back(id);
 }
 
+void PhysicsWorld::Impl::addTrunk(const Model& m, glm::vec3 position, glm::quat rotation, float scale, const std::string& name)
+{
+    const Trunk t = trunkOf(m);
+    const float half = t.height * 0.5f * scale, radius = t.radius * scale;
+    const glm::vec3 center = position + rotation * (glm::vec3(t.center.x, t.height * 0.5f, t.center.y) * scale);
+    addStatic(JPH::CylinderShapeSettings(half, radius, std::min(JPH::cDefaultConvexRadius, radius * 0.5f)), center, name, rotation, "wood");
+}
+
 void PhysicsWorld::Impl::addStaticModel(const Model& m, std::size_t index)
 {
     removeStaticModel(index);
@@ -221,6 +229,13 @@ void PhysicsWorld::Impl::addStaticModel(const Model& m, std::size_t index)
     const glm::quat rotation = glm::normalize(glm::quat_cast(rotScale / scale));
     const std::string name = m.name + " " + m.sourcePath.stem().string();
     const std::size_t first = staticBodies.size();
+    if (const PlantCollider plant = plantCollider(m.sway); plant != PlantCollider::Mesh) { // trees: trunk, bushes: nothing
+        if (plant == PlantCollider::Trunk && !m.parts.empty())
+            addTrunk(m, m.position, rotation, scale, name);
+        if (staticBodies.size() > first)
+            modelBodies[index].assign(staticBodies.begin() + static_cast<std::ptrdiff_t>(first), staticBodies.end());
+        return;
+    }
     for (const MeshPart& part : m.parts) {
         std::string surface = surfaceOf(m.materialFor(part), part.materialName);
         if (surface.empty())
@@ -363,8 +378,17 @@ void PhysicsWorld::setLevel(const Scene& scene)
                 continue;
             glm::quat rotation = glm::angleAxis(f.tiltX, glm::vec3(1, 0, 0)) * glm::angleAxis(f.tiltZ, glm::vec3(0, 0, 1)) *
                                  glm::angleAxis(glm::radians(f.yawDegrees), glm::vec3(0, 1, 0)); // as drawn
-            addModelParts(*type.model, type.modelPath.stem().string(), f.position, glm::normalize(rotation), f.scale > 0.0f ? f.scale : 1.0f,
-                          "wood");
+            const float scale = f.scale > 0.0f ? f.scale : 1.0f;
+            // Foliage collides only when its type says so (trees): rigid types with the mesh, the rest with the trunk.
+            switch (type.sway > 0.0f ? PlantCollider::Trunk : PlantCollider::Mesh) {
+            case PlantCollider::Mesh:
+                addModelParts(*type.model, type.modelPath.stem().string(), f.position, glm::normalize(rotation), scale, "wood");
+                break;
+            case PlantCollider::Trunk:
+                impl_->addTrunk(*type.model, f.position, glm::normalize(rotation), scale, type.modelPath.stem().string());
+                break;
+            case PlantCollider::None: break;
+            }
         }
     }
     impl_->system.OptimizeBroadPhase();

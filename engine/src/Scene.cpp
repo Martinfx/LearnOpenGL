@@ -1510,4 +1510,78 @@ std::filesystem::path findLodFile(const std::filesystem::path& file)
     return fileExists(lod) ? lod : std::filesystem::path();
 }
 
+Trunk trunkOf(const Model& model)
+{
+    static std::mutex mutex;
+    static std::map<std::uint64_t, Trunk> cache;
+    const std::uint64_t key = model.parts.empty() ? 0 : model.parts.front().id;
+    {
+        std::lock_guard lock(mutex);
+        if (const auto it = cache.find(key); key && it != cache.end())
+            return it->second;
+    }
+    Trunk t;
+    float top = 0.0f;
+    // Cross-sections of the mesh at 0.5, 1 and 1.4 m: where its edges pass these heights.
+    std::vector<glm::vec2> cut;
+    for (const MeshPart& part : model.parts) {
+        for (const glm::vec3& p : part.positions)
+            top = std::max(top, p.y);
+        for (std::size_t i = 0; i + 2 < part.indices.size(); i += 3)
+            for (int e = 0; e < 3; ++e) {
+                const std::uint32_t ia = part.indices[i + static_cast<std::size_t>(e)], ib = part.indices[i + static_cast<std::size_t>((e + 1) % 3)];
+                if (ia >= part.positions.size() || ib >= part.positions.size())
+                    continue;
+                const glm::vec3 a = part.positions[ia], b = part.positions[ib];
+                for (const float h : {0.5f, 1.0f, 1.4f})
+                    if ((a.y - h) * (b.y - h) < 0.0f) {
+                        const glm::vec3 q = a + (b - a) * ((h - a.y) / (b.y - a.y));
+                        cut.emplace_back(q.x, q.z);
+                    }
+            }
+    }
+    if (!cut.empty()) {
+        auto percentile = [](std::vector<float> v, float f) {
+            const std::size_t k = std::min(v.size() - 1, static_cast<std::size_t>(static_cast<float>(v.size()) * f));
+            std::nth_element(v.begin(), v.begin() + static_cast<std::ptrdiff_t>(k), v.end());
+            return v[k];
+        };
+        std::vector<float> xs, zs;
+        for (const glm::vec2& p : cut) {
+            xs.push_back(p.x);
+            zs.push_back(p.y);
+        }
+        t.center = {percentile(xs, 0.5f), percentile(zs, 0.5f)};
+        auto distances = [&] {
+            std::vector<float> d;
+            d.reserve(cut.size());
+            for (const glm::vec2& p : cut)
+                d.push_back(glm::distance(p, t.center));
+            return d;
+        };
+        // The stem is the closest ring of points; branches and leaves lie farther out.
+        const float window = std::max(0.06f, percentile(distances(), 0.25f)) * 1.5f;
+        glm::vec2 sum(0.0f);
+        int n = 0;
+        for (const glm::vec2& p : cut)
+            if (glm::distance(p, t.center) <= window) {
+                sum += p;
+                ++n;
+            }
+        if (n > 0)
+            t.center = sum / static_cast<float>(n);
+        std::vector<float> near;
+        for (const float d : distances())
+            if (d <= window)
+                near.push_back(d);
+        t.radius = std::clamp(near.empty() ? 0.15f : percentile(near, 0.6f), 0.06f, 0.6f);
+    }
+    if (top > 0.0f)
+        t.height = std::clamp(top, 1.0f, 8.0f);
+    std::lock_guard lock(mutex);
+    if (key)
+        cache[key] = t;
+    return t;
+}
+
 } // namespace engine

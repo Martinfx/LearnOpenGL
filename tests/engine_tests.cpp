@@ -395,6 +395,14 @@ void testDemo()
         cut << "FPSDEMO1";
     }
     check(!engine::loadDemo(back, file, &error) && !error.empty(), "a damaged demo is an error");
+    {
+        engine::Demo empty;
+        empty.level = "levels/test.level";
+        check(engine::saveDemo(empty, file), "an empty demo saves");
+        error.clear();
+        check(!engine::loadDemo(back, file, &error) && error.find("no frames") != std::string::npos,
+              "a demo without frames is refused (nothing to replay)");
+    }
     std::filesystem::remove(file);
 
     // Seeds: the same game seed gives the same streams, streams differ from each other.
@@ -2221,6 +2229,7 @@ void testTerrain()
         engine::FoliageType tree;
         tree.model = std::make_shared<engine::Model>(ramp);
         tree.collision = true;
+        tree.sway = 0.0f; // rigid (a ramp): collides with its mesh
         auto withTree = std::make_shared<engine::Terrain>(*t);
         withTree->foliageTypes = {tree};
         withTree->foliage = {engine::FoliageInstance{{20.0f, 0.0f, 20.0f}, 0.0f, 1.0f, 0.0f, 0.0f, 0}};
@@ -3765,6 +3774,52 @@ void testProbes()
     check(engine::probeFile("a/b.level") == std::filesystem::path("a/b.probes"), "probe file sits next to the level");
 }
 
+void testPlantCollision()
+{
+    // A "tree": a 16-sided stem (r = 0.1 m) 5 m high at the origin and a branch at 1 m reaching out to x = 3.
+    auto addBox = [](engine::MeshPart& part, glm::vec3 lo, glm::vec3 hi) {
+        const auto base = static_cast<std::uint32_t>(part.positions.size());
+        for (int i = 0; i < 8; ++i)
+            part.positions.push_back({i & 1 ? hi.x : lo.x, i & 2 ? hi.y : lo.y, i & 4 ? hi.z : lo.z});
+        const std::uint32_t f[36] = {0, 1, 3, 0, 3, 2, 4, 6, 7, 4, 7, 5, 0, 4, 5, 0, 5, 1, 2, 3, 7, 2, 7, 6, 0, 2, 6, 0, 6, 4, 1, 5, 7, 1, 7, 3};
+        for (std::uint32_t i : f)
+            part.indices.push_back(base + i);
+    };
+    engine::Model tree;
+    engine::MeshPart part;
+    part.id = 0x7ee5eed;
+    for (int i = 0; i < 16; ++i) { // stem: bottom and top ring
+        const float a = static_cast<float>(i) / 16.0f * 6.2831853f;
+        part.positions.push_back({0.1f * std::cos(a), 0.0f, 0.1f * std::sin(a)});
+        part.positions.push_back({0.1f * std::cos(a), 5.0f, 0.1f * std::sin(a)});
+    }
+    for (std::uint32_t i = 0; i < 16; ++i) {
+        const std::uint32_t a = i * 2, b = ((i + 1) % 16) * 2;
+        part.indices.insert(part.indices.end(), {a, a + 1, b, b, a + 1, b + 1});
+    }
+    addBox(part, {0.1f, 0.9f, -0.05f}, {3.0f, 1.1f, 0.05f});
+    tree.parts.push_back(part);
+    tree.name = "Tree";
+    const engine::Trunk t = engine::trunkOf(tree);
+    check(glm::length(t.center) < 0.05f && t.radius > 0.05f && t.radius < 0.3f && std::abs(t.height - 5.0f) < 0.01f,
+          "the trunk is found under the branch: r=" + std::to_string(t.radius));
+    check(engine::plantCollider(0.0f) == engine::PlantCollider::Mesh && engine::plantCollider(0.3f) == engine::PlantCollider::Trunk &&
+              engine::plantCollider(0.7f) == engine::PlantCollider::None,
+          "rigid: mesh, trees: trunk, bushes: nothing");
+    auto hits = [&](float sway, glm::vec3 from) {
+        engine::Scene scene = flatFloor();
+        engine::Model m = tree;
+        m.sway = sway;
+        scene.models.push_back(m);
+        engine::PhysicsWorld world;
+        world.setLevel(scene);
+        return world.raycast(from, {0.0f, 0.0f, 1.0f}, 10.0f).has_value();
+    };
+    check(hits(0.0f, {2.0f, 1.0f, -5.0f}), "a rigid model blocks with its whole mesh (the branch)");
+    check(!hits(0.3f, {2.0f, 1.0f, -5.0f}) && hits(0.3f, {0.0f, 1.0f, -5.0f}), "a tree blocks with its trunk only");
+    check(!hits(0.7f, {0.0f, 1.0f, -5.0f}), "a bush does not block at all");
+}
+
 void testVertexPaint()
 {
     // A 2 x 2 m quad of 3 x 3 vertices facing +Y, placed at (10, 0, 0).
@@ -4335,6 +4390,7 @@ int main()
         {"testSurfaces", testSurfaces},
         {"testAnomalies", testAnomalies},
         {"testPhysicsProps", testPhysicsProps},
+        {"testPlantCollision", testPlantCollision},
         {"testEntityIO", testEntityIO},
         {"testTimeOfDay", testTimeOfDay},
         {"testAssetPalette", testAssetPalette},

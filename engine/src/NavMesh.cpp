@@ -186,9 +186,28 @@ std::vector<GeoInstance> gatherInstances(const Scene& scene)
             out.push_back(g);
         }
     };
+    // Trees block with their trunk only, bushes not at all (as in PhysicsWorld).
+    auto addTrunk = [&](const Model& m, const glm::mat4& transform) {
+        const Trunk t = trunkOf(m);
+        GeoInstance g;
+        g.transform = glm::scale(glm::translate(transform, glm::vec3(t.center.x, t.height * 0.5f, t.center.y)),
+                                 glm::vec3(t.radius * 2.0f, t.height, t.radius * 2.0f)); // unit cube -> trunk box
+        boundsOf(g.transform, glm::vec3(-0.5f), glm::vec3(0.5f), g.min, g.max);
+        out.push_back(g);
+    };
+    auto addPlant = [&](const Model& m, float sway, const glm::mat4& transform) {
+        switch (plantCollider(sway)) {
+        case PlantCollider::Mesh: addModel(m, transform); break;
+        case PlantCollider::Trunk:
+            if (!m.parts.empty())
+                addTrunk(m, transform);
+            break;
+        case PlantCollider::None: break;
+        }
+    };
     for (const Model& m : scene.models)
         if (m.collision)
-            addModel(m, m.transform());
+            addPlant(m, m.sway, m.transform());
     if (scene.terrain && scene.terrain->valid()) {
         const Terrain& t = *scene.terrain;
         for (const FoliageInstance& f : t.foliage) {
@@ -203,7 +222,7 @@ std::vector<GeoInstance> gatherInstances(const Scene& scene)
             m = glm::rotate(m, f.tiltZ, glm::vec3(0, 0, 1));
             m = glm::rotate(m, glm::radians(f.yawDegrees), glm::vec3(0, 1, 0));
             m = glm::scale(m, glm::vec3(f.scale > 0.0f ? f.scale : 1.0f));
-            addModel(*type.model, m);
+            addPlant(*type.model, std::min(type.sway, kBushSway * 0.5f), m); // collision on: never passable (PhysicsWorld)
         }
     }
     return out;

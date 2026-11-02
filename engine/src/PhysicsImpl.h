@@ -65,6 +65,8 @@ struct PhysicsWorld::Impl {
     // Static collision of one level model (a Jolt mesh per part, shared by copies); bodies kept per model
     // so world streaming can remove them again.
     void addStaticModel(const Model& m, std::size_t index);
+    // A tree's trunk (engine::trunkOf) as an upright cylinder, placed like the model.
+    void addTrunk(const Model& m, glm::vec3 position, glm::quat rotation, float scale, const std::string& name);
     void removeStaticModel(std::size_t index);
     std::unordered_map<std::size_t, std::vector<JPH::BodyID>> modelBodies;
     std::unordered_map<std::uint64_t, JPH::ShapeRefC> meshShapes; // MeshPart::id -> shape

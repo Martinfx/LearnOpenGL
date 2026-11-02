@@ -1986,6 +1986,8 @@ int main(int argc, char** argv)
                                        : " | desync at frame " + std::to_string(demo.desyncFrame) + " (" +
                                              std::to_string(demo.desyncDistance) + " m off)";
         LOG_INFO("demo", "%s: %s", demo.file.filename().string().c_str(), result.c_str());
+        const glm::vec3 end = player.feet();
+        LOG_INFO("demo", "replay ended with the player at %.2f %.2f %.2f", end.x, end.y, end.z);
         int width = 0, height = 0;
         glfwGetFramebufferSize(window, &width, &height);
         std::printf("@bench %s | quality %s | %dx%d\n", result.c_str(),
