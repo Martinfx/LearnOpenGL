@@ -6,6 +6,9 @@ layout(location = 3) in uvec4 aJoints;
 layout(location = 4) in vec4 aWeights;
 layout(location = 5) in uint aInstance; // base instance + instance number (mesh pool VAO)
 #include "common.glsl"
+// The depth pre-pass and the lit pass compile this separately: identical depth in both, so the
+// lit pass can test against the pre-pass depth without writing it.
+invariant gl_Position;
 layout(std140, binding = 0) uniform Joints { mat4 uJoints[256]; };
 uniform float uSway; // bending in the wind: 0 rigid, ~0.3 trees, 1 grass
 uniform bool uSkinned;

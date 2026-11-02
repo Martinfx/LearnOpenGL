@@ -481,6 +481,7 @@ RenderQuality RenderQuality::preset(int level)
         q.shadowResolution = 4096; q.shadowCascades = 3; q.textureStreamDistance = 80.0f;
         q.lodScale = 1.5f; q.detailDensityFar = 0.35f; q.detailShadowDistance = 25.0f;
         q.localShadowLayers = 18;
+        q.ssaoFullRes = true;
         break;
     default: break; // high
     }
@@ -901,15 +902,19 @@ void Renderer::ensureTargets(int width, int height)
         glTextureParameteri(tex, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTextureParameteri(tex, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     }
-    ssaoTex_ = makeTexture2D(GL_RG16F, width, height, GL_NEAREST); // visibility, linear depth
+    // Ambient occlusion and bounce light at half resolution (Ultra: full); the lit pass reads
+    // them filtered by screen position.
+    ssaoWidth_ = quality_.ssaoFullRes ? width : (width + 1) / 2;
+    ssaoHeight_ = quality_.ssaoFullRes ? height : (height + 1) / 2;
+    ssaoTex_ = makeTexture2D(GL_RG16F, ssaoWidth_, ssaoHeight_, GL_NEAREST); // visibility, linear depth
     ssaoFbo_ = makeFbo(ssaoTex_);
-    ssgiTex_ = makeTexture2D(GL_R11F_G11F_B10F, width, height, GL_NEAREST); // bounce light (SSGI)
+    ssgiTex_ = makeTexture2D(GL_R11F_G11F_B10F, ssaoWidth_, ssaoHeight_, GL_NEAREST); // bounce light (SSGI)
     glNamedFramebufferTexture(ssaoFbo_, GL_COLOR_ATTACHMENT1, ssgiTex_, 0);
     {
         const GLenum buffers[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
         glNamedFramebufferDrawBuffers(ssaoFbo_, 2, buffers);
     }
-    ssaoBlurTex_ = makeTexture2D(GL_RGBA16F, width, height, GL_LINEAR); // rgb bounce light, a visibility
+    ssaoBlurTex_ = makeTexture2D(GL_RGBA16F, ssaoWidth_, ssaoHeight_, GL_LINEAR); // rgb bounce light, a visibility
     ssaoBlurFbo_ = makeFbo(ssaoBlurTex_);
     ldrTex_ = makeTexture2D(GL_RGBA8, width, height, GL_LINEAR);
     ldrFbo_ = makeFbo(ldrTex_);
@@ -2247,7 +2252,7 @@ void Renderer::renderSsao()
     glDisable(GL_DEPTH_TEST);
     glBindVertexArray(emptyVao_);
     glBindFramebuffer(GL_FRAMEBUFFER, ssaoFbo_);
-    glViewport(0, 0, width_, height_);
+    glViewport(0, 0, ssaoWidth_, ssaoHeight_);
     glUseProgram(programs_.ssao.id);
     glUniform1f(programs_.ssao.loc("uRadius"), env_ ? env_->ssaoRadius : 0.6f);
     glUniformMatrix4fv(programs_.ssao.loc("uInvProj"), 1, GL_FALSE, glm::value_ptr(glm::inverse(projection_)));
@@ -2265,6 +2270,7 @@ void Renderer::renderSsao()
     glBindTextureUnit(1, ssgiTex_);
     glDrawArrays(GL_TRIANGLES, 0, 3);
     glBindTextureUnit(1, 0);
+    glViewport(0, 0, width_, height_);
 }
 
 namespace {
@@ -2459,6 +2465,10 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     glViewport(0, 0, width_, height_);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
+    // The pre-pass already wrote the final depth: without depth writes the GPU keeps testing
+    // early even for shaders that discard (grass, leaves), so hidden layers of foliage are no
+    // longer fully lit before being thrown away.
+    glDepthMask(GL_FALSE);
     const float clear[4] = {0.0f, 0.0f, 0.0f, 1.0f};
     glClearBufferfv(GL_COLOR, 0, clear);
     useMeshProgram(programs_.mesh);
@@ -4439,6 +4449,8 @@ void Renderer::updateStreaming()
 
 void Renderer::setQuality(const RenderQuality& quality)
 {
+    if (quality.ssaoFullRes != quality_.ssaoFullRes)
+        width_ = 0; // the ambient occlusion targets change size: ensureTargets() makes them again
     quality_ = quality;
     for (auto& [id, g] : textures_) {
         if (g.file.empty())
