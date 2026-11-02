@@ -49,8 +49,8 @@ constexpr int kStreetClassCount = 4;
 const char* streetClassName(StreetClass c);          // "none", "alley", "side", "main"
 StreetClass streetClassFromName(const std::string& name);
 
-enum class BlockKind { Perimeter, Microdistrict, Towers, Garages, Park, Ruin, Wasteland, Empty, Houses };
-constexpr int kBlockKindCount = 9;
+enum class BlockKind { Perimeter, Microdistrict, Towers, Garages, Park, Ruin, Wasteland, Empty, Houses, Square };
+constexpr int kBlockKindCount = 10;
 const char* blockKindName(BlockKind k);              // "perimeter", ... (file keys)
 const char* blockKindLabel(BlockKind k);             // "Perimeter block (tenements)", ... (editor)
 BlockKind blockKindFromName(const std::string& name);
@@ -234,6 +234,7 @@ struct Settings {
     float ruinShare = 0.15f;         // blocks left in ruins
     float parkShare = 0.08f;         // blocks left green
     float houseShare = 0.3f;         // outer blocks of private houses (cut into parcels by recursive subdivision)
+    bool square = true;              // the block nearest the centre is the town square (the goal of the map)
     std::filesystem::path cache;     // generated houses (.glb), absolute; empty = next to the .city
 
     int blockCount() const { return static_cast<int>(rows.size() * columns.size()); }
@@ -308,8 +309,15 @@ struct GroundPlan {
     std::vector<KitFoliage> foliage; // densities already scaled
 };
 
+// A named place shown on the PDA map (map_marker entity), e.g. the town square.
+struct PlanMarker {
+    std::string name, group;
+    glm::vec3 position{0.0f};
+};
+
 struct Plan {
     std::vector<PlanGroup> groups;   // parents before children
+    std::vector<PlanMarker> markers;
     std::vector<Placement> placements;
     std::vector<GeneratedBuilding> generated;
     std::filesystem::path textures;  // texture sets of the generated houses
@@ -337,6 +345,7 @@ struct CityObjects {
     std::vector<Group> groups;
     std::vector<Box> boxes;
     std::vector<Model> models;
+    std::vector<Entity> entities;     // map markers
     std::shared_ptr<Terrain> terrain; // the ground, when the plan has one
     std::vector<std::string> errors;
     int housesWritten = 0;            // generated houses written now (others were cached)

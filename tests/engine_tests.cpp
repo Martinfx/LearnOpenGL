@@ -4655,6 +4655,13 @@ void testCityOrganic()
                                                                                     std::to_string(a.stats.parcels) + " parcels");
     check(!a.generated.empty() && a.stats.generated == static_cast<int>(a.generated.size()), "grammar houses");
     check(a.ground.enabled && !a.ground.shapes.empty() && !a.ground.foliage.empty(), "terrain ground with foliage");
+    // The town square: a memorial and its map marker.
+    bool memorial = false;
+    for (const auto& p : a.placements)
+        memorial = memorial || p.path.filename() == "square_monument.glb";
+    check(memorial && a.markers.size() == 1, "town square with a memorial and a map marker");
+    const CityObjects objects = buildObjects(Plan{.groups = a.groups, .markers = a.markers});
+    check(objects.entities.size() == 1 && objects.entities[0].type == "map_marker", "square marker becomes a map_marker entity");
     bool same = a.placements.size() == b.placements.size() && a.generated.size() == b.generated.size();
     for (std::size_t i = 0; same && i < a.placements.size(); ++i)
         same = a.placements[i].position == b.placements[i].position && a.placements[i].path == b.placements[i].path;

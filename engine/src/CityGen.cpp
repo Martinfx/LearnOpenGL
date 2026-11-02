@@ -25,9 +25,9 @@ namespace fs = std::filesystem;
 // ============================================================================ names
 namespace {
 constexpr const char* kStreetNames[] = {"none", "alley", "side", "main"};
-constexpr const char* kBlockNames[] = {"perimeter", "microdistrict", "towers", "garages", "park", "ruin", "wasteland", "empty", "houses"};
+constexpr const char* kBlockNames[] = {"perimeter", "microdistrict", "towers", "garages", "park", "ruin", "wasteland", "empty", "houses", "square"};
 constexpr const char* kBlockLabels[] = {"Perimeter block (tenements)", "Micro-district (panel slabs)", "Towers",
-                                        "Garages", "Park", "Ruin", "Waste lot", "Empty lot", "Private houses"};
+                                        "Garages", "Park", "Ruin", "Waste lot", "Empty lot", "Private houses", "Town square"};
 constexpr const char* kGroundNames[] = {"yard", "lot", "road", "pavement", "meadow", "path", "built", "verge"};
 } // namespace
 
@@ -54,7 +54,8 @@ const char* groundName(int g) { return g >= 0 && g < kGroundCount ? kGroundNames
 const std::vector<std::string>& propRoles()
 {
     static const std::vector<std::string> roles{"kerb",  "lamp",  "lamp_leaning", "cable", "car",    "tree",  "sapling",
-                                                "snag",  "bush",  "grass",        "weed",  "nettle", "rubble", "slab",  "meadow"};
+                                                "snag",  "bush",  "grass",        "weed",  "nettle", "rubble", "slab",  "meadow",
+                                                "monument", "fountain", "bench", "kiosk"};
     return roles;
 }
 
@@ -468,6 +469,7 @@ const ScalarField kScalars[] = {
     {"ruin_share", &Settings::ruinShare},
     {"park_share", &Settings::parkShare},
     {"house_share", &Settings::houseShare},
+    {"square", nullptr, nullptr, &Settings::square},
 };
 } // namespace
 
@@ -1995,6 +1997,7 @@ private:
         }
         case BlockKind::Empty:
         case BlockKind::Houses: // organic layout only
+        case BlockKind::Square:
             break;
         }
     }
@@ -2069,6 +2072,20 @@ public:
             }
         exitRoads();
 
+        squareBlock_ = -1;
+        if (s_.square) { // the roomy block nearest the centre
+            float best = 1e9f;
+            for (int i = 0; i < static_cast<int>(net_.blocks.size()); ++i) {
+                const Poly& o = net_.blocks[static_cast<std::size_t>(i)].outline;
+                const float A = signedArea(o), d = glm::length(centroid(o));
+                glm::vec2 c, ax, hs;
+                minAreaRect(o, c, ax, hs);
+                if (A > 3000.0f && A < 30000.0f && std::min(hs.x, hs.y) > 25.0f && d < best) {
+                    best = d;
+                    squareBlock_ = i;
+                }
+            }
+        }
         for (int i = 0; i < static_cast<int>(net_.blocks.size()); ++i)
             layBlock(i);
         for (const auto& r : net_.roads)
@@ -2163,6 +2180,10 @@ private:
         b_.group(L.group, s_.group);
         b_.polyLines(L.poly, kColLot);
         zoning(L, A);
+        if (index == squareBlock_) {
+            L.kind = BlockKind::Square;
+            L.ruined = false;
+        }
         const bool bare = L.kind == BlockKind::Ruin || L.kind == BlockKind::Garages || L.kind == BlockKind::Wasteland;
         b_.ground(bare ? Ground::Lot : Ground::Yard, L.poly, s_.kerbHeight);
         L.yard = L.poly;
@@ -2173,6 +2194,7 @@ private:
         case BlockKind::Towers: towers(L, rng); break;
         case BlockKind::Garages: garages(L, rng); break;
         case BlockKind::Houses: houses(L, rng); break;
+        case BlockKind::Square: square(L, rng); break;
         default: break;
         }
         lots_.push_back(std::move(L));
@@ -2898,6 +2920,105 @@ private:
         }
     }
 
+    // ------------------------------------------------------------ town square
+    // Paved in slabs (grass in the joints), a memorial in the middle on the long axis,
+    // a dry fountain in front of it when there is room, a ring of lime trees along the
+    // edge, benches facing the memorial, lamps at the corners, a kiosk by the street.
+    void square(Lot& L, Rng& rng)
+    {
+        const float kh = s_.kerbHeight;
+        b_.ground(Ground::Pavement, L.poly, kh);
+        glm::vec2 c, ax, hs;
+        minAreaRect(L.poly, c, ax, hs);
+        const glm::vec2 ay(-ax.y, ax.x);
+        // Slab joints: a grid of verge strokes every 6 m along the square's axes.
+        const float R = std::max(hs.x, hs.y) + 2.0f;
+        for (float t = -R; t <= R; t += 6.0f) {
+            b_.ground(Ground::Verge, {c + ax * t - ay * R, c + ax * t + ay * R}, kh, 0.12f, false);
+            b_.ground(Ground::Verge, {c + ay * t - ax * R, c + ay * t + ax * R}, kh, 0.12f, false);
+        }
+        auto place = [&](const char* role, const char* name, glm::vec2 at, float yaw, float solid) -> bool {
+            const KitProp* k = b_.anyProp(role, rng);
+            if (!k)
+                return false;
+            b_.prop(*k, name, L.group, at, kh, yaw, rng, {0.0f, 0.0f}, 1.0f);
+            if (solid > 0.0f)
+                b_.addSolid({at.x - solid, at.y - solid, at.x + solid, at.y + solid});
+            return true;
+        };
+        // Memorial in the middle, a fountain on the long axis in front of it.
+        const bool fountainRoom = hs.x > 38.0f;
+        const glm::vec2 mon = fountainRoom ? c - ax * (hs.x * 0.3f) : c;
+        place("monument", "War memorial", mon, b_.yawZ(ax), 4.0f);
+        b_.line(mon - ax * 3.6f, mon + ax * 3.6f, kColHouse, 0.5f);
+        if (fountainRoom) {
+            const glm::vec2 f = c + ax * (hs.x * 0.3f);
+            place("fountain", "Fountain", f, rng.range(0.0f, 360.0f), 5.2f);
+            b_.line(f - ax * 5.0f, f + ax * 5.0f, kColHouse, 0.5f);
+        }
+        b_.addClear(mon + ax * 3.8f, c + ax * hs.x, 1.5f);
+        // Benches on a ring around the memorial, facing it.
+        const float br = 9.5f;
+        for (int i = 0; i < 8; ++i) {
+            const float a = (static_cast<float>(i) + 0.5f) * kPi / 4.0f;
+            const glm::vec2 d = ax * std::cos(a) + ay * std::sin(a);
+            const glm::vec2 p = mon + d * br;
+            if (!pointInPolygon(L.poly, p) || distanceToPolygonEdge(L.poly, p) < 3.0f || !rng.chance(0.8f))
+                continue;
+            place("bench", "Bench", p, b_.yawZ(-d), 0.0f); // front (+Z of the model) toward the memorial
+        }
+        // Lime trees along the edge, 3.5 m in, every 8 m; a few gone, seedlings around the rest.
+        Poly ring;
+        if (insetPolygon(L.poly, std::vector<float>(L.poly.size(), 3.5f), ring)) {
+            for (std::size_t i = 0; i < ring.size(); ++i) {
+                const glm::vec2 a = ring[i], b = ring[(i + 1) % ring.size()];
+                const float len = glm::length(b - a);
+                const int n = std::max(1, static_cast<int>(len / 8.0f));
+                for (int k = 0; k <= n; ++k) {
+                    if (k == n && i + 1 < ring.size())
+                        continue;
+                    const glm::vec2 p = a + (b - a) * (static_cast<float>(k) / static_cast<float>(n));
+                    if (!b_.free(p, 1.0f))
+                        continue;
+                    if (rng.chance(s_.treeSurvival)) {
+                        if (const KitProp* t = b_.anyProp("tree", rng)) {
+                            b_.tree(*t, L.group, p, rng, kh);
+                            b_.seedlings(p, static_cast<int>(s_.overgrowth * 2.0f + rng.uniform()), L.group, rng, kh);
+                        }
+                    } else if (const KitProp* t = b_.anyProp(rng.chance(0.5f) ? "snag" : "sapling", rng)) {
+                        b_.prop(*t, "Dead tree", L.group, p, kh, rng.range(0.0f, 360.0f), rng);
+                    }
+                }
+            }
+            // Lamps at the corners of the ring.
+            for (const glm::vec2 q : ring)
+                if (const KitProp* k = b_.anyProp(rng.chance(0.2f) ? "lamp_leaning" : "lamp", rng))
+                    b_.prop(*k, "Lamp", L.group, q + glm::normalize(c - q) * 1.5f, kh, b_.yawZ(c - q) - 90.0f, rng, {0.0f, 0.0f}, 1.0f);
+        }
+        // Kiosk by the busiest street edge, its front toward the square.
+        int best = 0;
+        for (std::size_t i = 0; i < L.poly.size(); ++i)
+            if (L.cls[i] > L.cls[static_cast<std::size_t>(best)] ||
+                (L.cls[i] == L.cls[static_cast<std::size_t>(best)] &&
+                 glm::length(L.poly[(i + 1) % L.poly.size()] - L.poly[i]) > glm::length(L.poly[(static_cast<std::size_t>(best) + 1) % L.poly.size()] - L.poly[static_cast<std::size_t>(best)])))
+                best = static_cast<int>(i);
+        {
+            const glm::vec2 a = L.poly[static_cast<std::size_t>(best)], b = L.poly[(static_cast<std::size_t>(best) + 1) % L.poly.size()];
+            const glm::vec2 t = glm::normalize(b - a), n(-t.y, t.x); // inward for a counter-clockwise outline
+            const glm::vec2 p = a + (b - a) * rng.range(0.25f, 0.4f) + n * 6.5f;
+            if (b_.free(p, 2.0f))
+                place("kiosk", "Kiosk", p, b_.yawZ(n), 2.2f);
+        }
+        // A few cracks have let saplings through; rubble from the memorial's cornice.
+        for (int i = 0; i < static_cast<int>(signedArea(L.poly) / 900.0f * s_.overgrowth); ++i) {
+            glm::vec2 p;
+            if (randomIn(L.poly, rng, p))
+                b_.plant({"sapling", "bush"}, "Seedling", L.group, p, rng, kh, 1.0f);
+        }
+        b_.plan.markers.push_back({"Площадь", L.group, b_.world(c, kh)});
+        L.yard.clear(); // nothing else grows here (green() keeps off)
+    }
+
     void green(Lot& L)
     {
         Rng rng(mix(L.seed, 4242));
@@ -2989,6 +3110,7 @@ private:
     Builder b_;
     RoadNetwork net_;
     float half_ = 300.0f;
+    int squareBlock_ = -1;
     std::vector<Lot> lots_;
     std::string streetGroup_, kerbs_, lamps_, streetTrees_, wrecks_, streetPlants_;
 };
@@ -3247,6 +3369,16 @@ CityObjects buildObjects(const Plan& plan, const std::function<void(float)>& pro
     };
     for (const auto& g : plan.groups)
         out.groups.push_back({g.name, g.parent, {}});
+    for (const auto& m : plan.markers) {
+        Entity e;
+        e.name = m.name;
+        e.parent = m.group;
+        e.type = "map_marker";
+        e.position = m.position;
+        e.size = {1.0f, 1.0f, 1.0f};
+        e.color = {0.85f, 0.3f, 0.2f};
+        out.entities.push_back(std::move(e));
+    }
     // Every model and LOD file once, in parallel.
     std::vector<fs::path> files;
     std::map<fs::path, std::size_t> index;
@@ -3394,6 +3526,11 @@ int replaceCity(Scene& scene, const std::string& root, CityObjects objects)
         m.name = unique(m.name);
         m.parent = parentOf(m.parent);
         scene.models.push_back(std::move(m));
+    }
+    for (auto& e : objects.entities) {
+        e.name = unique(e.name);
+        e.parent = parentOf(e.parent);
+        scene.entities.push_back(std::move(e));
     }
     if (objects.terrain)
         scene.terrain = std::move(objects.terrain);

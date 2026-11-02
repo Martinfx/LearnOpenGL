@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from zonegen import mats, glb                         # noqa: E402
 from zonegen import vehicles, structures, buildings, vegetation   # noqa: E402
-from zonegen import panel_tower   # noqa: E402
+from zonegen import panel_tower, square   # noqa: E402
 
 OUT = os.path.join(mats.ZONE, 'gen')
 
@@ -74,6 +74,11 @@ MODELS = {
     'grass_patch': (vegetation.grass_patch, dict(seed=1), False),
     'grass_patch_dry': (vegetation.grass_patch, dict(seed=2, dry=True, height=0.8), False),
     'grass_crack': (vegetation.grass_patch, dict(seed=3, size=6.0, tufts=5, height=0.4), False),
+    'square_monument': (square.monument, dict(seed=1), True),
+    'square_fountain': (square.fountain, dict(seed=2), True),
+    'square_bench_a': (square.bench, dict(seed=3), False),
+    'square_bench_b': (square.bench, dict(seed=8), False),
+    'square_kiosk': (square.kiosk, dict(seed=5), True),
 }
 
 

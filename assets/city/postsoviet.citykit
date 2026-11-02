@@ -108,3 +108,8 @@ foliage "Weeds" "../models/zone/vegetation/weed_b.glb" density 0.04 yard 0.6 lot
 foliage "Nettles" "../models/zone/vegetation/nettle_tall_a.glb" density 0.03 yard 0.6 lot 1 road 0 pavement 0.05 meadow 0.5 path 0 built 0 verge 1.2 cull 50 far 0.6 sway 1 scale_min 0.85 scale_max 1.15 collision 0 shadows 0 lod "../models/zone/vegetation/nettle_tall_a_lod1.glb" 10
 foliage "Dandelions" "../models/zone/vegetation/dandelion_a.glb" density 0.03 yard 1 lot 0.3 road 0.02 pavement 0.05 meadow 1 path 0 built 0 verge 0.8 cull 22 far 0.6 sway 1 scale_min 0.85 scale_max 1.15 collision 0 shadows 0 lod "../models/zone/vegetation/dandelion_a_lod1.glb" 8
 foliage "Celandine" "../models/zone/vegetation/celandine_a.glb" density 0.02 yard 1 lot 0.2 road 0 pavement 0.05 meadow 0.6 path 0 built 0 verge 0.8 cull 22 far 0.6 sway 1 scale_min 0.85 scale_max 1.15 collision 0 shadows 0 lod "../models/zone/vegetation/celandine_a_lod1.glb" 8
+prop monument "../models/zone/gen/square_monument.glb" cull 900 collision 1 shadows 1 lod "../models/zone/gen/square_monument_lod1.glb" 90
+prop fountain "../models/zone/gen/square_fountain.glb" cull 300 collision 1 shadows 1 lod "../models/zone/gen/square_fountain_lod1.glb" 50
+prop bench "../models/zone/gen/square_bench_a.glb" cull 120 collision 1 shadows 1
+prop bench "../models/zone/gen/square_bench_b.glb" cull 120 collision 1 shadows 1
+prop kiosk "../models/zone/gen/square_kiosk.glb" cull 250 collision 1 shadows 1 lod "../models/zone/gen/square_kiosk_lod1.glb" 50

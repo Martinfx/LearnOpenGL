@@ -85,7 +85,12 @@ Druhý režim vedle mřížky, podle přehledu algoritmů, který poslal martin.
    přes foliage terénu (instancované, tisíce kusů na blok) s hustotou podle druhu země – tabulka *Ground cover*
    v kitu, celkově *Grass density*. Zvláštní druh země *verge* je spára podél obrubníků a pás u paty zdí: tam
    tráva a plevel rostou nejhustěji, jako v opravdu opuštěném městě.
-5. **Optimalizace** zůstává na enginu: LOD každého domu, instancing sdílených meshů, frustum culling, Hi-Z
+5. **Náměstí** (*Town square in the centre*): nejbližší dost velký blok u centra je náměstí – cíl mapy. Dlažba
+   s trávou ve spárách po 6 m, pomník (obelisk s hvězdou na stupňovitém podstavci) na dlouhé ose, před ním suchá
+   kašna, když je místo, kolem pomníku lavičky, po obvodu lípy (část uschlá), lampy v rozích, u nejrušnější ulice
+   kiosk, sem tam náletový stromek. Na mapě PDA má značku *Площадь*. Modely jsou v
+   `assets/models/zone/source/zonegen/square.py` (role `monument`, `fountain`, `bench`, `kiosk` v kitu).
+6. **Optimalizace** zůstává na enginu: LOD každého domu, instancing sdílených meshů, frustum culling, Hi-Z
    occlusion. Textury domů se sdílí mezi soubory (jedna kopie v paměti pro celé město).
 
 Město 640 × 640 m: ~200 úseků silnic, 80 bloků, 330 parcel, 370 domů; plán za 0,1 s, domy se zapíšou za ~3 s
@@ -119,5 +124,6 @@ Příkazová řádka (stejný generátor): `city_gen <settings.city> <out.level>
 - Náměstí a parky jako cíl sítě (ne jen zbylé bloky) a řeky / železnice jako hranice pole zatím nejsou.
 - Mapa **Mrtvé město** (`assets/levels/zone_city.level`, martin schválil 2. 11. 2026) je vygenerovaná z
   `assets/city/zone_city.city`; domy jsou v `assets/models/city/zone_city/`. Start na jižním příjezdu, cíl centrum;
-  start, název a značky na mapě jsou dopsané ručně (při přegenerování je potřeba je vrátit).
+  start, název, popis a značka jižního příjezdu jsou ruční a přegenerování je zachová
+  (`city_gen assets/city/zone_city.city zone_city.level --base <kopie zone_city.level>`).
 - Další mapy z generátoru jen po schválení.

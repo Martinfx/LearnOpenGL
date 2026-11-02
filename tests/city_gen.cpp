@@ -1,6 +1,7 @@
 // Command line city generator (engine/CityGen.h), the same as the editor's Tools > City generator > Generate.
 //   city_gen <settings.city> <out.level> [--base level-with-sky-and-sun.level] [--plan-only]
-// Without --base the level gets the default environment. Prints the plan's statistics and warnings.
+// Without --base the level gets the default environment. With it, the base level's environment,
+// loading title and hint, player start and top-level map markers stay (pass the map itself to regenerate it). Prints the plan's statistics and warnings.
 #include <engine/CityGen.h>
 #include <engine/Scene.h>
 
@@ -79,10 +80,11 @@ int main(int argc, char** argv)
         std::fprintf(stderr, "%s\n", err.c_str());
         return 1;
     }
-    if (base) { // keep only the environment of the base level
+    const bool baseStart = base && scene.playerStart != glm::vec3(0.0f);
+    if (base) { // keep the environment, the player start and the hand-placed map markers of the base level
         scene.boxes.clear();
         scene.models.clear();
-        scene.entities.clear();
+        std::erase_if(scene.entities, [](const engine::Entity& e) { return e.type != "map_marker" || !e.parent.empty(); });
         scene.groups.clear();
         scene.prefabs.clear();
         scene.terrain.reset();
@@ -99,7 +101,8 @@ int main(int argc, char** argv)
     for (const auto& e : objects.errors)
         std::printf("error: %s\n", e.c_str());
     replaceCity(scene, settings.group, std::move(objects));
-    scene.playerStart = settings.origin;
+    if (!baseStart)
+        scene.playerStart = settings.origin;
     if (!engine::saveScene(scene, argv[2], &err)) {
         std::fprintf(stderr, "%s\n", err.c_str());
         return 1;
