@@ -1708,6 +1708,54 @@ void testQuestsAndDialogs()
         for (const std::string& m : log)
             check(m.find("[script]") != 0, "no script errors: " + m);
     }
+    // The fixed radio (storm_radio.lua): warns once per storm, only after its quest is done.
+    {
+        auto s = flatFloor();
+        engine::Entity radio;
+        radio.type = "radio";
+        radio.name = "Radio";
+        radio.position = {3, 0, 0};
+        radio.scriptPath = ENGINE_TEST_ASSETS "/scripts/storm_radio.lua";
+        radio.properties["quest"] = "tolik_radio";
+        radio.properties["lead"] = "120";
+        radio.properties["message"] = "storm soon";
+        radio.properties["sound"] = "";
+        s.entities.push_back(radio);
+        engine::PhysicsWorld world;
+        world.setLevel(s);
+        engine::PlayerController player;
+        player.spawn(world, s.playerStart);
+        engine::Quests q;
+        q.loadFolder(ENGINE_TEST_ASSETS "/quests");
+        std::vector<std::string> shown;
+        engine::ScriptSystem scripts(s, world, player, [&shown](const std::string& m) { shown.push_back(m); });
+        scripts.setMessageHandler([&shown](const std::string& m) { shown.push_back(m); }); // game.message()
+        scripts.setQuests(&q);
+        check(scripts.start() == 0, "storm radio script starts");
+        engine::AnomalyStormNow& now = s.environment.anomalyStormNow;
+        auto run = [&](const char* phase, float left) {
+            now.phase = phase;
+            now.secondsLeft = left;
+            for (int i = 0; i < 5; ++i)
+                scripts.fixedUpdate(1.0f / 60.0f);
+        };
+        auto said = [&] { return std::count(shown.begin(), shown.end(), std::string("storm soon")); };
+        run("calm", 60.0f);
+        check(said() == 0, "the broken radio says nothing");
+        q.start("tolik_radio");
+        q.complete("tolik_radio");
+        run("calm", 300.0f);
+        check(said() == 0, "fixed radio: quiet while the storm is far");
+        run("calm", 100.0f);
+        run("calm", 90.0f);
+        for (const std::string& m : shown)
+            check(m.find("[script]") != 0, "storm radio: no script errors: " + m);
+        check(said() == 1, "fixed radio: one warning within the lead time");
+        run("warning", 50.0f);
+        run("storm", 80.0f);
+        run("calm", 110.0f);
+        check(said() == 2, "and again before the next storm");
+    }
 }
 
 void testAnomalyStorm()

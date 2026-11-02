@@ -30,7 +30,7 @@ std::vector<std::string> wrapText(const engine::Ui2D& ui, const std::string& tex
     return lines;
 }
 
-bool GameDialog::begin(const std::filesystem::path& file, const std::string& speaker, int entity, engine::Quests& quests, std::string* why)
+const engine::DialogDef* GameDialog::dialog(const std::filesystem::path& file, std::string* why)
 {
     auto it = cache_.find(file);
     if (it == cache_.end()) {
@@ -39,10 +39,25 @@ bool GameDialog::begin(const std::filesystem::path& file, const std::string& spe
         if (!engine::loadDialog(d, file, &error)) {
             if (why)
                 *why = error;
-            return false;
+            return nullptr;
         }
         it = cache_.emplace(file, std::move(d)).first;
     }
+    return &it->second;
+}
+
+std::string GameDialog::speakerOf(const std::filesystem::path& file, const std::string& fallback)
+{
+    const engine::DialogDef* d = dialog(file);
+    return d && !d->speaker.empty() ? engine::localize(d->speaker) : fallback;
+}
+
+bool GameDialog::begin(const std::filesystem::path& file, const std::string& speaker, int entity, engine::Quests& quests, std::string* why)
+{
+    const engine::DialogDef* d = dialog(file, why);
+    if (!d)
+        return false;
+    const auto it = cache_.find(file);
     if (!session_.start(it->second, quests)) {
         if (why)
             *why = "nothing to say";

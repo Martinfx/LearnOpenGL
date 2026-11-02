@@ -6478,6 +6478,18 @@ entity "Locomotive radio" "objective" -77.9 1.63 16.4 90 0.6 0.6 0.6 0.95 0.75 0
   prop "quest" "tolik_radio"
   prop "radius" "1.8"
   prop "stage" "find"
+entity "Tolik's radio" "radio" -100.3 0 38.7 200 0.4 0.4 0.4 0.55 0.5 0.5 "../scripts/storm_radio.lua"
+  parent "Stalker camp"
+  id bdd093ca0c823833
+  character "../models/props/vintage_radio_transceiver/vintage_radio_transceiver.gltf" 1 0 ""
+  prop "lead" "120"
+  prop "message" "@storm.radio_warning"
+  prop "quest" "tolik_radio"
+  prop "sound" "sounds/ui/pda_beep.sound"
+entity "Tolik's radio sound" "sound" -100.3 0.3 38.7 0 0.4 0.4 0.4 0.55 0.5 0.5 ""
+  parent "Stalker camp"
+  id af466e97540c1d2e
+  prop "sound" "sounds/ambient/radio_beacon.sound"
 entity "Medkit at the camp" "pickup" -102.6 0 34.4 30 0.245 0.1 0.165 0.9 0.8 0.3 ""
   id 64bbd77815ff3102
   character "../models/props/pickups/medkit_pouch.glb" 1 0 ""

@@ -2863,8 +2863,15 @@ int main(int argc, char** argv)
                     const float H = static_cast<float>(height), size = uiSize(H, 0.022f, 12.0f, 26.0f);
                     const engine::CVar* key = cvars.find("in_use");
                     const engine::Entity& target = scene.entities[static_cast<std::size_t>(useTarget)];
-                    const std::string line = (key ? key->value : std::string("E")) + (target.properties.count("dialog") ? "   Mluvit: " : "   Obchodovat: ") +
-                                             target.name;
+                    std::string name = target.name;
+                    if (const auto d = target.properties.find("dialog"); d != target.properties.end()) {
+                        std::filesystem::path file = std::filesystem::path(std::u8string(d->second.begin(), d->second.end()));
+                        if (file.is_relative())
+                            file = assetRoot / file;
+                        name = talk.speakerOf(file.lexically_normal(), name);
+                    }
+                    const std::string line = (key ? key->value : std::string("E")) + "   " +
+                                             engine::trf(target.properties.count("dialog") ? "hud.talk_to" : "hud.trade_with", name);
                     const float w = ui.textWidth(line, size, true);
                     const glm::vec2 at(std::round((static_cast<float>(width) - w) * 0.5f), std::round(H * 0.6f));
                     ui.rect(at - glm::vec2(size * 0.6f, size * 0.3f), {w + size * 1.2f, size * 1.6f}, {0.05f, 0.055f, 0.045f, 0.7f});

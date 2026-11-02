@@ -268,3 +268,6 @@ quest.tolik_radio.find = Vymontuj zesilovač z vysílačky v lokomotivě (stanov
 quest.tolik_radio.report = Přines zesilovač Tolikovi do tábora
 quest.tolik_radio.found = Máš zesilovač z vlakové vysílačky
 quest.camp_stash.found = Našel jsi Hřišovy zásoby
+storm.radio_warning = Tolikovo rádio píská: bouře se blíží. Najdi si včas střechu.
+hud.talk_to = Mluvit: {0}
+hud.trade_with = Obchodovat: {0}

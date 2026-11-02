@@ -279,3 +279,6 @@ quest.tolik_radio.find = Take the amplifier out of the radio in the locomotive (
 quest.tolik_radio.report = Bring the amplifier to Tolik at the camp
 quest.tolik_radio.found = You have the amplifier from the train radio
 quest.camp_stash.found = You found Grisha's supplies
+storm.radio_warning = Tolik's radio is whining: a storm is coming. Find a roof in time.
+hud.talk_to = Talk: {0}
+hud.trade_with = Trade: {0}
