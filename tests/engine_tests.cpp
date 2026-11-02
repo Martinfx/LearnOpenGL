@@ -2927,7 +2927,10 @@ void testPhysicsProps()
 {
     engine::Scene s;
     std::string err;
-    check(engine::loadScene(s, ENGINE_TEST_DATA "/physics_scene.level", &err), "load physics_scene.level: " + err);
+    if (!engine::loadScene(s, ENGINE_TEST_DATA "/physics_scene.level", &err)) {
+        check(false, "load physics_scene.level: " + err); // the rest would index missing objects
+        return;
+    }
     const int dynamicModels = static_cast<int>(std::count_if(s.models.begin(), s.models.end(), [](const engine::Model& m) { return m.dynamic; }));
     check(dynamicModels >= 15, "physics test level has dynamic props");
     check(engine::saveScene(s, "physics_props.level", &err), "save props: " + err);
