@@ -284,7 +284,11 @@ void TextureEditor::refreshPreview()
         for (int x = 0; x < tiles; ++x) {
             QImage tileImg = scaled;
             if (asset_->settings.wrap == engine::TextureSettings::Wrap::Mirror)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0) // mirrored() is deprecated from Qt 6.13
+                tileImg = scaled.flipped((x % 2 == 1 ? Qt::Horizontal : Qt::Orientations()) | (y % 2 == 1 ? Qt::Vertical : Qt::Orientations()));
+#else
                 tileImg = scaled.mirrored(x % 2 == 1, y % 2 == 1);
+#endif
             p.drawImage(x * cell.width(), y * cell.height(), tileImg);
         }
     p.end();
