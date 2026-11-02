@@ -556,13 +556,13 @@ def _f(path, dens=0.1, lo=0.85, hi=1.15, cull=50, coll=0, shadows=0, far=0.6, lo
 
 
 FOLIAGE = {
-    'grass_patch': _f(SK + 'veg/grass_fresh.glb', 0.25, cull=70, far=0.5, lods=[(SK + 'veg/grass_fresh_lod1.glb', 10), (SK + 'veg/grass_fresh_far.glb', 24)]),
+    'grass_patch': _f(V + 'grass_fresh_street.glb', 0.25, cull=70, far=0.5, lods=[(V + 'grass_fresh_street_lod1.glb', 6), (V + 'grass_fresh_street_far.glb', 13)]),
     'grass_tall_a': _f(V + 'grass_tall_a.glb', lods=[(V + 'grass_tall_a_lod1.glb', 10)], cull=55),
     'grass_tall_b': _f(V + 'grass_tall_b.glb', lods=[(V + 'grass_tall_b_lod1.glb', 10)], cull=55),
-    'grass_clump': _f(V + 'grass_clump_a.glb', lods=[(V + 'grass_clump_a_lod1.glb', 10), (V + 'grass_clump_a_far.glb', 22)], cull=45),
-    'grass_short': _f(V + 'grass_short_a.glb', lods=[(V + 'grass_short_a_lod1.glb', 10)], cull=40),
-    'weed_a': _f(V + 'weed_a.glb', lods=[(V + 'weed_a_lod1.glb', 10), (V + 'weed_a_far.glb', 22)], cull=45),
-    'weed_b': _f(V + 'weed_b.glb', lods=[(V + 'weed_b_lod1.glb', 10), (V + 'weed_b_far.glb', 22)], cull=45),
+    'grass_clump': _f(V + 'grass_clump_a.glb', lods=[(V + 'grass_clump_a_lod1.glb', 6), (V + 'grass_clump_a_far.glb', 13)], cull=45),
+    'grass_short': _f(V + 'grass_short_a.glb', lods=[(V + 'grass_short_a_lod1.glb', 8), (V + 'grass_short_a_far.glb', 14)], cull=40),
+    'weed_a': _f(V + 'weed_a.glb', lods=[(V + 'weed_a_lod1.glb', 6), (V + 'weed_a_far.glb', 13)], cull=45),
+    'weed_b': _f(V + 'weed_b.glb', lods=[(V + 'weed_b_lod1.glb', 6), (V + 'weed_b_far.glb', 13)], cull=45),
     'nettle': _f(V + 'nettle_tall_a.glb', lods=[(V + 'nettle_tall_a_lod1.glb', 10), (V + 'nettle_tall_a_far.glb', 22)], cull=50),
     'dandelion_a': _f(V + 'dandelion_a.glb', lods=[(V + 'dandelion_a_lod1.glb', 8), (V + 'dandelion_a_far.glb', 14)], cull=22),
     'dandelion_c': _f(V + 'dandelion_c.glb', lods=[(V + 'dandelion_c_lod1.glb', 8), (V + 'dandelion_c_far.glb', 14)], cull=22),
