@@ -1,0 +1,1726 @@
+# FPS engine level
+# Overgrown street (Почтовая): made by assets/levels/source/make_overgrown_street.py;
+# edit in the editor afterwards (re-running the script rebuilds it).
+# Original CC0 content.
+version 6
+player_start 1.5 0 104
+sun -0.42 -0.82 -0.39
+env sun_color 1 0.97 0.92
+env sun_intensity 3.6
+env sky_zenith 0.36 0.47 0.62
+env sky_horizon 0.76 0.79 0.8
+env ground_color 0.46 0.43 0.35
+env cloud_cover 0.35
+env ambient_intensity 0.9
+env fog_color 0.7 0.77 0.86
+env fog_density 0.0032
+env fog_height 2
+env fog_height_falloff 0.02
+env fog_sun_scatter 0.6
+env exposure 0.9
+env bloom_intensity 0.04
+env bloom_threshold 1.4
+env ssao_radius 0.8
+env ssao_intensity 1.3
+env shadow_distance 110
+env saturation 1
+env contrast 1.06
+env tint 1.03 1 0.95
+env vignette 0.18
+env grain 0.02
+env auto_exposure 0.6
+env exposure_min_ev -0.5
+env exposure_max_ev 2
+env adapt_brighten 0.8
+env adapt_darken 2.5
+env rain 0
+env wind 0.25
+terrain "overgrown_street.terrain"
+terrain_layer 0 "../materials/pbr/cracked_concrete.material" 0.5
+terrain_layer 1 "../materials/pbr/road_damaged.material" 0.4545
+terrain_layer 2 "../materials/pbr/concrete_pavement.material" 0.5556
+terrain_layer 3 "../materials/pbr/concrete_moss.material" 0.3333
+terrain_layer 4 "../materials/skrunda/terrain_dirt.material" 0.5
+terrain_layer 5 "../materials/skrunda/terrain_lush.material" 0.5
+terrain_layer 6 "../materials/skrunda/terrain_leaves.material" 0.33
+terrain_layer 7 "../materials/pbr/rubble.material" 0.5
+foliage_type "../models/zone/vegetation/grass_tall_a.glb" 0.1 0.85 1.15 55 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/grass_tall_a_lod1.glb" 10
+foliage_type "../models/zone/vegetation/dandelion_a.glb" 0.1 0.85 1.15 30 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/dandelion_a_lod1.glb" 8
+foliage_type "../models/zone/vegetation/grass_clump_a.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/grass_clump_a_lod1.glb" 10
+foliage_type "../models/zone/vegetation/grass_tall_b.glb" 0.1 0.85 1.15 55 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/grass_tall_b_lod1.glb" 10
+foliage_type "../models/zone/skrunda/veg/grass_fresh.glb" 0.25 0.85 1.15 70 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/skrunda/veg/grass_fresh_lod1.glb" 10
+foliage_lod "../models/zone/skrunda/veg/grass_fresh_far.glb" 24
+foliage_type "../models/zone/vegetation/celandine_b.glb" 0.1 0.85 1.15 40 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/celandine_b_lod1.glb" 8
+foliage_type "../models/zone/vegetation/grass_short_a.glb" 0.1 0.85 1.15 40 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/grass_short_a_lod1.glb" 10
+foliage_type "../models/zone/vegetation/dandelion_c.glb" 0.1 0.85 1.15 30 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/dandelion_c_lod1.glb" 8
+foliage_type "../models/zone/vegetation/weed_b.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/weed_b_lod1.glb" 10
+foliage_type "../models/zone/vegetation/celandine_a.glb" 0.1 0.85 1.15 40 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/celandine_a_lod1.glb" 8
+foliage_type "../models/zone/vegetation/weed_a.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/weed_a_lod1.glb" 10
+foliage_type "../models/zone/vegetation/nettle_tall_a.glb" 0.1 0.85 1.15 50 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/nettle_tall_a_lod1.glb" 10
+foliage_type "../models/zone/vegetation/sapling_shrub_a.glb" 0.03 0.85 1.15 120 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/sapling_shrub_a_lod1.glb" 25
+foliage_type "../models/zone/vegetation/sapling_shrub_b.glb" 0.03 0.85 1.15 120 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/sapling_shrub_b_lod1.glb" 25
+foliage_type "../models/zone/vegetation/bush_dense_a.glb" 0.02 0.85 1.15 120 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/bush_dense_a_lod1.glb" 25
+foliage_type "../models/zone/vegetation/bush_wide_a.glb" 0.02 0.85 1.15 120 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/bush_wide_a_lod1.glb" 25
+foliage_type "../models/zone/vegetation/sapling_c.glb" 0.03 0.85 1.15 200 0 0 1 1 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/sapling_c_lod1.glb" 35
+foliage_type "../models/zone/vegetation/broadleaf_b.glb" 0.03 0.85 1.15 400 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/broadleaf_b_lod1.glb" 45
+foliage_impostor 120
+foliage_type "../models/zone/vegetation/broadleaf_young.glb" 0.03 0.85 1.15 300 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/broadleaf_young_lod1.glb" 40
+foliage_type "../models/zone/vegetation/birch_young.glb" 0.03 0.85 1.15 220 0 0 1 1 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/birch_young_lod1.glb" 35
+foliage_type "../models/zone/vegetation/sapling_a.glb" 0.03 0.85 1.15 220 0 0 1 1 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/sapling_a_lod1.glb" 35
+foliage_type "../models/zone/vegetation/birch_a.glb" 0.03 0.85 1.15 400 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/birch_a_lod1.glb" 45
+foliage_impostor 120
+foliage_type "../models/zone/vegetation/sapling_b.glb" 0.03 0.85 1.15 220 0 0 1 1 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/sapling_b_lod1.glb" 35
+loading_title "Почтовая улица"
+loading_hint "Projdi ulicí na sever, k domu na jejím konci."
+group "Houses" ""
+group "Street" ""
+group "Kerbs" "Street"
+group "Lamps and cables" "Street"
+group "Wrecks" "Street"
+group "Rubble" "Street"
+group "Barricades" "Street"
+group "Far" ""
+box "Far street ground" 0 -0.06 -265 140 0.1 150 0.36 0.37 0.33
+  parent "Far"
+  id 72edbd515cc3a0b4
+model "House A" "../models/zone/street/house_a.glb" -14.8 0.15 157
+  parent "Houses"
+  id dfed381bbf456125
+  transform 0 90 0 1
+  lod "../models/zone/street/house_a_lod1.glb" 70
+  cull_distance 600
+model "House B" "../models/zone/street/house_b.glb" -15 0.15 124
+  parent "Houses"
+  id b0024becfb73fa7a
+  transform 0 90 0 1
+  lod "../models/zone/street/house_b_lod1.glb" 70
+  cull_distance 600
+model "House C" "../models/zone/street/house_c.glb" -15.4 0.15 88
+  parent "Houses"
+  id fbc03b0d5593742d
+  transform 0 90 0 1
+  lod "../models/zone/street/house_c_lod1.glb" 70
+  cull_distance 600
+model "House D" "../models/zone/street/house_d.glb" -15.25 0.15 55
+  parent "Houses"
+  id c80a48b2d8dbf1e1
+  transform 0 90 0 1
+  lod "../models/zone/street/house_d_lod1.glb" 70
+  cull_distance 600
+model "House E" "../models/zone/street/house_e.glb" -15.4 0.15 26.5
+  parent "Houses"
+  id 92d89e71d6757599
+  transform 0 90 0 1
+  lod "../models/zone/street/house_e_lod1.glb" 70
+  cull_distance 600
+model "House F" "../models/zone/street/house_f.glb" -15 0.15 -3.5
+  parent "Houses"
+  id cef791b6d64b4b46
+  transform 0 90 0 1
+  lod "../models/zone/street/house_f_lod1.glb" 70
+  cull_distance 600
+model "House J" "../models/zone/street/house_j.glb" -15.25 0.15 -46.5
+  parent "Houses"
+  id 692a05e51a00f595
+  transform 0 90 0 1
+  lod "../models/zone/street/house_j_lod1.glb" 70
+  cull_distance 600
+model "House A 2" "../models/zone/street/house_a.glb" -15 0.15 -87
+  parent "Houses"
+  id 3ec74e9a67c7cb97
+  transform 0 90 0 1
+  lod "../models/zone/street/house_a_lod1.glb" 70
+  cull_distance 600
+model "House B 2" "../models/zone/street/house_b.glb" -15.25 0.15 -120
+  parent "Houses"
+  id a4778421ab75f675
+  transform 0 90 0 1
+  lod "../models/zone/street/house_b_lod1.glb" 70
+  cull_distance 600
+model "House C 2" "../models/zone/street/house_c.glb" -15 0.15 -156
+  parent "Houses"
+  id 14af9217b767c47b
+  transform 0 90 0 1
+  lod "../models/zone/street/house_c_lod1.glb" 70
+  cull_distance 600
+model "House D 2" "../models/zone/street/house_d.glb" -15.4 0.15 -189
+  parent "Houses"
+  id 64168687a32159c4
+  transform 0 90 0 1
+  lod "../models/zone/street/house_d_lod1.glb" 70
+  cull_distance 600
+model "House E 2" "../models/zone/street/house_e.glb" -15 0.15 -217.5
+  parent "Houses"
+  id efd43b8578eafa78
+  transform 0 90 0 1
+  lod "../models/zone/street/house_e_lod1.glb" 70
+  cull_distance 600
+model "House F 2" "../models/zone/street/house_f.glb" -14.8 0.15 -247.5
+  parent "Houses"
+  id 58a4f49cf9fbebf8
+  transform 0 90 0 1
+  lod "../models/zone/street/house_f_lod1.glb" 70
+  cull_distance 600
+model "House G" "../models/zone/street/house_g.glb" -14.8 0.15 -280.5
+  parent "Houses"
+  id 75a0e86a0d28761c
+  transform 0 90 0 1
+  lod "../models/zone/street/house_g_lod1.glb" 70
+  cull_distance 600
+model "House H" "../models/zone/street/house_h.glb" -15 0.15 -315
+  parent "Houses"
+  id d949570446f0ccdc
+  transform 0 90 0 1
+  lod "../models/zone/street/house_h_lod1.glb" 70
+  cull_distance 600
+model "House F 3" "../models/zone/street/house_f.glb" 14.8 0.15 158.5
+  parent "Houses"
+  id 4e9316af33d886a4
+  transform 0 -90 0 1
+  lod "../models/zone/street/house_f_lod1.glb" 70
+  cull_distance 600
+model "House G 2" "../models/zone/street/house_g.glb" 15 0.15 125.5
+  parent "Houses"
+  id 0c198eeb436103e2
+  transform 0 -90 0 1
+  lod "../models/zone/street/house_g_lod1.glb" 70
+  cull_distance 600
+model "House H 2" "../models/zone/street/house_h.glb" 15.4 0.15 91
+  parent "Houses"
+  id ac921ef797827863
+  transform 0 -90 0 1
+  lod "../models/zone/street/house_h_lod1.glb" 70
+  cull_distance 600
+model "House I" "../models/zone/street/house_i.glb" 15.4 0.15 58
+  parent "Houses"
+  id 8f9b39e82c6eedd4
+  transform 0 -90 0 1
+  lod "../models/zone/street/house_i_lod1.glb" 70
+  cull_distance 600
+model "House J 2" "../models/zone/street/house_j.glb" 15.4 0.15 17.5
+  parent "Houses"
+  id 65fb895df8371b16
+  transform 0 -90 0 1
+  lod "../models/zone/street/house_j_lod1.glb" 70
+  cull_distance 600
+model "House C 3" "../models/zone/street/house_c.glb" 15.4 0.15 -45
+  parent "Houses"
+  id 8d963d50b79d0593
+  transform 0 -90 0 1
+  lod "../models/zone/street/house_c_lod1.glb" 70
+  cull_distance 600
+model "House D 3" "../models/zone/street/house_d.glb" 14.8 0.15 -78
+  parent "Houses"
+  id 01195100357ce929
+  transform 0 -90 0 1
+  lod "../models/zone/street/house_d_lod1.glb" 70
+  cull_distance 600
+model "House E 3" "../models/zone/street/house_e.glb" 15 0.15 -106.5
+  parent "Houses"
+  id cef4edecb4c98009
+  transform 0 -90 0 1
+  lod "../models/zone/street/house_e_lod1.glb" 70
+  cull_distance 600
+model "House F 4" "../models/zone/street/house_f.glb" 14.8 0.15 -136.5
+  parent "Houses"
+  id 8e25729e3a37bffb
+  transform 0 -90 0 1
+  lod "../models/zone/street/house_f_lod1.glb" 70
+  cull_distance 600
+model "House G 3" "../models/zone/street/house_g.glb" 14.8 0.15 -169.5
+  parent "Houses"
+  id 67a3570e0c0aeee2
+  transform 0 -90 0 1
+  lod "../models/zone/street/house_g_lod1.glb" 70
+  cull_distance 600
+model "House H 3" "../models/zone/street/house_h.glb" 15 0.15 -204
+  parent "Houses"
+  id 211b3fffaf664150
+  transform 0 -90 0 1
+  lod "../models/zone/street/house_h_lod1.glb" 70
+  cull_distance 600
+model "House I 2" "../models/zone/street/house_i.glb" 15.4 0.15 -237
+  parent "Houses"
+  id dca8e415a3acb3c9
+  transform 0 -90 0 1
+  lod "../models/zone/street/house_i_lod1.glb" 70
+  cull_distance 600
+model "House J 3" "../models/zone/street/house_j.glb" 15 0.15 -277.5
+  parent "Houses"
+  id 4bf2116d78c610f5
+  transform 0 -90 0 1
+  lod "../models/zone/street/house_j_lod1.glb" 70
+  cull_distance 600
+model "House A 3" "../models/zone/street/house_a.glb" 15.25 0.15 -318
+  parent "Houses"
+  id 653edb6803d08e9a
+  transform 0 -90 0 1
+  lod "../models/zone/street/house_a_lod1.glb" 70
+  cull_distance 600
+model "House G 4" "../models/zone/street/house_g.glb" -42 0.15 -3
+  parent "Houses"
+  id bdbf2f05ebc9d499
+  transform 0 180 0 1
+  lod "../models/zone/street/house_g_lod1.glb" 70
+  cull_distance 600
+model "House C 4" "../models/zone/street/house_c.glb" -43.5 0.15 -31
+  parent "Houses"
+  id e26690577e791c68
+  lod "../models/zone/street/house_c_lod1.glb" 70
+  cull_distance 600
+model "House E 4" "../models/zone/street/house_e.glb" -78 0.15 -17
+  parent "Houses"
+  id c9e4c1cfef85b928
+  transform 0 -90 0 1
+  lod "../models/zone/street/house_e_lod1.glb" 70
+  cull_distance 600
+model "House C 5" "../models/zone/street/house_c.glb" 43.5 0.15 -3
+  parent "Houses"
+  id 462e0a46dd346cb7
+  transform 0 180 0 1
+  lod "../models/zone/street/house_c_lod1.glb" 70
+  cull_distance 600
+model "House G 5" "../models/zone/street/house_g.glb" 42 0.15 -31
+  parent "Houses"
+  id a3af68c2fad7822d
+  lod "../models/zone/street/house_g_lod1.glb" 70
+  cull_distance 600
+model "House E 5" "../models/zone/street/house_e.glb" 78 0.15 -17
+  parent "Houses"
+  id 20b13865f37854f4
+  transform 0 90 0 1
+  lod "../models/zone/street/house_e_lod1.glb" 70
+  cull_distance 600
+model "House at the end" "../models/zone/street/house_end.glb" 0 0.15 -338
+  parent "Far"
+  id 86f761dac88b99fa
+  lod "../models/zone/street/house_end_lod1.glb" 70
+  cull_distance 900
+model "Tower" "../models/zone/gen/skyline_tower_a.glb" -40 -0.2 -420
+  parent "Far"
+  id cc6d7eb98e75c6f5
+  transform 0 84 0 1
+  cull_distance 1200
+  collision 0
+model "Tower 2" "../models/zone/gen/skyline_tower_c.glb" 35 -0.2 -460
+  parent "Far"
+  id 25b1f81025bc3e4e
+  transform 0 13.8 0 1
+  cull_distance 1200
+  collision 0
+model "Tower 3" "../models/zone/gen/skyline_tower_b.glb" 90 -0.2 -380
+  parent "Far"
+  id 86e8ca9cfda55b25
+  transform 0 74 0 1
+  cull_distance 1200
+  collision 0
+model "Tower 4" "../models/zone/gen/skyline_tower_b.glb" -110 -0.2 -400
+  parent "Far"
+  id 2bd9e56e3b424bb0
+  transform 0 79.8 0 1
+  cull_distance 1200
+  collision 0
+model "Kerb" "../models/zone/street/kerb_6m.glb" -4.5 0 147
+  parent "Kerbs"
+  id dde7796b6742ca77
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 2" "../models/zone/street/kerb_6m_b.glb" -4.5 0 141
+  parent "Kerbs"
+  id 4af5c6c2837683c2
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 3" "../models/zone/street/kerb_6m.glb" -4.5 0 135
+  parent "Kerbs"
+  id 9a7c1e6704270924
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 4" "../models/zone/street/kerb_6m.glb" -4.5 0 129
+  parent "Kerbs"
+  id 208dc70da9bbb909
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 5" "../models/zone/street/kerb_6m_b.glb" -4.5 0 123
+  parent "Kerbs"
+  id eeaf0e8b34cb7f2e
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 6" "../models/zone/street/kerb_6m_b.glb" -4.5 0 117
+  parent "Kerbs"
+  id 70f155cc38b278b4
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 7" "../models/zone/street/kerb_6m.glb" -4.5 0 111
+  parent "Kerbs"
+  id 1c0d959981ba672d
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 8" "../models/zone/street/kerb_6m_b.glb" -4.5 0 105
+  parent "Kerbs"
+  id a52792ff08c810bc
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 9" "../models/zone/street/kerb_6m.glb" -4.5 0 99
+  parent "Kerbs"
+  id 7b415b7b84e93990
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 10" "../models/zone/street/kerb_6m.glb" -4.5 0 93
+  parent "Kerbs"
+  id 78ef5aa790f84155
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 11" "../models/zone/street/kerb_6m_b.glb" -4.5 0 87
+  parent "Kerbs"
+  id 726118a7d5816b59
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 12" "../models/zone/street/kerb_6m_b.glb" -4.5 0 81
+  parent "Kerbs"
+  id f97d49e2183e384a
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 13" "../models/zone/street/kerb_6m_b.glb" -4.5 0 75
+  parent "Kerbs"
+  id 3f0e623f57538d73
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 14" "../models/zone/street/kerb_6m.glb" -4.5 0 69
+  parent "Kerbs"
+  id f6ca332449961eb1
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 15" "../models/zone/street/kerb_6m.glb" -4.5 0 63
+  parent "Kerbs"
+  id e99959927b17bdfc
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 16" "../models/zone/street/kerb_6m_b.glb" -4.5 0 57
+  parent "Kerbs"
+  id 50ed47d687687e6b
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 17" "../models/zone/street/kerb_6m.glb" -4.5 0 51
+  parent "Kerbs"
+  id 887abd58ab6dcabd
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 18" "../models/zone/street/kerb_6m.glb" -4.5 0 45
+  parent "Kerbs"
+  id 050b390750e9968f
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 19" "../models/zone/street/kerb_6m.glb" -4.5 0 39
+  parent "Kerbs"
+  id cd8b3c39cc00bf09
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 20" "../models/zone/street/kerb_6m.glb" -4.5 0 33
+  parent "Kerbs"
+  id 09ccf05e2dc1c61c
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 21" "../models/zone/street/kerb_6m.glb" -4.5 0 27
+  parent "Kerbs"
+  id a1e0750aa6409053
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 22" "../models/zone/street/kerb_6m_b.glb" -4.5 0 21
+  parent "Kerbs"
+  id 3a7010a88e35eed5
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 23" "../models/zone/street/kerb_6m.glb" -4.5 0 15
+  parent "Kerbs"
+  id c7913486624a6d68
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 24" "../models/zone/street/kerb_6m.glb" -4.5 0 9
+  parent "Kerbs"
+  id ddf382090ee422ce
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 25" "../models/zone/street/kerb_6m.glb" -4.5 0 3
+  parent "Kerbs"
+  id 3765c0da5457c314
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 26" "../models/zone/street/kerb_6m.glb" -4.5 0 -33
+  parent "Kerbs"
+  id f1d6955ac531c9f6
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 27" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -39
+  parent "Kerbs"
+  id 5bf82aecd5401caf
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 28" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -45
+  parent "Kerbs"
+  id 517edb0a27f65cfe
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 29" "../models/zone/street/kerb_6m.glb" -4.5 0 -51
+  parent "Kerbs"
+  id 158b8d6dc23a39ec
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 30" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -57
+  parent "Kerbs"
+  id 124901a1ecdc463a
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 31" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -63
+  parent "Kerbs"
+  id 698d1cd083f1216d
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 32" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -69
+  parent "Kerbs"
+  id 237fd0f35ecdee98
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 33" "../models/zone/street/kerb_6m.glb" -4.5 0 -75
+  parent "Kerbs"
+  id 7735886617adcbc8
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 34" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -81
+  parent "Kerbs"
+  id 735e9533505a67fc
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 35" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -87
+  parent "Kerbs"
+  id 9b87fc7ebb6e18a7
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 36" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -93
+  parent "Kerbs"
+  id dfd061e7e27044e5
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 37" "../models/zone/street/kerb_6m.glb" -4.5 0 -99
+  parent "Kerbs"
+  id 50da54d99ddba4b4
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 38" "../models/zone/street/kerb_6m.glb" -4.5 0 -105
+  parent "Kerbs"
+  id d7aaeae95ba6db48
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 39" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -111
+  parent "Kerbs"
+  id a6e46b745fb295ed
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 40" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -117
+  parent "Kerbs"
+  id 8079eb947a39c63c
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 41" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -123
+  parent "Kerbs"
+  id e7d91ba1980daa0d
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 42" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -129
+  parent "Kerbs"
+  id 98844d01592ad023
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 43" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -135
+  parent "Kerbs"
+  id e18ea0387de76648
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 44" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -141
+  parent "Kerbs"
+  id 29fb569e5ac2d747
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 45" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -147
+  parent "Kerbs"
+  id 0ee8dd683307ffc9
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 46" "../models/zone/street/kerb_6m.glb" -4.5 0 -153
+  parent "Kerbs"
+  id 6611335ea233fea5
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 47" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -159
+  parent "Kerbs"
+  id af68420bfa88c353
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 48" "../models/zone/street/kerb_6m.glb" -4.5 0 -165
+  parent "Kerbs"
+  id a07fd7279332e521
+  transform 0 90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 49" "../models/zone/street/kerb_6m.glb" 4.5 0 147
+  parent "Kerbs"
+  id 669861539138f2d7
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 50" "../models/zone/street/kerb_6m.glb" 4.5 0 141
+  parent "Kerbs"
+  id 32588c95b845b129
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 51" "../models/zone/street/kerb_6m_b.glb" 4.5 0 135
+  parent "Kerbs"
+  id d2c98a8658c9d875
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 52" "../models/zone/street/kerb_6m.glb" 4.5 0 129
+  parent "Kerbs"
+  id 92fd5fefcf4ea2bb
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 53" "../models/zone/street/kerb_6m_b.glb" 4.5 0 123
+  parent "Kerbs"
+  id a76c0e7d5bacf037
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 54" "../models/zone/street/kerb_6m_b.glb" 4.5 0 117
+  parent "Kerbs"
+  id b55d84b0c289c20f
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 55" "../models/zone/street/kerb_6m_b.glb" 4.5 0 111
+  parent "Kerbs"
+  id a7ad1683fbe9d193
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 56" "../models/zone/street/kerb_6m_b.glb" 4.5 0 105
+  parent "Kerbs"
+  id a60e61f63dab799b
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 57" "../models/zone/street/kerb_6m.glb" 4.5 0 99
+  parent "Kerbs"
+  id 4484c206f620158a
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 58" "../models/zone/street/kerb_6m.glb" 4.5 0 93
+  parent "Kerbs"
+  id 3ddf70f7d2e8cc27
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 59" "../models/zone/street/kerb_6m.glb" 4.5 0 87
+  parent "Kerbs"
+  id 8c649f494fcf1af9
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 60" "../models/zone/street/kerb_6m.glb" 4.5 0 81
+  parent "Kerbs"
+  id 55d3e5733f5c60db
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 61" "../models/zone/street/kerb_6m.glb" 4.5 0 75
+  parent "Kerbs"
+  id 1c63fac706c1c015
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 62" "../models/zone/street/kerb_6m_b.glb" 4.5 0 69
+  parent "Kerbs"
+  id e734588e6085e9b5
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 63" "../models/zone/street/kerb_6m.glb" 4.5 0 63
+  parent "Kerbs"
+  id ebc6c3106b0fd298
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 64" "../models/zone/street/kerb_6m_b.glb" 4.5 0 57
+  parent "Kerbs"
+  id 2c203a50ca739016
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 65" "../models/zone/street/kerb_6m_b.glb" 4.5 0 51
+  parent "Kerbs"
+  id bd6a0269326ab84c
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 66" "../models/zone/street/kerb_6m_b.glb" 4.5 0 45
+  parent "Kerbs"
+  id a140558eca4fdd91
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 67" "../models/zone/street/kerb_6m_b.glb" 4.5 0 39
+  parent "Kerbs"
+  id 20130efddcd07f80
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 68" "../models/zone/street/kerb_6m.glb" 4.5 0 33
+  parent "Kerbs"
+  id 0de65307ed2eda9c
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 69" "../models/zone/street/kerb_6m.glb" 4.5 0 27
+  parent "Kerbs"
+  id 1d3a5ccf57006e72
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 70" "../models/zone/street/kerb_6m.glb" 4.5 0 21
+  parent "Kerbs"
+  id 290632e8398625ae
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 71" "../models/zone/street/kerb_6m_b.glb" 4.5 0 15
+  parent "Kerbs"
+  id 1f2a22fbc46282a5
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 72" "../models/zone/street/kerb_6m_b.glb" 4.5 0 9
+  parent "Kerbs"
+  id eb5af77f57579cb9
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 73" "../models/zone/street/kerb_6m_b.glb" 4.5 0 3
+  parent "Kerbs"
+  id 59526c54ab3c5eea
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 74" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -33
+  parent "Kerbs"
+  id 8480ae57133f180d
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 75" "../models/zone/street/kerb_6m.glb" 4.5 0 -39
+  parent "Kerbs"
+  id 94655ceac2203977
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 76" "../models/zone/street/kerb_6m.glb" 4.5 0 -45
+  parent "Kerbs"
+  id 7b37be29024cbe16
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 77" "../models/zone/street/kerb_6m.glb" 4.5 0 -51
+  parent "Kerbs"
+  id 6c4d2af9700c10c7
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 78" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -57
+  parent "Kerbs"
+  id 476987b0d7efc727
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 79" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -63
+  parent "Kerbs"
+  id f72a78d80de055e3
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 80" "../models/zone/street/kerb_6m.glb" 4.5 0 -69
+  parent "Kerbs"
+  id 356cf2a33decf979
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 81" "../models/zone/street/kerb_6m.glb" 4.5 0 -75
+  parent "Kerbs"
+  id 4daf19c7bff4cca9
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 82" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -81
+  parent "Kerbs"
+  id 1b97f7a2fbe0dd8d
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 83" "../models/zone/street/kerb_6m.glb" 4.5 0 -87
+  parent "Kerbs"
+  id 4cd4d4634abec2c4
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 84" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -93
+  parent "Kerbs"
+  id 69b614ce0ea92eb6
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 85" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -99
+  parent "Kerbs"
+  id 94d462a24fda03df
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 86" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -105
+  parent "Kerbs"
+  id e94d96a401bdd3cf
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 87" "../models/zone/street/kerb_6m.glb" 4.5 0 -111
+  parent "Kerbs"
+  id af34d2b76d657031
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 88" "../models/zone/street/kerb_6m.glb" 4.5 0 -117
+  parent "Kerbs"
+  id d65af06ac413ecf1
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 89" "../models/zone/street/kerb_6m.glb" 4.5 0 -123
+  parent "Kerbs"
+  id bca554677f3c9838
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 90" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -129
+  parent "Kerbs"
+  id 281dc2759f39077f
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 91" "../models/zone/street/kerb_6m.glb" 4.5 0 -135
+  parent "Kerbs"
+  id 9230064e461b5019
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 92" "../models/zone/street/kerb_6m.glb" 4.5 0 -141
+  parent "Kerbs"
+  id 250fc7759a004bf1
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 93" "../models/zone/street/kerb_6m.glb" 4.5 0 -147
+  parent "Kerbs"
+  id 069705b2148880ce
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 94" "../models/zone/street/kerb_6m.glb" 4.5 0 -153
+  parent "Kerbs"
+  id bc39e52af0fa5508
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 95" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -159
+  parent "Kerbs"
+  id efc4f820f79df46e
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 96" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -165
+  parent "Kerbs"
+  id 140ab3c0e7dfc231
+  transform 0 -90 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 97" "../models/zone/street/kerb_6m.glb" -12 0 -12.5
+  parent "Kerbs"
+  id d6f093f6df8cc100
+  transform 0 180 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 98" "../models/zone/street/kerb_6m.glb" -18 0 -12.5
+  parent "Kerbs"
+  id c0b4193affafe4e5
+  transform 0 180 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 99" "../models/zone/street/kerb_6m.glb" -24 0 -12.5
+  parent "Kerbs"
+  id c3f57596e5343577
+  transform 0 180 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 100" "../models/zone/street/kerb_6m.glb" -30 0 -12.5
+  parent "Kerbs"
+  id 1ad6e036242a1d49
+  transform 0 180 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 101" "../models/zone/street/kerb_6m.glb" -36 0 -12.5
+  parent "Kerbs"
+  id 4572a3cf42a58db9
+  transform 0 180 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 102" "../models/zone/street/kerb_6m.glb" -42 0 -12.5
+  parent "Kerbs"
+  id bd827fc0bf0f2035
+  transform 0 180 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 103" "../models/zone/street/kerb_6m.glb" -48 0 -12.5
+  parent "Kerbs"
+  id 0de079bdd8267849
+  transform 0 180 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 104" "../models/zone/street/kerb_6m.glb" -54 0 -12.5
+  parent "Kerbs"
+  id fc4edfb147c2eb40
+  transform 0 180 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 105" "../models/zone/street/kerb_6m.glb" -60 0 -12.5
+  parent "Kerbs"
+  id 3b3059bd180e1463
+  transform 0 180 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 106" "../models/zone/street/kerb_6m.glb" -66 0 -12.5
+  parent "Kerbs"
+  id 56d1c4ea242cd6a9
+  transform 0 180 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 107" "../models/zone/street/kerb_6m.glb" -12 0 -21.5
+  parent "Kerbs"
+  id 2482a4867abe6225
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 108" "../models/zone/street/kerb_6m.glb" -18 0 -21.5
+  parent "Kerbs"
+  id 7f14fafeed8ba971
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 109" "../models/zone/street/kerb_6m.glb" -24 0 -21.5
+  parent "Kerbs"
+  id bfd9b493e640e324
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 110" "../models/zone/street/kerb_6m.glb" -30 0 -21.5
+  parent "Kerbs"
+  id eab305e7e18e04ac
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 111" "../models/zone/street/kerb_6m.glb" -36 0 -21.5
+  parent "Kerbs"
+  id 881acc2bac3f912a
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 112" "../models/zone/street/kerb_6m.glb" -42 0 -21.5
+  parent "Kerbs"
+  id 4558f1c1dc852100
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 113" "../models/zone/street/kerb_6m.glb" -48 0 -21.5
+  parent "Kerbs"
+  id 247fa62c2a99c5e4
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 114" "../models/zone/street/kerb_6m.glb" -54 0 -21.5
+  parent "Kerbs"
+  id 8fb8e11977ea6333
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 115" "../models/zone/street/kerb_6m.glb" -60 0 -21.5
+  parent "Kerbs"
+  id 5d8af7d79598899a
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 116" "../models/zone/street/kerb_6m.glb" -66 0 -21.5
+  parent "Kerbs"
+  id aace37e19374b124
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 117" "../models/zone/street/kerb_6m.glb" 12 0 -12.5
+  parent "Kerbs"
+  id 526d1d8d07c3469a
+  transform 0 180 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 118" "../models/zone/street/kerb_6m.glb" 18 0 -12.5
+  parent "Kerbs"
+  id ba2a75c6fa145675
+  transform 0 180 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 119" "../models/zone/street/kerb_6m.glb" 24 0 -12.5
+  parent "Kerbs"
+  id fedddb59563c0a6b
+  transform 0 180 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 120" "../models/zone/street/kerb_6m.glb" 30 0 -12.5
+  parent "Kerbs"
+  id 27308eeb97033961
+  transform 0 180 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 121" "../models/zone/street/kerb_6m.glb" 36 0 -12.5
+  parent "Kerbs"
+  id ea0088163869d5af
+  transform 0 180 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 122" "../models/zone/street/kerb_6m.glb" 42 0 -12.5
+  parent "Kerbs"
+  id c001a6a80279a1a2
+  transform 0 180 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 123" "../models/zone/street/kerb_6m.glb" 48 0 -12.5
+  parent "Kerbs"
+  id e6e70bd7453b4353
+  transform 0 180 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 124" "../models/zone/street/kerb_6m.glb" 54 0 -12.5
+  parent "Kerbs"
+  id 339681b757276371
+  transform 0 180 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 125" "../models/zone/street/kerb_6m.glb" 60 0 -12.5
+  parent "Kerbs"
+  id bc534a169e0fbf6d
+  transform 0 180 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 126" "../models/zone/street/kerb_6m.glb" 66 0 -12.5
+  parent "Kerbs"
+  id 35638707881e1bed
+  transform 0 180 0 1
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 127" "../models/zone/street/kerb_6m.glb" 12 0 -21.5
+  parent "Kerbs"
+  id 52db8c5d77675430
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 128" "../models/zone/street/kerb_6m.glb" 18 0 -21.5
+  parent "Kerbs"
+  id f4115c88e8e0af8d
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 129" "../models/zone/street/kerb_6m.glb" 24 0 -21.5
+  parent "Kerbs"
+  id fe34da3dc1445184
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 130" "../models/zone/street/kerb_6m.glb" 30 0 -21.5
+  parent "Kerbs"
+  id 4d3b250c0402685b
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 131" "../models/zone/street/kerb_6m.glb" 36 0 -21.5
+  parent "Kerbs"
+  id b70797d2302a3671
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 132" "../models/zone/street/kerb_6m.glb" 42 0 -21.5
+  parent "Kerbs"
+  id b93ec8915cf69577
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 133" "../models/zone/street/kerb_6m.glb" 48 0 -21.5
+  parent "Kerbs"
+  id a85339d8f4e0cc07
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 134" "../models/zone/street/kerb_6m.glb" 54 0 -21.5
+  parent "Kerbs"
+  id 2287026eee560a48
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 135" "../models/zone/street/kerb_6m.glb" 60 0 -21.5
+  parent "Kerbs"
+  id e9c115953afb5625
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Kerb 136" "../models/zone/street/kerb_6m.glb" 66 0 -21.5
+  parent "Kerbs"
+  id df8b5a7d8a15e062
+  cull_distance 90
+  collision 0
+  cast_shadows 0
+model "Lamp post" "../models/zone/gen/lamp_post.glb" 5.2 0.13 112
+  parent "Lamps and cables"
+  id 7889e2c58848347f
+  transform 0 184 0 1
+  cull_distance 300
+model "Lamp post 2" "../models/zone/gen/lamp_post.glb" -5.2 0.13 82.51
+  parent "Lamps and cables"
+  id c198c7808066699d
+  transform 0 -3.5 0 1
+  cull_distance 300
+model "Lamp post 3" "../models/zone/gen/lamp_post.glb" 5.2 0.13 52.35
+  parent "Lamps and cables"
+  id cee811efe36eef3d
+  transform 0 182 0 1
+  cull_distance 300
+model "Lamp post 4" "../models/zone/gen/lamp_post.glb" -5.2 0.13 20.44
+  parent "Lamps and cables"
+  id 8213185622fb6bb3
+  transform 0 -1.7 0 1
+  cull_distance 300
+model "Lamp post 5" "../models/zone/gen/lamp_post.glb" 5.2 0.13 -5.74
+  parent "Lamps and cables"
+  id 007a635c4abe0c78
+  transform 0 177 0 1
+  cull_distance 300
+model "Lamp post 6" "../models/zone/gen/lamp_post.glb" -5.2 0.13 -35.47
+  parent "Lamps and cables"
+  id b0be8bd3119bcb7b
+  transform 0 -1.1 0 1
+  cull_distance 300
+model "Lamp post 7" "../models/zone/gen/lamp_post.glb" 5.2 0.13 -66.5
+  parent "Lamps and cables"
+  id 44fd6ec14062f9d5
+  transform 0 175.4 0 1
+  cull_distance 300
+model "Lamp post 8" "../models/zone/gen/lamp_post.glb" -5.2 0.13 -93.88
+  parent "Lamps and cables"
+  id d9361cc1a3d417b7
+  transform 0 5.1 0 1
+  cull_distance 300
+model "Lamp post 9" "../models/zone/gen/lamp_post.glb" 5.2 0.13 -125.75
+  parent "Lamps and cables"
+  id ea561dc1800bf90b
+  transform 0 184.8 0 1
+  cull_distance 300
+model "Lamp post 10" "../models/zone/gen/lamp_post.glb" -5.2 0.13 -153.13
+  parent "Lamps and cables"
+  id 9a6ca9bee8427229
+  transform 0 3.2 0 1
+  cull_distance 300
+model "Lamp post 11" "../models/zone/gen/lamp_post_leaning.glb" 5.2 0.13 -184.36
+  parent "Lamps and cables"
+  id 2582806e3b07c874
+  transform 0 183.5 0 1
+  cull_distance 300
+model "Cable" "../models/zone/street/cable_32m.glb" 0 8.1 97.25
+  parent "Lamps and cables"
+  id 440b40f1cfc4aa95
+  transform 0 109.4 0 0.977
+  cull_distance 160
+  collision 0
+model "Cable 2" "../models/zone/street/cable_32m.glb" 0 8.1 67.43
+  parent "Lamps and cables"
+  id eb0a5f5a79d6c0b9
+  transform 0 71 0 0.997
+  cull_distance 160
+  collision 0
+model "Cable 3" "../models/zone/street/cable_32m.glb" 0 8.1 36.4
+  parent "Lamps and cables"
+  id cc12d4828b523d45
+  transform 0 108.1 0 1.05
+  cull_distance 160
+  collision 0
+model "Cable 4" "../models/zone/street/cable_32m.glb" 0 8.1 7.35
+  parent "Lamps and cables"
+  id db33ed7a916db9e1
+  transform 0 68.3 0 0.88
+  cull_distance 160
+  collision 0
+model "Cable 5" "../models/zone/street/cable_32m.glb" 0 8.1 -50.99
+  parent "Lamps and cables"
+  id 0f4c0c63e76a1064
+  transform 0 71.5 0 1.02
+  cull_distance 160
+  collision 0
+model "Cable 6" "../models/zone/street/cable_32m.glb" 0 8.1 -109.81
+  parent "Lamps and cables"
+  id 96ee46d5a71638a1
+  transform 0 71.9 0 1.05
+  cull_distance 160
+  collision 0
+model "Cable 7" "../models/zone/street/cable_32m.glb" 0 8.1 -139.44
+  parent "Lamps and cables"
+  id 59374b3074fcb11b
+  transform 0 110.8 0 0.915
+  cull_distance 160
+  collision 0
+model "Cable 8" "../models/zone/street/cable_32m.glb" 0 8.1 -168.75
+  parent "Lamps and cables"
+  id e5099363a662d8e8
+  transform 0 71.6 0 1.03
+  cull_distance 160
+  collision 0
+model "Cable 9" "../models/zone/street/cable_14m.glb" 0 9.505 99.86
+  parent "Lamps and cables"
+  id 392ac23c65a97507
+  transform 0 1 5.44121 1.14
+  cull_distance 160
+  collision 0
+model "Cable 10" "../models/zone/street/cable_18m.glb" 0 8.827 81.37
+  parent "Lamps and cables"
+  id a0fff1bea01620df
+  transform 0 11.6 7.24657 0.902
+  cull_distance 160
+  collision 0
+model "Cable 11" "../models/zone/street/cable_18m.glb" 0 9.353 64.92
+  parent "Lamps and cables"
+  id acb39222d6eec42a
+  transform 0 7.7 -8.41758 0.891
+  cull_distance 160
+  collision 0
+model "Cable 12" "../models/zone/street/cable_18m.glb" 0 9.378 30.97
+  parent "Lamps and cables"
+  id 081ac2f5720db535
+  transform 0 7.4 2.9534 0.891
+  cull_distance 160
+  collision 0
+model "Cable 13" "../models/zone/street/cable_14m.glb" 0 8.96 14.86
+  parent "Lamps and cables"
+  id f6ef8117d76d25cf
+  transform 0 1 -7.98123 1.14
+  cull_distance 160
+  collision 0
+model "Cable 14" "../models/zone/street/cable_14m.glb" 0 8.866 -1.2
+  parent "Lamps and cables"
+  id 3e7dbf752c57acff
+  transform 0 -5.7 -2.86583 1.14
+  cull_distance 160
+  collision 0
+model "Cable 15" "../models/zone/street/cable_14m.glb" 0 8.211 -35.36
+  parent "Lamps and cables"
+  id d81c757d5003d9a7
+  transform 0 -4.6 -5.94879 1.14
+  cull_distance 160
+  collision 0
+model "Cable 16" "../models/zone/street/cable_18m.glb" 0 9.071 -71.1
+  parent "Lamps and cables"
+  id 87aaf9e26b9ac73b
+  transform 0 7.9 4.416 0.892
+  cull_distance 160
+  collision 0
+model "Cable 17" "../models/zone/street/cable_14m.glb" 0 10.39 -103.12
+  parent "Lamps and cables"
+  id 96e35ae42b07ae02
+  transform 0 -6.3 -3.81755 1.14
+  cull_distance 160
+  collision 0
+model "Cable 18" "../models/zone/street/cable_18m.glb" 0 9.402 -139.32
+  parent "Lamps and cables"
+  id 4d51e73f9b899e14
+  transform 0 9.4 -5.15769 0.895
+  cull_distance 160
+  collision 0
+model "Cable 19" "../models/zone/street/cable_18m.glb" 0 7.948 -156.5
+  parent "Lamps and cables"
+  id 2c14a176ab99009e
+  transform 0 10.7 -4.80946 0.899
+  cull_distance 160
+  collision 0
+model "Cable 20" "../models/zone/street/cable_18m.glb" 0 7.671 -170.8
+  parent "Lamps and cables"
+  id fdedf1ceb61bf927
+  transform 0 -8.6 -1.28813 0.893
+  cull_distance 160
+  collision 0
+model "Wreck" "../models/zone/gen/car_estate_rust.glb" 3 -0.06 96
+  parent "Wrecks"
+  id 10c81a51baef24aa
+  transform -1.22758 174.8 -2.36599 1
+  cull_distance 260
+model "Wreck 2" "../models/zone/gen/car_burnt.glb" -3.1 -0.06 74
+  parent "Wrecks"
+  id f6edb7d479c6efd1
+  transform -1.01659 11.4 1.98622 1
+  cull_distance 260
+model "Wreck 3" "../models/zone/gen/car_estate_rust.glb" 2.6 -0.06 41
+  parent "Wrecks"
+  id 44424866c3900fde
+  transform 1.76618 184 -0.0848457 1
+  cull_distance 260
+model "Wreck 4" "../models/zone/gen/car_sedan_green.glb" -2.8 -0.06 12
+  parent "Wrecks"
+  id 205e4fd2168d4524
+  transform -1.99962 -10.6 0.537484 1
+  cull_distance 260
+model "Wreck 5" "../models/zone/gen/car_van_green.glb" 0.8 -0.06 -48
+  parent "Wrecks"
+  id e9f6c3255bf43cc8
+  transform 0.405267 152.9 1.82463 1
+  cull_distance 260
+model "Wreck 6" "../models/zone/gen/car_sedan_cream.glb" -3 -0.06 -66
+  parent "Wrecks"
+  id 145434a6114291fd
+  transform 0.730181 -1 -2.11258 1
+  cull_distance 260
+model "Wreck 7" "../models/zone/gen/car_estate_red.glb" 3.2 -0.06 -92
+  parent "Wrecks"
+  id c7e520a58d7a2005
+  transform 1.00228 172.3 -0.97948 1
+  cull_distance 260
+model "Wreck 8" "../models/zone/gen/car_burnt.glb" -2.5 -0.06 -112
+  parent "Wrecks"
+  id bfdd8fb05f511c1e
+  transform -0.223689 30.9 0.375739 1
+  cull_distance 260
+model "Wreck 9" "../models/zone/gen/car_estate_rust.glb" 6.1 0.09 60
+  parent "Wrecks"
+  id d4eef704836e2a8e
+  transform 0.566213 178 1.92992 1
+  cull_distance 260
+model "Wreck 10" "../models/zone/gen/car_burnt.glb" -6 0.09 -84
+  parent "Wrecks"
+  id 608a2a7ae777494c
+  transform 1.81777 6.8 0.582335 1
+  cull_distance 260
+model "Bus" "../models/zone/gen/bus_small_cream.glb" 1 -0.08 -126
+  parent "Barricades"
+  id 94e0cb9bd29eb6ac
+  transform 0 62 0 1
+  cull_distance 320
+model "Rubble heap" "../models/zone/gen/rubble_b.glb" -4 -0.2 -132
+  parent "Barricades"
+  id 3319359292947a2e
+  transform 0 0 0 2.4
+  cull_distance 320
+model "Rubble heap 2" "../models/zone/gen/rubble_b.glb" 3.5 -0.2 -136
+  parent "Barricades"
+  id 9c2eb5e4d1ace297
+  transform 0 70 0 2.1
+  cull_distance 320
+model "Rubble heap 3" "../models/zone/gen/rubble_b.glb" -1 -0.2 -140
+  parent "Barricades"
+  id 07385a4ea728446d
+  transform 0 30 0 2.8
+  cull_distance 320
+model "Rubble heap 4" "../models/zone/gen/rubble_b.glb" 6 -0.2 -130
+  parent "Barricades"
+  id 25c3c206bda632bc
+  transform 0 120 0 1.6
+  cull_distance 320
+model "Rubble heap 5" "../models/zone/gen/rubble_b.glb" -6.5 -0.2 -127
+  parent "Barricades"
+  id 1c5b5c9f3fce603c
+  transform 0 200 0 1.4
+  cull_distance 320
+model "Fallen slab" "../models/zone/gen/slab_fallen.glb" -2 0.6 -129
+  parent "Barricades"
+  id 019cae89df99d2f3
+  transform 12 15 0 1
+  cull_distance 200
+model "Fallen slab 2" "../models/zone/gen/slab_fallen.glb" 2.5 0.6 -133
+  parent "Barricades"
+  id 874e0fc1a5d083fc
+  transform 12 100 0 1
+  cull_distance 200
+model "Barricade wreck" "../models/zone/gen/car_burnt.glb" -4.2 -0.06 117
+  parent "Barricades"
+  id 3ed44d8b51820e26
+  transform 0 78 0 1
+  cull_distance 260
+model "Barricade wreck 2" "../models/zone/gen/car_estate_rust.glb" -0.6 -0.06 118.5
+  parent "Barricades"
+  id bb71c373bf6dbaf6
+  transform 0 96 0 1
+  cull_distance 260
+model "Barricade wreck 3" "../models/zone/gen/car_van_green.glb" 3.4 -0.06 117.4
+  parent "Barricades"
+  id bcfe422bb90d8d59
+  transform 0 70 0 1
+  cull_distance 260
+model "Rubble heap 6" "../models/zone/gen/rubble_a.glb" 6.3 0 118
+  parent "Barricades"
+  id dcc1b83069387c20
+  transform 0 349.4 0 1.3
+  cull_distance 200
+model "Rubble heap 7" "../models/zone/gen/rubble_a.glb" -6.6 0 118.4
+  parent "Barricades"
+  id 51f6e8f452a3c393
+  transform 0 264.2 0 1.3
+  cull_distance 200
+model "Rubble" "../models/zone/gen/rubble_b.glb" -6.31 -0.1 22.26
+  parent "Rubble"
+  id 3b93a8feee0ebb22
+  transform 0 100.4 0 0.356
+  cull_distance 120
+model "Rubble 2" "../models/zone/gen/rubble_a.glb" -6.07 -0.1 -113.71
+  parent "Rubble"
+  id 16fdac820504c3bc
+  transform 0 83.8 0 0.505
+  cull_distance 120
+model "Rubble 3" "../models/zone/gen/rubble_b.glb" -6.02 -0.1 88.42
+  parent "Rubble"
+  id 38c153bab1070f5b
+  transform 0 23.4 0 0.378
+  cull_distance 120
+model "Rubble 4" "../models/zone/gen/rubble_b.glb" 7.22 -0.1 17.37
+  parent "Rubble"
+  id 25b66dfd4e212ea6
+  transform 0 329.9 0 0.45
+  cull_distance 120
+model "Rubble 5" "../models/zone/gen/rubble_a.glb" 6.54 -0.1 -114.52
+  parent "Rubble"
+  id c26620338e4b9133
+  transform 0 137.5 0 0.485
+  cull_distance 120
+model "Rubble 6" "../models/zone/gen/rubble_b.glb" -7.23 -0.1 26.69
+  parent "Rubble"
+  id 6e5c90df70964392
+  transform 0 115.7 0 0.415
+  cull_distance 120
+model "Rubble 7" "../models/zone/gen/rubble_b.glb" 7.22 -0.1 -92.89
+  parent "Rubble"
+  id 886c9f9e94c1e253
+  transform 0 359.4 0 0.524
+  cull_distance 120
+model "Rubble 8" "../models/zone/gen/rubble_b.glb" 6.8 -0.1 -29.49
+  parent "Rubble"
+  id a86470735fa2ab4c
+  transform 0 248.5 0 0.47
+  cull_distance 120
+model "Rubble 9" "../models/zone/gen/rubble_a.glb" -7.08 -0.1 61.67
+  parent "Rubble"
+  id be07dcf21cbca878
+  transform 0 168.1 0 0.559
+  cull_distance 120
+model "Rubble 10" "../models/zone/gen/rubble_b.glb" 6.1 -0.1 -88.27
+  parent "Rubble"
+  id bf09b08bc55b2e2a
+  transform 0 112.7 0 0.393
+  cull_distance 120
+model "Rubble 11" "../models/zone/gen/rubble_a.glb" -7.27 -0.1 -127.92
+  parent "Rubble"
+  id 4712862d6c2438c2
+  transform 0 33.1 0 0.391
+  cull_distance 120
+model "Rubble 12" "../models/zone/gen/rubble_a.glb" -7.03 -0.1 86.55
+  parent "Rubble"
+  id ac0c9607fa6dc795
+  transform 0 122.7 0 0.519
+  cull_distance 120
+model "Rubble 13" "../models/zone/gen/rubble_b.glb" -7.04 -0.1 -99.42
+  parent "Rubble"
+  id ca91d4cc06b39056
+  transform 0 270.9 0 0.567
+  cull_distance 120
+model "Rubble 14" "../models/zone/gen/rubble_a.glb" 6.99 -0.1 100.56
+  parent "Rubble"
+  id 5e2c2ebc6622cc70
+  transform 0 229.9 0 0.491
+  cull_distance 120
+model "Rubble 15" "../models/zone/gen/rubble_a.glb" 6.3 -0.1 -1.03
+  parent "Rubble"
+  id 3efe676dcae45e8f
+  transform 0 124.2 0 0.591
+  cull_distance 120
+model "Rubble 16" "../models/zone/gen/rubble_b.glb" 7.26 -0.1 79.81
+  parent "Rubble"
+  id 569c371581a98dcd
+  transform 0 64.5 0 0.564
+  cull_distance 120
+model "Rubble 17" "../models/zone/gen/rubble_a.glb" 6.23 -0.1 79.6
+  parent "Rubble"
+  id ff1518b3cbb12bbb
+  transform 0 29.5 0 0.434
+  cull_distance 120
+model "Rubble 18" "../models/zone/gen/rubble_b.glb" 6.57 -0.1 -88.8
+  parent "Rubble"
+  id 07a71f60c7c11a0d
+  transform 0 124.4 0 0.376
+  cull_distance 120
+model "Rubble 19" "../models/zone/gen/rubble_a.glb" 6.52 -0.1 84.6
+  parent "Rubble"
+  id 321d7f4ef6fa2a0c
+  transform 0 61.8 0 0.518
+  cull_distance 120
+model "Rubble 20" "../models/zone/gen/rubble_a.glb" -6.25 -0.1 42.72
+  parent "Rubble"
+  id d0c64eb4bff81f52
+  transform 0 298.8 0 0.427
+  cull_distance 120
+model "Rubble 21" "../models/zone/gen/rubble_a.glb" -6.12 -0.1 5.27
+  parent "Rubble"
+  id 6b042fb11ec2b4bb
+  transform 0 353.2 0 0.372
+  cull_distance 120
+model "Rubble 22" "../models/zone/gen/rubble_b.glb" -6.99 -0.1 99.9
+  parent "Rubble"
+  id e29100add2098271
+  transform 0 51.7 0 0.497
+  cull_distance 120
+model "Rubble 23" "../models/zone/gen/rubble_a.glb" -6.81 -0.1 -102.33
+  parent "Rubble"
+  id 65d602a5cd18ef47
+  transform 0 93.5 0 0.541
+  cull_distance 120
+model "Rubble 24" "../models/zone/gen/rubble_a.glb" 6.13 -0.1 -102.42
+  parent "Rubble"
+  id de23d4b322bb9a8e
+  transform 0 293.1 0 0.454
+  cull_distance 120
+model "Rubble 25" "../models/zone/gen/rubble_a.glb" -6.6 -0.1 -83.73
+  parent "Rubble"
+  id 3ef48b350caf4251
+  transform 0 237.2 0 0.407
+  cull_distance 120
+model "Slab" "../models/zone/gen/slab_fallen.glb" -0.34 -0.3 38.43
+  parent "Rubble"
+  id 2a1a322d6d7a110e
+  transform -0.83624 143.4 -0.595395 0.533
+  cull_distance 140
+model "Slab 2" "../models/zone/gen/slab_fallen.glb" -2.29 -0.3 49.53
+  parent "Rubble"
+  id 90d02b92cd4efe9f
+  transform 4.44703 53.1 -1.40307 0.697
+  cull_distance 140
+model "Slab 3" "../models/zone/gen/slab_fallen.glb" 0.75 -0.3 -43.34
+  parent "Rubble"
+  id 6b71d6a027914bce
+  transform -7.60555 26.1 -0.817307 0.696
+  cull_distance 140
+model "Slab 4" "../models/zone/gen/slab_fallen.glb" -0.32 -0.3 34.5
+  parent "Rubble"
+  id 4e53d2a37d5a53f0
+  transform -0.510382 78.9 3.8756 0.741
+  cull_distance 140
+model "Slab 5" "../models/zone/gen/slab_fallen.glb" 2.51 -0.3 30.82
+  parent "Rubble"
+  id 93aedc77e4bf830c
+  transform -3.57824 154.5 -6.99993 0.584
+  cull_distance 140
+player 5 8.5 5.5 18 0.15 1.8 1.7 0.4 45 100
+navmesh 1 0.25 0.1 0.35 1.8 0.4 45 32 4
+weapon "../weapons/ak74.weapon"
+weapon "../weapons/pistol.weapon"
+weapon "../weapons/knife.weapon"
+entity "Почтовая" "map_marker" 0 0 60 0 1 1 1 0.85 0.3 0.2 ""
+  id 7a051adc52ad45ca
+entity "Перекрёсток" "map_marker" 0 0 -17 0 1 1 1 0.85 0.3 0.2 ""
+  id d3ffc2f486c394f9

@@ -71,6 +71,11 @@ levé tlačítko výběr, F zaměří výběr, Ctrl+B přidá box, Ctrl+I import
 **Herní levely**: 2026-11-02 byly všechny dosavadní mapy (Zóna, Ulice u nemocnice, Skrunda-1 i testovací levely) smazány (zůstávají v historii gitu)
 a staví se jeden nový level podle referenční nálady: zarostlá post-sovětská ulice mezi vysokými zchátralými domy
 (`assets/levels/overgrown_street.level`, výchozí level hry i editoru).
+Ulice Počtovaja: 250 m dlouhý uliční kaňon mezi předválečnými činžáky o 4 až 9 patrech (cihla a omítka, balkony, římsy,
+svody, zatékání pod parapety), popraskané betonové desky s trávou ve spárách, keře a mladé stromy na silnici, vraky,
+lampy a převislé kabely, příčná ulice uprostřed a zavalené konce s výhledem na vysoký dům. Vše generuje
+`python3 -I assets/levels/source/make_overgrown_street.py [--models]` (domy `zonegen/tenement.py`), pak se level ladí
+v editoru (štětce Landscape a Foliage).
 Nástroje pro levely zůstávají: spoje se zemí `assets/levels/source/add_joints.py`, nápisy na zdech `add_wall_writing.py`,
 kontrola palety a hustoty textur `material_audit.py`, terén `add_terrain.py`. Modely budov Skrundy (`build_skrunda.py`),
 svody a smaltované cedule (`build_skrunda.py fixtures`) jsou dál k dispozici. Pravidla a rešerše: `docs/LEVEL_ART_GUIDE.md`.

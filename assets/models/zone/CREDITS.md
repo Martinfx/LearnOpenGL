@@ -30,4 +30,11 @@ skyline towers, low-poly vegetation, debris, signs) is generated for this projec
 `assets/textures/pbr` (albedo, OpenGL normal, ORM = occlusion/roughness/metallic), plus generated birch bark,
 panel facade and Cyrillic sign textures (text set in DejaVu Sans, Bitstream Vera license; place names are fictional).
 
+Everything in `street/` (pre-war brick and plaster tenements with balconies, cornices, pipes and leaks, kerb runs, sagging
+cables) is generated for the overgrown street level by `assets/levels/source/make_overgrown_street.py --models`
+(`source/zonegen/tenement.py`, `fixtures.py`), CC0. Its facade textures `textures/st_*` are 1K repacks of Poly Haven CC0
+sets (red_brick_03, red_brick_plaster_patch_02, rough_plaster_brick, worn_cracked_plaster, peeling_painted_wall,
+dark_brick_wall, slumped_mortar_brick, worn_brick_wall, beige_wall_002, rusted_shutter, rusty_painted_metal,
+cracked_concrete).
+
 The old-town street in `postwar/` is based on "Postwar City - Exterior Scene" by Aurélien Martel (CC-BY 4.0); see `postwar/CREDITS.md`.

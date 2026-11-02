@@ -114,3 +114,48 @@ def plate(name):
     m.poly('plates', [(-wm / 2, 0, 0), (wm / 2, 0, 0), (wm / 2, hm, 0), (-wm / 2, hm, 0)],
            uvs=[(u0, -v1), (u1, -v1), (u1, -v0), (u0, -v0)])
     return m
+
+
+CABLE_SPANS = (6, 10, 14, 18, 24, 32)
+
+
+def cable(span, sag=0.045, r=0.011, seed=0):
+    """A sagging cable between x = -span/2 and +span/2 at y = 0 (parabolic catenary, sag `sag` x span), with a
+    porcelain-less steel clamp at each end. Uniform scale keeps the shape."""
+    m = Mesh(PALETTE)
+    n = max(8, int(span * 1.2))
+    pts = []
+    for i in range(n + 1):
+        t = -1.0 + 2.0 * i / n
+        pts.append((t * span / 2, -sag * span * (1.0 - t * t), 0.0))
+    for a, b in zip(pts, pts[1:]):
+        m.cylinder('rubber', a, b, r, seg=5, caps=False)
+    for sx in (-1, 1):
+        m.box('rust_dark', (sx * span / 2 - 0.06, -0.04, -0.04), (sx * span / 2 + 0.06, 0.04, 0.04))
+    return m
+
+
+def kerb(length=6.0, seed=0):
+    """A run of 1 m granite-grey concrete kerb stones along X: the road side faces +Z at z = 0, top at y = 0.17,
+    0.15 m wide into -Z, 0.35 m deep. Decades of frost: stones sit a little crooked, a few are cracked off or gone."""
+    rng = np.random.default_rng(seed)
+    m = Mesh(PALETTE)
+    n = int(round(length))
+    for i in range(n):
+        if rng.random() < 0.06:
+            continue
+        x0 = -length / 2 + i * length / n + 0.006
+        x1 = x0 + length / n - 0.012
+        dy = rng.uniform(-0.03, 0.015)
+        dz = rng.uniform(-0.02, 0.025)
+        top = 0.17 + dy
+        if rng.random() < 0.1:                         # a broken stone: lower, a chunk missing at one end
+            top -= rng.uniform(0.04, 0.09)
+            cut = rng.uniform(0.2, 0.5)
+            if rng.random() < 0.5:
+                x0 += cut
+            else:
+                x1 -= cut
+        m.box('concrete', (x0, -0.2, -0.15 + dz), (x1, top, 0.0 + dz))
+        m.box('concrete', (x0, top - 0.02, -0.01 + dz), (x1, top, 0.01 + dz))     # chamfer lip
+    return m
