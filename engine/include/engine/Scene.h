@@ -375,6 +375,11 @@ struct Environment {
     float fogAnisotropy = 0.5f;                 // phase function g: 0 even, 0.9 bright toward the light
     float fogNoise = 0.4f;                      // 0 smooth .. 1 patchy fog drifting with the wind
     float fogLocalLights = 1.0f;                // strength of local lights in the fog
+    // Physically based atmosphere (engine/Atmosphere.h): 0 = the authored zenith / horizon / fog
+    // colours, 1 = sky, horizon, fog and (without the day cycle) sunlight colour from the model.
+    float atmosphere = 0.0f;
+    float atmosphereHaze = 1.0f;                // Mie haze: 0.3 crisp air .. 1 normal .. 5 smog / humid
+    float atmosphereBrightness = 1.0f;          // the model's sky radiance multiplier
     float exposure = 1.0f;
     float bloomIntensity = 0.06f;
     float bloomThreshold = 1.2f;

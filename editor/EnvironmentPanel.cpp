@@ -167,6 +167,10 @@ EnvironmentPanel::EnvironmentPanel(engine::Scene* scene, QWidget* parent)
     addColor(form, tr("Ground"), &E::groundColor);
     addFloat(form, tr("Clouds"), &E::cloudCover, 0, 1, 0.05, 2, tr("0 clear, 1 overcast"));
     addFloat(form, tr("Sky light"), &E::ambientIntensity, 0, 5, 0.05, 2, tr("Ambient light and reflections from the sky"));
+    addFloat(form, tr("Physical atmosphere"), &E::atmosphere, 0, 1, 0.05, 2,
+             tr("0 = the colours above, 1 = sky, horizon, fog and sunlight colour from a physical model of the air (Rayleigh, Mie, ozone)"));
+    addFloat(form, tr("Haze"), &E::atmosphereHaze, 0, 10, 0.1, 2, tr("Dust and humidity in the air: 0.3 crisp, 1 normal, 5 smog (physical atmosphere)"));
+    addFloat(form, tr("Sky brightness"), &E::atmosphereBrightness, 0, 5, 0.05, 2, tr("Multiplier of the physical sky's light"));
     section(tr("Fog"));
     addColor(form, tr("Color"), &E::fogColor);
     addFloat(form, tr("Density"), &E::fogDensity, 0, 0.5, 0.002, 3);

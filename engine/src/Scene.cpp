@@ -184,6 +184,12 @@ bool writeLevelSettings(std::ostream& out, const Scene& scene, const std::filesy
         f1("fog_height", e.fogHeight);
         f1("fog_height_falloff", e.fogHeightFalloff);
         f1("fog_sun_scatter", e.fogSunScatter);
+        if (e.atmosphere != Environment{}.atmosphere || e.atmosphereHaze != Environment{}.atmosphereHaze ||
+            e.atmosphereBrightness != Environment{}.atmosphereBrightness) {
+            f1("atmosphere", e.atmosphere);
+            f1("atmosphere_haze", e.atmosphereHaze);
+            f1("atmosphere_brightness", e.atmosphereBrightness);
+        }
         f1("exposure", e.exposure);
         f1("bloom_intensity", e.bloomIntensity);
         f1("bloom_threshold", e.bloomThreshold);
@@ -659,7 +665,8 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                 {"adapt_brighten", &e.adaptBrighten}, {"adapt_darken", &e.adaptDarken}, {"temperature", &e.temperature},
                 {"green_magenta", &e.greenMagenta}, {"fog_volumetric_range", &e.fogVolumetricRange},
                 {"fog_light_shafts", &e.fogLightShafts}, {"fog_anisotropy", &e.fogAnisotropy}, {"fog_noise", &e.fogNoise},
-                {"fog_local_lights", &e.fogLocalLights}};
+                {"fog_local_lights", &e.fogLocalLights}, {"atmosphere", &e.atmosphere}, {"atmosphere_haze", &e.atmosphereHaze},
+                {"atmosphere_brightness", &e.atmosphereBrightness}};
             if (ok) {
                 if (auto it = vectors.find(name); it != vectors.end())
                     ok = static_cast<bool>(ls >> it->second->x >> it->second->y >> it->second->z);

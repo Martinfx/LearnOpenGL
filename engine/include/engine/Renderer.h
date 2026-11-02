@@ -585,6 +585,10 @@ private:
     float shadowMinCaster_ = 0.0f;   // casters with a smaller bounding box diagonal are skipped
     unsigned envRaw_ = 0, envMap_ = 0, brdfLut_ = 0, captureFbo_ = 0;
     std::size_t envHash_ = 0;
+    // Physical atmosphere: sky-view table (engine/Atmosphere.h) on texture unit 31, rebuilt when the sun or the air changes.
+    unsigned int skyLut_ = 0;
+    std::size_t skyLutHash_ = 0;
+    glm::vec3 skyLutZenith_{0.0f}, skyLutHorizon_{0.0f}, skyLutSunTint_{1.0f};
     unsigned whiteTex_ = 0;             // stand-in when SSAO is off
     unsigned shadowDummy_ = 0;          // stand-in when shadows are off
     // Volumetric fog: froxel light + density (ping-pong with the previous frame) and the

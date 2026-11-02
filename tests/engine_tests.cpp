@@ -1,4 +1,5 @@
 // Headless tests for the engine core (no OpenGL needed).
+#include <engine/Atmosphere.h>
 #include <engine/Log.h>
 #include <engine/Demo.h>
 #include <engine/MeshCache.h>
@@ -3778,6 +3779,46 @@ void testProbes()
     check(engine::probeFile("a/b.level") == std::filesystem::path("a/b.probes"), "probe file sits next to the level");
 }
 
+void testAtmosphere()
+{
+    engine::AtmosphereParams air;
+    const glm::vec3 noon = glm::normalize(glm::vec3(0.3f, 0.9f, 0.1f)), low = glm::normalize(glm::vec3(1.0f, 0.04f, 0.0f));
+    const glm::vec3 zenith = engine::atmosphereSkyRadiance({0, 1, 0}, noon, air);
+    check(zenith.b > zenith.g && zenith.g > zenith.r && zenith.b > 0.0f, "the sky overhead is blue (Rayleigh)");
+    const glm::vec3 horizon = engine::atmosphereSkyRadiance({0, 0.02f, 1}, noon, air);
+    check(horizon.r / horizon.b > zenith.r / zenith.b, "the horizon is paler than the zenith");
+    const glm::vec3 tNoon = engine::atmosphereTransmittance(noon, air), tLow = engine::atmosphereTransmittance(low, air);
+    check(tNoon.r > 0.8f && tLow.r > tLow.b * 3.0f && tLow.g < tNoon.g, "a low sun is dimmer and red");
+    check(engine::atmosphereTransmittance({1, -0.2f, 0}, air) == glm::vec3(0.0f), "no sunlight from below the horizon");
+    engine::AtmosphereParams hazy = air;
+    hazy.haze = 5.0f;
+    check(engine::atmosphereTransmittance(low, hazy).g < tLow.g, "haze dims the sun");
+    glm::vec3 in, t;
+    engine::atmosphereAerial({0, 0, 1}, noon, 2000.0f, hazy, in, t);
+    check(t.b < 1.0f && t.b > 0.5f && in.b > 0.0f, "2 km of hazy air veils a building and adds sky colour");
+    // The table's direction mapping round-trips (the shader uses the same one).
+    const glm::vec3 dir = glm::normalize(glm::vec3(-0.4f, 0.3f, 0.7f));
+    const glm::vec3 back = engine::skyLutDirection(engine::skyLutUv(dir, noon), noon);
+    check(std::abs(back.y - dir.y) < 1e-3f && std::abs(glm::dot(glm::normalize(glm::vec2(back.x, back.z)), glm::normalize(glm::vec2(noon.x, noon.z))) -
+                                                     glm::dot(glm::normalize(glm::vec2(dir.x, dir.z)), glm::normalize(glm::vec2(noon.x, noon.z)))) < 1e-3f,
+          "sky table direction mapping round-trips");
+    const engine::SkyLut lut = engine::buildSkyLut(noon, air);
+    const glm::vec3 fromLut = engine::sampleSkyLut(lut, {0, 1, 0}, noon);
+    check(glm::length(fromLut - zenith) < 0.15f * glm::length(zenith), "the table matches the model overhead");
+
+    // Settings survive save + load (editor: Environment > Sky).
+    engine::Scene s;
+    s.environment.atmosphere = 0.8f;
+    s.environment.atmosphereHaze = 2.5f;
+    s.environment.atmosphereBrightness = 1.3f;
+    std::string err;
+    engine::Scene r;
+    check(engine::saveScene(s, "atmosphere.level", &err) && engine::loadScene(r, "atmosphere.level", &err), "atmosphere level: " + err);
+    check(r.environment.atmosphere == 0.8f && r.environment.atmosphereHaze == 2.5f && r.environment.atmosphereBrightness == 1.3f,
+          "atmosphere settings survive save + load");
+    std::filesystem::remove("atmosphere.level");
+}
+
 void testThickets()
 {
     engine::Scene s;
@@ -4573,6 +4614,7 @@ int main(int argc, char** argv)
         {"testPhysicsProps", testPhysicsProps},
         {"testPlantCollision", testPlantCollision},
         {"testThickets", testThickets},
+        {"testAtmosphere", testAtmosphere},
         {"testEntityIO", testEntityIO},
         {"testTimeOfDay", testTimeOfDay},
         {"testAssetPalette", testAssetPalette},

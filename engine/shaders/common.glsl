@@ -25,7 +25,19 @@ layout(std140, binding = 1) uniform Environment {
     vec4 uProbeParams;     // x: 1 = baked probes on (0 while baking them), y: reflection cube max mip
     mat4 uPrevViewProj;    // previous frame (no TAA jitter): screen-space reflections reproject into it
     vec4 uSsr;             // x: 1 = SSR on, y: max distance (m), z: intensity, w: max roughness
+    vec4 uAtmosphere;      // x: physical sky 0..1, y: radiance scale (sun illuminance)
 };
+// Physical sky table (engine/Atmosphere.h): azimuth from the sun by elevation, linear radiance.
+layout(binding = 31) uniform sampler2D uSkyLut;
+vec2 skyLutUv(vec3 view, vec3 toSun) {
+    float elevation = asin(clamp(view.y, -1.0, 1.0));
+    float v = 0.5 + 0.5 * sign(elevation) * sqrt(abs(elevation) / 1.5707963);
+    vec2 a = view.xz, s = toSun.xz;
+    float u = 0.0;
+    if (length(a) > 1e-5 && length(s) > 1e-5)
+        u = acos(clamp(dot(normalize(a), normalize(s)), -1.0, 1.0)) / 3.14159265;
+    return vec2(u, v);
+}
 // Volumetric fog up to uVolumetric.w (view depth): rgb light scattered toward the eye,
 // a: transmittance, both from the eye to the froxel (volumetric_*.comp).
 layout(binding = 15) uniform sampler3D uVolumeFog;
@@ -148,11 +160,13 @@ vec3 skyColor(vec3 dir, bool withSun) {
     float cover = uSkyZenith.w;
     float up = dir.y;
     vec3 sky = mix(uSkyHorizon.rgb, uSkyZenith.rgb, pow(clamp(up, 0.0, 1.0), 0.45));
+    if (uAtmosphere.x > 0.0) // the physical model: blue overhead, pale and hazy at the horizon, warm toward a low sun
+        sky = mix(sky, texture(uSkyLut, skyLutUv(vec3(dir.x, max(up, 0.0), dir.z), sunDir)).rgb * uAtmosphere.y, uAtmosphere.x);
     vec3 ground = mix(uSkyHorizon.rgb, uGroundColor.rgb, clamp(-up * 4.0, 0.0, 1.0));
     vec3 color = up >= 0.0 ? sky : ground;
     float sunAmount = max(dot(dir, sunDir), 0.0);
     vec3 sunLight = sunIsLight ? uSunColor.rgb * uSunDir.w : vec3(0.0);
-    color += sunLight * 0.06 * pow(sunAmount, 8.0) * (1.0 - cover * 0.7);
+    color += sunLight * 0.06 * pow(sunAmount, 8.0) * (1.0 - cover * 0.7) * (1.0 - 0.7 * uAtmosphere.x); // the model has its own glow
     // Sunrise / sunset: warm band along the horizon, strongest toward the sun.
     float twilight = uSkyParams.y;
     if (twilight > 0.0) {

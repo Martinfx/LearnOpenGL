@@ -1,4 +1,5 @@
 #include "engine/Renderer.h"
+#include "engine/Atmosphere.h"
 #include "engine/Vfs.h"
 #include "engine/Water.h"
 
@@ -151,6 +152,7 @@ struct EnvironmentBlock {
     glm::vec4 probes;     // x: 1 = baked probes on, y: reflection cube max mip
     glm::mat4 prevViewProj; // previous frame, no jitter (SSR)
     glm::vec4 ssr;          // x: on, y: max distance, z: intensity, w: max roughness
+    glm::vec4 atmosphere;   // x: physical sky 0..1, y: radiance scale
 };
 
 constexpr int kEnvSize = 128;  // environment cubemap face size
@@ -973,6 +975,49 @@ void Renderer::updateEnvironment(const Scene& scene, const RenderView& view)
     b.groundColor = glm::vec4(linear(e.groundColor), e.ambientIntensity);
     b.fogColor = glm::vec4(linear(e.fogColor), view.fog ? e.fogDensity : 0.0f);
     b.fogParams = glm::vec4(e.fogHeight, e.fogHeightFalloff, e.fogSunScatter, e.ssaoIntensity);
+    if (const float a = std::clamp(e.atmosphere, 0.0f, 1.0f); a > 0.0f) {
+        // Physical atmosphere: the sky table for the shaders, and the colours the rest of the
+        // lighting reads (clouds, fog, ground haze) from the same model, so they agree.
+        const glm::vec3 toSun = glm::normalize(glm::vec3(b.sunPos));
+        AtmosphereParams air;
+        air.haze = std::max(0.0f, e.atmosphereHaze);
+        std::size_t h = 7;
+        for (float v : {std::round(toSun.x * 2000.0f), std::round(toSun.y * 2000.0f), std::round(toSun.z * 2000.0f), air.haze})
+            hashCombine(h, v);
+        if (h != skyLutHash_ || !skyLut_) {
+            skyLutHash_ = h;
+            const SkyLut lut = buildSkyLut(toSun, air);
+            if (!skyLut_) {
+                glCreateTextures(GL_TEXTURE_2D, 1, &skyLut_);
+                glTextureStorage2D(skyLut_, 1, GL_RGB16F, SkyLut::kWidth, SkyLut::kHeight);
+                glTextureParameteri(skyLut_, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                glTextureParameteri(skyLut_, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                glTextureParameteri(skyLut_, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+                glTextureParameteri(skyLut_, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            }
+            glTextureSubImage2D(skyLut_, 0, 0, 0, SkyLut::kWidth, SkyLut::kHeight, GL_RGB, GL_FLOAT, lut.texels.data());
+            skyLutZenith_ = sampleSkyLut(lut, glm::vec3(0.0f, 1.0f, 0.0f), toSun);
+            glm::vec3 ring(0.0f); // the horizon all around (fog sees every direction)
+            for (int i = 0; i < 16; ++i) {
+                const float az = static_cast<float>(i) / 16.0f * 6.2831853f;
+                ring += sampleSkyLut(lut, glm::vec3(std::cos(az), 0.05f, std::sin(az)), toSun) / 16.0f;
+            }
+            skyLutHorizon_ = ring;
+            const glm::vec3 t = atmosphereTransmittance(toSun, air);
+            skyLutSunTint_ = t / std::max({t.r, t.g, t.b, 1e-4f});
+        }
+        // Radiance for the authored sun (not the day cycle's dimmed one: the table has the dimming).
+        const float scale = std::max(0.0f, scene.environment.sunIntensity) * std::max(0.0f, e.atmosphereBrightness);
+        b.atmosphere = glm::vec4(a, scale, 0.0f, 0.0f);
+        const float cover = std::clamp(e.cloudCover, 0.0f, 1.0f);
+        b.skyZenith = glm::vec4(glm::mix(glm::vec3(b.skyZenith), skyLutZenith_ * scale, a), b.skyZenith.w);
+        b.skyHorizon = glm::vec4(glm::mix(glm::vec3(b.skyHorizon), skyLutHorizon_ * scale, a), b.skyHorizon.w);
+        // Aerial perspective: the fog takes the horizon's colour (greyer under a cloud cover).
+        const glm::vec3 haze = glm::mix(skyLutHorizon_ * scale, glm::vec3(glm::dot(skyLutHorizon_ * scale, glm::vec3(0.2126f, 0.7152f, 0.0722f))), cover * 0.7f);
+        b.fogColor = glm::vec4(glm::mix(glm::vec3(b.fogColor), haze, a), b.fogColor.w);
+        if (!e.time.enabled) // the day cycle already reddens a low sun
+            b.sunColor = glm::vec4(glm::mix(glm::vec3(b.sunColor), glm::vec3(b.sunColor) * skyLutSunTint_, a), b.sunColor.w);
+    }
     b.cameraPos = glm::vec4(view.cameraPosition, quality_.ssao ? 1.0f : 0.0f);
     b.view = view.view;
     b.proj = projection_; // with the TAA jitter, like the depth buffer
@@ -1084,6 +1129,9 @@ void Renderer::updateEnvironmentMap(const Scene& scene)
     // is captured again only when the change becomes visible (every few game minutes).
     const float q = e.time.enabled ? 48.0f : 0.0f;
     auto quant = [q](float v) { return q > 0.0f ? std::round(v * q) / q : v; };
+    hashCombine(h, static_cast<float>(skyLutHash_ % 1000003u));
+    hashCombine(h, e.atmosphere);
+    hashCombine(h, e.atmosphereBrightness);
     for (float v : {e.sunColor.r, e.sunColor.g, e.sunColor.b, e.sunIntensity, e.skyZenith.r, e.skyZenith.g, e.skyZenith.b,
                     e.skyHorizon.r, e.skyHorizon.g, e.skyHorizon.b, e.groundColor.r, e.groundColor.g, e.groundColor.b,
                     e.cloudCover, sky_.lightDirection.x, sky_.lightDirection.y, sky_.lightDirection.z, sky_.stars, sky_.twilight,
@@ -2277,6 +2325,7 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     if (rainActive_)
         renderRainMap(scene, view); // before the environment block: it carries the map's matrix
     updateEnvironment(scene, view);
+    glBindTextureUnit(31, skyLut_ ? skyLut_ : whiteTex_); // physical sky table (common.glsl uSkyLut)
     if (quality_.asyncCull && shadowTex_ && quality_.shadowResolution > 0) // the sun's cascades due this frame (renderShadows)
         for (int i = 0; i < cascadeCount_; ++i)
             if (cascadeUpdate_ & (1u << i)) {
