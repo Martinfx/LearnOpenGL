@@ -340,6 +340,10 @@ Explicitní `self:play(klip)` graf dočasně přebije, `self:use_graph()` vrát�
   menu, nastavení, ukládání, HUD, hlášky, obchod, mapa PDA a názvy kláves. Data (dialogy, úkoly, předměty, zbraně,
   titulky a tipy levelů) místo textu píšou `@klíč`, hra ho přeloží až při zobrazení; dialogy Hřiši a Tolika, úkol
   a předměty už jsou tak přeložené. Test hlídá, že každý `@klíč` v datech je v `cs.strings`.
+- Titulek a tip levelu bez `@klíče` (generované levely) přeloží klíč `level.<název souboru>.title` / `.hint`
+  v tabulce jazyka, jinak zůstane text z levelu. Level bez `loading_title` vezme titulek z `cs.strings`.
+  Test hlídá, že každý level má anglický titulek. Editor dialogů, úkolů a předmětů ukazuje u `@klíčů`
+  text ve všech jazycích (chybějící oranžově).
 - Editor: Assets > Texts and translations: tabulka klíčů a jazyků, nepřeložené buňky jsou oranžové,
   filtr „Only untranslated“, přidání klíče a jazyka. `asset_check` hlásí nepřeložené klíče jako varování
   a test hlídá, že každý klíč použitý v kódu hry je v `cs.strings`.

@@ -768,7 +768,8 @@ int main(int argc, char** argv)
         const engine::LoadingScreen look = engine::readLoadingScreen(levelPath);
         int imageW = 0, imageH = 0;
         const unsigned background = look.image.empty() ? 0u : engine::Ui2D::loadImage(look.image, &imageW, &imageH);
-        const std::string title = look.title.empty() ? levelPath.stem().string() : engine::localize(look.title);
+        const std::string title = engine::levelText(levelPath.stem().string(), "title", look.title, levelPath.stem().string());
+        const std::string hint = engine::levelText(levelPath.stem().string(), "hint", look.hint);
         levelTitle = title;
         engine::LoadProgress progress;
         std::atomic<bool> finished{false};
@@ -827,8 +828,8 @@ int main(int argc, char** argv)
             const float barY = H - margin - textSize * 2.2f;
             const float barH = std::max(6.0f, std::round(H * 0.012f));
             ui.text(title, {margin, barY - titleSize * 1.55f - textSize * 1.4f}, titleSize, bone, true);
-            if (!look.hint.empty())
-                ui.text(engine::localize(look.hint), {margin, barY - textSize * 1.9f}, textSize, dim);
+            if (!hint.empty())
+                ui.text(hint, {margin, barY - textSize * 1.9f}, textSize, dim);
             // Progress bar: frame, fill and a moving highlight at its end.
             const float barW = W - 2.0f * margin;
             fraction = std::clamp(fraction, 0.0f, 1.0f);

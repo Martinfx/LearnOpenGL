@@ -558,6 +558,8 @@ void testLocalization()
     check(l.plural("hud.ammo", 1) == "1 round" && l.plural("hud.ammo", 3) == "3 rounds", "English plurals");
     check(engine::formatText(l.text("hud.two"), {"A", "B"}) == "A a B" && l.localize("@menu.back") == "Back" && l.localize("plain") == "plain",
           "arguments and @key data strings");
+    check(l.textOr("menu.back", "x") == "Back" && l.textOr("hud.only_cs", "written") == "written",
+          "textOr: only the current language, else the written text");
     engine::StringTable cs, en;
     check(cs.load(dir / "cs.strings") && en.load(dir / "en.strings"), "tables load");
     const auto missing = engine::untranslatedKeys(cs, en, "en");
@@ -624,6 +626,14 @@ void testLocalization()
         for (const engine::ItemDef& d : items.items)
             if (!d.name.empty() && d.name[0] == '@' && !shipped.texts.count(d.name.substr(1)))
                 noDataKey.push_back("items.cfg: " + d.name);
+    }
+    {
+        // Every shipped level has an English title (level.<stem>.title; the level file's own title is Czech).
+        engine::StringTable english;
+        english.load(fs::path(ENGINE_TEST_ASSETS) / "text" / "en.strings");
+        for (const auto& entry : fs::directory_iterator(fs::path(ENGINE_TEST_ASSETS) / "levels"))
+            if (entry.path().extension() == ".level" && !english.texts.count("level." + entry.path().stem().string() + ".title"))
+                noDataKey.push_back("en.strings: level." + entry.path().stem().string() + ".title");
     }
     check(noDataKey.empty(), "\"@key\" texts of the data exist in cs.strings" + (noDataKey.empty() ? std::string() : ": " + noDataKey.front()));
     check(captioned > 10 && noCaption.empty(),

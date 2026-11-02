@@ -118,7 +118,8 @@ void GameMenu::init(const std::filesystem::path& assetDir, const std::filesystem
     for (const std::filesystem::path& level : engine::vfs().list(assetDir / "levels")) // mods can add levels
         if (level.extension() == ".level") {
             const engine::LoadingScreen look = engine::readLoadingScreen(level);
-            levels_.push_back({level, look.title.empty() ? level.stem().string() : engine::localize(look.title), engine::localize(look.hint)});
+            const std::string stem = level.stem().string();
+            levels_.push_back({level, engine::levelText(stem, "title", look.title, stem), engine::levelText(stem, "hint", look.hint)});
         }
     std::sort(levels_.begin(), levels_.end(), [](const LevelEntry& a, const LevelEntry& b) { return a.title < b.title; });
     std::vector<std::filesystem::path> files;

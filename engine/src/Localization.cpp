@@ -160,6 +160,21 @@ std::string Localization::localize(const std::string& s) const
     return !s.empty() && s[0] == '@' ? text(std::string_view(s).substr(1)) : s;
 }
 
+std::string Localization::textOr(std::string_view key, const std::string& fallback) const
+{
+    const std::string k(key);
+    if (auto it = current_.texts.find(k); it != current_.texts.end() && !it->second.empty())
+        return it->second;
+    return fallback;
+}
+
+std::string levelText(const std::string& stem, const char* field, const std::string& written, const std::string& fallback)
+{
+    if (!written.empty() && written[0] == '@')
+        return localize(written);
+    return localization().textOr("level." + stem + "." + field, written.empty() ? fallback : written);
+}
+
 std::string formatText(std::string text, const std::vector<std::string>& args)
 {
     for (std::size_t i = 0; i < args.size(); ++i) {
