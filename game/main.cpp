@@ -775,19 +775,24 @@ int main(int argc, char** argv)
         std::atomic<bool> finished{false};
         std::string loadError;
         bool loaded = false;
+        double sceneSeconds = 0.0, physicsSeconds = 0.0;
         std::thread loader([&] {
             ENGINE_THREAD_NAME("Level loader");
             // World streaming: far static models are read later, around where the player appears
             // (a save's position, else the level's start: NaN).
             const glm::vec3 streamFrom = loadFrom ? loadFrom->feet : glm::vec3(std::numeric_limits<float>::quiet_NaN());
+            const double sceneStart = glfwGetTime();
             loaded = engine::loadScene(scene, levelPath, &loadError, &progress, &streamFrom);
+            sceneSeconds = glfwGetTime() - sceneStart;
             if (!loaded)
                 scene = engine::makeDefaultScene();
             engine::expandFlocks(scene); // a crow flock entity becomes its birds
             progress.setStep("physics");
+            const double physicsStart = glfwGetTime();
             ragdolls.clear(); // setLevel removes their bodies
             killShots.clear();
             physics.setLevel(scene);
+            physicsSeconds = glfwGetTime() - physicsStart;
             ++progress.done;
             finished = true;
         });
@@ -854,14 +859,19 @@ int main(int argc, char** argv)
         loader.join();
         if (!loaded)
             LOG_ERROR("level", "%s, using the built-in level", loadError.c_str());
+        const double gpuStart = glfwGetTime();
         std::size_t cursor = 0;
         for (float uploaded = 0.0f; uploaded < 1.0f;) {
             uploaded = renderer.preload(scene, cursor, 12.0, scene.playerStart); // full textures near the start
             drawLoading(0.85f + 0.15f * uploaded, engine::tr("loading.textures"));
         }
         drawLoading(1.0f, engine::tr("loading.map"));
+        const double mapStart = glfwGetTime();
         map.init(renderer, scene);
-        LOG_INFO("level", "%s loaded in %.1f s", levelPath.filename().string().c_str(), glfwGetTime() - loadStart);
+        const double now = glfwGetTime();
+        LOG_INFO("level", "%s loaded in %.1f s (models %.1f, level %.1f, physics %.1f, GPU %.1f, map %.1f)",
+                 levelPath.filename().string().c_str(), now - loadStart, progress.modelSeconds.load(),
+                 sceneSeconds - progress.modelSeconds.load(), physicsSeconds, mapStart - gpuStart, now - mapStart);
 #ifndef NDEBUG
         LOG_INFO("warning", "debug build (no optimisation), expect a much lower frame rate. Build with -DCMAKE_BUILD_TYPE=Release.");
 #endif

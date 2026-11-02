@@ -478,6 +478,7 @@ struct MapSettings {
 struct LoadProgress {
     std::atomic<int> done{0};
     std::atomic<int> total{1};
+    std::atomic<float> modelSeconds{0.0f}; // reading the model files (in parallel), for the load time log
     void setStep(const std::string& what)
     {
         std::lock_guard<std::mutex> lock(mutex_);

@@ -595,6 +595,7 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
             progress->total = static_cast<int>(files.size()) + 2; // + level lines + physics/scripts afterwards
             progress->done = 0;
         }
+        const auto modelsStart = std::chrono::steady_clock::now();
         JobSystem::global().parallelFor(files.size(), 1, [&](std::size_t begin, std::size_t end) {
             for (std::size_t i = begin; i < end; ++i) {
                 if (progress)
@@ -607,8 +608,10 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
         for (std::size_t i = 0; i < files.size(); ++i)
             if (ok[i])
                 loaded.emplace(files[i], std::move(models[i])); // failures are reported by the line that uses them
-        if (progress)
+        if (progress) {
+            progress->modelSeconds = std::chrono::duration<float>(std::chrono::steady_clock::now() - modelsStart).count();
             progress->setStep("level");
+        }
     }
     auto loadCached = [&loaded](Model& m, const std::filesystem::path& path, std::string* err) {
         if (const auto it = loaded.find(path); it != loaded.end()) {
