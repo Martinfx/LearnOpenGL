@@ -1251,7 +1251,7 @@ int main(int argc, char** argv)
         cvars.add("snd_duck", CVarType::Float, "1", "How much gunfire ducks the ambience and music (0 = not at all)", engine::CVarConfig, 0.0, 1.0);
         cvars.add("snd_occlusion", CVarType::Bool, "1", "Walls muffle the sounds behind them", engine::CVarConfig);
         cvars.add("cl_showfps", CVarType::Bool, "0", "Frame rate in the corner", engine::CVarConfig);
-        cvars.add("cl_viewbob", CVarType::Float, "1", "Weapon bob while walking (0 = off, against motion sickness)", engine::CVarConfig, 0.0, 1.0);
+        cvars.add("cl_viewbob", CVarType::Float, "0.3", "Weapon bob while walking (0 = off, against motion sickness)", engine::CVarConfig, 0.0, 1.0);
         cvars.add("cl_subtitles", CVarType::Bool, "0", "Captions for sounds and speech at the bottom of the screen", engine::CVarConfig);
         cvars.add("ui_scale", CVarType::Float, "1", "Size of texts and HUD (1 = normal)", engine::CVarConfig, 0.75, 1.75)
             .onChange = [](const engine::CVar& v) { uiScale() = std::clamp(static_cast<float>(v.number()), 0.75f, 1.75f); };

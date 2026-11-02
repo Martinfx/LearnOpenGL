@@ -21,6 +21,7 @@ menu.no_saves = No saved games yet.
 menu.off = Off
 menu.on = On
 menu.page.audio = Audio
+menu.page.comfort = Comfort
 menu.page.controls = Controls
 menu.page.graphics = Graphics
 menu.page.other = Other

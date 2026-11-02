@@ -33,14 +33,14 @@ const glm::vec4 kTrack(0.16f, 0.16f, 0.14f, 0.95f);
 struct SettingInfo {
     const char* cvar;
     const char* label;
-    int page; // 0 graphics, 1 controls, 2 audio
+    int page; // 0 graphics, 1 controls, 2 audio, 3 other, 4 comfort (motion sickness)
     std::vector<const char*> choices; // ints shown as named choices (min..max)
 };
 const std::vector<SettingInfo>& settingInfos()
 {
     static const std::vector<SettingInfo> infos = {
         {"r_quality", "setting.r_quality", 0, {"setting.r_quality.0", "setting.r_quality.1", "setting.r_quality.2", "setting.r_quality.3"}},
-        {"fov", "setting.fov", 0, {}},
+        {"fov", "setting.fov", 4, {}},
         {"vsync", "setting.vsync", 0, {}},
         {"fps_max", "setting.fps_max", 0, {}},
         {"cl_showfps", "setting.cl_showfps", 0, {}},
@@ -48,7 +48,7 @@ const std::vector<SettingInfo>& settingInfos()
         {"r_monitor", "setting.r_monitor", 0, {"setting.r_monitor.0", "2", "3", "4", "5", "6", "7", "8"}},
         {"r_scale", "setting.r_scale", 0, {}},
         {"r_aa", "setting.r_aa", 0, {"setting.r_aa.0", "setting.r_aa.1", "setting.r_aa.2"}},
-        {"r_motionblur", "setting.r_motionblur", 0, {}},
+        {"r_motionblur", "setting.r_motionblur", 4, {}},
         {"m_sensitivity", "setting.m_sensitivity", 1, {}},
         {"m_invert_y", "setting.m_invert_y", 1, {}},
         {"joy_sensitivity", "setting.joy_sensitivity", 1, {}},
@@ -74,11 +74,12 @@ const std::vector<SettingInfo>& settingInfos()
         {"language", "setting.language", 3, {}},
         {"cl_subtitles", "setting.cl_subtitles", 3, {}},
         {"ui_scale", "setting.ui_scale", 3, {}},
-        {"cl_viewbob", "setting.cl_viewbob", 3, {}},
+        {"cl_viewbob", "setting.cl_viewbob", 4, {}},
     };
     return infos;
 }
-const char* const kPages[] = {"menu.page.graphics", "menu.page.controls", "menu.page.audio", "menu.page.other"};
+const char* const kPages[] = {"menu.page.graphics", "menu.page.controls", "menu.page.audio", "menu.page.other", "menu.page.comfort"};
+constexpr int kPageCount = 5;
 
 std::string formatValue(const engine::CVar& v)
 {
@@ -403,7 +404,7 @@ void GameMenu::drawSettings(engine::Ui2D& ui, float w, float h)
 
     // Which settings exist (registered by the game) and on which page.
     engine::CVarRegistry& cvars = engine::CVarRegistry::global();
-    std::vector<std::pair<const engine::CVar*, const SettingInfo*>> pages[4];
+    std::vector<std::pair<const engine::CVar*, const SettingInfo*>> pages[kPageCount];
     for (const SettingInfo& info : settingInfos())
         if (const engine::CVar* v = cvars.find(info.cvar))
             pages[info.page].push_back({v, &info});
@@ -415,7 +416,7 @@ void GameMenu::drawSettings(engine::Ui2D& ui, float w, float h)
     // Page tabs.
     float tx = pos.x + row * 0.6f;
     const float tabY = pos.y + row * 1.4f;
-    for (int p = 0; p < 4; ++p) {
+    for (int p = 0; p < kPageCount; ++p) {
         if (pages[p].empty())
             continue;
         const std::string page = engine::tr(kPages[p]);
