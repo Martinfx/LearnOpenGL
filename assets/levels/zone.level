@@ -109,6 +109,7 @@ group "City" ""
 group "Skyline" "City"
 group "Vegetation" ""
 group "Debris" ""
+group "Wall writing" "Debris"
 group "NPC" ""
 group "Stalkers" "NPC"
 group "Soldiers" "NPC"
@@ -6363,6 +6364,517 @@ model "Barrel 10" "../models/props/Barrel_01/Barrel_01.gltf" 54.13 0.01 -94.65
   parent "Debris"
   id 6f21df6697713f88
   transform 90 292.9 0 1
+model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" -20.21 0.54 180.66
+  parent "Wall writing"
+  id 961b0f5b233c3049
+  transform 0 270 0 0.957
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Keep out" "../models/zone/skrunda/graffiti_keep_out.glb" 18.21 3.09 187.02
+  parent "Wall writing"
+  id cb4395f09c10a617
+  transform 0 355 0 0.815
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" -66.42 1.27 -123.31
+  parent "Wall writing"
+  id 5780e406750a1cb3
+  transform 0 89.8 0 0.841
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" -66.37 1.44 -63.29
+  parent "Wall writing"
+  id 8c188931e21d2512
+  transform 0 90.5 0 0.986
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Cross" "../models/zone/skrunda/graffiti_cross.glb" -69.6 1.65 46.24
+  parent "Wall writing"
+  id de1ff0c6d6902740
+  transform 0 269.7 0 0.976
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Cross" "../models/zone/skrunda/graffiti_cross.glb" -66.47 1.65 73.29
+  parent "Wall writing"
+  id b31b071d9194cb2c
+  transform 0 89.7 0 0.919
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "No exit" "../models/zone/skrunda/graffiti_no_exit.glb" -75.02 1.69 -134.69
+  parent "Wall writing"
+  id 866a42cd91ee6278
+  transform 0 269.4 0 0.918
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Dmb" "../models/zone/skrunda/graffiti_dmb.glb" -75.03 1.43 -113.32
+  parent "Wall writing"
+  id 0328894958624b13
+  transform 0 269.7 0 0.825
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Arrow clear" "../models/zone/skrunda/graffiti_arrow_clear.glb" -71.96 1.51 18.7
+  parent "Wall writing"
+  id 1e877d701947cc5d
+  transform 0 89.8 0 0.984
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Dmb" "../models/zone/skrunda/graffiti_dmb.glb" -71.87 1.72 26.35
+  parent "Wall writing"
+  id 6409f67581b81f64
+  transform 0 89.6 0 0.942
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Cross" "../models/zone/skrunda/graffiti_cross.glb" -71.97 1.72 40.75
+  parent "Wall writing"
+  id c1e151bcae25ff92
+  transform 0 89.6 0 1.02
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Dmb" "../models/zone/skrunda/graffiti_dmb.glb" -71.94 1.41 64.12
+  parent "Wall writing"
+  id c9514cf519b3fe25
+  transform 0 89.9 0 0.916
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Cross" "../models/zone/skrunda/graffiti_cross.glb" -75.06 1.72 53.32
+  parent "Wall writing"
+  id 29d8ca141bf76d16
+  transform 0 269.9 0 1.07
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" -75.07 1.53 82.27
+  parent "Wall writing"
+  id d4613025b2273c70
+  transform 0 269.9 0 0.941
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Cross" "../models/zone/skrunda/graffiti_cross.glb" -71.94 1.47 91.33
+  parent "Wall writing"
+  id 1e2849375dd056cf
+  transform 0 89.9 0 1.05
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" -82.95 1.31 -37.69
+  parent "Wall writing"
+  id 54002ed458a12aa6
+  transform 0 90.4 0 0.859
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Cross" "../models/zone/skrunda/graffiti_cross.glb" -86.01 1.73 86.73
+  parent "Wall writing"
+  id a48bf00662d03438
+  transform 0 270.5 0 1.1
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Dmb" "../models/zone/skrunda/graffiti_dmb.glb" -82.92 1.49 106.58
+  parent "Wall writing"
+  id db7f7e0cf8b7a7b6
+  transform 0 90.3 0 0.947
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Cross" "../models/zone/skrunda/graffiti_cross.glb" -82.94 1.43 103.27
+  parent "Wall writing"
+  id 3cf314f055950887
+  transform 0 90.3 0 1
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Cross" "../models/zone/skrunda/graffiti_cross.glb" -82.93 1.33 128.34
+  parent "Wall writing"
+  id 2ef2495cdf6fc855
+  transform 0 89.9 0 1.07
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Dmb" "../models/zone/skrunda/graffiti_dmb.glb" -88.39 1.47 -108.77
+  parent "Wall writing"
+  id 3860a6462ca28e33
+  transform 0 90.4 0 0.926
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Arrow clear" "../models/zone/skrunda/graffiti_arrow_clear.glb" -88.47 1.79 -24.02
+  parent "Wall writing"
+  id 69e839477242e931
+  transform 0 90.6 0 0.924
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" -88.46 1.42 -2.23
+  parent "Wall writing"
+  id 7b70c8fcbd21ef55
+  transform 0 90.2 0 0.994
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Arrow clear" "../models/zone/skrunda/graffiti_arrow_clear.glb" -91.54 1.54 14.87
+  parent "Wall writing"
+  id 59bb60d919745cde
+  transform 0 270.2 0 0.989
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Cross" "../models/zone/skrunda/graffiti_cross.glb" -88.42 1.75 112.33
+  parent "Wall writing"
+  id db08102538c4e32a
+  transform 0 90.2 0 0.995
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "No exit" "../models/zone/skrunda/graffiti_no_exit.glb" -97.06 1.46 -107.56
+  parent "Wall writing"
+  id 36a3d51fc013d0c3
+  transform 0 269.9 0 0.904
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Dmb" "../models/zone/skrunda/graffiti_dmb.glb" -97.06 1.35 -76.85
+  parent "Wall writing"
+  id 6556488742eda738
+  transform 0 269.7 0 0.954
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Cross" "../models/zone/skrunda/graffiti_cross.glb" -93.92 1.51 29
+  parent "Wall writing"
+  id 142334ef5d682eef
+  transform 0 89.6 0 1.02
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" -97.05 1.57 60.61
+  parent "Wall writing"
+  id f23f7729611a0f91
+  transform 0 270.2 0 0.875
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Cross" "../models/zone/skrunda/graffiti_cross.glb" -93.92 1.67 57.75
+  parent "Wall writing"
+  id 90c3a11152ac9b78
+  transform 0 90.2 0 1.02
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Arrow clear" "../models/zone/skrunda/graffiti_arrow_clear.glb" -80.57 1.36 -14.79
+  parent "Wall writing"
+  id 9f8beca1d783ec7a
+  transform 0 270 0 1.1
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Dmb" "../models/zone/skrunda/graffiti_dmb.glb" 63.02 0.3 39.76
+  parent "Wall writing"
+  id addc2f3861c9c992
+  transform 0 90 0 1.21
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 36.98 0.2 41.32
+  parent "Wall writing"
+  id e14ee4364d5f3776
+  transform 0 270 0 0.813
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Arrow clear" "../models/zone/skrunda/graffiti_arrow_clear.glb" 36.98 1.37 38.44
+  parent "Wall writing"
+  id f49d1c134b9a5f9f
+  transform 0 270 0 1.05
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" 135.02 0.41 41.18
+  parent "Wall writing"
+  id 1a4ecbc0367d73f5
+  transform 0 90 0 1.18
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" 108.98 0.6 39.21
+  parent "Wall writing"
+  id 5151806785dd6674
+  transform 0 270 0 1.28
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Dmb" "../models/zone/skrunda/graffiti_dmb.glb" 121.96 0.56 33.98
+  parent "Wall writing"
+  id 475a9980c6fba173
+  transform 0 180 0 1.24
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 121.93 0.19 46.02
+  parent "Wall writing"
+  id 4ba801759f7dbf76
+  transform 0 0 0 0.742
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 135.02 5.52 40.09
+  parent "Wall writing"
+  id ef0ee2223d0d9826
+  transform 0 90 0 1.03
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 108.98 8.98 39.84
+  parent "Wall writing"
+  id 8a0120fd8e804ba9
+  transform 0 270 0 0.933
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Keep out" "../models/zone/skrunda/graffiti_keep_out.glb" 71.44 0.81 97.52
+  parent "Wall writing"
+  id 990dcbbfe42e1353
+  transform 0 0 0 1.01
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Keep out" "../models/zone/skrunda/graffiti_keep_out.glb" 116.02 0.62 89.17
+  parent "Wall writing"
+  id db244593845f1ef3
+  transform 0 90 0 1.01
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Keep out" "../models/zone/skrunda/graffiti_keep_out.glb" 111.23 0.81 82.48
+  parent "Wall writing"
+  id ad4d8b003ea96898
+  transform 0 180 0 1.07
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "No exit" "../models/zone/skrunda/graffiti_no_exit.glb" 114.58 0.59 97.52
+  parent "Wall writing"
+  id c577905852e7f9d2
+  transform 0 0 0 1.05
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 67.98 0.35 83.56
+  parent "Wall writing"
+  id 1c2d61421c717aa3
+  transform 0 270 0 0.825
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 67.98 0.18 90.74
+  parent "Wall writing"
+  id 5733ccb0c9018fe0
+  transform 0 270 0 0.911
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 116.02 5.44 90.95
+  parent "Wall writing"
+  id 9787145ee7fa40ef
+  transform 0 90 0 0.972
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" 162.97 0.4 17.78
+  parent "Wall writing"
+  id e76597f6a3a02810
+  transform 0 270 0 1.17
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 172.41 0.15 36.46
+  parent "Wall writing"
+  id c0a7e09c2daee23f
+  transform 0 0 0 0.707
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 153.98 26.23 25.62
+  parent "Wall writing"
+  id a5b61d6e52331e70
+  transform 0 270 0 1.24
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 226.03 27.66 34.52
+  parent "Wall writing"
+  id e7de6bb451e1f04f
+  transform 0 90 0 1.24
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Dmb" "../models/zone/skrunda/graffiti_dmb.glb" 146.18 0.32 95.81
+  parent "Wall writing"
+  id b626cf7e1910fa74
+  transform 0 270 0 1.06
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" 149.94 0.4 90.09
+  parent "Wall writing"
+  id a6b3c51baedde3ff
+  transform 0 180 0 1.03
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Soot" "../models/zone/skrunda/graffiti_soot.glb" 146.18 0.05 99.06
+  parent "Wall writing"
+  id fbc913448cc7e009
+  transform 0 270 0 0.835
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" 159.21 0.64 106.2
+  parent "Wall writing"
+  id cd8e89039a1d3f3b
+  transform 0 0 0 0.93
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" 156.53 0.76 96.57
+  parent "Wall writing"
+  id 85cba711fbdf6f06
+  transform 0 270 0 0.934
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Dmb" "../models/zone/skrunda/graffiti_dmb.glb" 161.04 0.76 90.58
+  parent "Wall writing"
+  id 47846e2e4f854da1
+  transform 0 180 0 1.05
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "No exit" "../models/zone/skrunda/graffiti_no_exit.glb" 20.95 0.72 86.37
+  parent "Wall writing"
+  id b551f62fa0796e5a
+  transform 0 180 0 1.09
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Dmb" "../models/zone/skrunda/graffiti_dmb.glb" 23.8 0.32 86.37
+  parent "Wall writing"
+  id 600cccdaf2d42751
+  transform 0 180 0 0.979
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" 82.12 0.39 165.45
+  parent "Wall writing"
+  id db7723702e2e4f06
+  transform 0 180 0 1.07
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 58.28 0.15 179.4
+  parent "Wall writing"
+  id 3c4489e76897ce6a
+  transform 0 90 0 0.881
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 64.57 4.18 204.72
+  parent "Wall writing"
+  id 036b7c498cb7e3f5
+  transform 0 0 0 1.06
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Radiation" "../models/zone/skrunda/graffiti_radiation.glb" 67.03 1.59 -29.02
+  parent "Wall writing"
+  id 4166aff011a26978
+  transform 0 180 0 1.15
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 84.02 2.31 -26.06
+  parent "Wall writing"
+  id 6470e676457c4228
+  transform 0 90 0 1.07
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 55.87 2.78 -29.02
+  parent "Wall writing"
+  id 63261fa672f979b8
+  transform 0 180 0 1.18
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Radiation" "../models/zone/skrunda/graffiti_radiation.glb" 102.64 1.75 -29.95
+  parent "Wall writing"
+  id 5e765d8bfd56bfd3
+  transform 0 180 0 1.05
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Keep out" "../models/zone/skrunda/graffiti_keep_out.glb" 103.78 1.16 1.13
+  parent "Wall writing"
+  id f88e533ca7c1fd89
+  transform 0 0 0 1.04
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 105.19 0.72 -30.08
+  parent "Wall writing"
+  id cf2b9ff263f6cead
+  transform 0 180 0 0.902
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 97.15 0.28 -4.43
+  parent "Wall writing"
+  id 2f29d09b8c6930c4
+  transform 0 270 0 1
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Radiation" "../models/zone/skrunda/graffiti_radiation.glb" 125.98 1.52 -65.98
+  parent "Wall writing"
+  id e573f68ce3826450
+  transform 0 270 0 1.08
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 125.98 1.48 -56.36
+  parent "Wall writing"
+  id 70626dbb380a4502
+  transform 0 270 0 1.16
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 133.23 1.56 -51.48
+  parent "Wall writing"
+  id 3bd6131d5c1bfd00
+  transform 0 0 0 0.975
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Dmb" "../models/zone/skrunda/graffiti_dmb.glb" 51.44 0.57 -65.55
+  parent "Wall writing"
+  id fed9649237a30f1a
+  transform 0 192 0 0.961
+  cull_distance 70
+  collision 0
+  cast_shadows 0
 player 5 8.5 5.5 18 0.15 1.8 1.7 0.4 45 100
 player_sounds "../sounds/player/step_gravel.sound" "../sounds/player/land.sound" "../sounds/player/hurt.sound"
 navmesh 1 0.25 0.1 0.35 1.8 0.4 45 32 4

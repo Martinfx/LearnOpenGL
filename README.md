@@ -87,6 +87,10 @@ Oba levely (Zóna i Ulice u nemocnice) stojí na terénu enginu (`zone.terrain`,
 a val na okrajích mapy, u budov, vraků, kolejí a postav rovná zem, 8 vrstev povrchu a tráva ve shlucích. Podél
 zdí, plotů, svodidel a vraků rostou kopřivy a plevel, u budov keře a leží cihly a omítka, u silnic plechovky
 a lahve, pod stromy větvičky a v prasklinách u obrubníků tráva (vše jako foliage, štětcem upravitelné).
+Na zdech Zóny jsou nápisy a skvrny, každý s důvodem: „Цой жив“ a DMB na garážích, kontejnerech a vagónech,
+„Не входить“ u nemocnice, kterou drží bandité, radiace na elektrárně, stalkerské šipky „чисто“ od tábora do města,
+kříže na vagónech u pole anomálií, zatékání a vlhko na štítech a soklech
+(`python3 -I assets/levels/source/add_wall_writing.py zone`; místo ověřuje paprsky proti skutečné geometrii zdi).
 Přidal ho `python3 -I assets/levels/source/add_terrain.py zone hospital_street` přímo do upravených levelů
 (nic z editoru se neztratí; stromy a suť posadí na nový povrch), dál se ladí v režimech Landscape a Foliage.
 
