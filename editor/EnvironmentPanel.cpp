@@ -175,6 +175,8 @@ EnvironmentPanel::EnvironmentPanel(engine::Scene* scene, QWidget* parent)
     addFloat(form, tr("Sky brightness"), &E::atmosphereBrightness, 0, 5, 0.05, 2, tr("Multiplier of the physical sky's light"));
     addFloat(form, tr("Sky occlusion"), &E::skyOcclusion, 0, 1, 0.05, 2,
              tr("Buildings and roofs within ~40 m hide the sky: darker street bottoms and rooms (sky light and reflections)"));
+    addFloat(form, tr("Bounce light"), &E::bounceLight, 0, 2, 0.05, 2,
+             tr("Light reflected from walls and ground on screen into the shade around them (quality option SSGI): 0 off, 1 physical, above 1 over-brightens corners"));
     section(tr("Fog"));
     addColor(form, tr("Color"), &E::fogColor);
     addFloat(form, tr("Density"), &E::fogDensity, 0, 0.5, 0.002, 3);

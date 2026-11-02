@@ -462,6 +462,7 @@ RenderQuality RenderQuality::preset(int level)
         q.ssr = false;
         q.parallax = false;
         q.softShadows = false;
+        q.ssgi = false;
         break;
     case 1:
         q.shadowResolution = 1024; q.shadowCascades = 3; q.ssao = true; q.bloom = true;
@@ -470,6 +471,7 @@ RenderQuality RenderQuality::preset(int level)
         q.localShadowResolution = 512;
         q.taa = false; // FXAA
         q.ssr = false;
+        q.ssgi = false;
         q.volumetricFog = 1;
         break;
     case 3:
@@ -859,7 +861,7 @@ void Renderer::shutdown()
 
 void Renderer::destroyTargets()
 {
-    for (unsigned* t : {&hdrColor_, &depthTex_, &ssaoTex_, &ssaoBlurTex_, &ldrTex_, &sceneColorCopy_, &sceneDepthCopy_, &distortTex_,
+    for (unsigned* t : {&hdrColor_, &depthTex_, &ssaoTex_, &ssaoBlurTex_, &ssgiTex_, &ldrTex_, &sceneColorCopy_, &sceneDepthCopy_, &distortTex_,
                          &taaHistory_[0], &taaHistory_[1], &taaDepth_, &ssrColor_})
         if (*t) {
             glDeleteTextures(1, t);
@@ -898,7 +900,13 @@ void Renderer::ensureTargets(int width, int height)
     }
     ssaoTex_ = makeTexture2D(GL_RG16F, width, height, GL_NEAREST); // visibility, linear depth
     ssaoFbo_ = makeFbo(ssaoTex_);
-    ssaoBlurTex_ = makeTexture2D(GL_R8, width, height, GL_LINEAR);
+    ssgiTex_ = makeTexture2D(GL_R11F_G11F_B10F, width, height, GL_NEAREST); // bounce light (SSGI)
+    glNamedFramebufferTexture(ssaoFbo_, GL_COLOR_ATTACHMENT1, ssgiTex_, 0);
+    {
+        const GLenum buffers[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
+        glNamedFramebufferDrawBuffers(ssaoFbo_, 2, buffers);
+    }
+    ssaoBlurTex_ = makeTexture2D(GL_RGBA16F, width, height, GL_LINEAR); // rgb bounce light, a visibility
     ssaoBlurFbo_ = makeFbo(ssaoBlurTex_);
     ldrTex_ = makeTexture2D(GL_RGBA8, width, height, GL_LINEAR);
     ldrFbo_ = makeFbo(ldrTex_);
@@ -1043,9 +1051,14 @@ void Renderer::updateEnvironment(const Scene& scene, const RenderView& view)
     b.invViewProj = glm::inverse(projection_ * view.view);
     b.probes = glm::vec4(view.capture && !captureProbes_ ? 0.0f : 1.0f, static_cast<float>(kEnvMips - 1), 0.0f, 0.0f);
     // Screen-space reflections: a perspective, lit, continuous view with a previous frame of the same size.
-    const bool ssrView = quality_.ssr && !view.capture && view.shading == Shading::Lit && view.projection[3][3] == 0.0f &&
-                         programs_.ssrHistory.id;
-    ssrRecord_ = ssrView;
+    // The same previous frame lights the screen-space bounce (SSGI, gathered by the SSAO pass).
+    const bool historyView = !view.capture && view.shading == Shading::Lit && view.projection[3][3] == 0.0f && programs_.ssrHistory.id;
+    const bool ssrView = quality_.ssr && historyView;
+    const bool ssgiView = quality_.ssgi && quality_.ssao && historyView && e.bounceLight > 0.0f;
+    ssrRecord_ = ssrView || ssgiView;
+    ssgiActive_ = ssgiView && ssrValid_;
+    ssgiViewToPrev_ = ssrViewProj_ * glm::inverse(view.view);
+    b.probes.z = ssgiActive_ ? std::clamp(e.bounceLight, 0.0f, 2.0f) : 0.0f;
     b.prevViewProj = ssrViewProj_;                     // the frame now in ssrColor_
     ssrPrevViewProj_ = view.projection * view.view;    // becomes ssrViewProj_ once this frame is recorded
     if (ssrView && ssrValid_)
@@ -2225,12 +2238,18 @@ void Renderer::renderSsao()
     glUniformMatrix4fv(programs_.ssao.loc("uInvProj"), 1, GL_FALSE, glm::value_ptr(glm::inverse(projection_)));
     // With TAA the slices turn every frame and the history averages them.
     glUniform1f(programs_.ssao.loc("uFrame"), taaActive_ ? static_cast<float>(taaFrame_ % 64) : 0.0f);
+    glUniform1f(programs_.ssao.loc("uGi"), ssgiActive_ ? 1.0f : 0.0f);
+    glUniform1f(programs_.ssao.loc("uGiRadius"), 4.0f);
+    glUniformMatrix4fv(programs_.ssao.loc("uViewToPrev"), 1, GL_FALSE, glm::value_ptr(ssgiViewToPrev_));
     glBindTextureUnit(0, depthTex_);
+    glBindTextureUnit(1, ssrColor_);
     glDrawArrays(GL_TRIANGLES, 0, 3);
     glBindFramebuffer(GL_FRAMEBUFFER, ssaoBlurFbo_);
     glUseProgram(programs_.blur.id);
     glBindTextureUnit(0, ssaoTex_);
+    glBindTextureUnit(1, ssgiTex_);
     glDrawArrays(GL_TRIANGLES, 0, 3);
+    glBindTextureUnit(1, 0);
 }
 
 namespace {

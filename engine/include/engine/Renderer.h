@@ -125,6 +125,9 @@ struct RenderQuality {
     bool parallax = true; // height maps shift textures with the view angle (Material::heightDepth)
     // Sun shadows sharp at the contact and softer far from the caster (PCSS, Environment::sunSize).
     bool softShadows = true;
+    // Screen-space indirect light: walls and ground seen on screen light their neighbours
+    // (one bounce, gathered with the ambient occlusion; needs ssao). Environment::bounceLight.
+    bool ssgi = true;
     float motionBlur = 0.0f; // camera motion blur in continuous views, shutter fraction 0..1 (0 = off)
     int textureUploadsPerFrame = 6; // new textures sent to the GPU per frame, 0 = all at once
     // Memory. Textures larger than textureMaxSize drop their top mip levels (0 = full size).
@@ -566,6 +569,9 @@ private:
     void drawWater(const Scene& scene, const RenderView& view, const glm::mat4& viewProj);
     void drawUnderwater(const Scene& scene, const RenderView& view);
     unsigned ssaoFbo_ = 0, ssaoTex_ = 0, ssaoBlurFbo_ = 0, ssaoBlurTex_ = 0;
+    unsigned ssgiTex_ = 0;           // screen-space bounce light, second target of the SSAO pass
+    bool ssgiActive_ = false;        // this frame's SSAO pass gathers bounce light
+    glm::mat4 ssgiViewToPrev_{1.0f}; // view space -> clip space of the frame in ssrColor_
     std::vector<unsigned> bloomTex_, bloomFbo_;
     std::vector<glm::ivec2> bloomSize_;
     unsigned ldrFbo_ = 0, ldrTex_ = 0;

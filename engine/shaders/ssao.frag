@@ -5,12 +5,21 @@
 // integrate the visible arc cosine-weighted against the normal reconstructed from depth.
 // Slice directions turn per pixel (4x4 pattern, blurred away by blur.frag) and per frame
 // (averaged by TAA when it is on). Output: visibility 0..1 and linear depth for the blur.
+// Screen-space indirect light (SSGI, one bounce per frame - more over frames): the samples
+// that raise a horizon are surfaces in front of this one; their colour in the previous frame
+// (reprojected) is the light they send here. Bounce = occluded part (1 - visibility) times
+// the cosine-weighted average colour of those occluders.
 in vec2 vUV;
 layout(binding = 0) uniform sampler2D uDepth;
+layout(binding = 1) uniform sampler2D uPrevColor; // previous frame HDR (a = 0 under the weapon)
 uniform float uRadius;   // metres
 uniform mat4 uInvProj;
 uniform float uFrame;    // frame index for the temporal rotation (0 = still)
-out vec2 fragColor;
+uniform float uGi;       // 1 = indirect light on (previous frame valid)
+uniform float uGiRadius; // metres the bounce light is gathered from
+uniform mat4 uViewToPrev; // view space -> previous frame clip space
+layout(location = 0) out vec2 fragColor;
+layout(location = 1) out vec3 fragGi;
 
 vec3 viewPos(vec2 uv) {
     float d = textureLod(uDepth, uv, 0.0).r;
@@ -19,11 +28,24 @@ vec3 viewPos(vec2 uv) {
 }
 
 const float kPi = 3.14159265;
+const int kGiSteps = 5;
+
+// Cosine-weighted visible part of one slice between the horizons h0, h1 (cosines to the view
+// vector), limited by the normal's hemisphere (gamma: normal angle in the slice; Jimenez eq. 10).
+float arcVisibility(float h0, float h1, float gamma) {
+    float a0 = gamma + max(-acos(h0) - gamma, -kPi * 0.5);
+    float a1 = gamma + min(acos(h1) - gamma, kPi * 0.5);
+    float sinG = sin(gamma), cosG = cos(gamma);
+    float arc0 = -cos(2.0 * a0 - gamma) + cosG + 2.0 * a0 * sinG;
+    float arc1 = -cos(2.0 * a1 - gamma) + cosG + 2.0 * a1 * sinG;
+    return 0.25 * (arc0 + arc1);
+}
 
 void main() {
     float depth = textureLod(uDepth, vUV, 0.0).r;
     if (depth >= 1.0) {
         fragColor = vec2(1.0, 1e6);
+        fragGi = vec3(0.0);
         return;
     }
     vec3 p = viewPos(vUV);
@@ -45,7 +67,11 @@ void main() {
     float jitter = fract(float((q.x + q.y * 4) * 7 & 15) / 16.0 + uFrame * 0.618034);
     float rotation = (pattern + uFrame * 0.2451) * kPi / float(kSlices);
 
-    float visibility = 0.0;
+    float visibility = 0.0, giVisibility = 0.0;
+    vec3 giSum = vec3(0.0);
+    float giWeight = 0.0;
+    // Bounce light reaches farther than the contact darkening: its own, longer march.
+    float giRadiusPx = clamp(uGiRadius * pixelsPerMetre, 8.0, 0.35 * float(textureSize(uDepth, 0).y));
     for (int s = 0; s < kSlices; ++s) {
         float phi = rotation + float(s) * kPi / float(kSlices);
         vec2 dir = vec2(cos(phi), sin(phi));
@@ -79,15 +105,46 @@ void main() {
                     h0 = max(h0, c);
             }
         }
-        // Horizon angles relative to the view vector, limited by the normal's hemisphere.
-        float a0 = gamma + max(-acos(h0) - gamma, -kPi * 0.5);
-        float a1 = gamma + min(acos(h1) - gamma, kPi * 0.5);
-        // Cosine-weighted integral of the visible arc (Jimenez eq. 10).
-        float sinG = sin(gamma), cosG = cos(gamma);
-        float arc0 = -cos(2.0 * a0 - gamma) + cosG + 2.0 * a0 * sinG;
-        float arc1 = -cos(2.0 * a1 - gamma) + cosG + 2.0 * a1 * sinG;
-        visibility += nLen * 0.25 * (arc0 + arc1);
+        visibility += nLen * arcVisibility(h0, h1, gamma);
+        if (uGi > 0.0) {
+            // The surfaces that hide the sky from here within uGiRadius: what they showed last
+            // frame (reprojected) is light they send here, weighted by how much of the arc each
+            // newly hides and how it faces the normal.
+            float g0 = -1.0, g1 = -1.0;
+            for (int i = 0; i < kGiSteps; ++i) {
+                float t = (float(i) + jitter) / float(kGiSteps);
+                vec2 offset = dir * texel * max(2.0, t * t * giRadiusPx);
+                for (int side = 0; side < 2; ++side) {
+                    vec2 suv = vUV + (side == 0 ? offset : -offset);
+                    if (any(lessThan(suv, vec2(0.0))) || any(greaterThan(suv, vec2(1.0))))
+                        continue;
+                    vec3 d = viewPos(suv) - p;
+                    float len = length(d);
+                    float falloff = clamp(1.0 - len * len / (uGiRadius * uGiRadius), 0.0, 1.0);
+                    float c = mix(-1.0, dot(d, v) / max(len, 1e-4), falloff);
+                    float h = side == 0 ? g1 : g0;
+                    if (c > h) {
+                        float facing = max(dot(n, d) / max(len, 1e-4), 0.0);
+                        vec4 prev = uViewToPrev * vec4(p + d, 1.0);
+                        vec2 puv = prev.xy / prev.w * 0.5 + 0.5;
+                        if (prev.w > 0.0 && all(greaterThan(puv, vec2(0.0))) && all(lessThan(puv, vec2(1.0)))) {
+                            vec4 col = textureLod(uPrevColor, puv, 1.0);
+                            float w = (c - h) * facing * col.a;
+                            giSum += col.rgb * w;
+                            giWeight += w;
+                        }
+                        if (side == 0)
+                            g1 = c;
+                        else
+                            g0 = c;
+                    }
+                }
+            }
+            giVisibility += nLen * arcVisibility(g0, g1, gamma);
+        }
     }
+    giVisibility = clamp(giVisibility / float(kSlices), 0.0, 1.0);
     visibility = clamp(visibility / float(kSlices), 0.0, 1.0);
     fragColor = vec2(visibility, -p.z);
+    fragGi = giWeight > 1e-4 ? min(giSum / giWeight, vec3(64.0)) * (1.0 - giVisibility) : vec3(0.0);
 }

@@ -618,8 +618,12 @@ void main() {
     vec2 brdf = texture(uBrdfLut, vec2(nv, rough)).rg;
     vec3 Fa = fresnelRoughness(nv, f0, rough);
     float occlusion = ao;
-    if (!uOverlay && uCameraPos.w > 0.5)
-        occlusion *= mix(1.0, texture(uSsao, gl_FragCoord.xy * uViewport.zw).r, uFogParams.w);
+    vec3 bounce = vec3(0.0); // light from nearby surfaces on screen (SSGI)
+    if (!uOverlay && uCameraPos.w > 0.5) {
+        vec4 screenAo = texture(uSsao, gl_FragCoord.xy * uViewport.zw);
+        occlusion *= mix(1.0, screenAo.a, uFogParams.w);
+        bounce = screenAo.rgb * uProbeParams.z * ao;
+    }
     // Direct light leaks less into crevices than sky light: soften AO on the sun term.
     color *= mix(1.0, occlusion, 0.3);
     // Energy of light scattered more than once between microfacets (Fdez-Aguera 2019): rough
@@ -633,7 +637,7 @@ void main() {
     // Specular occlusion (Lagarde 2014): a crevice that hides the sky hides its reflection too,
     // more for glossy surfaces, so corners and gaps stop shining with the sky.
     float specOcclusion = clamp(pow(nv + occlusion, exp2(-16.0 * rough - 1.0)) - 1.0 + occlusion, 0.0, 1.0);
-    vec3 ambient = (1.0 - specularEnergy) * (1.0 - metal) * albedo * irradiance * occlusion + prefiltered * specularEnergy * specOcclusion;
+    vec3 ambient = (1.0 - specularEnergy) * (1.0 - metal) * albedo * (irradiance * occlusion + bounce) + prefiltered * specularEnergy * specOcclusion;
     color += ambient;
     color += albedo * (1.0 - metal) * vec3(0.7, 0.75, 0.9) * uWeather.y * 0.45 * skyOpen * interiorSky * (0.4 + 0.6 * max(nWorld.y, 0.0)); // lightning
 

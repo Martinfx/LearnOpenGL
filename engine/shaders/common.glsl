@@ -22,7 +22,7 @@ layout(std140, binding = 1) uniform Environment {
     vec4 uWeather;         // x: wetness, y: lightning flash, z: 1 = rain map valid, w: puddles
     vec4 uWind;            // xz: direction the wind blows, y: strength 0..1, w: gusts 0..1
     vec4 uVolumetric;      // volumetric fog: x 1 = on, y: near (m), z: 1 / log(far / near), w: far (m)
-    vec4 uProbeParams;     // x: 1 = baked probes on (0 while baking them), y: reflection cube max mip
+    vec4 uProbeParams;     // x: 1 = baked probes on (0 while baking them), y: reflection cube max mip, z: screen-space bounce light strength (SSGI)
     mat4 uPrevViewProj;    // previous frame (no TAA jitter): screen-space reflections reproject into it
     vec4 uSsr;             // x: 1 = SSR on, y: max distance (m), z: intensity, w: max roughness
     vec4 uAtmosphere;      // x: physical sky 0..1, y: radiance scale (sun illuminance), z: sky occlusion, w: top-down map top height
