@@ -1,0 +1,7 @@
+seed 1957
+group "City"
+kit "postsoviet.citykit"
+layout organic
+cache "../models/city/zone_city"
+town_size 640
+outskirts 80

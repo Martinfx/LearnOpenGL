@@ -105,9 +105,10 @@ struct KitProp {
 };
 
 // Ground kinds of the terrain the generator paints (terrain layer = index).
-enum class Ground { Yard, Lot, Road, Pavement, Meadow, Path, Built };
-constexpr int kGroundCount = 7;
-const char* groundName(int g);                       // "yard", "lot", "road", "pavement", "meadow", "path", "built"
+enum class Ground { Yard, Lot, Road, Pavement, Meadow, Path, Built, Verge };
+constexpr int kGroundCount = 8;   // = Terrain::kLayers
+const char* groundName(int g);                       // "yard", "lot", "road", "pavement", "meadow", "path", "built", "verge"
+// verge: the dirt joint along the kerbs and at the foot of the walls, where grass and weeds take hold first.
 
 // Ground cover grown through the terrain's foliage (instanced, dense): grass, weeds.
 struct KitFoliage {
@@ -116,7 +117,7 @@ struct KitFoliage {
     std::filesystem::path lodPath;   // absolute, empty = none
     float lodDistance = 25.0f;
     float density = 0.1f;            // instances per m2 where it grows fully
-    std::array<float, kGroundCount> on{1.0f, 0.3f, 0.02f, 0.05f, 1.0f, 0.0f, 0.0f}; // share by ground kind
+    std::array<float, kGroundCount> on{1.0f, 0.3f, 0.02f, 0.05f, 1.0f, 0.0f, 0.0f, 1.0f}; // share by ground kind
     float cull = 60.0f;
     float farDensity = 0.4f;
     float sway = 1.0f;

@@ -83,7 +83,8 @@ Druhý režim vedle mřížky, podle přehledu algoritmů, který poslal martin.
 4. **Terén a hustá tráva.** Pod městem vznikne terén (krok *Terrain spacing*): vozovka, chodníky, dvory, cesty
    a zastavěná plocha jsou namalované jako vrstvy, mimo město se zvedají kopce (*Hills*). Tráva a plevel rostou
    přes foliage terénu (instancované, tisíce kusů na blok) s hustotou podle druhu země – tabulka *Ground cover*
-   v kitu, celkově *Grass density*.
+   v kitu, celkově *Grass density*. Zvláštní druh země *verge* je spára podél obrubníků a pás u paty zdí: tam
+   tráva a plevel rostou nejhustěji, jako v opravdu opuštěném městě.
 5. **Optimalizace** zůstává na enginu: LOD každého domu, instancing sdílených meshů, frustum culling, Hi-Z
    occlusion. Textury domů se sdílí mezi soubory (jedna kopie v paměti pro celé město).
 
@@ -116,4 +117,7 @@ Příkazová řádka (stejný generátor): `city_gen <settings.city> <out.level>
 - Kit tvoří domy zarostlé ulice (11 činžáků), dva panelové domy, tři podrobné věžáky (lodžie, vchody, strojovna
   výtahu) a garáže; organický režim k tomu staví domy gramatikou. Víc stylů = víc variability.
 - Náměstí a parky jako cíl sítě (ne jen zbylé bloky) a řeky / železnice jako hranice pole zatím nejsou.
-- Generátorem se nedělají hotové mapy; nový level z něj vznikne až po schválení.
+- Mapa **Mrtvé město** (`assets/levels/zone_city.level`, martin schválil 2. 11. 2026) je vygenerovaná z
+  `assets/city/zone_city.city`; domy jsou v `assets/models/city/zone_city/`. Start na jižním příjezdu, cíl centrum;
+  start, název a značky na mapě jsou dopsané ručně (při přegenerování je potřeba je vrátit).
+- Další mapy z generátoru jen po schválení.

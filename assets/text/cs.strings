@@ -266,4 +266,6 @@ storm.radio_warning = Tolikovo rádio píská: bouře se blíží. Najdi si vča
 hud.talk_to = Mluvit: {0}
 hud.trade_with = Obchodovat: {0}
 level.overgrown_street.title = Počtovaja: zarostlá ulice
+level.zone_city.title = Mrtvé město
+level.zone_city.hint = Město zarůstá desítky let. Vejdi do něj od jihu a dojdi do centra.
 level.overgrown_street.hint = Město je desítky let prázdné a ulice zarůstá. Projdi na sever k domu na jejím konci.

@@ -265,4 +265,6 @@ storm.radio_warning = Tolik's radio is whining: a storm is coming. Find a roof i
 hud.talk_to = Talk: {0}
 hud.trade_with = Trade: {0}
 level.overgrown_street.title = Pochtovaya street: overgrown
+level.zone_city.title = Dead city
+level.zone_city.hint = The town has been growing over for decades. Enter it from the south and make your way to the centre.
 level.overgrown_street.hint = The town has been empty for decades and the street is going back to nature. Walk north to the house at its end.

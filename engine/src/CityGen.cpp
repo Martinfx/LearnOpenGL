@@ -28,7 +28,7 @@ constexpr const char* kStreetNames[] = {"none", "alley", "side", "main"};
 constexpr const char* kBlockNames[] = {"perimeter", "microdistrict", "towers", "garages", "park", "ruin", "wasteland", "empty", "houses"};
 constexpr const char* kBlockLabels[] = {"Perimeter block (tenements)", "Micro-district (panel slabs)", "Towers",
                                         "Garages", "Park", "Ruin", "Waste lot", "Empty lot", "Private houses"};
-constexpr const char* kGroundNames[] = {"yard", "lot", "road", "pavement", "meadow", "path", "built"};
+constexpr const char* kGroundNames[] = {"yard", "lot", "road", "pavement", "meadow", "path", "built", "verge"};
 } // namespace
 
 const char* streetClassName(StreetClass c) { return kStreetNames[static_cast<int>(c)]; }
@@ -629,6 +629,7 @@ std::uint64_t mix(std::uint64_t a, std::uint64_t b)
 }
 
 constexpr float kPi = 3.14159265358979f;
+constexpr float kVergeWidth = 0.45f; // kerb joint / wall foot strip where plants take hold (m)
 float deg(float rad) { return rad * 180.0f / kPi; }
 
 struct Rect {
@@ -713,8 +714,10 @@ public:
     }
     void rectLines(const Rect& r, const glm::vec4& c, float y = 0.4f)
     {
-        if (c == kColHouse)
+        if (c == kColHouse) {
             groundRect(Ground::Built, r, s_.kerbHeight);
+            wallFoot({{r.u0, r.v0}, {r.u1, r.v0}, {r.u1, r.v1}, {r.u0, r.v1}});
+        }
         line({r.u0, r.v0}, {r.u1, r.v0}, c, y);
         line({r.u1, r.v0}, {r.u1, r.v1}, c, y);
         line({r.u1, r.v1}, {r.u0, r.v1}, c, y);
@@ -898,6 +901,27 @@ public:
         sh.points = worldXZ(pts);
         plan.ground.shapes.push_back(std::move(sh));
     }
+    // The foot of a wall: painted after everything else (yards and lots would cover it).
+    void wallFoot(const std::vector<glm::vec2>& footprint)
+    {
+        if (!plan.ground.enabled || footprint.size() < 3)
+            return;
+        std::vector<glm::vec2> ring = footprint;
+        ring.push_back(footprint.front());
+        GroundShape sh;
+        sh.layer = static_cast<int>(Ground::Verge);
+        sh.setHeight = false;
+        sh.halfWidth = kVergeWidth * 1.6f;
+        sh.points = worldXZ(ring);
+        feet.push_back(std::move(sh));
+    }
+    void flushWallFeet()
+    {
+        for (auto& f : feet)
+            plan.ground.shapes.push_back(std::move(f));
+        feet.clear();
+    }
+    std::vector<GroundShape> feet;
     void groundRect(Ground g, const Rect& r, float height)
     {
         ground(g, {{r.u0, r.v0}, {r.u1, r.v0}, {r.u1, r.v1}, {r.u0, r.v1}}, height);
@@ -957,7 +981,7 @@ void setupGround(Builder& b, const Settings& s, const Rect& extent, const Rect& 
     G.baseLayer = static_cast<int>(Ground::Meadow);
     const Kit& k = b.kit_;
     G.materials = {k.yard, k.lot.empty() ? k.yard : k.lot, k.road, k.pavement, k.yard, k.lot.empty() ? k.yard : k.lot,
-                   k.lot.empty() ? k.pavement : k.lot};
+                   k.lot.empty() ? k.pavement : k.lot, k.lot.empty() ? k.yard : k.lot};
     G.foliage = k.foliage;
     for (auto& f : G.foliage)
         f.density *= s.foliageDensity * (0.25f + 0.75f * s.overgrowth);
@@ -1187,6 +1211,7 @@ public:
             p.boundsMin = glm::min(p.boundsMin, w);
             p.boundsMax = glm::max(p.boundsMax, w + glm::vec3(0.0f, 1.0f, 0.0f));
         }
+        b_.flushWallFeet();
         return std::move(b_.plan);
     }
 
@@ -2033,6 +2058,9 @@ public:
         for (const auto& r : net_.roads)
             if (const StreetProfile& P = profile(cls(r.cls)); P.carriageway > 0.0f)
                 b_.ground(Ground::Pavement, r.points, kh, P.width() * 0.5f);
+        for (const auto& r : net_.roads) // the kerb joint: a strip left by the carriageway painted over it
+            if (const StreetProfile& P = profile(cls(r.cls)); P.carriageway > 0.0f)
+                b_.ground(Ground::Verge, r.points, kh, P.carriageway * 0.5f + kVergeWidth, false);
         for (const auto& r : net_.roads)
             if (const StreetProfile& P = profile(cls(r.cls)); P.carriageway > 0.0f) {
                 b_.ground(Ground::Road, r.points, 0.0f, P.carriageway * 0.5f);
@@ -2059,6 +2087,7 @@ public:
             p.boundsMax = glm::max(p.boundsMax, w + glm::vec3(0.0f, 1.0f, 0.0f));
         }
         p.stats.blocks = static_cast<int>(lots_.size());
+        b_.flushWallFeet();
         return std::move(b_.plan);
     }
 
@@ -2279,6 +2308,7 @@ private:
         b_.addSolidPoly(fp);
         b_.polyLines(fp, kColHouse, 0.5f);
         b_.ground(Ground::Built, fp, s_.kerbHeight);
+        b_.wallFoot(fp);
     }
 
     // ------------------------------------------------------------ perimeter blocks of any shape
@@ -2570,6 +2600,7 @@ private:
             b_.addSolidPoly(fp);
             b_.polyLines(fp, kColHouse, 0.5f);
             b_.ground(Ground::Built, fp, s_.kerbHeight);
+            b_.wallFoot(fp);
             L.entrances.push_back(sl.c + face * (tw.depth * 0.5f));
         }
         L.yard = region;
@@ -2600,6 +2631,7 @@ private:
             b_.addSolidPoly(fp);
             b_.polyLines(fp, kColHouse, 0.5f);
             b_.ground(Ground::Built, fp, s_.kerbHeight);
+            b_.wallFoot(fp);
         }
         (void)rng;
     }

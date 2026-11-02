@@ -29,3 +29,4 @@ assets/models/zone/textures/*.png filter=lfs diff=lfs merge=lfs -text
 assets/levels/*.probes filter=lfs diff=lfs merge=lfs -text
 # Golden images of the renderer (uncompressed PPM, small)
 tests/golden/*.ppm binary
+assets/models/city/**/*.glb filter=lfs diff=lfs merge=lfs -text
