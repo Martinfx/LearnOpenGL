@@ -69,43 +69,43 @@ foliage_impostor 90
 foliage_type "../models/zone/skrunda/veg/birch_b.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
 foliage_lod "../models/zone/skrunda/veg/birch_b_lod1.glb" 30
 foliage_impostor 90
-foliage_type "../models/zone/vegetation/bush_wide_a.glb" 0.02 0.85 1.15 110 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/bush_wide_a_lod1.glb" 20
-foliage_type "../models/zone/vegetation/bush_c.glb" 0.02 0.85 1.15 110 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/bush_c_lod1.glb" 20
-foliage_type "../models/zone/vegetation/bush_a.glb" 0.02 0.85 1.15 110 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/bush_a_lod1.glb" 20
 foliage_type "../models/zone/vegetation/bush_b.glb" 0.02 0.85 1.15 110 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
 foliage_lod "../models/zone/vegetation/bush_b_lod1.glb" 20
+foliage_type "../models/zone/vegetation/bush_a.glb" 0.02 0.85 1.15 110 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/bush_a_lod1.glb" 20
 foliage_type "../models/zone/vegetation/bush_dense_a.glb" 0.02 0.85 1.15 110 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
 foliage_lod "../models/zone/vegetation/bush_dense_a_lod1.glb" 20
+foliage_type "../models/zone/vegetation/bush_c.glb" 0.02 0.85 1.15 110 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/bush_c_lod1.glb" 20
+foliage_type "../models/zone/vegetation/grass_tall_a.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/grass_tall_a_lod1.glb" 8
+foliage_type "../models/zone/vegetation/grass_tall_b.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/grass_tall_b_lod1.glb" 8
 foliage_type "../models/zone/vegetation/weed_patch.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
 foliage_lod "../models/zone/vegetation/weed_patch_lod1.glb" 8
 foliage_lod "../models/zone/skrunda/veg/weed_patch_far.glb" 16
-foliage_type "../models/zone/vegetation/grass_tall_b.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/grass_tall_b_lod1.glb" 8
-foliage_type "../models/zone/vegetation/grass_tall_a.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/grass_tall_a_lod1.glb" 8
 foliage_type "../models/zone/vegetation/nettle_tall_a.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
 foliage_lod "../models/zone/vegetation/nettle_tall_a_lod1.glb" 8
+foliage_type "../models/zone/vegetation/nettle_medium_a.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/nettle_medium_a_lod1.glb" 8
 foliage_type "../models/zone/skrunda/veg/grass_dry.glb" 0.25 0.85 1.15 55 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
 foliage_lod "../models/zone/skrunda/veg/grass_dry_lod1.glb" 8
 foliage_lod "../models/zone/skrunda/veg/grass_dry_far.glb" 18
+foliage_type "../models/zone/vegetation/grass_dry_a.glb" 0.3 0.85 1.15 55 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/grass_dry_a_lod1.glb" 8
+foliage_type "../models/zone/skrunda/veg/grass_fresh.glb" 0.25 0.85 1.15 55 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/skrunda/veg/grass_fresh_lod1.glb" 8
+foliage_lod "../models/zone/skrunda/veg/grass_fresh_far.glb" 18
 foliage_type "../models/zone/vegetation/grass_short_a.glb" 0.3 0.85 1.15 55 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
 foliage_lod "../models/zone/vegetation/grass_short_a_lod1.glb" 8
 foliage_type "../models/zone/vegetation/grass_tall_a.glb" 0.3 0.85 1.15 55 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
 foliage_lod "../models/zone/vegetation/grass_tall_a_lod1.glb" 8
-foliage_type "../models/zone/vegetation/grass_dry_a.glb" 0.3 0.85 1.15 55 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/grass_dry_a_lod1.glb" 8
-foliage_type "../models/zone/vegetation/grass_patch_tall.glb" 0.25 0.85 1.15 55 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/grass_patch_tall_lod1.glb" 8
-foliage_lod "../models/zone/skrunda/veg/grass_patch_far.glb" 18
 foliage_type "../models/zone/vegetation/grass_clump_a.glb" 0.3 0.85 1.15 55 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
 foliage_lod "../models/zone/vegetation/grass_clump_a_lod1.glb" 8
-foliage_type "../models/zone/vegetation/grass_tall_a.glb" 0.2 0.85 1.15 55 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/grass_tall_a_lod1.glb" 8
 foliage_type "../models/zone/vegetation/grass_tall_b.glb" 0.2 0.85 1.15 55 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
 foliage_lod "../models/zone/vegetation/grass_tall_b_lod1.glb" 8
+foliage_type "../models/zone/vegetation/grass_tall_a.glb" 0.2 0.85 1.15 55 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/grass_tall_a_lod1.glb" 8
 loading_image "../textures/ui/loading_zone.jpg"
 loading_title "Test: voda – odvodňovací kanál"
 loading_hint "Betonový kanál s tekoucí vodou v louce. Vlez do vody po schodech, ponoř se, střílej do hladiny."

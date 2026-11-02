@@ -99,9 +99,9 @@ foliage_lod "../models/zone/skrunda/veg/grass_dry_lod1.glb" 8
 foliage_lod "../models/zone/skrunda/veg/grass_dry_far.glb" 18
 foliage_type "../models/zone/vegetation/grass_short_a.glb" 0.3 0.85 1.15 55 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
 foliage_lod "../models/zone/vegetation/grass_short_a_lod1.glb" 8
-foliage_type "../models/zone/vegetation/grass_patch_tall.glb" 0.25 0.85 1.15 55 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/grass_patch_tall_lod1.glb" 8
-foliage_lod "../models/zone/skrunda/veg/grass_patch_far.glb" 18
+foliage_type "../models/zone/skrunda/veg/grass_fresh.glb" 0.25 0.85 1.15 55 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/skrunda/veg/grass_fresh_lod1.glb" 8
+foliage_lod "../models/zone/skrunda/veg/grass_fresh_far.glb" 18
 foliage_type "../models/zone/vegetation/grass_tall_a.glb" 0.3 0.85 1.15 55 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
 foliage_lod "../models/zone/vegetation/grass_tall_a_lod1.glb" 8
 foliage_type "../models/zone/vegetation/grass_dry_a.glb" 0.3 0.85 1.15 55 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1

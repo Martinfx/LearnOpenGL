@@ -2,6 +2,7 @@
 f4f50d2af90b2308 levels/anomaly_test.level
 07aec73e8a819f2c levels/anomaly_test.terrain
 b639b748eaa99f15 levels/hospital_street.level
+16a99c4bdef1dd84 levels/hospital_street.terrain
 445fc50ee5c09d1b levels/io_test.level
 2d88df5b0e8fd10d levels/io_test.terrain
 e4d934740cc114f2 levels/lights_test.level
@@ -17,6 +18,7 @@ c977985b1b77c564 levels/test.level
 d71fdc253874d2f4 levels/water_test.level
 5c73bcb3e054f39e levels/water_test.terrain
 cd8cd79746c9f3e5 levels/zone.level
+a5c67d643d441c43 levels/zone.terrain
 795312dd3622823e materials/bricks.material
 386a2c09e258b16f materials/concrete.material
 bbde7209239d4283 materials/metal_plate.material
@@ -1464,6 +1466,9 @@ af95c8347bb97864 models/zone/skrunda/veg/broadleaf_b_spring_lod1.glb
 adabae24329865b3 models/zone/skrunda/veg/grass_dry.glb
 4d34311630799276 models/zone/skrunda/veg/grass_dry_far.glb
 784d9f7a4db3365d models/zone/skrunda/veg/grass_dry_lod1.glb
+8e0e552c5915c8fc models/zone/skrunda/veg/grass_fresh.glb
+316bff3aafced9f4 models/zone/skrunda/veg/grass_fresh_far.glb
+20c2dacfa82f14da models/zone/skrunda/veg/grass_fresh_lod1.glb
 7761544c96d8e56d models/zone/skrunda/veg/grass_patch_far.glb
 a194ec33e1fc32dd models/zone/skrunda/veg/pine_a.glb
 4b48971fae725702 models/zone/skrunda/veg/pine_a_lod1.glb

@@ -61,7 +61,8 @@ DUSK_ENV = [
 # foliage kinds: brush density (instances / m2) and far density, as in Skrunda-1
 KIND = {'Tree': (0.03, 1.0), 'Bush': (0.02, 0.8), 'Tall grass': (0.25, 0.5), 'Weeds': (0.1, 0.6), 'Grass tuft': (0.3, 0.5),
         'Reeds': (0.2, 0.6)}
-FAR = {SK + 'veg/grass_dry': (SK + 'veg/grass_dry_far.glb', 18), V + 'grass_patch_tall': (SK + 'veg/grass_patch_far.glb', 18),
+FAR = {SK + 'veg/grass_dry': (SK + 'veg/grass_dry_far.glb', 18), SK + 'veg/grass_fresh': (SK + 'veg/grass_fresh_far.glb', 18),
+       V + 'grass_patch_tall': (SK + 'veg/grass_patch_far.glb', 18),
        V + 'weed_patch': (SK + 'veg/weed_patch_far.glb', 16)}
 # (file without .glb, lod distance, cull distance, collision, casts shadows)
 TREE = dict(lod=30, cull=200, coll=True, shadow=True)
@@ -350,8 +351,11 @@ class Place:
                         self.veg('Reeds', V + rng.choice(['grass_tall_a', 'grass_tall_b']), jx, jz, GRASS,
                                  scale=rng.uniform(1.1, 1.5))
                     else:
-                        f = SK + 'veg/grass_dry' if rng.random() < 0.6 else V + 'grass_patch_tall'
-                        self.veg('Tall grass', f, jx, jz, GRASS, scale=rng.uniform(0.8, 1.15))
+                        # clumps: a slow noise makes dense, tall patches and low, open spots; fresh green
+                        # grass where it is damp, last year's straw elsewhere
+                        dense = min(max((float(self.noise.fbm(jx + 333.0, jz - 777.0, 11.0, 2)) - 0.38) / 0.24, 0.0), 1.0)
+                        f = SK + 'veg/grass_dry' if rng.random() < 0.6 - 0.4 * wet else SK + 'veg/grass_fresh'
+                        self.veg('Tall grass', f, jx, jz, GRASS, scale=rng.uniform(0.8, 1.15) * (0.7 + 0.45 * dense))
                     if rng.random() < 0.7:
                         self.veg('Grass tuft', V + rng.choice(['grass_tall_a', 'grass_dry_a', 'grass_short_a']),
                                  jx + step * 0.5, jz + step * 0.5, GRASS, scale=rng.uniform(0.7, 1.0))

@@ -89,6 +89,7 @@ def gen(name, file, x, z, parent, yaw=0.0, lod_dist=60, has_lod=True, dy=0.0, **
 
 # LOD2 thinned to a quarter of the blades (assets/models/zone/source/thin_glb.py): file, distance
 FAR_LOD = {'grass_patch_tall': ('../models/zone/skrunda/veg/grass_patch_far.glb', 18),
+           'sk:grass_fresh': ('../models/zone/skrunda/veg/grass_fresh_far.glb', 18),
            'sk:grass_dry': ('../models/zone/skrunda/veg/grass_dry_far.glb', 18),
            'weed_patch': ('../models/zone/skrunda/veg/weed_patch_far.glb', 16)}
 
@@ -227,9 +228,9 @@ L += [
     'env sun_intensity 3.4',
     'env sky_zenith 0.28 0.44 0.7',
     'env sky_horizon 0.74 0.8 0.86',
-    'env ground_color 0.34 0.31 0.24',
+    'env ground_color 0.4 0.37 0.28',     # sunlit straw and walls bounce warm light into the shade
     'env cloud_cover 0.4',
-    'env ambient_intensity 1.0',
+    'env ambient_intensity 1.15',
     'env fog_color 0.72 0.78 0.85',
     'env fog_density 0.0022',
     'env fog_height 2',
@@ -532,31 +533,42 @@ for k in range(2600):
         f = 'bush_a' if r < 0.3 else 'bush_b' if r < 0.5 else 'bush_c' if r < 0.65 else 'bush_wide_a' if r < 0.85 else 'bush_dense_a'
         veg('Bush', f, x, z, 'Bushes', lod_dist=20, cull=110, shadows=True)
 
-# ground cover: tall grass everywhere it is not trodden, nettles and weeds at the walls, dry grass patches.
-# Dense (2.6 m grid, one 2.5 m patch per cell = closed sward) in the playable town, sparse outside it.
+# ground cover: tall grass everywhere it is not trodden, nettles and weeds at the walls. The grass follows the
+# terrain layers under it (fresh green on the lush layer, straw elsewhere, little on bare dirt, none in wheel ruts)
+# and grows in clumps: a slow noise thins it to open spots and thickens it to dense patches.
+# Dense (2 m grid + a lower second layer) in the playable town, 3.5 m grid outside it.
+grng = random.Random(4711)          # own stream: the rest of the level keeps its random sequence
 z = site.Z0 + 1
 while z < site.Z0 + site.SIZE - 1:
     inside_z = site.PLAY[1] < z < site.PLAY[3]
     x = site.X0 + 1
     while x < site.X0 + site.SIZE - 1:
         inside = inside_z and site.PLAY[0] < x < site.PLAY[2]
-        g = 2.0 if inside else 5.0
+        g = 2.0 if inside else 3.5
         jx, jz = x + rng.uniform(-0.45, 0.45) * g, z + rng.uniform(-0.45, 0.45) * g
-        if free(jx, jz, 0.6):
+        if free(jx, jz, 0.6) and T.field('ruts', jx, jz) < 0.0:
             bd = float(T.field('bdist', jx, jz))
+            clump = float(T.noise.fbm(jx + 333.0, jz - 777.0, 11.0, 2))
+            dense = min(max((clump - 0.38) / 0.24, 0.0), 1.0)            # 0 open spot .. 1 dense patch
+            bare = float(T.field('dirt', jx, jz)) > 0.2 or float(T.field('apron', jx, jz)) > -0.5
+            lush = float(T.field('grass', jx, jz)) > -0.15
+
+            def kind(dry_share):
+                if lush:
+                    return 'sk:grass_fresh' if grng.random() < 0.75 else 'sk:grass_dry'
+                return 'sk:grass_dry' if grng.random() < dry_share else 'sk:grass_fresh'
             if bd < 5.0 and rng.random() < (0.3 if inside else 0.55):
                 veg('Weeds', 'weed_patch' if rng.random() < 0.6 else 'nettle_tall_a', jx, jz, 'Weeds', lod_dist=8, cull=45)
-            elif rng.random() < (0.92 if inside else 0.55):
-                veg('Tall grass', 'sk:grass_dry' if rng.random() < 0.65 else 'grass_patch_tall', jx, jz, 'Grass',
-                    lod_dist=8, cull=50, scale=rng.uniform(0.85, 1.2))
-                if inside:          # second, lower layer between the patches: a closed sward like in the photos
-                    veg('Tall grass', 'sk:grass_dry' if rng.random() < 0.7 else 'grass_patch_tall',
-                        jx + g * 0.5, jz + g * 0.5, 'Grass', lod_dist=8, cull=50, scale=rng.uniform(0.6, 0.85))
+            elif rng.random() < (0.62 + 0.36 * dense if inside else 0.12 + 0.75 * dense) * (0.5 if bare else 1.0):
+                veg('Tall grass', kind(0.8), jx, jz, 'Grass', lod_dist=8, cull=50, scale=grng.uniform(0.75, 1.0) + 0.3 * dense)
+                if inside and dense > 0.15:     # second, lower layer between the patches: a closed sward
+                    veg('Tall grass', kind(0.85), jx + g * 0.5, jz + g * 0.5, 'Grass', lod_dist=8, cull=50,
+                        scale=grng.uniform(0.55, 0.85))
             elif inside and rng.random() < 0.5:
                 veg('Grass tuft', rng.choice(['grass_tall_a', 'grass_tall_b']), jx, jz, 'Grass', lod_dist=12, cull=40,
                     scale=rng.uniform(1.0, 1.4))
         x += g
-    z += 2.0 if inside_z else 5.0
+    z += 2.0 if inside_z else 3.5
 
 # grass and weeds in the cracks and potholes of the asphalt, along the kerbs
 for k in range(5000):

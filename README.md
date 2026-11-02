@@ -83,6 +83,10 @@ boční cesta přes garáže a dvůr po požárním schodišti. Bandité hlídaj
 vchod a chodby nemocnice; na východě je staré město (scéna "Postwar City", CC-BY, viz
 `assets/models/zone/postwar/CREDITS.md`). Na mapě (M) jsou značky míst. Plán s trasami:
 `assets/levels/source/hospital_street_map.png`, rozložení `assets/levels/source/make_street_level.py`.
+Oba levely (Zóna i Ulice u nemocnice) stojí na terénu enginu (`zone.terrain`, `hospital_street.terrain`): kopce
+a val na okrajích mapy, u budov, vraků, kolejí a postav rovná zem, 8 vrstev povrchu a tráva ve shlucích.
+Přidal ho `python3 -I assets/levels/source/add_terrain.py zone hospital_street` přímo do upravených levelů
+(nic z editoru se neztratí; stromy a suť posadí na nový povrch), dál se ladí v režimech Landscape a Foliage.
 
 **Level Skrunda-1** (`fps_game assets/levels/skrunda1.level`): opuštěné sovětské radarové městečko Skrunda-1
 v Lotyšsku. Budovy, ulice a rybník jsou 1:1 podle OpenStreetMap (© OpenStreetMap contributors, ODbL,
