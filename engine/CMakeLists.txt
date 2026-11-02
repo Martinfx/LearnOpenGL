@@ -42,6 +42,8 @@ add_library(engine STATIC
     src/AssetPalette.cpp
     src/Prefab.cpp
     src/CityGen.cpp
+    src/CityRoads.cpp
+    src/CityGrammar.cpp
     src/Scene.cpp
     src/JobSystem.cpp
     src/SceneGraph.cpp

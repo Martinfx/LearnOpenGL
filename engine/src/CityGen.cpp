@@ -1,5 +1,7 @@
 #include "engine/CityGen.h"
 
+#include "engine/CityRoads.h"
+
 #include "engine/JobSystem.h"
 #include "engine/Material.h"
 #include "engine/SceneGraph.h"
@@ -23,9 +25,10 @@ namespace fs = std::filesystem;
 // ============================================================================ names
 namespace {
 constexpr const char* kStreetNames[] = {"none", "alley", "side", "main"};
-constexpr const char* kBlockNames[] = {"perimeter", "microdistrict", "towers", "garages", "park", "ruin", "wasteland", "empty"};
+constexpr const char* kBlockNames[] = {"perimeter", "microdistrict", "towers", "garages", "park", "ruin", "wasteland", "empty", "houses"};
 constexpr const char* kBlockLabels[] = {"Perimeter block (tenements)", "Micro-district (panel slabs)", "Towers",
-                                        "Garages", "Park", "Ruin", "Waste lot", "Empty lot"};
+                                        "Garages", "Park", "Ruin", "Waste lot", "Empty lot", "Private houses"};
+constexpr const char* kGroundNames[] = {"yard", "lot", "road", "pavement", "meadow", "path", "built"};
 } // namespace
 
 const char* streetClassName(StreetClass c) { return kStreetNames[static_cast<int>(c)]; }
@@ -45,6 +48,8 @@ BlockKind blockKindFromName(const std::string& name)
             return static_cast<BlockKind>(i);
     return BlockKind::Perimeter;
 }
+
+const char* groundName(int g) { return g >= 0 && g < kGroundCount ? kGroundNames[g] : "yard"; }
 
 const std::vector<std::string>& propRoles()
 {
@@ -68,6 +73,15 @@ std::vector<const KitProp*> Kit::propsWithRole(const std::string& role) const
     for (const auto& p : props)
         if (p.role == role)
             out.push_back(&p);
+    return out;
+}
+
+std::vector<const FacadeStyle*> Kit::stylesWithRole(const std::string& role) const
+{
+    std::vector<const FacadeStyle*> out;
+    for (const auto& st : styles)
+        if (st.role == role)
+            out.push_back(&st);
     return out;
 }
 
@@ -117,6 +131,22 @@ void Settings::normalize()
     cableChance = std::clamp(cableChance, 0.0f, 1.0f);
     wrecksPer100m = std::clamp(wrecksPer100m, 0.0f, 20.0f);
     rubblePer100m = std::clamp(rubblePer100m, 0.0f, 50.0f);
+    groundSpacing = std::clamp(groundSpacing, 0.25f, 4.0f);
+    hills = std::clamp(hills, 0.0f, 100.0f);
+    foliageDensity = std::clamp(foliageDensity, 0.0f, 4.0f);
+    townSize = std::clamp(townSize, 100.0f, 3000.0f);
+    districts = std::clamp(districts, 1, 8);
+    districtTurn = std::clamp(districtTurn, 0.0f, 90.0f);
+    radial = std::clamp(radial, 0.0f, 2.0f);
+    curvature = std::clamp(curvature, 0.0f, 2.0f);
+    noiseScale = std::clamp(noiseScale, 20.0f, 5000.0f);
+    mainSpacing = std::clamp(mainSpacing, 40.0f, 1000.0f);
+    sideSpacing = std::clamp(sideSpacing, 25.0f, mainSpacing);
+    centreZone = std::clamp(centreZone, 0.0f, 1.0f);
+    innerZone = std::clamp(innerZone, centreZone, 1.5f);
+    ruinShare = std::clamp(ruinShare, 0.0f, 1.0f);
+    parkShare = std::clamp(parkShare, 0.0f, 1.0f);
+    houseShare = std::clamp(houseShare, 0.0f, 1.0f);
     if (group.empty())
         group = "City";
 }
@@ -244,6 +274,59 @@ bool loadKit(Kit& kit, const fs::path& file, std::string* error)
             b.weight = get("weight", b.weight);
             b.cull = get("cull", b.cull);
             kit.buildings.push_back(std::move(b));
+        } else if (t[0] == "textures" && t.size() >= 2) {
+            kit.textures = resolve(dir, t[1]);
+        } else if (t[0] == "style" && t.size() >= 2) {
+            FacadeStyle st;
+            st.name = t[1];
+            const auto kv = pairs(t, 2, nullptr, nullptr);
+            auto get = [&](const char* k, float d) { const auto it = kv.find(k); return it == kv.end() ? d : toFloat(it->second, d); };
+            auto str = [&](const char* k, const std::string& d) { const auto it = kv.find(k); return it == kv.end() ? d : it->second; };
+            st.role = str("role", st.role);
+            st.floorsMin = static_cast<int>(get("floors_min", static_cast<float>(st.floorsMin)));
+            st.floorsMax = std::max(st.floorsMin, static_cast<int>(get("floors_max", static_cast<float>(st.floorsMax))));
+            st.groundStorey = get("ground", st.groundStorey);
+            st.storey = get("storey", st.storey);
+            st.bay = std::max(1.0f, get("bay", st.bay));
+            st.windowWidth = get("window_w", st.windowWidth);
+            st.windowHeight = get("window_h", st.windowHeight);
+            st.sill = get("sill", st.sill);
+            st.depthMin = get("depth_min", st.depthMin);
+            st.depthMax = std::max(st.depthMin, get("depth_max", st.depthMax));
+            st.widthMin = get("width_min", st.widthMin);
+            st.widthMax = std::max(st.widthMin, get("width_max", st.widthMax));
+            st.wall = str("wall", st.wall);
+            st.plinth = str("plinth", st.plinth);
+            st.trim = str("trim", st.trim);
+            st.roof = str("roof", st.roof);
+            st.firewall = str("firewall", st.firewall);
+            st.cornice = get("cornice", st.cornice);
+            st.bands = get("bands", st.bands);
+            st.loggias = get("loggias", st.loggias);
+            st.balconies = get("balconies", st.balconies);
+            st.shops = get("shops", st.shops);
+            st.pitched = get("pitched", st.pitched ? 1.0f : 0.0f) != 0.0f;
+            st.weight = get("weight", st.weight);
+            kit.styles.push_back(std::move(st));
+        } else if (t[0] == "foliage" && t.size() >= 3) {
+            KitFoliage f;
+            f.name = t[1];
+            f.path = resolve(dir, t[2]);
+            std::string lod;
+            const auto kv = pairs(t, 3, &lod, &f.lodDistance);
+            f.lodPath = resolve(dir, lod);
+            auto get = [&](const char* k, float d) { const auto it = kv.find(k); return it == kv.end() ? d : toFloat(it->second, d); };
+            f.density = get("density", f.density);
+            for (int g = 0; g < kGroundCount; ++g)
+                f.on[static_cast<std::size_t>(g)] = std::max(0.0f, get(kGroundNames[g], f.on[static_cast<std::size_t>(g)]));
+            f.cull = get("cull", f.cull);
+            f.farDensity = get("far", f.farDensity);
+            f.sway = get("sway", f.sway);
+            f.scaleMin = get("scale_min", f.scaleMin);
+            f.scaleMax = get("scale_max", std::max(f.scaleMin, f.scaleMax));
+            f.collision = get("collision", 0.0f) != 0.0f;
+            f.shadows = get("shadows", 0.0f) != 0.0f;
+            kit.foliage.push_back(std::move(f));
         } else if (t[0] == "prop" && t.size() >= 3) {
             KitProp p;
             p.role = t[1];
@@ -311,6 +394,30 @@ bool saveKit(const Kit& kit, const fs::path& file, std::string* error)
             out << " yaw " << p.yaw;
         out << " collision " << (p.collision ? 1 : 0) << " shadows " << (p.shadows ? 1 : 0) << '\n';
     }
+    if (!kit.textures.empty())
+        out << "\ntextures " << q(relPath(kit.textures, dir)) << '\n';
+    if (!kit.styles.empty())
+        out << "\n# style \"name\" role <tenement|panel|khrushchyovka|house> floors_min floors_max ground storey bay window_w window_h sill\n"
+               "#   depth_min depth_max width_min width_max wall plinth trim roof firewall (grammar materials) cornice bands loggias balconies shops pitched weight\n";
+    for (const auto& st : kit.styles)
+        out << "style " << q(st.name) << " role " << st.role << " floors_min " << st.floorsMin << " floors_max " << st.floorsMax << " ground "
+            << st.groundStorey << " storey " << st.storey << " bay " << st.bay << " window_w " << st.windowWidth << " window_h " << st.windowHeight
+            << " sill " << st.sill << " depth_min " << st.depthMin << " depth_max " << st.depthMax << " width_min " << st.widthMin << " width_max "
+            << st.widthMax << " wall " << st.wall << " plinth " << st.plinth << " trim " << st.trim << " roof " << st.roof << " firewall "
+            << st.firewall << " cornice " << st.cornice << " bands " << st.bands << " loggias " << st.loggias << " balconies " << st.balconies
+            << " shops " << st.shops << " pitched " << (st.pitched ? 1 : 0) << " weight " << st.weight << '\n';
+    if (!kit.foliage.empty())
+        out << "\n# foliage \"name\" \"model\" density per_m2 <ground> share ... cull far sway scale_min scale_max collision shadows [lod \"model\" m]\n";
+    for (const auto& f : kit.foliage) {
+        out << "foliage " << q(f.name) << ' ' << q(relPath(f.path, dir)) << " density " << f.density;
+        for (int g = 0; g < kGroundCount; ++g)
+            out << ' ' << kGroundNames[g] << ' ' << f.on[static_cast<std::size_t>(g)];
+        out << " cull " << f.cull << " far " << f.farDensity << " sway " << f.sway << " scale_min " << f.scaleMin << " scale_max " << f.scaleMax
+            << " collision " << (f.collision ? 1 : 0) << " shadows " << (f.shadows ? 1 : 0);
+        if (!f.lodPath.empty())
+            out << " lod " << q(relPath(f.lodPath, dir)) << ' ' << f.lodDistance;
+        out << '\n';
+    }
     return static_cast<bool>(out);
 }
 
@@ -343,6 +450,24 @@ const ScalarField kScalars[] = {
     {"rubble_per_100m", &Settings::rubblePer100m},
     {"overgrowth", &Settings::overgrowth},
     {"outskirts", &Settings::outskirts},
+    {"terrain_ground", nullptr, nullptr, &Settings::terrainGround},
+    {"ground_spacing", &Settings::groundSpacing},
+    {"hills", &Settings::hills},
+    {"foliage_density", &Settings::foliageDensity},
+    {"town_size", &Settings::townSize},
+    {"road_angle", &Settings::roadAngle},
+    {"district_turn", &Settings::districtTurn},
+    {"districts", nullptr, &Settings::districts},
+    {"radial", &Settings::radial},
+    {"curvature", &Settings::curvature},
+    {"noise_scale", &Settings::noiseScale},
+    {"main_spacing", &Settings::mainSpacing},
+    {"side_spacing", &Settings::sideSpacing},
+    {"centre_zone", &Settings::centreZone},
+    {"inner_zone", &Settings::innerZone},
+    {"ruin_share", &Settings::ruinShare},
+    {"park_share", &Settings::parkShare},
+    {"house_share", &Settings::houseShare},
 };
 } // namespace
 
@@ -374,6 +499,9 @@ bool loadSettings(Settings& s, const fs::path& file, std::string* error)
         else if (k == "rotation") s.rotation = num(1, 0);
         else if (k == "group" && t.size() > 1) s.group = t[1];
         else if (k == "kit" && t.size() > 1) s.kit = resolve(dir, t[1]);
+        else if (k == "layout" && t.size() > 1) s.layout = t[1] == "organic" ? Layout::Organic : Layout::Grid;
+        else if (k == "edge_road" && t.size() > 1) s.edgeRoad = streetClassFromName(t[1]);
+        else if (k == "cache" && t.size() > 1) s.cache = resolve(dir, t[1]);
         else if (k == "columns" || k == "rows") {
             auto& v = k == "columns" ? s.columns : s.rows;
             v.clear();
@@ -408,6 +536,8 @@ bool loadSettings(Settings& s, const fs::path& file, std::string* error)
                 }
         }
     }
+    if (s.cache.empty())
+        s.cache = (dir / "generated").lexically_normal();
     s.normalize();
     for (const auto& [r, c, b] : blocks)
         if (r >= 0 && c >= 0 && r < static_cast<int>(s.rows.size()) && c < static_cast<int>(s.columns.size()))
@@ -433,6 +563,10 @@ bool saveSettings(const Settings& settings, const fs::path& file, std::string* e
     out << "group " << q(s.group) << '\n';
     if (!s.kit.empty())
         out << "kit " << q(relPath(s.kit, dir)) << '\n';
+    out << "layout " << (s.layout == Layout::Organic ? "organic" : "grid") << '\n';
+    out << "edge_road " << streetClassName(s.edgeRoad) << '\n';
+    if (!s.cache.empty())
+        out << "cache " << q(relPath(s.cache, dir)) << '\n';
     out << "columns";
     for (float c : s.columns)
         out << ' ' << c;
@@ -579,6 +713,8 @@ public:
     }
     void rectLines(const Rect& r, const glm::vec4& c, float y = 0.4f)
     {
+        if (c == kColHouse)
+            groundRect(Ground::Built, r, s_.kerbHeight);
         line({r.u0, r.v0}, {r.u1, r.v0}, c, y);
         line({r.u1, r.v0}, {r.u1, r.v1}, c, y);
         line({r.u1, r.v1}, {r.u0, r.v1}, c, y);
@@ -647,6 +783,9 @@ public:
     {
         for (const auto& r : solid_)
             if (r.contains(p, margin))
+                return false;
+        for (std::size_t i = 0; i < solidPolys_.size(); ++i)
+            if (solidPolyBox_[i].contains(p, margin) && (pointInPolygon(solidPolys_[i], p) || distanceToPolygonEdge(solidPolys_[i], p) < margin))
                 return false;
         for (const auto& c : clear_)
             if (c.contains(p))
@@ -719,6 +858,51 @@ public:
     }
 
     void addSolid(const Rect& r) { solid_.push_back(r); }
+    void addSolidPoly(const Poly& p)
+    {
+        Rect bb{1e9f, 1e9f, -1e9f, -1e9f};
+        for (const auto& q : p) {
+            bb.u0 = std::min(bb.u0, q.x);
+            bb.v0 = std::min(bb.v0, q.y);
+            bb.u1 = std::max(bb.u1, q.x);
+            bb.v1 = std::max(bb.v1, q.y);
+        }
+        solidPolys_.push_back(p);
+        solidPolyBox_.push_back(bb);
+    }
+    void polyLines(const Poly& p, const glm::vec4& c, float y = 0.4f)
+    {
+        for (std::size_t i = 0; i < p.size(); ++i)
+            line(p[i], p[(i + 1) % p.size()], c, y);
+    }
+    // Ground shapes (local coordinates in, world out).
+    std::vector<glm::vec2> worldXZ(const std::vector<glm::vec2>& pts) const
+    {
+        std::vector<glm::vec2> out;
+        out.reserve(pts.size());
+        for (const auto& q : pts) {
+            const glm::vec3 w = world(q, 0.0f);
+            out.push_back({w.x, w.z});
+        }
+        return out;
+    }
+    void ground(Ground g, const std::vector<glm::vec2>& pts, float height, float halfWidth = 0.0f, bool setHeight = true)
+    {
+        if (!plan.ground.enabled || pts.size() < (halfWidth > 0.0f ? 2u : 3u))
+            return;
+        GroundShape sh;
+        sh.layer = static_cast<int>(g);
+        sh.height = height + s_.origin.y;
+        sh.setHeight = setHeight;
+        sh.halfWidth = halfWidth;
+        sh.points = worldXZ(pts);
+        plan.ground.shapes.push_back(std::move(sh));
+    }
+    void groundRect(Ground g, const Rect& r, float height)
+    {
+        ground(g, {{r.u0, r.v0}, {r.u1, r.v0}, {r.u1, r.v1}, {r.u0, r.v1}}, height);
+    }
+    bool terrain() const { return plan.ground.enabled; }
     // True when a kept-clear path crosses the rectangle (sampled on a 1 m grid).
     bool crossesPath(const Rect& r) const
     {
@@ -743,9 +927,41 @@ private:
     std::map<std::string, int> counts_;
     std::set<std::string> groupSet_;
     std::vector<Rect> solid_;
+    std::vector<Poly> solidPolys_;
+    std::vector<Rect> solidPolyBox_;
     std::vector<Capsule> clear_;
     std::vector<glm::vec2> trees_;
 };
+
+// The terrain under the town: covers `extent` (local), the town itself is `town`.
+void setupGround(Builder& b, const Settings& s, const Rect& extent, const Rect& town)
+{
+    GroundPlan& G = b.plan.ground;
+    G.enabled = true;
+    glm::vec2 lo{1e30f}, hi{-1e30f};
+    for (const glm::vec2 c : {glm::vec2{extent.u0, extent.v0}, glm::vec2{extent.u1, extent.v0}, glm::vec2{extent.u1, extent.v1},
+                              glm::vec2{extent.u0, extent.v1}}) {
+        const glm::vec3 w = b.world(c, 0.0f);
+        lo = glm::min(lo, glm::vec2(w.x, w.z));
+        hi = glm::max(hi, glm::vec2(w.x, w.z));
+    }
+    G.size = std::max(hi.x - lo.x, hi.y - lo.y);
+    G.origin = (lo + hi) * 0.5f - glm::vec2(G.size * 0.5f);
+    G.spacing = std::max(s.groundSpacing, G.size / 4096.0f);
+    G.town = b.worldXZ({{town.u0, town.v0}, {town.u1, town.v0}, {town.u1, town.v1}, {town.u0, town.v1}});
+    G.hills = s.hills;
+    G.hillFalloff = std::max(20.0f, s.outskirts * 0.6f);
+    G.level = s.origin.y;
+    G.kerb = s.kerbHeight;
+    G.seed = s.seed;
+    G.baseLayer = static_cast<int>(Ground::Meadow);
+    const Kit& k = b.kit_;
+    G.materials = {k.yard, k.lot.empty() ? k.yard : k.lot, k.road, k.pavement, k.yard, k.lot.empty() ? k.yard : k.lot,
+                   k.lot.empty() ? k.pavement : k.lot};
+    G.foliage = k.foliage;
+    for (auto& f : G.foliage)
+        f.density *= s.foliageDensity * (0.25f + 0.75f * s.overgrowth);
+}
 
 // ---------------------------------------------------------------------------- frontage fill
 struct Fill {
@@ -934,7 +1150,11 @@ public:
 
         // Road surface under everything, pavements on top.
         const Rect all = extent();
-        if (!b_.kit_.road.empty())
+        if (s_.terrainGround) {
+            const float o = std::max(s_.outskirts, 10.0f);
+            setupGround(b_, s_, {all.u0 - o, all.v0 - o, all.u1 + o, all.v1 + o}, all);
+            b_.groundRect(Ground::Road, all, 0.0f);
+        } else if (!b_.kit_.road.empty())
             b_.box("Road", groundGroup_, b_.kit_.road, all.centre(), -0.1f, {all.w(), 0.2f, all.h()});
         else
             b_.plan.warnings.push_back("The kit has no road material.");
@@ -1039,11 +1259,14 @@ private:
         b_.rectLines(bl.lot, kColLot);
 
         const float kh = s_.kerbHeight;
-        if (!b_.kit_.pavement.empty())
-            b_.box("Pavement " + bl.label, groundGroup_, b_.kit_.pavement, bl.pave.centre(), kh - 0.15f, {bl.pave.w(), 0.3f, bl.pave.h()});
         const bool bare = bl.kind == BlockKind::Ruin || bl.kind == BlockKind::Garages || bl.kind == BlockKind::Wasteland;
         const fs::path& ground = bare && !b_.kit_.lot.empty() ? b_.kit_.lot : b_.kit_.yard;
-        if (!ground.empty())
+        if (b_.terrain()) {
+            b_.groundRect(Ground::Pavement, bl.pave, kh);
+            b_.groundRect(bare ? Ground::Lot : Ground::Yard, bl.lot, kh);
+        } else if (!b_.kit_.pavement.empty())
+            b_.box("Pavement " + bl.label, groundGroup_, b_.kit_.pavement, bl.pave.centre(), kh - 0.15f, {bl.pave.w(), 0.3f, bl.pave.h()});
+        if (!ground.empty() && !b_.terrain())
             b_.box("Ground " + bl.label, groundGroup_, ground, bl.lot.centre(), kh - 0.13f, {bl.lot.w(), 0.3f, bl.lot.h()});
 
         bl.inner = bl.lot;
@@ -1138,6 +1361,7 @@ private:
         // The gap reaches back into the yard: nothing grows in the way.
         b_.addClear(c - E.n * 0.5f, c - E.n * (D + 1.0f), std::min(1.4f, g * 0.3f));
         const float kh = s_.kerbHeight;
+        b_.ground(Ground::Path, {c + E.n * 0.2f, c - E.n * (D + 3.0f)}, kh, std::min(1.6f, g * 0.35f));
         if (!b_.kit_.pillar.empty())
             for (const float side : {s + 0.3f, s + g - 0.3f})
                 b_.box("Gate pillar", bl.group, b_.kit_.pillar, E.start + E.t * side - E.n * 0.3f, kh + 1.3f, {0.6f, 2.6f, 0.6f},
@@ -1549,7 +1773,7 @@ private:
         const fs::path& ground = b_.kit_.yard.empty() ? b_.kit_.lot : b_.kit_.yard;
         const Rect ring[] = {{all.u0 - o, all.v0 - o, all.u1 + o, all.v0}, {all.u0 - o, all.v1, all.u1 + o, all.v1 + o},
                              {all.u0 - o, all.v0, all.u0, all.v1}, {all.u1, all.v0, all.u1 + o, all.v1}};
-        if (!ground.empty())
+        if (!ground.empty() && !b_.terrain())
             for (const Rect& r : ring)
                 b_.box("Outskirts ground", groundGroup_, ground, r.centre(), -0.17f, {r.w(), 0.3f, r.h()});
         // The streets run on out of town as bare carriageways.
@@ -1557,7 +1781,9 @@ private:
         auto road = [&](glm::vec2 a, glm::vec2 b, float cw) {
             const Rect r{std::min(a.x, b.x) - (a.x == b.x ? cw * 0.5f : 0.0f), std::min(a.y, b.y) - (a.y == b.y ? cw * 0.5f : 0.0f),
                          std::max(a.x, b.x) + (a.x == b.x ? cw * 0.5f : 0.0f), std::max(a.y, b.y) + (a.y == b.y ? cw * 0.5f : 0.0f)};
-            if (!b_.kit_.road.empty())
+            if (b_.terrain())
+                b_.ground(Ground::Road, {a, b}, 0.0f, cw * 0.5f, false);
+            else if (!b_.kit_.road.empty())
                 b_.box("Road out of town", groundGroup_, b_.kit_.road, r.centre(), -0.1f, {r.w(), 0.2f, r.h()});
             b_.addClear(a, b, cw * 0.5f - 0.3f);
             // grass eats the edges of the old asphalt
@@ -1636,6 +1862,8 @@ private:
 
     void scatter(const BlockState& bl, const Rect& area, float perHundredM2, Rng& rng, const std::vector<const char*>& roles, const char* name)
     {
+        if (b_.terrain() && !roles.empty() && std::string(roles.front()) == "meadow")
+            return; // the terrain's foliage grows the grass
         const int n = std::min(4000, static_cast<int>(area.w() * area.h() / 100.0f * perHundredM2));
         for (int i = 0; i < n; ++i)
             b_.plant(roles, name, bl.group, {rng.range(area.u0, area.u1), rng.range(area.v0, area.v1)}, rng, bl.groundY);
@@ -1668,6 +1896,7 @@ private:
                 const float dS = bl.lot.v1 - e.y, dE = bl.lot.u1 - e.x;
                 const glm::vec2 to = dS <= dE ? glm::vec2(e.x, bl.lot.v1) : glm::vec2(bl.lot.u1, e.y);
                 b_.addClear(e + glm::vec2(0.0f, 1.0f), to, 1.1f);
+                b_.ground(Ground::Path, {e, to}, kh, 1.0f);
                 for (int i = 0; i < static_cast<int>(6.0f * g); ++i)
                     b_.plant({"bush"}, "Bush", bl.group, e + glm::vec2(rng.range(-12.0f, 12.0f), rng.range(1.5f, 4.0f)), rng, kh);
             }
@@ -1740,6 +1969,7 @@ private:
             break;
         }
         case BlockKind::Empty:
+        case BlockKind::Houses: // organic layout only
             break;
         }
     }
@@ -1751,20 +1981,1238 @@ private:
     std::string groundGroup_, streetGroup_, kerbs_, lamps_, streetTrees_, wrecks_, streetPlants_;
 };
 
+// ============================================================================ organic layout
+// Streets grown from a tensor field, blocks cut into lots and parcels, zoning by
+// distance from the centre, houses by the shape grammar (docs/CITY_GENERATOR.md).
+class OrganicLayout {
+public:
+    OrganicLayout(const Settings& s, const Kit& k) : s_(s), b_(s, k) {}
+
+    Plan run()
+    {
+        const std::string root = s_.group;
+        b_.group(root, "");
+        streetGroup_ = root + " streets";
+        b_.group(streetGroup_, root);
+        kerbs_ = root + " kerbs";
+        lamps_ = root + " lamps and cables";
+        streetTrees_ = root + " street trees";
+        wrecks_ = root + " wrecks";
+        streetPlants_ = root + " street plants";
+        for (const auto* g : {&kerbs_, &lamps_, &streetTrees_, &wrecks_, &streetPlants_})
+            b_.group(*g, streetGroup_);
+
+        NetworkSettings ns;
+        ns.size = s_.townSize;
+        ns.angle = s_.roadAngle;
+        ns.districtTurn = s_.districtTurn;
+        ns.districts = s_.districts;
+        ns.radial = s_.radial;
+        ns.curvature = s_.curvature;
+        ns.noiseScale = s_.noiseScale;
+        ns.majorSpacing = s_.mainSpacing;
+        ns.minorSpacing = s_.sideSpacing;
+        ns.majorClass = static_cast<int>(StreetClass::Main);
+        ns.minorClass = static_cast<int>(StreetClass::Side);
+        ns.boundaryClass = static_cast<int>(s_.edgeRoad);
+        ns.seed = s_.seed;
+        net_ = buildRoadNetwork(ns);
+        half_ = s_.townSize * 0.5f;
+        b_.plan.textures = b_.kit_.textures;
+        if (b_.kit_.textures.empty())
+            b_.plan.warnings.push_back("The kit names no texture folder (line textures) for the generated houses.");
+        b_.plan.stats.roads = static_cast<int>(net_.roads.size());
+
+        const float o = std::max(s_.outskirts, 10.0f);
+        const Rect town{-half_, -half_, half_, half_};
+        setupGround(b_, s_, {-half_ - o, -half_ - o, half_ + o, half_ + o}, town);
+        const float kh = s_.kerbHeight;
+        // Pavement under the whole town first (closes every gap), then the pavements
+        // along the streets, the carriageways, and the lots on top.
+        b_.groundRect(Ground::Pavement, town, kh);
+        for (const auto& r : net_.roads)
+            if (const StreetProfile& P = profile(cls(r.cls)); P.carriageway > 0.0f)
+                b_.ground(Ground::Pavement, r.points, kh, P.width() * 0.5f);
+        for (const auto& r : net_.roads)
+            if (const StreetProfile& P = profile(cls(r.cls)); P.carriageway > 0.0f) {
+                b_.ground(Ground::Road, r.points, 0.0f, P.carriageway * 0.5f);
+                for (std::size_t i = 1; i < r.points.size(); ++i)
+                    b_.line(r.points[i - 1], r.points[i], kColStreet, 0.2f);
+            }
+        exitRoads();
+
+        for (int i = 0; i < static_cast<int>(net_.blocks.size()); ++i)
+            layBlock(i);
+        for (const auto& r : net_.roads)
+            dressRoad(r);
+        for (auto& L : lots_)
+            green(L);
+        outskirts();
+
+        auto& p = b_.plan;
+        p.boundsMin = glm::vec3(1e9f);
+        p.boundsMax = glm::vec3(-1e9f);
+        for (const glm::vec2 corner : {glm::vec2{-half_ - o, -half_ - o}, glm::vec2{half_ + o, -half_ - o}, glm::vec2{-half_ - o, half_ + o},
+                                       glm::vec2{half_ + o, half_ + o}}) {
+            const glm::vec3 w = b_.world(corner, 0.0f);
+            p.boundsMin = glm::min(p.boundsMin, w);
+            p.boundsMax = glm::max(p.boundsMax, w + glm::vec3(0.0f, 1.0f, 0.0f));
+        }
+        p.stats.blocks = static_cast<int>(lots_.size());
+        return std::move(b_.plan);
+    }
+
+private:
+    struct Lot {
+        Poly poly;                    // facade line (lot outline), counter-clockwise
+        std::vector<int> cls;         // street class on edge i
+        Poly yard;                    // courtyard / free ground for greenery
+        BlockKind kind = BlockKind::Park;
+        bool ruined = false;
+        std::string group, label;
+        std::uint64_t seed = 0;
+        float zone = 0.0f;            // distance from the centre / town radius
+        std::vector<glm::vec2> entrances;
+    };
+
+    static StreetClass cls(int c) { return static_cast<StreetClass>(std::clamp(c, 0, kStreetClassCount - 1)); }
+    const StreetProfile& profile(StreetClass c) const { return s_.profiles[static_cast<std::size_t>(c)]; }
+    float width(int c) const { return profile(cls(c)).width(); }
+
+    // ------------------------------------------------------------ roads out of town
+    void exitRoads()
+    {
+        // Main roads that reach the town edge run on across the fields.
+        for (const auto& r : net_.roads) {
+            if (cls(r.cls) != StreetClass::Main || r.points.size() < 2)
+                continue;
+            for (int end = 0; end < 2; ++end) {
+                const glm::vec2 p = end == 0 ? r.points.front() : r.points.back();
+                const glm::vec2 q = end == 0 ? r.points[1] : r.points[r.points.size() - 2];
+                if (std::max(std::abs(p.x), std::abs(p.y)) < half_ - 0.5f)
+                    continue;
+                glm::vec2 d = p - q;
+                if (glm::length(d) < 1e-3f)
+                    continue;
+                d = glm::normalize(d);
+                const glm::vec2 far = p + d * (std::max(s_.outskirts, 10.0f) + 20.0f);
+                b_.ground(Ground::Road, {p, far}, 0.0f, profile(StreetClass::Main).carriageway * 0.5f, false);
+                b_.addClear(p, far, profile(StreetClass::Main).carriageway * 0.5f - 0.3f);
+            }
+        }
+    }
+
+    // ------------------------------------------------------------ blocks
+    void layBlock(int index)
+    {
+        const Block& B = net_.blocks[static_cast<std::size_t>(index)];
+        // Simplify the street axes, keeping the points where the street class changes.
+        std::vector<bool> keep(B.outline.size(), false);
+        for (std::size_t i = 0; i < B.outline.size(); ++i)
+            keep[i] = B.edgeClass[i] != B.edgeClass[(i + B.outline.size() - 1) % B.outline.size()];
+        std::vector<int> kept;
+        const Poly axes = simplifyPolygon(B.outline, 1.2f, &keep, &kept);
+        std::vector<int> axCls;
+        for (int k : kept)
+            axCls.push_back(B.edgeClass[static_cast<std::size_t>(k)]);
+        std::vector<float> dist;
+        for (int c : axCls)
+            dist.push_back(width(c) * 0.5f);
+        Lot L;
+        std::vector<int> src;
+        if (!insetPolygon(axes, dist, L.poly, &src))
+            return;
+        for (int e : src)
+            L.cls.push_back(axCls[static_cast<std::size_t>(e)]);
+        mergeShortEdges(L.poly, L.cls, 6.0f);
+        const float A = signedArea(L.poly);
+        if (L.poly.size() < 3 || A < 250.0f)
+            return;
+        L.seed = mix(mix(s_.seed, 0xB10CBull), static_cast<std::uint64_t>(index));
+        L.label = std::to_string(index + 1);
+        L.group = s_.group + " block " + L.label;
+        b_.group(L.group, s_.group);
+        b_.polyLines(L.poly, kColLot);
+        zoning(L, A);
+        const bool bare = L.kind == BlockKind::Ruin || L.kind == BlockKind::Garages || L.kind == BlockKind::Wasteland;
+        b_.ground(bare ? Ground::Lot : Ground::Yard, L.poly, s_.kerbHeight);
+        L.yard = L.poly;
+        Rng rng(L.seed);
+        switch (L.kind) {
+        case BlockKind::Perimeter: perimeter(L, rng); break;
+        case BlockKind::Microdistrict: slabs(L, rng, L.zone < s_.innerZone ? "panel" : "khrushchyovka"); break;
+        case BlockKind::Towers: towers(L, rng); break;
+        case BlockKind::Garages: garages(L, rng); break;
+        case BlockKind::Houses: houses(L, rng); break;
+        default: break;
+        }
+        lots_.push_back(std::move(L));
+    }
+
+    static void mergeShortEdges(Poly& p, std::vector<int>& c, float minLen)
+    {
+        for (int guard = 0; guard < 200 && p.size() > 3; ++guard) {
+            std::size_t worst = p.size();
+            float wl = minLen;
+            for (std::size_t i = 0; i < p.size(); ++i) {
+                const float l = glm::length(p[(i + 1) % p.size()] - p[i]);
+                if (l < wl) {
+                    wl = l;
+                    worst = i;
+                }
+            }
+            // Nearly straight joints go too (they would only make slivers of parcels).
+            if (worst == p.size()) {
+                for (std::size_t i = 0; i < p.size(); ++i) {
+                    const glm::vec2 a = p[(i + p.size() - 1) % p.size()], b = p[i], d = p[(i + 1) % p.size()];
+                    const glm::vec2 t0 = glm::normalize(b - a), t1 = glm::normalize(d - b);
+                    if (glm::dot(t0, t1) > 0.9985f && c[(i + p.size() - 1) % p.size()] == c[i]) {
+                        p.erase(p.begin() + static_cast<std::ptrdiff_t>(i));
+                        c.erase(c.begin() + static_cast<std::ptrdiff_t>(i));
+                        worst = p.size() + 1;
+                        break;
+                    }
+                }
+                if (worst == p.size())
+                    return;
+                continue;
+            }
+            // Drop the short edge: its end point goes, the neighbours meet there.
+            const std::size_t j = (worst + 1) % p.size();
+            const glm::vec2 m = (p[worst] + p[j]) * 0.5f;
+            p[worst] = m;
+            p.erase(p.begin() + static_cast<std::ptrdiff_t>(j));
+            c.erase(c.begin() + static_cast<std::ptrdiff_t>(worst));
+        }
+    }
+
+    // Which kind of block, by the distance from the centre (the town grew outwards).
+    void zoning(Lot& L, float area)
+    {
+        glm::vec2 c, ax, hs;
+        minAreaRect(L.poly, c, ax, hs);
+        L.zone = glm::length(centroid(L.poly)) / std::max(1.0f, half_);
+        Rng z(mix(L.seed, 0x2011EULL));
+        const float narrow = std::min(hs.x, hs.y);
+        if (narrow < 12.0f || area < 1400.0f) {
+            L.kind = z.chance(0.5f) ? BlockKind::Park : BlockKind::Wasteland;
+            return;
+        }
+        auto pick = [&](std::initializer_list<std::pair<BlockKind, float>> w) {
+            float sum = 0.0f;
+            for (const auto& [k, x] : w)
+                sum += x;
+            float r = z.uniform() * sum;
+            for (const auto& [k, x] : w) {
+                if (r < x)
+                    return k;
+                r -= x;
+            }
+            return w.begin()->first;
+        };
+        const bool roomy = narrow > 40.0f && area > 7000.0f;
+        if (L.zone < s_.centreZone)
+            L.kind = BlockKind::Perimeter;
+        else if (L.zone < s_.innerZone)
+            L.kind = pick({{BlockKind::Perimeter, 0.45f}, {BlockKind::Microdistrict, roomy ? 0.35f : 0.05f}, {BlockKind::Towers, roomy ? 0.2f : 0.0f}});
+        else
+            L.kind = pick({{BlockKind::Houses, s_.houseShare}, {BlockKind::Microdistrict, roomy ? 0.3f : 0.0f}, {BlockKind::Garages, 0.12f},
+                           {BlockKind::Wasteland, 0.1f}, {BlockKind::Park, 0.06f}, {BlockKind::Perimeter, 0.08f}});
+        if (z.chance(s_.parkShare))
+            L.kind = BlockKind::Park;
+        else if (L.kind != BlockKind::Park && L.kind != BlockKind::Wasteland && z.chance(s_.ruinShare))
+            L.ruined = true;
+        if (L.ruined && z.chance(0.25f))
+            L.kind = BlockKind::Ruin; // came down altogether: heaps and birch wood
+    }
+
+    const FacadeStyle* style(const std::string& role, Rng& rng, const FacadeStyle* avoid = nullptr) const
+    {
+        auto v = b_.kit_.stylesWithRole(role);
+        if (v.empty())
+            return nullptr;
+        if (v.size() > 1 && avoid)
+            v.erase(std::remove(v.begin(), v.end(), avoid), v.end());
+        float sum = 0.0f;
+        for (const auto* st : v)
+            sum += std::max(0.01f, st->weight);
+        float r = rng.uniform() * sum;
+        for (const auto* st : v) {
+            r -= std::max(0.01f, st->weight);
+            if (r <= 0.0f)
+                return st;
+        }
+        return v.back();
+    }
+
+    // A house by the grammar on a footprint (local plan coordinates).
+    void house(const Lot& L, const FacadeStyle& st, const Poly& fp, const std::vector<EdgeRole>& roles, int floors, std::uint32_t seed, bool ruin,
+               const char* what)
+    {
+        GeneratedBuilding g;
+        const glm::vec2 c = centroid(fp);
+        g.spec.style = st;
+        for (const auto& p : fp)
+            g.spec.footprint.push_back(p - c);
+        g.spec.edges = roles;
+        g.spec.floors = std::clamp(floors, 1, 40);
+        g.spec.seed = seed;
+        g.spec.ruin = ruin;
+        const std::string key = buildingKey(g.spec);
+        const fs::path dir = s_.cache.empty() ? fs::temp_directory_path() / "fps_city" : s_.cache;
+        g.file = dir / ("house_" + key + ".glb");
+        g.lodFile = dir / ("house_" + key + "_lod1.glb");
+        Placement p;
+        p.name = b_.label(std::string(ruin ? "Ruin " : "") + what);
+        p.group = L.group;
+        p.path = g.file;
+        p.lodPath = g.lodFile;
+        const float h = buildingHeight(g.spec);
+        p.lodDistance = std::clamp(40.0f + h * 2.0f, 70.0f, 160.0f);
+        p.cull = std::clamp(400.0f + h * 18.0f, 600.0f, 1600.0f);
+        p.position = b_.world(c, s_.kerbHeight);
+        p.rotation = {0.0f, s_.rotation, 0.0f};
+        b_.plan.placements.push_back(std::move(p));
+        b_.plan.generated.push_back(std::move(g));
+        ++b_.plan.stats.buildings;
+        ++b_.plan.stats.generated;
+        b_.addSolidPoly(fp);
+        b_.polyLines(fp, kColHouse, 0.5f);
+        b_.ground(Ground::Built, fp, s_.kerbHeight);
+    }
+
+    // ------------------------------------------------------------ perimeter blocks of any shape
+    void perimeter(Lot& L, Rng& rng)
+    {
+        const FacadeStyle* base = style("tenement", rng);
+        if (!base) {
+            b_.plan.warnings.push_back("Block " + L.label + ": the kit has no tenement styles.");
+            L.kind = BlockKind::Park;
+            return;
+        }
+        const std::size_t n = L.poly.size();
+        float D = rng.range(base->depthMin, base->depthMax);
+        Poly Q;
+        bool ok = false;
+        for (int tries = 0; tries < 3 && !ok; ++tries, D *= 0.8f)
+            ok = D >= 8.0f && mitreInset(L.poly, std::vector<float>(n, D), Q);
+        if (!ok) {
+            // Too small for a courtyard: one house on the whole lot.
+            Poly fp;
+            if (signedArea(L.poly) < 3200.0f && insetPolygon(L.poly, std::vector<float>(n, 0.2f), fp)) {
+                std::vector<EdgeRole> roles(fp.size(), EdgeRole::Street);
+                house(L, *base, fp, roles, base->floorsMax, static_cast<std::uint32_t>(rng.next()), L.ruined && rng.chance(0.6f), "Tenement");
+            } else {
+                L.kind = BlockKind::Park;
+            }
+            return;
+        }
+        L.yard = Q;
+        b_.polyLines(Q, kColLot, 0.45f);
+        const int centreBonus = L.zone < s_.centreZone ? 1 : 0;
+        int prevFloors = 0;
+        const FacadeStyle* prevStyle = nullptr;
+        int parcel = 0;
+        for (std::size_t i = 0; i < n; ++i) {
+            const std::size_t j = (i + 1) % n;
+            const glm::vec2 P0 = L.poly[i], P1 = L.poly[j], Q0 = Q[i], Q1 = Q[j];
+            const float len = glm::length(P1 - P0);
+            const bool street = cls(L.cls[i]) != StreetClass::None;
+            // Gateways into the yard, spread along long frontages.
+            std::vector<std::pair<float, float>> gaps;
+            if (len > 40.0f) {
+                const int k = std::max(street ? 1 : 0, static_cast<int>(std::lround(len / s_.gatewayEvery)));
+                for (int g = 0; g < k; ++g) {
+                    const float w = rng.range(s_.gatewayMin, s_.gatewayMax);
+                    const float at = len * static_cast<float>(g + 1) / static_cast<float>(k + 1) + rng.range(-4.0f, 4.0f);
+                    gaps.push_back({std::clamp(at - w * 0.5f, 12.0f, len - 12.0f - w), w});
+                }
+            }
+            // Runs between the gateways, filled with parcels of the style's widths.
+            std::vector<std::pair<float, float>> runs;
+            float s = 0.0f;
+            for (const auto& [g0, w] : gaps) {
+                if (g0 - s > 4.0f)
+                    runs.push_back({s, g0});
+                s = g0 + w;
+                gateway(L, P0, P1, Q0, Q1, g0, w);
+            }
+            runs.push_back({s, len});
+            for (const auto& [r0, r1] : runs) {
+                const float run = r1 - r0;
+                const float avg = (base->widthMin + base->widthMax) * 0.5f;
+                const int count = std::max(1, static_cast<int>(std::lround(run / avg)));
+                std::vector<float> w(static_cast<std::size_t>(count));
+                float sum = 0.0f;
+                for (float& x : w)
+                    sum += x = rng.range(0.75f, 1.25f);
+                float at = r0;
+                for (int k = 0; k < count; ++k) {
+                    const float sa = at, sb = k + 1 == count ? r1 : at + run * w[static_cast<std::size_t>(k)] / sum;
+                    at = sb;
+                    const float fa = sa / len, fb = sb / len;
+                    const glm::vec2 a = P0 + (P1 - P0) * fa, b = P0 + (P1 - P0) * fb;
+                    const glm::vec2 qa = Q0 + (Q1 - Q0) * fa, qb = Q0 + (Q1 - Q0) * fb;
+                    const Poly fp{a, b, qb, qa};
+                    if (signedArea(fp) < 30.0f || !isSimple(fp))
+                        continue;
+                    const FacadeStyle* st = style("tenement", rng, prevStyle);
+                    prevStyle = st;
+                    const bool corner = (k == 0 && r0 < 0.01f) || (k + 1 == count && r1 > len - 0.01f);
+                    int f = prevFloors > 0 ? prevFloors + rng.below(2 * s_.maxFloorStep + 1) - s_.maxFloorStep
+                                           : st->floorsMin + rng.below(st->floorsMax - st->floorsMin + 1);
+                    f = std::clamp(f, st->floorsMin, st->floorsMax) + centreBonus;
+                    if (corner && s_.tallCorners)
+                        f = std::max(f, st->floorsMax + centreBonus);
+                    prevFloors = f;
+                    const std::vector<EdgeRole> roles{street ? EdgeRole::Street : EdgeRole::Yard, EdgeRole::Party, EdgeRole::Yard, EdgeRole::Party};
+                    const bool ruin = L.ruined ? rng.chance(0.65f) : rng.chance(0.04f);
+                    house(L, *st, fp, roles, f, static_cast<std::uint32_t>(mix(L.seed, static_cast<std::uint64_t>(parcel++)) & 0xFFFFFFu), ruin,
+                          "Tenement");
+                    ++b_.plan.stats.parcels;
+                    b_.plan.stats.frontage += sb - sa;
+                }
+            }
+            // Wall weeds and rubble at the foot of the street wall.
+            if (street)
+                wallFoot(L, P0, P1, rng);
+        }
+    }
+
+    void gateway(Lot& L, glm::vec2 P0, glm::vec2 P1, glm::vec2 Q0, glm::vec2 Q1, float s, float w)
+    {
+        ++b_.plan.stats.gateways;
+        const float len = glm::length(P1 - P0);
+        const float f = (s + w * 0.5f) / len;
+        const glm::vec2 out = P0 + (P1 - P0) * f, in = Q0 + (Q1 - Q0) * f;
+        b_.line(P0 + (P1 - P0) * (s / len), P0 + (P1 - P0) * ((s + w) / len), kColGate, 0.6f);
+        b_.addClear(out, in + (in - out) * 0.2f, std::min(1.4f, w * 0.3f));
+        b_.ground(Ground::Path, {out, in + glm::normalize(in - out) * 4.0f}, s_.kerbHeight, std::min(1.6f, w * 0.35f));
+        L.entrances.push_back(out);
+    }
+
+    void wallFoot(const Lot& L, glm::vec2 P0, glm::vec2 P1, Rng& rng)
+    {
+        const float len = glm::length(P1 - P0);
+        if (len < 1.0f)
+            return;
+        const glm::vec2 t = (P1 - P0) / len, nOut{t.y, -t.x};
+        const float kh = s_.kerbHeight;
+        if (s_.overgrowth > 0.01f) {
+            const float step = 2.6f / s_.overgrowth;
+            for (float x = rng.range(0.0f, step); x < len; x += step * rng.range(0.5f, 1.5f))
+                b_.plant({rng.chance(0.5f) ? "nettle" : "weed", "weed", "grass"}, "Wall weeds", L.group, P0 + t * x + nOut * rng.range(0.25f, 0.8f),
+                         rng, kh, 0.05f);
+        }
+        const int nr = static_cast<int>(len / 100.0f * s_.rubblePer100m * (L.ruined ? 3.0f : 1.0f) * rng.range(0.6f, 1.4f) + 0.5f);
+        for (int i = 0; i < nr; ++i)
+            if (const KitProp* k = b_.anyProp("rubble", rng)) {
+                const glm::vec2 p = P0 + t * rng.range(2.0f, std::max(2.5f, len - 2.0f)) + nOut * rng.range(0.6f, 2.2f);
+                b_.prop(*k, "Rubble", L.group, p, kh - 0.25f, rng.range(0.0f, 360.0f), rng, {0.0f, 0.0f}, rng.range(0.45f, 0.9f));
+            }
+    }
+
+    // ------------------------------------------------------------ rows of slabs and towers
+    // Axis of a lot: along its longest street edge.
+    glm::vec2 axisOf(const Lot& L) const
+    {
+        float best = -1.0f;
+        glm::vec2 ax{1.0f, 0.0f};
+        for (std::size_t i = 0; i < L.poly.size(); ++i) {
+            const glm::vec2 e = L.poly[(i + 1) % L.poly.size()] - L.poly[i];
+            const float l = glm::length(e) * (cls(L.cls[i]) == StreetClass::Main ? 1.3f : 1.0f);
+            if (l > best) {
+                best = l;
+                ax = glm::normalize(e);
+            }
+        }
+        return ax;
+    }
+
+    // Span of the polygon along `u` on the line through c + v * t (min, max of the crossings).
+    static bool chord(const Poly& p, glm::vec2 u, glm::vec2 v, float t, float& a, float& b)
+    {
+        a = 1e30f;
+        b = -1e30f;
+        for (std::size_t i = 0; i < p.size(); ++i) {
+            const glm::vec2 P = p[i], Q = p[(i + 1) % p.size()];
+            const float pv = glm::dot(P, v) - t, qv = glm::dot(Q, v) - t;
+            if ((pv > 0.0f) == (qv > 0.0f))
+                continue;
+            const glm::vec2 x = P + (Q - P) * (pv / (pv - qv));
+            const float s = glm::dot(x, u);
+            a = std::min(a, s);
+            b = std::max(b, s);
+        }
+        return b > a;
+    }
+
+    struct Slot {
+        glm::vec2 c;      // centre
+        float length;     // along u
+    };
+
+    // Rows of rectangles depth D, spaced gap, as long as fits (lengths from `lengthFor`).
+    std::vector<Slot> rows(const Poly& region, glm::vec2 u, glm::vec2 v, float D, float rowGap, float gapAlong, float minLen, float maxLen,
+                           float step)
+    {
+        std::vector<Slot> out;
+        float v0 = 1e30f, v1 = -1e30f;
+        for (const auto& p : region) {
+            v0 = std::min(v0, glm::dot(p, v));
+            v1 = std::max(v1, glm::dot(p, v));
+        }
+        const float total = v1 - v0;
+        const int nRows = std::max(0, static_cast<int>((total + rowGap) / (D + rowGap)));
+        if (nRows == 0)
+            return out;
+        const float used = static_cast<float>(nRows) * D + static_cast<float>(nRows - 1) * rowGap;
+        for (int r = 0; r < nRows; ++r) {
+            const float vc = v0 + (total - used) * 0.5f + static_cast<float>(r) * (D + rowGap) + D * 0.5f;
+            float a0, a1, b0, b1;
+            if (!chord(region, u, v, vc - D * 0.5f, a0, a1) || !chord(region, u, v, vc + D * 0.5f, b0, b1))
+                continue;
+            const float lo = std::max(a0, b0), hi = std::min(a1, b1);
+            float avail = hi - lo;
+            // Lengths: as long as allowed, the rest split.
+            std::vector<float> lens;
+            while (avail >= minLen) {
+                float l = std::min(maxLen, avail);
+                l = std::floor(l / step) * step;
+                if (l < minLen)
+                    break;
+                lens.push_back(l);
+                avail -= l + gapAlong;
+            }
+            float usedU = -gapAlong;
+            for (float l : lens)
+                usedU += l + gapAlong;
+            float at = lo + (hi - lo - usedU) * 0.5f;
+            for (float l : lens) {
+                const glm::vec2 c = u * (at + l * 0.5f) + v * vc;
+                // all four corners inside (the region may not be convex)
+                const glm::vec2 hu = u * (l * 0.5f), hv = v * (D * 0.5f);
+                if (pointInPolygon(region, c - hu - hv) && pointInPolygon(region, c + hu - hv) && pointInPolygon(region, c + hu + hv) &&
+                    pointInPolygon(region, c - hu + hv))
+                    out.push_back({c, l});
+                at += l + gapAlong;
+            }
+        }
+        return out;
+    }
+
+    static Poly rectPoly(glm::vec2 c, glm::vec2 u, glm::vec2 v, float L, float D)
+    {
+        const glm::vec2 hu = u * (L * 0.5f), hv = v * (D * 0.5f);
+        return {c - hu - hv, c + hu - hv, c + hu + hv, c - hu + hv};
+    }
+
+    void slabs(Lot& L, Rng& rng, const char* role)
+    {
+        Poly region;
+        if (!insetPolygon(L.poly, std::vector<float>(L.poly.size(), s_.setback), region)) {
+            L.kind = BlockKind::Park;
+            return;
+        }
+        const FacadeStyle* st = style(role, rng);
+        if (!st)
+            st = style("panel", rng);
+        if (!st) {
+            b_.plan.warnings.push_back(std::string("Block ") + L.label + ": the kit has no " + role + " styles.");
+            L.kind = BlockKind::Park;
+            return;
+        }
+        const glm::vec2 u = axisOf(L), v{-u.y, u.x};
+        const int floors = st->floorsMin + rng.below(st->floorsMax - st->floorsMin + 1);
+        BuildingSpec probe;
+        probe.style = *st;
+        probe.floors = floors;
+        const float H = buildingHeight(probe);
+        const float D = std::round(rng.range(st->depthMin, st->depthMax));
+        const float gap = std::max(s_.rowGapMin, s_.rowGapFactor * H);
+        const auto slots = rows(region, u, v, D, gap, s_.slabGap, std::max(st->bay * 6.0f, 18.0f), st->widthMax, st->bay);
+        for (const auto& sl : slots) {
+            const Poly fp = rectPoly(sl.c, u, v, sl.length, D);
+            const std::vector<EdgeRole> roles{EdgeRole::Street, EdgeRole::Yard, EdgeRole::Yard, EdgeRole::Yard};
+            // Few variants per series: identical slabs repeat (as they did) and share one file.
+            house(L, *st, fp, roles, floors, static_cast<std::uint32_t>(1 + rng.below(3)), L.ruined && rng.chance(0.5f),
+                  st->role == "khrushchyovka" ? "Khrushchyovka" : "Panel block");
+            L.entrances.push_back(sl.c - v * (D * 0.5f));
+            ++b_.plan.stats.parcels;
+        }
+        if (slots.empty())
+            L.kind = BlockKind::Park; // nothing fitted: a green square
+        L.yard = region;
+    }
+
+    void towers(Lot& L, Rng& rng)
+    {
+        const auto kit = b_.kit_.buildingsWithRole("tower");
+        if (kit.empty()) {
+            slabs(L, rng, "panel");
+            return;
+        }
+        Poly region;
+        if (!insetPolygon(L.poly, std::vector<float>(L.poly.size(), s_.setback), region)) {
+            L.kind = BlockKind::Park;
+            return;
+        }
+        const glm::vec2 u = axisOf(L), v{-u.y, u.x};
+        const KitBuilding& t = *kit[static_cast<std::size_t>(rng.below(static_cast<int>(kit.size())))];
+        const float gap = std::max(s_.rowGapMin, 0.5f * t.height);
+        const auto slots = rows(region, u, v, t.depth, gap, gap, t.length, t.length, 0.01f);
+        int i = 0;
+        for (const auto& sl : slots) {
+            const KitBuilding& tw = *kit[static_cast<std::size_t>((i++ + rng.below(2)) % static_cast<int>(kit.size()))];
+            const glm::vec2 face = -v;
+            b_.building(tw, L.group, sl.c - face * (tw.front - tw.depth * 0.5f), b_.yawZ(face));
+            const Poly fp = rectPoly(sl.c, u, v, tw.length, tw.depth);
+            b_.addSolidPoly(fp);
+            b_.polyLines(fp, kColHouse, 0.5f);
+            b_.ground(Ground::Built, fp, s_.kerbHeight);
+            L.entrances.push_back(sl.c + face * (tw.depth * 0.5f));
+        }
+        L.yard = region;
+    }
+
+    void garages(Lot& L, Rng& rng)
+    {
+        const auto kit = b_.kit_.buildingsWithRole("garage");
+        if (kit.empty()) {
+            L.kind = BlockKind::Wasteland;
+            return;
+        }
+        Poly region;
+        if (!insetPolygon(L.poly, std::vector<float>(L.poly.size(), 5.0f), region))
+            return;
+        const KitBuilding& g = *kit.front();
+        const glm::vec2 u = axisOf(L), v{-u.y, u.x};
+        const auto slots = rows(region, u, v, g.depth, 8.0f, 6.0f, g.length * 3.0f, g.length * 14.0f, g.length);
+        int r = 0;
+        for (const auto& sl : slots) {
+            const glm::vec2 face = (r++ % 2) ? v : -v;
+            const int count = static_cast<int>(std::lround(sl.length / g.length));
+            for (int i = 0; i < count; ++i) {
+                const glm::vec2 c = sl.c + u * ((static_cast<float>(i) - (static_cast<float>(count) - 1.0f) * 0.5f) * g.length);
+                b_.building(g, L.group, c - face * (g.front - g.depth * 0.5f), b_.yawZ(face));
+            }
+            const Poly fp = rectPoly(sl.c, u, v, sl.length, g.depth);
+            b_.addSolidPoly(fp);
+            b_.polyLines(fp, kColHouse, 0.5f);
+            b_.ground(Ground::Built, fp, s_.kerbHeight);
+        }
+        (void)rng;
+    }
+
+    // ------------------------------------------------------------ private houses: recursive subdivision
+    void subdivide(const Poly& p, float target, float minWidth, Rng& rng, std::vector<Poly>& out, int depth = 0)
+    {
+        const float A = signedArea(p);
+        glm::vec2 c, ax, hs;
+        minAreaRect(p, c, ax, hs);
+        if (depth > 12 || A < target * 1.5f || hs.x * 2.0f < minWidth * 2.0f) {
+            out.push_back(p);
+            return;
+        }
+        // Cut across the long side, near the middle.
+        const glm::vec2 at = c + ax * (hs.x * rng.range(-0.15f, 0.15f));
+        Poly a, b;
+        splitPolygon(p, at, glm::vec2(-ax.y, ax.x), a, b);
+        if (a.empty() || b.empty()) {
+            out.push_back(p);
+            return;
+        }
+        subdivide(a, target, minWidth, rng, out, depth + 1);
+        subdivide(b, target, minWidth, rng, out, depth + 1);
+    }
+
+    void houses(Lot& L, Rng& rng)
+    {
+        const FacadeStyle* st = style("house", rng);
+        if (!st) {
+            L.kind = BlockKind::Wasteland;
+            return;
+        }
+        std::vector<Poly> parcels;
+        subdivide(L.poly, rng.range(450.0f, 800.0f), 16.0f, rng, parcels);
+        for (const Poly& P : parcels) {
+            b_.polyLines(P, kColLot, 0.45f);
+            // The street side: the longest edge on the lot's outline facing a street.
+            float best = 0.0f;
+            int front = -1;
+            for (std::size_t i = 0; i < P.size(); ++i) {
+                const glm::vec2 a = P[i], b = P[(i + 1) % P.size()];
+                const float l = glm::length(b - a);
+                const glm::vec2 m = (a + b) * 0.5f;
+                if (l > best && l > 9.0f && distanceToPolygonEdge(L.poly, m) < 0.3f) {
+                    best = l;
+                    front = static_cast<int>(i);
+                }
+            }
+            if (front < 0)
+                continue; // a garden without a way to the street stays a garden
+            const glm::vec2 a = P[static_cast<std::size_t>(front)], b = P[(static_cast<std::size_t>(front) + 1) % P.size()];
+            const glm::vec2 t = glm::normalize(b - a), nIn{-t.y, t.x};
+            const float w = std::min(rng.range(8.0f, 11.0f), best - 3.0f), d = rng.range(7.0f, 9.5f), back = rng.range(3.0f, 6.0f);
+            const glm::vec2 c = (a + b) * 0.5f + t * rng.range(-0.15f, 0.15f) * (best - w) + nIn * (back + d * 0.5f);
+            const Poly fp = rectPoly(c, t, nIn, w, d);
+            bool inside = true;
+            for (const auto& q : fp)
+                inside = inside && pointInPolygon(P, q) && distanceToPolygonEdge(P, q) > 1.0f;
+            if (!inside)
+                continue;
+            const int floors = st->floorsMin + rng.below(st->floorsMax - st->floorsMin + 1);
+            house(L, *st, fp, {EdgeRole::Street, EdgeRole::Yard, EdgeRole::Yard, EdgeRole::Yard}, floors,
+                  static_cast<std::uint32_t>(1 + rng.below(6)), L.ruined ? rng.chance(0.5f) : rng.chance(0.12f), "House");
+            ++b_.plan.stats.parcels;
+            // An old fruit tree or two behind the house.
+            for (int k = 0; k < 1 + rng.below(2); ++k) {
+                const glm::vec2 q = c + nIn * (d * 0.5f + rng.range(3.0f, 9.0f)) + t * rng.range(-6.0f, 6.0f);
+                if (pointInPolygon(P, q) && b_.free(q, 1.5f))
+                    if (const KitProp* tr = b_.anyProp("tree", rng))
+                        b_.tree(*tr, L.group, q, rng, s_.kerbHeight);
+            }
+        }
+    }
+
+    // ------------------------------------------------------------ the streets
+    void dressRoad(const Road& r)
+    {
+        const StreetProfile& P = profile(cls(r.cls));
+        if (P.carriageway <= 0.0f || r.points.size() < 2)
+            return;
+        std::vector<float> acc{0.0f};
+        for (std::size_t i = 1; i < r.points.size(); ++i)
+            acc.push_back(acc.back() + glm::length(r.points[i] - r.points[i - 1]));
+        const float L = acc.back();
+        auto at = [&](float s, glm::vec2& p, glm::vec2& t) {
+            const std::size_t i = static_cast<std::size_t>(std::upper_bound(acc.begin(), acc.end(), s) - acc.begin());
+            const std::size_t k = std::clamp<std::size_t>(i, 1, r.points.size() - 1);
+            const float seg = acc[k] - acc[k - 1];
+            const float f = seg > 0.0f ? (s - acc[k - 1]) / seg : 0.0f;
+            p = r.points[k - 1] + (r.points[k] - r.points[k - 1]) * std::clamp(f, 0.0f, 1.0f);
+            t = seg > 0.0f ? (r.points[k] - r.points[k - 1]) / seg : glm::vec2(1, 0);
+        };
+        Rng rng(mix(s_.seed, static_cast<std::uint64_t>(std::lround(r.points.front().x * 10.0f) * 73856093 ^ std::lround(r.points.front().y * 10.0f) * 19349663)));
+        const float kh = s_.kerbHeight;
+        const float jc = 11.0f; // keep junctions clear
+        if (L < 2.0f * jc)
+            return;
+        const float cw = P.carriageway * 0.5f;
+        // Kerbs in whole modules on both sides.
+        if (const auto kerbs = b_.kit_.propsWithRole("kerb"); !kerbs.empty() && P.pavement > 0.0f) {
+            const float m = kerbs.front()->size > 0.0f ? kerbs.front()->size : 6.0f;
+            for (const float side : {1.0f, -1.0f})
+                for (float s = jc * 0.7f + m * 0.5f; s < L - jc * 0.7f - m * 0.5f; s += m) {
+                    glm::vec2 p, t;
+                    at(s, p, t);
+                    const glm::vec2 n{-t.y, t.x};
+                    const glm::vec2 k = p + n * side * cw;
+                    b_.prop(*kerbs[static_cast<std::size_t>(rng.below(static_cast<int>(kerbs.size())))], "Kerb", kerbs_, k, 0.0f, b_.yawZ(-n * side), rng,
+                            {0.0f, 0.0f}, 1.0f);
+                }
+        }
+        // Lamps staggered across the street, cables lamp to lamp.
+        std::vector<float> lampS;
+        if (P.lamps && P.pavement >= 1.0f)
+            for (const float side : {1.0f, -1.0f}) {
+                std::vector<glm::vec3> tops;
+                for (float s = jc + (side > 0.0f ? 0.0f : s_.lampSpacing * 0.5f); s < L - jc; s += s_.lampSpacing) {
+                    glm::vec2 p, t;
+                    at(s, p, t);
+                    const glm::vec2 n{-t.y, t.x};
+                    const glm::vec2 q = p + n * side * (cw + 0.6f);
+                    if (!b_.free(q, 0.6f))
+                        continue;
+                    const KitProp* lamp = rng.chance(0.25f) ? b_.anyProp("lamp_leaning", rng) : nullptr;
+                    if (!lamp)
+                        lamp = b_.anyProp("lamp", rng);
+                    if (!lamp)
+                        break;
+                    b_.prop(*lamp, "Lamp post", lamps_, q, kh - 0.02f, b_.yawX(-n * side) + rng.range(-5.0f, 5.0f), rng);
+                    b_.addSolid({q.x - 0.3f, q.y - 0.3f, q.x + 0.3f, q.y + 0.3f});
+                    ++b_.plan.stats.lamps;
+                    lampS.push_back(s);
+                    tops.push_back(b_.world(q, kh + 8.1f));
+                }
+                for (std::size_t i = 1; i < tops.size(); ++i)
+                    if (rng.chance(s_.cableChance))
+                        b_.cable(tops[i - 1], tops[i], lamps_);
+            }
+        // Planted rows: one species per street, some lost, seedlings in the gaps.
+        if (P.trees && P.pavement >= 2.5f) {
+            const KitProp* sp = b_.anyProp("tree", rng);
+            for (const float side : {1.0f, -1.0f})
+                for (float s = jc + 3.0f; sp && s < L - jc - 3.0f; s += s_.treeSpacing) {
+                    if (std::any_of(lampS.begin(), lampS.end(), [&](float l) { return std::abs(l - s) < 3.0f; }))
+                        continue;
+                    glm::vec2 p, t;
+                    at(s, p, t);
+                    const glm::vec2 n{-t.y, t.x};
+                    const glm::vec2 q = p + n * side * (cw + P.pavement - 1.1f);
+                    if (!b_.free(q, 1.0f))
+                        continue;
+                    if (rng.chance(s_.treeSurvival)) {
+                        b_.tree(*sp, streetTrees_, q, rng, kh);
+                        b_.seedlings(q, static_cast<int>(rng.range(0.0f, 3.0f) * s_.overgrowth), streetTrees_, rng, kh);
+                    } else if (rng.chance(0.35f)) {
+                        if (const KitProp* snag = b_.anyProp("snag", rng))
+                            b_.prop(*snag, "Dead tree", streetTrees_, q, kh, rng.range(0.0f, 360.0f), rng);
+                    } else if (rng.chance(s_.overgrowth)) {
+                        b_.plant({"sapling"}, "Seedling", streetTrees_, q, rng, kh);
+                    }
+                }
+        }
+        // Weeds in the joint between kerb and road.
+        if (s_.overgrowth > 0.01f && P.pavement > 0.0f) {
+            const float step = 3.0f / s_.overgrowth;
+            for (const float side : {1.0f, -1.0f})
+                for (float s = rng.range(0.0f, step); s < L; s += step * rng.range(0.5f, 1.5f)) {
+                    glm::vec2 p, t;
+                    at(s, p, t);
+                    const glm::vec2 n{-t.y, t.x};
+                    b_.plant({rng.chance(0.75f) ? "grass" : "weed", "grass"}, "Kerb grass", streetPlants_, p + n * side * (cw - rng.range(0.1f, 0.5f)),
+                             rng, 0.0f, 0.1f);
+                }
+        }
+        // Wrecks parked at the kerb, decades in one place.
+        const float density = s_.wrecksPer100m * (cls(r.cls) == StreetClass::Main ? 1.0f : 0.7f);
+        const int count = static_cast<int>(L / 100.0f * density * rng.range(0.5f, 1.5f) + 0.5f);
+        std::vector<float> taken;
+        for (int w = 0, tries = 0; w < count && tries < count * 10 && P.carriageway >= 3.0f; ++tries) {
+            const float s = rng.range(jc, L - jc);
+            if (std::any_of(taken.begin(), taken.end(), [&](float x) { return std::abs(x - s) < 10.0f; }))
+                continue;
+            const KitProp* car = b_.anyProp("car", rng);
+            if (!car)
+                break;
+            taken.push_back(s);
+            ++w;
+            glm::vec2 p, t;
+            at(s, p, t);
+            const glm::vec2 n{-t.y, t.x};
+            const float side = rng.chance(0.5f) ? 1.0f : -1.0f;
+            const glm::vec2 q = p + n * side * (cw - 1.15f);
+            b_.prop(*car, "Wreck", wrecks_, q, -0.05f, b_.yawZ(t * (rng.chance(0.5f) ? 1.0f : -1.0f)) + rng.range(-7.0f, 7.0f), rng,
+                    {rng.range(-2.0f, 2.0f), rng.range(-2.5f, 2.5f)});
+            ++b_.plan.stats.wrecks;
+            for (int g = 0; g < static_cast<int>(8.0f * s_.overgrowth); ++g) {
+                const float ang = rng.range(0.0f, 2.0f * kPi), d = rng.range(1.0f, 1.25f);
+                b_.plant({"grass", "weed"}, "Grass", wrecks_, q + (t * std::cos(ang) * 2.5f + n * std::sin(ang) * 1.1f) * d, rng, 0.0f, 0.0f);
+            }
+            b_.addSolid({q.x - 0.8f, q.y - 0.8f, q.x + 0.8f, q.y + 0.8f});
+        }
+    }
+
+    // ------------------------------------------------------------ greenery
+    bool randomIn(const Poly& p, Rng& rng, glm::vec2& out) const
+    {
+        glm::vec2 lo{1e30f}, hi{-1e30f};
+        for (const auto& q : p) {
+            lo = glm::min(lo, q);
+            hi = glm::max(hi, q);
+        }
+        for (int i = 0; i < 20; ++i) {
+            const glm::vec2 q{rng.range(lo.x, hi.x), rng.range(lo.y, hi.y)};
+            if (pointInPolygon(p, q)) {
+                out = q;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void grove(const Lot& L, const Poly& area, glm::vec2 c, int trees, Rng& rng)
+    {
+        const float kh = s_.kerbHeight;
+        std::vector<glm::vec2> placed;
+        for (int i = 0, tries = 0; i < trees && tries < trees * 12; ++tries) {
+            const float a = rng.range(0.0f, 2.0f * kPi), d = rng.range(0.0f, 6.0f);
+            const glm::vec2 p = c + glm::vec2(std::cos(a), std::sin(a)) * d;
+            if (!pointInPolygon(area, p) || !b_.free(p, 1.5f))
+                continue;
+            if (std::any_of(placed.begin(), placed.end(), [&](glm::vec2 q) { return glm::length(q - p) < 4.0f; }))
+                continue;
+            if (const KitProp* k = b_.anyProp("tree", rng)) {
+                b_.tree(*k, L.group, p, rng, kh);
+                placed.push_back(p);
+                ++i;
+            }
+        }
+        if (placed.empty())
+            return;
+        const int bushes = static_cast<int>(rng.range(4.0f, 9.0f) * (0.3f + s_.overgrowth));
+        for (int i = 0; i < bushes; ++i) {
+            const float a = rng.range(0.0f, 2.0f * kPi), d = rng.range(5.5f, 9.0f);
+            const glm::vec2 p = c + glm::vec2(std::cos(a), std::sin(a)) * d;
+            if (pointInPolygon(area, p))
+                b_.plant({"bush"}, "Bush", L.group, p, rng, kh);
+        }
+        for (int i = 0; i < static_cast<int>(rng.range(2.0f, 7.0f) * s_.overgrowth); ++i) {
+            const float a = rng.range(0.0f, 2.0f * kPi), d = rng.range(1.5f, 7.0f);
+            const glm::vec2 p = c + glm::vec2(std::cos(a), std::sin(a)) * d;
+            if (pointInPolygon(area, p))
+                b_.plant({rng.chance(0.6f) ? "sapling" : "bush", "bush"}, "Seedling", L.group, p, rng, kh);
+        }
+    }
+
+    void scatterIn(const Lot& L, const Poly& area, float perHundredM2, Rng& rng, const std::vector<const char*>& roles, const char* name)
+    {
+        const int n = std::min(3000, static_cast<int>(signedArea(area) / 100.0f * perHundredM2));
+        for (int i = 0; i < n; ++i) {
+            glm::vec2 p;
+            if (randomIn(area, rng, p))
+                b_.plant(roles, name, L.group, p, rng, s_.kerbHeight);
+        }
+    }
+
+    void green(Lot& L)
+    {
+        Rng rng(mix(L.seed, 4242));
+        const float g = s_.overgrowth;
+        const Poly& area = L.yard;
+        if (area.size() < 3 || signedArea(area) < 30.0f)
+            return;
+        // Paths from the entrances: nothing grows on them.
+        for (const glm::vec2 e : L.entrances) {
+            const glm::vec2 c = centroid(area);
+            if (glm::length(c - e) > 1.0f) {
+                const glm::vec2 to = e + glm::normalize(c - e) * std::min(12.0f, glm::length(c - e));
+                b_.addClear(e, to, 1.1f);
+                b_.ground(Ground::Path, {e, to}, s_.kerbHeight, 0.9f);
+            }
+        }
+        float grovesPer = 0.0f, young = 0.0f, weeds = 0.0f;
+        switch (L.kind) {
+        // (grass and most weeds grow through the terrain; these are the bigger plants)
+        case BlockKind::Perimeter: grovesPer = 1.0f / 700.0f; young = 0.08f; weeds = 0.2f; break;
+        case BlockKind::Microdistrict:
+        case BlockKind::Towers: grovesPer = 1.0f / 1000.0f; young = 0.12f; weeds = 0.1f; break;
+        case BlockKind::Park: grovesPer = 1.0f / 380.0f; young = 0.25f; weeds = 0.1f; break;
+        case BlockKind::Ruin: grovesPer = 1.0f / 900.0f; young = 0.5f; weeds = 0.8f; break;
+        case BlockKind::Wasteland: grovesPer = 1.0f / 1500.0f; young = 0.25f; weeds = 0.6f; break;
+        case BlockKind::Houses: grovesPer = 1.0f / 2500.0f; young = 0.1f; weeds = 0.1f; break;
+        case BlockKind::Garages: young = 0.1f; weeds = 0.5f; break;
+        default: break;
+        }
+        const float A = signedArea(area);
+        const int groves = static_cast<int>(A * grovesPer * (0.4f + 0.8f * g) + rng.uniform());
+        std::vector<glm::vec2> centres;
+        for (int tries = 0; tries < groves * 20 && static_cast<int>(centres.size()) < groves; ++tries) {
+            glm::vec2 p;
+            if (!randomIn(area, rng, p) || distanceToPolygonEdge(area, p) < 4.0f)
+                continue;
+            if (std::any_of(centres.begin(), centres.end(), [&](glm::vec2 q) { return glm::length(q - p) < 20.0f; }))
+                continue;
+            centres.push_back(p);
+            grove(L, area, p, 2 + rng.below(4), rng);
+        }
+        if (L.kind == BlockKind::Ruin) // heaps where the houses stood
+            for (int i = 0; i < static_cast<int>(A / 250.0f); ++i) {
+                glm::vec2 p;
+                if (!randomIn(area, rng, p))
+                    continue;
+                if (const KitProp* k = b_.anyProp(rng.chance(0.2f) ? "slab" : "rubble", rng)) {
+                    b_.prop(*k, "Rubble heap", L.group, p, s_.kerbHeight - 0.25f, rng.range(0.0f, 360.0f), rng,
+                            {rng.range(-8.0f, 8.0f), rng.range(-8.0f, 8.0f)}, rng.range(1.3f, 2.6f));
+                    b_.addSolid({p.x - 2.0f, p.y - 2.0f, p.x + 2.0f, p.y + 2.0f});
+                }
+            }
+        scatterIn(L, area, young * (0.3f + g), rng, {"sapling", "bush"}, "Young tree");
+        scatterIn(L, area, weeds * g, rng, {"weed", "nettle", "grass"}, "Weeds");
+    }
+
+    void outskirts()
+    {
+        const float o = s_.outskirts;
+        if (o < 1.0f)
+            return;
+        const std::string grp = s_.group + " outskirts";
+        b_.group(grp, s_.group);
+        Rng rng(mix(s_.seed, 5150));
+        Lot pseudo;
+        pseudo.group = grp;
+        const float h = half_, H = half_ + o - 3.0f;
+        const Poly ring[] = {{{-H, -H}, {H, -H}, {H, -h - 3}, {-H, -h - 3}}, {{-H, h + 3}, {H, h + 3}, {H, H}, {-H, H}},
+                             {{-H, -h - 3}, {-h - 3, -h - 3}, {-h - 3, h + 3}, {-H, h + 3}}, {{h + 3, -h - 3}, {H, -h - 3}, {H, h + 3}, {h + 3, h + 3}}};
+        for (const Poly& r : ring) {
+            if (signedArea(r) < 100.0f)
+                continue;
+            const int want = static_cast<int>(signedArea(r) / 900.0f * (0.3f + 0.7f * s_.overgrowth));
+            std::vector<glm::vec2> centres;
+            for (int tries = 0; tries < want * 20 && static_cast<int>(centres.size()) < want; ++tries) {
+                glm::vec2 p;
+                if (!randomIn(r, rng, p))
+                    continue;
+                if (std::any_of(centres.begin(), centres.end(), [&](glm::vec2 q) { return glm::length(q - p) < 24.0f; }))
+                    continue;
+                centres.push_back(p);
+                grove(pseudo, r, p, 2 + rng.below(4), rng);
+            }
+            scatterIn(pseudo, r, 0.2f * s_.overgrowth, rng, {"sapling", "bush"}, "Young tree");
+        }
+    }
+
+    const Settings& s_;
+    Builder b_;
+    RoadNetwork net_;
+    float half_ = 300.0f;
+    std::vector<Lot> lots_;
+    std::string streetGroup_, kerbs_, lamps_, streetTrees_, wrecks_, streetPlants_;
+};
+
 } // namespace
 
 Plan generate(const Settings& in, const Kit& kit)
 {
     Settings s = in;
     s.normalize();
+    if (s.layout == Layout::Organic) {
+        OrganicLayout layout(s, kit);
+        return layout.run();
+    }
     CityLayout layout(s, kit);
     return layout.run();
 }
 
 // ============================================================================ objects
+// ============================================================================ terrain
+namespace {
+
+float hash2(int x, int y, std::uint32_t seed)
+{
+    std::uint32_t h = static_cast<std::uint32_t>(x) * 0x8da6b343U ^ static_cast<std::uint32_t>(y) * 0xd8163841U ^ seed * 0xcb1ab31fU;
+    h ^= h >> 16;
+    h *= 0x7feb352dU;
+    h ^= h >> 15;
+    h *= 0x846ca68bU;
+    h ^= h >> 16;
+    return static_cast<float>(h >> 8) * (1.0f / 16777216.0f);
+}
+float noise2(glm::vec2 p, std::uint32_t seed)
+{
+    const float fx = std::floor(p.x), fy = std::floor(p.y);
+    const int x = static_cast<int>(fx), y = static_cast<int>(fy);
+    float u = p.x - fx, v = p.y - fy;
+    u = u * u * (3.0f - 2.0f * u);
+    v = v * v * (3.0f - 2.0f * v);
+    const float a = hash2(x, y, seed), b = hash2(x + 1, y, seed), c = hash2(x, y + 1, seed), d = hash2(x + 1, y + 1, seed);
+    return (a + (b - a) * u) + ((c + (d - c) * u) - (a + (b - a) * u)) * v;
+}
+
+// Calls fn(ix, iz) for grid points origin + (i + offset) * cell inside the polygon (scanlines).
+template <class F>
+void rasterPolygon(const std::vector<glm::vec2>& poly, glm::vec2 origin, float cell, float offset, int res, F&& fn)
+{
+    if (poly.size() < 3)
+        return;
+    float z0 = 1e30f, z1 = -1e30f;
+    for (const auto& p : poly) {
+        z0 = std::min(z0, p.y);
+        z1 = std::max(z1, p.y);
+    }
+    const int iz0 = std::max(0, static_cast<int>(std::ceil((z0 - origin.y) / cell - offset)));
+    const int iz1 = std::min(res - 1, static_cast<int>(std::floor((z1 - origin.y) / cell - offset)));
+    std::vector<float> xs;
+    for (int iz = iz0; iz <= iz1; ++iz) {
+        const float z = origin.y + (static_cast<float>(iz) + offset) * cell;
+        xs.clear();
+        for (std::size_t i = 0, n = poly.size(); i < n; ++i) {
+            const glm::vec2 a = poly[i], b = poly[(i + 1) % n];
+            if ((a.y > z) != (b.y > z))
+                xs.push_back(a.x + (z - a.y) * (b.x - a.x) / (b.y - a.y));
+        }
+        std::sort(xs.begin(), xs.end());
+        for (std::size_t k = 0; k + 1 < xs.size(); k += 2) {
+            const int ix0 = std::max(0, static_cast<int>(std::ceil((xs[k] - origin.x) / cell - offset)));
+            const int ix1 = std::min(res - 1, static_cast<int>(std::floor((xs[k + 1] - origin.x) / cell - offset)));
+            for (int ix = ix0; ix <= ix1; ++ix)
+                fn(ix, iz);
+        }
+    }
+}
+
+template <class F>
+void rasterStroke(const std::vector<glm::vec2>& pts, float hw, glm::vec2 origin, float cell, float offset, int res, F&& fn)
+{
+    for (std::size_t i = 0; i + 1 < pts.size(); ++i) {
+        const glm::vec2 a = pts[i], b = pts[i + 1];
+        const glm::vec2 lo = glm::min(a, b) - glm::vec2(hw), hi = glm::max(a, b) + glm::vec2(hw);
+        const int ix0 = std::max(0, static_cast<int>(std::ceil((lo.x - origin.x) / cell - offset)));
+        const int ix1 = std::min(res - 1, static_cast<int>(std::floor((hi.x - origin.x) / cell - offset)));
+        const int iz0 = std::max(0, static_cast<int>(std::ceil((lo.y - origin.y) / cell - offset)));
+        const int iz1 = std::min(res - 1, static_cast<int>(std::floor((hi.y - origin.y) / cell - offset)));
+        const glm::vec2 ab = b - a;
+        const float L2 = std::max(glm::dot(ab, ab), 1e-8f);
+        for (int iz = iz0; iz <= iz1; ++iz)
+            for (int ix = ix0; ix <= ix1; ++ix) {
+                const glm::vec2 p = origin + (glm::vec2(static_cast<float>(ix), static_cast<float>(iz)) + offset) * cell;
+                const float t = std::clamp(glm::dot(p - a, ab) / L2, 0.0f, 1.0f);
+                const glm::vec2 d = p - (a + ab * t);
+                if (glm::dot(d, d) <= hw * hw)
+                    fn(ix, iz);
+            }
+    }
+}
+
+float distanceOutside(const std::vector<glm::vec2>& poly, glm::vec2 p)
+{
+    if (poly.size() < 3 || pointInPolygon(poly, p))
+        return 0.0f;
+    return distanceToPolygonEdge(poly, p);
+}
+
+} // namespace
+
+std::shared_ptr<Terrain> buildTerrain(const GroundPlan& G, std::vector<std::string>* errors, const std::function<void(float)>& progress)
+{
+    if (!G.enabled || G.size <= 1.0f)
+        return nullptr;
+    auto T = std::make_shared<Terrain>();
+    const int res = std::clamp(static_cast<int>(std::ceil(G.size / std::max(0.1f, G.spacing))) + 1, 2, 4097);
+    const int splatRes = std::clamp(static_cast<int>(std::ceil(G.size / 0.4f)), 256, 2048);
+    T->create(G.origin, G.size, res, splatRes);
+    const float cell = T->spacing();
+    // Rolling land outside the town: low hills that rise from the town edge.
+    JobSystem::global().parallelFor(static_cast<std::size_t>(res), 16, [&](std::size_t b, std::size_t e) {
+        for (std::size_t iz = b; iz < e; ++iz)
+            for (int ix = 0; ix < res; ++ix) {
+                const glm::vec2 p = G.origin + glm::vec2(static_cast<float>(ix), static_cast<float>(iz)) * cell;
+                const float out = distanceOutside(G.town, p);
+                const float f = std::clamp(out / std::max(1.0f, G.hillFalloff), 0.0f, 1.0f);
+                const float k = f * f * (3.0f - 2.0f * f);
+                const float hills = G.hills * (0.65f * noise2(p / 170.0f, G.seed) + 0.35f * noise2(p / 61.0f, G.seed + 7)) - G.hills * 0.15f;
+                const float micro = 0.25f * (noise2(p / 9.0f, G.seed + 3) - 0.5f);
+                T->heights[iz * static_cast<std::size_t>(res) + static_cast<std::size_t>(ix)] = G.level - 0.02f + k * (hills + micro) + (1.0f - k) * 0.0f;
+            }
+    });
+    if (progress)
+        progress(0.2f);
+    // Splat: the base layer, then every shape over it.
+    for (std::size_t i = 0; i < T->splat.size(); i += Terrain::kLayers)
+        for (int k = 0; k < Terrain::kLayers; ++k)
+            T->splat[i + static_cast<std::size_t>(k)] = k == G.baseLayer ? 255 : 0;
+    const float px = G.size / static_cast<float>(splatRes);
+    for (const auto& sh : G.shapes) {
+        auto paint = [&](int ix, int iz) {
+            std::uint8_t* p = &T->splat[(static_cast<std::size_t>(iz) * static_cast<std::size_t>(splatRes) + static_cast<std::size_t>(ix)) * Terrain::kLayers];
+            for (int k = 0; k < Terrain::kLayers; ++k)
+                p[k] = k == sh.layer ? 255 : 0;
+        };
+        auto lift = [&](int ix, int iz) { T->heights[static_cast<std::size_t>(iz) * static_cast<std::size_t>(res) + static_cast<std::size_t>(ix)] = sh.height; };
+        if (sh.halfWidth > 0.0f) {
+            rasterStroke(sh.points, sh.halfWidth, G.origin, px, 0.5f, splatRes, paint);
+            if (sh.setHeight)
+                rasterStroke(sh.points, sh.halfWidth, G.origin, cell, 0.0f, res, lift);
+        } else {
+            rasterPolygon(sh.points, G.origin, px, 0.5f, splatRes, paint);
+            if (sh.setHeight)
+                rasterPolygon(sh.points, G.origin, cell, 0.0f, res, lift);
+        }
+    }
+    if (progress)
+        progress(0.5f);
+    for (int i = 0; i < kGroundCount && i < Terrain::kLayers; ++i) {
+        TerrainLayer& l = T->layers[static_cast<std::size_t>(i)];
+        l.materialPath = G.materials[static_cast<std::size_t>(i)];
+        l.tiling = i == static_cast<int>(Ground::Road) ? 0.2f : 0.25f;
+        if (!l.materialPath.empty()) {
+            std::string err;
+            l.material = loadMaterial(l.materialPath, &err);
+            if (!l.material && errors)
+                errors->push_back(l.materialPath.string() + ": " + err);
+        }
+    }
+    // Ground cover.
+    for (const auto& f : G.foliage) {
+        FoliageType ft;
+        ft.modelPath = f.path;
+        auto m = std::make_shared<Model>();
+        std::string err;
+        if (!loadModelFile(*m, f.path, &err)) {
+            if (errors)
+                errors->push_back(f.path.string() + ": " + err);
+            continue;
+        }
+        ft.model = std::move(m);
+        if (!f.lodPath.empty()) {
+            FoliageType::Lod lod;
+            lod.modelPath = f.lodPath;
+            auto lm = std::make_shared<Model>();
+            if (loadModelFile(*lm, f.lodPath, nullptr)) {
+                lod.model = std::move(lm);
+                lod.distance = f.lodDistance;
+                ft.lods.push_back(std::move(lod));
+            }
+        }
+        ft.density = f.density;
+        ft.minScale = f.scaleMin;
+        ft.maxScale = f.scaleMax;
+        ft.cullDistance = f.cull;
+        ft.collision = f.collision;
+        ft.alignToSlope = !f.collision;
+        ft.castShadows = f.shadows;
+        ft.farDensity = f.farDensity;
+        ft.sway = f.sway;
+        for (int i = 0; i < FoliageType::kLayerSlots; ++i)
+            ft.layerDensity[static_cast<std::size_t>(i)] = i < kGroundCount ? f.on[static_cast<std::size_t>(i)] : 0.0f;
+        T->foliageTypes.push_back(std::move(ft));
+    }
+    std::vector<std::vector<FoliageInstance>> inst(T->foliageTypes.size());
+    JobSystem::global().parallelFor(inst.size(), 1, [&](std::size_t b, std::size_t e) {
+        for (std::size_t i = b; i < e; ++i)
+            inst[i] = T->scatterFoliage(static_cast<int>(i), G.seed * 31u + static_cast<std::uint32_t>(i));
+    });
+    for (auto& v : inst)
+        T->foliage.insert(T->foliage.end(), v.begin(), v.end());
+    T->foliageVersion = T->splatVersion + 1; // changed
+    if (progress)
+        progress(1.0f);
+    return T;
+}
+
 CityObjects buildObjects(const Plan& plan, const std::function<void(float)>& progress, const std::function<bool()>& cancelled)
 {
     CityObjects out;
+    // Houses of the grammar: written once per distinct house (the file name is a hash of it).
+    {
+        std::vector<const GeneratedBuilding*> todo;
+        std::set<fs::path> seen;
+        for (const auto& g : plan.generated)
+            if (seen.insert(g.file).second && (!fs::exists(g.file) || !fs::exists(g.lodFile)))
+                todo.push_back(&g);
+        std::vector<std::string> errs(todo.size());
+        std::atomic<int> done{0};
+        JobSystem::global().parallelFor(todo.size(), 1, [&](std::size_t b, std::size_t e) {
+            for (std::size_t i = b; i < e; ++i) {
+                if (cancelled && cancelled())
+                    return;
+                const GeneratedBuilding& g = *todo[i];
+                const fs::path tex = plan.textures;
+                if (!writeBuildingGlb(g.spec, g.file, 0, tex, &errs[i]) || !writeBuildingGlb(g.spec, g.lodFile, 1, tex, &errs[i]))
+                    if (errs[i].empty())
+                        errs[i] = "cannot write " + g.file.string();
+                if (progress)
+                    progress(0.25f * static_cast<float>(++done) / static_cast<float>(std::max<std::size_t>(todo.size(), 1)));
+            }
+        });
+        for (const auto& e : errs)
+            if (!e.empty())
+                out.errors.push_back(e);
+        out.housesWritten = static_cast<int>(todo.size());
+    }
+    if (cancelled && cancelled())
+        return out;
+    if (plan.ground.enabled) {
+        out.terrain = buildTerrain(plan.ground, &out.errors, [&](float f) {
+            if (progress)
+                progress(0.25f + 0.25f * f);
+        });
+    }
+    auto sub = [&](float f) {
+        if (progress)
+            progress(0.5f + 0.5f * f);
+    };
     for (const auto& g : plan.groups)
         out.groups.push_back({g.name, g.parent, {}});
     // Every model and LOD file once, in parallel.
@@ -1787,8 +3235,7 @@ CityObjects buildObjects(const Plan& plan, const std::function<void(float)>& pro
             auto m = std::make_shared<Model>();
             if (loadModelFile(*m, files[i], &errors[i]))
                 loaded[i] = std::move(m);
-            if (progress)
-                progress(0.8f * static_cast<float>(++done) / static_cast<float>(std::max<std::size_t>(files.size(), 1)));
+            sub(0.8f * static_cast<float>(++done) / static_cast<float>(std::max<std::size_t>(files.size(), 1)));
         }
     });
     for (std::size_t i = 0; i < files.size(); ++i)
@@ -1799,8 +3246,8 @@ CityObjects buildObjects(const Plan& plan, const std::function<void(float)>& pro
     std::map<fs::path, std::shared_ptr<Material>> materials;
     std::size_t k = 0;
     for (const auto& p : plan.placements) {
-        if (progress && (++k % 512) == 0)
-            progress(0.8f + 0.2f * static_cast<float>(k) / static_cast<float>(plan.placements.size()));
+        if ((++k % 512) == 0)
+            sub(0.8f + 0.2f * static_cast<float>(k) / static_cast<float>(plan.placements.size()));
         if (p.kind == Placement::Kind::Box) {
             Box b;
             b.name = p.name;
@@ -1831,6 +3278,10 @@ CityObjects buildObjects(const Plan& plan, const std::function<void(float)>& pro
         m.name = p.name;
         m.parent = p.group;
         m.position = p.position;
+        // Out of town the land rolls: stand on it.
+        if (out.terrain && !pointInPolygon(plan.ground.town, {p.position.x, p.position.z}))
+            m.position.y = out.terrain->heightAt(p.position.x, p.position.z) +
+                           std::max(-0.3f, p.position.y - (plan.ground.level + plan.ground.kerb));
         m.rotation = p.rotation;
         m.scale = p.scale;
         m.cullDistance = p.cull;
@@ -1912,6 +3363,8 @@ int replaceCity(Scene& scene, const std::string& root, CityObjects objects)
         m.parent = parentOf(m.parent);
         scene.models.push_back(std::move(m));
     }
+    if (objects.terrain)
+        scene.terrain = std::move(objects.terrain);
     assignObjectIds(scene);
     return removed;
 }

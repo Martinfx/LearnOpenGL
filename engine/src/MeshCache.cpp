@@ -5,6 +5,8 @@
 #include <cstring>
 #include <fstream>
 #include <map>
+#include <mutex>
+#include <string>
 
 namespace engine {
 
@@ -194,8 +196,22 @@ bool readMeshCache(Model& model, const std::filesystem::path& source)
         r.get(nearest);
         r.get(mipmaps);
         r.get(wrap);
+        if (!r.ok)
+            return false;
+        // The same cooked texture in many models: one copy in memory and on the GPU.
+        static std::mutex sharedMutex;
+        static std::map<std::string, std::weak_ptr<const Texture>> shared;
+        const std::string key = path + '|' + std::to_string(srgb) + std::to_string(nearest) + std::to_string(mipmaps) + '|' + std::to_string(wrap);
+        {
+            std::lock_guard<std::mutex> lock(sharedMutex);
+            if (auto it = shared.find(key); it != shared.end())
+                if (auto t = it->second.lock()) {
+                    textures.push_back(std::move(t));
+                    continue;
+                }
+        }
         CookedTexture info;
-        if (!r.ok || !readCookedTextureInfo(fromUtf8(path), info))
+        if (!readCookedTextureInfo(fromUtf8(path), info))
             return false; // the texture cache was cleared
         auto tex = std::make_shared<Texture>();
         tex->id = newResourceId();
@@ -204,6 +220,10 @@ bool readMeshCache(Model& model, const std::filesystem::path& source)
         tex->mipmaps = mipmaps != 0;
         tex->wrap = wrap;
         tex->setCooked(std::move(info), fromUtf8(path));
+        {
+            std::lock_guard<std::mutex> lock(sharedMutex);
+            shared[key] = tex;
+        }
         textures.push_back(std::move(tex));
     }
     r.get(count);

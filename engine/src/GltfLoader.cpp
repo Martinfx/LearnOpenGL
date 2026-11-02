@@ -73,6 +73,32 @@ std::shared_ptr<const Texture> loadImage(const cgltf_image* image, const std::fi
     options.compress = config.compress;
     options.alphaCoverage = usage == TextureUsage::Color ? alphaCoverage : 0.0f;
     const std::string key = textureCacheKey(source, extra, options);
+    // Image files shared by many models (texture sets next to them): one texture
+    // in memory and on the GPU for all of them, not one per model file.
+    static std::mutex sharedMutex;
+    static std::map<std::string, std::weak_ptr<const Texture>> shared;
+    const std::string sharedKey = embedded ? std::string() : source.lexically_normal().generic_string() + "|" + key;
+    if (!embedded) {
+        std::lock_guard<std::mutex> lock(sharedMutex);
+        if (auto it = shared.find(sharedKey); it != shared.end())
+            if (auto t = it->second.lock()) {
+                cache[{image, cacheId}] = t;
+                return t;
+            }
+    }
+    struct Remember { // registers whatever this call returns (also the early returns)
+        const std::string& key;
+        std::shared_ptr<const Texture>* out = nullptr;
+        ~Remember()
+        {
+            if (key.empty() || !out || !*out)
+                return;
+            std::lock_guard<std::mutex> lock(sharedMutex);
+            shared[key] = *out;
+        }
+    };
+    std::shared_ptr<const Texture> registered;
+    Remember remember{sharedKey, &registered};
     const std::filesystem::path cacheFile = config.diskCache ? textureCachePath(key) : std::filesystem::path();
 
     auto tex = std::make_shared<Texture>();
@@ -84,6 +110,7 @@ std::shared_ptr<const Texture> loadImage(const cgltf_image* image, const std::fi
     if (!cacheFile.empty() && readCookedTextureInfo(cacheFile, cooked)) {
         tex->setCooked(std::move(cooked), cacheFile);
         cache[{image, cacheId}] = tex;
+        registered = tex;
         return tex;
     }
 
@@ -106,6 +133,7 @@ std::shared_ptr<const Texture> loadImage(const cgltf_image* image, const std::fi
         result = std::move(tex);
     }
     cache[{image, cacheId}] = result;
+    registered = result;
     return result;
 }
 

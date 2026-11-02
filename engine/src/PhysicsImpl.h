@@ -61,6 +61,8 @@ struct PhysicsWorld::Impl {
                    glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f), const std::string& surface = {});
     void addStatic(const JPH::ShapeRefC& shape, glm::vec3 position, const std::string& name,
                    glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f), const std::string& surface = {});
+    void bodyLimitWarning(const std::string& name); // once per level: Jolt is out of bodies
+    bool bodyLimitWarned = false;
     JPH::uint64 surfaceId(const std::string& surface); // body user data: index + 1 into `surfaces`, 0 = none
     // Static collision of one level model (a Jolt mesh per part, shared by copies); bodies kept per model
     // so world streaming can remove them again.

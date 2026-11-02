@@ -57,14 +57,51 @@ povolenými možnostmi.**
 („Re-roll selected blocks“ přegeneruje jen vybrané). Generátor má vlastní generátor náhodných čísel, takže stejné
 nastavení dá stejné město na Windows, Linuxu i FreeBSD.
 
+### Organický režim (Layout → Street layout: Organic)
+
+Druhý režim vedle mřížky, podle přehledu algoritmů, který poslal martin. Každý krok je popsaný pravidlem:
+
+1. **Silniční síť z tenzorového pole** (Chen, Esch, Wonka, Müller, Zhang: *Interactive Procedural Street
+   Modeling*, 2008; `engine/CityRoads.h`). Pole je směs mřížek (jedna na čtvrť, natočené až o *District turn*),
+   radiálního pole kolem centra (okružní a paprskové ulice, *Ring roads*) a pomalého šumu (*Curvature*, *Bend
+   scale*). Hlavní silnice se trasují jako proudnice pole (RK2, krok 3 m) v odstupu *Main road spacing*, pak
+   vedlejší ulice mezi nimi (*Side street spacing*, rozmístění podle Jobard–Lefer). Krátké konce se protáhnou
+   k nejbližší ulici, slepé konce se odříznou, z průsečíků vznikne rovinný graf a z jeho stěn bloky (každá hrana
+   bloku ví, jaká ulice podél ní vede). Kolem města volitelně obvodová silnice.
+2. **Zónování a parcely.** Blok se zmenší o polovinu šířky ulic (podle třídy každé hrany) a podle vzdálenosti od
+   centra dostane druh: v centru činžákové bloky, ve vnitřním městě činžáky / sídliště / věžáky, venku rodinné
+   domy, garáže a pustina; podíl ruin a parků je nastavitelný. Úzké nebo malé bloky jsou zeleň. Činžákový blok se
+   dělí na pásy podél ulic (mitre inset) a ty na parcely s průjezdy; rodinné domy rekurzivním dělením bloku na
+   parcely s frontou k ulici (dům stažený od uliční čáry, ovocné stromy na zahradě).
+3. **Domy podle gramatiky fasád** (zjednodušená CGA, Müller a kol. 2006; `engine/CityGrammar.h`). Půdorys parcely
+   → stěna pro každou hranu podle role (ulice / dvůr / štít k sousedovi) → patra → osy oken → dlaždice (okno,
+   lodžie, balkon, dveře, výloha). Okna jsou rozbitá, zatlučená nebo prázdná, pod parapety stékající špína, ruiny
+   mají patra uražená po sloupcích. Střecha valbová nebo plochá s atikou. Výsledek je .glb (a _lod1.glb) ve složce
+   *House models*; stejný dům se zapíše jen jednou (soubor je pojmenovaný hashem parametrů). Styly (činžák,
+   panelák, chruščovka, rodinný dům – patra, výšky podlaží, rozteč os, okna, materiály, lodžie, balkony, výlohy)
+   jsou tabulka v kitu.
+4. **Terén a hustá tráva.** Pod městem vznikne terén (krok *Terrain spacing*): vozovka, chodníky, dvory, cesty
+   a zastavěná plocha jsou namalované jako vrstvy, mimo město se zvedají kopce (*Hills*). Tráva a plevel rostou
+   přes foliage terénu (instancované, tisíce kusů na blok) s hustotou podle druhu země – tabulka *Ground cover*
+   v kitu, celkově *Grass density*.
+5. **Optimalizace** zůstává na enginu: LOD každého domu, instancing sdílených meshů, frustum culling, Hi-Z
+   occlusion. Textury domů se sdílí mezi soubory (jedna kopie v paměti pro celé město).
+
+Město 640 × 640 m: ~200 úseků silnic, 80 bloků, 330 parcel, 370 domů; plán za 0,1 s, domy se zapíšou za ~3 s
+(paralelně), level se načte za ~10 s.
+
 ## 3. Editor
 
 - **Layout:** seed, střed (tlačítko *Camera*), otočení, kořenová skupina, šířky sloupců a řad, třídy ulic na
   čarách mřížky, druh každého bloku.
+- **Town plan:** organický režim – silniční síť (velikost, hlavní směr, čtvrti a jejich natočení, okružní ulice,
+  zakřivení, rozteče hlavních a vedlejších ulic, obvodová silnice), zónování (centrum, vnitřní město, podíl
+  rodinných domů, ruin a parků) a terén (krok, kopce, hustota trávy, složka generovaných domů).
 - **Rules:** profily tří tříd ulic (vozovka, chodník, lampy, stromořadí, kabely napříč), vybavení, pravidla bloků
   činžáků a sídlišť, zarůstání a okraj města. Každá hodnota má nápovědu.
 - **Kit:** soubor kitu, materiály země, tabulka budov (role, délka, hloubka, fasáda, patra, výška, váha; *Add
-  building* a *Measure selected* změří model) a tabulka rekvizit a rostlin podle rolí.
+  building* a *Measure selected* změří model), tabulka rekvizit a rostlin podle rolí, sady textur, tabulka stylů
+  fasád (materiály z nabídky) a tabulka pokryvu země (model, hustota, podíl na každém druhu země, LOD, vítr).
 - **Náhled:** plán (osy ulic, pozemky, půdorysy, průjezdy, cesty) se kreslí do viewportu při každé změně, počítá se
   na pracovním vlákně. Pod tím statistika a varování (např. blok je na sídliště malý).
 - **Generate:** modely se načtou paralelně na job systému (každý soubor jednou, kopie sdílejí mesh), do levelu se
@@ -76,9 +113,7 @@ Příkazová řádka (stejný generátor): `city_gen <settings.city> <out.level>
 
 ## 4. Omezení a další kroky
 
-- Kit zatím tvoří domy zarostlé ulice (11 činžáků), dva panelové domy, tři věžáky (jednoduché modely do dálky),
-  garáže a vegetace. Víc druhů domů (rohové domy, delší paneláky, obchod, škola) = víc variability.
-- Tráva a plevel jsou jednotlivé modely; hustý porost jako v zarostlé ulici by měl jít přes foliage terénu
-  (vrstvy a hustota podle plánu generátoru).
-- Mřížka je pravoúhlá (celá se dá otočit). Křivé ulice a náměstí by potřebovaly graf ulic místo mřížky.
+- Kit tvoří domy zarostlé ulice (11 činžáků), dva panelové domy, tři podrobné věžáky (lodžie, vchody, strojovna
+  výtahu) a garáže; organický režim k tomu staví domy gramatikou. Víc stylů = víc variability.
+- Náměstí a parky jako cíl sítě (ne jen zbylé bloky) a řeky / železnice jako hranice pole zatím nejsou.
 - Generátorem se nedělají hotové mapy; nový level z něj vznikne až po schválení.

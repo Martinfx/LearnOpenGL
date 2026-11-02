@@ -31,6 +31,7 @@
 #include <QVBoxLayout>
 
 #include <atomic>
+#include <functional>
 #include <cmath>
 #include <sstream>
 
@@ -139,6 +140,7 @@ void CityGeneratorPanel::buildUi()
         return area;
     };
     tabs->addTab(scroll(layoutTab()), tr("Layout"));
+    tabs->addTab(scroll(townTab()), tr("Town plan"));
     tabs->addTab(scroll(rulesTab()), tr("Rules"));
     tabs->addTab(scroll(kitTab()), tr("Kit"));
     layout->addWidget(tabs, 1);
@@ -186,6 +188,25 @@ QWidget* CityGeneratorPanel::layoutTab()
 {
     auto* w = new QWidget;
     auto* form = new QFormLayout(w);
+    auto* mode = new QComboBox;
+    mode->addItem(tr("Grid (designed blocks below)"));
+    mode->addItem(tr("Organic (grown street network, see Town plan)"));
+    mode->setToolTip(tr("Grid: you set the columns, rows and every block. Organic: streets grow from a tensor field (Chen et al. 2008), "
+                        "blocks are cut into parcels and zoned by distance from the centre, houses are built by a facade grammar."));
+    form->addRow(tr("Street layout"), mode);
+    connect(mode, &QComboBox::currentIndexChanged, this, [this](int v) {
+        if (updating_)
+            return;
+        settings_.layout = v == 1 ? Layout::Organic : Layout::Grid;
+        for (QWidget* g : gridOnly_)
+            g->setEnabled(settings_.layout == Layout::Grid);
+        changed();
+    });
+    refreshers_.push_back([this, mode] {
+        mode->setCurrentIndex(settings_.layout == Layout::Organic ? 1 : 0);
+        for (QWidget* g : gridOnly_)
+            g->setEnabled(settings_.layout == Layout::Grid);
+    });
     auto* seedRow = new QWidget;
     auto* seedLayout = new QHBoxLayout(seedRow);
     seedLayout->setContentsMargins(0, 0, 0, 0);
@@ -292,6 +313,7 @@ QWidget* CityGeneratorPanel::layoutTab()
     auto* rerollBlock = new QPushButton(tr("Re-roll selected blocks"));
     rerollBlock->setToolTip(tr("Another version of the selected blocks; the rest of the town stays as it is"));
     form->addRow(rerollBlock);
+    gridOnly_ = {columns_, rows_, streetsX_, streetsZ_, blocks_, rerollBlock};
     connect(rerollBlock, &QPushButton::clicked, this, [this] {
         for (const QModelIndex& i : blocks_->selectionModel()->selectedIndexes()) {
             BlockSettings b = settings_.block(i.row(), i.column());
@@ -361,6 +383,125 @@ void CityGeneratorPanel::rebuildGrid()
     updating_ = was;
 }
 
+void CityGeneratorPanel::addNumber(QFormLayout* form, const QString& label, float* value, double min, double max, double step, const QString& tip,
+                                   const QString& suffix, int decimals)
+{
+    auto* spin = new QDoubleSpinBox;
+    spin->setRange(min, max);
+    spin->setSingleStep(step);
+    spin->setDecimals(decimals);
+    spin->setSuffix(suffix);
+    spin->setToolTip(tip);
+    form->addRow(label, spin);
+    connect(spin, &QDoubleSpinBox::valueChanged, this, [this, value](double x) {
+        if (updating_)
+            return;
+        *value = static_cast<float>(x);
+        changed();
+    });
+    refreshers_.push_back([spin, value] { spin->setValue(*value); });
+}
+
+void CityGeneratorPanel::addInteger(QFormLayout* form, const QString& label, int* value, int min, int max, const QString& tip)
+{
+    auto* spin = new QSpinBox;
+    spin->setRange(min, max);
+    spin->setToolTip(tip);
+    form->addRow(label, spin);
+    connect(spin, &QSpinBox::valueChanged, this, [this, value](int x) {
+        if (updating_)
+            return;
+        *value = x;
+        changed();
+    });
+    refreshers_.push_back([spin, value] { spin->setValue(*value); });
+}
+
+void CityGeneratorPanel::addFlag(QFormLayout* form, const QString& label, bool* value, const QString& tip)
+{
+    auto* check = new QCheckBox(label);
+    check->setToolTip(tip);
+    form->addRow(QString(), check);
+    connect(check, &QCheckBox::toggled, this, [this, value](bool on) {
+        if (updating_)
+            return;
+        *value = on;
+        changed();
+    });
+    refreshers_.push_back([check, value] { check->setChecked(*value); });
+}
+
+QWidget* CityGeneratorPanel::townTab()
+{
+    auto* w = new QWidget;
+    auto* v = new QVBoxLayout(w);
+    auto section = [v](const QString& title) {
+        auto* box = new QGroupBox(title);
+        auto* form = new QFormLayout(box);
+        v->addWidget(box);
+        return form;
+    };
+    const QString none;
+    QFormLayout* net = section(tr("Street network (organic layout)"));
+    net->addRow(new QLabel(tr("Streets follow a tensor field: a grid per district, rings around the centre, bent by noise. "
+                              "Main roads are traced first, side streets fill in between.")));
+    addNumber(net, tr("Town size"), &settings_.townSize, 100, 4000, 10, tr("Side of the square the streets fill"));
+    addNumber(net, tr("Main direction"), &settings_.roadAngle, -180, 180, 1, tr("Heading of the main grid"), QStringLiteral(" °"), 1);
+    addInteger(net, tr("Districts"), &settings_.districts, 1, 12, tr("Areas with their own grid direction"));
+    addNumber(net, tr("District turn"), &settings_.districtTurn, 0, 90, 1, tr("The other districts turn up to this much"), QStringLiteral(" °"), 1);
+    addNumber(net, tr("Ring roads"), &settings_.radial, 0, 1, 0.05, tr("0 = straight grids, 1 = rings and radials around the centre"), none);
+    addNumber(net, tr("Curvature"), &settings_.curvature, 0, 1, 0.05, tr("How much the streets bend (noise in the field)"), none);
+    addNumber(net, tr("Bend scale"), &settings_.noiseScale, 20, 2000, 10, tr("Size of the bends"));
+    addNumber(net, tr("Main road spacing"), &settings_.mainSpacing, 20, 1000, 5, tr("Distance between main roads"));
+    addNumber(net, tr("Side street spacing"), &settings_.sideSpacing, 10, 500, 5, tr("Distance between side streets (about the block size)"));
+    auto* edge = streetCombo(settings_.edgeRoad);
+    edge->setToolTip(tr("Road around the town (none = the blocks end in the outskirts)"));
+    net->addRow(tr("Road round the town"), edge);
+    connect(edge, &QComboBox::currentIndexChanged, this, [this](int x) {
+        if (updating_)
+            return;
+        settings_.edgeRoad = static_cast<StreetClass>(x);
+        changed();
+    });
+    refreshers_.push_back([this, edge] { edge->setCurrentIndex(static_cast<int>(settings_.edgeRoad)); });
+
+    QFormLayout* zone = section(tr("Parcels and zoning"));
+    zone->addRow(new QLabel(tr("Blocks are zoned by their distance from the centre (share of the half town size), then cut into parcels.")));
+    addNumber(zone, tr("Centre"), &settings_.centreZone, 0, 1, 0.05, tr("Inside: tenement perimeter blocks along every street"), none);
+    addNumber(zone, tr("Inner town"), &settings_.innerZone, 0, 1, 0.05, tr("To here: tenements, panel micro-districts and towers; beyond: houses, garages, waste ground"), none);
+    addNumber(zone, tr("Private houses"), &settings_.houseShare, 0, 1, 0.05, tr("Outer blocks cut into house plots by recursive subdivision"), none);
+    addNumber(zone, tr("Ruins"), &settings_.ruinShare, 0, 1, 0.05, tr("Blocks whose houses are ruins (storeys gone, open to the sky)"), none);
+    addNumber(zone, tr("Parks"), &settings_.parkShare, 0, 1, 0.05, tr("Blocks left green"), none);
+
+    QFormLayout* ground = section(tr("Ground"));
+    addFlag(ground, tr("Terrain ground (grid layout)"), &settings_.terrainGround,
+            tr("The grid town stands on a painted terrain with dense grass instead of ground boxes (the organic layout always does)"));
+    addNumber(ground, tr("Terrain spacing"), &settings_.groundSpacing, 0.25, 4, 0.25, tr("Distance between height samples; smaller = sharper kerbs and paths, more memory"));
+    addNumber(ground, tr("Hills"), &settings_.hills, 0, 50, 0.5, tr("Height of the rolling land outside the town"));
+    addNumber(ground, tr("Grass density"), &settings_.foliageDensity, 0, 4, 0.05, tr("Multiplies the ground cover of the kit (Kit tab)"), none);
+    auto* cacheRow = new QWidget;
+    auto* ch = new QHBoxLayout(cacheRow);
+    ch->setContentsMargins(0, 0, 0, 0);
+    auto* cache = new QLineEdit;
+    cache->setReadOnly(true);
+    cache->setToolTip(tr("Where the generated house models are written (shared by identical houses; empty = \"generated\" next to the .city file)"));
+    auto* pickCache = new QPushButton(QStringLiteral("..."));
+    ch->addWidget(cache, 1);
+    ch->addWidget(pickCache);
+    ground->addRow(tr("House models"), cacheRow);
+    connect(pickCache, &QPushButton::clicked, this, [this, cache] {
+        const QString d = QFileDialog::getExistingDirectory(this, tr("Folder for the generated houses"), fromPath(settings_.cache));
+        if (d.isEmpty())
+            return;
+        settings_.cache = toPath(d);
+        cache->setText(d);
+        changed();
+    });
+    refreshers_.push_back([this, cache] { cache->setText(fromPath(settings_.cache)); });
+    v->addStretch(1);
+    return w;
+}
+
 QWidget* CityGeneratorPanel::rulesTab()
 {
     auto* w = new QWidget;
@@ -371,35 +512,8 @@ QWidget* CityGeneratorPanel::rulesTab()
         v->addWidget(box);
         return form;
     };
-    auto number = [this](QFormLayout* form, const QString& label, float* value, double min, double max, double step, const QString& tip,
-                         const QString& suffix = QStringLiteral(" m"), int decimals = 2) {
-        auto* spin = new QDoubleSpinBox;
-        spin->setRange(min, max);
-        spin->setSingleStep(step);
-        spin->setDecimals(decimals);
-        spin->setSuffix(suffix);
-        spin->setToolTip(tip);
-        form->addRow(label, spin);
-        connect(spin, &QDoubleSpinBox::valueChanged, this, [this, value](double x) {
-            if (updating_)
-                return;
-            *value = static_cast<float>(x);
-            changed();
-        });
-        refreshers_.push_back([spin, value] { spin->setValue(*value); });
-    };
-    auto flag = [this](QFormLayout* form, const QString& label, bool* value, const QString& tip) {
-        auto* check = new QCheckBox(label);
-        check->setToolTip(tip);
-        form->addRow(QString(), check);
-        connect(check, &QCheckBox::toggled, this, [this, value](bool on) {
-            if (updating_)
-                return;
-            *value = on;
-            changed();
-        });
-        refreshers_.push_back([check, value] { check->setChecked(*value); });
-    };
+    auto number = [this](auto&&... a) { addNumber(std::forward<decltype(a)>(a)...); };
+    auto flag = [this](auto&&... a) { addFlag(std::forward<decltype(a)>(a)...); };
 
     const char* const classLabels[] = {"", "Alley", "Side street", "Main street"};
     for (int c = kStreetClassCount - 1; c >= 1; --c) {
@@ -639,7 +753,208 @@ QWidget* CityGeneratorPanel::kitTab()
         refreshKitTables();
         changed();
     });
+    v->addWidget(grammarBox());
     return w;
+}
+
+namespace {
+
+// Columns of the facade style table: header, tip, read and write as text.
+struct StyleColumn {
+    const char* header;
+    const char* tip;
+    std::function<QString(const FacadeStyle&)> get;
+    std::function<void(FacadeStyle&, const QString&)> set;
+    std::string FacadeStyle::*material = nullptr; // a combo of the grammar's materials
+};
+
+const std::vector<StyleColumn>& styleColumns()
+{
+    auto num = [](float FacadeStyle::*f) {
+        return std::make_pair([f](const FacadeStyle& s) { return QString::number(s.*f); },
+                              [f](FacadeStyle& s, const QString& t) { s.*f = t.toFloat(); });
+    };
+    auto integer = [](int FacadeStyle::*f) {
+        return std::make_pair([f](const FacadeStyle& s) { return QString::number(s.*f); },
+                              [f](FacadeStyle& s, const QString& t) { s.*f = t.toInt(); });
+    };
+    auto text = [](std::string FacadeStyle::*f) {
+        return std::make_pair([f](const FacadeStyle& s) { return QString::fromStdString(s.*f); },
+                              [f](FacadeStyle& s, const QString& t) { s.*f = t.toStdString(); });
+    };
+    static const std::vector<StyleColumn> columns = [&] {
+        std::vector<StyleColumn> c;
+        auto add = [&c](const char* h, const char* tip, auto p, std::string FacadeStyle::*mat = nullptr) {
+            c.push_back({h, tip, p.first, p.second, mat});
+        };
+        add("Name", "", text(&FacadeStyle::name));
+        add("Role", "tenement (perimeter blocks), panel, khrushchyovka (micro-districts), house (private plots)", text(&FacadeStyle::role));
+        add("Floors min", "", integer(&FacadeStyle::floorsMin));
+        add("Floors max", "", integer(&FacadeStyle::floorsMax));
+        add("Ground storey", "Height of the ground floor (m)", num(&FacadeStyle::groundStorey));
+        add("Storey", "Height of the upper floors (m)", num(&FacadeStyle::storey));
+        add("Bay", "Window axis spacing (m), fitted to each facade", num(&FacadeStyle::bay));
+        add("Window w", "", num(&FacadeStyle::windowWidth));
+        add("Window h", "", num(&FacadeStyle::windowHeight));
+        add("Sill", "Sill height above the floor (m)", num(&FacadeStyle::sill));
+        add("Depth min", "Building depth behind the street line (m)", num(&FacadeStyle::depthMin));
+        add("Depth max", "", num(&FacadeStyle::depthMax));
+        add("Width min", "Parcel width along the street (m)", num(&FacadeStyle::widthMin));
+        add("Width max", "", num(&FacadeStyle::widthMax));
+        add("Wall", "", text(&FacadeStyle::wall), &FacadeStyle::wall);
+        add("Plinth", "", text(&FacadeStyle::plinth), &FacadeStyle::plinth);
+        add("Trim", "Window frames, cornice, string course", text(&FacadeStyle::trim), &FacadeStyle::trim);
+        add("Roof", "", text(&FacadeStyle::roof), &FacadeStyle::roof);
+        add("Firewall", "Party walls (seen where the neighbour is lower or gone)", text(&FacadeStyle::firewall), &FacadeStyle::firewall);
+        add("Cornice", "Projection of the cornice (m, 0 = none)", num(&FacadeStyle::cornice));
+        add("Bands", "String course over the ground floor (0/1)", num(&FacadeStyle::bands));
+        add("Loggias", "Share of window columns that are loggia stacks", num(&FacadeStyle::loggias));
+        add("Balconies", "Chance of a balcony column", num(&FacadeStyle::balconies));
+        add("Shops", "Chance of shop windows on the street ground floor", num(&FacadeStyle::shops));
+        add("Pitched", "1 = hipped sheet roof, 0 = flat with a parapet",
+            std::make_pair([](const FacadeStyle& s) { return QString::number(s.pitched ? 1 : 0); },
+                           [](FacadeStyle& s, const QString& t) { s.pitched = t.toInt() != 0; }));
+        add("Weight", "How often the zoning picks it among the styles of its role", num(&FacadeStyle::weight));
+        return c;
+    }();
+    return columns;
+}
+
+// Foliage table: name, model, density, share per ground kind, then the rest.
+constexpr int kFoliageFixed = 3, kFoliageTail = 6;
+const char* const kFoliageTailHeaders[kFoliageTail] = {"Cull", "Far density", "Sway", "Scale min", "Scale max", "Shadows"};
+
+} // namespace
+
+QWidget* CityGeneratorPanel::grammarBox()
+{
+    auto* box = new QGroupBox(tr("Generated houses and ground cover (organic layout, terrain ground)"));
+    auto* v = new QVBoxLayout(box);
+    auto* texRow = new QHBoxLayout;
+    textures_ = new QLineEdit;
+    textures_->setReadOnly(true);
+    textures_->setToolTip(tr("The zone texture sets (brick_red, panel, plaster_yellow, ...) the facade grammar puts on the generated houses"));
+    auto* pickTex = new QPushButton(QStringLiteral("..."));
+    texRow->addWidget(new QLabel(tr("Texture sets")));
+    texRow->addWidget(textures_, 1);
+    texRow->addWidget(pickTex);
+    v->addLayout(texRow);
+    connect(pickTex, &QPushButton::clicked, this, [this] {
+        const QString d = QFileDialog::getExistingDirectory(this, tr("Texture sets"), fromPath(kit_.textures));
+        if (d.isEmpty())
+            return;
+        kit_.textures = toPath(d);
+        refreshKitTables();
+        changed();
+    });
+
+    v->addWidget(new QLabel(tr("Facade styles (shape grammar: facade -> floors -> bays -> window, loggia, balcony, door, shop):")));
+    const auto& cols = styleColumns();
+    styles_ = new QTableWidget(0, static_cast<int>(cols.size()));
+    for (int c = 0; c < static_cast<int>(cols.size()); ++c) {
+        auto* h = new QTableWidgetItem(tr(cols[static_cast<std::size_t>(c)].header));
+        h->setToolTip(tr(cols[static_cast<std::size_t>(c)].tip));
+        styles_->setHorizontalHeaderItem(c, h);
+    }
+    styles_->setMinimumHeight(200);
+    v->addWidget(styles_, 1);
+    connect(styles_, &QTableWidget::itemChanged, this, [this](QTableWidgetItem* item) {
+        const auto& cols = styleColumns();
+        if (updating_ || item->row() >= static_cast<int>(kit_.styles.size()) || item->column() >= static_cast<int>(cols.size()))
+            return;
+        cols[static_cast<std::size_t>(item->column())].set(kit_.styles[static_cast<std::size_t>(item->row())], item->text().trimmed());
+        changed();
+    });
+    auto* sRow = new QHBoxLayout;
+    auto* addS = new QPushButton(tr("Add style"));
+    addS->setToolTip(tr("A copy of the selected style (or a default tenement)"));
+    auto* removeS = new QPushButton(tr("Remove"));
+    sRow->addWidget(addS);
+    sRow->addWidget(removeS);
+    sRow->addStretch(1);
+    v->addLayout(sRow);
+    connect(addS, &QPushButton::clicked, this, [this] {
+        const int r = styles_->currentRow();
+        FacadeStyle st = r >= 0 && r < static_cast<int>(kit_.styles.size()) ? kit_.styles[static_cast<std::size_t>(r)] : FacadeStyle{};
+        st.name += " 2";
+        kit_.styles.push_back(st);
+        refreshKitTables();
+        changed();
+    });
+    connect(removeS, &QPushButton::clicked, this, [this] {
+        const int r = styles_->currentRow();
+        if (r < 0 || r >= static_cast<int>(kit_.styles.size()))
+            return;
+        kit_.styles.erase(kit_.styles.begin() + r);
+        refreshKitTables();
+        changed();
+    });
+
+    v->addWidget(new QLabel(tr("Ground cover grown through the terrain (instances per m2, then the share on each kind of ground):")));
+    foliage_ = new QTableWidget(0, kFoliageFixed + kGroundCount + kFoliageTail);
+    QStringList headers{tr("Name"), tr("Model"), tr("Density")};
+    for (int g = 0; g < kGroundCount; ++g)
+        headers << QString::fromLatin1(groundName(g));
+    for (const char* h : kFoliageTailHeaders)
+        headers << tr(h);
+    foliage_->setHorizontalHeaderLabels(headers);
+    foliage_->setToolTip(tr("Density: instances per m2 where it grows fully (x the Grass density of the Town plan). "
+                            "yard ... built: share on that ground (0 = never, 1 = fully). Far density: share kept beyond the LOD distance."));
+    foliage_->setMinimumHeight(200);
+    v->addWidget(foliage_, 1);
+    connect(foliage_, &QTableWidget::itemChanged, this, [this](QTableWidgetItem* item) {
+        if (updating_ || item->row() >= static_cast<int>(kit_.foliage.size()))
+            return;
+        KitFoliage& f = kit_.foliage[static_cast<std::size_t>(item->row())];
+        const QString t = item->text().trimmed();
+        const int c = item->column();
+        if (c == 0)
+            f.name = t.toStdString();
+        else if (c == 2)
+            f.density = t.toFloat();
+        else if (c >= kFoliageFixed && c < kFoliageFixed + kGroundCount)
+            f.on[static_cast<std::size_t>(c - kFoliageFixed)] = t.toFloat();
+        else
+            switch (c - kFoliageFixed - kGroundCount) {
+            case 0: f.cull = t.toFloat(); break;
+            case 1: f.farDensity = t.toFloat(); break;
+            case 2: f.sway = t.toFloat(); break;
+            case 3: f.scaleMin = t.toFloat(); break;
+            case 4: f.scaleMax = t.toFloat(); break;
+            case 5: f.shadows = t.toInt() != 0; break;
+            default: break;
+            }
+        changed();
+    });
+    auto* fRow = new QHBoxLayout;
+    auto* addF = new QPushButton(tr("Add plant..."));
+    addF->setToolTip(tr("Pick a grass or weed model (its _lod1 file is found next to it)"));
+    auto* removeF = new QPushButton(tr("Remove"));
+    fRow->addWidget(addF);
+    fRow->addWidget(removeF);
+    fRow->addStretch(1);
+    v->addLayout(fRow);
+    connect(addF, &QPushButton::clicked, this, [this] {
+        const QString file = QFileDialog::getOpenFileName(this, tr("Plant model"), assetPath("models"), tr("glTF (*.glb *.gltf)"));
+        if (file.isEmpty())
+            return;
+        KitFoliage f;
+        f.name = QFileInfo(file).completeBaseName().toStdString();
+        f.path = toPath(file);
+        f.lodPath = engine::findLodFile(f.path);
+        kit_.foliage.push_back(f);
+        refreshKitTables();
+        changed();
+    });
+    connect(removeF, &QPushButton::clicked, this, [this] {
+        const int r = foliage_->currentRow();
+        if (r < 0 || r >= static_cast<int>(kit_.foliage.size()))
+            return;
+        kit_.foliage.erase(kit_.foliage.begin() + r);
+        refreshKitTables();
+        changed();
+    });
+    return box;
 }
 
 void CityGeneratorPanel::refreshKitTables()
@@ -680,6 +995,52 @@ void CityGeneratorPanel::refreshKitTables()
         }
     }
     props_->resizeColumnsToContents();
+
+    textures_->setText(kit_.textures.empty() ? tr("(none)") : dir.relativeFilePath(fromPath(kit_.textures)));
+    const auto& cols = styleColumns();
+    styles_->setRowCount(static_cast<int>(kit_.styles.size()));
+    for (int r = 0; r < static_cast<int>(kit_.styles.size()); ++r) {
+        const FacadeStyle& st = kit_.styles[static_cast<std::size_t>(r)];
+        for (int c = 0; c < static_cast<int>(cols.size()); ++c) {
+            const StyleColumn& col = cols[static_cast<std::size_t>(c)];
+            if (col.material) {
+                auto* combo = new QComboBox;
+                for (const std::string& m : grammarMaterials())
+                    combo->addItem(QString::fromStdString(m));
+                const QString current = QString::fromStdString(st.*col.material);
+                if (combo->findText(current) < 0)
+                    combo->addItem(current);
+                combo->setCurrentText(current);
+                styles_->setItem(r, c, nullptr);
+                styles_->setCellWidget(r, c, combo);
+                connect(combo, &QComboBox::currentTextChanged, this, [this, r, field = col.material](const QString& t) {
+                    if (updating_ || r >= static_cast<int>(kit_.styles.size()))
+                        return;
+                    kit_.styles[static_cast<std::size_t>(r)].*field = t.toStdString();
+                    changed();
+                });
+            } else {
+                styles_->setItem(r, c, new QTableWidgetItem(col.get(st)));
+            }
+        }
+    }
+    styles_->resizeColumnsToContents();
+    foliage_->setRowCount(static_cast<int>(kit_.foliage.size()));
+    for (int r = 0; r < static_cast<int>(kit_.foliage.size()); ++r) {
+        const KitFoliage& f = kit_.foliage[static_cast<std::size_t>(r)];
+        QStringList cells{QString::fromStdString(f.name), dir.relativeFilePath(fromPath(f.path)), QString::number(f.density)};
+        for (float share : f.on)
+            cells << QString::number(share);
+        cells << QString::number(f.cull) << QString::number(f.farDensity) << QString::number(f.sway) << QString::number(f.scaleMin)
+              << QString::number(f.scaleMax) << QString::number(f.shadows ? 1 : 0);
+        for (int c = 0; c < cells.size(); ++c) {
+            auto* item = new QTableWidgetItem(cells[c]);
+            if (c == 1)
+                item->setFlags(item->flags() & ~Qt::ItemIsEditable);
+            foliage_->setItem(r, c, item);
+        }
+    }
+    foliage_->resizeColumnsToContents();
     updating_ = was;
 }
 

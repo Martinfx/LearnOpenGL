@@ -79,7 +79,8 @@ PhysicsWorld::Impl::Impl()
     tempAllocator = std::make_unique<JPH::TempAllocatorImpl>(16 * 1024 * 1024);
     const int threads = std::max(1, static_cast<int>(std::thread::hardware_concurrency()) - 1);
     jobs = std::make_unique<JPH::JobSystemThreadPool>(JPH::cMaxPhysicsJobs, JPH::cMaxPhysicsBarriers, threads);
-    system.Init(/*maxBodies*/ 8192, /*mutexes*/ 0, /*maxBodyPairs*/ 8192, /*maxContactConstraints*/ 4096,
+    system.Init(/*maxBodies*/ 65536, // generated cities have tens of thousands of static pieces
+                /*mutexes*/ 0, /*maxBodyPairs*/ 8192, /*maxContactConstraints*/ 4096,
                 broadPhaseLayers, objectVsBroadPhase, objectPairs);
     system.SetGravity(JPH::Vec3(0.0f, -18.0f, 0.0f));
 }
@@ -151,8 +152,10 @@ void PhysicsWorld::Impl::addDynamic(const Scene& scene, std::size_t index)
     // User data: surface id in the low 32 bits, model index + 1 in the high ones.
     body.mUserData = surfaceId(surface.empty() ? "wood" : surface) | (static_cast<JPH::uint64>(index + 1) << 32);
     const JPH::BodyID id = system.GetBodyInterface().CreateAndAddBody(body, JPH::EActivation::Activate);
-    if (id.IsInvalid())
+    if (id.IsInvalid()) {
+        bodyLimitWarning(m.name);
         return;
+    }
     propOfModel[index] = props.size();
     props.push_back({index, id, center});
 }
@@ -170,6 +173,16 @@ void PhysicsWorld::Impl::clearStatic()
     surfaces.clear();
     terrain.reset();
     terrainBody = JPH::BodyID();
+    bodyLimitWarned = false;
+}
+
+void PhysicsWorld::Impl::bodyLimitWarning(const std::string& name)
+{
+    if (bodyLimitWarned)
+        return;
+    bodyLimitWarned = true;
+    LOG_WARN("physics", "out of bodies at '%s' (%u in use): the rest of the level has no collision\n", name.c_str(),
+             system.GetNumBodies());
 }
 
 JPH::uint64 PhysicsWorld::Impl::surfaceId(const std::string& surface)
@@ -197,6 +210,8 @@ void PhysicsWorld::Impl::addStatic(const JPH::ShapeSettings& settings, glm::vec3
     const JPH::BodyID id = system.GetBodyInterface().CreateAndAddBody(body, JPH::EActivation::Activate);
     if (!id.IsInvalid())
         staticBodies.push_back(id);
+    else
+        bodyLimitWarning(name);
 }
 
 void PhysicsWorld::Impl::addStatic(const JPH::ShapeRefC& shape, glm::vec3 position, const std::string& name, glm::quat rotation,
@@ -204,13 +219,14 @@ void PhysicsWorld::Impl::addStatic(const JPH::ShapeRefC& shape, glm::vec3 positi
 {
     if (!shape)
         return;
-    (void)name;
     JPH::BodyCreationSettings body(shape, toJolt(position), JPH::Quat(rotation.x, rotation.y, rotation.z, rotation.w),
                                    JPH::EMotionType::Static, Layers::Static);
     body.mUserData = surfaceId(surface);
     const JPH::BodyID id = system.GetBodyInterface().CreateAndAddBody(body, JPH::EActivation::Activate);
     if (!id.IsInvalid())
         staticBodies.push_back(id);
+    else
+        bodyLimitWarning(name);
 }
 
 void PhysicsWorld::Impl::addTrunk(const Model& m, glm::vec3 position, glm::quat rotation, float scale, const std::string& name)
@@ -366,9 +382,12 @@ void PhysicsWorld::setLevel(const Scene& scene)
             LOG_WARN("physics", "terrain: %s\n", result.GetError().c_str());
         else
         {
+            const std::size_t before = impl_->staticBodies.size();
             impl_->addStatic(result.Get(), glm::vec3(0.0f), "Terrain", glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
-            impl_->terrain = scene.terrain;
-            impl_->terrainBody = impl_->staticBodies.back();
+            if (impl_->staticBodies.size() > before) {
+                impl_->terrain = scene.terrain;
+                impl_->terrainBody = impl_->staticBodies.back();
+            }
         }
         for (const FoliageInstance& f : t.foliage) {
             if (f.type >= t.foliageTypes.size())

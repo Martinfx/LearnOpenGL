@@ -42,6 +42,9 @@ int main(int argc, char** argv)
                 "%d wrecks, %d plants, %d boxes\n",
                 plan.placements.size(), std::chrono::duration<double, std::milli>(t1 - t0).count(), s.buildings, s.gateways, s.frontage,
                 s.worstFill, s.lamps, s.trees, s.wrecks, s.plants, s.boxes);
+    if (settings.layout == Layout::Organic)
+        std::printf("organic: %d roads, %d blocks, %d parcels, %d grammar houses (%zu ground shapes)\n", s.roads, s.blocks, s.parcels, s.generated,
+                    plan.ground.shapes.size());
     for (const auto& w : plan.warnings)
         std::printf("warning: %s\n", w.c_str());
     if (svg) { // the layout preview from above (north up), as the editor draws it over the viewport
@@ -85,7 +88,14 @@ int main(int argc, char** argv)
         scene.terrain.reset();
         scene.probes.reset();
     }
+    const auto t2 = std::chrono::steady_clock::now();
     CityObjects objects = buildObjects(plan);
+    const auto t3 = std::chrono::steady_clock::now();
+    std::printf("objects in %.1f s: %zu models, %zu boxes, %d houses written", std::chrono::duration<double>(t3 - t2).count(), objects.models.size(),
+                objects.boxes.size(), objects.housesWritten);
+    if (objects.terrain)
+        std::printf(", terrain %d samples, %zu foliage instances", objects.terrain->resolution, objects.terrain->foliage.size());
+    std::printf("\n");
     for (const auto& e : objects.errors)
         std::printf("error: %s\n", e.c_str());
     replaceCity(scene, settings.group, std::move(objects));

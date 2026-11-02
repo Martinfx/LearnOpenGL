@@ -4553,6 +4553,121 @@ void testCityReplace()
     check(scene.boxes[0].name == "Keep me", "hand-placed object stays");
 }
 
+void testCityRoadNetwork()
+{
+    using namespace engine::city;
+    NetworkSettings n;
+    n.size = 500.0f;
+    n.seed = 7;
+    const RoadNetwork a = buildRoadNetwork(n), b = buildRoadNetwork(n);
+    check(a.roads.size() > 20 && a.blocks.size() > 8, "network: " + std::to_string(a.roads.size()) + " roads, " + std::to_string(a.blocks.size()) + " blocks");
+    check(a.blocks.size() == b.blocks.size() && a.roads.size() == b.roads.size(), "network deterministic");
+    float total = 0.0f;
+    for (const Block& bl : a.blocks) {
+        const float area = signedArea(bl.outline);
+        check(area > 0.0f, "block counter-clockwise");
+        check(isSimple(bl.outline), "block outline simple");
+        check(bl.edgeClass.size() == bl.outline.size(), "street class per block edge");
+        total += area;
+    }
+    check(total > 0.5f * n.size * n.size && total <= n.size * n.size * 1.01f, "blocks cover the town: " + std::to_string(total));
+    // Directions are continuous: nearby points have nearby (sign-free) directions.
+    const glm::vec2 d0 = fieldDirection(n, {10, 10}), d1 = fieldDirection(n, {11, 10});
+    check(std::abs(glm::dot(d0, d1)) > 0.95f, "field smooth");
+}
+
+void testCityPolygons()
+{
+    using namespace engine::city;
+    const Poly square{{0, 0}, {10, 0}, {10, 10}, {0, 10}};
+    check(std::abs(signedArea(square) - 100.0f) < 1e-3f, "square area");
+    Poly in;
+    check(insetPolygon(square, {1, 1, 1, 1}, in) && std::abs(signedArea(in) - 64.0f) < 1e-2f, "inset square");
+    check(mitreInset(square, {2, 0, 2, 0}, in) && in.size() == 4 && std::abs(signedArea(in) - 60.0f) < 1e-2f, "mitre inset keeps vertices");
+    check(!insetPolygon(square, {6, 6, 6, 6}, in), "inset past the middle fails");
+    const Poly ell{{0, 0}, {20, 0}, {20, 8}, {8, 8}, {8, 20}, {0, 20}};
+    const auto tris = triangulate(ell);
+    float sum = 0.0f;
+    for (std::size_t i = 0; i + 2 < tris.size(); i += 3)
+        sum += signedArea({ell[tris[i]], ell[tris[i + 1]], ell[tris[i + 2]]});
+    check(tris.size() == 12 && std::abs(sum - signedArea(ell)) < 1e-2f, "ear clipping covers the L");
+    Poly l, r;
+    splitPolygon(square, {4, 0}, {0, 1}, l, r);
+    check(std::abs(signedArea(l) - 40.0f) < 1e-2f && std::abs(signedArea(r) - 60.0f) < 1e-2f, "split by a line");
+    glm::vec2 c, axis, half;
+    minAreaRect({{0, 0}, {8, 6}, {5, 10}, {-3, 4}}, c, axis, half);
+    check(std::abs(4.0f * half.x * half.y - 50.0f) < 0.1f && std::abs(std::abs(axis.y) - 0.6f) < 0.01f, "min area rect of a turned rectangle");
+}
+
+void testCityGrammarHouse()
+{
+    using namespace engine::city;
+    BuildingSpec b;
+    b.footprint = {{-10, -6}, {10, -6}, {10, 6}, {-10, 6}};
+    b.edges = {EdgeRole::Yard, EdgeRole::Party, EdgeRole::Street, EdgeRole::Party};
+    b.floors = 5;
+    b.seed = 3;
+    const float height = buildingHeight(b);
+    check(std::abs(height - (b.style.groundStorey + 4.0f * b.style.storey)) < 1.0f, "building height from the storeys");
+    BuildingSpec other = b;
+    other.seed = 4;
+    check(buildingKey(b) == buildingKey(BuildingSpec(b)) && buildingKey(b) != buildingKey(other), "building key");
+    const auto dir = std::filesystem::temp_directory_path() / "city_grammar_test";
+    std::filesystem::create_directories(dir);
+    for (int lod = 0; lod < 2; ++lod) {
+        const auto file = dir / (lod ? "h_lod1.glb" : "h.glb");
+        std::string err;
+        GrammarStats stats;
+        check(writeBuildingGlb(b, file, lod, ENGINE_TEST_ASSETS "/models/zone/textures", &err, &stats), "write house: " + err);
+        check(stats.triangles > (lod ? 12 : 500), "house triangles: " + std::to_string(stats.triangles));
+        if (!lod)
+            check(stats.windows >= 4 * 5, "windows on the facades: " + std::to_string(stats.windows));
+        engine::Model m;
+        check(engine::loadModelFile(m, file, &err), "load house: " + err);
+        check(m.localBounds.max.y > height - 0.5f && m.localBounds.max.y < height + 6.0f, "model as tall as the house");
+        check(m.localBounds.min.x > -11.5f && m.localBounds.max.x < 11.5f, "model within its footprint (plus cornice)");
+    }
+    std::filesystem::remove_all(dir);
+}
+
+void testCityOrganic()
+{
+    using namespace engine::city;
+    const Kit kit = cityKit();
+    check(!kit.stylesWithRole("tenement").empty() && !kit.stylesWithRole("house").empty() && !kit.foliage.empty(), "kit has styles and ground cover");
+    Settings s = citySettings();
+    s.layout = Layout::Organic;
+    s.townSize = 420.0f;
+    s.outskirts = 40.0f;
+    s.seed = 11;
+    s.normalize();
+    const Plan a = generate(s, kit), b = generate(s, kit);
+    check(a.stats.blocks > 5 && a.stats.parcels > 20 && a.stats.roads > 10, "organic: " + std::to_string(a.stats.blocks) + " blocks, " +
+                                                                                    std::to_string(a.stats.parcels) + " parcels");
+    check(!a.generated.empty() && a.stats.generated == static_cast<int>(a.generated.size()), "grammar houses");
+    check(a.ground.enabled && !a.ground.shapes.empty() && !a.ground.foliage.empty(), "terrain ground with foliage");
+    bool same = a.placements.size() == b.placements.size() && a.generated.size() == b.generated.size();
+    for (std::size_t i = 0; same && i < a.placements.size(); ++i)
+        same = a.placements[i].position == b.placements[i].position && a.placements[i].path == b.placements[i].path;
+    check(same, "organic plan deterministic");
+    // Houses stand on their parcels: no two generated footprints overlap much (centres apart).
+    for (std::size_t i = 0; i < a.generated.size(); ++i)
+        check(a.generated[i].spec.floors >= 1 && signedArea(a.generated[i].spec.footprint) > 20.0f, "house footprint valid");
+    // Settings round trip with the organic fields.
+    const auto dir = std::filesystem::temp_directory_path() / "city_organic_test";
+    std::filesystem::create_directories(dir);
+    s.curvature = 0.4f;
+    s.districts = 5;
+    s.houseShare = 0.45f;
+    s.foliageDensity = 0.6f;
+    s.edgeRoad = StreetClass::Main;
+    s.cache = dir / "gen";
+    check(saveSettings(s, dir / "o.city"), "save organic city");
+    Settings back;
+    check(loadSettings(back, dir / "o.city") && back == s, "organic settings round trip");
+    std::filesystem::remove_all(dir);
+}
+
 bool lfsAssetsPresent()
 {
     std::ifstream in(ENGINE_TEST_ASSETS "/models/zone/vegetation/spruce_a_lod1.glb", std::ios::binary);
@@ -4665,6 +4780,10 @@ int main(int argc, char** argv)
         {"testCityFrontageIsExact", testCityFrontageIsExact},
         {"testCityRulesAndScale", testCityRulesAndScale},
         {"testCityReplace", testCityReplace},
+        {"testCityRoadNetwork", testCityRoadNetwork},
+        {"testCityPolygons", testCityPolygons},
+        {"testCityGrammarHouse", testCityGrammarHouse},
+        {"testCityOrganic", testCityOrganic},
     };
     for (const auto& [name, run] : tests)
         if ((assets || !needAssets.count(name)) && (only.empty() || std::string(name).find(only) != std::string::npos)) {

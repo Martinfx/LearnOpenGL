@@ -48,6 +48,13 @@ private:
     QWidget* layoutTab();
     QWidget* rulesTab();
     QWidget* kitTab();
+    QWidget* townTab();         // organic layout: street network, zoning, ground
+    QWidget* grammarBox();      // kit: facade styles and ground cover
+    // A row bound to a setting (refreshed from settings_ / kit_ by refreshWidgets).
+    void addNumber(QFormLayout* form, const QString& label, float* value, double min, double max, double step, const QString& tip,
+                   const QString& suffix = QStringLiteral(" m"), int decimals = 2);
+    void addInteger(QFormLayout* form, const QString& label, int* value, int min, int max, const QString& tip);
+    void addFlag(QFormLayout* form, const QString& label, bool* value, const QString& tip);
     void rebuildGrid();
     void refreshWidgets();      // settings_ / kit_ -> widgets
     void refreshKitTables();
@@ -79,6 +86,10 @@ private:
     QTableWidget* streetsZ_ = nullptr;
     QTableWidget* buildings_ = nullptr;
     QTableWidget* props_ = nullptr;
+    QTableWidget* styles_ = nullptr;
+    QTableWidget* foliage_ = nullptr;
+    QLineEdit* textures_ = nullptr;
+    std::vector<QWidget*> gridOnly_;   // grid-layout controls (disabled for the organic layout)
     QLineEdit* kitPath_ = nullptr;
     QLineEdit* materials_[6] = {};
     QCheckBox* showPreview_ = nullptr;
