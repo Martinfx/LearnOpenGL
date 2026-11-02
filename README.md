@@ -91,6 +91,10 @@ Na zdech Zóny jsou nápisy a skvrny, každý s důvodem: „Цой жив“ a 
 „Не входить“ u nemocnice, kterou drží bandité, radiace na elektrárně, stalkerské šipky „чисто“ od tábora do města,
 kříže na vagónech u pole anomálií, zatékání a vlhko na štítech a soklech
 (`python3 -I assets/levels/source/add_wall_writing.py zone`; místo ověřuje paprsky proti skutečné geometrii zdi).
+Spoje se zemí (hlína u obrubníků, rozbitá krajnice, špína u paty zdí, štěrk z kolejí) přidává
+`python3 -I assets/levels/source/add_joints.py zone hospital_street skrunda1`, paletu a hustotu textur kontroluje
+`python3 -I assets/levels/source/material_audit.py zone hospital_street skrunda1`. Pravidla a rešerše:
+`docs/LEVEL_ART_GUIDE.md`.
 Přidal ho `python3 -I assets/levels/source/add_terrain.py zone hospital_street` přímo do upravených levelů
 (nic z editoru se neztratí; stromy a suť posadí na nový povrch), dál se ladí v režimech Landscape a Foliage.
 

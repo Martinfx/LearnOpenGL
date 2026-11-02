@@ -11,6 +11,8 @@ All models in this folder (buildings, fences, sandbags, terrain tiles) are gener
 - Wall writing (`graffiti_*.glb`, atlas `zone/textures/graffiti_albedo.png`, `zonegen/graffiti.py`) and ground debris
   (`debris_*.glb`, `zonegen/debris.py`) are original designs made for this project (CC0). The slogans are common
   Soviet-era phrases ("ЦОЙ ЖИВ", "ДМБ-91"), not copied artwork.
+- Joint decals (`joint_*.glb`, atlas `zone/textures/joints_albedo.png`, `zonegen/joints.py`): soil at kerbs, broken road
+  edges, grime at wall feet, ballast spill. Original, procedurally painted for this engine, CC0.
 - Sign texts are real place names of the town (shop "Venta", Novaya street) and generic Soviet signage.
 - Vegetation in `veg/` is recoloured or thinned from `assets/models/zone/vegetation/` (see its CREDITS.md, CC0 Poly Haven
   models) with `source/recolor_glb.py` and `source/thin_glb.py`: `grass_dry*` (straw), `grass_fresh*` (spring lawn),

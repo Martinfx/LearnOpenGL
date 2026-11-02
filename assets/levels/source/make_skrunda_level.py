@@ -97,7 +97,7 @@ FAR_LOD = {'grass_patch_tall': ('../models/zone/skrunda/veg/grass_patch_far.glb'
 FOLIAGE_TYPES = {}       # (file, lod_dist, cull, collision, shadows) -> type index
 FOLIAGE = []             # (x, y, z, yaw, scale, type)
 # brush density (instances / m2) and far density per kind, used when painting more in the editor
-FOLIAGE_KIND = {'Tree': (0.03, 1.0), 'Bush': (0.02, 0.8), 'Tall grass': (0.25, 0.5), 'Weeds': (0.1, 0.6),
+FOLIAGE_KIND = {'Tree': (0.03, 1.0), 'Bush': (0.02, 0.8), 'Sapling': (0.03, 0.8), 'Tall grass': (0.25, 0.5), 'Weeds': (0.1, 0.6),
                 'Grass tuft': (0.3, 0.5), 'Crack grass': (0.2, 0.5), 'Rubble': (0.15, 0.5), 'Litter': (0.06, 0.5),
                 'Twigs': (0.1, 0.5)}
 
@@ -532,6 +532,26 @@ for k in range(2600):
         r = rng.random()
         f = 'bush_a' if r < 0.3 else 'bush_b' if r < 0.5 else 'bush_c' if r < 0.65 else 'bush_wide_a' if r < 0.85 else 'bush_dense_a'
         veg('Bush', f, x, z, 'Bushes', lod_dist=20, cull=110, shadows=True)
+
+# the town growing over: as in Pripyat after 25 years (Lacan et al. 2015), most of the new wood is seedlings and
+# saplings, densest along the streets and around the mature trees (docs/LEVEL_ART_GUIDE.md). Own random stream
+# (and own yaw), so everything placed after keeps its place.
+srng = random.Random(1989)
+for x, z, forest, grove in trees:
+    if forest or srng.random() < 0.35:
+        continue
+    for _ in range(srng.randint(1, 3)):
+        a, r = srng.uniform(0, 2 * math.pi), 2.5 + abs(srng.gauss(0.0, 4.0))
+        jx, jz = x + r * math.cos(a), z + r * math.sin(a)
+        if free(jx, jz, 1.0) and not near_route(jx, jz, 1.0) and not in_hq_yard(jx, jz) and T.field('ruts', jx, jz) < 0.0:
+            veg('Sapling', srng.choice(['sk:birch_young', 'sk:birch_young', 'sk:spruce_young']), jx, jz, 'Trees',
+                lod_dist=25, cull=150, shadows=True, collision=True, yaw=srng.uniform(0, 360), scale=srng.uniform(0.35, 0.9))
+for k in range(12000):                  # street verges: a sapling every few tens of metres of kerb
+    x, z = srng.uniform(TOWN[0], TOWN[2]), srng.uniform(TOWN[1], TOWN[3])
+    rd = float(T.field('road', x, z))
+    if -3.5 < rd < -1.0 and srng.random() < 0.12 and free(x, z, 1.0) and not near_route(x, z, 1.0) and not in_hq_yard(x, z):
+        veg('Sapling', srng.choice(['sk:birch_young', 'sk:birch_young', 'sk:birch_young', 'sk:spruce_young']), x, z, 'Trees',
+            lod_dist=25, cull=150, shadows=True, collision=True, yaw=srng.uniform(0, 360), scale=srng.uniform(0.5, 1.05))
 
 # ground cover: tall grass everywhere it is not trodden, nettles and weeds at the walls. The grass follows the
 # terrain layers under it (fresh green on the lush layer, straw elsewhere, little on bare dirt, none in wheel ruts)

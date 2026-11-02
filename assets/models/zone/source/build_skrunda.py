@@ -5,6 +5,7 @@
     python3 -I assets/models/zone/source/build_skrunda.py overlays   (draped roads/paths over the engine terrain)
     python3 -I assets/models/zone/source/build_skrunda.py decals     (graffiti and stains, zonegen/graffiti.py)
     python3 -I assets/models/zone/source/build_skrunda.py debris     (ground debris for foliage, zonegen/debris.py)
+    python3 -I assets/models/zone/source/build_skrunda.py joints     (soil at kerbs, grime at wall feet, ballast spill)
 
 Sizes come from assets/levels/source/osm/skrunda1.json (oriented bounding rectangle of each footprint).
 Textures are shared with the other zone models (assets/models/zone/textures/).
@@ -15,7 +16,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from zonegen import mats, glb, skrunda, graffiti, debris          # noqa: E402
+from zonegen import mats, glb, skrunda, graffiti, debris, joints  # noqa: E402
 
 OUT = os.path.join(mats.ZONE, 'skrunda')
 OSM = os.path.join(mats.ROOT, 'levels', 'source', 'osm', 'skrunda1.json')
@@ -122,6 +123,15 @@ def build_decals():
     print(len(graffiti.DESIGNS), 'decals')
 
 
+def build_joints():
+    """Joint decals (zonegen/joints.py): one quad per design (joint_<name>.glb) on one shared RGBA atlas."""
+    joints.make_atlas(force=True)
+    for name in joints.DESIGNS:
+        glb.write_glb(os.path.join(OUT, f'joint_{name}.glb'), joints.quad(name), tex_rel_dir='../textures',
+                      name=f'joint_{name}')
+    print(len(joints.DESIGNS), 'joint decals')
+
+
 def build_debris():
     """Small ground debris clusters (debris_<name>.glb), scattered as terrain foliage by make_skrunda_level.py."""
     for name, fn in debris.MODELS.items():
@@ -141,6 +151,8 @@ if __name__ == '__main__':
         build_decals()
     elif args[:1] == ['debris']:
         build_debris()
+    elif args[:1] == ['joints']:
+        build_joints()
     else:
         for n in args or list(MODELS):
             build(n)

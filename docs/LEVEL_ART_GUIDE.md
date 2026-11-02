@@ -118,6 +118,25 @@ pro Skrundu):
    občas v dlažbě; podrost keřů na okrajích hájů.
 3. Nápisy a skvrny i na Ulici u nemocnice.
 
+## 8. Proč to působí amatérsky a co se s tím dělá (2026-11-02)
+
+Seřazeno podle dopadu, z pohledu hráče:
+
+1. **Věci nesedí v zemi.** Silnice jsou krabice s ostrou hranou do trávy, koleje leží na desce, budovy vyrůstají
+   ze země bez přechodu. Profi hry mají na každém spoji přechod. *Uděláno:* decaly spojů
+   (`assets/models/zone/source/zonegen/joints.py`, rozmisťuje `assets/levels/source/add_joints.py`): hlína, písek
+   a listí u obrubníků, rozbitá zarostlá krajnice silnic, špína a vlhko u paty zdí (jen kde je zeď rovná, test
+   paprsky), štěrk vysypaný z kolejového lože.
+2. **Assety nejsou z jedné rodiny.** Různá hustota textur, sytost a jas. *Uděláno:* `assets/levels/source/material_audit.py`
+   (texel density proti mediánu levelu, jas a sytost albeda); rez a vlnitý plech méně syté (0,6), červený lak
+   vybledlý, asfalt Skrundy z 114 na 256 px/m. Odchylek ze 127 na 47; zbytek jsou malé rekvizity, gumy a listí.
+3. **Kompozice.** *Uděláno:* háje s podrostem keřů a semenáčky na okraji místo rozházených stromů,
+   semenáčky u vzrostlých stromů a podél ulic (Pripjať), úzké prošlapané pěšiny mezi tábory, postavami, cíli
+   a silnicí (Dijkstra na mřížce, vyhlazené, sešlapaná suchá tráva s holou zemí uprostřed). Háje drží 28 m od
+   táborů a cílů.
+4. **Střední vrstva detailu budov** (okapy, svody, kabely, cedule, otlučené hrany): další krok.
+5. **Světlo a varianty stromů**: sépie opravena; zbývá víc variant stromů a kontaktní stín.
+
 ## Zdroje
 
 - Game Maker's Toolkit, How Level Design Can Tell a Story:

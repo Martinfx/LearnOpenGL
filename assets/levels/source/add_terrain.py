@@ -158,6 +158,7 @@ def parse(lines):
             o['x'], o['y'], o['z'], o['sx'], o['sy'], o['sz'] = v
         else:
             v = rest.split()
+            o['etype'] = v[0].strip('"')
             o['x'], o['y'], o['z'] = float(v[1]), float(v[2]), float(v[3])
         objs.append(o)
         i = j
@@ -187,6 +188,138 @@ def footprint(o, level_dir):
             xs.append(o['x'] + x * c + z * s)
             zs.append(o['z'] - x * s + z * c)
     return min(xs), min(zs), max(xs), max(zs)
+
+
+NODE_KINDS = ('npc', 'objective', 'pickup', 'alife_point', 'map_marker', 'radio', 'trader')
+
+
+def trails(nodes, X, Z, fixed, hard, slope, H, x0, z0, n, box=None):
+    """Distance (m) from every grid point to the trodden paths between `nodes` and to the roads."""
+    import heapq
+    st = 2                                               # 2 m cells
+    m = (n + st - 1) // st
+    fx, hd, sl, hh = fixed[::st, ::st], hard[::st, ::st], slope[::st, ::st], H[::st, ::st]
+    cost = 1.0 + 6.0 * np.clip(sl - 0.15, 0, None) + 3.0 * (fx < 2.5)
+    cost = np.where(hd, 0.7, cost)
+    cost = np.where((fx < 0.6) & ~hd, 25.0, cost)        # through objects only to get out of a building
+    blocked = hh < -1.0
+    if box:                                              # only inside the playable area
+        bx0, bz0, bx1, bz1 = box
+        xs_, zs_ = X[::st, ::st], Z[::st, ::st]
+        blocked |= (xs_ < bx0) | (xs_ > bx1) | (zs_ < bz0) | (zs_ > bz1)
+    merged = []                                          # a camp is one place, not five people
+    for (x, z) in nodes:
+        for k, (mx, mz, c) in enumerate(merged):
+            if math.hypot(x - mx / c, z - mz / c) < 14.0:
+                merged[k] = (mx + x, mz + z, c + 1)
+                break
+        else:
+            merged.append((x, z, 1))
+    nodes = [(mx / c, mz / c) for mx, mz, c in merged]
+    cell = []
+    for (x, z) in nodes:
+        i, j = int(round((x - x0) / st)), int(round((z - z0) / st))
+        if 0 <= i < m and 0 <= j < m:
+            cell.append((j, i))
+    nbr = [(-1, 0, 1.0), (1, 0, 1.0), (0, -1, 1.0), (0, 1, 1.0), (-1, -1, 1.414), (-1, 1, 1.414), (1, -1, 1.414), (1, 1, 1.414)]
+
+    def dijkstra(src):
+        dist = np.full((m, m), np.inf)
+        prev = np.full((m, m), -1, dtype=np.int64)
+        dist[src] = 0.0
+        pq = [(0.0, src[0], src[1])]
+        while pq:
+            d, j, i = heapq.heappop(pq)
+            if d > dist[j, i] or d > 900:
+                continue
+            for dj, di, w in nbr:
+                jj, ii = j + dj, i + di
+                if 0 <= jj < m and 0 <= ii < m and not blocked[jj, ii]:
+                    nd = d + w * st * 0.5 * (cost[j, i] + cost[jj, ii])
+                    if nd < dist[jj, ii]:
+                        dist[jj, ii] = nd
+                        prev[jj, ii] = j * m + i
+                        heapq.heappush(pq, (nd, jj, ii))
+        return dist, prev
+    polys = []
+
+    def walk(prev, j, i):
+        pts = []
+        while True:
+            pts.append((j, i))
+            k = prev[j, i]
+            if k < 0:
+                break
+            j, i = divmod(int(k), m)
+        # split at the roads: no trodden earth painted on them
+        run = []
+        for (pj, pi) in pts:
+            if hd[pj, pi]:
+                if len(run) > 1:
+                    polys.append(run)
+                run = []
+            else:
+                run.append((pj, pi))
+        if len(run) > 1:
+            polys.append(run)
+    runs = [dijkstra(c) for c in cell]
+    for k, (dist, prev) in enumerate(runs):                # every node to its nearest road
+        rd = np.where(hd, dist, np.inf)
+        if np.isfinite(rd).any():
+            j, i = np.unravel_index(int(np.argmin(rd)), rd.shape)
+            walk(prev, int(j), int(i))
+    if len(cell) > 1:                                      # nodes to each other: minimum spanning tree
+        inside, rest = {0}, set(range(1, len(cell)))
+        while rest:
+            d, a, b = min(((runs[a][0][cell[b]], a, b) for a in inside for b in rest), key=lambda t: t[0])
+            if np.isfinite(d) and d <= 450:                # farther ones meet at the roads
+                walk(runs[a][1], *cell[b])
+            inside.add(b)
+            rest.discard(b)
+
+    def clear_line(a, b):                                  # straight walk between two cells stays cheap
+        nseg = int(max(abs(b[0] - a[0]), abs(b[1] - a[1]))) + 1
+        for t in np.linspace(0.0, 1.0, nseg + 1):
+            jj, ii = int(round(a[0] + (b[0] - a[0]) * t)), int(round(a[1] + (b[1] - a[1]) * t))
+            if cost[jj, ii] > 2.5 or blocked[jj, ii]:
+                return False
+        return True
+    out = np.full(X.shape, 1e9)
+    for run in polys:
+        # string pulling: people cut corners in straight lines where nothing is in the way ...
+        keep = [run[0]]
+        k = 0
+        while k < len(run) - 1:
+            far = k + 1
+            for t in range(len(run) - 1, k, -1):
+                if t - k <= 40 and clear_line(run[k], run[t]):
+                    far = t
+                    break
+            keep.append(run[far])
+            k = far
+        P = np.array([(x0 + i * st, z0 + j * st) for (j, i) in keep], dtype=np.float64)
+        # ... and round them off (Chaikin), with a slight sideways wander
+        for _ in range(3):
+            if len(P) < 3:
+                break
+            Q = [P[0]]
+            for a_, b_ in zip(P[:-1], P[1:]):
+                Q += [0.75 * a_ + 0.25 * b_, 0.25 * a_ + 0.75 * b_]
+            Q.append(P[-1])
+            P = np.array(Q)
+        dense = [P[0]]
+        for a_, b_ in zip(P[:-1], P[1:]):
+            L_ = float(np.hypot(*(b_ - a_)))
+            for t in np.arange(0.5, L_, 0.5):
+                dense.append(a_ + (b_ - a_) * (t / max(L_, 1e-6)))
+            dense.append(b_)
+        for (cx, cz) in dense:
+            wob = 0.6 * math.sin(cx * 0.21 + cz * 0.17) + 0.4 * math.sin(cx * 0.07 - cz * 0.11)
+            cx, cz = cx + 0.5 * wob, cz - 0.5 * wob
+            i, j = int(cx - x0), int(cz - z0)
+            sl_ = (slice(max(j - 4, 0), min(j + 5, n)), slice(max(i - 4, 0), min(i + 5, n)))
+            out[sl_] = np.minimum(out[sl_], np.hypot(X[sl_] - cx, Z[sl_] - cz))
+    return out
 
 
 def build(name):
@@ -314,6 +447,21 @@ def build(name):
     put(GRAVEL, smoothstep(1.4, 0.2, road_d + 0.8 * (nz(X - 31, Z + 17, 3.0) - 0.5)) * (road_d > 0))
     put(DIRT, smoothstep(2.2, 0.3, build_d + 1.2 * (nz(X + 5, Z - 5, 2.5) - 0.5)) * 0.85)
     put(MUD, smoothstep(0.6, 0.85, nz.fbm(X - 77, Z + 41, 8.0, 2)) * smoothstep(0.0, -0.5, H - base))
+    # ---------------------------------------------------------------- trodden paths (desire lines)
+    # People walk the cheapest way between the places they go to: camps, characters, stashes, map markers and
+    # the roads. Dijkstra on a 2 m grid (open ground cheap, roads a bit cheaper, steep banks dear, objects
+    # impassable) joins every such node to its nearest road and the nodes to each other (minimum spanning
+    # tree), and the routes are painted as bare trodden earth with no grass on them.
+    nodes = [(o['x'], o['z']) for o in objs if o['kind'] == 'entity' and o.get('etype') in NODE_KINDS]
+    ps = next((ln.split() for ln in lines if ln.startswith('player_start ')), None)
+    if ps:
+        nodes.append((float(ps[1]), float(ps[3])))
+    trail = trails(nodes, X, Z, fixed, hard, slope, H, x0, z0, n, cfg.get('trail_box'))
+    tw = 0.28 + 0.2 * nz(X + 19, Z - 47, 6.0)                      # 0.28 .. 0.48 m half width: a footpath, wandering
+    # a worn track: flattened, dried-out grass with bare earth only along the middle (dark mud or leaf layers read
+    # as holes from eye height)
+    put(DRY, smoothstep(tw + 0.6, tw - 0.1, trail) * (H > -1.0) * 0.9)
+    put(DIRT, smoothstep(tw * 0.6 + 0.1, tw * 0.6 - 0.15, trail) * (H > -1.0) * (0.45 + 0.25 * nz(X - 3, Z + 8, 2.0)))
     splat_n = 1024
     u = (np.arange(splat_n) + 0.5) / splat_n * (n - 1)
     iu = np.clip(u.astype(int), 0, n - 2)
@@ -357,6 +505,8 @@ def build(name):
                 continue
             x, z = gx_ + rng.uniform(-1.1, 1.1), gz_ + rng.uniform(-1.1, 1.1)
             fd = sample(fixed, x, z)
+            if sample(trail, x, z) < 0.55:
+                continue
             if fd < 0.7 or sample(H, x, z) < -1.0 or sample(hard.astype(float), x, z) > 0.0:
                 continue
             fi, fj = int(x - x0), int(z - z0)
@@ -437,6 +587,88 @@ def build(name):
                 if x0 < x < x0 + size and z0 < z < z0 + size:
                     add('d:twigs', x, z, drng.uniform(0.8, 1.3))
 
+    # ---------------------------------------------------------------- nature taking the place back
+    # As in Pripyat after 25 years (Lacan et al. 2015): most of the new wood is seedlings and saplings, densest
+    # along the streets and in the groves, and young trees come up wherever mature ones stand. Trees grow in
+    # groves with a shrub belt at their edge, not evenly sprinkled. Own random stream.
+    rrng = random.Random(cfg['seed'] + 13)
+    rim_w = 45.0
+
+    def open_at(x, z, clear=1.5, path_clear=2.0):
+        if not (x0 + 2 < x < x0 + size - 2 and z0 + 2 < z < z0 + size - 2):
+            return False
+        return (sample(H, x, z) > -1.0 and sample(fixed, x, z) > clear and sample(trail, x, z) > path_clear
+                and sample(hard.astype(float), x, z) <= 0.0 and sample(ent_d, x, z) > 4.0)
+
+    def put_tree(key, x, z, scale):
+        if key not in types:
+            types[key] = len(types)
+        inst.append((x, sample(H, x, z) - 0.05, z, rrng.uniform(0, 360), scale, types[key]))
+    YOUNG = [('birch_young', 0.7), ('pine_young', 0.1), ('spruce_young', 0.2)]
+
+    def young():
+        r, acc = rrng.random(), 0.0
+        for key, pr in YOUNG:
+            acc += pr
+            if r < acc:
+                return key
+        return YOUNG[-1][0]
+    # seedlings and saplings around the living mature trees
+    for o in loose:
+        if o['name'].startswith('birch') and 'dead' not in o['path']:
+            for _ in range(rrng.randint(1, 4)):
+                a, r = rrng.uniform(0, 2 * math.pi), 2.5 + abs(rrng.gauss(0.0, 4.0))
+                x, z = o['x'] + r * math.cos(a), o['z'] + r * math.sin(a)
+                if open_at(x, z):
+                    put_tree(young(), x, z, rrng.uniform(0.35, 0.95))
+    # street side: saplings in the verges along the roads and, now and then, one out of the pavement seam
+    for (bx0, bz0, bx1, bz1), top in kerbs:
+        for (ax, az, bx, bz, nx, nz_) in ((bx0, bz0, bx1, bz0, 0, -1), (bx0, bz1, bx1, bz1, 0, 1),
+                                         (bx0, bz0, bx0, bz1, -1, 0), (bx1, bz0, bx1, bz1, 1, 0)):
+            length = math.hypot(bx - ax, bz - az)
+            for k in range(int(length)):
+                t = (k + rrng.random()) / length
+                ex, ez = ax + (bx - ax) * t, az + (bz - az) * t
+                if rrng.random() < 0.045:
+                    off = rrng.uniform(1.0, 3.5)
+                    x, z = ex + nx * off, ez + nz_ * off
+                    if open_at(x, z, 1.0, 1.5) and sample(road_d, x, z) > 0.8:
+                        put_tree(young(), x, z, rrng.uniform(0.5, 1.05))
+                elif rrng.random() < 0.004 and min(bx1 - bx0, bz1 - bz0) < 5.0:     # sidewalks: out of the seam
+                    x, z = ex - nx * 0.25, ez - nz_ * 0.25
+                    if x0 < x < x0 + size and z0 < z < z0 + size and sample(fixed, x, z) > 1.0:
+                        if 'birch_young' not in types:
+                            types['birch_young'] = len(types)
+                        inst.append((x, top - 0.02, z, rrng.uniform(0, 360), rrng.uniform(0.4, 0.7), types['birch_young']))
+    # groves: a slow noise picks the wooded patches; trees in the core, shrubs and saplings at the edge
+    gn = nz.fbm(X + 2100, Z - 1300, 55.0, 3)
+    t_core, t_edge = float(np.quantile(gn, 0.87)), float(np.quantile(gn, 0.81))
+    GROVE = [('birch_a', 0.3), ('birch_b', 0.25), ('birch_young', 0.1), ('broadleaf_a', 0.15), ('broadleaf_b', 0.1),
+             ('pine_a', 0.05), ('spruce_a', 0.05)]
+    gx_ = x0 + rim_w
+    while gx_ < x0 + size - rim_w:
+        gz_ = z0 + rim_w
+        while gz_ < z0 + size - rim_w:
+            x, z = gx_ + rrng.uniform(-2.4, 2.4), gz_ + rrng.uniform(-2.4, 2.4)
+            g = sample(gn, x, z)
+            if g > t_edge and open_at(x, z, 4.0, 3.0) and min((math.hypot(x - nx_, z - nz2) for nx_, nz2 in nodes),
+                                                               default=1e9) > 28.0:     # camps and goals stay open
+                if g > t_core and rrng.random() < 0.55:
+                    r, acc, key = rrng.random(), 0.0, GROVE[-1][0]
+                    for kk, pr in GROVE:
+                        acc += pr
+                        if r < acc:
+                            key = kk
+                            break
+                    put_tree(key, x, z, rrng.uniform(0.8, 1.2))
+                elif rrng.random() < 0.45:
+                    put_tree(rrng.choice(['bush_a', 'bush_b', 'bush_c', 'bush_dense_a', 'bush_wide_a']), x, z,
+                             rrng.uniform(0.7, 1.15))
+                elif rrng.random() < 0.4:
+                    put_tree(young(), x, z, rrng.uniform(0.4, 0.9))
+            gz_ += 6.0
+        gx_ += 6.0
+
     # key -> (model without .glb, [(lod model, distance)], brush density, cull distance, shadows, far density)
     FILES = {'dry': (SK + 'veg/grass_dry', [(SK + 'veg/grass_dry_lod1.glb', 8), (SK + 'veg/grass_dry_far.glb', 18)], 0.25, 50, 0, 0.5),
              'fresh': (SK + 'veg/grass_fresh', [(SK + 'veg/grass_fresh_lod1.glb', 8), (SK + 'veg/grass_fresh_far.glb', 18)], 0.25, 50, 0, 0.5),
@@ -444,17 +676,25 @@ def build(name):
     for key in ('nettle_tall_a', 'nettle_tall_b', 'nettle_medium_a', 'weed_a', 'weed_b', 'weed_c', 'grass_tall_a', 'grass_tall_b',
                 'grass_clump_a', 'grass_short_a'):
         FILES[key] = (V + key, [(V + key + '_lod1.glb', 8)], 0.1, 45, 0, 0.6)
-    for key in ('bush_a', 'bush_b', 'bush_c', 'bush_dense_a'):
+    for key in ('bush_a', 'bush_b', 'bush_c', 'bush_dense_a', 'bush_wide_a'):
         FILES[key] = (V + key, [(V + key + '_lod1.glb', 25)], 0.02, 120, 1, 0.8)
+    for key in ('birch_young', 'pine_young', 'spruce_young'):
+        FILES[key] = (V + key, [(V + key + '_lod1.glb', 25)], 0.03, 150, 1, 0.8)
+    TREES = ('birch_a', 'birch_b', 'broadleaf_a', 'broadleaf_b', 'pine_a', 'spruce_a')
+    for key in TREES:                           # grove trees: collide, cast shadows, impostor cards far away
+        FILES[key] = (V + key, [(V + key + '_lod1.glb', 30)], 0.03, 230, 1, 1.0)
     for key in ('silicate_bricks', 'plaster_chunks', 'glass_shards', 'concrete_chunks', 'tin_cans', 'bottles', 'twigs'):
         FILES['d:' + key] = ('../models/zone/skrunda/debris_' + key, [], 0.1, 40, 0, 0.5)
     header = [f'terrain "{name}.terrain"'] + [f'terrain_layer {i} "{SKM}{LAYERS[i]}.material" {TILING[i]:g}' for i in range(8)]
     for key, _ in sorted(types.items(), key=lambda kv: kv[1]):
         f, lods, dens, cull, shadows, far = FILES[key]
         lo, hi = (0.8, 1.2) if key.startswith('d:') else (0.85, 1.15)
-        header.append(f'foliage_type "{f}.glb" {dens:g} {lo:g} {hi:g} {cull:g} 0 0 {shadows} {far:g}')
+        coll = 1 if key in TREES else 0
+        header.append(f'foliage_type "{f}.glb" {dens:g} {lo:g} {hi:g} {cull:g} {coll} 0 {shadows} {far:g}')
         for lf, ld in lods:
             header.append(f'foliage_lod "{lf}" {ld:g}')
+        if key in TREES:
+            header.append('foliage_impostor 90')
 
     # ---------------------------------------------------------------- environment
     for k, v in cfg['env'].items():

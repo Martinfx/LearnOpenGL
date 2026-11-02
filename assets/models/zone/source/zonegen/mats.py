@@ -11,7 +11,7 @@ TEX_OUT = os.path.join(ZONE, 'textures')
 
 # name -> (source set, pack kwargs)
 SETS = {
-    'rust': ('rust_coarse_01', dict(metal=0.35)),
+    'rust': ('rust_coarse_01', dict(metal=0.35, saturation=0.6)),         # decades old: brown, not orange (material_audit.py)
     'rust_dark': ('rusty_metal_04', dict(metal=0.3, tint=(0.7, 0.62, 0.55))),
     'rust_sheet': ('rusty_metal_sheet', dict(metal=0.4)),
     'paint_green': ('green_metal_rust', dict(metal=0.2, saturation=0.75)),
@@ -19,7 +19,7 @@ SETS = {
                                             overlay_mask=tex.noise_mask(3, 96, 0.5, 0.15))),
     'paint_cream': ('rusty_metal_02', dict(metal=0.2, tint=(1.0, 0.95, 0.82), saturation=0.6, overlay='rust_coarse_01',
                                            overlay_mask=tex.noise_mask(5, 80, 0.55, 0.12))),
-    'paint_red': ('blue_metal_plate', dict(metal=0.2, tint=(1.7, 0.55, 0.45), saturation=0.0, overlay='rust_coarse_01',
+    'paint_red': ('blue_metal_plate', dict(metal=0.2, tint=(1.4, 0.68, 0.58), saturation=0.0, overlay='rust_coarse_01',
                                            overlay_mask=tex.noise_mask(7, 96, 0.48, 0.15))),
     'concrete': ('concrete_wall_008', dict()),
     'concrete_dark': ('concrete_layers_02', dict()),
@@ -65,7 +65,7 @@ SETS = {
     'ground_path': ('stony_dirt_path', dict()),
     'ground_ruts': ('aerial_mud_1', dict()),
     'shutter': ('rusty_metal_shutter', dict(metal=0.3)),
-    'corr_rust': ('rusty_corrugated_iron', dict(metal=0.35)),
+    'corr_rust': ('rusty_corrugated_iron', dict(metal=0.35, saturation=0.6)),
     'debris': ('concrete_debris', dict()),
     'broken_wall': ('rebar_reinforced_concrete', dict(saturation=0.5)),
 }
@@ -268,7 +268,7 @@ PALETTE = {
     'plaster_peel': M('plaster_peel', 1.8),
     'wallpaper': M('wallpaper', 2.5),
     'stair_paint': M('stair_paint', 2.0),
-    'road': M('road', 9.0),
+    'road': M('road', 4.0),       # ~250 px/m like the rest of the set (9 m tiles were blurry next to it)
     'road_worn': M('road_worn', 4.0),
     'ground_grass': M('ground_grass', 2.5),
     'ground_lush': M('ground_lush', 2.0),

@@ -63,26 +63,47 @@ foliage_type "../models/zone/vegetation/nettle_tall_a.glb" 0.1 0.85 1.15 45 0 0 
 foliage_lod "../models/zone/vegetation/nettle_tall_a_lod1.glb" 8
 foliage_type "../models/zone/vegetation/weed_a.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
 foliage_lod "../models/zone/vegetation/weed_a_lod1.glb" 8
-foliage_type "../models/zone/vegetation/bush_c.glb" 0.02 0.85 1.15 120 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/bush_c_lod1.glb" 25
+foliage_type "../models/zone/vegetation/bush_b.glb" 0.02 0.85 1.15 120 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/bush_b_lod1.glb" 25
 foliage_type "../models/zone/vegetation/bush_a.glb" 0.02 0.85 1.15 120 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
 foliage_lod "../models/zone/vegetation/bush_a_lod1.glb" 25
 foliage_type "../models/zone/vegetation/bush_dense_a.glb" 0.02 0.85 1.15 120 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
 foliage_lod "../models/zone/vegetation/bush_dense_a_lod1.glb" 25
-foliage_type "../models/zone/vegetation/bush_b.glb" 0.02 0.85 1.15 120 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/bush_b_lod1.glb" 25
+foliage_type "../models/zone/vegetation/bush_c.glb" 0.02 0.85 1.15 120 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/bush_c_lod1.glb" 25
+foliage_type "../models/zone/skrunda/debris_glass_shards.glb" 0.1 0.8 1.2 40 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
 foliage_type "../models/zone/skrunda/debris_silicate_bricks.glb" 0.1 0.8 1.2 40 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
 foliage_type "../models/zone/skrunda/debris_concrete_chunks.glb" 0.1 0.8 1.2 40 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
-foliage_type "../models/zone/skrunda/debris_glass_shards.glb" 0.1 0.8 1.2 40 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
 foliage_type "../models/zone/skrunda/debris_plaster_chunks.glb" 0.1 0.8 1.2 40 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
 foliage_type "../models/zone/skrunda/debris_bottles.glb" 0.1 0.8 1.2 40 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
 foliage_type "../models/zone/skrunda/debris_tin_cans.glb" 0.1 0.8 1.2 40 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
 foliage_type "../models/zone/vegetation/grass_clump_a.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
 foliage_lod "../models/zone/vegetation/grass_clump_a_lod1.glb" 8
-foliage_type "../models/zone/vegetation/grass_short_a.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/grass_short_a_lod1.glb" 8
 foliage_type "../models/zone/vegetation/grass_tall_b.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
 foliage_lod "../models/zone/vegetation/grass_tall_b_lod1.glb" 8
+foliage_type "../models/zone/vegetation/grass_short_a.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/grass_short_a_lod1.glb" 8
+foliage_type "../models/zone/vegetation/pine_young.glb" 0.03 0.85 1.15 150 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/pine_young_lod1.glb" 25
+foliage_type "../models/zone/vegetation/birch_young.glb" 0.03 0.85 1.15 150 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/birch_young_lod1.glb" 25
+foliage_type "../models/zone/vegetation/birch_b.glb" 0.03 0.85 1.15 230 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/birch_b_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../models/zone/vegetation/bush_wide_a.glb" 0.02 0.85 1.15 120 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/bush_wide_a_lod1.glb" 25
+foliage_type "../models/zone/vegetation/broadleaf_a.glb" 0.03 0.85 1.15 230 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/broadleaf_a_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../models/zone/vegetation/spruce_a.glb" 0.03 0.85 1.15 230 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/spruce_a_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../models/zone/vegetation/pine_a.glb" 0.03 0.85 1.15 230 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/pine_a_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../models/zone/vegetation/broadleaf_b.glb" 0.03 0.85 1.15 230 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/broadleaf_b_lod1.glb" 30
+foliage_impostor 90
 group "Ground" ""
 group "Railway" ""
 group "Camp" "Railway"
@@ -100,6 +121,7 @@ group "NPC" ""
 group "Stalkers" "NPC"
 group "Bandits" "NPC"
 group "Backdrop" ""
+group "Ground joints" ""
 box "Street" -15.5 -0.49 15 169 1 10 0.5 0.5 0.5
   parent "Street"
   id c823d085b4dd8d51
@@ -2411,6 +2433,2182 @@ model "Stash ammo" "../models/props/ammo_box/ammo_box.gltf" 55.2 6.41 -15
   parent "Loot"
   id 4134f8ecff0dcc7d
   transform 0 -20 0 1
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -95.71 0.022 10
+  parent "Ground joints"
+  id c5721d39d6ee275d
+  transform 0 0 0 0.858
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -88.79 0.022 10
+  parent "Ground joints"
+  id f4e6d8870f0e8395
+  transform 0 0 0 0.9
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -81.41 0.022 10
+  parent "Ground joints"
+  id be0a6baff2ee4510
+  transform 0 0 0 0.892
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -74.04 0.022 10
+  parent "Ground joints"
+  id 729ce732e95cea33
+  transform 0 0 0 0.882
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -67.1 0.022 10
+  parent "Ground joints"
+  id becdc1336dc277e6
+  transform 0 0 0 0.941
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -59.76 0.022 10
+  parent "Ground joints"
+  id e7b82154c90ae11b
+  transform 0 0 0 1.036
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -52.07 0.022 10
+  parent "Ground joints"
+  id f82b6cc4266eb27d
+  transform 0 0 0 0.97
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -44.57 0.022 10
+  parent "Ground joints"
+  id 0333e23b2f8a75f7
+  transform 0 0 0 0.936
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -37.87 0.022 10
+  parent "Ground joints"
+  id e0786bcb4b91a584
+  transform 0 0 0 0.946
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -30.38 0.022 10
+  parent "Ground joints"
+  id 19a2242f71a6dadb
+  transform 0 0 0 0.933
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -23.27 0.022 10
+  parent "Ground joints"
+  id c936f7b840f74fc8
+  transform 0 0 0 0.981
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -15.75 0.022 10
+  parent "Ground joints"
+  id db34abaebb3fbca5
+  transform 0 0 0 1.045
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -8.42 0.022 10
+  parent "Ground joints"
+  id cd47aaa992da93a8
+  transform 0 0 0 1.015
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -0.77 0.022 10
+  parent "Ground joints"
+  id 618bf274d06cc6c4
+  transform 0 0 0 1.098
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 6.51 0.022 10
+  parent "Ground joints"
+  id a04262135380f0b5
+  transform 0 0 0 1.073
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 13.63 0.022 10
+  parent "Ground joints"
+  id c53f78e329e87ea8
+  transform 0 0 0 0.912
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 20.58 0.022 10
+  parent "Ground joints"
+  id 161b853dba699214
+  transform 0 0 0 0.962
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 28.39 0.022 10
+  parent "Ground joints"
+  id 8b8c55b0b680cc7e
+  transform 0 0 0 0.917
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 35.57 0.022 10
+  parent "Ground joints"
+  id 603c34d21c81f6ae
+  transform 0 0 0 0.873
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 42.55 0.022 10
+  parent "Ground joints"
+  id 8824871f1aaa8917
+  transform 0 0 0 0.994
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 49.68 0.022 10
+  parent "Ground joints"
+  id a6e655d962066340
+  transform 0 0 0 0.856
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 57.34 0.022 10
+  parent "Ground joints"
+  id 6f23bdafd8c5eedc
+  transform 0 0 0 1.006
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 64.83 0.022 10
+  parent "Ground joints"
+  id c972c81901ad41c8
+  transform 0 0 0 1.07
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 64.99 0.022 10
+  parent "Ground joints"
+  id c78627412be57e5a
+  transform 0 0 0 0.964
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -96 0.022 20
+  parent "Ground joints"
+  id 8d20e97a576ae782
+  transform 0 180 0 1.074
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -81.4 0.022 20
+  parent "Ground joints"
+  id f79de8b5e759a5f5
+  transform 0 180 0 0.88
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -67.02 0.022 20
+  parent "Ground joints"
+  id 6d6d96b42421a693
+  transform 0 180 0 0.93
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -59.47 0.022 20
+  parent "Ground joints"
+  id 8eb2ccf81dadc293
+  transform 0 180 0 1.083
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -44.61 0.022 20
+  parent "Ground joints"
+  id 5f6fbaf5f0d9246b
+  transform 0 180 0 0.976
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -37.83 0.022 20
+  parent "Ground joints"
+  id 902f104408a4a3cd
+  transform 0 180 0 1.068
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -30.45 0.022 20
+  parent "Ground joints"
+  id 16b35dd838251609
+  transform 0 180 0 0.974
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -22.69 0.022 20
+  parent "Ground joints"
+  id 0c30e0ed14559daf
+  transform 0 180 0 1.094
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -15.31 0.022 20
+  parent "Ground joints"
+  id 0451cd4fd5791692
+  transform 0 180 0 1.111
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -8.72 0.022 20
+  parent "Ground joints"
+  id 75bdb68151c86d31
+  transform 0 180 0 1.032
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -1.04 0.022 20
+  parent "Ground joints"
+  id 76c7ed6bd918fbc2
+  transform 0 180 0 0.869
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 5.86 0.022 20
+  parent "Ground joints"
+  id 038da5e1d52d8f08
+  transform 0 180 0 0.877
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 13.7 0.022 20
+  parent "Ground joints"
+  id 170bf8f35dbf2c42
+  transform 0 180 0 0.924
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 20.56 0.022 20
+  parent "Ground joints"
+  id d1a7042503ae1838
+  transform 0 180 0 0.896
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 28.37 0.022 20
+  parent "Ground joints"
+  id 4feb414a7be1d50a
+  transform 0 180 0 1.115
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 35.32 0.022 20
+  parent "Ground joints"
+  id 06d30e7d9ec85371
+  transform 0 180 0 0.877
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 42.39 0.022 20
+  parent "Ground joints"
+  id cf01466a54b53ec1
+  transform 0 180 0 1.088
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 50 0.022 20
+  parent "Ground joints"
+  id f3bccf19866cbdb3
+  transform 0 180 0 0.866
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 57.15 0.022 20
+  parent "Ground joints"
+  id ac8a6aebb9b63660
+  transform 0 180 0 1.105
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 64.54 0.022 20
+  parent "Ground joints"
+  id c287a790293e2d3f
+  transform 0 180 0 1.055
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 64.8 0.022 20
+  parent "Ground joints"
+  id 4bf5f91b2fe0fa3c
+  transform 0 180 0 1.063
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Verge soil" "../models/zone/skrunda/joint_verge_soil.glb" -100 0.022 16
+  parent "Ground joints"
+  id d8b3385eeda021ea
+  transform 0 90 0 0.889
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 69 0.022 14.33
+  parent "Ground joints"
+  id d68cbfd1cdf25f9d
+  transform 0 270 0 0.91
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -95.86 0.152 5
+  parent "Ground joints"
+  id b3163468e31edf6b
+  transform 0 0 0 0.914
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -88.39 0.152 5
+  parent "Ground joints"
+  id 16f3b15aec917391
+  transform 0 0 0 1.035
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -81.75 0.152 5
+  parent "Ground joints"
+  id 1c6070d5d2c75eda
+  transform 0 0 0 1.075
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -74.13 0.152 5
+  parent "Ground joints"
+  id 9ecc03cb8c849e44
+  transform 0 0 0 1.043
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -67.14 0.152 5
+  parent "Ground joints"
+  id a99f067f470d35c1
+  transform 0 0 0 0.884
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -59.81 0.152 5
+  parent "Ground joints"
+  id db0c2acffc1e8dd4
+  transform 0 0 0 1.017
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -44.69 0.152 5
+  parent "Ground joints"
+  id 28e000dcf375fe81
+  transform 0 0 0 0.96
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -37.88 0.152 5
+  parent "Ground joints"
+  id 8e30e2ecd1c409ad
+  transform 0 0 0 1.022
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -29.99 0.152 5
+  parent "Ground joints"
+  id 2e149fc6292aa10b
+  transform 0 0 0 0.866
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -23.04 0.152 5
+  parent "Ground joints"
+  id 462493f1293412f2
+  transform 0 0 0 1.088
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -16.07 0.152 5
+  parent "Ground joints"
+  id 7fa024220535e147
+  transform 0 0 0 0.904
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -8.03 0.152 5
+  parent "Ground joints"
+  id 77043763f89397a2
+  transform 0 0 0 1.033
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -1.15 0.152 5
+  parent "Ground joints"
+  id dbd5be388b59424b
+  transform 0 0 0 0.915
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 6.15 0.152 5
+  parent "Ground joints"
+  id 12624d3f38eebd15
+  transform 0 0 0 0.977
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 13.7 0.152 5
+  parent "Ground joints"
+  id 9dc1507617f98b5d
+  transform 0 0 0 0.942
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 64.47 0.152 5
+  parent "Ground joints"
+  id 682d3f699e4435d2
+  transform 0 0 0 1.091
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 64.67 0.152 5
+  parent "Ground joints"
+  id 60be537158151a2e
+  transform 0 0 0 0.922
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -95.97 0.152 24
+  parent "Ground joints"
+  id f3d329d8040ed469
+  transform 0 180 0 0.972
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -88.33 0.152 24
+  parent "Ground joints"
+  id 53a606287d53689c
+  transform 0 180 0 0.944
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -81.52 0.152 24
+  parent "Ground joints"
+  id 7f12dee10d3b56f8
+  transform 0 180 0 0.858
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -74.32 0.152 24
+  parent "Ground joints"
+  id ca09c69ff35f49c9
+  transform 0 180 0 1.072
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -59.56 0.152 24
+  parent "Ground joints"
+  id 266eaa94dc7f5d5b
+  transform 0 180 0 1.072
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -52.51 0.152 24
+  parent "Ground joints"
+  id 222ee2b3d4432abb
+  transform 0 180 0 1.071
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -45.06 0.152 24
+  parent "Ground joints"
+  id 5862e4ca7b672383
+  transform 0 180 0 1.084
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -37.75 0.152 24
+  parent "Ground joints"
+  id ebb31a4051bdf89a
+  transform 0 180 0 1.112
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -30.34 0.152 24
+  parent "Ground joints"
+  id 64b662b01fecd01b
+  transform 0 180 0 1.036
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -8.26 0.152 24
+  parent "Ground joints"
+  id fbfd9ccb53218541
+  transform 0 180 0 0.96
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" -0.77 0.152 24
+  parent "Ground joints"
+  id 0bca4c215006395c
+  transform 0 180 0 1.114
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 6.58 0.152 24
+  parent "Ground joints"
+  id 0721b6ab556655ea
+  transform 0 180 0 0.946
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 13.19 0.152 24
+  parent "Ground joints"
+  id e009c9174e964708
+  transform 0 180 0 1.061
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 21.05 0.152 24
+  parent "Ground joints"
+  id 8944dba4e420ef44
+  transform 0 180 0 0.969
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 28.42 0.152 24
+  parent "Ground joints"
+  id 86a0e42b1ba8534a
+  transform 0 180 0 1.011
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 35.08 0.152 24
+  parent "Ground joints"
+  id 19557f9e4915b10c
+  transform 0 180 0 0.858
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 50.37 0.152 24
+  parent "Ground joints"
+  id 97331fd7b873d1c9
+  transform 0 180 0 1.024
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 57.19 0.152 24
+  parent "Ground joints"
+  id 0cefa00729ec54c9
+  transform 0 180 0 1.072
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 64.8 0.152 24
+  parent "Ground joints"
+  id 872a2c6beab08cd5
+  transform 0 180 0 1.034
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 65 0.152 24
+  parent "Ground joints"
+  id 6318663983160c1b
+  transform 0 180 0 0.864
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 20.13 0.072 0.5
+  parent "Ground joints"
+  id 7f7d41269badfb68
+  transform 0 0 0 1.043
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 26.93 0.072 0.5
+  parent "Ground joints"
+  id 92fbac28b1288b06
+  transform 0 0 0 1.088
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 34.38 0.072 0.5
+  parent "Ground joints"
+  id e6568a41c8099b39
+  transform 0 0 0 0.964
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 42.29 0.072 0.5
+  parent "Ground joints"
+  id 87891555d58791c4
+  transform 0 0 0 0.86
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 49.08 0.072 0.5
+  parent "Ground joints"
+  id 48baa04353b63f6c
+  transform 0 0 0 0.992
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 56.65 0.072 0.5
+  parent "Ground joints"
+  id aade4010d9d960c2
+  transform 0 0 0 0.98
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 60 0.072 0.5
+  parent "Ground joints"
+  id 50c37920989f6923
+  transform 0 0 0 1.039
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 20 0.072 5
+  parent "Ground joints"
+  id 1a0039454aff8662
+  transform 0 180 0 1.096
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 27.11 0.072 5
+  parent "Ground joints"
+  id 733652b081b43ed8
+  transform 0 180 0 0.86
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 34.35 0.072 5
+  parent "Ground joints"
+  id 76c9e6b42ccfb6e6
+  transform 0 180 0 0.962
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 41.77 0.072 5
+  parent "Ground joints"
+  id 4d224111f5e2b53a
+  transform 0 180 0 1.101
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 49.13 0.072 5
+  parent "Ground joints"
+  id b2bd99c064215f1e
+  transform 0 180 0 1.066
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 56.65 0.072 5
+  parent "Ground joints"
+  id 415b625a5e5d1257
+  transform 0 180 0 0.872
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Kerb soil" "../models/zone/skrunda/joint_kerb_soil.glb" 60 0.072 5
+  parent "Ground joints"
+  id fe1caeac4b58ef4d
+  transform 0 180 0 0.892
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" -106.25 -0.008 64.2
+  parent "Ground joints"
+  id 4b89fdea6da5e659
+  transform 0 360 0 0.985
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" -93.75 -0.008 64.2
+  parent "Ground joints"
+  id 6fad73444e57f0d5
+  transform 0 360 0 0.992
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" -106.25 -0.008 59.8
+  parent "Ground joints"
+  id e4143d56c6ddedbe
+  transform 0 180 0 0.983
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" -93.75 -0.008 59.8
+  parent "Ground joints"
+  id 964fe5a4d400887b
+  transform 0 180 0 0.984
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" -81.25 -0.008 64.2
+  parent "Ground joints"
+  id d3ae8aa41160c1ee
+  transform 0 360 0 1.042
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" -68.75 -0.008 64.2
+  parent "Ground joints"
+  id 611659ee21305b68
+  transform 0 360 0 0.989
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" -81.25 -0.008 59.8
+  parent "Ground joints"
+  id 53fef80e1af375fc
+  transform 0 180 0 1.037
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" -56.25 -0.008 64.2
+  parent "Ground joints"
+  id af58fb5634b07ee8
+  transform 0 360 0 1.03
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" -43.75 -0.008 64.2
+  parent "Ground joints"
+  id ed19e05e5fdb5db0
+  transform 0 360 0 0.998
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" -56.25 -0.008 59.8
+  parent "Ground joints"
+  id 050f268b7ee2b9cb
+  transform 0 180 0 1.009
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" -43.75 -0.008 59.8
+  parent "Ground joints"
+  id bc5fba24649123ab
+  transform 0 180 0 1.031
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" -31.25 -0.008 64.2
+  parent "Ground joints"
+  id cc9774ac15588bfb
+  transform 0 360 0 1.025
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" -18.75 -0.008 64.2
+  parent "Ground joints"
+  id 30ebae1f102e22b5
+  transform 0 360 0 1.015
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" -31.25 -0.008 59.8
+  parent "Ground joints"
+  id 18ccef1c49e1042f
+  transform 0 180 0 1.021
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" -18.75 -0.008 59.8
+  parent "Ground joints"
+  id 09f456629495fc9c
+  transform 0 180 0 0.981
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" -6.25 -0.008 64.2
+  parent "Ground joints"
+  id 7e6c692845b2f910
+  transform 0 360 0 0.998
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" 6.25 -0.008 64.2
+  parent "Ground joints"
+  id 0343eede1d151bf4
+  transform 0 360 0 0.988
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" -6.25 -0.008 59.8
+  parent "Ground joints"
+  id 01f60265c7339413
+  transform 0 180 0 0.996
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" 6.25 -0.008 59.8
+  parent "Ground joints"
+  id bd4df49efdf342de
+  transform 0 180 0 0.987
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" 31.25 -0.008 64.2
+  parent "Ground joints"
+  id c5f7b5ef9bc5b379
+  transform 0 360 0 1.041
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" 18.75 -0.008 59.8
+  parent "Ground joints"
+  id 00fdcbd60ca775ad
+  transform 0 180 0 0.98
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" 31.25 -0.008 59.8
+  parent "Ground joints"
+  id f0469485658c9383
+  transform 0 180 0 1.006
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" 43.75 -0.008 64.2
+  parent "Ground joints"
+  id 28fd59ae3312d105
+  transform 0 360 0 0.996
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" 56.25 -0.008 64.2
+  parent "Ground joints"
+  id 46657a0dedcb196c
+  transform 0 360 0 1.04
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" 43.75 -0.008 59.8
+  parent "Ground joints"
+  id f929d796ba055ae2
+  transform 0 180 0 1.037
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" 56.25 -0.008 59.8
+  parent "Ground joints"
+  id e997fe5cc7a675af
+  transform 0 180 0 1.017
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" 68.75 -0.008 64.2
+  parent "Ground joints"
+  id a9865f0da9cbc3b1
+  transform 0 360 0 1.001
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" 81.25 -0.008 64.2
+  parent "Ground joints"
+  id fd967ba82ab11f65
+  transform 0 360 0 0.987
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" 68.75 -0.008 59.8
+  parent "Ground joints"
+  id caa7a9eb8a55fcad
+  transform 0 180 0 0.999
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" 81.25 -0.008 59.8
+  parent "Ground joints"
+  id 28075b5570ddfeac
+  transform 0 180 0 1.011
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" 93.75 -0.008 64.2
+  parent "Ground joints"
+  id c91f9b131a0e62a1
+  transform 0 360 0 0.984
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" 106.25 -0.008 59.8
+  parent "Ground joints"
+  id 94f7f03f72af1c3d
+  transform 0 180 0 1.035
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" -106.25 -0.008 69.7
+  parent "Ground joints"
+  id a09edf37ad0a0f87
+  transform 0 360 0 1.001
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" -93.75 -0.008 69.7
+  parent "Ground joints"
+  id 1ec319cdb6ab15ac
+  transform 0 360 0 0.998
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" -106.25 -0.008 65.3
+  parent "Ground joints"
+  id d6d9b33705a5efcc
+  transform 0 180 0 1.034
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" -93.75 -0.008 65.3
+  parent "Ground joints"
+  id 1e1b40d0acc4c44d
+  transform 0 180 0 1.021
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" -81.25 -0.008 69.7
+  parent "Ground joints"
+  id 54d3d9a86da67861
+  transform 0 360 0 0.981
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" -81.25 -0.008 65.3
+  parent "Ground joints"
+  id ee5cc72bd185906e
+  transform 0 180 0 1.001
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" -68.75 -0.008 65.3
+  parent "Ground joints"
+  id 8c95601f009e4626
+  transform 0 180 0 1.013
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" -56.25 -0.008 69.7
+  parent "Ground joints"
+  id 07481a0a9bb68164
+  transform 0 360 0 1.034
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" -43.75 -0.008 69.7
+  parent "Ground joints"
+  id 38fbc88a5420e8bb
+  transform 0 360 0 0.984
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" -56.25 -0.008 65.3
+  parent "Ground joints"
+  id 2e146b84a6179fb0
+  transform 0 180 0 1.037
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" -31.25 -0.008 69.7
+  parent "Ground joints"
+  id 2a07fbdff3a561f0
+  transform 0 360 0 0.985
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" -18.75 -0.008 69.7
+  parent "Ground joints"
+  id c5ae249eb104e06a
+  transform 0 360 0 0.983
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" -31.25 -0.008 65.3
+  parent "Ground joints"
+  id dadf10eded7f7017
+  transform 0 180 0 0.985
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" -18.75 -0.008 65.3
+  parent "Ground joints"
+  id 70cb23f29a6352b7
+  transform 0 180 0 0.986
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" -6.25 -0.008 69.7
+  parent "Ground joints"
+  id d74ad9074a7a3988
+  transform 0 360 0 1.045
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" 6.25 -0.008 69.7
+  parent "Ground joints"
+  id fc759dd85db52702
+  transform 0 360 0 0.994
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" -6.25 -0.008 65.3
+  parent "Ground joints"
+  id 4b4affac30a96fd3
+  transform 0 180 0 1.035
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" 6.25 -0.008 65.3
+  parent "Ground joints"
+  id 5f6bf9a1f87c04f4
+  transform 0 180 0 1.031
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" 18.75 -0.008 69.7
+  parent "Ground joints"
+  id 1bd8bca330ee5dc2
+  transform 0 360 0 0.988
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" 31.25 -0.008 69.7
+  parent "Ground joints"
+  id c7b2cf2e50056aae
+  transform 0 360 0 0.982
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" 18.75 -0.008 65.3
+  parent "Ground joints"
+  id d37743623077105c
+  transform 0 180 0 1.026
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" 31.25 -0.008 65.3
+  parent "Ground joints"
+  id bad8e7764d38f047
+  transform 0 180 0 1.031
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" 43.75 -0.008 69.7
+  parent "Ground joints"
+  id b035da7eb6774676
+  transform 0 360 0 0.999
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" 56.25 -0.008 65.3
+  parent "Ground joints"
+  id b04a03e8cc681472
+  transform 0 180 0 1.028
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" 68.75 -0.008 69.7
+  parent "Ground joints"
+  id 356c1f7abe917f01
+  transform 0 360 0 1.028
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" 81.25 -0.008 69.7
+  parent "Ground joints"
+  id 8642630bb377570a
+  transform 0 360 0 0.995
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" 68.75 -0.008 65.3
+  parent "Ground joints"
+  id 59a73f03bf504059
+  transform 0 180 0 1
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" 81.25 -0.008 65.3
+  parent "Ground joints"
+  id ccea051a51936ad6
+  transform 0 180 0 1.012
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" 93.75 -0.008 69.7
+  parent "Ground joints"
+  id 0ff62f5b6e655618
+  transform 0 360 0 1.022
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" 106.25 -0.008 69.7
+  parent "Ground joints"
+  id dccf794875ebd49f
+  transform 0 360 0 1.039
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" 93.75 -0.008 65.3
+  parent "Ground joints"
+  id 12f91b18dc1503be
+  transform 0 180 0 1.007
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Ballast spill" "../models/zone/skrunda/joint_ballast_spill.glb" 106.25 -0.008 65.3
+  parent "Ground joints"
+  id 8c0781465dd93351
+  transform 0 180 0 1.005
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 108.65 -0.02 22.31
+  parent "Ground joints"
+  id 6a9f78d05298e14f
+  transform 0 0 0 1.036
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 105.64 -0.02 22.31
+  parent "Ground joints"
+  id f4100c4402bb1cd5
+  transform 0 0 0 0.981
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 93.03 -0.02 22.53
+  parent "Ground joints"
+  id b72d70753fa34eea
+  transform 0 0 0 0.98
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 89.23 -0.02 22.53
+  parent "Ground joints"
+  id eb522fab9afd9321
+  transform 0 0 0 1.045
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 77.42 -0.02 23.45
+  parent "Ground joints"
+  id 4ffbb91d64efd507
+  transform 0 0 0 0.982
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 92.9 -0.02 7
+  parent "Ground joints"
+  id 219881c5537de53a
+  transform 0 180 0 0.98
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 88.29 -0.02 6.65
+  parent "Ground joints"
+  id 86e59cd6284b90bd
+  transform 0 180 0 1.004
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 68.76 -0.02 5.12
+  parent "Ground joints"
+  id 9c329225f07fb522
+  transform 0 270 0 1.06
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 68.76 -0.02 24.93
+  parent "Ground joints"
+  id e76c43d9da40919a
+  transform 0 270 0 0.995
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 102.13 -0.02 28.74
+  parent "Ground joints"
+  id b8163eac219e7b36
+  transform 0 270 0 1.013
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 102.17 -0.02 24.23
+  parent "Ground joints"
+  id 2f0e48ceb907fc9c
+  transform 0 90 0 1.015
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 102.17 -0.02 27.24
+  parent "Ground joints"
+  id c5e5d08e2efa5bc4
+  transform 0 90 0 1.046
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -26.98 -0.04 -9.35
+  parent "Ground joints"
+  id c7d114caeae7d537
+  transform 0 90 0 1.056
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -26.98 -0.04 -6.34
+  parent "Ground joints"
+  id 66692242f115a8ae
+  transform 0 90 0 1
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -26.98 -0.04 -3.33
+  parent "Ground joints"
+  id d9d8c264c9f93960
+  transform 0 90 0 1
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -53.02 -0.04 -9.46
+  parent "Ground joints"
+  id 8173500a7534a71f
+  transform 0 270 0 1.013
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -53.02 -0.04 -6.46
+  parent "Ground joints"
+  id d0d93d830ae61cab
+  transform 0 270 0 0.999
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -53.02 -0.04 -3.45
+  parent "Ground joints"
+  id 415679c2623242d7
+  transform 0 270 0 0.991
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -53.02 -0.04 -0.44
+  parent "Ground joints"
+  id 01387705b335c310
+  transform 0 270 0 0.983
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -51.11 -0.04 1.02
+  parent "Ground joints"
+  id 5da038d418de2444
+  transform 0 0 0 1.025
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -47.3 -0.04 1.02
+  parent "Ground joints"
+  id 59fbf940e40623d1
+  transform 0 0 0 1.024
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -44.3 -0.04 1.02
+  parent "Ground joints"
+  id 20ac63c536e8233c
+  transform 0 0 0 0.985
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -41.29 -0.04 1.02
+  parent "Ground joints"
+  id ddc857100351d680
+  transform 0 0 0 0.992
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -38.28 -0.04 1.02
+  parent "Ground joints"
+  id 0a95965f451d04d8
+  transform 0 0 0 0.997
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -32.87 -0.04 1.02
+  parent "Ground joints"
+  id b76f804e78042d1b
+  transform 0 0 0 1.024
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -29.86 -0.04 1.02
+  parent "Ground joints"
+  id d442912b032edce4
+  transform 0 0 0 1.04
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -50.89 -0.04 -11.02
+  parent "Ground joints"
+  id 8b13341dd30ec304
+  transform 0 180 0 1.048
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -47.88 -0.04 -11.02
+  parent "Ground joints"
+  id 86b887246085f183
+  transform 0 180 0 1.037
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -44.87 -0.04 -11.02
+  parent "Ground joints"
+  id 393838e1e3c7c750
+  transform 0 180 0 1.025
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -41.86 -0.04 -11.02
+  parent "Ground joints"
+  id f23aadba7d34ad33
+  transform 0 180 0 1.004
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -38.85 -0.04 -11.02
+  parent "Ground joints"
+  id 2f89c47e51e64b16
+  transform 0 180 0 1.027
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -35.85 -0.04 -11.02
+  parent "Ground joints"
+  id f125d0cba8a83f4d
+  transform 0 180 0 1
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -32.84 -0.04 -11.02
+  parent "Ground joints"
+  id 897a78f823f5ad23
+  transform 0 180 0 0.981
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -29.83 -0.04 -11.02
+  parent "Ground joints"
+  id 4d59ed5ed6712af2
+  transform 0 180 0 0.995
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 64.02 -0.04 -17.76
+  parent "Ground joints"
+  id d2cc255795863eb0
+  transform 0 90 0 1.041
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 64.02 -0.04 -14.75
+  parent "Ground joints"
+  id 52e78f93450252b0
+  transform 0 90 0 1.019
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 64.02 -0.04 -11.74
+  parent "Ground joints"
+  id f7d13ce1e37f138a
+  transform 0 90 0 1.05
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 64.02 -0.04 -8.74
+  parent "Ground joints"
+  id 06dbfc13a95ba2dd
+  transform 0 90 0 1.009
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 15.98 -0.04 -17.4
+  parent "Ground joints"
+  id f04a816919e4068d
+  transform 0 270 0 1.057
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 15.98 -0.04 -14.39
+  parent "Ground joints"
+  id 3218b4a7d9d400ea
+  transform 0 270 0 1.04
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 15.98 -0.04 -11.38
+  parent "Ground joints"
+  id 68f621856fc6ef07
+  transform 0 270 0 0.981
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 15.98 -0.04 -8.38
+  parent "Ground joints"
+  id 7837fd6f4e35f059
+  transform 0 270 0 0.983
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 18.05 -0.04 -4.48
+  parent "Ground joints"
+  id 888b3fd8104cf19a
+  transform 0 0 0 1.048
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 21.06 -0.04 -4.48
+  parent "Ground joints"
+  id 507e5968deca98df
+  transform 0 0 0 0.987
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 24.06 -0.04 -4.48
+  parent "Ground joints"
+  id 7ffad47e0bbd26ad
+  transform 0 0 0 1.039
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 27.07 -0.04 -4.48
+  parent "Ground joints"
+  id 3655fa61f1ddeab4
+  transform 0 0 0 1.049
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 30.08 -0.04 -4.48
+  parent "Ground joints"
+  id fad606783bdb98b7
+  transform 0 0 0 1.029
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 33.09 -0.04 -4.48
+  parent "Ground joints"
+  id 970a4ac7fd7865a4
+  transform 0 0 0 1.005
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 36.1 -0.04 -4.48
+  parent "Ground joints"
+  id 26ef353bfd2b2aff
+  transform 0 0 0 0.982
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 43.1 -0.04 -4.48
+  parent "Ground joints"
+  id ae1f57814784bdc5
+  transform 0 0 0 1.058
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 46.11 -0.04 -4.48
+  parent "Ground joints"
+  id 68cb8ceb9263c98c
+  transform 0 0 0 0.998
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 49.12 -0.04 -4.48
+  parent "Ground joints"
+  id de31880aa18deee9
+  transform 0 0 0 1.021
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 52.13 -0.04 -4.48
+  parent "Ground joints"
+  id 97d53eb6efdd3f96
+  transform 0 0 0 1.03
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 55.14 -0.04 -4.48
+  parent "Ground joints"
+  id 862e3e3a209ecee0
+  transform 0 0 0 1.029
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 58.14 -0.04 -4.48
+  parent "Ground joints"
+  id 0e0aac6a6c5a3623
+  transform 0 0 0 1.023
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 61.15 -0.04 -4.48
+  parent "Ground joints"
+  id 089819c73c5e3f42
+  transform 0 0 0 1.049
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 18.13 -0.04 -19.52
+  parent "Ground joints"
+  id d612060036d4629f
+  transform 0 180 0 1.012
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 21.13 -0.04 -19.52
+  parent "Ground joints"
+  id 7eb696a64211a424
+  transform 0 180 0 1.004
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 24.14 -0.04 -19.52
+  parent "Ground joints"
+  id 9d828fa816c9c52d
+  transform 0 180 0 1.057
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 27.15 -0.04 -19.52
+  parent "Ground joints"
+  id 38e167caf5c89d98
+  transform 0 180 0 1.041
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 30.16 -0.04 -19.52
+  parent "Ground joints"
+  id c8eacf636c577d0d
+  transform 0 180 0 1.01
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 33.17 -0.04 -19.52
+  parent "Ground joints"
+  id d97001d96b1059d0
+  transform 0 180 0 1.045
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 36.17 -0.04 -19.52
+  parent "Ground joints"
+  id 8aaf50f2bdf359ad
+  transform 0 180 0 1.057
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 39.18 -0.04 -19.52
+  parent "Ground joints"
+  id da7011ee47f00ffa
+  transform 0 180 0 1.003
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 42.19 -0.04 -19.52
+  parent "Ground joints"
+  id 8855f55ceca0acf5
+  transform 0 180 0 1.007
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 45.2 -0.04 -19.52
+  parent "Ground joints"
+  id 9cce0e9a0b0ed268
+  transform 0 180 0 1.046
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 48.21 -0.04 -19.52
+  parent "Ground joints"
+  id 5ef87354242bda77
+  transform 0 180 0 0.992
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 51.21 -0.04 -19.52
+  parent "Ground joints"
+  id 63d6386fa3fbb1fe
+  transform 0 180 0 0.998
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 54.22 -0.04 -19.52
+  parent "Ground joints"
+  id c94a9534acee12cc
+  transform 0 180 0 1.008
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 57.23 -0.04 -19.52
+  parent "Ground joints"
+  id 1391a51d8416ddc2
+  transform 0 180 0 1.015
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 60.24 -0.04 -19.52
+  parent "Ground joints"
+  id d3c6bea4993f0832
+  transform 0 180 0 1.004
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -13.52 -0.04 -40.08
+  parent "Ground joints"
+  id b4bf5dce1a20765e
+  transform 0 180 0 1.012
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -17.64 -0.04 -34.53
+  parent "Ground joints"
+  id 025894ffaa3b0158
+  transform 0 0 0 0.988
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -3.8 -0.04 -36.36
+  parent "Ground joints"
+  id e4ac2f2d19b64fd0
+  transform 0 90 0 1.028
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -19.42 -0.04 -36.12
+  parent "Ground joints"
+  id 2f263114f9121bd2
+  transform 0 270 0 1.043
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -0.47 -0.04 -40.09
+  parent "Ground joints"
+  id 5993df89a83a67b0
+  transform 0 180 0 1.023
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 2.53 -0.04 -40.09
+  parent "Ground joints"
+  id 082eee4dd129d57c
+  transform 0 180 0 1.011
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 5.54 -0.04 -40.09
+  parent "Ground joints"
+  id 3de9fd07b018f418
+  transform 0 180 0 1.036
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -1.24 -0.04 -34.18
+  parent "Ground joints"
+  id c052d85f9a1b863a
+  transform 0 0 0 1.018
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 1.77 -0.04 -34.18
+  parent "Ground joints"
+  id de4f9495ba5ffa3a
+  transform 0 0 0 0.991
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 4.78 -0.04 -34.18
+  parent "Ground joints"
+  id 4ed4b05048e0c9c9
+  transform 0 0 0 1.055
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 7.78 -0.04 -34.18
+  parent "Ground joints"
+  id 71237ceae36a23f1
+  transform 0 0 0 0.995
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 10.79 -0.04 -34.18
+  parent "Ground joints"
+  id c4d1447c4fe6acf6
+  transform 0 0 0 1.039
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 13.13 -0.04 -36.09
+  parent "Ground joints"
+  id 4d86d9016afb4d29
+  transform 0 90 0 1.049
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -2.91 -0.04 -36.06
+  parent "Ground joints"
+  id 7b7ce55523f13a8f
+  transform 0 270 0 0.991
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -17.63 -0.04 38.91
+  parent "Ground joints"
+  id 7a20c56177a71d83
+  transform 0 270 0 0.981
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -11.49 -0.04 34.56
+  parent "Ground joints"
+  id ef75cbad9caa26b3
+  transform 0 180 0 1.027
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -14.49 -0.04 34.56
+  parent "Ground joints"
+  id 9634f0e23b538cc7
+  transform 0 180 0 0.993
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -11.3 -0.04 40.6
+  parent "Ground joints"
+  id f33f603c617b9987
+  transform 0 0 0 1.024
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -15.11 -0.04 40.6
+  parent "Ground joints"
+  id 05872745b9bc3553
+  transform 0 0 0 1.032
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 24.4 -0.04 34.91
+  parent "Ground joints"
+  id 48b4d3bfa6392c92
+  transform 0 180 0 0.986
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 27.41 -0.04 34.91
+  parent "Ground joints"
+  id fed7f28fcb3dd82e
+  transform 0 180 0 1.018
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 30.41 -0.04 34.91
+  parent "Ground joints"
+  id e4dc3297932e5dd3
+  transform 0 180 0 0.982
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 23.65 -0.04 40.82
+  parent "Ground joints"
+  id 47556513ab989a42
+  transform 0 0 0 0.993
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 26.66 -0.04 40.82
+  parent "Ground joints"
+  id f5e12391e2eff1b5
+  transform 0 0 0 1.021
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 29.67 -0.04 40.82
+  parent "Ground joints"
+  id 3d4bb534790b29ec
+  transform 0 0 0 1.042
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 32.67 -0.04 40.82
+  parent "Ground joints"
+  id d834005c55b4fea4
+  transform 0 0 0 0.992
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 35.68 -0.04 40.82
+  parent "Ground joints"
+  id 1ed9c0be9694f94e
+  transform 0 0 0 1.059
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 38.13 -0.04 39.06
+  parent "Ground joints"
+  id bce82e987574da80
+  transform 0 90 0 1.043
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" 22.09 -0.04 39.14
+  parent "Ground joints"
+  id 51dff58a8dd1ae70
+  transform 0 270 0 1.057
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -33.02 -0.04 -138.81
+  parent "Ground joints"
+  id dd7dc486315cbfd5
+  transform 0 90 0 0.982
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -24.23 -0.04 -132.6
+  parent "Ground joints"
+  id 68637688fb93e6fb
+  transform 0 90 0 1.001
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -24.23 -0.04 -129.59
+  parent "Ground joints"
+  id 77164e6e2216a178
+  transform 0 90 0 0.983
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -24.23 -0.04 -126.58
+  parent "Ground joints"
+  id 0424f2f646cc4a90
+  transform 0 90 0 0.989
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -24.23 -0.04 -123.58
+  parent "Ground joints"
+  id 8964592318c148a1
+  transform 0 90 0 1.018
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -24.23 -0.04 -120.57
+  parent "Ground joints"
+  id eb933730e91eb062
+  transform 0 90 0 1.056
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -87.03 -0.04 -138.83
+  parent "Ground joints"
+  id 4a5de2c60817d481
+  transform 0 270 0 1.014
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -87.04 -0.04 -135.83
+  parent "Ground joints"
+  id 7553ecaba40c8126
+  transform 0 270 0 1.036
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -95.84 -0.04 -132.02
+  parent "Ground joints"
+  id 192b6228c2fe7907
+  transform 0 270 0 0.983
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -95.84 -0.04 -129.01
+  parent "Ground joints"
+  id d6f9c29df9a14bd8
+  transform 0 270 0 1.014
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -95.84 -0.04 -126
+  parent "Ground joints"
+  id 71f4233e28d92857
+  transform 0 270 0 0.999
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -95.84 -0.04 -122.99
+  parent "Ground joints"
+  id 67ef388cc0e6f3ff
+  transform 0 270 0 1.011
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -94.04 -0.04 -118.54
+  parent "Ground joints"
+  id fb7405a07993ecdf
+  transform 0 0 0 1.012
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -91.03 -0.04 -118.54
+  parent "Ground joints"
+  id 351ea61ed9912965
+  transform 0 0 0 1.059
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -88.03 -0.04 -118.54
+  parent "Ground joints"
+  id 4915c1723585c0c0
+  transform 0 0 0 1.03
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -85.02 -0.04 -118.54
+  parent "Ground joints"
+  id 77ce634225974345
+  transform 0 0 0 1.047
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -82.01 -0.04 -118.54
+  parent "Ground joints"
+  id 0d76dbda23b498e1
+  transform 0 0 0 1.052
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -79 -0.04 -118.54
+  parent "Ground joints"
+  id 32838f3b69e80bbe
+  transform 0 0 0 0.986
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -75.99 -0.04 -118.54
+  parent "Ground joints"
+  id a0b56ae76a764668
+  transform 0 0 0 1.028
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -72.99 -0.04 -118.54
+  parent "Ground joints"
+  id a311d4e311d2406f
+  transform 0 0 0 0.991
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -69.98 -0.04 -118.54
+  parent "Ground joints"
+  id 444cb6f41613ad61
+  transform 0 0 0 1.011
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -66.97 -0.04 -118.54
+  parent "Ground joints"
+  id 99ab879da2409552
+  transform 0 0 0 1.019
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -63.96 -0.04 -118.54
+  parent "Ground joints"
+  id 8c91010978f96338
+  transform 0 0 0 1.004
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -60.95 -0.04 -118.54
+  parent "Ground joints"
+  id 216ff0aa4e0ef2f0
+  transform 0 0 0 1.018
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -57.95 -0.04 -118.54
+  parent "Ground joints"
+  id caf1133c3154231a
+  transform 0 0 0 1.026
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -54.94 -0.04 -118.54
+  parent "Ground joints"
+  id 3417d21b66b19512
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -51.93 -0.04 -118.54
+  parent "Ground joints"
+  id 7a23edd98d80a575
+  transform 0 0 0 0.982
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -48.92 -0.04 -118.54
+  parent "Ground joints"
+  id 03017a502619d014
+  transform 0 0 0 1.033
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -45.91 -0.04 -118.54
+  parent "Ground joints"
+  id 45a8d3f601ab0d3b
+  transform 0 0 0 1.014
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -42.91 -0.04 -118.54
+  parent "Ground joints"
+  id 1c1f7aeee42646c5
+  transform 0 0 0 1.011
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -39.9 -0.04 -118.54
+  parent "Ground joints"
+  id 8397e49902158e7a
+  transform 0 0 0 1.031
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -36.89 -0.04 -118.54
+  parent "Ground joints"
+  id e3d7718aa269cb61
+  transform 0 0 0 1.011
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -33.88 -0.04 -118.54
+  parent "Ground joints"
+  id bd4b13719b20b0cb
+  transform 0 0 0 1.035
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -30.87 -0.04 -118.54
+  parent "Ground joints"
+  id 00fc3630764b1324
+  transform 0 0 0 0.99
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -27.87 -0.04 -118.54
+  parent "Ground joints"
+  id 3f497182884b2cde
+  transform 0 0 0 1.028
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -94.02 -0.04 -134.22
+  parent "Ground joints"
+  id ea43fc14b8334ec8
+  transform 0 180 0 1.039
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -91.01 -0.04 -134.22
+  parent "Ground joints"
+  id bc67616fdad94c8f
+  transform 0 180 0 1.048
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -79.2 -0.04 -134.22
+  parent "Ground joints"
+  id 87e3ac6c4af2ab17
+  transform 0 180 0 0.985
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -76.19 -0.04 -134.22
+  parent "Ground joints"
+  id 591adc06827bc2a0
+  transform 0 180 0 1.032
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -73.19 -0.04 -134.22
+  parent "Ground joints"
+  id 27c7047bec35ca16
+  transform 0 180 0 0.992
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -70.18 -0.04 -134.22
+  parent "Ground joints"
+  id 5324fc3beaba2f1f
+  transform 0 180 0 1.023
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -67.17 -0.04 -134.22
+  parent "Ground joints"
+  id 5c7c9565d48595ec
+  transform 0 180 0 1.023
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -55.36 -0.04 -134.22
+  parent "Ground joints"
+  id d6bb11fd63a04188
+  transform 0 180 0 1.014
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -52.35 -0.04 -134.22
+  parent "Ground joints"
+  id 499a8c0191a319a0
+  transform 0 180 0 0.998
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -49.35 -0.04 -134.22
+  parent "Ground joints"
+  id 5d662ac5115bb049
+  transform 0 180 0 0.981
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -46.34 -0.04 -134.22
+  parent "Ground joints"
+  id cb48486c868bf4dd
+  transform 0 180 0 0.988
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -43.33 -0.04 -134.22
+  parent "Ground joints"
+  id 550c2771121bdee9
+  transform 0 180 0 1.027
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -31.52 -0.04 -134.22
+  parent "Ground joints"
+  id 7a4424c2d9cb10cd
+  transform 0 180 0 0.988
+  cull_distance 60
+  collision 0
+  cast_shadows 0
+model "Wall grime" "../models/zone/skrunda/joint_wall_grime.glb" -28.51 -0.04 -134.22
+  parent "Ground joints"
+  id 8c16f44cbd5782d7
+  transform 0 180 0 0.987
+  cull_distance 60
+  collision 0
+  cast_shadows 0
 player 5 8.5 5.5 18 0.15 1.8 1.7 0.4 45 100
 player_sounds "../sounds/player/step_gravel.sound" "../sounds/player/land.sound" "../sounds/player/hurt.sound"
 navmesh 1 0.25 0.1 0.35 1.8 0.4 45 32 4

@@ -2671,3 +2671,8 @@ a273613ccfaa90b4 textures/prototype_grid.png
 45d0fdc44a09076b weapons/knife.weapon
 ce818c86a58d6742 weapons/pistol.weapon
 56f191591199d57e weapons/smg.weapon
+3d37cf60e610f736 models/zone/skrunda/joint_ballast_spill.glb
+8496eadd4206deb9 models/zone/skrunda/joint_kerb_soil.glb
+9303eb33943b340d models/zone/skrunda/joint_verge_soil.glb
+3555e1c25333721b models/zone/skrunda/joint_wall_grime.glb
+899e0d15a7dce1e5 models/zone/textures/joints_albedo.png
