@@ -4,7 +4,9 @@
 #include "engine/JobSystem.h"
 #include "engine/Scene.h"
 #include "engine/Terrain.h"
+#include "engine/TextureCook.h"
 
+#include <DetourAlloc.h>
 #include <DetourNavMesh.h>
 #include <DetourNavMeshBuilder.h>
 #include <DetourNavMeshQuery.h>
@@ -18,8 +20,11 @@
 #include <array>
 #include <chrono>
 #include <cmath>
+#include <cstdio>
 #include <cstring>
+#include <fstream>
 #include <random>
+#include <thread>
 
 namespace engine {
 
@@ -36,6 +41,88 @@ struct GeoInstance {
     glm::mat4 transform{1.0f};
     glm::vec3 min{0.0f}, max{0.0f}; // world bounds
 };
+
+// Tile cache: a finished tile (Detour tile data) under the hash of everything it was built
+// from (its triangles, bounds and the settings), so unchanged tiles load instead of building.
+// <cache>/navmesh/<hash>.navtile next to the cooked textures; cleared with them.
+constexpr std::uint32_t kTileCacheVersion = 1;
+
+struct Hasher {
+    std::uint64_t h = 0x9e3779b97f4a7c15ull;
+    void bytes(const void* data, std::size_t n)
+    {
+        const auto* p = static_cast<const unsigned char*>(data);
+        std::size_t i = 0;
+        for (; i + 8 <= n; i += 8) {
+            std::uint64_t w;
+            std::memcpy(&w, p + i, 8);
+            mix(w);
+        }
+        std::uint64_t tail = n;
+        for (; i < n; ++i)
+            tail = (tail << 8) | p[i];
+        mix(tail);
+    }
+    void mix(std::uint64_t w)
+    {
+        h ^= w + 0x9e3779b97f4a7c15ull + (h << 6) + (h >> 2);
+        h *= 0xff51afd7ed558ccdull;
+        h ^= h >> 33;
+    }
+    template <class T>
+    void value(const T& v) { bytes(&v, sizeof v); }
+};
+
+std::filesystem::path tileCacheFile(std::uint64_t key)
+{
+    char name[32];
+    std::snprintf(name, sizeof name, "%016llx.navtile", static_cast<unsigned long long>(key));
+    return textureCookConfig().cacheDir.parent_path() / "navmesh" / name;
+}
+
+// Tile data allocated with dtAlloc (the mesh frees it), or null.
+unsigned char* readCachedTile(std::uint64_t key, int& size, int& polys)
+{
+    std::ifstream in(tileCacheFile(key), std::ios::binary);
+    std::uint32_t version = 0;
+    std::uint64_t stored = 0;
+    std::int32_t n = 0, p = 0;
+    if (!in.read(reinterpret_cast<char*>(&version), 4) || version != kTileCacheVersion ||
+        !in.read(reinterpret_cast<char*>(&stored), 8) || stored != key || !in.read(reinterpret_cast<char*>(&p), 4) ||
+        !in.read(reinterpret_cast<char*>(&n), 4) || n <= 0 || n > (64 << 20))
+        return nullptr;
+    auto* data = static_cast<unsigned char*>(dtAlloc(static_cast<std::size_t>(n), DT_ALLOC_PERM));
+    if (!data || !in.read(reinterpret_cast<char*>(data), n)) {
+        dtFree(data);
+        return nullptr;
+    }
+    size = n;
+    polys = p;
+    return data;
+}
+
+void writeCachedTile(std::uint64_t key, const unsigned char* data, int size, int polys)
+{
+    const std::filesystem::path file = tileCacheFile(key);
+    std::error_code ec;
+    std::filesystem::create_directories(file.parent_path(), ec);
+    // Written under a temporary name and renamed: a half-written tile is never read.
+    const std::filesystem::path temp = file.string() + ".tmp" + std::to_string(std::hash<std::thread::id>{}(std::this_thread::get_id()));
+    {
+        std::ofstream out(temp, std::ios::binary);
+        const std::int32_t n = size, p = polys;
+        out.write(reinterpret_cast<const char*>(&kTileCacheVersion), 4);
+        out.write(reinterpret_cast<const char*>(&key), 8);
+        out.write(reinterpret_cast<const char*>(&p), 4);
+        out.write(reinterpret_cast<const char*>(&n), 4);
+        out.write(reinterpret_cast<const char*>(data), size);
+        if (!out)
+            return void(std::filesystem::remove(temp, ec));
+    }
+    std::filesystem::rename(temp, file, ec);
+    if (ec)
+        std::filesystem::remove(temp, ec);
+}
 
 struct TileGeometry {
     std::vector<float> verts;
@@ -203,6 +290,7 @@ struct NavMesh::Impl {
     double seconds = 0.0;
     int tiles = 0;
     int polys = 0;
+    int cached = 0;
 
     Impl() { filter.setIncludeFlags(kWalkable); }
     ~Impl() { clear(); }
@@ -212,7 +300,7 @@ struct NavMesh::Impl {
         dtFreeNavMesh(mesh);
         query = nullptr;
         mesh = nullptr;
-        tiles = polys = 0;
+        tiles = polys = cached = 0;
     }
 
     dtPolyRef nearest(glm::vec3 p, glm::vec3 extents, float* out) const
@@ -306,7 +394,8 @@ bool NavMesh::build(const Scene& scene, const NavSettings& s, std::string* error
     cfg.detailSampleMaxError = ch;
 
     std::mutex addMutex;
-    std::atomic<int> done{0}, polys{0}, tilesBuilt{0};
+    std::atomic<int> done{0}, polys{0}, tilesBuilt{0}, tilesCached{0};
+    const bool useCache = textureCookConfig().diskCache && !textureCookConfig().cacheDir.empty();
     std::atomic<bool> failed{false};
     const int total = tilesX * tilesZ;
 
@@ -330,6 +419,33 @@ bool NavMesh::build(const Scene& scene, const NavSettings& s, std::string* error
             emitTerrain(*terrain, tmin, tmax, geo);
         if (geo.tris.empty())
             return;
+
+        std::uint64_t key = 0;
+        if (useCache) {
+            Hasher hash;
+            hash.value(kTileCacheVersion);
+            hash.value(tx);
+            hash.value(tz);
+            hash.value(polyBits);
+            hash.bytes(&tc, sizeof tc); // cell sizes, agent, bounds
+            hash.value(s.agentHeight);
+            hash.value(s.agentRadius);
+            hash.value(s.agentClimb);
+            hash.bytes(geo.verts.data(), geo.verts.size() * sizeof(float));
+            hash.bytes(geo.tris.data(), geo.tris.size() * sizeof(int));
+            key = hash.h;
+            int size = 0, tilePolys = 0;
+            if (unsigned char* data = readCachedTile(key, size, tilePolys)) {
+                std::lock_guard lock(addMutex);
+                if (dtStatusSucceed(mesh->addTile(data, size, DT_TILE_FREE_DATA, 0, nullptr))) {
+                    polys += tilePolys;
+                    ++tilesBuilt;
+                    ++tilesCached;
+                    return;
+                }
+                dtFree(data);
+            }
+        }
 
         rcContext ctx(false);
         const int nverts = static_cast<int>(geo.verts.size() / 3), ntris = static_cast<int>(geo.tris.size() / 3);
@@ -394,6 +510,8 @@ bool NavMesh::build(const Scene& scene, const NavSettings& s, std::string* error
         int size = 0;
         if (!dtCreateNavMeshData(&p, &data, &size))
             return;
+        if (useCache)
+            writeCachedTile(key, data, size, pmesh->npolys);
         std::lock_guard lock(addMutex);
         if (dtStatusFailed(mesh->addTile(data, size, DT_TILE_FREE_DATA, 0, nullptr))) {
             dtFree(data);
@@ -427,6 +545,7 @@ bool NavMesh::build(const Scene& scene, const NavSettings& s, std::string* error
     impl_->query = query;
     impl_->tiles = tilesBuilt;
     impl_->polys = polys;
+    impl_->cached = tilesCached;
     impl_->seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
     return true;
 }
@@ -537,6 +656,12 @@ int NavMesh::tileCount() const
 {
     std::lock_guard lock(impl_->mutex);
     return impl_->tiles;
+}
+
+int NavMesh::cachedTileCount() const
+{
+    std::lock_guard lock(impl_->mutex);
+    return impl_->cached;
 }
 
 int NavMesh::polygonCount() const

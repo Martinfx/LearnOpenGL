@@ -477,7 +477,10 @@ výšková mlha se září ke slunci, bloom, ACES, barevné ladění (saturace, 
   textur): vrcholy, indexy, materiály a odkazy na uvařené textury, takže další načtení přeskočí JSON,
   accessory i skládání uzlů. Soubor si pamatuje velikost a čas glTF, `.bin` a obrázků a při jejich změně
   se uvaří znovu. Zóna se načte asi o 10 až 35 % rychleji (měřeno na llvmpipe, kde hodně dělá diskový cache OS).
-  Assets > Clear cooked cache smaže uvařené textury i meshe při příštím startu.
+  Assets > Clear cooked cache smaže uvařené textury, meshe i dlaždice navmeshe při příštím startu.
+- **Cache navmeshe:** hotové dlaždice navmeshe se ukládají do `fps_engine/navmesh/*.navtile` pod hashem
+  svých trojúhelníků a nastavení. Nezměněný level je načte místo stavění (zóna: 6,6 s → 0,2 s na llvmpipe),
+  po úpravě se znovu postaví jen dlaždice, kterých se změna dotkla.
 - **Streamování:** objekty dál než vzdálenost streamování mají na GPU jen malou kopii (max. 256 px).
   Plné rozlišení se načte z cache na pracovním vlákně, když se přiblížíš; po 5 s v dálce se zase uvolní.
   CPU kopie pixelů se po nahrání na GPU zahazují.

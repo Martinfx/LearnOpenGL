@@ -2458,6 +2458,25 @@ void testNavMesh()
             break;
         }
     }
+    // Tile cache: the same level again loads every tile; a moved wall rebuilds only its tiles.
+    {
+        check(nav.cachedTileCount() == 0, "a first build has no cached tiles");
+        engine::NavMesh again;
+        check(again.build(scene, scene.nav, &error) && again.cachedTileCount() == again.tileCount() &&
+                  again.polygonCount() == nav.polygonCount() && again.findPath({-10.0f, 0.0f, -10.0f}, {-10.0f, 0.0f, 10.0f}).size() == path.size(),
+              "an unchanged level loads its navmesh tiles from the cache");
+        scene.nav.tileSize = 8.0f;
+        engine::NavMesh small;
+        check(small.build(scene, scene.nav, &error) && small.cachedTileCount() == 0, "other settings do not use cached tiles");
+        engine::Scene moved = scene;
+        moved.boxes[1].position.z = 0.6f;
+        moved.boxes[1].size.x = 10.0f; // the wall now ends at x = 2
+        moved.boxes[1].position.x = -3.0f;
+        engine::NavMesh changed;
+        check(changed.build(moved, moved.nav, &error) && changed.cachedTileCount() > 0 && changed.cachedTileCount() < changed.tileCount(),
+              "a changed wall rebuilds only the tiles it touches");
+        scene.nav.tileSize = engine::NavSettings{}.tileSize;
+    }
     // Round trip of the level settings.
     scene.nav.agentRadius = 0.5f;
     scene.nav.enabled = false;
@@ -4187,6 +4206,7 @@ int main()
     // Hermetic cook cache for the tests.
     engine::textureCookConfig().cacheDir = std::filesystem::current_path() / "texture_cache";
     std::filesystem::remove_all(engine::textureCookConfig().cacheDir);
+    std::filesystem::remove_all(engine::textureCookConfig().cacheDir.parent_path() / "navmesh");
     const std::set<std::string> needAssets = {"testAnimatedCharacter",      "testEnemyAnimations", "testEnemyAnimGraph", "testRagdoll", "testHierarchyAndDependencies",
                                               "testLevelWithModel",         "testMaterialsAndTextures", "testPhysicsProps",
                                               "testSharedMeshes",           "testTexturedWeaponModel", "testWeaponFilesAndLoadout"};

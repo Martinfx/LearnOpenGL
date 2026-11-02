@@ -925,8 +925,8 @@ int main(int argc, char** argv)
             }
             std::string navError;
             if (navmesh.build(*navScene, navScene->nav, &navError, nullptr, &navCancel))
-                LOG_INFO("navmesh", "%d tiles, %d polygons in %.1f s\n", navmesh.tileCount(), navmesh.polygonCount(),
-                            navmesh.buildSeconds());
+                LOG_INFO("navmesh", "%d tiles (%d from the cache), %d polygons in %.1f s\n", navmesh.tileCount(),
+                         navmesh.cachedTileCount(), navmesh.polygonCount(), navmesh.buildSeconds());
             else if (!navCancel) // leaving the level early is not a problem
                 LOG_WARN("navmesh", "%s", navError.c_str());
             std::fflush(stdout);

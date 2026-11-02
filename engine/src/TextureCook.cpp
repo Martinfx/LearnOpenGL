@@ -243,6 +243,7 @@ TextureCookConfig& textureCookConfig()
         if (std::filesystem::exists(root / "clear_requested", ec)) {
             std::filesystem::remove_all(c.cacheDir, ec);
             std::filesystem::remove_all(root / "meshes", ec);
+            std::filesystem::remove_all(root / "navmesh", ec);
             std::filesystem::remove(root / "clear_requested", ec);
         }
         return c;
@@ -255,7 +256,7 @@ void requestCookCacheClear()
     const std::filesystem::path root = textureCookConfig().cacheDir.parent_path();
     std::error_code ec;
     std::filesystem::create_directories(root, ec);
-    std::ofstream(root / "clear_requested") << "cooked textures and meshes are deleted at the next start\n";
+    std::ofstream(root / "clear_requested") << "cooked textures, meshes and navmesh tiles are deleted at the next start\n";
 }
 
 std::size_t textureFormatBlockBytes(TextureFormat format)

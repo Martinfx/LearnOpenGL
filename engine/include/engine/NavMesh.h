@@ -37,6 +37,8 @@ public:
 
     // Builds from the level's collision geometry (boxes, models with collision,
     // terrain, foliage with collision), the same set the player collides with.
+    // Finished tiles are kept in the disk cache (<cache>/navmesh, textureCookConfig) under
+    // a hash of their triangles and the settings; unchanged tiles load from it next time.
     // `progress` (0..1) and `cancel` may be watched / set from another thread.
     bool build(const Scene& scene, const NavSettings& settings, std::string* error = nullptr,
                std::atomic<float>* progress = nullptr, const std::atomic<bool>* cancel = nullptr);
@@ -55,6 +57,7 @@ public:
     // Mesh triangles for drawing (3 vertices each, slightly above the surface).
     std::vector<glm::vec3> debugTriangles() const;
     int tileCount() const;
+    int cachedTileCount() const; // tiles of the last build read from the disk cache (unchanged since an earlier build)
     int polygonCount() const;
     double buildSeconds() const;
 
