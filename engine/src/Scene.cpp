@@ -202,6 +202,8 @@ bool writeLevelSettings(std::ostream& out, const Scene& scene, const std::filesy
         if (e.bounceLight != Environment{}.bounceLight)
             f1("bounce_light", e.bounceLight);
         f1("exposure", e.exposure);
+        if (e.tonemap != Environment{}.tonemap)
+            out << "env tonemap " << e.tonemap << '\n';
         f1("bloom_intensity", e.bloomIntensity);
         f1("bloom_threshold", e.bloomThreshold);
         f1("ssao_radius", e.ssaoRadius);
@@ -678,7 +680,9 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                 {"fog_light_shafts", &e.fogLightShafts}, {"fog_anisotropy", &e.fogAnisotropy}, {"fog_noise", &e.fogNoise},
                 {"fog_local_lights", &e.fogLocalLights}, {"atmosphere", &e.atmosphere}, {"atmosphere_haze", &e.atmosphereHaze},
                 {"atmosphere_brightness", &e.atmosphereBrightness}, {"sky_occlusion", &e.skyOcclusion}, {"sun_size", &e.sunSize}, {"bounce_light", &e.bounceLight}, {"ground_haze", &e.groundHaze}, {"ground_haze_height", &e.groundHazeHeight}, {"ground_haze_thickness", &e.groundHazeThickness}};
-            if (ok) {
+            if (ok && name == "tonemap")
+                ok = static_cast<bool>(ls >> e.tonemap);
+            else if (ok) {
                 if (auto it = vectors.find(name); it != vectors.end())
                     ok = static_cast<bool>(ls >> it->second->x >> it->second->y >> it->second->z);
                 else if (auto f = floats.find(name); f != floats.end())

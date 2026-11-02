@@ -194,6 +194,17 @@ EnvironmentPanel::EnvironmentPanel(engine::Scene* scene, QWidget* parent)
     addFloat(form, tr("Local lights"), &E::fogLocalLights, 0, 5, 0.05, 2, tr("How strongly lamps and the flashlight light up the fog"));
     section(tr("Camera and image"));
     addFloat(form, tr("Exposure"), &E::exposure, 0.05, 10, 0.05, 2, tr("Manual exposure; with auto-exposure it is the compensation"));
+    tonemap_ = new QComboBox(this);
+    tonemap_->addItems({tr("ACES filmic"), tr("AgX"), tr("Neutral (Khronos PBR)")});
+    tonemap_->setToolTip(tr("How bright light is compressed for the screen: ACES contrasty film look, AgX bright colours fade to "
+                            "white (fire, low sun), Neutral keeps authored colours"));
+    form->addRow(tr("Tone mapping"), tonemap_);
+    connect(tonemap_, &QComboBox::currentIndexChanged, this, [this](int index) {
+        if (updating_ || index < 0)
+            return;
+        scene_->environment.tonemap = index;
+        changed();
+    });
     addFloat(form, tr("Auto exposure"), &E::autoExposure, 0, 1, 0.05, 2,
              tr("0 manual, 1 the camera adapts to the brightness of the view like an eye"));
     addFloat(form, tr("Auto min EV"), &E::exposureMinEv, -10, 0, 0.25, 2, tr("Darkest correction in stops (bright scenes)"));
@@ -398,6 +409,7 @@ void EnvironmentPanel::refresh()
     windSound_->setPath(QString::fromStdU16String(scene_->environment.windSound.u16string()));
     thunderSound_->setPath(QString::fromStdU16String(scene_->environment.thunderSound.u16string()));
     reverb_->setCurrentText(QString::fromStdString(scene_->environment.reverb));
+    tonemap_->setCurrentIndex(std::clamp(scene_->environment.tonemap, 0, 2));
     ambience_->setPath(QString::fromStdU16String(scene_->environment.ambience.u16string()));
     refreshTimeOfDay();
     refreshWeatherCycle();

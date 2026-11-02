@@ -397,6 +397,8 @@ struct Environment {
     // light the shade around them in their colour. 0 off, 1 physical, more = stronger.
     float bounceLight = 1.0f;
     float exposure = 1.0f;
+    // Tone mapping: 0 ACES filmic, 1 AgX (bright colours fade to white), 2 neutral (Khronos PBR Neutral).
+    int tonemap = 0;
     float bloomIntensity = 0.06f;
     float bloomThreshold = 1.2f;
     float ssaoRadius = 0.6f;

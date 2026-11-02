@@ -63,6 +63,7 @@ private:
     SoundPicker* windSound_ = nullptr;
     SoundPicker* thunderSound_ = nullptr;
     class QComboBox* reverb_ = nullptr;
+    class QComboBox* tonemap_ = nullptr;
     SoundPicker* ambience_ = nullptr;
     QComboBox* preset_ = nullptr;
     bool updating_ = false;

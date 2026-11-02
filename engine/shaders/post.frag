@@ -1,5 +1,5 @@
 #version 450 core
-// Final image: exposure (manual x auto), bloom, ACES tone mapping, color grading
+// Final image: exposure (manual x auto), bloom, tone mapping (ACES / AgX / neutral), color grading
 // (saturation, tint, white balance, contrast, lift/gamma/gain, 3D LUT), vignette
 // and film grain, then gamma.
 in vec2 vUV;
@@ -16,6 +16,7 @@ layout(binding = 4) uniform sampler3D uLut;
 uniform float uLutStrength;   // 0 = no LUT
 uniform float uLutSize;
 uniform float uBloomIntensity;
+uniform int uTonemap;         // 0 ACES filmic, 1 AgX, 2 Khronos PBR Neutral
 uniform float uSaturation;
 uniform float uContrast;
 uniform vec3 uTint;
@@ -37,6 +38,48 @@ out vec4 fragColor;
 
 vec3 aces(vec3 x) {
     return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0);
+}
+
+// AgX (Troy Sobotka; polynomial fit by Benjamin Wrensch): bright saturated light (fire,
+// a low sun, anomalies) fades toward white instead of skewing to a hard yellow or cyan.
+vec3 agx(vec3 x) {
+    const mat3 inset = mat3(0.842479062253094, 0.0423282422610123, 0.0423756549057051,
+                            0.0784335999999992, 0.878468636469772, 0.0784336,
+                            0.0792237451477643, 0.0791661274605434, 0.879142973793104);
+    const mat3 outset = mat3(1.19687900512017, -0.0528968517574562, -0.0529716355144438,
+                             -0.0980208811401368, 1.15190312990417, -0.0980434501171241,
+                             -0.0990297440797205, -0.0989611768448433, 1.15107367264116);
+    const float minEv = -12.47393, maxEv = 4.026069;
+    vec3 v = clamp(log2(max(inset * x, vec3(1e-10))), minEv, maxEv);
+    v = (v - minEv) / (maxEv - minEv);
+    vec3 v2 = v * v, v4 = v2 * v2;
+    v = 15.5 * v4 * v2 - 40.14 * v4 * v + 31.96 * v4 - 6.868 * v2 * v + 0.4298 * v2 + 0.1191 * v - 0.00232;
+    return clamp(pow(max(outset * v, vec3(0.0)), vec3(2.2)), 0.0, 1.0); // back to linear
+}
+
+// Khronos PBR Neutral: colours stay as authored up to bright highlights (no hue shifts).
+vec3 pbrNeutral(vec3 c) {
+    const float start = 0.76, desaturation = 0.15;
+    float x = min(c.r, min(c.g, c.b));
+    c -= x < 0.08 ? x - 6.25 * x * x : 0.04;
+    float peak = max(c.r, max(c.g, c.b));
+    if (peak < start)
+        return c;
+    const float d = 1.0 - start;
+    float newPeak = 1.0 - d * d / (peak + d - start);
+    c *= newPeak / peak;
+    float g = 1.0 - 1.0 / (desaturation * (peak - newPeak) + 1.0);
+    return mix(c, vec3(newPeak), g);
+}
+
+// The operators scaled so that middle grey comes out alike (0.18 -> 0.27, as with ACES):
+// switching keeps the exposure of a level.
+vec3 tonemap(vec3 x) {
+    if (uTonemap == 1)
+        return agx(x * 1.334);
+    if (uTonemap == 2)
+        return clamp(pbrNeutral(x * 1.706), 0.0, 1.0);
+    return aces(x);
 }
 
 float hash(vec2 p) {
@@ -92,7 +135,7 @@ void main() {
     color += bloom * uBloomIntensity;
     float autoExposure = uAutoExposure > 0.0 ? texelFetch(uAdapted, ivec2(0), 0).r : 1.0;
     color *= uExposure * mix(1.0, autoExposure, uAutoExposure);
-    color = aces(color);
+    color = tonemap(color);
     float luma = dot(color, vec3(0.2126, 0.7152, 0.0722));
     color = mix(vec3(luma), color, uSaturation);
     color *= uTint * uWhiteBalance;

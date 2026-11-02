@@ -3715,6 +3715,7 @@ void Renderer::present()
     const Program& post = programs_.post;
     glUseProgram(post.id);
     glUniform1f(post.loc("uExposure"), e.exposure);
+    glUniform1i(post.loc("uTonemap"), std::clamp(e.tonemap, 0, 2));
     glUniform1f(post.loc("uAutoExposure"), adaptTex_[0] ? std::clamp(e.autoExposure, 0.0f, 1.0f) : 0.0f);
     {
         // White balance: warm/cold along orange-blue, tint along green-magenta, luminance kept.

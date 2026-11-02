@@ -107,6 +107,21 @@ staré levely víc, než je nutné. Výkonový cíl: střední GPU 60 fps na uli
 Vegetace: translucenci listů a trávy (průsvit proti slunci) přidává vlákno levelu do
 `pbr.frag`; engine ji zachová a napojí na nastavení prostředí.
 
+### Stav (2026-11-02)
+
+| Krok | Commit | Nastavení (level `env` / editor) |
+|---|---|---|
+| 1. Fyzikální atmosféra | 31b4c7a | `atmosphere`, `atmosphere_haze`, `atmosphere_brightness` (Environment > Sky) |
+| 2. Zastínění oblohy | 905d9f1 | `sky_occlusion` (Environment > Sky) |
+| 3. Zrcadlová okluze + víceodrazová energie | 905d9f1 | vždy zapnuto |
+| 4. Měkké stíny (PCSS) | 6745a90 | `sun_size` (Environment > Sun), kvalita „Soft shadows (PCSS)“ |
+| 5. Odražené světlo (SSGI) | 1b7595f | `bounce_light` (Environment > Sky), kvalita „Bounce light (SSGI)“ |
+| 6. Přízemní opar, barva oparu podle směru | b054eb9 | `ground_haze`, `ground_haze_height`, `ground_haze_thickness` (Environment > Fog) |
+| 7. Tónové mapování ACES / AgX / neutral | viz git log | `tonemap` 0/1/2 (Environment > Camera and image: „Tone mapping“) |
+
+Contact shadows (krátký paprsek v hloubce) zatím nejsou: v hlavním průchodu už není volná
+texturová jednotka; přijdou s odloženým (deferred) stínovým průchodem nebo spolu s bodem 8.
+
 ## 5. Ověření
 
 Každý krok: snímek před/po z hráčovy kamery na ulici (stejná pozice a čas), golden testy,
