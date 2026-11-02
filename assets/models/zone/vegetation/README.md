@@ -22,6 +22,7 @@ of the crown, so they light like a volume rather than flat planes.
 | `maple_a`, `maple_b` | middle-aged maple, round full crown (outer leaves light, inner crown darker) | 11.0 / 9.3 | 1964 / 1756 |
 | `ash_a`, `ash_b` | middle-aged ash, taller oval crown | 13.1 / 9.4 | 1680 / 1362 |
 | `bush_street_a`, `bush_street_b`, `bush_street_c` | dense self-seeded shrub (elder / hazel / lilac gone wild), a mound of leaves on many stems | 3.5 / 2.6 / 4.2 | 982 / 676 / 1264 |
+| `ivy_low`, `ivy_a`, `ivy_b`, `ivy_tall` | ivy / wild vine climbing a wall: vines with side shoots, leaves standing off the wall; the wall face is z = 0 of the glb, leaves toward +Z (place it on the facade, turned like the house) | 2.9 / 6.4 / 9.8 / 16.1 | 682 / 2134 / 5190 / 9256 |
 | `log_fallen_a` | fallen dead trunk (Poly Haven scan, decimated) | 4.05 long | 4000 |
 
 ## Ground cover (Poly Haven scans, split per variant)

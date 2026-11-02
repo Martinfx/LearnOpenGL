@@ -20,6 +20,7 @@ Design (docs/LEVEL_ART_GUIDE.md):
   - Nature takes the street back from the edges: the strip along each kerb, the foot of the walls, the cracks
     between the slabs; the middle keeps a trodden line of bare slabs, where people still walk.
 """
+import json
 import math
 import os
 import random
@@ -68,6 +69,7 @@ HOUSES = [('house_a', 36.0, 5, 'st_brick_red', 'pitched', 1), ('house_b', 30.0, 
           ('house_end', 48.0, 9, 'st_brick_patch', 'flat', 11)]
 DEPTH = 14.0
 # shelled houses (second reference): (from, to) of the break as fractions of the length, first storey gone
+SPOTS = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'overgrown_street_spots.json')  # from --models
 RUINS = {'house_c': (0.55, 0.75, 4), 'house_e': (0.2, 0.36, 5), 'house_i': (0.62, 0.8, 4)}
 
 
@@ -77,13 +79,18 @@ def build_models():
     os.makedirs(out, exist_ok=True)
     mats.ensure_textures()
     fixtures.make_sign_atlas(force=True)
+    spots = {}
     for name, L, fl, skin, roof, seed in HOUSES:
         for lod in (0, 1):
             m = tenement.tenement(L, fl, DEPTH, seed=seed, lod=lod, skin=skin, roof=roof,
                                   ruin=RUINS.get(name))
+            if lod == 0:
+                spots[name] = [[round(float(v), 2) for v in p[:3]] + [p[3]] for p in m.spots]
             fn = f'{name}.glb' if lod == 0 else f'{name}_lod1.glb'
             glb.write_glb(os.path.join(out, fn), m, tex_rel_dir='../textures', name=name)
         print(name, m.triangles(), 'tris (lod1)')
+    with open(SPOTS, 'w') as f:
+        json.dump(spots, f, separators=(',', ':'))
     for s in fixtures.CABLE_SPANS:
         glb.write_glb(os.path.join(out, f'cable_{s}m.glb'), fixtures.cable(s), tex_rel_dir='../textures', name=f'cable_{s}m')
     glb.write_glb(os.path.join(out, 'kerb_6m.glb'), fixtures.kerb(6.0, seed=3), tex_rel_dir='../textures', name='kerb_6m')
@@ -133,13 +140,14 @@ def build():
     nz = Noise(77)
     lv = Level()
     for g, p in (('Houses', ''), ('Street', ''), ('Kerbs', 'Street'), ('Lamps and cables', 'Street'), ('Wrecks', 'Street'),
-                 ('Rubble', 'Street'), ('Barricades', 'Street'), ('Plates', 'Houses'), ('Far', '')):
+                 ('Rubble', 'Street'), ('Barricades', 'Street'), ('Plates', 'Houses'), ('Ivy', 'Houses'), ('Far', '')):
         lv.group(g, p)
 
     # ------------------------------------------------------------------ houses along both sides
     houses = []                 # (x0, z0, x1, z1) footprints, for the ground and the vegetation
     order = [h[0] for h in HOUSES if h[0] != 'house_end']
     fronts = []                 # (side, facade x, south corner z) of the houses along the playable street
+    facades = []                # (side, facade x, centre z, length, house) of every house along the street
     ruins = []                  # (facade x, z from, z to) of the shelled houses: their rubble spills onto the street
 
     def row(side, z_from, z_to, start):
@@ -164,6 +172,7 @@ def build():
             if name in RUINS:           # where the break is, along the street (local +x runs along side * z)
                 za, zb = sorted(cz + side * (-L / 2 + f * L) for f in RUINS[name][:2])
                 ruins.append((side * (FACADE + setback), za, zb))
+            facades.append((side, side * (FACADE + setback), cz, L, name))
             if NORTH_END - 10 < cz < SOUTH_END + 10:
                 fronts.append((side, side * (FACADE + setback), cz + L / 2))
             z -= L - 0.2           # 20 cm overlap: no sunlit slit between the party walls
@@ -202,6 +211,44 @@ def build():
     lv.lines.append(f'box "Far street ground" 0 -0.06 -265 140 0.1 150 1 1 1')
     lv.lines.append('  parent "Far"')
     lv.lines.append('  material "../materials/skrunda/terrain_lush.material"')
+
+    # ivy and wild vine climbing the fronts from the pavement: mostly low patches round the ground floor, here and
+    # there a sheet up to the third or fifth floor (never over a break: there is no wall left to climb)
+    irng = random.Random(4242)  # own stream: the rest of the street stays where it was
+    for side, fx, cz, L, name in facades:
+        brk = [(a, b) for (rx, a, b) in ruins if abs(rx - fx) < 1.0 and cz - L / 2 <= a <= cz + L / 2]
+        for _ in range(max(1, int(L / 8.0 * irng.uniform(0.5, 1.4)))):
+            z = irng.uniform(cz - L / 2 + 1.5, cz + L / 2 - 1.5)
+            r = irng.random()
+            key = 'ivy_low' if r < 0.42 else 'ivy_a' if r < 0.72 else 'ivy_b' if r < 0.92 else 'ivy_tall'
+            if key in ('ivy_b', 'ivy_tall') and any(a - 4 < z < b + 4 for a, b in brk):
+                key = 'ivy_low'
+            lv.model('Ivy', V + key + '.glb', fx - side * 0.04, WALK, z, 90.0 if side < 0 else -90.0,
+                     irng.uniform(0.85, 1.15), group='Ivy', lod=(V + key + '_lod1.glb', 30), cull=140 if key != 'ivy_low' else 70,
+                     coll=False, shadows=key != 'ivy_low', sway=0.03)
+
+    # self-seeded birches, maples and grass on balconies, flat roofs and the open floors of the broken houses (the
+    # spots come from the house generator; local x runs along side * z, local +z (the front) toward the street)
+    spots = json.load(open(SPOTS)) if os.path.exists(SPOTS) else {}
+    for side, fx, cz, L, name in facades:
+        cx = fx + side * DEPTH / 2
+        for lx, ly, lz, kind in spots.get(name, []):
+            p = {'balcony': 0.3, 'roof': 0.3, 'ledge': 0.8, 'cornice': 0.22}[kind]
+            if irng.random() > p:
+                continue
+            x, z = cx - side * lz, cz + side * lx
+            r = irng.random()
+            if kind == 'balcony':
+                key, sc = (('sapling_c', irng.uniform(0.6, 0.95)) if r < 0.45 else ('birch_young', irng.uniform(0.35, 0.55))
+                           if r < 0.7 else (irng.choice(('grass_clump_a', 'weed_a', 'nettle_tall_a')), irng.uniform(0.8, 1.1)))
+            elif kind == 'cornice':
+                key, sc = ('birch_young', irng.uniform(0.25, 0.45)) if r < 0.7 else ('sapling_c', irng.uniform(0.4, 0.7))
+            else:
+                key, sc = (('birch_young', irng.uniform(0.5, 0.9)) if r < 0.45 else ('sapling_c', irng.uniform(0.7, 1.1))
+                           if r < 0.75 else ('sapling_a', irng.uniform(0.5, 0.8)))
+            lv.model('Roof plant', V + key + '.glb', x, WALK + ly, z, irng.uniform(0, 360), sc, group='Ivy',
+                     lod=(V + key + '_lod1.glb', 25), cull=120 if kind != 'balcony' or sc > 0.6 else 60,
+                     coll=False, shadows=kind != 'balcony', sway=0.7 if key.startswith(('sapling', 'birch')) else 1.0)
 
     # enamel plates at the south corner of each house: the street name over the house number (odd west, even east)
     num = {-1: 1, 1: 2}

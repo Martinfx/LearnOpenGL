@@ -56,6 +56,9 @@ Kevin Lynch (The Image of the City, 1960) popsal, z čeho si lidé skládají ma
   schodem; stropy visí přes okraj, trčí z nich pruty, střecha má holé krokve, okna u zlomu jsou vyhořelá se sazemi
   a suť leží v hromadě u fasády i na ulici. Takové domy dávají ulici siluetu (vidět jimi oblohu a vzdálená
   sídliště) a jsou orientační body; víc než dva tři na ulici z nich udělá kulisu války místo opuštěného města.
+- Příroda leze i na domy: břečťan od chodníku (ivy_*, nejčastěji nízký kolem přízemí, místy až do 5. patra), břízky
+  a javory na balkonech, v okapu římsy a na plochých střechách, tráva na otevřených patrech rozbitých domů. Místa
+  pro semenáčky vrací generátor domu (`m.spots`: balcony, cornice, roof, ledge), level je osazuje vlastním rng.
 
 ## 4. Jak příroda bere opuštěné město
 

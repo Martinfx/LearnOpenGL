@@ -12,5 +12,7 @@ gen broadleaf broadleaf_a 11 4 "$ST" & gen broadleaf broadleaf_b 8 7 "$ST" & gen
 gen sapling sapling_a 4.5 3 "$ST" & gen sapling sapling_b 5.6 6 "$ST" & gen sapling sapling_c 2.8 11 "$ST" & wait
 gen birch birch_a 15 3 "$BIR" & gen birch birch_young 5 5 "$BIR" &
 gen bush bush_street_a 2.2 21 "$ST" "\"width\":3.0," & gen bush bush_street_b 1.6 22 "$ST" "\"width\":2.2," & gen bush bush_street_c 2.8 23 "$ST" "\"width\":3.6," & wait
+# ivy on the house walls (wall face at z = 0 of the glb, leaves toward +Z)
+gen ivy ivy_low 2.6 31 "$ST" "\"width\":2.4," & gen ivy ivy_a 6 32 "$ST" "\"width\":3.2," & gen ivy ivy_b 10 33 "$ST" "\"width\":4.5," & gen ivy ivy_tall 16 34 "$ST" "\"width\":5.5," & wait
 # alpha-tested (MASK) leaves: Blender exports BLEND, which loses the crown shadows and sorts badly
-python3 -I $H/glbmask.py --match=leaves $(for n in maple_a maple_b ash_a ash_b broadleaf_a broadleaf_b broadleaf_young sapling_a sapling_b sapling_c birch_a birch_young bush_street_a bush_street_b bush_street_c; do echo $OUT/$n.glb $OUT/${n}_lod1.glb; done)
+python3 -I $H/glbmask.py --match=leaves $(for n in maple_a maple_b ash_a ash_b broadleaf_a broadleaf_b broadleaf_young sapling_a sapling_b sapling_c birch_a birch_young bush_street_a bush_street_b bush_street_c ivy_low ivy_a ivy_b ivy_tall; do echo $OUT/$n.glb $OUT/${n}_lod1.glb; done)

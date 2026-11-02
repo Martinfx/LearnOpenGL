@@ -168,6 +168,30 @@ elif sp=='bush':   # dense self-seeded shrub (elder, hazel, lilac gone wild): ma
         if c.z<0.15: c.z=0.15+R.uniform(0,0.2)
         rr=v.length
         if keep(): out_cluster(c,csz(R.uniform(0.75,1.05)*min(1.3,0.55+0.25*H)),ctr,'leaves',extra=rr>0.65)
+elif sp=='ivy':   # ivy / wild vine climbing a wall: the wall face is the plane y=0, leaves stand off it toward -Y
+    W=cfg.get('width',3.0); nv=int(3+W*1.4)
+    for k in range(nv):
+        x0=R.uniform(-W*0.42,W*0.42); Hk=H*R.uniform(0.4,1.0)**0.7
+        n=max(4,int(Hk/0.35)); pts=[Vector((x0,-0.03,0))]
+        for i in range(n):
+            p=pts[-1]+Vector((R.uniform(-0.2,0.2),0,Hk/n)); p.x=max(-W/2,min(W/2,p.x)); p.y=-0.025-R.uniform(0,0.03); pts.append(p)
+        tube(pts,0.035,0.008,4,'bark')
+        for b in range(int(Hk/0.7)):                    # side shoots fanning out over the wall
+            p=at(pts,R.uniform(0.1,0.95)); a=R.choice([-1,1]); sh=[p]
+            for i in range(3):
+                q=sh[-1]+Vector((a*R.uniform(0.15,0.35),0,R.uniform(-0.05,0.25))); q.y=-0.025; sh.append(q)
+            tube(sh,0.014,0.004,3,'bark')
+        for i in range(int(Hk*W/nv*24)):               # leaves: dense low, thinning to a ragged top
+            t=R.random()**0.75; p=at(pts,t)
+            c=p+Vector((R.uniform(-0.7,0.7)*(1.25-0.5*t),-R.uniform(0.05,0.24),R.uniform(-0.2,0.2)))
+            c.x=max(-W/2-0.2,min(W/2+0.2,c.x)); c.z=max(0.1,c.z)
+            nr=Vector((R.uniform(-0.4,0.4),-1,R.uniform(-0.15,0.5))).normalized()
+            u=perp(nr); u=Quaternion(nr,R.uniform(0,6.28))@u; v=nr.cross(u).normalized()
+            s=csz(R.uniform(0.42,0.68)*(1.0-0.3*t))
+            card(c,u,v,s,s,R.choice([1,1,2,0]),nrm_c=c+Vector((0,6,0)),mat='leaves_dark' if R.random()<0.6 else 'leaves')
+        if R.random()<0.6:                              # a spray hanging off the top
+            c=pts[-1]+Vector((0,-0.1,0.1)); s=csz(R.uniform(0.6,0.9))
+            card(c,Vector((1,0,0)),Vector((0,0,1)),s,s*1.2,3,0.5,1.0,nrm_c=c+Vector((0,6,0)))
 elif sp in('pine','spruce'):
     trunk=path(Vector((0,0,0)),Vector((R.uniform(-0.02,0.02),R.uniform(-0.02,0.02),1)),H,10 if not LOD else 6,noise=0.02 if sp=='spruce' else 0.035)
     r0=(0.22 if sp=='pine' else 0.2)*max(S,0.3); tube(trunk,r0,0.02,8,'bark'); ctr=Vector((0,0,H*(0.8 if sp=='pine' else 0.5)))

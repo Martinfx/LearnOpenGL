@@ -62,6 +62,7 @@ def tenement(length=36.0, floors=5, depth=14.0, seed=0, lod=0, skin='st_brick_re
         return 0.0 if f == 0 else GROUND + (f - 1) * STOREY
 
     rrng = np.random.default_rng(seed + 2000)
+    m.spots = []        # (x, y, z, kind) where seeds could take root: 'balcony', 'roof', 'ledge' (the level plants them)
     if ruin:
         ra0, rb0 = -hx + ruin[0] * length, -hx + ruin[1] * length
         keep = ruin[2]
@@ -181,6 +182,7 @@ def tenement(length=36.0, floors=5, depth=14.0, seed=0, lod=0, skin='st_brick_re
                 continue                                          # this one has fallen off
             w = min(2.6, bay - 0.3)
             m.box('concrete', (cx - w / 2, yf - 0.16, zf), (cx + w / 2, yf, zf + 1.0))
+            m.spots.append((cx + rrng.uniform(-w / 3, w / 3), yf, zf + 0.5, 'balcony'))
             if lod == 0:
                 for sx in (-1, 1):
                     m.box('concrete', (cx + sx * (w / 2 - 0.25) - 0.08, yf - 0.55, zf), (cx + sx * (w / 2 - 0.25) + 0.08, yf - 0.16, zf + 0.6))
@@ -294,9 +296,21 @@ def tenement(length=36.0, floors=5, depth=14.0, seed=0, lod=0, skin='st_brick_re
             m.box('concrete', (a - 0.05, top + 1.6, hz - T - 0.05), (c + 0.05, top + 1.7, hz + 0.05))
 
     # ---------------------------------------------------------------- the break: rubble, rebar
+    for k in range(int(length / 5)):                    # the cornice gutter, choked with leaves: birches in a row
+        x = rrng.uniform(-hx + 1.0, hx - 1.0)
+        if standing(floors, x, 1.0):
+            m.spots.append((x, top + 0.9, zf + 0.25, 'cornice'))
+    if roof != 'pitched':                                # dust and leaves gather on the flat roof: birches seed there
+        for k in range(int(length / 3)):
+            x = rrng.uniform(-hx + 1.0, hx - 1.0)
+            z = rrng.choice((rrng.uniform(hz - 2.5, hz - T - 0.3), rrng.uniform(-hz + T + 0.3, hz - T - 0.3)))
+            if standing(floors, x, 1.0):
+                m.spots.append((x, top, z, 'roof'))
     if ruin:
         g = gap(keep)
         y = floor_y(keep)
+        for k in range(6):                               # the open floor under the sky greens first
+            m.spots.append((rrng.uniform(g[0] + 0.8, g[1] - 0.8), y, rrng.uniform(-hz + 1.5, hz - 1.5), 'ledge'))
         for k in range(int((g[1] - g[0]) * (10 if lod == 0 else 3))):
             x = rrng.uniform(g[0] + 0.2, g[1] - 0.2)
             z = rrng.uniform(-hz + T + 0.3, hz - T - 0.3)
