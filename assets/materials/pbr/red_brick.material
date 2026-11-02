@@ -12,3 +12,5 @@ albedo_map "../../textures/pbr/red_brick/albedo.jpg"
 normal_map "../../textures/pbr/red_brick/normal.jpg"
 roughness_map "../../textures/pbr/red_brick/roughness.jpg"
 occlusion_map "../../textures/pbr/red_brick/ao.jpg"
+height_depth 0.02
+height_map "../../textures/pbr/red_brick/height.jpg"

@@ -12,3 +12,5 @@ albedo_map "../../textures/pbr/rubber_tiles/albedo.jpg"
 normal_map "../../textures/pbr/rubber_tiles/normal.jpg"
 roughness_map "../../textures/pbr/rubber_tiles/roughness.jpg"
 occlusion_map "../../textures/pbr/rubber_tiles/ao.jpg"
+height_depth 0.004
+height_map "../../textures/pbr/rubber_tiles/height.jpg"

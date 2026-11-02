@@ -12,3 +12,5 @@ albedo_map "../../textures/pbr/stony_dirt_path/albedo.jpg"
 normal_map "../../textures/pbr/stony_dirt_path/normal.jpg"
 roughness_map "../../textures/pbr/stony_dirt_path/roughness.jpg"
 occlusion_map "../../textures/pbr/stony_dirt_path/ao.jpg"
+height_depth 0.02
+height_map "../../textures/pbr/stony_dirt_path/height.jpg"

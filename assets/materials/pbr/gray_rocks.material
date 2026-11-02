@@ -12,3 +12,5 @@ albedo_map "../../textures/pbr/gray_rocks/albedo.jpg"
 normal_map "../../textures/pbr/gray_rocks/normal.jpg"
 roughness_map "../../textures/pbr/gray_rocks/roughness.jpg"
 occlusion_map "../../textures/pbr/gray_rocks/ao.jpg"
+height_depth 0.04
+height_map "../../textures/pbr/gray_rocks/height.jpg"

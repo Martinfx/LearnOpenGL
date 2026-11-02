@@ -12,3 +12,5 @@ albedo_map "../../textures/pbr/whitewashed_brick/albedo.jpg"
 normal_map "../../textures/pbr/whitewashed_brick/normal.jpg"
 roughness_map "../../textures/pbr/whitewashed_brick/roughness.jpg"
 occlusion_map "../../textures/pbr/whitewashed_brick/ao.jpg"
+height_depth 0.015
+height_map "../../textures/pbr/whitewashed_brick/height.jpg"

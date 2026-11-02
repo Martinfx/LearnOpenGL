@@ -12,3 +12,5 @@ albedo_map "../../textures/pbr/mossy_rock/albedo.jpg"
 normal_map "../../textures/pbr/mossy_rock/normal.jpg"
 roughness_map "../../textures/pbr/mossy_rock/roughness.jpg"
 occlusion_map "../../textures/pbr/mossy_rock/ao.jpg"
+height_depth 0.04
+height_map "../../textures/pbr/mossy_rock/height.jpg"

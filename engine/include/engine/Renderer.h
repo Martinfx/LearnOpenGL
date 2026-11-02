@@ -122,6 +122,7 @@ struct RenderQuality {
     // takes over when this is on.
     bool taa = true;
     bool ssr = true; // screen-space reflections (wet ground, glass, polished floors)
+    bool parallax = true; // height maps shift textures with the view angle (Material::heightDepth)
     float motionBlur = 0.0f; // camera motion blur in continuous views, shutter fraction 0..1 (0 = off)
     int textureUploadsPerFrame = 6; // new textures sent to the GPU per frame, 0 = all at once
     // Memory. Textures larger than textureMaxSize drop their top mip levels (0 = full size).
@@ -313,7 +314,8 @@ private:
         int normalStrength = -1, roughnessChannel = -1, metallicChannel = -1, overlay = -1, envRotation = -1;
         int overlaySun = -1, uvScale = -1, uvOffset = -1, uvRotation = -1, shading = -1;
         int alphaMode = -1, alphaCutoff = -1, opacity = -1, instanced = -1, instanceBase = -1, sway = -1, fade = -1;
-        int hasMap[8] = {-1, -1, -1, -1, -1, -1, -1, -1}; // MapKind order
+        int hasMap[9] = {-1, -1, -1, -1, -1, -1, -1, -1, -1}; // MapKind order
+        int heightDepth = -1;
         int detail = -1;
         int paintBase = -1, paintBaseVertex = -1;
         int blendLayers = -1, blendColor = -1, blendTiling = -1, blendSurface = -1, blendNormalStrength = -1, blendSharpness = -1;

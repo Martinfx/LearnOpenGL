@@ -12,3 +12,5 @@ albedo_map "../../textures/pbr/gravel_embedded_concrete/albedo.jpg"
 normal_map "../../textures/pbr/gravel_embedded_concrete/normal.jpg"
 roughness_map "../../textures/pbr/gravel_embedded_concrete/roughness.jpg"
 occlusion_map "../../textures/pbr/gravel_embedded_concrete/ao.jpg"
+height_depth 0.01
+height_map "../../textures/pbr/gravel_embedded_concrete/height.jpg"

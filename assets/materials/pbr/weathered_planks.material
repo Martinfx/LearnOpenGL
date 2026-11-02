@@ -12,3 +12,5 @@ albedo_map "../../textures/pbr/weathered_planks/albedo.jpg"
 normal_map "../../textures/pbr/weathered_planks/normal.jpg"
 roughness_map "../../textures/pbr/weathered_planks/roughness.jpg"
 occlusion_map "../../textures/pbr/weathered_planks/ao.jpg"
+height_depth 0.008
+height_map "../../textures/pbr/weathered_planks/height.jpg"

@@ -3764,6 +3764,26 @@ void testMaterialInstances()
     }
     detail.reset();
 
+    // Height map (parallax): depth parsed, written only with a height map, a material value.
+    {
+        std::ofstream height(dir / "height.material");
+        height << "version 2\nname \"Height\"\nheight_depth 0.035\n";
+    }
+    auto height = engine::loadMaterial(dir / "height.material", &error);
+    check(height && height->heightDepth == 0.035f && std::string(engine::mapKey(engine::MapKind::Height)) == "height_map",
+          "height depth loads");
+    if (height) {
+        check(engine::saveMaterial(*height, dir / "height.material", &error), "a material with a height depth saves");
+        std::ifstream hin(dir / "height.material");
+        const std::string htext((std::istreambuf_iterator<char>(hin)), std::istreambuf_iterator<char>());
+        check(htext.find("height_depth") == std::string::npos, "the height depth is not written without a height map");
+        engine::Material changed = *height;
+        changed.heightDepth = 0.01f;
+        const auto hdiff = engine::materialDifferences(*height, changed);
+        check(hdiff.size() == 1 && hdiff[0] == "height_depth", "height depth is a material value");
+    }
+    height.reset();
+
     // Blend layers: another material by path, saved relative; a material cannot be its own layer.
     {
         std::ofstream moss(dir / "moss.material");

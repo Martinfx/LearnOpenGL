@@ -12,3 +12,5 @@ albedo_map "../../textures/pbr/floor_tiles_06/albedo.jpg"
 normal_map "../../textures/pbr/floor_tiles_06/normal.jpg"
 roughness_map "../../textures/pbr/floor_tiles_06/roughness.jpg"
 occlusion_map "../../textures/pbr/floor_tiles_06/ao.jpg"
+height_depth 0.006
+height_map "../../textures/pbr/floor_tiles_06/height.jpg"

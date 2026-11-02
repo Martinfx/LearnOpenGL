@@ -12,3 +12,5 @@ albedo_map "../../textures/pbr/dry_riverbed_rock/albedo.jpg"
 normal_map "../../textures/pbr/dry_riverbed_rock/normal.jpg"
 roughness_map "../../textures/pbr/dry_riverbed_rock/roughness.jpg"
 occlusion_map "../../textures/pbr/dry_riverbed_rock/ao.jpg"
+height_depth 0.03
+height_map "../../textures/pbr/dry_riverbed_rock/height.jpg"

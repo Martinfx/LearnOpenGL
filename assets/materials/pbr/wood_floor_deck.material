@@ -12,3 +12,5 @@ albedo_map "../../textures/pbr/wood_floor_deck/albedo.jpg"
 normal_map "../../textures/pbr/wood_floor_deck/normal.jpg"
 roughness_map "../../textures/pbr/wood_floor_deck/roughness.jpg"
 occlusion_map "../../textures/pbr/wood_floor_deck/ao.jpg"
+height_depth 0.006
+height_map "../../textures/pbr/wood_floor_deck/height.jpg"

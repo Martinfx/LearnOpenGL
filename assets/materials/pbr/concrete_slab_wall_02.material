@@ -12,3 +12,5 @@ albedo_map "../../textures/pbr/concrete_slab_wall_02/albedo.jpg"
 normal_map "../../textures/pbr/concrete_slab_wall_02/normal.jpg"
 roughness_map "../../textures/pbr/concrete_slab_wall_02/roughness.jpg"
 occlusion_map "../../textures/pbr/concrete_slab_wall_02/ao.jpg"
+height_depth 0.01
+height_map "../../textures/pbr/concrete_slab_wall_02/height.jpg"

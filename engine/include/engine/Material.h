@@ -70,7 +70,9 @@ const char* alphaModeName(AlphaMode mode); // "opaque", "mask", "blend"
 // Texture slots of a material. Roughness, metallic and occlusion read the red channel.
 // Detail maps repeat much finer than the base maps and fade out with distance: grain of concrete,
 // scratches on metal close up. DetailAlbedo is grey (0.5 = no change), DetailNormal a normal map.
-enum class MapKind { Albedo, Normal, Roughness, Metallic, Occlusion, Emissive, DetailAlbedo, DetailNormal, Count };
+// Height (white = high) shifts the texture lookup with the view angle (parallax occlusion mapping):
+// mortar sinks between bricks, cobbles stand out; `heightDepth` metres deep, fading out with distance.
+enum class MapKind { Albedo, Normal, Roughness, Metallic, Occlusion, Emissive, DetailAlbedo, DetailNormal, Height, Count };
 constexpr int kMapCount = static_cast<int>(MapKind::Count);
 const char* mapKey(MapKind kind);   // key in .material files, e.g. "normal_map"
 const char* mapLabel(MapKind kind); // for the editor, e.g. "Normal map"
@@ -95,6 +97,7 @@ struct Material {
     float detailTiling = 8.0f;                 // detail maps repeat this many times per base map repeat
     float detailStrength = 1.0f;               // 0 = off .. 1 = full detail
     float detailDistance = 12.0f;              // m: gone beyond this distance from the camera
+    float heightDepth = 0.02f;                 // m: how deep the darkest height map texel lies (0 = off)
     // Blend layers: other materials painted onto models in the editor (vertex paint: red =
     // layer 1, green = layer 2). Their color, roughness, albedo, normal and roughness maps are used;
     // the edge follows the layer's albedo brightness (moss in the cracks first), sharper with blendSharpness.

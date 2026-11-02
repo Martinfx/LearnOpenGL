@@ -12,3 +12,5 @@ albedo_map "../../textures/pbr/large_grey_tiles/albedo.jpg"
 normal_map "../../textures/pbr/large_grey_tiles/normal.jpg"
 roughness_map "../../textures/pbr/large_grey_tiles/roughness.jpg"
 occlusion_map "../../textures/pbr/large_grey_tiles/ao.jpg"
+height_depth 0.006
+height_map "../../textures/pbr/large_grey_tiles/height.jpg"

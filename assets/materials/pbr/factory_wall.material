@@ -12,3 +12,5 @@ albedo_map "../../textures/pbr/factory_wall/albedo.jpg"
 normal_map "../../textures/pbr/factory_wall/normal.jpg"
 roughness_map "../../textures/pbr/factory_wall/roughness.jpg"
 occlusion_map "../../textures/pbr/factory_wall/ao.jpg"
+height_depth 0.015
+height_map "../../textures/pbr/factory_wall/height.jpg"

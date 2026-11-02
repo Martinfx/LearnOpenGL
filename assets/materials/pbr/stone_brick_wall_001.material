@@ -12,3 +12,5 @@ albedo_map "../../textures/pbr/stone_brick_wall_001/albedo.jpg"
 normal_map "../../textures/pbr/stone_brick_wall_001/normal.jpg"
 roughness_map "../../textures/pbr/stone_brick_wall_001/roughness.jpg"
 occlusion_map "../../textures/pbr/stone_brick_wall_001/ao.jpg"
+height_depth 0.03
+height_map "../../textures/pbr/stone_brick_wall_001/height.jpg"

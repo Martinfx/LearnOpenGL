@@ -254,6 +254,10 @@ materiál z Blenderu nahradit materiálem enginu (dvojklik).
   (tučné popisky); ostatní se řídí rodičem. Reset to parent vrátí změny.
 - **Detail mapy**: šedá detail mapa a detail normal mapa, jemně opakované (Detail tiling), slábnou se
   vzdáleností (Detail distance). Zrno betonu, škrábance na kovu zblízka.
+- **Výšková mapa (parallax)**: Height map (bílá = vysoko) a Height depth v metrech posouvají texturu podle
+  úhlu pohledu (parallax occlusion mapping): spáry mezi cihlami zapadnou, dlažba a kameny vystoupí. Zeslábne
+  do 22 m; vypíná se v Render > Parallax a v nízké kvalitě. Má ho 44 PBR materiálů (cihly, kámen, dlažba,
+  střechy, prkna, vlnitý plech, kůra).
 - **Blend vrstvy a vertex paint**: materiál může mít Blend layer 1 a 2 (jiné materiály, např. mech a
   bláto). V režimu **Paint** (Shift+6) se štětcem maluje na vybraný model: Layer 1 (červená), Layer 2
   (zelená) a Wet (mokrý, tmavší a lesklý povrch). Okraj sleduje jas textury vrstvy (mech nejdřív v

@@ -13,3 +13,5 @@ normal_map "../../textures/pbr/corrugated_iron_02/normal.jpg"
 roughness_map "../../textures/pbr/corrugated_iron_02/roughness.jpg"
 metallic_map "../../textures/pbr/corrugated_iron_02/metallic.jpg"
 occlusion_map "../../textures/pbr/corrugated_iron_02/ao.jpg"
+height_depth 0.02
+height_map "../../textures/pbr/corrugated_iron_02/height.jpg"

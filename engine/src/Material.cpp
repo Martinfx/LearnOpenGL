@@ -387,6 +387,8 @@ bool parseMaterial(Material& m, const std::filesystem::path& file, std::string* 
             ok = static_cast<bool>(ls >> result.metallic);
         } else if (k == "normal_strength") {
             ok = static_cast<bool>(ls >> result.normalStrength);
+        } else if (k == "height_depth") {
+            ok = static_cast<bool>(ls >> result.heightDepth);
         } else if (k == "emissive") {
             ok = static_cast<bool>(ls >> result.emissive.r >> result.emissive.g >> result.emissive.b);
         } else if (k == "world_uv") {
@@ -486,6 +488,8 @@ void writeMaterialValue(std::ostream& out, const Material& m, const std::string&
         out << "metallic " << m.metallic << '\n';
     else if (key == "normal_strength")
         out << "normal_strength " << m.normalStrength << '\n';
+    else if (key == "height_depth")
+        out << "height_depth " << m.heightDepth << '\n';
     else if (key == "emissive")
         out << "emissive " << m.emissive.r << ' ' << m.emissive.g << ' ' << m.emissive.b << '\n';
     else if (key == "tiling")
@@ -578,6 +582,8 @@ bool saveMaterial(const Material& m, const std::filesystem::path& file, std::str
                                   m.mapPaths[static_cast<std::size_t>(MapKind::DetailNormal)].empty();
             if (noDetail && key.rfind("detail_", 0) == 0)
                 empty = true; // no detail maps: their settings stay out of the file
+            if (key == "height_depth" && m.mapPaths[static_cast<std::size_t>(MapKind::Height)].empty())
+                empty = true;
             const bool noLayers = m.layerPaths[0].empty() && m.layerPaths[1].empty();
             if ((key == layerKey(0) && m.layerPaths[0].empty()) || (key == layerKey(1) && m.layerPaths[1].empty()) ||
                 (key == "blend_sharpness" && noLayers))
@@ -631,6 +637,7 @@ const char* mapKey(MapKind kind)
     case MapKind::Emissive: return "emissive_map";
     case MapKind::DetailAlbedo: return "detail_albedo_map";
     case MapKind::DetailNormal: return "detail_normal_map";
+    case MapKind::Height: return "height_map";
     default: return "";
     }
 }
@@ -646,6 +653,7 @@ const char* mapLabel(MapKind kind)
     case MapKind::Emissive: return "Emissive map";
     case MapKind::DetailAlbedo: return "Detail albedo (grey)";
     case MapKind::DetailNormal: return "Detail normal map";
+    case MapKind::Height: return "Height map (parallax)";
     default: return "";
     }
 }
@@ -715,7 +723,7 @@ const std::vector<std::string>& materialValueKeys()
         std::vector<std::string> k = {"color",      "roughness",    "metallic", "normal_strength", "emissive",     "tiling",
                                       "world_uv",   "alpha_mode",   "alpha_cutoff", "opacity",     "double_sided", "surface",
                                       "detail_tiling", "detail_strength", "detail_distance", "layer1_material",
-                                      "layer2_material", "blend_sharpness"};
+                                      "layer2_material", "blend_sharpness", "height_depth"};
         for (int i = 0; i < kMapCount; ++i)
             k.emplace_back(mapKey(static_cast<MapKind>(i)));
         return k;
@@ -733,6 +741,8 @@ void copyMaterialValue(Material& to, const Material& from, const std::string& ke
         to.metallic = from.metallic;
     else if (key == "normal_strength")
         to.normalStrength = from.normalStrength;
+    else if (key == "height_depth")
+        to.heightDepth = from.heightDepth;
     else if (key == "emissive")
         to.emissive = from.emissive;
     else if (key == "tiling")
@@ -782,6 +792,8 @@ std::vector<std::string> materialDifferences(const Material& a, const Material& 
             same = a.metallic == b.metallic;
         else if (key == "normal_strength")
             same = a.normalStrength == b.normalStrength;
+        else if (key == "height_depth")
+            same = a.heightDepth == b.heightDepth;
         else if (key == "emissive")
             same = a.emissive == b.emissive;
         else if (key == "tiling")

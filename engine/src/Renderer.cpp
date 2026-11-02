@@ -457,6 +457,7 @@ RenderQuality RenderQuality::preset(int level)
         q.localShadowResolution = 512; q.localShadowLayers = 6;
         q.volumetricFog = 0;
         q.ssr = false;
+        q.parallax = false;
         break;
     case 1:
         q.shadowResolution = 1024; q.shadowCascades = 3; q.ssao = true; q.bloom = true;
@@ -609,11 +610,12 @@ void Renderer::useMeshProgram(const Program& p)
     loc_.instanceBase = p.loc("uInstanceBase");
     loc_.alphaCutoff = p.loc("uAlphaCutoff");
     loc_.opacity = p.loc("uOpacity");
-    const char* names[8] = {"uHasTexture",      "uHasNormalMap",   "uHasRoughnessMap",  "uHasMetallicMap",
-                            "uHasOcclusionMap", "uHasEmissiveMap", "uHasDetailAlbedo", "uHasDetailNormal"};
-    static_assert(kMapCount == 8, "a texture slot per MapKind");
-    for (int i = 0; i < 8; ++i)
+    const char* names[9] = {"uHasTexture",      "uHasNormalMap",   "uHasRoughnessMap", "uHasMetallicMap", "uHasOcclusionMap",
+                            "uHasEmissiveMap", "uHasDetailAlbedo", "uHasDetailNormal", "uHasHeightMap"};
+    static_assert(kMapCount == 9, "a texture slot per MapKind");
+    for (int i = 0; i < kMapCount; ++i)
         loc_.hasMap[i] = p.loc(names[i]);
+    loc_.heightDepth = p.loc("uHeightDepth");
     loc_.detail = p.loc("uDetail");
     loc_.paintBase = p.loc("uPaintBase");
     loc_.paintBaseVertex = p.loc("uPaintBaseVertex");
@@ -4499,11 +4501,11 @@ void Renderer::applySurface(const Material* material, const MeshPart* part, glm:
         return;
     }
     // Texture units: 0 albedo, 1 normal, 2 roughness, 3 metallic, 4 occlusion, 5 emissive,
-    // 22 detail albedo, 23 detail normal.
+    // 22 detail albedo, 23 detail normal, 30 height.
     const Texture* maps[kMapCount] = {};
     glm::vec3 detail(8.0f, 0.0f, 12.0f);
     glm::vec2 tiling(1.0f);
-    float roughness = 0.8f, metallic = 0.0f, normalStrength = 1.0f;
+    float roughness = 0.8f, metallic = 0.0f, normalStrength = 1.0f, heightDepth = 0.0f;
     glm::vec3 emissive(0.0f);
     int roughnessChannel = 0, metallicChannel = 0;
     bool grid = true;
@@ -4516,6 +4518,7 @@ void Renderer::applySurface(const Material* material, const MeshPart* part, glm:
         roughness = material->roughness;
         metallic = material->metallic;
         normalStrength = material->normalStrength;
+        heightDepth = std::clamp(material->heightDepth, 0.0f, 0.2f) * (quality_.parallax ? 1.0f : 0.0f);
         emissive = material->emissive;
         detail = {material->detailTiling, std::clamp(material->detailStrength, 0.0f, 1.0f), std::max(material->detailDistance, 0.1f)};
         worldUv = worldUv || material->worldUv;
@@ -4548,12 +4551,17 @@ void Renderer::applySurface(const Material* material, const MeshPart* part, glm:
     glUniform2f(loc_.uvOffset, 0.0f, 0.0f);
     glUniform1f(loc_.uvRotation, 0.0f);
     glUniform3fv(loc_.detail, 1, glm::value_ptr(detail));
+    glUniform1f(loc_.heightDepth, heightDepth);
     for (int i = 0; i < kMapCount; ++i) {
-        const bool isDetail = i >= static_cast<int>(MapKind::DetailAlbedo);
-        const unsigned handle = maps[i] && maps[i]->valid() && (!isDetail || detail.y > 0.0f) ? texture(*maps[i]) : 0u;
+        const auto kind = static_cast<MapKind>(i);
+        const bool isDetail = kind == MapKind::DetailAlbedo || kind == MapKind::DetailNormal;
+        const bool wanted = isDetail ? detail.y > 0.0f : (kind != MapKind::Height || heightDepth > 0.0f);
+        const unsigned handle = maps[i] && maps[i]->valid() && wanted ? texture(*maps[i]) : 0u;
         const bool has = handle != 0;
+        const unsigned unit = isDetail ? static_cast<unsigned>(22 + i - static_cast<int>(MapKind::DetailAlbedo))
+                                       : (kind == MapKind::Height ? 30u : static_cast<unsigned>(i));
         if (has)
-            glBindTextureUnit(isDetail ? static_cast<unsigned>(22 + i - static_cast<int>(MapKind::DetailAlbedo)) : static_cast<unsigned>(i), handle);
+            glBindTextureUnit(unit, handle);
         glUniform1i(loc_.hasMap[i], has ? 1 : 0);
     }
     // Blend layers (vertex paint): units 24-25 albedo, 26-27 normal, 28-29 roughness.

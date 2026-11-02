@@ -12,3 +12,5 @@ albedo_map "../../textures/pbr/bark_willow/albedo.jpg"
 normal_map "../../textures/pbr/bark_willow/normal.jpg"
 roughness_map "../../textures/pbr/bark_willow/roughness.jpg"
 occlusion_map "../../textures/pbr/bark_willow/ao.jpg"
+height_depth 0.02
+height_map "../../textures/pbr/bark_willow/height.jpg"

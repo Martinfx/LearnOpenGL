@@ -12,3 +12,5 @@ albedo_map "../../textures/pbr/bark_brown_02/albedo.jpg"
 normal_map "../../textures/pbr/bark_brown_02/normal.jpg"
 roughness_map "../../textures/pbr/bark_brown_02/roughness.jpg"
 occlusion_map "../../textures/pbr/bark_brown_02/ao.jpg"
+height_depth 0.02
+height_map "../../textures/pbr/bark_brown_02/height.jpg"

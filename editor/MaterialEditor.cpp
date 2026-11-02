@@ -249,6 +249,10 @@ MaterialEditor::MaterialEditor(QWidget* parent)
     detailStrength_ = makeSpin(0.0, 1.0, 0.05, 2);
     detailDistance_ = makeSpin(1.0, 200.0, 1.0, 1);
     detailDistance_->setSuffix(" m");
+    heightDepth_ = makeSpin(0.0, 0.2, 0.005, 3);
+    heightDepth_->setSuffix(" m");
+    heightDepth_->setToolTip(tr("How deep the black of the height map lies under the white (bricks ~0.02 m, cobbles ~0.03 m). "
+                                "Shifts the texture with the view angle up close (parallax); 0 = off"));
     detailTiling_->setToolTip(tr("Detail map repeats per repeat of the base maps (close-up grain, scratches, pores)"));
     detailStrength_->setToolTip(tr("How strongly the detail maps show (grey 0.5 = no change)"));
     detailDistance_->setToolTip(tr("The detail fades out towards this distance from the camera"));
@@ -386,6 +390,7 @@ MaterialEditor::MaterialEditor(QWidget* parent)
     for (int i = 0; i < engine::kMapCount; ++i)
         form->addRow(tr(engine::mapLabel(static_cast<engine::MapKind>(i))), mapRows[static_cast<std::size_t>(i)]);
     form->addRow(tr("Normal strength"), normalStrength_);
+    form->addRow(tr("Height depth"), heightDepth_);
     form->addRow(tr("Tiling"), tilingRow);
     form->addRow(tr("Detail tiling"), detailTiling_);
     form->addRow(tr("Detail strength"), detailStrength_);
@@ -407,7 +412,8 @@ MaterialEditor::MaterialEditor(QWidget* parent)
                    {"world_uv", worldUv_},          {"alpha_mode", alphaMode_},     {"alpha_cutoff", alphaCutoff_},
                    {"opacity", opacity_},           {"double_sided", doubleSided_}, {"surface", surface_},
                    {"layer1_material", layerRows[0]}, {"layer2_material", layerRows[1]}, {"blend_sharpness", blendSharpness_},
-                   {"detail_tiling", detailTiling_}, {"detail_strength", detailStrength_}, {"detail_distance", detailDistance_}};
+                   {"detail_tiling", detailTiling_}, {"detail_strength", detailStrength_}, {"detail_distance", detailDistance_},
+                   {"height_depth", heightDepth_}};
     for (int i = 0; i < engine::kMapCount; ++i)
         keyWidgets_[engine::mapKey(static_cast<engine::MapKind>(i))] = mapRows[static_cast<std::size_t>(i)];
     tilingX_->setToolTip(tr("Repeats per UV unit; with world mapping (boxes) per metre: 0.25 = one image every 4 m"));
@@ -539,6 +545,7 @@ void MaterialEditor::refreshForm()
         roughness_->setValue(m.roughness);
         metallic_->setValue(m.metallic);
         normalStrength_->setValue(m.normalStrength);
+        heightDepth_->setValue(m.heightDepth);
         detailTiling_->setValue(m.detailTiling);
         detailStrength_->setValue(m.detailStrength);
         detailDistance_->setValue(m.detailDistance);
@@ -613,6 +620,7 @@ void MaterialEditor::edited()
     m.roughness = static_cast<float>(roughness_->value());
     m.metallic = static_cast<float>(metallic_->value());
     m.normalStrength = static_cast<float>(normalStrength_->value());
+    m.heightDepth = static_cast<float>(heightDepth_->value());
     m.detailTiling = static_cast<float>(detailTiling_->value());
     m.detailStrength = static_cast<float>(detailStrength_->value());
     m.detailDistance = static_cast<float>(detailDistance_->value());

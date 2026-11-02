@@ -12,3 +12,5 @@ albedo_map "../../textures/pbr/rusty_metal_shutter/albedo.jpg"
 normal_map "../../textures/pbr/rusty_metal_shutter/normal.jpg"
 roughness_map "../../textures/pbr/rusty_metal_shutter/roughness.jpg"
 occlusion_map "../../textures/pbr/rusty_metal_shutter/ao.jpg"
+height_depth 0.015
+height_map "../../textures/pbr/rusty_metal_shutter/height.jpg"

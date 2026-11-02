@@ -12,3 +12,5 @@ albedo_map "../../textures/pbr/roof_09/albedo.jpg"
 normal_map "../../textures/pbr/roof_09/normal.jpg"
 roughness_map "../../textures/pbr/roof_09/roughness.jpg"
 occlusion_map "../../textures/pbr/roof_09/ao.jpg"
+height_depth 0.02
+height_map "../../textures/pbr/roof_09/height.jpg"

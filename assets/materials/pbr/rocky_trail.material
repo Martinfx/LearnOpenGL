@@ -12,3 +12,5 @@ albedo_map "../../textures/pbr/rocky_trail/albedo.jpg"
 normal_map "../../textures/pbr/rocky_trail/normal.jpg"
 roughness_map "../../textures/pbr/rocky_trail/roughness.jpg"
 occlusion_map "../../textures/pbr/rocky_trail/ao.jpg"
+height_depth 0.03
+height_map "../../textures/pbr/rocky_trail/height.jpg"

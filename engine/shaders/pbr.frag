@@ -43,6 +43,10 @@ layout(binding = 22) uniform sampler2D uDetailAlbedo;
 layout(binding = 23) uniform sampler2D uDetailNormal;
 uniform bool uHasDetailAlbedo;
 uniform bool uHasDetailNormal;
+// Parallax occlusion mapping: height map (white = high), the darkest texel uHeightDepth metres deep.
+layout(binding = 30) uniform sampler2D uHeightMap;
+uniform bool uHasHeightMap;
+uniform float uHeightDepth;
 uniform vec3 uDetail;
 // Blend layers painted on the vertices (vPaint: red = layer 0, green = layer 1, blue = wet).
 in vec4 vPaint;
@@ -202,6 +206,43 @@ vec3 localLights(vec3 worldPos, vec3 n, vec3 geomNormal, vec3 v, vec3 albedo, fl
 
 uniform vec2 uFade; // dithered dissolve from x to y metres from the camera (cull distance); y 0 = off
 
+// Marches the view ray into the height field and returns the texture coordinate where it hits.
+// The UV gradients come from screen-space derivatives (as perturbNormal), so world-projected and
+// mesh UVs work alike and the depth is in metres whatever the tiling. Call in uniform control flow.
+vec2 parallaxUv(vec2 uv, vec3 n, vec3 toEye) {
+    vec3 dp1 = dFdx(vWorldPos), dp2 = dFdy(vWorldPos);
+    vec2 duv1 = dFdx(uv), duv2 = dFdy(uv);
+    vec3 dp2perp = cross(dp2, n), dp1perp = cross(n, dp1);
+    float det = dot(dp1, dp2perp);
+    float dist = length(toEye);
+    float fade = 1.0 - smoothstep(10.0, 22.0, dist);
+    if (abs(det) < 1e-14 || fade <= 0.0)
+        return uv;
+    vec3 gu = (dp2perp * duv1.x + dp1perp * duv2.x) / det; // d(uv.x) / d(world position) along the surface
+    vec3 gv = (dp2perp * duv1.y + dp1perp * duv2.y) / det;
+    vec3 v = toEye / dist;
+    float vn = dot(v, n);
+    if (vn <= 0.02)
+        return uv;
+    vec3 vt = v - n * vn;
+    // UV shift at full depth: following the ray `depth` metres under the surface moves along it by vt * depth / vn.
+    vec2 shift = -vec2(dot(vt, gu), dot(vt, gv)) * (uHeightDepth * fade / max(vn, 0.2));
+    float steps = mix(24.0, 6.0, vn);
+    float stepSize = 1.0 / steps;
+    float depth = 0.0, surface = 1.0 - textureGrad(uHeightMap, uv, duv1, duv2).r;
+    float prevDepth = 0.0, prevSurface = surface;
+    for (int i = 0; i < 24 && depth < surface; ++i) {
+        prevDepth = depth;
+        prevSurface = surface;
+        depth += stepSize;
+        surface = 1.0 - textureGrad(uHeightMap, uv + shift * depth, duv1, duv2).r;
+    }
+    // Between the last two samples the ray crossed the surface: intersect the two line pieces.
+    float after = surface - depth, before = prevSurface - prevDepth;
+    float t = clamp(before / max(before - after, 1e-5), 0.0, 1.0);
+    return uv + shift * mix(prevDepth, depth, t);
+}
+
 void main() {
     if (uFade.y > 0.0) {
         float k = smoothstep(uFade.x, uFade.y, length(vWorldPos - uCameraPos.xyz));
@@ -234,6 +275,8 @@ void main() {
     }
     vec2 uv0 = uv;
     uv = uv * uTiling * uUvScale + uUvOffset;
+    if (uHasHeightMap && uHeightDepth > 0.0 && !uTerrain)
+        uv = parallaxUv(uv, n, uOverlay ? -vWorldPos : uCameraPos.xyz - vWorldPos);
 
     float terrainW[8];
     vec2 terrainDx = vec2(0.0), terrainDy = vec2(0.0);

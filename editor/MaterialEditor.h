@@ -90,6 +90,7 @@ private:
     QDoubleSpinBox* detailTiling_;
     QDoubleSpinBox* detailStrength_;
     QDoubleSpinBox* detailDistance_;
+    QDoubleSpinBox* heightDepth_;
     QPushButton* emissiveButton_;
     QCheckBox* worldUv_;
     QComboBox* alphaMode_;
