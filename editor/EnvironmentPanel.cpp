@@ -182,6 +182,9 @@ EnvironmentPanel::EnvironmentPanel(engine::Scene* scene, QWidget* parent)
     addFloat(form, tr("Density"), &E::fogDensity, 0, 0.5, 0.002, 3);
     addFloat(form, tr("Height"), &E::fogHeight, -100, 100, 0.5, 1, tr("Fog is densest below this height (m)"));
     addFloat(form, tr("Height falloff"), &E::fogHeightFalloff, 0, 2, 0.01, 3);
+    addFloat(form, tr("Ground haze"), &E::groundHaze, 0, 0.5, 0.002, 3, tr("Density of a thin mist layer over the ground (0 off)"));
+    addFloat(form, tr("Ground haze height"), &E::groundHazeHeight, -100, 100, 0.1, 1, tr("Height of the ground the mist lies on (m)"));
+    addFloat(form, tr("Ground haze thickness"), &E::groundHazeThickness, 0.1, 20, 0.1, 1, tr("How high the mist reaches (m)"));
     addFloat(form, tr("Sun glow"), &E::fogSunScatter, 0, 5, 0.1, 2, tr("Fog brightens toward the sun"));
     addFloat(form, tr("Volumetric range"), &E::fogVolumetricRange, 0, 256, 4, 0,
              tr("Meters of volumetric fog in front of the camera (light shafts, lamps), 0 = simple fog only"));

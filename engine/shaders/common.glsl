@@ -27,6 +27,7 @@ layout(std140, binding = 1) uniform Environment {
     vec4 uSsr;             // x: 1 = SSR on, y: max distance (m), z: intensity, w: max roughness
     vec4 uAtmosphere;      // x: physical sky 0..1, y: radiance scale (sun illuminance), z: sky occlusion, w: top-down map top height
     vec4 uShadowSoft;      // x: 1 = soft sun shadows (PCSS), y: tan of the sun's angular radius, z: max caster distance (m), w: max filter radius (m)
+    vec4 uGroundHaze;      // ground haze layer: x density (1/m), y ground height (m), z thickness (m)
 };
 // Physical sky table (engine/Atmosphere.h): azimuth from the sun by elevation, linear radiance.
 layout(binding = 31) uniform sampler2D uSkyLut;
@@ -291,26 +292,53 @@ float skyVisibility(vec3 worldPos, vec3 n) {
 #endif
 
 // Exponential height fog along the view ray, tinted toward the sun.
-// Analytic height fog over [start, dist] of the ray from the camera: optical depth.
+// Optical depth of one exponential layer (density at the start height h0 above its base).
+float fogLayerDepth(float density, float falloff, float h0, float dirY, float len) {
+    if (density <= 0.0)
+        return 0.0;
+    float a = density * exp(min(-falloff * h0, 8.0));
+    return abs(falloff * dirY) < 1e-5 ? a * len : a * (1.0 - exp(-falloff * dirY * len)) / (falloff * dirY);
+}
+
+// Analytic height fog over [start, dist] of the ray from the camera: optical depth of the
+// level's fog and the ground haze (a thin dense layer over the ground).
 float heightFogDepth(vec3 dir, float start, float dist) {
-    float density = uFogColor.w;
-    float falloff = max(uFogParams.y, 1e-4);
-    float startHeight = uCameraPos.y + dir.y * start - uFogParams.x;
+    float y = uCameraPos.y + dir.y * start;
     float len = max(dist - start, 0.0);
-    float amount = abs(dir.y) < 1e-3 ? density * exp(-falloff * startHeight) * len
-                                     : density * exp(-falloff * startHeight) * (1.0 - exp(-falloff * dir.y * len)) / (falloff * dir.y);
+    float amount = fogLayerDepth(uFogColor.w, max(uFogParams.y, 1e-4), y - uFogParams.x, dir.y, len) +
+                   fogLayerDepth(uGroundHaze.x, 1.0 / max(uGroundHaze.z, 0.1), y - uGroundHaze.y, dir.y, len);
     return max(amount, 0.0);
+}
+
+// Density of the fog (both layers) at a point, as heightFogDepth integrates it.
+float fogDensityAt(vec3 p) {
+    float d = uFogColor.w * exp(min(-max(uFogParams.y, 1e-4) * (p.y - uFogParams.x), 8.0));
+    if (uGroundHaze.x > 0.0)
+        d += uGroundHaze.x * exp(min(-(p.y - uGroundHaze.y) / max(uGroundHaze.z, 0.1), 8.0));
+    return d;
 }
 
 vec3 analyticFogColor(vec3 dir) {
     float sun = pow(max(dot(dir, -normalize(uSunDir.xyz)), 0.0), 8.0) * uFogParams.z;
-    return uFogColor.rgb + uSunColor.rgb * uSunDir.w * 0.08 * sun + vec3(0.5, 0.55, 0.7) * uWeather.y * 0.12;
+    vec3 fog = uFogColor.rgb;
+    if (uAtmosphere.x > 0.0) {
+        // Aerial perspective by direction: the haze takes the colour of the sky at the horizon
+        // in that direction (warm and bright toward the sun, cooler away from it) relative to
+        // the horizon all around, which the fog colour already is. Clouds even it out.
+        vec3 toSun = normalize(uSunPos.xyz);
+        vec3 h = normalize(vec3(dir.x, max(dir.y, 0.03), dir.z));
+        vec3 here = texture(uSkyLut, skyLutUv(h, toSun)).rgb;
+        vec3 side = texture(uSkyLut, vec2(0.5, skyLutUv(h, toSun).y)).rgb;
+        vec3 ratio = clamp(here / max(side, vec3(1e-5)), vec3(0.4), vec3(3.0));
+        fog *= mix(vec3(1.0), ratio, uAtmosphere.x * (1.0 - 0.7 * uSkyZenith.w));
+    }
+    return fog + uSunColor.rgb * uSunDir.w * 0.08 * sun + vec3(0.5, 0.55, 0.7) * uWeather.y * 0.12;
 }
 
 // Fog between the camera and a surface: the volumetric fog (light shafts, lamps and the
 // flashlight in the fog) near the camera, the analytic height fog beyond its range.
 vec3 applyFog(vec3 color, vec3 worldPos) {
-    if (uFogColor.w <= 0.0)
+    if (uFogColor.w <= 0.0 && uGroundHaze.x <= 0.0)
         return color;
     vec3 ray = worldPos - uCameraPos.xyz;
     float dist = length(ray);

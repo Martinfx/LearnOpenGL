@@ -375,6 +375,12 @@ struct Environment {
     float fogAnisotropy = 0.5f;                 // phase function g: 0 even, 0.9 bright toward the light
     float fogNoise = 0.4f;                      // 0 smooth .. 1 patchy fog drifting with the wind
     float fogLocalLights = 1.0f;                // strength of local lights in the fog
+    // Ground haze: a thin dense layer over the ground in the fog colour (mist in the grass,
+    // milky street bottoms in the distance). Density per metre at groundHazeHeight, halving
+    // about every 0.7 x thickness metres above it.
+    float groundHaze = 0.0f;
+    float groundHazeHeight = 0.0f;
+    float groundHazeThickness = 1.5f;
     // Physically based atmosphere (engine/Atmosphere.h): 0 = the authored zenith / horizon / fog
     // colours, 1 = sky, horizon, fog and (without the day cycle) sunlight colour from the model.
     float atmosphere = 0.0f;

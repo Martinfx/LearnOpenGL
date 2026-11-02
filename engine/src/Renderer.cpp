@@ -154,6 +154,7 @@ struct EnvironmentBlock {
     glm::vec4 ssr;          // x: on, y: max distance, z: intensity, w: max roughness
     glm::vec4 atmosphere;   // x: physical sky 0..1, y: radiance scale
     glm::vec4 shadowSoft;   // x: PCSS on, y: tan of the sun's angular radius, z: max caster distance, w: max filter radius
+    glm::vec4 groundHaze;   // x: density, y: ground height, z: thickness
 };
 
 constexpr int kEnvSize = 128;  // environment cubemap face size
@@ -999,6 +1000,7 @@ void Renderer::updateEnvironment(const Scene& scene, const RenderView& view)
     b.groundColor = glm::vec4(linear(e.groundColor), e.ambientIntensity);
     b.fogColor = glm::vec4(linear(e.fogColor), view.fog ? e.fogDensity : 0.0f);
     b.fogParams = glm::vec4(e.fogHeight, e.fogHeightFalloff, e.fogSunScatter, e.ssaoIntensity);
+    b.groundHaze = glm::vec4(view.fog ? std::max(0.0f, e.groundHaze) : 0.0f, e.groundHazeHeight, std::max(0.1f, e.groundHazeThickness), 0.0f);
     // z: sky occlusion strength, w: world height of the top-down map's top (its depth spans 300 m down).
     b.atmosphere = glm::vec4(0.0f, 0.0f, rainActive_ && rainTex_ ? std::clamp(e.skyOcclusion, 0.0f, 1.0f) : 0.0f, rainTop_);
     if (const float a = std::clamp(e.atmosphere, 0.0f, 1.0f); a > 0.0f) {
@@ -2164,7 +2166,8 @@ void Renderer::captureCube(const Scene& scene, glm::vec3 position, int size, std
 
 bool Renderer::volumetricActive(const RenderView& view) const
 {
-    return quality_.volumetricFog > 0 && view.fog && !view.capture && env_ && env_->fogDensity > 0.0f && env_->fogVolumetricRange > 0.0f &&
+    return quality_.volumetricFog > 0 && view.fog && !view.capture && env_ && (env_->fogDensity > 0.0f || env_->groundHaze > 0.0f) &&
+           env_->fogVolumetricRange > 0.0f &&
            view.projection[3][3] == 0.0f && programs_.volumeInject.id && programs_.volumeIntegrate.id;
 }
 

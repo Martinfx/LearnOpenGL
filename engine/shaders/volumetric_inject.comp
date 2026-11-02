@@ -56,8 +56,7 @@ void main() {
     vec3 dir = normalize(worldPos - uCameraPos.xyz);
 
     // Density: the height fog of the level, broken up by noise drifting with the wind.
-    float falloff = max(uFogParams.y, 1e-4);
-    float density = min(uFogColor.w * exp(min(-falloff * (worldPos.y - uFogParams.x), 8.0)), 1.0);
+    float density = min(fogDensityAt(worldPos), 1.0);
     if (uVolumeLight.z > 0.0) {
         vec2 drift = uWind.xz * uSkyHorizon.w * (0.3 + 2.0 * uWind.y);
         float n = 0.5 * (valueNoise(worldPos.xz * 0.09 - drift * 0.09) + valueNoise(vec2(worldPos.x + worldPos.z, worldPos.y) * 0.13 + drift.yx * 0.05));
