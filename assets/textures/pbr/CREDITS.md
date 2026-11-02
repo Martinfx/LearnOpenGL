@@ -119,3 +119,28 @@ A ready material for each set is in `assets/materials/pbr/<name>.material`.
 | `rusty_corrugated_iron` | Rusty Corrugated Iron | Charlotte Baglioni | 2 × 2 m | https://polyhaven.com/a/rusty_corrugated_iron |
 | `concrete_debris` | Concrete Debris | Amal Kumar | 2 × 2 m | https://polyhaven.com/a/concrete_debris |
 | `rebar_reinforced_concrete` | Rebar Reinforced Concrete | Amal Kumar | 2 × 2 m | https://polyhaven.com/a/rebar_reinforced_concrete |
+| `road_damaged` | Road Damaged | Dimitrios Savva | 2.2 × 2.2 m | https://polyhaven.com/a/road_damaged |
+| `road_damaged_2` | Road Damaged 2 | Dimitrios Savva | 2.2 × 2.2 m | https://polyhaven.com/a/road_damaged_2 |
+| `worn_asphalt` | Worn Asphalt | Amal Kumar | 2 × 2 m | https://polyhaven.com/a/worn_asphalt |
+| `asphalt_03` | Asphalt 03 | Dario Barresi, Charlotte Baglioni | 2.05 × 2.05 m | https://polyhaven.com/a/asphalt_03 |
+| `cracked_concrete` | Cracked Concrete | Dimitrios Savva | 2 × 2 m | https://polyhaven.com/a/cracked_concrete |
+| `cracked_concrete_02` | Cracked Concrete 02 | Charlotte Baglioni | 2.23 × 2.23 m | https://polyhaven.com/a/cracked_concrete_02 |
+| `overgrown_concrete_pavers` | Overgrown Concrete Pavers | Dimitrios Savva | 2 × 2 m | https://polyhaven.com/a/overgrown_concrete_pavers |
+| `concrete_moss` | Concrete Moss | Rob Tuytel | 3 × 3 m | https://polyhaven.com/a/concrete_moss |
+| `concrete_pavement` | Concrete Pavement | Charlotte Baglioni | 1.8 × 1.8 m | https://polyhaven.com/a/concrete_pavement |
+| `grass_concrete_pavement` | Grass Concrete Pavement | Charlotte Baglioni | 1.97 × 1.97 m | https://polyhaven.com/a/grass_concrete_pavement |
+| `flower_scattered_asphalt` | Flower Scattered Asphalt | Dimitrios Savva | 1.8 × 1.8 m | https://polyhaven.com/a/flower_scattered_asphalt |
+| `rubble` | Rubble | Amal Kumar | 2 × 2 m | https://polyhaven.com/a/rubble |
+| `mossy_brick` | Mossy Brick | Amal Kumar | 1.45 × 1.45 m | https://polyhaven.com/a/mossy_brick |
+| `dark_brick_wall` | Dark Brick Wall | Dario Barresi, Dimitrios Savva | 1.05 × 1.05 m | https://polyhaven.com/a/dark_brick_wall |
+| `red_brick_03` | Red Brick 03 | Rob Tuytel | 1 × 1 m | https://polyhaven.com/a/red_brick_03 |
+| `slumped_mortar_brick` | Slumped Mortar Brick | Dimitrios Savva | 1.77 × 1.77 m | https://polyhaven.com/a/slumped_mortar_brick |
+| `worn_brick_wall` | Worn Brick Wall | Amal Kumar | 2 × 2 m | https://polyhaven.com/a/worn_brick_wall |
+| `rough_plaster_brick` | Rough Plaster Brick | Rob Tuytel | 1.5 × 1.5 m | https://polyhaven.com/a/rough_plaster_brick |
+| `red_brick_plaster_patch_02` | Red Brick Plaster Patch 02 | Rob Tuytel | 1.5 × 1.5 m | https://polyhaven.com/a/red_brick_plaster_patch_02 |
+| `peeling_painted_wall` | Peeling Painted Wall | Dimitrios Savva | 1.8 × 1.8 m | https://polyhaven.com/a/peeling_painted_wall |
+| `worn_cracked_plaster` | Worn Cracked Plaster | Amal Kumar | 1.8 × 1.8 m | https://polyhaven.com/a/worn_cracked_plaster |
+| `beige_wall_002` | Beige Wall 002 | Dimitrios Savva, Rico Cilliers | 3 × 3 m | https://polyhaven.com/a/beige_wall_002 |
+| `rusty_painted_metal` | Rusty Painted Metal | Amal Kumar | 2.2 × 2.2 m | https://polyhaven.com/a/rusty_painted_metal |
+| `rusted_shutter` | Rusted Shutter | Dimitrios Savva | 1.8 × 1.8 m | https://polyhaven.com/a/rusted_shutter |
+| `metal_grate_rusty` | Metal Grate Rusty | Rob Tuytel, Dimitrios Savva | 0.5 × 0.5 m | https://polyhaven.com/a/metal_grate_rusty |

@@ -1,0 +1,16 @@
+# FPS engine material (physically based: metal/roughness)
+version 2
+name "Rough Plaster Brick"
+color 1 1 1
+roughness 1
+metallic 0
+normal_strength 1
+emissive 0 0 0
+tiling 0.6667 0.6667
+world_uv 1
+albedo_map "../../textures/pbr/rough_plaster_brick/albedo.jpg"
+normal_map "../../textures/pbr/rough_plaster_brick/normal.jpg"
+roughness_map "../../textures/pbr/rough_plaster_brick/roughness.jpg"
+occlusion_map "../../textures/pbr/rough_plaster_brick/ao.jpg"
+height_depth 0.02
+height_map "../../textures/pbr/rough_plaster_brick/height.jpg"

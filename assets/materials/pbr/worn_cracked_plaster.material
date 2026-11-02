@@ -1,0 +1,16 @@
+# FPS engine material (physically based: metal/roughness)
+version 2
+name "Worn Cracked Plaster"
+color 1 1 1
+roughness 1
+metallic 0
+normal_strength 1
+emissive 0 0 0
+tiling 0.5556 0.5556
+world_uv 1
+albedo_map "../../textures/pbr/worn_cracked_plaster/albedo.jpg"
+normal_map "../../textures/pbr/worn_cracked_plaster/normal.jpg"
+roughness_map "../../textures/pbr/worn_cracked_plaster/roughness.jpg"
+occlusion_map "../../textures/pbr/worn_cracked_plaster/ao.jpg"
+height_depth 0.02
+height_map "../../textures/pbr/worn_cracked_plaster/height.jpg"
