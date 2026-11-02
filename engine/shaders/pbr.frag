@@ -50,6 +50,7 @@ uniform float uHeightDepth;
 uniform vec3 uDetail;
 // Blend layers painted on the vertices (vPaint: red = layer 0, green = layer 1, blue = wet).
 in vec4 vPaint;
+in float vSway;
 layout(binding = 24) uniform sampler2D uBlendAlbedo[2];
 layout(binding = 26) uniform sampler2D uBlendNormal[2];
 layout(binding = 28) uniform sampler2D uBlendRoughMap[2];
@@ -533,6 +534,13 @@ void main() {
     if (uOverlay)
         shadow *= interiorSky;
     vec3 color = (diffuse + specular) * uSunColor.rgb * uSunDir.w * nl * shadow;
+    // Leaves and blades are thin: sunlight comes through them and scatters inside a crown, so the far,
+    // shadowed side of a tree is a deep green, not black, and a leaf against the sun glows.
+    if (!uOverlay && uAlphaMode == 1 && vSway > 0.0) {
+        float sh = nl > 0.0 ? shadow : sunShadow(vWorldPos, -normalize(vNormal), 0.5) * cloudShadow(vWorldPos);
+        float through = 0.07 + 0.25 * pow(max(dot(-v, l), 0.0), 3.0);
+        color += albedo * uSunColor.rgb * uSunDir.w * through * mix(0.4, 1.0, sh);
+    }
     if (uOverlay) // view space -> world
         color += localLights(uEnvRotation * vWorldPos + uCameraPos.xyz, uEnvRotation * n, uEnvRotation * normalize(vNormal), uEnvRotation * v,
                              albedo, rough, metal, f0, true);

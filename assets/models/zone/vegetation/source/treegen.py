@@ -21,7 +21,23 @@ def tube(pts,r0,r1,sides,mat):
 def card(c,u,v,w,h,cell,ox=0.5,oy=0.5,nrm_c=None,mat='leaves'):
     if LOD and KR.random()>0.6: return
     cards.append((c,u.normalized(),v.normalized(),w,h,cell,ox,oy,nrm_c,mat))
+OUT=cfg.get('crown')=='out'   # street atlas (leafcards.py): leaf rosettes facing out of the crown
+def out_cluster(c,s,ctr,mat='leaves',extra=True):
+    # SpeedTree-like: the main card faces away from the crown centre (rolled at random), a crossing card gives it
+    # depth from the side, low outer clusters let a spray hang down (ragged underside instead of a flat bottom)
+    nr=c-ctr
+    nr=nr.normalized() if nr.length>1e-3 else Vector((0,0,1))
+    nr=(nr+Vector((R.uniform(-1,1),R.uniform(-1,1),R.uniform(-1,1)))*0.35).normalized()
+    u=perp(nr); u=Quaternion(nr,R.uniform(0,6.28))@u; v=nr.cross(u).normalized()
+    card(c,u,v,s*R.uniform(0.9,1.1),s*R.uniform(0.9,1.1),R.choice([0,1,2,0,1]),nrm_c=ctr,mat=mat)
+    if extra:
+        card(c,u,nr,s*0.8,s*0.8,2,nrm_c=ctr,mat=mat)
+    if nr.z<-0.1 and R.random()<0.45:
+        a=R.uniform(0,6.28); hu=Vector((math.cos(a),math.sin(a),0))
+        card(c+Vector((0,0,s*0.15)),hu,Vector((0,0,1)),s*0.9,s*1.1,3,0.5,1.0,nrm_c=ctr,mat=mat)
 def cross_cluster(c,s,cells,ctr,nh=True):
+    if OUT:
+        out_cluster(c,s*0.85,ctr,extra=nh); return
     ang=R.uniform(0,math.pi)
     for k in range(2):
         a=ang+k*math.pi/2; u=Vector((math.cos(a),math.sin(a),0))
@@ -111,15 +127,25 @@ elif sp in('maple','ash'):   # middle-aged broadleaf with a full crown: short tr
             sl=path(q,d,rx*R.uniform(0.35,0.6),3,noise=0.15,gravity=0.15); tube(sl,r0*0.18,0.01,4,'bark'); limbs.append(sl)
     pts=[p_ for l in limbs for p_ in l[1:]]
     nc=int((60 if sp=='maple' else 50)*(H/10)**1.2); cs=2.0*(H/10)**0.6
+    if OUT: nc=int(nc*3.6); cs*=0.85
+    # a lumpy crown: clusters gather in clumps around the limb ends, with gaps between them
+    clumps=[l[-1] for l in limbs[::4]]+[ctr+Vector((0,0,rz*0.55))]
     for i in range(nc):
         while True:
             v=Vector((R.uniform(-1,1),R.uniform(-1,1),R.uniform(-1,1)))
             if 0.3<v.length<=1.0: break
         c=ctr+Vector((v.x*rx,v.y*rx,v.z*rz)); rr=v.length
+        if OUT:
+            k=min(clumps,key=lambda q:(q-c).length)
+            if (k-c).length>rx*0.8 and R.random()<0.35: continue
+            c=c.lerp(k,0.25); q=c-ctr; rr=Vector((q.x/rx,q.y/rx,q.z/rz)).length   # shade by where it ended up
         near=min(pts,key=lambda q:(q-c).length)
         if (near-c).length>0.4: tube([near,near.lerp(c,0.5),c],0.025,0.006,3,'bark')
         cmat='leaves' if rr>0.72 else 'leaves_dark'
-        sz=csz(cs*R.uniform(0.85,1.2)*(1.0 if rr>0.72 else 1.15))
+        sz=csz(cs*R.uniform(0.85,1.2)*(1.0 if rr>0.72 else 0.9))
+        if OUT:
+            if keep(): out_cluster(c,sz,ctr,'leaves',extra=rr>0.72 or i%2==0)   # the shadow map darkens the inside
+            continue
         ang=R.uniform(0,math.pi)
         for k in range(2):
             a=ang+k*math.pi/2; u=Vector((math.cos(a),math.sin(a),0)); vv=Quaternion(u.cross(Vector((0,0,1))),R.uniform(-0.3,0.3))@Vector((0,0,1))
@@ -127,6 +153,21 @@ elif sp in('maple','ash'):   # middle-aged broadleaf with a full crown: short tr
         if rr>0.72 or i%2==0:
             a=R.uniform(0,6.28); u=Vector((math.cos(a),math.sin(a),0)); vv=Vector((-math.sin(a),math.cos(a),R.uniform(-0.25,0.25)))
             card(c+Vector((0,0,sz*0.1)),u,vv,sz,sz,R.choice([0,1,2,3]),nrm_c=ctr,mat=cmat)
+elif sp=='bush':   # dense self-seeded shrub (elder, hazel, lilac gone wild): many stems from the ground, a mound of leaves
+    W=cfg.get('width',H*1.3); ctr=Vector((0,0,H*0.45))
+    for m in range(int(6+4*H)):
+        a=R.uniform(0,6.28); sl=R.uniform(0.2,0.7)
+        st=path(Vector((math.cos(a)*0.08,math.sin(a)*0.08,0)),Vector((math.cos(a)*sl,math.sin(a)*sl,1)),H*R.uniform(0.6,1.0),4,noise=0.12,gravity=0.15)
+        tube(st,0.025,0.006,4,'bark')
+    n=int(70*(W*H/3.0)**0.8)
+    for i in range(n):
+        while True:
+            v=Vector((R.uniform(-1,1),R.uniform(-1,1),R.uniform(-1,1)))
+            if 0.25<v.length<=1.0: break
+        c=ctr+Vector((v.x*W/2,v.y*W/2,v.z*H*0.55))
+        if c.z<0.15: c.z=0.15+R.uniform(0,0.2)
+        rr=v.length
+        if keep(): out_cluster(c,csz(R.uniform(0.75,1.05)*min(1.3,0.55+0.25*H)),ctr,'leaves',extra=rr>0.65)
 elif sp in('pine','spruce'):
     trunk=path(Vector((0,0,0)),Vector((R.uniform(-0.02,0.02),R.uniform(-0.02,0.02),1)),H,10 if not LOD else 6,noise=0.02 if sp=='spruce' else 0.035)
     r0=(0.22 if sp=='pine' else 0.2)*max(S,0.3); tube(trunk,r0,0.02,8,'bark'); ctr=Vector((0,0,H*(0.8 if sp=='pine' else 0.5)))

@@ -182,8 +182,16 @@ def build():
                  lod=(ST + name + '_lod1.glb', 70), cull=600)
     # the far end of the view: a taller house across the axis, towers beyond it in the haze
     lv.model('House at the end', ST + 'house_end.glb', 0.0, WALK, -338.0, 0.0, group='Far', lod=(ST + 'house_end_lod1.glb', 70), cull=900)
-    for (tx, tz, t) in ((-40, -420, 'a'), (35, -460, 'c'), (90, -380, 'b'), (-110, -400, 'b')):
-        lv.model('Tower', G + f'skyline_tower_{t}.glb', tx, -0.2, tz, rng.uniform(0, 90), group='Far', cull=1200, coll=False)
+    for (tx, tz, t) in ((-40, -420, 'a'), (35, -460, 'c'), (90, -380, 'b'), (-110, -400, 'b'), (-190, -640, 'c'),
+                        (160, -600, 'a'), (-20, -720, 'c'), (230, -480, 'b')):
+        lv.model('Tower', G + f'skyline_tower_{t}.glb', tx, -0.2, tz, rng.uniform(0, 90), group='Far', cull=1500, coll=False)
+    # sixteen-storey panel blocks of the newer town behind the old street: they stand over the roofs of the
+    # tenements on both sides and close the view at both ends, grey in the mist (the second reference picture)
+    for (bx, bz, yaw) in ((-72, -380, 8), (64, -440, -6), (150, -370, 85), (-160, -470, 30), (15, -540, 2),
+                          (-62, -130, 90), (70, -60, 90), (-68, 70, 92), (74, 140, 88), (-20, 260, 180), (60, 300, 175),
+                          (-110, 230, 120)):
+        lv.model('Panel block', '../models/zone/panel_block_16.glb', bx, 0.0, bz, yaw, group='Far',
+                 lod=('../models/zone/panel_block_16_lod1.glb', 120), cull=1500, coll=False)
     lv.lines.append(f'box "Far street ground" 0 -0.06 -265 140 0.1 150 1 1 1')
     lv.lines.append('  parent "Far"')
     lv.lines.append('  material "../materials/skrunda/terrain_lush.material"')
@@ -340,8 +348,8 @@ def build():
                  lod=(V + key + '_lod1.glb', 45), cull=900, coll=False, sway=0.3, impostor=120)
     for _ in range(70):
         x, z = far.uniform(-FACADE + 0.5, FACADE - 0.5), far.uniform(-330.0, Z0 + 1.0)
-        key = far.choice(('bush_dense_a', 'bush_wide_a', 'sapling_shrub_a', 'sapling_shrub_b', 'sapling_a'))
-        lv.model('Far bush', V + key + '.glb', x, -0.03, z, far.uniform(0, 360), far.uniform(0.9, 1.5), group='Far',
+        key = far.choice(('bush_street_a', 'bush_street_b', 'bush_street_c', 'bush_street_a', 'sapling_a'))
+        lv.model('Far bush', V + key + '.glb', x, -0.03, z, far.uniform(0, 360), far.uniform(0.6, 1.0), group='Far',
                  lod=(V + key + '_lod1.glb', 25 if 'sapling_a' not in key else 35), cull=600, coll=False, shadows=False,
                  sway=1.0)
 
@@ -349,13 +357,16 @@ def build():
     head = ['# FPS engine level', '# Overgrown street (Почтовая): made by assets/levels/source/make_overgrown_street.py;',
             '# edit in the editor afterwards (re-running the script rebuilds it).', '# Original CC0 content.',
             'version 5', 'player_start 1.5 0 104',
-            'sun -0.42 -0.82 -0.39']
-    env = {'sun_color': '1 0.97 0.92', 'sun_intensity': '3.6', 'sky_zenith': '0.26 0.42 0.72', 'sky_horizon': '0.74 0.79 0.84',
-           'ground_color': '0.46 0.43 0.35', 'cloud_cover': '0.5', 'ambient_intensity': '0.8', 'fog_color': '0.7 0.77 0.86',
-           'fog_density': '0.0032', 'fog_height': '2', 'fog_height_falloff': '0.02', 'fog_sun_scatter': '0.6',
-           'exposure': '0.9', 'bloom_intensity': '0.04', 'bloom_threshold': '1.4', 'ssao_radius': '0.8', 'ssao_intensity': '1.3',
-           'shadow_distance': '110', 'saturation': '1.0', 'contrast': '1.06', 'tint': '1.03 1 0.95', 'vignette': '0.18',
-           'grain': '0.02', 'auto_exposure': '0.6', 'exposure_min_ev': '-0.5', 'exposure_max_ev': '2', 'rain': '0', 'wind': '0.25'}
+            'sun -0.5 -0.62 -0.6']
+    # a storm coming (martin's second reference): heavy dark clouds with a pale band low over the horizon, grey
+    # diffuse light with weak shadows, mist that swallows the far blocks, the road wet from the last shower
+    env = {'sun_color': '0.82 0.86 0.92', 'sun_intensity': '1.5', 'sky_zenith': '0.085 0.095 0.11', 'sky_horizon': '0.46 0.48 0.48',
+           'ground_color': '0.2 0.2 0.18', 'cloud_cover': '0.74', 'ambient_intensity': '0.95', 'fog_color': '0.36 0.39 0.4',
+           'fog_density': '0.011', 'fog_height': '6', 'fog_height_falloff': '0.012', 'fog_sun_scatter': '0.25',
+           'exposure': '1.05', 'bloom_intensity': '0.05', 'bloom_threshold': '1.2', 'ssao_radius': '0.8', 'ssao_intensity': '1.4',
+           'shadow_distance': '110', 'saturation': '0.72', 'contrast': '1.12', 'tint': '0.96 1 1.02', 'vignette': '0.32',
+           'grain': '0.03', 'auto_exposure': '0.5', 'exposure_min_ev': '-0.5', 'exposure_max_ev': '2', 'rain': '0.06',
+           'puddles': '0.6', 'wind': '0.55'}
     head += [f'env {k} {v}' for k, v in env.items()]
     head += ['loading_title "Почтовая улица"', 'loading_hint "Projdi ulicí na sever, k domu na jejím konci."',
              'weapon "../weapons/ak74.weapon"', 'weapon "../weapons/pistol.weapon"', 'weapon "../weapons/knife.weapon"']
@@ -499,14 +510,14 @@ FOLIAGE = {
     'weed_a': _f(V + 'weed_a.glb', lods=[(V + 'weed_a_lod1.glb', 10)], cull=45),
     'weed_b': _f(V + 'weed_b.glb', lods=[(V + 'weed_b_lod1.glb', 10)], cull=45),
     'nettle': _f(V + 'nettle_tall_a.glb', lods=[(V + 'nettle_tall_a_lod1.glb', 10)], cull=50),
-    'dandelion_a': _f(V + 'dandelion_a.glb', lods=[(V + 'dandelion_a_lod1.glb', 8)], cull=30),
-    'dandelion_c': _f(V + 'dandelion_c.glb', lods=[(V + 'dandelion_c_lod1.glb', 8)], cull=30),
-    'celandine_a': _f(V + 'celandine_a.glb', lods=[(V + 'celandine_a_lod1.glb', 8)], cull=40),
-    'celandine_b': _f(V + 'celandine_b.glb', lods=[(V + 'celandine_b_lod1.glb', 8)], cull=40),
-    'shrub_a': _f(V + 'sapling_shrub_a.glb', 0.03, cull=120, shadows=1, far=0.8, lods=[(V + 'sapling_shrub_a_lod1.glb', 25)]),
-    'shrub_b': _f(V + 'sapling_shrub_b.glb', 0.03, cull=120, shadows=1, far=0.8, lods=[(V + 'sapling_shrub_b_lod1.glb', 25)]),
-    'bush_dense': _f(V + 'bush_dense_a.glb', 0.02, cull=120, shadows=1, far=0.8, lods=[(V + 'bush_dense_a_lod1.glb', 25)]),
-    'bush_wide': _f(V + 'bush_wide_a.glb', 0.02, cull=120, shadows=1, far=0.8, lods=[(V + 'bush_wide_a_lod1.glb', 25)]),
+    'dandelion_a': _f(V + 'dandelion_a.glb', lods=[(V + 'dandelion_a_lod1.glb', 8)], cull=22),
+    'dandelion_c': _f(V + 'dandelion_c.glb', lods=[(V + 'dandelion_c_lod1.glb', 8)], cull=22),
+    'celandine_a': _f(V + 'celandine_a.glb', lods=[(V + 'celandine_a_lod1.glb', 8)], cull=22),
+    'celandine_b': _f(V + 'celandine_b.glb', lods=[(V + 'celandine_b_lod1.glb', 8)], cull=22),
+    'shrub_a': _f(V + 'bush_street_b.glb', 0.03, cull=160, shadows=1, far=0.8, lods=[(V + 'bush_street_b_lod1.glb', 25)]),
+    'shrub_b': _f(V + 'bush_street_a.glb', 0.03, cull=160, shadows=1, far=0.8, lods=[(V + 'bush_street_a_lod1.glb', 25)]),
+    'bush_dense': _f(V + 'bush_street_c.glb', 0.02, cull=160, shadows=1, far=0.8, lods=[(V + 'bush_street_c_lod1.glb', 25)]),
+    'bush_wide': _f(V + 'bush_street_a.glb', 0.02, cull=160, shadows=1, far=0.8, lods=[(V + 'bush_street_a_lod1.glb', 25)]),
     'sapling_a': _f(V + 'sapling_a.glb', 0.03, cull=220, shadows=1, far=1.0, lods=[(V + 'sapling_a_lod1.glb', 35)]),
     'sapling_b': _f(V + 'sapling_b.glb', 0.03, cull=220, shadows=1, far=1.0, lods=[(V + 'sapling_b_lod1.glb', 35)]),
     'sapling_c': _f(V + 'sapling_c.glb', 0.03, cull=200, shadows=1, far=1.0, lods=[(V + 'sapling_c_lod1.glb', 35)]),
@@ -520,6 +531,11 @@ FOLIAGE = {
     'ash_b': _f(V + 'ash_b.glb', 0.03, cull=400, coll=1, shadows=1, far=1.0, lods=[(V + 'ash_b_lod1.glb', 45)], imp=120),
     'birch_a': _f(V + 'birch_a.glb', 0.03, cull=400, coll=1, shadows=1, far=1.0, lods=[(V + 'birch_a_lod1.glb', 45)], imp=120),
 }
+# ground debris (zonegen/debris.py), scattered like plants: what fell off the houses, what the wind brought
+DEBRIS = {'concrete_chunks': 60, 'plaster_chunks': 50, 'silicate_bricks': 50, 'glass_shards': 40, 'tin_cans': 40, 'bottles': 40,
+          'twigs': 45, 'planks': 90, 'sheet': 90, 'brick_heap': 110}
+for _k, _c in DEBRIS.items():
+    FOLIAGE['deb_' + _k] = _f(SK + f'debris_{_k}.glb', 0.02, cull=_c, far=0.7, shadows=1 if _k in ('brick_heap', 'sheet', 'planks') else 0)
 
 
 def vegetation(nz, rng, S, H, reclaim_pts, lamps, wrecks):
@@ -599,11 +615,13 @@ def vegetation(nz, rng, S, H, reclaim_pts, lamps, wrecks):
         if not street(x, z):
             continue
         w = at(W, x, z)
-        if w[GRASS] + 0.5 * w[SOIL] < 0.55 or rng.random() > 0.14:
+        if w[GRASS] + 0.5 * w[SOIL] < 0.55 or rng.random() > 0.075:
             continue
+        if abs(x) < 2.2 and abs(z - CROSS_C) > 8 and NORTH_END < z < SOUTH_END and rng.random() < 0.8:
+            continue                    # the bushes leave the trodden middle of the street open
         if not free(x, z, 0.7):
             continue
-        put(rng.choice(('shrub_a', 'shrub_b', 'shrub_a', 'bush_dense', 'bush_wide')), x, z, rng.uniform(0.8, 1.35))
+        put(rng.choice(('shrub_a', 'shrub_b', 'shrub_a', 'bush_dense', 'bush_wide')), x, z, rng.uniform(0.55, 0.95))
         occupied.append((x, z, 0.6))
 
     # wrecks sunk in the green: tall grass and nettles packed around the body up to the doors, a bush or a sapling
@@ -627,7 +645,7 @@ def vegetation(nz, rng, S, H, reclaim_pts, lamps, wrecks):
             u, v = rng.choice((-1, 1)) * rng.uniform(2.4, 2.9), rng.uniform(-0.7, 0.7)
             x, z = wx + u * ax + v * az, wz + u * az - v * ax
             if street(x, z):
-                put(rng.choice(('shrub_a', 'shrub_b', 'bush_dense', 'sapling_a', 'sapling_c')), x, z, rng.uniform(0.9, 1.3))
+                put(rng.choice(('shrub_a', 'shrub_b', 'bush_dense', 'sapling_a', 'sapling_c')), x, z, rng.uniform(0.6, 0.9))
                 occupied.append((x, z, 0.8))
 
     # young trees on the road and pavements (self-seeded ash and maple, birch), big ones in a few places; past the
@@ -656,6 +674,26 @@ def vegetation(nz, rng, S, H, reclaim_pts, lamps, wrecks):
         put(key, x, z, sc, sink=0.05)
         occupied.append((x, z, 2.8 if big else 1.6))
         planted += 1
+    # debris: chunks of plaster, bricks and broken glass under the facades, planks, roofing sheets and rubbish on the
+    # road, thicker toward the barricades
+    for _ in range(2600):
+        x, z = rng.uniform(-FACADE + 0.3, FACADE - 0.3), rng.uniform(Z0 + 3, Z0 + SIZE - 3)
+        if rng.random() < 0.15:
+            x, z = rng.uniform(-60, 60), rng.uniform(CROSS[0] + 0.5, CROSS[1] - 0.5)
+        if not street(x, z):
+            continue
+        wall = FACADE - abs(x) < 1.6
+        near_bar = min(abs(z - NORTH_END + 8), abs(z - SOUTH_END + 2)) < 14
+        if rng.random() > (0.5 if near_bar else 0.28):
+            continue
+        if wall:
+            key = rng.choice(('plaster_chunks', 'silicate_bricks', 'plaster_chunks', 'brick_heap', 'glass_shards', 'concrete_chunks'))
+        else:
+            key = rng.choice(('concrete_chunks', 'planks', 'sheet', 'glass_shards', 'tin_cans', 'bottles', 'twigs',
+                              'concrete_chunks', 'plaster_chunks', 'glass_shards', 'concrete_chunks'))
+        if key == 'brick_heap' and not free(x, z, 0.8):
+            continue
+        put('deb_' + key, x, z, rng.uniform(0.8, 1.3), sink=0.0)
     for (z_a, z_b, count) in ((Z0 + 3, NORTH_END - 8, 34), (SOUTH_END + 5, Z0 + SIZE - 3, 6)):
         planted = 0
         for _ in range(8000):

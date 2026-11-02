@@ -4,37 +4,37 @@
 # Original CC0 content.
 version 6
 player_start 1.5 0 104
-sun -0.42 -0.82 -0.39
-env sun_color 1 0.97 0.92
-env sun_intensity 3.6
-env sky_zenith 0.26 0.42 0.72
-env sky_horizon 0.74 0.79 0.84
-env ground_color 0.46 0.43 0.35
-env cloud_cover 0.5
-env ambient_intensity 0.8
-env fog_color 0.7 0.77 0.86
-env fog_density 0.0032
-env fog_height 2
-env fog_height_falloff 0.02
-env fog_sun_scatter 0.6
-env exposure 0.9
-env bloom_intensity 0.04
-env bloom_threshold 1.4
+sun -0.5 -0.62 -0.6
+env sun_color 0.82 0.86 0.92
+env sun_intensity 1.5
+env sky_zenith 0.085 0.095 0.11
+env sky_horizon 0.46 0.48 0.48
+env ground_color 0.2 0.2 0.18
+env cloud_cover 0.74
+env ambient_intensity 0.95
+env fog_color 0.36 0.39 0.4
+env fog_density 0.011
+env fog_height 6
+env fog_height_falloff 0.012
+env fog_sun_scatter 0.25
+env exposure 1.05
+env bloom_intensity 0.05
+env bloom_threshold 1.2
 env ssao_radius 0.8
-env ssao_intensity 1.3
+env ssao_intensity 1.4
 env shadow_distance 110
-env saturation 1
-env contrast 1.06
-env tint 1.03 1 0.95
-env vignette 0.18
-env grain 0.02
-env auto_exposure 0.6
+env saturation 0.72
+env contrast 1.12
+env tint 0.96 1 1.02
+env vignette 0.32
+env grain 0.03
+env auto_exposure 0.5
 env exposure_min_ev -0.5
 env exposure_max_ev 2
 env adapt_brighten 0.8
 env adapt_darken 2.5
-env rain 0
-env wind 0.25
+env rain 0.06
+env wind 0.55
 terrain "overgrown_street.terrain"
 terrain_layer 0 "../materials/pbr/cracked_concrete.material" 0.5
 terrain_layer 1 "../materials/pbr/asphalt_02.material" 0.3333
@@ -44,67 +44,74 @@ terrain_layer 4 "../materials/skrunda/terrain_dirt.material" 0.5
 terrain_layer 5 "../materials/skrunda/terrain_lush.material" 0.5
 terrain_layer 6 "../materials/skrunda/terrain_leaves.material" 0.33
 terrain_layer 7 "../materials/pbr/rubble.material" 0.5
+foliage_type "../models/zone/vegetation/nettle_tall_a.glb" 0.1 0.85 1.15 50 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/nettle_tall_a_lod1.glb" 10
+foliage_type "../models/zone/vegetation/weed_b.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/weed_b_lod1.glb" 10
 foliage_type "../models/zone/vegetation/grass_tall_b.glb" 0.1 0.85 1.15 55 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
 foliage_lod "../models/zone/vegetation/grass_tall_b_lod1.glb" 10
 foliage_type "../models/zone/vegetation/grass_clump_a.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
 foliage_lod "../models/zone/vegetation/grass_clump_a_lod1.glb" 10
-foliage_type "../models/zone/vegetation/weed_a.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/weed_a_lod1.glb" 10
 foliage_type "../models/zone/vegetation/grass_short_a.glb" 0.1 0.85 1.15 40 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
 foliage_lod "../models/zone/vegetation/grass_short_a_lod1.glb" 10
+foliage_type "../models/zone/vegetation/celandine_a.glb" 0.1 0.85 1.15 22 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/celandine_a_lod1.glb" 8
+foliage_type "../models/zone/vegetation/dandelion_c.glb" 0.1 0.85 1.15 22 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/dandelion_c_lod1.glb" 8
 foliage_type "../models/zone/vegetation/grass_tall_a.glb" 0.1 0.85 1.15 55 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
 foliage_lod "../models/zone/vegetation/grass_tall_a_lod1.glb" 10
-foliage_type "../models/zone/vegetation/dandelion_a.glb" 0.1 0.85 1.15 30 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_type "../models/zone/vegetation/dandelion_a.glb" 0.1 0.85 1.15 22 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
 foliage_lod "../models/zone/vegetation/dandelion_a_lod1.glb" 8
-foliage_type "../models/zone/vegetation/weed_b.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/weed_b_lod1.glb" 10
 foliage_type "../models/zone/skrunda/veg/grass_fresh.glb" 0.25 0.85 1.15 70 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
 foliage_lod "../models/zone/skrunda/veg/grass_fresh_lod1.glb" 10
 foliage_lod "../models/zone/skrunda/veg/grass_fresh_far.glb" 24
-foliage_type "../models/zone/vegetation/nettle_tall_a.glb" 0.1 0.85 1.15 50 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/nettle_tall_a_lod1.glb" 10
-foliage_type "../models/zone/vegetation/celandine_b.glb" 0.1 0.85 1.15 40 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_type "../models/zone/vegetation/celandine_b.glb" 0.1 0.85 1.15 22 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
 foliage_lod "../models/zone/vegetation/celandine_b_lod1.glb" 8
-foliage_type "../models/zone/vegetation/celandine_a.glb" 0.1 0.85 1.15 40 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/celandine_a_lod1.glb" 8
-foliage_type "../models/zone/vegetation/dandelion_c.glb" 0.1 0.85 1.15 30 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/dandelion_c_lod1.glb" 8
-foliage_type "../models/zone/vegetation/bush_wide_a.glb" 0.02 0.85 1.15 120 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/bush_wide_a_lod1.glb" 25
-foliage_type "../models/zone/vegetation/sapling_shrub_b.glb" 0.03 0.85 1.15 120 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/sapling_shrub_b_lod1.glb" 25
-foliage_type "../models/zone/vegetation/sapling_shrub_a.glb" 0.03 0.85 1.15 120 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/sapling_shrub_a_lod1.glb" 25
-foliage_type "../models/zone/vegetation/bush_dense_a.glb" 0.02 0.85 1.15 120 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/bush_dense_a_lod1.glb" 25
-foliage_type "../models/zone/vegetation/sapling_c.glb" 0.03 0.85 1.15 200 0 0 1 1 1 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/sapling_c_lod1.glb" 35
+foliage_type "../models/zone/vegetation/weed_a.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/weed_a_lod1.glb" 10
+foliage_type "../models/zone/vegetation/bush_street_b.glb" 0.03 0.85 1.15 160 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/bush_street_b_lod1.glb" 25
+foliage_type "../models/zone/vegetation/bush_street_a.glb" 0.02 0.85 1.15 160 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/bush_street_a_lod1.glb" 25
+foliage_type "../models/zone/vegetation/bush_street_a.glb" 0.03 0.85 1.15 160 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/bush_street_a_lod1.glb" 25
+foliage_type "../models/zone/vegetation/bush_street_c.glb" 0.02 0.85 1.15 160 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/bush_street_c_lod1.glb" 25
 foliage_type "../models/zone/vegetation/sapling_a.glb" 0.03 0.85 1.15 220 0 0 1 1 1 0.15 1 1 1 1 1 1 1 1
 foliage_lod "../models/zone/vegetation/sapling_a_lod1.glb" 35
+foliage_type "../models/zone/vegetation/sapling_c.glb" 0.03 0.85 1.15 200 0 0 1 1 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/sapling_c_lod1.glb" 35
+foliage_type "../models/zone/vegetation/maple_b.glb" 0.03 0.85 1.15 400 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/maple_b_lod1.glb" 45
+foliage_impostor 120
 foliage_type "../models/zone/vegetation/ash_a.glb" 0.03 0.85 1.15 400 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
 foliage_lod "../models/zone/vegetation/ash_a_lod1.glb" 45
 foliage_impostor 120
-foliage_type "../models/zone/vegetation/ash_b.glb" 0.03 0.85 1.15 400 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/ash_b_lod1.glb" 45
-foliage_impostor 120
 foliage_type "../models/zone/vegetation/broadleaf_young.glb" 0.03 0.85 1.15 300 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
 foliage_lod "../models/zone/vegetation/broadleaf_young_lod1.glb" 40
-foliage_type "../models/zone/vegetation/sapling_b.glb" 0.03 0.85 1.15 220 0 0 1 1 1 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/sapling_b_lod1.glb" 35
 foliage_type "../models/zone/vegetation/birch_young.glb" 0.03 0.85 1.15 220 0 0 1 1 1 0.15 1 1 1 1 1 1 1 1
 foliage_lod "../models/zone/vegetation/birch_young_lod1.glb" 35
-foliage_type "../models/zone/vegetation/birch_a.glb" 0.03 0.85 1.15 400 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/birch_a_lod1.glb" 45
+foliage_type "../models/zone/vegetation/ash_b.glb" 0.03 0.85 1.15 400 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/ash_b_lod1.glb" 45
 foliage_impostor 120
 foliage_type "../models/zone/vegetation/maple_a.glb" 0.03 0.85 1.15 400 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
 foliage_lod "../models/zone/vegetation/maple_a_lod1.glb" 45
 foliage_impostor 120
-foliage_type "../models/zone/vegetation/maple_b.glb" 0.03 0.85 1.15 400 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/maple_b_lod1.glb" 45
+foliage_type "../models/zone/vegetation/birch_a.glb" 0.03 0.85 1.15 400 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/birch_a_lod1.glb" 45
 foliage_impostor 120
-foliage_type "../models/zone/vegetation/broadleaf_b.glb" 0.03 0.85 1.15 400 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/broadleaf_b_lod1.glb" 45
-foliage_impostor 120
+foliage_type "../models/zone/vegetation/sapling_b.glb" 0.03 0.85 1.15 220 0 0 1 1 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/sapling_b_lod1.glb" 35
+foliage_type "../models/zone/skrunda/debris_concrete_chunks.glb" 0.02 0.85 1.15 60 0 0 0 0.7 1 0.15 1 1 1 1 1 1 1 1
+foliage_type "../models/zone/skrunda/debris_sheet.glb" 0.02 0.85 1.15 90 0 0 1 0.7 1 0.15 1 1 1 1 1 1 1 1
+foliage_type "../models/zone/skrunda/debris_bottles.glb" 0.02 0.85 1.15 40 0 0 0 0.7 1 0.15 1 1 1 1 1 1 1 1
+foliage_type "../models/zone/skrunda/debris_glass_shards.glb" 0.02 0.85 1.15 40 0 0 0 0.7 1 0.15 1 1 1 1 1 1 1 1
+foliage_type "../models/zone/skrunda/debris_plaster_chunks.glb" 0.02 0.85 1.15 50 0 0 0 0.7 1 0.15 1 1 1 1 1 1 1 1
+foliage_type "../models/zone/skrunda/debris_brick_heap.glb" 0.02 0.85 1.15 110 0 0 1 0.7 1 0.15 1 1 1 1 1 1 1 1
+foliage_type "../models/zone/skrunda/debris_silicate_bricks.glb" 0.02 0.85 1.15 50 0 0 0 0.7 1 0.15 1 1 1 1 1 1 1 1
+foliage_type "../models/zone/skrunda/debris_planks.glb" 0.02 0.85 1.15 90 0 0 1 0.7 1 0.15 1 1 1 1 1 1 1 1
+foliage_type "../models/zone/skrunda/debris_tin_cans.glb" 0.02 0.85 1.15 40 0 0 0 0.7 1 0.15 1 1 1 1 1 1 1 1
+foliage_type "../models/zone/skrunda/debris_twigs.glb" 0.02 0.85 1.15 45 0 0 0 0.7 1 0.15 1 1 1 1 1 1 1 1
 loading_title "Почтовая улица"
 loading_hint "Projdi ulicí na sever, k domu na jejím konci."
 group "Houses" ""
@@ -119,1770 +126,1924 @@ group "Far" ""
 group "Wall writing" "Houses"
 box "Far street ground" 0 -0.06 -265 140 0.1 150 1 1 1
   parent "Far"
-  id 6eafec09eb09bb8c
+  id 726102a9eaa54b14
   material "../materials/skrunda/terrain_lush.material"
 model "House A" "../models/zone/street/house_a.glb" -14.8 0.15 157
   parent "Houses"
-  id 6eead04a529191ef
+  id 4000757e2726727d
   transform 0 90 0 1
   lod "../models/zone/street/house_a_lod1.glb" 70
   cull_distance 600
 model "House B" "../models/zone/street/house_b.glb" -15 0.15 124.2
   parent "Houses"
-  id 60aeb1c22d57ea63
+  id effbb49b041ded34
   transform 0 90 0 1
   lod "../models/zone/street/house_b_lod1.glb" 70
   cull_distance 600
 model "House C" "../models/zone/street/house_c.glb" -15.4 0.15 88.4
   parent "Houses"
-  id 65e195728cba52ef
+  id c31f1d115354bab6
   transform 0 90 0 1
   lod "../models/zone/street/house_c_lod1.glb" 70
   cull_distance 600
 model "House D" "../models/zone/street/house_d.glb" -15.25 0.15 55.6
   parent "Houses"
-  id a46677a2b83103a3
+  id 05db88c14844674d
   transform 0 90 0 1
   lod "../models/zone/street/house_d_lod1.glb" 70
   cull_distance 600
 model "House E" "../models/zone/street/house_e.glb" -15.4 0.15 27.3
   parent "Houses"
-  id f1d09629514f35cf
+  id de71996a48c7db0e
   transform 0 90 0 1
   lod "../models/zone/street/house_e_lod1.glb" 70
   cull_distance 600
 model "House F" "../models/zone/street/house_f.glb" -15 0.15 -2.5
   parent "Houses"
-  id 348ee70e0337eedb
+  id e3131b43eae27f65
   transform 0 90 0 1
   lod "../models/zone/street/house_f_lod1.glb" 70
   cull_distance 600
 model "House J" "../models/zone/street/house_j.glb" -15.25 0.15 -46.5
   parent "Houses"
-  id ffeda4aa8c89ed3b
+  id 1a856cb8288a70a8
   transform 0 90 0 1
   lod "../models/zone/street/house_j_lod1.glb" 70
   cull_distance 600
 model "House A 2" "../models/zone/street/house_a.glb" -15 0.15 -86.8
   parent "Houses"
-  id d9cc2a1f468e182f
+  id f8ae79328240e7ff
   transform 0 90 0 1
   lod "../models/zone/street/house_a_lod1.glb" 70
   cull_distance 600
 model "House B 2" "../models/zone/street/house_b.glb" -15.25 0.15 -119.6
   parent "Houses"
-  id 0f528198e3529852
+  id 2946080ec994a100
   transform 0 90 0 1
   lod "../models/zone/street/house_b_lod1.glb" 70
   cull_distance 600
 model "House C 2" "../models/zone/street/house_c.glb" -15 0.15 -155.4
   parent "Houses"
-  id 21046ab3d7fd7009
+  id f5f6df1e1145a44d
   transform 0 90 0 1
   lod "../models/zone/street/house_c_lod1.glb" 70
   cull_distance 600
 model "House D 2" "../models/zone/street/house_d.glb" -15.4 0.15 -188.2
   parent "Houses"
-  id e0dead40f423b0bf
+  id 7ba638a71d566760
   transform 0 90 0 1
   lod "../models/zone/street/house_d_lod1.glb" 70
   cull_distance 600
 model "House E 2" "../models/zone/street/house_e.glb" -15 0.15 -216.5
   parent "Houses"
-  id 749c786fd45ba58f
+  id 2bc5eadeb407c756
   transform 0 90 0 1
   lod "../models/zone/street/house_e_lod1.glb" 70
   cull_distance 600
 model "House F 2" "../models/zone/street/house_f.glb" -14.8 0.15 -246.3
   parent "Houses"
-  id 35fbeb6a963e7d7a
+  id 81e3a00de49f9706
   transform 0 90 0 1
   lod "../models/zone/street/house_f_lod1.glb" 70
   cull_distance 600
 model "House G" "../models/zone/street/house_g.glb" -14.8 0.15 -279.1
   parent "Houses"
-  id 5db8fb33e65f1bbf
+  id 3f4d339ba5396309
   transform 0 90 0 1
   lod "../models/zone/street/house_g_lod1.glb" 70
   cull_distance 600
 model "House H" "../models/zone/street/house_h.glb" -15 0.15 -313.4
   parent "Houses"
-  id aa663f0064f17225
+  id 230334d8edc0e34b
   transform 0 90 0 1
   lod "../models/zone/street/house_h_lod1.glb" 70
   cull_distance 600
 model "House F 3" "../models/zone/street/house_f.glb" 14.8 0.15 158.5
   parent "Houses"
-  id 0a44565a98fc9e3e
+  id 638775ef0a2d08d2
   transform 0 -90 0 1
   lod "../models/zone/street/house_f_lod1.glb" 70
   cull_distance 600
 model "House G 2" "../models/zone/street/house_g.glb" 15 0.15 125.7
   parent "Houses"
-  id e68caeb768287d90
+  id b6c82cab9f6c779d
   transform 0 -90 0 1
   lod "../models/zone/street/house_g_lod1.glb" 70
   cull_distance 600
 model "House H 2" "../models/zone/street/house_h.glb" 15.4 0.15 91.4
   parent "Houses"
-  id fb7d580a6c9ed75c
+  id 03a51d1dbed0e7bc
   transform 0 -90 0 1
   lod "../models/zone/street/house_h_lod1.glb" 70
   cull_distance 600
 model "House I" "../models/zone/street/house_i.glb" 15.4 0.15 58.6
   parent "Houses"
-  id 20d34af2be5494b2
+  id 8ad4c8b36481b6be
   transform 0 -90 0 1
   lod "../models/zone/street/house_i_lod1.glb" 70
   cull_distance 600
 model "House J 2" "../models/zone/street/house_j.glb" 15.4 0.15 18.3
   parent "Houses"
-  id 91f854c4cb3b4c71
+  id 55f7b70d393139ee
   transform 0 -90 0 1
   lod "../models/zone/street/house_j_lod1.glb" 70
   cull_distance 600
 model "House C 3" "../models/zone/street/house_c.glb" 15.4 0.15 -45
   parent "Houses"
-  id 1561531cc51f6008
+  id 07ae58b358821be5
   transform 0 -90 0 1
   lod "../models/zone/street/house_c_lod1.glb" 70
   cull_distance 600
 model "House D 3" "../models/zone/street/house_d.glb" 14.8 0.15 -77.8
   parent "Houses"
-  id 795a54123436bedd
+  id 302620a793ec55dd
   transform 0 -90 0 1
   lod "../models/zone/street/house_d_lod1.glb" 70
   cull_distance 600
 model "House E 3" "../models/zone/street/house_e.glb" 15 0.15 -106.1
   parent "Houses"
-  id a3714443cc9becd4
+  id d0d782a3a3e4475f
   transform 0 -90 0 1
   lod "../models/zone/street/house_e_lod1.glb" 70
   cull_distance 600
 model "House F 4" "../models/zone/street/house_f.glb" 14.8 0.15 -135.9
   parent "Houses"
-  id 88a319313a2d04b8
+  id decde11347ae45e3
   transform 0 -90 0 1
   lod "../models/zone/street/house_f_lod1.glb" 70
   cull_distance 600
 model "House G 3" "../models/zone/street/house_g.glb" 14.8 0.15 -168.7
   parent "Houses"
-  id 0b0ddff3512f0d2e
+  id d6564937cfd5d668
   transform 0 -90 0 1
   lod "../models/zone/street/house_g_lod1.glb" 70
   cull_distance 600
 model "House H 3" "../models/zone/street/house_h.glb" 15 0.15 -203
   parent "Houses"
-  id a19334c8790f9e45
+  id f50061f4632ea6cf
   transform 0 -90 0 1
   lod "../models/zone/street/house_h_lod1.glb" 70
   cull_distance 600
 model "House I 2" "../models/zone/street/house_i.glb" 15.4 0.15 -235.8
   parent "Houses"
-  id 081e4ce3689734dd
+  id ecb72df6357be80d
   transform 0 -90 0 1
   lod "../models/zone/street/house_i_lod1.glb" 70
   cull_distance 600
 model "House J 3" "../models/zone/street/house_j.glb" 15 0.15 -276.1
   parent "Houses"
-  id 63f304352552def7
+  id 37b85a338ba4c2ce
   transform 0 -90 0 1
   lod "../models/zone/street/house_j_lod1.glb" 70
   cull_distance 600
 model "House A 3" "../models/zone/street/house_a.glb" 15.25 0.15 -316.4
   parent "Houses"
-  id fe4d3832aeda9fd0
+  id cb2b6e830ee40616
   transform 0 -90 0 1
   lod "../models/zone/street/house_a_lod1.glb" 70
   cull_distance 600
 model "House G 4" "../models/zone/street/house_g.glb" -42 0.15 -3
   parent "Houses"
-  id 24b036efa9394ed7
+  id c1ef2757f2654648
   transform 0 180 0 1
   lod "../models/zone/street/house_g_lod1.glb" 70
   cull_distance 600
 model "House C 4" "../models/zone/street/house_c.glb" -43.5 0.15 -31
   parent "Houses"
-  id e720584b0be24db7
+  id 3e0a4e45587d811b
   lod "../models/zone/street/house_c_lod1.glb" 70
   cull_distance 600
 model "House E 4" "../models/zone/street/house_e.glb" -78 0.15 -17
   parent "Houses"
-  id 88b21fc373bcbce0
+  id e1468585afda3e21
   transform 0 -90 0 1
   lod "../models/zone/street/house_e_lod1.glb" 70
   cull_distance 600
 model "House C 5" "../models/zone/street/house_c.glb" 43.5 0.15 -3
   parent "Houses"
-  id dbcaf08d6f96958d
+  id 7951e724a9e14b04
   transform 0 180 0 1
   lod "../models/zone/street/house_c_lod1.glb" 70
   cull_distance 600
 model "House G 5" "../models/zone/street/house_g.glb" 42 0.15 -31
   parent "Houses"
-  id c01947149ac62598
+  id b6c7782542791ab3
   lod "../models/zone/street/house_g_lod1.glb" 70
   cull_distance 600
 model "House E 5" "../models/zone/street/house_e.glb" 78 0.15 -17
   parent "Houses"
-  id 0943af0eb9f20857
+  id f99d6dc95810e26e
   transform 0 90 0 1
   lod "../models/zone/street/house_e_lod1.glb" 70
   cull_distance 600
 model "House at the end" "../models/zone/street/house_end.glb" 0 0.15 -338
   parent "Far"
-  id dcd03a2f400605af
+  id 5d9012fb6caa6b3d
   lod "../models/zone/street/house_end_lod1.glb" 70
   cull_distance 900
 model "Tower" "../models/zone/gen/skyline_tower_a.glb" -40 -0.2 -420
   parent "Far"
-  id 569824d9ca8ed6ce
+  id 0b84edc03ecc899b
   transform 0 84 0 1
-  cull_distance 1200
+  cull_distance 1500
   collision 0
 model "Tower 2" "../models/zone/gen/skyline_tower_c.glb" 35 -0.2 -460
   parent "Far"
-  id ba0b80fad4c8ae2d
+  id 0b719bebe64eca63
   transform 0 13.8 0 1
-  cull_distance 1200
+  cull_distance 1500
   collision 0
 model "Tower 3" "../models/zone/gen/skyline_tower_b.glb" 90 -0.2 -380
   parent "Far"
-  id 81ecb34e1b0759c7
+  id 1cf252db179415a3
   transform 0 74 0 1
-  cull_distance 1200
+  cull_distance 1500
   collision 0
 model "Tower 4" "../models/zone/gen/skyline_tower_b.glb" -110 -0.2 -400
   parent "Far"
-  id 26ebc7cea3abb6dc
+  id 8242c363e94cae67
   transform 0 79.8 0 1
-  cull_distance 1200
+  cull_distance 1500
+  collision 0
+model "Tower 5" "../models/zone/gen/skyline_tower_c.glb" -190 -0.2 -640
+  parent "Far"
+  id cf41fe5d7bdb4849
+  transform 0 11.3 0 1
+  cull_distance 1500
+  collision 0
+model "Tower 6" "../models/zone/gen/skyline_tower_a.glb" 160 -0.2 -600
+  parent "Far"
+  id 706be1bb3890b620
+  transform 0 65.6 0 1
+  cull_distance 1500
+  collision 0
+model "Tower 7" "../models/zone/gen/skyline_tower_c.glb" -20 -0.2 -720
+  parent "Far"
+  id f19ef14dd2991a31
+  transform 0 36 0 1
+  cull_distance 1500
+  collision 0
+model "Tower 8" "../models/zone/gen/skyline_tower_b.glb" 230 -0.2 -480
+  parent "Far"
+  id 9951151f31438f61
+  transform 0 20.6 0 1
+  cull_distance 1500
+  collision 0
+model "Panel block" "../models/zone/panel_block_16.glb" -72 0 -380
+  parent "Far"
+  id 90acce731679c99d
+  transform 0 8 0 1
+  lod "../models/zone/panel_block_16_lod1.glb" 120
+  cull_distance 1500
+  collision 0
+model "Panel block 2" "../models/zone/panel_block_16.glb" 64 0 -440
+  parent "Far"
+  id f026196e4baf4cc2
+  transform 0 -6 0 1
+  lod "../models/zone/panel_block_16_lod1.glb" 120
+  cull_distance 1500
+  collision 0
+model "Panel block 3" "../models/zone/panel_block_16.glb" 150 0 -370
+  parent "Far"
+  id a82f12241b6d4708
+  transform 0 85 0 1
+  lod "../models/zone/panel_block_16_lod1.glb" 120
+  cull_distance 1500
+  collision 0
+model "Panel block 4" "../models/zone/panel_block_16.glb" -160 0 -470
+  parent "Far"
+  id 786547e5a1c1dddb
+  transform 0 30 0 1
+  lod "../models/zone/panel_block_16_lod1.glb" 120
+  cull_distance 1500
+  collision 0
+model "Panel block 5" "../models/zone/panel_block_16.glb" 15 0 -540
+  parent "Far"
+  id f74d8004eabde655
+  transform 0 2 0 1
+  lod "../models/zone/panel_block_16_lod1.glb" 120
+  cull_distance 1500
+  collision 0
+model "Panel block 6" "../models/zone/panel_block_16.glb" -62 0 -130
+  parent "Far"
+  id 6d4add50a5d38342
+  transform 0 90 0 1
+  lod "../models/zone/panel_block_16_lod1.glb" 120
+  cull_distance 1500
+  collision 0
+model "Panel block 7" "../models/zone/panel_block_16.glb" 70 0 -60
+  parent "Far"
+  id fbfd5e727d810c92
+  transform 0 90 0 1
+  lod "../models/zone/panel_block_16_lod1.glb" 120
+  cull_distance 1500
+  collision 0
+model "Panel block 8" "../models/zone/panel_block_16.glb" -68 0 70
+  parent "Far"
+  id 69709481430b8674
+  transform 0 92 0 1
+  lod "../models/zone/panel_block_16_lod1.glb" 120
+  cull_distance 1500
+  collision 0
+model "Panel block 9" "../models/zone/panel_block_16.glb" 74 0 140
+  parent "Far"
+  id bc6787e47a41c986
+  transform 0 88 0 1
+  lod "../models/zone/panel_block_16_lod1.glb" 120
+  cull_distance 1500
+  collision 0
+model "Panel block 10" "../models/zone/panel_block_16.glb" -20 0 260
+  parent "Far"
+  id a83ff1747b2f9d18
+  transform 0 180 0 1
+  lod "../models/zone/panel_block_16_lod1.glb" 120
+  cull_distance 1500
+  collision 0
+model "Panel block 11" "../models/zone/panel_block_16.glb" 60 0 300
+  parent "Far"
+  id 2888b2f3501da236
+  transform 0 175 0 1
+  lod "../models/zone/panel_block_16_lod1.glb" 120
+  cull_distance 1500
+  collision 0
+model "Panel block 12" "../models/zone/panel_block_16.glb" -110 0 230
+  parent "Far"
+  id 519d32e4b4598c13
+  transform 0 120 0 1
+  lod "../models/zone/panel_block_16_lod1.glb" 120
+  cull_distance 1500
   collision 0
 model "House number" "../models/zone/skrunda/plate_house_2.glb" 7.98 2.55 144.25
   parent "Plates"
-  id 274035de6f20b4cd
-  transform 0 -90 0 1
-  cull_distance 45
-  collision 0
-  cast_shadows 0
-model "Street plate" "../models/zone/skrunda/plate_street_pochta.glb" 7.98 2.95 144.25
-  parent "Plates"
-  id 1412a453570aae14
+  id c1cb5f27e92c7b32
   transform 0 -90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "House number 2" "../models/zone/skrunda/plate_house_1.glb" -7.98 2.55 138.25
   parent "Plates"
-  id 8807ad5c474ddda8
+  id 2227c1b67f4c13d4
   transform 0 90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "House number 3" "../models/zone/skrunda/plate_house_3.glb" -8.38 2.55 108.45
   parent "Plates"
-  id 957042241d61ae52
+  id d02cab4f17e4dde6
   transform 0 90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
-model "Street plate 2" "../models/zone/skrunda/plate_street_pochta.glb" -8.38 2.95 108.45
+model "Street plate" "../models/zone/skrunda/plate_street_pochta.glb" -8.38 2.95 108.45
   parent "Plates"
-  id daea77e6e82fcc10
+  id 39285c0184eda948
   transform 0 90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "House number 4" "../models/zone/skrunda/plate_house_4.glb" 8.38 2.55 105.45
   parent "Plates"
-  id 517af29315cc5a57
-  transform 0 -90 0 1
-  cull_distance 45
-  collision 0
-  cast_shadows 0
-model "Street plate 3" "../models/zone/skrunda/plate_street_pochta.glb" 8.38 2.95 105.45
-  parent "Plates"
-  id 778e41631b1b1a40
+  id d0190b2904f1d217
   transform 0 -90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "House number 5" "../models/zone/skrunda/plate_house_6.glb" 8.38 2.55 75.65
   parent "Plates"
-  id cc6174fb722032c4
+  id 68d1c18971004720
+  transform 0 -90 0 1
+  cull_distance 45
+  collision 0
+  cast_shadows 0
+model "Street plate 2" "../models/zone/skrunda/plate_street_pochta.glb" 8.38 2.95 75.65
+  parent "Plates"
+  id f67df210b7ad2422
   transform 0 -90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "House number 6" "../models/zone/skrunda/plate_house_5.glb" -8.23 2.55 66.65
   parent "Plates"
-  id 58e4bb521edb2191
+  id 44f5ec78648fcdb9
+  transform 0 90 0 1
+  cull_distance 45
+  collision 0
+  cast_shadows 0
+model "Street plate 3" "../models/zone/skrunda/plate_street_pochta.glb" -8.23 2.95 66.65
+  parent "Plates"
+  id 6f266e40f828cdb2
   transform 0 90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "House number 7" "../models/zone/skrunda/plate_house_7.glb" -8.38 2.55 42.85
   parent "Plates"
-  id 9f6489ee1e67fa91
-  transform 0 90 0 1
-  cull_distance 45
-  collision 0
-  cast_shadows 0
-model "Street plate 4" "../models/zone/skrunda/plate_street_pochta.glb" -8.38 2.95 42.85
-  parent "Plates"
-  id 3aaee3dd1b29b449
+  id 9ae17541c1b9205a
   transform 0 90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "House number 8" "../models/zone/skrunda/plate_house_8.glb" 8.38 2.55 39.85
   parent "Plates"
-  id 6a41f21ff34692e6
+  id df66d521e74a384a
+  transform 0 -90 0 1
+  cull_distance 45
+  collision 0
+  cast_shadows 0
+model "Street plate 4" "../models/zone/skrunda/plate_street_pochta.glb" 8.38 2.95 39.85
+  parent "Plates"
+  id 3f3533f8fa3fe4f7
   transform 0 -90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "House number 9" "../models/zone/skrunda/plate_house_9.glb" -7.98 2.55 10.05
   parent "Plates"
-  id df95dcda3f8af037
-  transform 0 90 0 1
-  cull_distance 45
-  collision 0
-  cast_shadows 0
-model "Street plate 5" "../models/zone/skrunda/plate_street_pochta.glb" -7.98 2.95 10.05
-  parent "Plates"
-  id b519bddb38451490
+  id 41b49592ed2aa0e1
   transform 0 90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "House number 10" "../models/zone/skrunda/plate_house_11.glb" -8.23 2.55 -24.95
   parent "Plates"
-  id 490947b283ef0b04
+  id 2aecdce0b6d00eaf
   transform 0 90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
-model "Street plate 6" "../models/zone/skrunda/plate_street_pochta.glb" -8.23 2.95 -24.95
+model "Street plate 5" "../models/zone/skrunda/plate_street_pochta.glb" -8.23 2.95 -24.95
   parent "Plates"
-  id 73b76f0133c3a92d
+  id 7586174eccf21854
   transform 0 90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "House number 11" "../models/zone/skrunda/plate_house_10.glb" 8.38 2.55 -24.95
   parent "Plates"
-  id 8713a07f798a121b
+  id 7b08597c23933fec
+  transform 0 -90 0 1
+  cull_distance 45
+  collision 0
+  cast_shadows 0
+model "Street plate 6" "../models/zone/skrunda/plate_street_pochta.glb" 8.38 2.95 -24.95
+  parent "Plates"
+  id 272b106814c5433d
   transform 0 -90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "House number 12" "../models/zone/skrunda/plate_house_12.glb" 7.78 2.55 -66.75
   parent "Plates"
-  id f00855d5032765ea
+  id 32f6d84ae6da1233
   transform 0 -90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "Street plate 7" "../models/zone/skrunda/plate_street_pochta.glb" 7.78 2.95 -66.75
   parent "Plates"
-  id 5a823835e8d798af
+  id f4bb7f9cbbb99f43
   transform 0 -90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "House number 13" "../models/zone/skrunda/plate_house_13.glb" -7.98 2.55 -69.75
   parent "Plates"
-  id 66c77280960f521b
+  id 39b16695f2901e39
+  transform 0 90 0 1
+  cull_distance 45
+  collision 0
+  cast_shadows 0
+model "Street plate 8" "../models/zone/skrunda/plate_street_pochta.glb" -7.98 2.95 -69.75
+  parent "Plates"
+  id ca44d73ab608c56c
   transform 0 90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "House number 14" "../models/zone/skrunda/plate_house_14.glb" 7.98 2.55 -90.55
   parent "Plates"
-  id 797a515185df2ca8
+  id 85c23d152dd11203
   transform 0 -90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
-model "Street plate 8" "../models/zone/skrunda/plate_street_pochta.glb" 7.98 2.95 -90.55
+model "Street plate 9" "../models/zone/skrunda/plate_street_pochta.glb" 7.98 2.95 -90.55
   parent "Plates"
-  id 3c0d5faa52c10b58
+  id a23f15a24b206583
   transform 0 -90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "House number 15" "../models/zone/skrunda/plate_house_15.glb" -8.23 2.55 -105.55
   parent "Plates"
-  id 27059286be1fec60
+  id f4b024e861ba1ca9
   transform 0 90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
-model "Street plate 9" "../models/zone/skrunda/plate_street_pochta.glb" -8.23 2.95 -105.55
+model "Street plate 10" "../models/zone/skrunda/plate_street_pochta.glb" -8.23 2.95 -105.55
   parent "Plates"
-  id 84fc150ba2b9769b
+  id 0f67f2be4b9ea282
   transform 0 90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "House number 16" "../models/zone/skrunda/plate_house_16.glb" 7.78 2.55 -123.35
   parent "Plates"
-  id e0fb602bcaf9bef0
+  id 618519173869c852
   transform 0 -90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
-model "Street plate 10" "../models/zone/skrunda/plate_street_pochta.glb" 7.78 2.95 -123.35
+model "Street plate 11" "../models/zone/skrunda/plate_street_pochta.glb" 7.78 2.95 -123.35
   parent "Plates"
-  id 789ede091db5d7fa
+  id b4e2b0c2fc3ceda2
   transform 0 -90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "Kerb" "../models/zone/street/kerb_6m.glb" -4.5 0 147
   parent "Kerbs"
-  id cf5928997ae615fc
+  id 8aa3fcfd8a772546
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 2" "../models/zone/street/kerb_6m.glb" -4.5 0 141
+model "Kerb 2" "../models/zone/street/kerb_6m_b.glb" -4.5 0 141
   parent "Kerbs"
-  id e7ed166e1d0842f9
+  id 9cbf2f1520ac7e44
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 3" "../models/zone/street/kerb_6m.glb" -4.5 0 135
   parent "Kerbs"
-  id dc40ba5a9014f472
+  id bac9407f33349717
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 4" "../models/zone/street/kerb_6m.glb" -4.5 0 129
   parent "Kerbs"
-  id 0a11aaf24606509f
+  id d29a95322305ec0c
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 5" "../models/zone/street/kerb_6m.glb" -4.5 0 123
   parent "Kerbs"
-  id 27355bda5ccf19cd
+  id f06213fb04ab02e1
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 6" "../models/zone/street/kerb_6m_b.glb" -4.5 0 117
+model "Kerb 6" "../models/zone/street/kerb_6m.glb" -4.5 0 117
   parent "Kerbs"
-  id a4042483c697cb9b
+  id 3b764fbdd583ef7f
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 7" "../models/zone/street/kerb_6m.glb" -4.5 0 111
+model "Kerb 7" "../models/zone/street/kerb_6m_b.glb" -4.5 0 111
   parent "Kerbs"
-  id 98a340041acf8a39
+  id 10f70a193b4123e1
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 8" "../models/zone/street/kerb_6m.glb" -4.5 0 105
+model "Kerb 8" "../models/zone/street/kerb_6m_b.glb" -4.5 0 105
   parent "Kerbs"
-  id c2fccc2e74f9f874
+  id e51582de4062c525
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 9" "../models/zone/street/kerb_6m.glb" -4.5 0 99
   parent "Kerbs"
-  id d97a56aa83c9cb80
+  id ca8287f547b0656d
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 10" "../models/zone/street/kerb_6m.glb" -4.5 0 93
+model "Kerb 10" "../models/zone/street/kerb_6m_b.glb" -4.5 0 93
   parent "Kerbs"
-  id a84124a067e2b408
+  id d35f48575b545937
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 11" "../models/zone/street/kerb_6m_b.glb" -4.5 0 87
   parent "Kerbs"
-  id 331bca5c2eeeed13
+  id 24b96db85b323160
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 12" "../models/zone/street/kerb_6m_b.glb" -4.5 0 81
   parent "Kerbs"
-  id 53915db3005dc1e5
+  id 22b99c145777c2d9
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 13" "../models/zone/street/kerb_6m.glb" -4.5 0 75
   parent "Kerbs"
-  id 5818f17073c0dc66
+  id 75e9a689c5301427
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 14" "../models/zone/street/kerb_6m_b.glb" -4.5 0 69
   parent "Kerbs"
-  id 64853a5116f8f0ab
+  id d6c5939c7e694116
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 15" "../models/zone/street/kerb_6m_b.glb" -4.5 0 63
   parent "Kerbs"
-  id 3302e3a58454fa9e
+  id 6a895b45a9596a57
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 16" "../models/zone/street/kerb_6m_b.glb" -4.5 0 57
   parent "Kerbs"
-  id 8a11d81bf27187c7
+  id 369f2c136d2eafa2
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 17" "../models/zone/street/kerb_6m.glb" -4.5 0 51
   parent "Kerbs"
-  id 64c3946ab5dc0ddb
+  id f638f4ea22d81cb5
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 18" "../models/zone/street/kerb_6m_b.glb" -4.5 0 45
+model "Kerb 18" "../models/zone/street/kerb_6m.glb" -4.5 0 45
   parent "Kerbs"
-  id b162bf95739fd30f
+  id d732214c536eaddb
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 19" "../models/zone/street/kerb_6m_b.glb" -4.5 0 39
   parent "Kerbs"
-  id 14c770554b98d839
+  id c6be55828f16f665
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 20" "../models/zone/street/kerb_6m_b.glb" -4.5 0 33
   parent "Kerbs"
-  id f00a794a73a5c362
+  id 949bd53033347d0a
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 21" "../models/zone/street/kerb_6m.glb" -4.5 0 27
+model "Kerb 21" "../models/zone/street/kerb_6m_b.glb" -4.5 0 27
   parent "Kerbs"
-  id 42c431963e9ddf7c
+  id c13e1e3dda888a2b
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 22" "../models/zone/street/kerb_6m.glb" -4.5 0 21
+model "Kerb 22" "../models/zone/street/kerb_6m_b.glb" -4.5 0 21
   parent "Kerbs"
-  id 33e0eb549187da31
+  id 62fa79f122a557a4
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 23" "../models/zone/street/kerb_6m_b.glb" -4.5 0 15
   parent "Kerbs"
-  id c1638260d7de9636
+  id e1d84c34135e0cdb
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 24" "../models/zone/street/kerb_6m_b.glb" -4.5 0 9
   parent "Kerbs"
-  id b3bc3375ef6a2159
+  id 004dbb051397070e
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 25" "../models/zone/street/kerb_6m_b.glb" -4.5 0 3
   parent "Kerbs"
-  id c5359acee1a92c38
+  id 54eee73bbd5fa4f6
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 26" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -33
+model "Kerb 26" "../models/zone/street/kerb_6m.glb" -4.5 0 -33
   parent "Kerbs"
-  id 74df8ae0d8c0bc3b
+  id 71e1fa99c603e8e6
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 27" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -39
   parent "Kerbs"
-  id da70aa334977e7a9
+  id fe0a3af731564aa2
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 28" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -45
+model "Kerb 28" "../models/zone/street/kerb_6m.glb" -4.5 0 -45
   parent "Kerbs"
-  id 8aa90144d4c79532
+  id c4bbdbbc9262d926
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 29" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -51
+model "Kerb 29" "../models/zone/street/kerb_6m.glb" -4.5 0 -51
   parent "Kerbs"
-  id 5add57966790819c
+  id dd997c97bf9f2b31
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 30" "../models/zone/street/kerb_6m.glb" -4.5 0 -57
   parent "Kerbs"
-  id cbfab34d95cc6b5d
+  id 1a30f6e08ff6f6c8
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 31" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -63
   parent "Kerbs"
-  id f26a8ebf822ed8dd
+  id e36e8a9e48a9799c
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 32" "../models/zone/street/kerb_6m.glb" -4.5 0 -69
   parent "Kerbs"
-  id c82cdeefb1afd562
+  id b9f8bb9e4263e227
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 33" "../models/zone/street/kerb_6m.glb" -4.5 0 -75
+model "Kerb 33" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -75
   parent "Kerbs"
-  id de0f2a9b679bdf5d
+  id 00607f440ec7103a
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 34" "../models/zone/street/kerb_6m.glb" -4.5 0 -81
+model "Kerb 34" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -81
   parent "Kerbs"
-  id 6d7173565f3262ce
+  id dc77751aed2aa5b3
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 35" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -87
   parent "Kerbs"
-  id e5eae0b11944eb95
+  id 621cc57eead21912
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 36" "../models/zone/street/kerb_6m.glb" -4.5 0 -93
+model "Kerb 36" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -93
   parent "Kerbs"
-  id 65dafdd4b2e35b8b
+  id 457c24e91d4da43f
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 37" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -99
+model "Kerb 37" "../models/zone/street/kerb_6m.glb" -4.5 0 -99
   parent "Kerbs"
-  id f03baaed1feb6714
+  id 3280fe40e36b900b
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 38" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -105
+model "Kerb 38" "../models/zone/street/kerb_6m.glb" -4.5 0 -105
   parent "Kerbs"
-  id a483fb10f20f792f
+  id ad6c65a4a1c26cad
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 39" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -111
+model "Kerb 39" "../models/zone/street/kerb_6m.glb" -4.5 0 -111
   parent "Kerbs"
-  id f32192ac5efa5a00
+  id 2c66250780869396
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 40" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -117
+model "Kerb 40" "../models/zone/street/kerb_6m.glb" -4.5 0 -117
   parent "Kerbs"
-  id dfb87d7f762a5c89
+  id 3b95b41c3fead47e
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 41" "../models/zone/street/kerb_6m.glb" -4.5 0 -123
   parent "Kerbs"
-  id 6d6905b9250b5c69
+  id 7f117ea4a2611b14
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 42" "../models/zone/street/kerb_6m.glb" -4.5 0 -129
+model "Kerb 42" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -129
   parent "Kerbs"
-  id dd00149fca7cbee6
+  id 13a8b366d1e23b98
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 43" "../models/zone/street/kerb_6m.glb" -4.5 0 -135
   parent "Kerbs"
-  id f83124e69c7defe7
+  id f1e56f8841ca00f9
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 44" "../models/zone/street/kerb_6m.glb" -4.5 0 -141
+model "Kerb 44" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -141
   parent "Kerbs"
-  id be543820b7f70bf5
+  id fee4ede883421c79
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 45" "../models/zone/street/kerb_6m.glb" -4.5 0 -147
+model "Kerb 45" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -147
   parent "Kerbs"
-  id 616b916364482101
+  id a1993624a65bc569
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 46" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -153
   parent "Kerbs"
-  id dcfe4e6e4ab5f8b9
+  id 892134f9693daea9
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 47" "../models/zone/street/kerb_6m.glb" -4.5 0 -159
+model "Kerb 47" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -159
   parent "Kerbs"
-  id c07a925b707c2c6c
+  id 671981f34f3bba99
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 48" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -165
+model "Kerb 48" "../models/zone/street/kerb_6m.glb" -4.5 0 -165
   parent "Kerbs"
-  id 19636690ed29b1ad
+  id 0a42df23097678b2
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 49" "../models/zone/street/kerb_6m_b.glb" 4.5 0 147
+model "Kerb 49" "../models/zone/street/kerb_6m.glb" 4.5 0 147
   parent "Kerbs"
-  id 9a4ea8b9a6427121
+  id 482cfc0bf2e5f33a
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 50" "../models/zone/street/kerb_6m_b.glb" 4.5 0 141
+model "Kerb 50" "../models/zone/street/kerb_6m.glb" 4.5 0 141
   parent "Kerbs"
-  id 4509f62674f114ad
+  id 429ede7da77071ea
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 51" "../models/zone/street/kerb_6m_b.glb" 4.5 0 135
   parent "Kerbs"
-  id e071b50f6b685dff
+  id f79efe13874a2319
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 52" "../models/zone/street/kerb_6m.glb" 4.5 0 129
+model "Kerb 52" "../models/zone/street/kerb_6m_b.glb" 4.5 0 129
   parent "Kerbs"
-  id 76d248fcba1c82eb
+  id 02ae36ec4bd923aa
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 53" "../models/zone/street/kerb_6m.glb" 4.5 0 123
+model "Kerb 53" "../models/zone/street/kerb_6m_b.glb" 4.5 0 123
   parent "Kerbs"
-  id c9234ece340642af
+  id f5dd1eeec7682b3c
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 54" "../models/zone/street/kerb_6m.glb" 4.5 0 117
+model "Kerb 54" "../models/zone/street/kerb_6m_b.glb" 4.5 0 117
   parent "Kerbs"
-  id a9679c5b76a597e5
+  id 03de3cf80a6aa0a9
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 55" "../models/zone/street/kerb_6m_b.glb" 4.5 0 111
+model "Kerb 55" "../models/zone/street/kerb_6m.glb" 4.5 0 111
   parent "Kerbs"
-  id 9d6e9711ef3e94d0
+  id 5eddb9a2614fc443
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 56" "../models/zone/street/kerb_6m_b.glb" 4.5 0 105
+model "Kerb 56" "../models/zone/street/kerb_6m.glb" 4.5 0 105
   parent "Kerbs"
-  id 0401db250f753754
+  id e7e97cfe6707d120
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 57" "../models/zone/street/kerb_6m_b.glb" 4.5 0 99
+model "Kerb 57" "../models/zone/street/kerb_6m.glb" 4.5 0 99
   parent "Kerbs"
-  id b7c750dbd727a608
+  id c3faa14be4ebea5f
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 58" "../models/zone/street/kerb_6m_b.glb" 4.5 0 93
   parent "Kerbs"
-  id e3171e30b29cd3e9
+  id 50255f7aa6c6fd72
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 59" "../models/zone/street/kerb_6m.glb" 4.5 0 87
+model "Kerb 59" "../models/zone/street/kerb_6m_b.glb" 4.5 0 87
   parent "Kerbs"
-  id c8dea995781d185c
+  id ff425d9fbdcde6cf
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 60" "../models/zone/street/kerb_6m.glb" 4.5 0 81
   parent "Kerbs"
-  id b4e81d165eec673c
+  id f6527d5f7bcd6f3b
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 61" "../models/zone/street/kerb_6m.glb" 4.5 0 75
   parent "Kerbs"
-  id c986f85e0a271474
+  id 1915e73e0b32136a
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 62" "../models/zone/street/kerb_6m_b.glb" 4.5 0 69
   parent "Kerbs"
-  id f83429a2fdfb8f02
+  id a98f774b58257fa7
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 63" "../models/zone/street/kerb_6m_b.glb" 4.5 0 63
+model "Kerb 63" "../models/zone/street/kerb_6m.glb" 4.5 0 63
   parent "Kerbs"
-  id 41f79fda00a23334
+  id 4f403bbbc51bd5f6
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 64" "../models/zone/street/kerb_6m.glb" 4.5 0 57
+model "Kerb 64" "../models/zone/street/kerb_6m_b.glb" 4.5 0 57
   parent "Kerbs"
-  id 0b60818a2bdf611b
+  id 700c6a7a29a96581
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 65" "../models/zone/street/kerb_6m.glb" 4.5 0 51
+model "Kerb 65" "../models/zone/street/kerb_6m_b.glb" 4.5 0 51
   parent "Kerbs"
-  id 722c9ca12f16de99
+  id 390e88681c8e3945
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 66" "../models/zone/street/kerb_6m_b.glb" 4.5 0 45
   parent "Kerbs"
-  id 5f1477d5c6a4cd7c
+  id ca762269634cdbac
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 67" "../models/zone/street/kerb_6m.glb" 4.5 0 39
   parent "Kerbs"
-  id 1921d5000416ae1c
+  id a003cd9782387b15
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 68" "../models/zone/street/kerb_6m_b.glb" 4.5 0 33
+model "Kerb 68" "../models/zone/street/kerb_6m.glb" 4.5 0 33
   parent "Kerbs"
-  id 7c2cc8fc9f1a95dc
+  id 229467ede6de6f79
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 69" "../models/zone/street/kerb_6m_b.glb" 4.5 0 27
+model "Kerb 69" "../models/zone/street/kerb_6m.glb" 4.5 0 27
   parent "Kerbs"
-  id 7e7b17ceabb54457
+  id 6118ee48cac63f5c
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 70" "../models/zone/street/kerb_6m_b.glb" 4.5 0 21
   parent "Kerbs"
-  id bfb1aa9f73185c6b
+  id a2df108a5244e131
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 71" "../models/zone/street/kerb_6m.glb" 4.5 0 15
   parent "Kerbs"
-  id f9b3fbf951af4314
+  id 43b69aec1893b624
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 72" "../models/zone/street/kerb_6m.glb" 4.5 0 9
   parent "Kerbs"
-  id c4a7a49ac0d980b6
+  id 6ad297cc300365e2
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 73" "../models/zone/street/kerb_6m.glb" 4.5 0 3
   parent "Kerbs"
-  id 0f47faae1ff277b8
+  id 56ec074df20d90f0
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 74" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -33
+model "Kerb 74" "../models/zone/street/kerb_6m.glb" 4.5 0 -33
   parent "Kerbs"
-  id ea8628ac5c856c65
+  id e568a2019e8cfcad
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 75" "../models/zone/street/kerb_6m.glb" 4.5 0 -39
+model "Kerb 75" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -39
   parent "Kerbs"
-  id 827a4c0cd485baf4
+  id 0319ac8cb66670dc
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 76" "../models/zone/street/kerb_6m.glb" 4.5 0 -45
+model "Kerb 76" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -45
   parent "Kerbs"
-  id 50d798ca7827ed9a
+  id 05041425528875b1
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 77" "../models/zone/street/kerb_6m.glb" 4.5 0 -51
+model "Kerb 77" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -51
   parent "Kerbs"
-  id 00a0ba350413e375
+  id 11bcbf58ce8e3b65
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 78" "../models/zone/street/kerb_6m.glb" 4.5 0 -57
+model "Kerb 78" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -57
   parent "Kerbs"
-  id c31e3fe7fb0d147f
+  id 923848a74de3d281
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 79" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -63
   parent "Kerbs"
-  id d645ff1dc3f489c4
+  id 77ed8b041a5575fb
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 80" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -69
+model "Kerb 80" "../models/zone/street/kerb_6m.glb" 4.5 0 -69
   parent "Kerbs"
-  id bcb4e183a5e5db86
+  id 616c10cb8d5d1e34
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 81" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -75
+model "Kerb 81" "../models/zone/street/kerb_6m.glb" 4.5 0 -75
   parent "Kerbs"
-  id bcd69b56c6ef678f
+  id cdaf5d5bf27fc4f1
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 82" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -81
   parent "Kerbs"
-  id 606370fe03abc987
+  id 14fb2c53f5a9165a
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 83" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -87
+model "Kerb 83" "../models/zone/street/kerb_6m.glb" 4.5 0 -87
   parent "Kerbs"
-  id 3cae31a5560f6ab5
+  id c909d61f5013031f
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 84" "../models/zone/street/kerb_6m.glb" 4.5 0 -93
+model "Kerb 84" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -93
   parent "Kerbs"
-  id 7d55ce472604df67
+  id 23fb81bfd262715b
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 85" "../models/zone/street/kerb_6m.glb" 4.5 0 -99
+model "Kerb 85" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -99
   parent "Kerbs"
-  id 4079d6844c708efd
+  id 325ae54b673f3ddc
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 86" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -105
   parent "Kerbs"
-  id 8914aa600d41a87c
+  id 6d10ce938ad38619
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 87" "../models/zone/street/kerb_6m.glb" 4.5 0 -111
   parent "Kerbs"
-  id fea605173d4fac9d
+  id 2d2c3444172ae279
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 88" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -117
+model "Kerb 88" "../models/zone/street/kerb_6m.glb" 4.5 0 -117
   parent "Kerbs"
-  id cce7fe321eba1ea2
+  id 82983e1f19ee2553
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 89" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -123
   parent "Kerbs"
-  id be8772f983a760b9
+  id e466d014faa0d3fd
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 90" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -129
+model "Kerb 90" "../models/zone/street/kerb_6m.glb" 4.5 0 -129
   parent "Kerbs"
-  id 92394994c6660c43
+  id 824bf1cc9ef99197
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 91" "../models/zone/street/kerb_6m.glb" 4.5 0 -135
+model "Kerb 91" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -135
   parent "Kerbs"
-  id dc23b51229e50b2a
+  id c77e27f674ab5b7c
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 92" "../models/zone/street/kerb_6m.glb" 4.5 0 -141
+model "Kerb 92" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -141
   parent "Kerbs"
-  id e7f873fe6df98301
+  id e9b5fc6dec09742e
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 93" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -147
+model "Kerb 93" "../models/zone/street/kerb_6m.glb" 4.5 0 -147
   parent "Kerbs"
-  id 92e8988c98caebdb
+  id c390c13c11d25bc0
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 94" "../models/zone/street/kerb_6m.glb" 4.5 0 -153
+model "Kerb 94" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -153
   parent "Kerbs"
-  id 936c21e6f37327d7
+  id 5355f44a32a75913
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 95" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -159
+model "Kerb 95" "../models/zone/street/kerb_6m.glb" 4.5 0 -159
   parent "Kerbs"
-  id 0a2f3ed0c9de43d7
+  id 2eed82216060d18b
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Kerb 96" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -165
+model "Kerb 96" "../models/zone/street/kerb_6m.glb" 4.5 0 -165
   parent "Kerbs"
-  id fb57b32e4abf5b81
+  id b6ed6a2635b717d0
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 97" "../models/zone/street/kerb_6m.glb" -12 0 -12.5
   parent "Kerbs"
-  id 44607709a15c9525
+  id 26a9000b0b0a6b82
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 98" "../models/zone/street/kerb_6m.glb" -18 0 -12.5
   parent "Kerbs"
-  id 9cee4024ff74503d
+  id e6ee7f668e055dbe
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 99" "../models/zone/street/kerb_6m.glb" -24 0 -12.5
   parent "Kerbs"
-  id ea767d2722ce9cf5
+  id dc6887d54d6d56c2
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 100" "../models/zone/street/kerb_6m.glb" -30 0 -12.5
   parent "Kerbs"
-  id 985d580abfe6026f
+  id 145eb631dbb36514
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 101" "../models/zone/street/kerb_6m.glb" -36 0 -12.5
   parent "Kerbs"
-  id 6e7b99e27eb13682
+  id f5ac1a07901f4684
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 102" "../models/zone/street/kerb_6m.glb" -42 0 -12.5
   parent "Kerbs"
-  id d07ead8b57ac9605
+  id 84555f39c9804559
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 103" "../models/zone/street/kerb_6m.glb" -48 0 -12.5
   parent "Kerbs"
-  id e9b1f3dc81c88277
+  id 3e041c84c96a70d2
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 104" "../models/zone/street/kerb_6m.glb" -54 0 -12.5
   parent "Kerbs"
-  id 7062c7bb9066017a
+  id 5fcf63672a92c342
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 105" "../models/zone/street/kerb_6m.glb" -60 0 -12.5
   parent "Kerbs"
-  id dd27f5f1b3a0caf7
+  id 995729ec4b0c4dcf
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 106" "../models/zone/street/kerb_6m.glb" -66 0 -12.5
   parent "Kerbs"
-  id b1daba2fdfc7723e
+  id 3d6f72c077669e5c
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 107" "../models/zone/street/kerb_6m.glb" -12 0 -21.5
   parent "Kerbs"
-  id 52a36d74682e24d2
+  id 1c8341ff4ac0104c
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 108" "../models/zone/street/kerb_6m.glb" -18 0 -21.5
   parent "Kerbs"
-  id e73167f3131fd84e
+  id 4f37a9e26a235b56
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 109" "../models/zone/street/kerb_6m.glb" -24 0 -21.5
   parent "Kerbs"
-  id d2b74ce9a0c64e94
+  id 371dfe77dfe8c934
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 110" "../models/zone/street/kerb_6m.glb" -30 0 -21.5
   parent "Kerbs"
-  id 0be8cce3afc68349
+  id ff0194aac35f754f
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 111" "../models/zone/street/kerb_6m.glb" -36 0 -21.5
   parent "Kerbs"
-  id 98d94317a4622482
+  id 5f69e65308294f7d
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 112" "../models/zone/street/kerb_6m.glb" -42 0 -21.5
   parent "Kerbs"
-  id fb65bce6f8bc1da4
+  id fe74fff5ed9783ca
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 113" "../models/zone/street/kerb_6m.glb" -48 0 -21.5
   parent "Kerbs"
-  id e55f26dbebc374bf
+  id 7f0966d4aba7ce3f
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 114" "../models/zone/street/kerb_6m.glb" -54 0 -21.5
   parent "Kerbs"
-  id 83aff83b6214ea30
+  id 37233aa3cbb2b732
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 115" "../models/zone/street/kerb_6m.glb" -60 0 -21.5
   parent "Kerbs"
-  id d3a4ad3ac823b378
+  id 8aefe8b81d765c28
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 116" "../models/zone/street/kerb_6m.glb" -66 0 -21.5
   parent "Kerbs"
-  id fc53b69fd9f87636
+  id edf5ab13cb1962f7
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 117" "../models/zone/street/kerb_6m.glb" 12 0 -12.5
   parent "Kerbs"
-  id 4b1cbfcf0a30b027
+  id ffd521738ce992af
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 118" "../models/zone/street/kerb_6m.glb" 18 0 -12.5
   parent "Kerbs"
-  id 991a22f9d51f5746
+  id 7979117a0fade6af
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 119" "../models/zone/street/kerb_6m.glb" 24 0 -12.5
   parent "Kerbs"
-  id 1ce3dc31bd4e2ac7
+  id 33bf9798b60d2e6e
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 120" "../models/zone/street/kerb_6m.glb" 30 0 -12.5
   parent "Kerbs"
-  id 98aa80140389b7d3
+  id 2c6476024384a764
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 121" "../models/zone/street/kerb_6m.glb" 36 0 -12.5
   parent "Kerbs"
-  id d51a5702458169f5
+  id 613f5579f1e88aa7
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 122" "../models/zone/street/kerb_6m.glb" 42 0 -12.5
   parent "Kerbs"
-  id f00c5aad4317d5bb
+  id 675dd8fe13b90bf3
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 123" "../models/zone/street/kerb_6m.glb" 48 0 -12.5
   parent "Kerbs"
-  id f442f9897ad79f64
+  id 441710ff43c78a33
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 124" "../models/zone/street/kerb_6m.glb" 54 0 -12.5
   parent "Kerbs"
-  id ed5adbe259cfa66a
+  id ad374024b5e6b806
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 125" "../models/zone/street/kerb_6m.glb" 60 0 -12.5
   parent "Kerbs"
-  id cae7a75b8208fa78
+  id 8d9ea579cd2ee67a
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 126" "../models/zone/street/kerb_6m.glb" 66 0 -12.5
   parent "Kerbs"
-  id 00883e5fcf897b16
+  id 514a0338c1ee961c
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 127" "../models/zone/street/kerb_6m.glb" 12 0 -21.5
   parent "Kerbs"
-  id e7face66c758ba6e
+  id 5f417d92f179867c
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 128" "../models/zone/street/kerb_6m.glb" 18 0 -21.5
   parent "Kerbs"
-  id 867fced599364400
+  id 0d4cdd470c39b4be
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 129" "../models/zone/street/kerb_6m.glb" 24 0 -21.5
   parent "Kerbs"
-  id ce13a69eac211f27
+  id 8856005eede1b77a
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 130" "../models/zone/street/kerb_6m.glb" 30 0 -21.5
   parent "Kerbs"
-  id 14dbc8affd1e4849
+  id bf0228f669580207
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 131" "../models/zone/street/kerb_6m.glb" 36 0 -21.5
   parent "Kerbs"
-  id b1e84c5986800646
+  id 6cd646d5f173096e
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 132" "../models/zone/street/kerb_6m.glb" 42 0 -21.5
   parent "Kerbs"
-  id 175bcb43bb7b1831
+  id c1df4469df8b3d8d
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 133" "../models/zone/street/kerb_6m.glb" 48 0 -21.5
   parent "Kerbs"
-  id 6811e7ab39062536
+  id 175efaf3df8f106b
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 134" "../models/zone/street/kerb_6m.glb" 54 0 -21.5
   parent "Kerbs"
-  id f867b88f663d8dd3
+  id 9941e3e1f37f930d
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 135" "../models/zone/street/kerb_6m.glb" 60 0 -21.5
   parent "Kerbs"
-  id f2afae8e352d52d8
+  id f497d8bee1f9412a
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 136" "../models/zone/street/kerb_6m.glb" 66 0 -21.5
   parent "Kerbs"
-  id 513aa50bbde54ea5
+  id bc49590f64f40a4d
   cull_distance 90
   collision 0
   cast_shadows 0
-model "Lamp post" "../models/zone/gen/lamp_post.glb" 5.2 0.13 112
+model "Lamp post" "../models/zone/gen/lamp_post_leaning.glb" 5.2 0.13 112
   parent "Lamps and cables"
-  id bff4485174152fd5
-  transform 0 184.1 0 1
+  id 4168c07af0fd6ffd
+  transform 0 184.6 0 1
   cull_distance 300
-model "Lamp post 2" "../models/zone/gen/lamp_post_leaning.glb" -5.2 0.13 83.76
+model "Lamp post 2" "../models/zone/gen/lamp_post.glb" -5.2 0.13 80.43
   parent "Lamps and cables"
-  id 52d26e444e4ddefa
-  transform 0 -3.3 0 1
+  id 75911c2630f7d3c3
+  transform 0 2.1 0 1
   cull_distance 300
-model "Lamp post 3" "../models/zone/gen/lamp_post.glb" 5.2 0.13 52.45
+model "Lamp post 3" "../models/zone/gen/lamp_post_leaning.glb" 5.2 0.13 49.01
   parent "Lamps and cables"
-  id b8bd6f65e379dc7e
-  transform 0 185.7 0 1
+  id 61686f97a7634adc
+  transform 0 182.8 0 1
   cull_distance 300
-model "Lamp post 4" "../models/zone/gen/lamp_post.glb" -5.2 0.13 22.39
+model "Lamp post 4" "../models/zone/gen/lamp_post.glb" -5.2 0.13 18.42
   parent "Lamps and cables"
-  id d735e73358759a42
-  transform 0 -3.2 0 1
+  id f0a0e04978f6e88c
+  transform 0 -3.4 0 1
   cull_distance 300
-model "Lamp post 5" "../models/zone/gen/lamp_post.glb" 5.2 0.13 -34.99
+model "Lamp post 5" "../models/zone/gen/lamp_post_leaning.glb" 5.2 0.13 -30.31
   parent "Lamps and cables"
-  id 907dc6dbcf580cf6
-  transform 0 184.5 0 1
+  id 6e3d4616ef7695c6
+  transform 0 176.9 0 1
   cull_distance 300
-model "Lamp post 6" "../models/zone/gen/lamp_post.glb" -5.2 0.13 -62.31
+model "Lamp post 6" "../models/zone/gen/lamp_post.glb" -5.2 0.13 -58.62
   parent "Lamps and cables"
-  id d4edd35861420ff8
-  transform 0 -4 0 1
+  id a3915ac4abba7292
+  transform 0 -2.9 0 1
   cull_distance 300
-model "Lamp post 7" "../models/zone/gen/lamp_post.glb" 5.2 0.13 -89.78
+model "Lamp post 7" "../models/zone/gen/lamp_post.glb" 5.2 0.13 -88.82
   parent "Lamps and cables"
-  id 59ec82af4d587f31
-  transform 0 181.9 0 1
+  id 5681e2c682119714
+  transform 0 183.6 0 1
   cull_distance 300
-model "Lamp post 8" "../models/zone/gen/lamp_post.glb" -5.2 0.13 -117.33
+model "Lamp post 8" "../models/zone/gen/lamp_post_leaning.glb" -5.2 0.13 -116.61
   parent "Lamps and cables"
-  id a74ab94e46b13924
-  transform 0 -1.3 0 1
+  id 968329bb2887cbf4
+  transform 0 -4.9 0 1
   cull_distance 300
-model "Lamp post 9" "../models/zone/gen/lamp_post.glb" 5.2 0.13 -148.11
+model "Lamp post 9" "../models/zone/gen/lamp_post.glb" 5.2 0.13 -143.07
   parent "Lamps and cables"
-  id 26b6e2a8177c8325
-  transform 0 177 0 1
+  id 8be3aa66cc60c314
+  transform 0 179.2 0 1
   cull_distance 300
-model "Lamp post 10" "../models/zone/gen/lamp_post_leaning.glb" -5.2 0.13 -174.68
+model "Lamp post 10" "../models/zone/gen/lamp_post.glb" -5.2 0.13 -173.96
   parent "Lamps and cables"
-  id b0947106fbd0f9ae
-  transform 0 -0.4 0 1
+  id 4190eb28afe48a4c
+  transform 0 -4.9 0 1
   cull_distance 300
-model "Cable" "../models/zone/street/cable_32m.glb" 0 8.1 68.11
+model "Cable" "../models/zone/street/cable_32m.glb" 0 8.1 64.72
   parent "Lamps and cables"
-  id b0b6355d374d107b
-  transform 0 71.6 0 1.03
+  id 79469a6b34e2cad7
+  transform 0 71.7 0 1.03
   cull_distance 160
   collision 0
-model "Cable 2" "../models/zone/street/cable_32m.glb" 0 8.1 37.42
+model "Cable 2" "../models/zone/street/cable_32m.glb" 0 8.1 33.71
   parent "Lamps and cables"
-  id 6af700bd959ea52b
-  transform 0 109.1 0 0.994
+  id 907f824f35827040
+  transform 0 108.8 0 1.01
   cull_distance 160
   collision 0
-model "Cable 3" "../models/zone/street/cable_32m.glb" 0 8.1 -6.3
+model "Cable 3" "../models/zone/street/cable_32m.glb" 0 8.1 -44.46
   parent "Lamps and cables"
-  id 8f12bc969ff218f4
-  transform 0 79.7 0 1.82
+  id bf37f507de17a74a
+  transform 0 110.2 0 0.942
   cull_distance 160
   collision 0
-model "Cable 4" "../models/zone/street/cable_32m.glb" 0 8.1 -76.05
+model "Cable 4" "../models/zone/street/cable_32m.glb" 0 8.1 -102.72
   parent "Lamps and cables"
-  id fd518ff61a6fcc82
-  transform 0 69.3 0 0.918
+  id ebedd41622c99aa1
+  transform 0 110.5 0 0.927
   cull_distance 160
   collision 0
-model "Cable 5" "../models/zone/street/cable_32m.glb" 0 8.1 -103.56
+model "Cable 5" "../models/zone/street/cable_32m.glb" 0 8.1 -129.84
   parent "Lamps and cables"
-  id 30c41e03c8ecc1f7
-  transform 0 110.7 0 0.92
+  id f10fb2eaf901500b
+  transform 0 68.5 0 0.888
   cull_distance 160
   collision 0
-model "Cable 6" "../models/zone/street/cable_32m.glb" 0 8.1 -161.4
+model "Cable 6" "../models/zone/street/cable_32m.glb" 0 8.1 -158.51
   parent "Lamps and cables"
-  id ca3891c6aa7165bc
-  transform 0 111.4 0 0.891
+  id 93223b40d1607e84
+  transform 0 108.6 0 1.02
   cull_distance 160
   collision 0
-model "Cable 7" "../models/zone/street/cable_18m.glb" 0 9.378 81.97
+model "Cable 7" "../models/zone/street/cable_14m.glb" 0 9.466 100.82
   parent "Lamps and cables"
-  id b1a19e1886bae99b
-  transform 0 7.4 2.9534 0.891
+  id 8d44156fdc1c424c
+  transform 0 -5.9 4.35334 1.14
   cull_distance 160
   collision 0
-model "Cable 8" "../models/zone/street/cable_14m.glb" 0 8.96 65.86
+model "Cable 8" "../models/zone/street/cable_14m.glb" 0 9.532 82.16
   parent "Lamps and cables"
-  id 4ea4459172e9d2ce
-  transform 0 1 -7.98123 1.14
+  id d3523d3329ceb797
+  transform 0 6.1 -1.90211 1.14
   cull_distance 160
   collision 0
-model "Cable 9" "../models/zone/street/cable_14m.glb" 0 8.866 49.8
+model "Cable 9" "../models/zone/street/cable_18m.glb" 0 9.341 64.74
   parent "Lamps and cables"
-  id ceb5c2d7121ac62d
-  transform 0 -5.7 -2.86583 1.14
+  id 32b9896c98139e6d
+  transform 0 9 -2.13288 0.894
   cull_distance 160
   collision 0
-model "Cable 10" "../models/zone/street/cable_14m.glb" 0 8.211 32.64
+model "Cable 10" "../models/zone/street/cable_18m.glb" 0 8.076 50.42
   parent "Lamps and cables"
-  id 2eb908f3c81d07ce
-  transform 0 -4.6 -5.94879 1.14
+  id 971d3210580c15b7
+  transform 0 -10.2 -1.25482 0.897
   cull_distance 160
   collision 0
-model "Cable 11" "../models/zone/street/cable_18m.glb" 0 9.071 -3.1
+model "Cable 11" "../models/zone/street/cable_14m.glb" 0 8.744 32.69
   parent "Lamps and cables"
-  id fcd1680837b0be66
-  transform 0 7.9 4.416 0.892
+  id 8591d749538daf5a
+  transform 0 -5 -8.95194 1.14
   cull_distance 160
   collision 0
-model "Cable 12" "../models/zone/street/cable_14m.glb" 0 10.39 -52.12
+model "Cable 12" "../models/zone/street/cable_18m.glb" 0 10.113 16.92
   parent "Lamps and cables"
-  id 97e17a81c61d2432
-  transform 0 -6.3 -3.81755 1.14
+  id ab285cb9039d397e
+  transform 0 -13.6 1.79997 0.909
   cull_distance 160
   collision 0
-model "Cable 13" "../models/zone/street/cable_18m.glb" 0 9.402 -88.32
+model "Cable 13" "../models/zone/street/cable_18m.glb" 0 9.402 -3.32
   parent "Lamps and cables"
-  id 6fce4facc4ae5a4a
+  id aa898dd394502b14
   transform 0 9.4 -5.15769 0.895
   cull_distance 160
   collision 0
-model "Cable 14" "../models/zone/street/cable_18m.glb" 0 7.948 -105.5
+model "Cable 14" "../models/zone/street/cable_18m.glb" 0 7.948 -37.5
   parent "Lamps and cables"
-  id 732968aed3429055
+  id 72000410461faf64
   transform 0 10.7 -4.80946 0.899
   cull_distance 160
   collision 0
-model "Cable 15" "../models/zone/street/cable_18m.glb" 0 7.671 -119.8
+model "Cable 15" "../models/zone/street/cable_18m.glb" 0 7.671 -51.8
   parent "Lamps and cables"
-  id e22184a012ed1126
+  id 18609ff8362308e6
   transform 0 -8.6 -1.28813 0.893
   cull_distance 160
   collision 0
-model "Cable 16" "../models/zone/street/cable_18m.glb" 0 8.615 -139.23
+model "Cable 16" "../models/zone/street/cable_18m.glb" 0 8.615 -71.23
   parent "Lamps and cables"
-  id 12085de0370617a5
+  id c33f9e31f3ef4914
   transform 0 8.8 10.6181 0.894
   cull_distance 160
   collision 0
-model "Cable 17" "../models/zone/street/cable_18m.glb" 0 9.548 -153.41
+model "Cable 17" "../models/zone/street/cable_18m.glb" 0 9.548 -85.41
   parent "Lamps and cables"
-  id 43490311a5aa083e
+  id 6daa362f5759ec85
   transform 0 -11.3 8.54352 0.901
   cull_distance 160
   collision 0
-model "Cable 18" "../models/zone/street/cable_14m.glb" 0 8.215 -172.19
+model "Cable 18" "../models/zone/street/cable_14m.glb" 0 8.215 -104.19
   parent "Lamps and cables"
-  id addc3ba8a26e1aa0
+  id 6bd9da4f7da554dd
   transform 0 1.3 8.68553 1.14
+  cull_distance 160
+  collision 0
+model "Cable 19" "../models/zone/street/cable_14m.glb" 0 9.222 -120.59
+  parent "Lamps and cables"
+  id f207581aebba30e3
+  transform 0 -2.9 -8.8346 1.14
+  cull_distance 160
+  collision 0
+model "Cable 20" "../models/zone/street/cable_18m.glb" 0 8.883 -139.69
+  parent "Lamps and cables"
+  id 915ceaf7beab0f8c
+  transform 0 12 7.843 0.903
+  cull_distance 160
+  collision 0
+model "Cable 21" "../models/zone/street/cable_18m.glb" 0 9.038 -153.04
+  parent "Lamps and cables"
+  id 1c5deeb346c8c0f7
+  transform 0 -13.9 1.83347 0.91
+  cull_distance 160
+  collision 0
+model "Cable 22" "../models/zone/street/cable_14m.glb" 0 10.413 -171.43
+  parent "Lamps and cables"
+  id e39aaf24d1a1f685
+  transform 0 -4.1 -0.944612 1.14
   cull_distance 160
   collision 0
 model "Wreck" "../models/zone/car_pirozhok_rust_green.glb" 3 -0.11 96
   parent "Wrecks"
-  id 075a61a0dfd9eceb
-  transform 0.405267 264.9 1.82463 1
+  id 30f1b84d499ce4e8
+  transform 0.465868 267.5 2.35301 1
   cull_distance 260
 model "Wreck 2" "../models/zone/gen/car_burnt.glb" -3.1 -0.06 74
   parent "Wrecks"
-  id c32d805fd3e842f2
-  transform 0.730181 5 -2.11258 1
+  id 1a932f8f2235c710
+  transform 1.35976 10.8 0.668501 1
   cull_distance 260
 model "Wreck 3" "../models/zone/car_pirozhok_wreck.glb" 2.6 -0.11 41
   parent "Wrecks"
-  id f4136e92400a9b7b
-  transform 1.00228 272.3 -0.97948 1
+  id b42daa15b753230e
+  transform 0.877681 272.6 -1.10595 1
   cull_distance 260
 model "Wreck 4" "../models/zone/gen/car_sedan_green.glb" -2.8 -0.06 12
   parent "Wrecks"
-  id ea3976434ef4a163
-  transform -0.223689 -4.1 0.375739 1
+  id ea20b34a9d74b8af
+  transform -1.78814 -15.7 -1.06719 1
   cull_distance 260
 model "Wreck 5" "../models/zone/car_pirozhok_rust_blue.glb" 0.8 -0.11 -48
   parent "Wrecks"
-  id 9f50f21f8823d9cf
-  transform 0.566213 236 1.92992 1
+  id c2a751c230345663
+  transform 0.722488 238.6 -1.3363 1
   cull_distance 260
 model "Wreck 6" "../models/zone/gen/car_sedan_cream.glb" -3 -0.06 -66
   parent "Wrecks"
-  id b8af4a87bb23fe7a
-  transform 1.81777 5.8 0.582335 1
+  id 9d3d8b398fcd9751
+  transform 1.65578 3.4 -1.43333 1
   cull_distance 260
 model "Wreck 7" "../models/zone/gen/car_estate_red.glb" 3.2 -0.06 -92
   parent "Wrecks"
-  id ff9e24c0c789733d
-  transform 0.935347 181.6 1.6997 1
+  id a619f899e75efe30
+  transform 1.33324 180.8 -2.17543 1
   cull_distance 260
 model "Wreck 8" "../models/zone/car_pirozhok_rust_green.glb" -2.5 -0.11 -112
   parent "Wrecks"
-  id dd320a5dca80e622
-  transform -1.12114 116.6 1.0971 1
+  id e937078eae82085f
+  transform -0.388693 110.3 0.114588 1
   cull_distance 260
 model "Wreck 9" "../models/zone/gen/car_estate_rust.glb" 6.1 0.09 60
   parent "Wrecks"
-  id 3504b5e832e1d218
-  transform -1.89727 179.3 -2.23517 1
+  id 59c521f9556efed8
+  transform -0.219713 176 2.43425 1
   cull_distance 260
 model "Wreck 10" "../models/zone/gen/car_burnt.glb" -6 0.09 -84
   parent "Wrecks"
-  id 432ca01579b15972
-  transform -0.457328 0.4 0.90311 1
+  id b2e91ecc05df1141
+  transform -1.69832 6 -0.564787 1
   cull_distance 260
 model "Bus" "../models/zone/gen/bus_small_cream.glb" 1 -0.08 -126
   parent "Barricades"
-  id efcd665f38c5d240
+  id d018848eefe1d096
   transform 0 62 0 1
   cull_distance 320
 model "Rubble heap" "../models/zone/gen/rubble_b.glb" -4 -0.2 -132
   parent "Barricades"
-  id befbce1b79bd8e36
+  id 83c5d3c7e05489d2
   transform 0 0 0 2.4
   cull_distance 320
 model "Rubble heap 2" "../models/zone/gen/rubble_b.glb" 3.5 -0.2 -136
   parent "Barricades"
-  id 832739a1ffd77714
+  id ab47d4d704467674
   transform 0 70 0 2.1
   cull_distance 320
 model "Rubble heap 3" "../models/zone/gen/rubble_b.glb" -1 -0.2 -140
   parent "Barricades"
-  id ab7c62216efe0aa0
+  id eeec9cde323ca356
   transform 0 30 0 2.8
   cull_distance 320
 model "Rubble heap 4" "../models/zone/gen/rubble_b.glb" 6 -0.2 -130
   parent "Barricades"
-  id 8bf07bc05fd2b76c
+  id 1679c19ac8b87dee
   transform 0 120 0 1.6
   cull_distance 320
 model "Rubble heap 5" "../models/zone/gen/rubble_b.glb" -6.5 -0.2 -127
   parent "Barricades"
-  id 3963a6360a4243c1
+  id 6d00b0c706ec3e37
   transform 0 200 0 1.4
   cull_distance 320
 model "Fallen slab" "../models/zone/gen/slab_fallen.glb" -2 0.6 -129
   parent "Barricades"
-  id 6b3284acfed21917
+  id 85c71c12160f0856
   transform 12 15 0 1
   cull_distance 200
 model "Fallen slab 2" "../models/zone/gen/slab_fallen.glb" 2.5 0.6 -133
   parent "Barricades"
-  id eb243e0a08ceab43
+  id 9ab5fd013ca580f2
   transform 12 100 0 1
   cull_distance 200
 model "Barricade wreck" "../models/zone/gen/car_burnt.glb" -4.2 -0.06 117
   parent "Barricades"
-  id cb4e41e05ead924b
+  id 311e42ffc8aeae57
   transform 0 78 0 1
   cull_distance 260
 model "Barricade wreck 2" "../models/zone/gen/car_estate_rust.glb" -0.6 -0.06 118.5
   parent "Barricades"
-  id b420172713a1e3e4
+  id 42117b3845e143f9
   transform 0 96 0 1
   cull_distance 260
 model "Barricade wreck 3" "../models/zone/gen/car_van_green.glb" 3.4 -0.06 117.4
   parent "Barricades"
-  id 5fce5678f636ead2
+  id f24eacaa017bb2c9
   transform 0 70 0 1
   cull_distance 260
 model "Rubble heap 6" "../models/zone/gen/rubble_a.glb" 6.3 0 118
   parent "Barricades"
-  id a6452462e25e2fd2
-  transform 0 83.8 0 1.3
+  id d44347752359754f
+  transform 0 47.4 0 1.3
   cull_distance 200
 model "Rubble heap 7" "../models/zone/gen/rubble_a.glb" -6.6 0 118.4
   parent "Barricades"
-  id db3ffe646c06c57d
-  transform 0 223.3 0 1.3
+  id d6e818935d53c689
+  transform 0 242.7 0 1.3
   cull_distance 200
-model "Rubble" "../models/zone/gen/rubble_b.glb" -6.02 -0.1 88.42
+model "Rubble" "../models/zone/gen/rubble_b.glb" 6.11 -0.1 54.21
   parent "Rubble"
-  id 8fc92f3a5fb8eaa0
-  transform 0 23.4 0 0.378
-  cull_distance 120
-model "Rubble 2" "../models/zone/gen/rubble_b.glb" 7.22 -0.1 17.37
-  parent "Rubble"
-  id c4189c6ea4f49a12
-  transform 0 329.9 0 0.45
-  cull_distance 120
-model "Rubble 3" "../models/zone/gen/rubble_a.glb" 6.54 -0.1 -114.52
-  parent "Rubble"
-  id dfa8ea4f32b0b30d
-  transform 0 137.5 0 0.485
-  cull_distance 120
-model "Rubble 4" "../models/zone/gen/rubble_b.glb" -7.23 -0.1 26.69
-  parent "Rubble"
-  id aa6281edcb1c286d
+  id 82988b6f77f04bfd
   transform 0 115.7 0 0.415
   cull_distance 120
-model "Rubble 5" "../models/zone/gen/rubble_b.glb" 7.22 -0.1 -92.89
+model "Rubble 2" "../models/zone/gen/rubble_b.glb" 7.22 -0.1 -92.89
   parent "Rubble"
-  id 48288b9297d407c6
+  id c8788748baef2f20
   transform 0 359.4 0 0.524
   cull_distance 120
-model "Rubble 6" "../models/zone/gen/rubble_b.glb" 6.8 -0.1 -29.49
+model "Rubble 3" "../models/zone/gen/rubble_b.glb" 6.8 -0.1 -29.49
   parent "Rubble"
-  id 80b123d20b8ae41e
+  id d8e42e114907e49f
   transform 0 248.5 0 0.47
   cull_distance 120
-model "Rubble 7" "../models/zone/gen/rubble_a.glb" -7.08 -0.1 61.67
+model "Rubble 4" "../models/zone/gen/rubble_a.glb" -7.08 -0.1 61.67
   parent "Rubble"
-  id c2a790b3fd8778f4
+  id 99a5dfd5d13da726
   transform 0 168.1 0 0.559
   cull_distance 120
-model "Rubble 8" "../models/zone/gen/rubble_b.glb" 6.1 -0.1 -88.27
+model "Rubble 5" "../models/zone/gen/rubble_b.glb" 6.1 -0.1 -88.27
   parent "Rubble"
-  id c6b149c9d94f4524
+  id dece6f710ab9908f
   transform 0 112.7 0 0.393
   cull_distance 120
-model "Rubble 9" "../models/zone/gen/rubble_a.glb" -7.27 -0.1 -127.92
+model "Rubble 6" "../models/zone/gen/rubble_a.glb" -7.27 -0.1 -127.92
   parent "Rubble"
-  id f1dfda9c7db6a13d
+  id 28af687b86336b2b
   transform 0 33.1 0 0.391
   cull_distance 120
-model "Rubble 10" "../models/zone/gen/rubble_a.glb" -7.03 -0.1 86.55
+model "Rubble 7" "../models/zone/gen/rubble_a.glb" -7.03 -0.1 86.55
   parent "Rubble"
-  id d2ae59e8eb4265f7
+  id abbef978ac22e9fb
   transform 0 122.7 0 0.519
   cull_distance 120
-model "Rubble 11" "../models/zone/gen/rubble_b.glb" -7.04 -0.1 -99.42
+model "Rubble 8" "../models/zone/gen/rubble_b.glb" -7.04 -0.1 -99.42
   parent "Rubble"
-  id 0c2dca49fdd4750e
+  id 13a69d551b947f3e
   transform 0 270.9 0 0.567
   cull_distance 120
-model "Rubble 12" "../models/zone/gen/rubble_a.glb" 6.99 -0.1 100.56
+model "Rubble 9" "../models/zone/gen/rubble_a.glb" 6.99 -0.1 100.56
   parent "Rubble"
-  id 2bb1d4e781cc9fad
+  id 1956571c0b366592
   transform 0 229.9 0 0.491
   cull_distance 120
-model "Rubble 13" "../models/zone/gen/rubble_a.glb" 6.3 -0.1 -1.03
+model "Rubble 10" "../models/zone/gen/rubble_a.glb" 6.3 -0.1 -1.03
   parent "Rubble"
-  id 7a25bca064b53e84
+  id 7276528ac093c766
   transform 0 124.2 0 0.591
   cull_distance 120
-model "Rubble 14" "../models/zone/gen/rubble_b.glb" 7.26 -0.1 79.81
+model "Rubble 11" "../models/zone/gen/rubble_b.glb" 7.26 -0.1 79.81
   parent "Rubble"
-  id 9eea50ba979308cf
+  id d3ece755138b5abe
   transform 0 64.5 0 0.564
   cull_distance 120
-model "Rubble 15" "../models/zone/gen/rubble_a.glb" 6.23 -0.1 79.6
+model "Rubble 12" "../models/zone/gen/rubble_a.glb" 6.23 -0.1 79.6
   parent "Rubble"
-  id 4adf5a4dcde6b343
+  id 6b221ac4e89628ca
   transform 0 29.5 0 0.434
   cull_distance 120
-model "Rubble 16" "../models/zone/gen/rubble_b.glb" 6.57 -0.1 -88.8
+model "Rubble 13" "../models/zone/gen/rubble_b.glb" 6.57 -0.1 -88.8
   parent "Rubble"
-  id fab29d7b65c09263
+  id da29d6e424b7d733
   transform 0 124.4 0 0.376
   cull_distance 120
-model "Rubble 17" "../models/zone/gen/rubble_a.glb" 6.52 -0.1 84.6
+model "Rubble 14" "../models/zone/gen/rubble_a.glb" 6.52 -0.1 84.6
   parent "Rubble"
-  id de5d11e342708653
+  id 025dcc6cb6449587
   transform 0 61.8 0 0.518
   cull_distance 120
-model "Rubble 18" "../models/zone/gen/rubble_a.glb" -6.25 -0.1 42.72
+model "Rubble 15" "../models/zone/gen/rubble_a.glb" -6.25 -0.1 42.72
   parent "Rubble"
-  id 30b0f79ab9c140d3
+  id 7c01cb46a3a68204
   transform 0 298.8 0 0.427
   cull_distance 120
-model "Rubble 19" "../models/zone/gen/rubble_a.glb" -6.12 -0.1 5.27
+model "Rubble 16" "../models/zone/gen/rubble_a.glb" -6.12 -0.1 5.27
   parent "Rubble"
-  id 96ddc8098ce76b18
+  id 9350dede5686bf0d
   transform 0 353.2 0 0.372
   cull_distance 120
-model "Rubble 20" "../models/zone/gen/rubble_b.glb" -6.99 -0.1 99.9
+model "Rubble 17" "../models/zone/gen/rubble_b.glb" -6.99 -0.1 99.9
   parent "Rubble"
-  id 4ec619b486cef411
+  id c50d99e8259bc416
   transform 0 51.7 0 0.497
   cull_distance 120
-model "Rubble 21" "../models/zone/gen/rubble_a.glb" -6.81 -0.1 -102.33
+model "Rubble 18" "../models/zone/gen/rubble_a.glb" -6.81 -0.1 -102.33
   parent "Rubble"
-  id aac0c7080d96ce60
+  id 13bc1de4500d3f77
   transform 0 93.5 0 0.541
   cull_distance 120
-model "Rubble 22" "../models/zone/gen/rubble_a.glb" 6.13 -0.1 -102.42
+model "Rubble 19" "../models/zone/gen/rubble_a.glb" 6.13 -0.1 -102.42
   parent "Rubble"
-  id 271a571db8f8c53b
+  id 1d1eb72237e1d330
   transform 0 293.1 0 0.454
   cull_distance 120
-model "Rubble 23" "../models/zone/gen/rubble_a.glb" -6.6 -0.1 -83.73
+model "Rubble 20" "../models/zone/gen/rubble_a.glb" -6.6 -0.1 -83.73
   parent "Rubble"
-  id 9c609931a35cb565
+  id 9bb9196d7bc9f937
   transform 0 237.2 0 0.407
   cull_distance 120
-model "Rubble 24" "../models/zone/gen/rubble_a.glb" 7.11 -0.1 -102.72
+model "Rubble 21" "../models/zone/gen/rubble_a.glb" 7.11 -0.1 -102.72
   parent "Rubble"
-  id cb04ba2a7b26760e
+  id 8e3ee0fa40d5a19e
   transform 0 64.7 0 0.355
   cull_distance 120
-model "Rubble 25" "../models/zone/gen/rubble_a.glb" -6.11 -0.1 -61.94
+model "Rubble 22" "../models/zone/gen/rubble_a.glb" -6.11 -0.1 -61.94
   parent "Rubble"
-  id a034f2e7cd1bdd68
+  id 2c44f64beab40499
   transform 0 284 0 0.544
   cull_distance 120
-model "Slab" "../models/zone/gen/slab_fallen.glb" -0.53 -0.3 19.58
+model "Rubble 23" "../models/zone/gen/rubble_b.glb" 6.02 -0.1 71.76
   parent "Rubble"
-  id 05837a0be17e52f6
-  transform 4.53881 62.9 -7.60555 0.536
+  id ea7bfd43d6a04112
+  transform 0 52.1 0 0.546
+  cull_distance 120
+model "Rubble 24" "../models/zone/gen/rubble_b.glb" -6.24 -0.1 -109.44
+  parent "Rubble"
+  id 102c3e6dcfc0dd0b
+  transform 0 251.2 0 0.388
+  cull_distance 120
+model "Rubble 25" "../models/zone/gen/rubble_b.glb" -7.28 -0.1 48.85
+  parent "Rubble"
+  id 2df66b7d04e4e582
+  transform 0 309.1 0 0.434
+  cull_distance 120
+model "Slab" "../models/zone/gen/slab_fallen.glb" -1.34 -0.3 -108.75
+  parent "Rubble"
+  id f3b12c7be42cce0d
+  transform 4.52978 7.2 4.12182 0.538
   cull_distance 140
-model "Slab 2" "../models/zone/gen/slab_fallen.glb" 1.45 -0.3 86.21
+model "Slab 2" "../models/zone/gen/slab_fallen.glb" -1.64 -0.3 -59.57
   parent "Rubble"
-  id 84ab3e8958844954
-  transform -2.64437 121.4 -3.57824 0.715
+  id 0010652bd9cc7faf
+  transform -6.60382 171.4 -3.43236 0.638
+  cull_distance 140
+model "Slab 3" "../models/zone/gen/slab_fallen.glb" 1.67 -0.3 -55.78
+  parent "Rubble"
+  id 22439fb69f92f88e
+  transform 4.35767 76.5 7.54164 0.647
+  cull_distance 140
+model "Slab 4" "../models/zone/gen/slab_fallen.glb" 0.18 -0.3 73.16
+  parent "Rubble"
+  id fefe0d8b61fba578
+  transform 4.07465 164.1 2.448 0.664
+  cull_distance 140
+model "Slab 5" "../models/zone/gen/slab_fallen.glb" 1.28 -0.3 -70.35
+  parent "Rubble"
+  id e15973bbcabd386e
+  transform -1.03434 158 0.268323 0.654
   cull_distance 140
 model "Far tree" "../models/zone/vegetation/maple_a.glb" 5.07 -0.05 -273.47
   parent "Far"
-  id 2f090b9de37a2807
+  id e2c9fd546886a1ea
   transform 0 222 0 0.864
   lod "../models/zone/vegetation/maple_a_lod1.glb" 45
   cull_distance 900
@@ -1891,7 +2052,7 @@ model "Far tree" "../models/zone/vegetation/maple_a.glb" 5.07 -0.05 -273.47
   impostor 120
 model "Far tree 2" "../models/zone/vegetation/maple_a.glb" -3.15 -0.05 -259.89
   parent "Far"
-  id 3372d39d5b76c8e0
+  id 2fd208fea70544d8
   transform 0 292.9 0 0.797
   lod "../models/zone/vegetation/maple_a_lod1.glb" 45
   cull_distance 900
@@ -1900,7 +2061,7 @@ model "Far tree 2" "../models/zone/vegetation/maple_a.glb" -3.15 -0.05 -259.89
   impostor 120
 model "Far tree 3" "../models/zone/vegetation/maple_b.glb" 1.03 -0.05 -238.62
   parent "Far"
-  id fef43c180abdfb64
+  id 1636abce202d44fb
   transform 0 9.7 0 0.902
   lod "../models/zone/vegetation/maple_b_lod1.glb" 45
   cull_distance 900
@@ -1909,7 +2070,7 @@ model "Far tree 3" "../models/zone/vegetation/maple_b.glb" 1.03 -0.05 -238.62
   impostor 120
 model "Far tree 4" "../models/zone/vegetation/ash_b.glb" -4.48 -0.05 -313.52
   parent "Far"
-  id 941dd424edee0243
+  id 7786b0b8813d0f47
   transform 0 310.9 0 0.921
   lod "../models/zone/vegetation/ash_b_lod1.glb" 45
   cull_distance 900
@@ -1918,7 +2079,7 @@ model "Far tree 4" "../models/zone/vegetation/ash_b.glb" -4.48 -0.05 -313.52
   impostor 120
 model "Far tree 5" "../models/zone/vegetation/maple_a.glb" 1.81 -0.05 -206.45
   parent "Far"
-  id 31fff9e0715fc301
+  id 28760ec3434fc3ca
   transform 0 328.6 0 0.851
   lod "../models/zone/vegetation/maple_a_lod1.glb" 45
   cull_distance 900
@@ -1927,7 +2088,7 @@ model "Far tree 5" "../models/zone/vegetation/maple_a.glb" 1.81 -0.05 -206.45
   impostor 120
 model "Far tree 6" "../models/zone/vegetation/broadleaf_a.glb" -2.53 -0.05 -307.12
   parent "Far"
-  id d76a16f7f6b2a7a3
+  id 6faff87ef34488ca
   transform 0 242 0 0.932
   lod "../models/zone/vegetation/broadleaf_a_lod1.glb" 45
   cull_distance 900
@@ -1936,7 +2097,7 @@ model "Far tree 6" "../models/zone/vegetation/broadleaf_a.glb" -2.53 -0.05 -307.
   impostor 120
 model "Far tree 7" "../models/zone/vegetation/ash_a.glb" -1.35 -0.05 -229.6
   parent "Far"
-  id 55b8b75330cb5c17
+  id edcdab546268ac8c
   transform 0 124 0 0.918
   lod "../models/zone/vegetation/ash_a_lod1.glb" 45
   cull_distance 900
@@ -1945,7 +2106,7 @@ model "Far tree 7" "../models/zone/vegetation/ash_a.glb" -1.35 -0.05 -229.6
   impostor 120
 model "Far tree 8" "../models/zone/vegetation/maple_b.glb" -3.25 -0.05 -319.29
   parent "Far"
-  id 5155e34f5707f05e
+  id 60b50d93c4408f2f
   transform 0 92.4 0 1.04
   lod "../models/zone/vegetation/maple_b_lod1.glb" 45
   cull_distance 900
@@ -1954,7 +2115,7 @@ model "Far tree 8" "../models/zone/vegetation/maple_b.glb" -3.25 -0.05 -319.29
   impostor 120
 model "Far tree 9" "../models/zone/vegetation/birch_a.glb" -4.67 -0.05 -291.7
   parent "Far"
-  id 5fc8f6287e1b07f6
+  id 65e398657f635f5e
   transform 0 331 0 1.01
   lod "../models/zone/vegetation/birch_a_lod1.glb" 45
   cull_distance 900
@@ -1963,7 +2124,7 @@ model "Far tree 9" "../models/zone/vegetation/birch_a.glb" -4.67 -0.05 -291.7
   impostor 120
 model "Far tree 10" "../models/zone/vegetation/maple_b.glb" 3.18 -0.05 -217.54
   parent "Far"
-  id 3aca54586a4816d2
+  id 3d935be3166298ce
   transform 0 169.9 0 0.898
   lod "../models/zone/vegetation/maple_b_lod1.glb" 45
   cull_distance 900
@@ -1972,7 +2133,7 @@ model "Far tree 10" "../models/zone/vegetation/maple_b.glb" 3.18 -0.05 -217.54
   impostor 120
 model "Far tree 11" "../models/zone/vegetation/broadleaf_b.glb" -5.54 -0.05 -269.22
   parent "Far"
-  id bdb285d602cb22a1
+  id d37fa32623a6f647
   transform 0 79.7 0 0.824
   lod "../models/zone/vegetation/broadleaf_b_lod1.glb" 45
   cull_distance 900
@@ -1981,7 +2142,7 @@ model "Far tree 11" "../models/zone/vegetation/broadleaf_b.glb" -5.54 -0.05 -269
   impostor 120
 model "Far tree 12" "../models/zone/vegetation/maple_b.glb" 3 -0.05 -258.09
   parent "Far"
-  id 8644678755c9b69d
+  id ad069d9189091e36
   transform 0 327.5 0 1.02
   lod "../models/zone/vegetation/maple_b_lod1.glb" 45
   cull_distance 900
@@ -1990,7 +2151,7 @@ model "Far tree 12" "../models/zone/vegetation/maple_b.glb" 3 -0.05 -258.09
   impostor 120
 model "Far tree 13" "../models/zone/vegetation/broadleaf_b.glb" -6.15 -0.05 -300.6
   parent "Far"
-  id f1862ca122e017d1
+  id 8ce7155b7440ff27
   transform 0 3.1 0 0.757
   lod "../models/zone/vegetation/broadleaf_b_lod1.glb" 45
   cull_distance 900
@@ -1999,7 +2160,7 @@ model "Far tree 13" "../models/zone/vegetation/broadleaf_b.glb" -6.15 -0.05 -300
   impostor 120
 model "Far tree 14" "../models/zone/vegetation/ash_b.glb" 0.77 -0.05 -248.81
   parent "Far"
-  id 6c2972066044bcad
+  id e392e5d614569b78
   transform 0 285.6 0 0.826
   lod "../models/zone/vegetation/ash_b_lod1.glb" 45
   cull_distance 900
@@ -2008,7 +2169,7 @@ model "Far tree 14" "../models/zone/vegetation/ash_b.glb" 0.77 -0.05 -248.81
   impostor 120
 model "Far tree 15" "../models/zone/vegetation/ash_b.glb" 4.43 -0.05 -263.85
   parent "Far"
-  id db44d7a9e8822216
+  id aae30b5a14520146
   transform 0 333.1 0 0.856
   lod "../models/zone/vegetation/ash_b_lod1.glb" 45
   cull_distance 900
@@ -2017,7 +2178,7 @@ model "Far tree 15" "../models/zone/vegetation/ash_b.glb" 4.43 -0.05 -263.85
   impostor 120
 model "Far tree 16" "../models/zone/vegetation/broadleaf_b.glb" -4.73 -0.05 -217.8
   parent "Far"
-  id 54734e5a9ccd3de6
+  id bbfd4c5f162a46c9
   transform 0 289.1 0 1.05
   lod "../models/zone/vegetation/broadleaf_b_lod1.glb" 45
   cull_distance 900
@@ -2026,7 +2187,7 @@ model "Far tree 16" "../models/zone/vegetation/broadleaf_b.glb" -4.73 -0.05 -217
   impostor 120
 model "Far tree 17" "../models/zone/vegetation/maple_b.glb" 0.07 -0.05 -278.46
   parent "Far"
-  id 10ba1d281f268d4d
+  id 639f6d75615dfea4
   transform 0 311.1 0 0.99
   lod "../models/zone/vegetation/maple_b_lod1.glb" 45
   cull_distance 900
@@ -2035,7 +2196,7 @@ model "Far tree 17" "../models/zone/vegetation/maple_b.glb" 0.07 -0.05 -278.46
   impostor 120
 model "Far tree 18" "../models/zone/vegetation/ash_a.glb" 2.22 -0.05 -315.06
   parent "Far"
-  id a8fad7b757ea8306
+  id d9e0da8971e56159
   transform 0 310.4 0 0.758
   lod "../models/zone/vegetation/ash_a_lod1.glb" 45
   cull_distance 900
@@ -2044,7 +2205,7 @@ model "Far tree 18" "../models/zone/vegetation/ash_a.glb" 2.22 -0.05 -315.06
   impostor 120
 model "Far tree 19" "../models/zone/vegetation/maple_a.glb" 5.75 -0.05 -213.52
   parent "Far"
-  id 99099bbef96dc41b
+  id de600fb5f1be47bd
   transform 0 185.6 0 0.789
   lod "../models/zone/vegetation/maple_a_lod1.glb" 45
   cull_distance 900
@@ -2053,7 +2214,7 @@ model "Far tree 19" "../models/zone/vegetation/maple_a.glb" 5.75 -0.05 -213.52
   impostor 120
 model "Far tree 20" "../models/zone/vegetation/maple_a.glb" -0.56 -0.05 -194.94
   parent "Far"
-  id 0f8d9904c4c91337
+  id 94e0ecdddf950af6
   transform 0 325.1 0 1.05
   lod "../models/zone/vegetation/maple_a_lod1.glb" 45
   cull_distance 900
@@ -2062,7 +2223,7 @@ model "Far tree 20" "../models/zone/vegetation/maple_a.glb" -0.56 -0.05 -194.94
   impostor 120
 model "Far tree 21" "../models/zone/vegetation/maple_b.glb" -3.55 -0.05 -198.41
   parent "Far"
-  id 08097147affec180
+  id 2e904b6750c72b35
   transform 0 302.5 0 0.806
   lod "../models/zone/vegetation/maple_b_lod1.glb" 45
   cull_distance 900
@@ -2071,7 +2232,7 @@ model "Far tree 21" "../models/zone/vegetation/maple_b.glb" -3.55 -0.05 -198.41
   impostor 120
 model "Far tree 22" "../models/zone/vegetation/broadleaf_a.glb" 2.58 -0.05 -309.08
   parent "Far"
-  id fefc325b6530f86c
+  id 7c0ff604a7c3d901
   transform 0 296.5 0 0.758
   lod "../models/zone/vegetation/broadleaf_a_lod1.glb" 45
   cull_distance 900
@@ -2080,7 +2241,7 @@ model "Far tree 22" "../models/zone/vegetation/broadleaf_a.glb" 2.58 -0.05 -309.
   impostor 120
 model "Far tree 23" "../models/zone/vegetation/maple_b.glb" 4.96 -0.05 -304
   parent "Far"
-  id fa34692521d00279
+  id 8cd3f36eecd6946f
   transform 0 145.1 0 1.01
   lod "../models/zone/vegetation/maple_b_lod1.glb" 45
   cull_distance 900
@@ -2089,7 +2250,7 @@ model "Far tree 23" "../models/zone/vegetation/maple_b.glb" 4.96 -0.05 -304
   impostor 120
 model "Far tree 24" "../models/zone/vegetation/broadleaf_b.glb" -3.63 -0.05 -210.29
   parent "Far"
-  id 62ea474ae7e3656d
+  id abfcb1fd60424ac7
   transform 0 253.4 0 0.768
   lod "../models/zone/vegetation/broadleaf_b_lod1.glb" 45
   cull_distance 900
@@ -2098,7 +2259,7 @@ model "Far tree 24" "../models/zone/vegetation/broadleaf_b.glb" -3.63 -0.05 -210
   impostor 120
 model "Far tree 25" "../models/zone/vegetation/birch_a.glb" 5.11 -0.05 -226.75
   parent "Far"
-  id 203ef4bbd7382015
+  id 432a729f1ce095c7
   transform 0 273.8 0 0.755
   lod "../models/zone/vegetation/birch_a_lod1.glb" 45
   cull_distance 900
@@ -2107,7 +2268,7 @@ model "Far tree 25" "../models/zone/vegetation/birch_a.glb" 5.11 -0.05 -226.75
   impostor 120
 model "Far tree 26" "../models/zone/vegetation/broadleaf_b.glb" 6.28 -0.05 -285.99
   parent "Far"
-  id cca485ae46bbe963
+  id 10752ac1eb2fccf5
   transform 0 355.3 0 0.816
   lod "../models/zone/vegetation/broadleaf_b_lod1.glb" 45
   cull_distance 900
@@ -2116,7 +2277,7 @@ model "Far tree 26" "../models/zone/vegetation/broadleaf_b.glb" 6.28 -0.05 -285.
   impostor 120
 model "Far tree 27" "../models/zone/vegetation/maple_b.glb" 3.06 -0.05 -232.68
   parent "Far"
-  id cf0516b665d2ca77
+  id 85bb82413822822d
   transform 0 335.7 0 1.05
   lod "../models/zone/vegetation/maple_b_lod1.glb" 45
   cull_distance 900
@@ -2125,7 +2286,7 @@ model "Far tree 27" "../models/zone/vegetation/maple_b.glb" 3.06 -0.05 -232.68
   impostor 120
 model "Far tree 28" "../models/zone/vegetation/ash_a.glb" 2.14 -0.05 -296.67
   parent "Far"
-  id 1b48aa669bf2a7e5
+  id 321f375a57c3c9c3
   transform 0 222.1 0 0.752
   lod "../models/zone/vegetation/ash_a_lod1.glb" 45
   cull_distance 900
@@ -2134,7 +2295,7 @@ model "Far tree 28" "../models/zone/vegetation/ash_a.glb" 2.14 -0.05 -296.67
   impostor 120
 model "Far tree 29" "../models/zone/vegetation/ash_a.glb" 5.36 -0.05 -324.47
   parent "Far"
-  id fe4848d732c598cf
+  id c2c1de25766f9647
   transform 0 165.4 0 0.842
   lod "../models/zone/vegetation/ash_a_lod1.glb" 45
   cull_distance 900
@@ -2143,7 +2304,7 @@ model "Far tree 29" "../models/zone/vegetation/ash_a.glb" 5.36 -0.05 -324.47
   impostor 120
 model "Far tree 30" "../models/zone/vegetation/maple_a.glb" -0.88 -0.05 -287.78
   parent "Far"
-  id 16f4230b03d5273e
+  id a809db309056f4b6
   transform 0 86 0 0.881
   lod "../models/zone/vegetation/maple_a_lod1.glb" 45
   cull_distance 900
@@ -2152,7 +2313,7 @@ model "Far tree 30" "../models/zone/vegetation/maple_a.glb" -0.88 -0.05 -287.78
   impostor 120
 model "Far tree 31" "../models/zone/vegetation/broadleaf_a.glb" 3.51 -0.05 -269.24
   parent "Far"
-  id 3210b89ace6360b9
+  id 78b1755eb169d428
   transform 0 5 0 0.825
   lod "../models/zone/vegetation/broadleaf_a_lod1.glb" 45
   cull_distance 900
@@ -2161,7 +2322,7 @@ model "Far tree 31" "../models/zone/vegetation/broadleaf_a.glb" 3.51 -0.05 -269.
   impostor 120
 model "Far tree 32" "../models/zone/vegetation/maple_b.glb" -6.26 -0.05 -263.97
   parent "Far"
-  id ada8747b52c0069c
+  id a49307d9b7a2f5e0
   transform 0 122.8 0 0.792
   lod "../models/zone/vegetation/maple_b_lod1.glb" 45
   cull_distance 900
@@ -2170,7 +2331,7 @@ model "Far tree 32" "../models/zone/vegetation/maple_b.glb" -6.26 -0.05 -263.97
   impostor 120
 model "Far tree 33" "../models/zone/vegetation/birch_a.glb" 5.49 -0.05 -317.89
   parent "Far"
-  id 2cc3086a7badaf0d
+  id 6c89cfbbe2f99098
   transform 0 203.7 0 0.841
   lod "../models/zone/vegetation/birch_a_lod1.glb" 45
   cull_distance 900
@@ -2179,7 +2340,7 @@ model "Far tree 33" "../models/zone/vegetation/birch_a.glb" 5.49 -0.05 -317.89
   impostor 120
 model "Far tree 34" "../models/zone/vegetation/birch_a.glb" -6.67 -0.05 -204.09
   parent "Far"
-  id 6056b76a2fdf3ef2
+  id c31366aa6dd8d735
   transform 0 212.3 0 0.994
   lod "../models/zone/vegetation/birch_a_lod1.glb" 45
   cull_distance 900
@@ -2188,7 +2349,7 @@ model "Far tree 34" "../models/zone/vegetation/birch_a.glb" -6.67 -0.05 -204.09
   impostor 120
 model "Far tree 35" "../models/zone/vegetation/maple_b.glb" 0.42 -0.05 -242.95
   parent "Far"
-  id 784ec8d22607a5d1
+  id 606ea9ca831c33ba
   transform 0 189.6 0 0.895
   lod "../models/zone/vegetation/maple_b_lod1.glb" 45
   cull_distance 900
@@ -2197,7 +2358,7 @@ model "Far tree 35" "../models/zone/vegetation/maple_b.glb" 0.42 -0.05 -242.95
   impostor 120
 model "Far tree 36" "../models/zone/vegetation/ash_b.glb" -4.32 -0.05 -232.8
   parent "Far"
-  id 0069047b9056c88d
+  id 86031c041daf9a26
   transform 0 131.5 0 1.04
   lod "../models/zone/vegetation/ash_b_lod1.glb" 45
   cull_distance 900
@@ -2206,7 +2367,7 @@ model "Far tree 36" "../models/zone/vegetation/ash_b.glb" -4.32 -0.05 -232.8
   impostor 120
 model "Far tree 37" "../models/zone/vegetation/broadleaf_a.glb" -6.86 -0.05 -282.86
   parent "Far"
-  id 232deeb931f5eb09
+  id fe8636f7720b5313
   transform 0 198.1 0 0.993
   lod "../models/zone/vegetation/broadleaf_a_lod1.glb" 45
   cull_distance 900
@@ -2215,7 +2376,7 @@ model "Far tree 37" "../models/zone/vegetation/broadleaf_a.glb" -6.86 -0.05 -282
   impostor 120
 model "Far tree 38" "../models/zone/vegetation/broadleaf_a.glb" -0.55 -0.05 -283.28
   parent "Far"
-  id a7f5f32073532b21
+  id 115d92cc58652d6d
   transform 0 295.8 0 1.01
   lod "../models/zone/vegetation/broadleaf_a_lod1.glb" 45
   cull_distance 900
@@ -2224,7 +2385,7 @@ model "Far tree 38" "../models/zone/vegetation/broadleaf_a.glb" -0.55 -0.05 -283
   impostor 120
 model "Far tree 39" "../models/zone/vegetation/ash_a.glb" 5.15 -0.05 -194.69
   parent "Far"
-  id ab6f5e7715c4b1b4
+  id 6282e29d4e9f54d1
   transform 0 332.9 0 0.953
   lod "../models/zone/vegetation/ash_a_lod1.glb" 45
   cull_distance 900
@@ -2233,7 +2394,7 @@ model "Far tree 39" "../models/zone/vegetation/ash_a.glb" 5.15 -0.05 -194.69
   impostor 120
 model "Far tree 40" "../models/zone/vegetation/maple_b.glb" 4.32 -0.05 -281.52
   parent "Far"
-  id 0115c0e953ac7b90
+  id c5089623dce6a0ad
   transform 0 319.7 0 0.86
   lod "../models/zone/vegetation/maple_b_lod1.glb" 45
   cull_distance 900
@@ -2242,7 +2403,7 @@ model "Far tree 40" "../models/zone/vegetation/maple_b.glb" 4.32 -0.05 -281.52
   impostor 120
 model "Far tree 41" "../models/zone/vegetation/broadleaf_b.glb" 1.42 -0.05 -292.51
   parent "Far"
-  id 6d99ea17a2109fad
+  id f07eae6be80435a7
   transform 0 178 0 0.929
   lod "../models/zone/vegetation/broadleaf_b_lod1.glb" 45
   cull_distance 900
@@ -2251,7 +2412,7 @@ model "Far tree 41" "../models/zone/vegetation/broadleaf_b.glb" 1.42 -0.05 -292.
   impostor 120
 model "Far tree 42" "../models/zone/vegetation/broadleaf_b.glb" -6.58 -0.05 -257.09
   parent "Far"
-  id c41c4966d15383da
+  id c1e22ed07f958a7a
   transform 0 346.8 0 0.832
   lod "../models/zone/vegetation/broadleaf_b_lod1.glb" 45
   cull_distance 900
@@ -2260,7 +2421,7 @@ model "Far tree 42" "../models/zone/vegetation/broadleaf_b.glb" -6.58 -0.05 -257
   impostor 120
 model "Far tree 43" "../models/zone/vegetation/maple_a.glb" 2.35 -0.05 -329.46
   parent "Far"
-  id d5f91fb155cbb73d
+  id fdeaa0326b6f5586
   transform 0 179.8 0 0.816
   lod "../models/zone/vegetation/maple_a_lod1.glb" 45
   cull_distance 900
@@ -2269,7 +2430,7 @@ model "Far tree 43" "../models/zone/vegetation/maple_a.glb" 2.35 -0.05 -329.46
   impostor 120
 model "Far tree 44" "../models/zone/vegetation/broadleaf_a.glb" -4.71 -0.05 -274.14
   parent "Far"
-  id 1754b943af197070
+  id 9699673b399e936f
   transform 0 249 0 0.773
   lod "../models/zone/vegetation/broadleaf_a_lod1.glb" 45
   cull_distance 900
@@ -2278,7 +2439,7 @@ model "Far tree 44" "../models/zone/vegetation/broadleaf_a.glb" -4.71 -0.05 -274
   impostor 120
 model "Far tree 45" "../models/zone/vegetation/maple_b.glb" 5.75 -0.05 -293.69
   parent "Far"
-  id 11d23f6832ba0688
+  id a9ae0bd597845bfa
   transform 0 13.2 0 0.804
   lod "../models/zone/vegetation/maple_b_lod1.glb" 45
   cull_distance 900
@@ -2287,179 +2448,179 @@ model "Far tree 45" "../models/zone/vegetation/maple_b.glb" 5.75 -0.05 -293.69
   impostor 120
 model "Far tree 46" "../models/zone/vegetation/broadleaf_b.glb" -2.29 -0.05 -326.94
   parent "Far"
-  id f4794fb8ae021b2a
+  id 7fdbf9f4ef4fef37
   transform 0 351.4 0 0.971
   lod "../models/zone/vegetation/broadleaf_b_lod1.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
   impostor 120
-model "Far bush" "../models/zone/vegetation/sapling_shrub_a.glb" -4.39 -0.03 -205.38
+model "Far bush" "../models/zone/vegetation/bush_street_c.glb" -4.39 -0.03 -205.38
   parent "Far"
-  id 3180ea13d9275076
-  transform 0 29.9 0 1.32
-  lod "../models/zone/vegetation/sapling_shrub_a_lod1.glb" 25
+  id e7c0773caea1af9d
+  transform 0 29.9 0 0.881
+  lod "../models/zone/vegetation/bush_street_c_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
 model "Far bush 2" "../models/zone/vegetation/sapling_a.glb" -6.61 -0.03 -309
   parent "Far"
-  id 9fd5af0bbcac0876
-  transform 0 333.1 0 1.36
+  id e766d35cd8b5c70a
+  transform 0 333.1 0 0.906
   lod "../models/zone/vegetation/sapling_a_lod1.glb" 35
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 3" "../models/zone/vegetation/bush_dense_a.glb" -0.12 -0.03 -237.28
+model "Far bush 3" "../models/zone/vegetation/bush_street_a.glb" -0.12 -0.03 -237.28
   parent "Far"
-  id d1b37af762cbe0c2
-  transform 0 297.1 0 1.15
-  lod "../models/zone/vegetation/bush_dense_a_lod1.glb" 25
+  id 054d123ab0fb3e04
+  transform 0 297.1 0 0.765
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 4" "../models/zone/vegetation/sapling_shrub_b.glb" 0.81 -0.03 -249.39
+model "Far bush 4" "../models/zone/vegetation/bush_street_a.glb" 0.81 -0.03 -249.39
   parent "Far"
-  id 1120c891cf5dc5ad
-  transform 0 356 0 1.42
-  lod "../models/zone/vegetation/sapling_shrub_b_lod1.glb" 25
+  id 6947d84edcdd1bdf
+  transform 0 356 0 0.948
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 5" "../models/zone/vegetation/sapling_shrub_b.glb" 6.8 -0.03 -327.69
+model "Far bush 5" "../models/zone/vegetation/bush_street_a.glb" 6.8 -0.03 -327.69
   parent "Far"
-  id c56ade88b9d89b73
-  transform 0 305.1 0 1.33
-  lod "../models/zone/vegetation/sapling_shrub_b_lod1.glb" 25
+  id 0be4bfbf14f99c79
+  transform 0 305.1 0 0.885
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 6" "../models/zone/vegetation/bush_wide_a.glb" -3.51 -0.03 -295.89
+model "Far bush 6" "../models/zone/vegetation/bush_street_b.glb" -3.51 -0.03 -295.89
   parent "Far"
-  id d049c7b3f0da2584
-  transform 0 101.4 0 1.1
-  lod "../models/zone/vegetation/bush_wide_a_lod1.glb" 25
+  id 36504fb9f51d9c6b
+  transform 0 101.4 0 0.734
+  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 7" "../models/zone/vegetation/bush_dense_a.glb" -0.12 -0.03 -276.7
+model "Far bush 7" "../models/zone/vegetation/bush_street_a.glb" -0.12 -0.03 -276.7
   parent "Far"
-  id d3fafaba518cf4a3
-  transform 0 233.6 0 1.12
-  lod "../models/zone/vegetation/bush_dense_a_lod1.glb" 25
+  id acb666b21743da4a
+  transform 0 233.6 0 0.745
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
 model "Far bush 8" "../models/zone/vegetation/sapling_a.glb" 0.05 -0.03 -237.93
   parent "Far"
-  id 22cce78e27d3dad2
-  transform 0 35.2 0 0.9
+  id 3807556bc408e231
+  transform 0 35.2 0 0.6
   lod "../models/zone/vegetation/sapling_a_lod1.glb" 35
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 9" "../models/zone/vegetation/bush_wide_a.glb" -6.82 -0.03 -314.77
+model "Far bush 9" "../models/zone/vegetation/bush_street_b.glb" -6.82 -0.03 -314.77
   parent "Far"
-  id 5f47f12721a2b6a5
-  transform 0 42 0 1.18
-  lod "../models/zone/vegetation/bush_wide_a_lod1.glb" 25
+  id d8ee720cb206bb61
+  transform 0 42 0 0.784
+  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 10" "../models/zone/vegetation/bush_dense_a.glb" -3.97 -0.03 -230.56
+model "Far bush 10" "../models/zone/vegetation/bush_street_a.glb" -3.97 -0.03 -230.56
   parent "Far"
-  id be7bffcff7ec9e69
-  transform 0 157.6 0 1.5
-  lod "../models/zone/vegetation/bush_dense_a_lod1.glb" 25
+  id a4119e398c972757
+  transform 0 157.6 0 0.998
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 11" "../models/zone/vegetation/sapling_shrub_b.glb" 4.77 -0.03 -277.41
+model "Far bush 11" "../models/zone/vegetation/bush_street_a.glb" 4.77 -0.03 -277.41
   parent "Far"
-  id e23abf054b5a49a3
-  transform 0 1.6 0 1.32
-  lod "../models/zone/vegetation/sapling_shrub_b_lod1.glb" 25
+  id ccaf7a46847e438c
+  transform 0 1.6 0 0.88
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 12" "../models/zone/vegetation/bush_wide_a.glb" -1.91 -0.03 -211.86
+model "Far bush 12" "../models/zone/vegetation/bush_street_b.glb" -1.91 -0.03 -211.86
   parent "Far"
-  id e7e7eb55512dd34e
-  transform 0 47.9 0 1.23
-  lod "../models/zone/vegetation/bush_wide_a_lod1.glb" 25
+  id 8c8bb1af13ac9138
+  transform 0 47.9 0 0.819
+  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
 model "Far bush 13" "../models/zone/vegetation/sapling_a.glb" -2.35 -0.03 -264.4
   parent "Far"
-  id 073a41e1103b5827
-  transform 0 119.2 0 1.03
+  id 8e67835e7591aa2c
+  transform 0 119.2 0 0.688
   lod "../models/zone/vegetation/sapling_a_lod1.glb" 35
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 14" "../models/zone/vegetation/bush_dense_a.glb" -6.86 -0.03 -244.06
+model "Far bush 14" "../models/zone/vegetation/bush_street_a.glb" -6.86 -0.03 -244.06
   parent "Far"
-  id 8f58eda5d3e2e598
-  transform 0 37.4 0 0.987
-  lod "../models/zone/vegetation/bush_dense_a_lod1.glb" 25
+  id f39fbea0b9933a49
+  transform 0 37.4 0 0.658
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 15" "../models/zone/vegetation/sapling_shrub_a.glb" -3.64 -0.03 -270.38
+model "Far bush 15" "../models/zone/vegetation/bush_street_c.glb" -3.64 -0.03 -270.38
   parent "Far"
-  id eeb6c6af87752760
-  transform 0 269.1 0 0.985
-  lod "../models/zone/vegetation/sapling_shrub_a_lod1.glb" 25
+  id cedc4e7bbc9b3a92
+  transform 0 269.1 0 0.657
+  lod "../models/zone/vegetation/bush_street_c_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 16" "../models/zone/vegetation/bush_dense_a.glb" -0.12 -0.03 -197.89
+model "Far bush 16" "../models/zone/vegetation/bush_street_a.glb" -0.12 -0.03 -197.89
   parent "Far"
-  id 09ec3dfa87547612
-  transform 0 284.8 0 1.34
-  lod "../models/zone/vegetation/bush_dense_a_lod1.glb" 25
+  id 191b20899f52f606
+  transform 0 284.8 0 0.894
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 17" "../models/zone/vegetation/sapling_shrub_a.glb" -2.92 -0.03 -221.32
+model "Far bush 17" "../models/zone/vegetation/bush_street_c.glb" -2.92 -0.03 -221.32
   parent "Far"
-  id 5751d28ad9a97a15
-  transform 0 256.6 0 1.12
-  lod "../models/zone/vegetation/sapling_shrub_a_lod1.glb" 25
+  id 20b41fa26a91464a
+  transform 0 256.6 0 0.748
+  lod "../models/zone/vegetation/bush_street_c_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 18" "../models/zone/vegetation/sapling_shrub_b.glb" -4.75 -0.03 -238.92
+model "Far bush 18" "../models/zone/vegetation/bush_street_a.glb" -4.75 -0.03 -238.92
   parent "Far"
-  id fb1a34c760bb9af4
-  transform 0 235.9 0 1.06
-  lod "../models/zone/vegetation/sapling_shrub_b_lod1.glb" 25
+  id 5a812edb7203f41e
+  transform 0 235.9 0 0.708
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
 model "Far bush 19" "../models/zone/vegetation/sapling_a.glb" -0.61 -0.03 -222.64
   parent "Far"
-  id 3ef24b26fc3320c8
-  transform 0 156.9 0 0.912
+  id 2aae85825c3b869e
+  transform 0 156.9 0 0.608
   lod "../models/zone/vegetation/sapling_a_lod1.glb" 35
   cull_distance 600
   collision 0
@@ -2467,8 +2628,8 @@ model "Far bush 19" "../models/zone/vegetation/sapling_a.glb" -0.61 -0.03 -222.6
   sway 1
 model "Far bush 20" "../models/zone/vegetation/sapling_a.glb" -5.92 -0.03 -266.08
   parent "Far"
-  id 6bdb1f2f40e99c6c
-  transform 0 20.1 0 0.912
+  id 8ca6e54105494568
+  transform 0 20.1 0 0.608
   lod "../models/zone/vegetation/sapling_a_lod1.glb" 35
   cull_distance 600
   collision 0
@@ -2476,71 +2637,71 @@ model "Far bush 20" "../models/zone/vegetation/sapling_a.glb" -5.92 -0.03 -266.0
   sway 1
 model "Far bush 21" "../models/zone/vegetation/sapling_a.glb" 4.73 -0.03 -204.83
   parent "Far"
-  id 2010a499e8f362f0
-  transform 0 24.6 0 1.24
+  id b6ad9f55a1e5fabd
+  transform 0 24.6 0 0.828
   lod "../models/zone/vegetation/sapling_a_lod1.glb" 35
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 22" "../models/zone/vegetation/bush_dense_a.glb" -6.82 -0.03 -323.31
+model "Far bush 22" "../models/zone/vegetation/bush_street_a.glb" -6.82 -0.03 -323.31
   parent "Far"
-  id da6c85cad2381f07
-  transform 0 65.7 0 1.1
-  lod "../models/zone/vegetation/bush_dense_a_lod1.glb" 25
+  id 6b6c4688b39da7c4
+  transform 0 65.7 0 0.731
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 23" "../models/zone/vegetation/bush_wide_a.glb" -4.21 -0.03 -208.46
+model "Far bush 23" "../models/zone/vegetation/bush_street_b.glb" -4.21 -0.03 -208.46
   parent "Far"
-  id 40c90966dd01c8c0
-  transform 0 114.7 0 1.15
-  lod "../models/zone/vegetation/bush_wide_a_lod1.glb" 25
+  id 8b37cf1dc0da601e
+  transform 0 114.7 0 0.763
+  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
 model "Far bush 24" "../models/zone/vegetation/sapling_a.glb" -0.79 -0.03 -205.31
   parent "Far"
-  id 8467ff03f4cc9495
-  transform 0 39.1 0 1.07
+  id f8cedbe3d59bb1b1
+  transform 0 39.1 0 0.716
   lod "../models/zone/vegetation/sapling_a_lod1.glb" 35
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 25" "../models/zone/vegetation/bush_wide_a.glb" -7.03 -0.03 -287.39
+model "Far bush 25" "../models/zone/vegetation/bush_street_b.glb" -7.03 -0.03 -287.39
   parent "Far"
-  id 8381663432a4a910
-  transform 0 191.9 0 1.24
-  lod "../models/zone/vegetation/bush_wide_a_lod1.glb" 25
+  id 82298744ef09190f
+  transform 0 191.9 0 0.829
+  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 26" "../models/zone/vegetation/bush_dense_a.glb" 3.04 -0.03 -288.27
+model "Far bush 26" "../models/zone/vegetation/bush_street_a.glb" 3.04 -0.03 -288.27
   parent "Far"
-  id 53ee7ac3930f5bcd
-  transform 0 179.2 0 1.31
-  lod "../models/zone/vegetation/bush_dense_a_lod1.glb" 25
+  id d7f12e189742bfb4
+  transform 0 179.2 0 0.876
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 27" "../models/zone/vegetation/bush_wide_a.glb" -2.75 -0.03 -235.88
+model "Far bush 27" "../models/zone/vegetation/bush_street_b.glb" -2.75 -0.03 -235.88
   parent "Far"
-  id f6366186e7b8a2ff
-  transform 0 262.9 0 1.1
-  lod "../models/zone/vegetation/bush_wide_a_lod1.glb" 25
+  id 0cb2e183c5ba662b
+  transform 0 262.9 0 0.736
+  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
 model "Far bush 28" "../models/zone/vegetation/sapling_a.glb" 2.16 -0.03 -253.57
   parent "Far"
-  id fef677a757f7263f
-  transform 0 163.8 0 0.941
+  id 9af8f10f5a56fdce
+  transform 0 163.8 0 0.627
   lod "../models/zone/vegetation/sapling_a_lod1.glb" 35
   cull_distance 600
   collision 0
@@ -2548,8 +2709,8 @@ model "Far bush 28" "../models/zone/vegetation/sapling_a.glb" 2.16 -0.03 -253.57
   sway 1
 model "Far bush 29" "../models/zone/vegetation/sapling_a.glb" 1.43 -0.03 -267.39
   parent "Far"
-  id 8699cade1da1be33
-  transform 0 269.5 0 1.13
+  id 920a1c70f972bb5d
+  transform 0 269.5 0 0.756
   lod "../models/zone/vegetation/sapling_a_lod1.glb" 35
   cull_distance 600
   collision 0
@@ -2557,8 +2718,8 @@ model "Far bush 29" "../models/zone/vegetation/sapling_a.glb" 1.43 -0.03 -267.39
   sway 1
 model "Far bush 30" "../models/zone/vegetation/sapling_a.glb" 2.43 -0.03 -281.9
   parent "Far"
-  id 1a802c296bd2fc84
-  transform 0 98.4 0 1.4
+  id 373b953c83788426
+  transform 0 98.4 0 0.936
   lod "../models/zone/vegetation/sapling_a_lod1.glb" 35
   cull_distance 600
   collision 0
@@ -2566,89 +2727,89 @@ model "Far bush 30" "../models/zone/vegetation/sapling_a.glb" 2.43 -0.03 -281.9
   sway 1
 model "Far bush 31" "../models/zone/vegetation/sapling_a.glb" 4.91 -0.03 -245.92
   parent "Far"
-  id f761d6f9fc32613d
-  transform 0 285.2 0 1.28
+  id 0bed0859b73abffe
+  transform 0 285.2 0 0.853
   lod "../models/zone/vegetation/sapling_a_lod1.glb" 35
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 32" "../models/zone/vegetation/bush_dense_a.glb" 5.18 -0.03 -320.5
+model "Far bush 32" "../models/zone/vegetation/bush_street_a.glb" 5.18 -0.03 -320.5
   parent "Far"
-  id 1c4bc6313468313e
-  transform 0 15.2 0 1.45
-  lod "../models/zone/vegetation/bush_dense_a_lod1.glb" 25
+  id 662df458e81baa66
+  transform 0 15.2 0 0.967
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 33" "../models/zone/vegetation/bush_dense_a.glb" 2.09 -0.03 -234.01
+model "Far bush 33" "../models/zone/vegetation/bush_street_a.glb" 2.09 -0.03 -234.01
   parent "Far"
-  id 9271ab5485601f19
-  transform 0 172 0 1.44
-  lod "../models/zone/vegetation/bush_dense_a_lod1.glb" 25
+  id a6a75ff00dc59b56
+  transform 0 172 0 0.963
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
 model "Far bush 34" "../models/zone/vegetation/sapling_a.glb" -5.25 -0.03 -225.55
   parent "Far"
-  id 6bd831b2528b3537
-  transform 0 1.7 0 1.08
+  id 839c97c90b65fa68
+  transform 0 1.7 0 0.722
   lod "../models/zone/vegetation/sapling_a_lod1.glb" 35
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 35" "../models/zone/vegetation/bush_wide_a.glb" -0.22 -0.03 -194.53
+model "Far bush 35" "../models/zone/vegetation/bush_street_b.glb" -0.22 -0.03 -194.53
   parent "Far"
-  id be709205b469b721
-  transform 0 7.4 0 1.44
-  lod "../models/zone/vegetation/bush_wide_a_lod1.glb" 25
+  id a108a97f8f6cdd04
+  transform 0 7.4 0 0.957
+  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 36" "../models/zone/vegetation/sapling_shrub_b.glb" 4.89 -0.03 -240.17
+model "Far bush 36" "../models/zone/vegetation/bush_street_a.glb" 4.89 -0.03 -240.17
   parent "Far"
-  id 582365d8ba3fd576
-  transform 0 320.3 0 1.07
-  lod "../models/zone/vegetation/sapling_shrub_b_lod1.glb" 25
+  id 0d4a935f8b84a7a2
+  transform 0 320.3 0 0.713
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
 model "Far bush 37" "../models/zone/vegetation/sapling_a.glb" 0.19 -0.03 -263.26
   parent "Far"
-  id dd739d341e4d1764
-  transform 0 88.4 0 1.05
+  id 8c564e410f217008
+  transform 0 88.4 0 0.7
   lod "../models/zone/vegetation/sapling_a_lod1.glb" 35
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 38" "../models/zone/vegetation/bush_wide_a.glb" -1.95 -0.03 -274.47
+model "Far bush 38" "../models/zone/vegetation/bush_street_b.glb" -1.95 -0.03 -274.47
   parent "Far"
-  id b28f75791d55fef3
-  transform 0 224.6 0 1.18
-  lod "../models/zone/vegetation/bush_wide_a_lod1.glb" 25
+  id 0ea6be3d0d041577
+  transform 0 224.6 0 0.79
+  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 39" "../models/zone/vegetation/bush_wide_a.glb" 3.24 -0.03 -197.89
+model "Far bush 39" "../models/zone/vegetation/bush_street_b.glb" 3.24 -0.03 -197.89
   parent "Far"
-  id 2f5bc1ed1b30b4f2
-  transform 0 198.7 0 0.937
-  lod "../models/zone/vegetation/bush_wide_a_lod1.glb" 25
+  id 7fb2c65751741591
+  transform 0 198.7 0 0.625
+  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
 model "Far bush 40" "../models/zone/vegetation/sapling_a.glb" -5.26 -0.03 -301.75
   parent "Far"
-  id 516d09a9d1eb8e3f
-  transform 0 71.5 0 1.2
+  id f776f6bf0ee1d953
+  transform 0 71.5 0 0.801
   lod "../models/zone/vegetation/sapling_a_lod1.glb" 35
   cull_distance 600
   collision 0
@@ -2656,107 +2817,107 @@ model "Far bush 40" "../models/zone/vegetation/sapling_a.glb" -5.26 -0.03 -301.7
   sway 1
 model "Far bush 41" "../models/zone/vegetation/sapling_a.glb" -6.16 -0.03 -285.61
   parent "Far"
-  id fc2e08ff492584a7
-  transform 0 103.2 0 1.25
+  id 5c435d491e1166ff
+  transform 0 103.2 0 0.834
   lod "../models/zone/vegetation/sapling_a_lod1.glb" 35
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 42" "../models/zone/vegetation/bush_dense_a.glb" 4.22 -0.03 -299.76
+model "Far bush 42" "../models/zone/vegetation/bush_street_a.glb" 4.22 -0.03 -299.76
   parent "Far"
-  id fe3be84376e07318
-  transform 0 69.3 0 1.01
-  lod "../models/zone/vegetation/bush_dense_a_lod1.glb" 25
+  id 1230e0c95bbc87ea
+  transform 0 69.3 0 0.672
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 43" "../models/zone/vegetation/sapling_shrub_a.glb" 3.92 -0.03 -263.31
+model "Far bush 43" "../models/zone/vegetation/bush_street_c.glb" 3.92 -0.03 -263.31
   parent "Far"
-  id e8248789cf12c2d6
-  transform 0 307.5 0 0.954
-  lod "../models/zone/vegetation/sapling_shrub_a_lod1.glb" 25
+  id 3983ed94705b9bcb
+  transform 0 307.5 0 0.636
+  lod "../models/zone/vegetation/bush_street_c_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 44" "../models/zone/vegetation/bush_dense_a.glb" -5.76 -0.03 -284.55
+model "Far bush 44" "../models/zone/vegetation/bush_street_a.glb" -5.76 -0.03 -284.55
   parent "Far"
-  id a682fcb2b4d59c79
-  transform 0 66.4 0 1.14
-  lod "../models/zone/vegetation/bush_dense_a_lod1.glb" 25
+  id c86da37f066f6c5e
+  transform 0 66.4 0 0.763
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 45" "../models/zone/vegetation/bush_dense_a.glb" -2.78 -0.03 -319.52
+model "Far bush 45" "../models/zone/vegetation/bush_street_a.glb" -2.78 -0.03 -319.52
   parent "Far"
-  id 1a55ba4a5f620448
-  transform 0 221.4 0 1.09
-  lod "../models/zone/vegetation/bush_dense_a_lod1.glb" 25
+  id cb99bfcaaa2d80ef
+  transform 0 221.4 0 0.725
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 46" "../models/zone/vegetation/bush_wide_a.glb" -7.13 -0.03 -197.01
+model "Far bush 46" "../models/zone/vegetation/bush_street_b.glb" -7.13 -0.03 -197.01
   parent "Far"
-  id 0ebb79304f3d579b
-  transform 0 142.4 0 0.975
-  lod "../models/zone/vegetation/bush_wide_a_lod1.glb" 25
+  id b660a165114d14ca
+  transform 0 142.4 0 0.65
+  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 47" "../models/zone/vegetation/sapling_shrub_b.glb" 7.37 -0.03 -327.19
+model "Far bush 47" "../models/zone/vegetation/bush_street_a.glb" 7.37 -0.03 -327.19
   parent "Far"
-  id 842668dda935ad05
-  transform 0 310.4 0 1.49
-  lod "../models/zone/vegetation/sapling_shrub_b_lod1.glb" 25
+  id aca59afebbcc8cda
+  transform 0 310.4 0 0.997
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
 model "Far bush 48" "../models/zone/vegetation/sapling_a.glb" -1.57 -0.03 -288.83
   parent "Far"
-  id 6509892ce9ea92ec
-  transform 0 273.2 0 1.12
+  id dbc63bb34eee1f08
+  transform 0 273.2 0 0.748
   lod "../models/zone/vegetation/sapling_a_lod1.glb" 35
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 49" "../models/zone/vegetation/sapling_shrub_a.glb" 4.68 -0.03 -199.75
+model "Far bush 49" "../models/zone/vegetation/bush_street_c.glb" 4.68 -0.03 -199.75
   parent "Far"
-  id 706ae50ea134f889
-  transform 0 238.5 0 1.46
-  lod "../models/zone/vegetation/sapling_shrub_a_lod1.glb" 25
+  id 08501add2a2b292a
+  transform 0 238.5 0 0.976
+  lod "../models/zone/vegetation/bush_street_c_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 50" "../models/zone/vegetation/sapling_shrub_a.glb" -3.25 -0.03 -270.34
+model "Far bush 50" "../models/zone/vegetation/bush_street_c.glb" -3.25 -0.03 -270.34
   parent "Far"
-  id 57cabfb2b3676f18
-  transform 0 127.7 0 1.37
-  lod "../models/zone/vegetation/sapling_shrub_a_lod1.glb" 25
+  id f8dc709d82a04e52
+  transform 0 127.7 0 0.916
+  lod "../models/zone/vegetation/bush_street_c_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 51" "../models/zone/vegetation/sapling_shrub_b.glb" -4.3 -0.03 -239.53
+model "Far bush 51" "../models/zone/vegetation/bush_street_a.glb" -4.3 -0.03 -239.53
   parent "Far"
-  id e235d2d764afa9b0
-  transform 0 274 0 1.23
-  lod "../models/zone/vegetation/sapling_shrub_b_lod1.glb" 25
+  id 09a32dd8d58ca66a
+  transform 0 274 0 0.817
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
 model "Far bush 52" "../models/zone/vegetation/sapling_a.glb" 5.74 -0.03 -267.69
   parent "Far"
-  id e9045587182323eb
-  transform 0 283.3 0 1.18
+  id c5191c0d54873acd
+  transform 0 283.3 0 0.784
   lod "../models/zone/vegetation/sapling_a_lod1.glb" 35
   cull_distance 600
   collision 0
@@ -2764,125 +2925,125 @@ model "Far bush 52" "../models/zone/vegetation/sapling_a.glb" 5.74 -0.03 -267.69
   sway 1
 model "Far bush 53" "../models/zone/vegetation/sapling_a.glb" 0.57 -0.03 -277.77
   parent "Far"
-  id 37c6987f81f3bb8c
-  transform 0 220.4 0 1.19
+  id b17771fea280729f
+  transform 0 220.4 0 0.793
   lod "../models/zone/vegetation/sapling_a_lod1.glb" 35
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 54" "../models/zone/vegetation/bush_dense_a.glb" 1.88 -0.03 -236.54
+model "Far bush 54" "../models/zone/vegetation/bush_street_a.glb" 1.88 -0.03 -236.54
   parent "Far"
-  id 832302c84fe55dcf
-  transform 0 222.8 0 1.41
-  lod "../models/zone/vegetation/bush_dense_a_lod1.glb" 25
+  id 31b736f2a02def30
+  transform 0 222.8 0 0.943
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 55" "../models/zone/vegetation/bush_wide_a.glb" 0.97 -0.03 -311.25
+model "Far bush 55" "../models/zone/vegetation/bush_street_b.glb" 0.97 -0.03 -311.25
   parent "Far"
-  id 5cc92bf2cb634ddf
-  transform 0 21.3 0 1.38
-  lod "../models/zone/vegetation/bush_wide_a_lod1.glb" 25
+  id ea478a6e5af20bee
+  transform 0 21.3 0 0.919
+  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 56" "../models/zone/vegetation/sapling_shrub_b.glb" -5.09 -0.03 -329.28
+model "Far bush 56" "../models/zone/vegetation/bush_street_a.glb" -5.09 -0.03 -329.28
   parent "Far"
-  id 4923610466d36d58
-  transform 0 58.7 0 1.19
-  lod "../models/zone/vegetation/sapling_shrub_b_lod1.glb" 25
+  id 7798280473ff18ea
+  transform 0 58.7 0 0.79
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 57" "../models/zone/vegetation/bush_wide_a.glb" 0.69 -0.03 -241.89
+model "Far bush 57" "../models/zone/vegetation/bush_street_b.glb" 0.69 -0.03 -241.89
   parent "Far"
-  id 8883b9a66e68f5f7
-  transform 0 201.3 0 1.15
-  lod "../models/zone/vegetation/bush_wide_a_lod1.glb" 25
+  id 181064dde034a49f
+  transform 0 201.3 0 0.765
+  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 58" "../models/zone/vegetation/sapling_shrub_a.glb" 6.47 -0.03 -256.96
+model "Far bush 58" "../models/zone/vegetation/bush_street_c.glb" 6.47 -0.03 -256.96
   parent "Far"
-  id 5501dfb4f6ee379d
-  transform 0 56.6 0 1.21
-  lod "../models/zone/vegetation/sapling_shrub_a_lod1.glb" 25
+  id b4060d35eea38534
+  transform 0 56.6 0 0.804
+  lod "../models/zone/vegetation/bush_street_c_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
 model "Far bush 59" "../models/zone/vegetation/sapling_a.glb" 4.12 -0.03 -309.59
   parent "Far"
-  id 511d592e94368836
-  transform 0 119.4 0 1.37
+  id 70e726e7e14039c8
+  transform 0 119.4 0 0.913
   lod "../models/zone/vegetation/sapling_a_lod1.glb" 35
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 60" "../models/zone/vegetation/bush_wide_a.glb" -5.1 -0.03 -199.47
+model "Far bush 60" "../models/zone/vegetation/bush_street_b.glb" -5.1 -0.03 -199.47
   parent "Far"
-  id 8bb0039df822cc4b
-  transform 0 62.8 0 1.14
-  lod "../models/zone/vegetation/bush_wide_a_lod1.glb" 25
+  id 628237c91f913bdc
+  transform 0 62.8 0 0.758
+  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 61" "../models/zone/vegetation/sapling_shrub_a.glb" -6.85 -0.03 -296.18
+model "Far bush 61" "../models/zone/vegetation/bush_street_c.glb" -6.85 -0.03 -296.18
   parent "Far"
-  id 754ab4b17c8bdbcf
-  transform 0 298 0 1.12
-  lod "../models/zone/vegetation/sapling_shrub_a_lod1.glb" 25
+  id 7b70814bfcc78aef
+  transform 0 298 0 0.747
+  lod "../models/zone/vegetation/bush_street_c_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 62" "../models/zone/vegetation/bush_dense_a.glb" 7.35 -0.03 -284.68
+model "Far bush 62" "../models/zone/vegetation/bush_street_a.glb" 7.35 -0.03 -284.68
   parent "Far"
-  id eccd9e25f4acef69
-  transform 0 97.8 0 1.07
-  lod "../models/zone/vegetation/bush_dense_a_lod1.glb" 25
+  id 59599abf2127b9ff
+  transform 0 97.8 0 0.713
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 63" "../models/zone/vegetation/bush_wide_a.glb" -0.44 -0.03 -249.79
+model "Far bush 63" "../models/zone/vegetation/bush_street_b.glb" -0.44 -0.03 -249.79
   parent "Far"
-  id 10a610e289a7368f
-  transform 0 236.6 0 1.1
-  lod "../models/zone/vegetation/bush_wide_a_lod1.glb" 25
+  id 42abfcdc06a8886b
+  transform 0 236.6 0 0.735
+  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
 model "Far bush 64" "../models/zone/vegetation/sapling_a.glb" 3.67 -0.03 -201.1
   parent "Far"
-  id 5e5919498864110d
-  transform 0 33.7 0 1.26
+  id d177c895a113b895
+  transform 0 33.7 0 0.84
   lod "../models/zone/vegetation/sapling_a_lod1.glb" 35
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 65" "../models/zone/vegetation/sapling_shrub_b.glb" -2.57 -0.03 -269.39
+model "Far bush 65" "../models/zone/vegetation/bush_street_a.glb" -2.57 -0.03 -269.39
   parent "Far"
-  id c605e281a26ecfd9
-  transform 0 201.9 0 1.31
-  lod "../models/zone/vegetation/sapling_shrub_b_lod1.glb" 25
+  id 5bc9f5b422c31117
+  transform 0 201.9 0 0.875
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
 model "Far bush 66" "../models/zone/vegetation/sapling_a.glb" 1.69 -0.03 -277.92
   parent "Far"
-  id 7ad09fb340e5412a
-  transform 0 318.1 0 0.963
+  id 2a6b123364b1d507
+  transform 0 318.1 0 0.642
   lod "../models/zone/vegetation/sapling_a_lod1.glb" 35
   cull_distance 600
   collision 0
@@ -2890,8 +3051,8 @@ model "Far bush 66" "../models/zone/vegetation/sapling_a.glb" 1.69 -0.03 -277.92
   sway 1
 model "Far bush 67" "../models/zone/vegetation/sapling_a.glb" 5.72 -0.03 -250.14
   parent "Far"
-  id a829c27cdab7afbe
-  transform 0 281.8 0 1.31
+  id da980e21096a2282
+  transform 0 281.8 0 0.876
   lod "../models/zone/vegetation/sapling_a_lod1.glb" 35
   cull_distance 600
   collision 0
@@ -2899,1400 +3060,1848 @@ model "Far bush 67" "../models/zone/vegetation/sapling_a.glb" 5.72 -0.03 -250.14
   sway 1
 model "Far bush 68" "../models/zone/vegetation/sapling_a.glb" 4.99 -0.03 -248.01
   parent "Far"
-  id 963c79681ceda27f
-  transform 0 283.1 0 1.41
+  id 6eee9ba6854284c9
+  transform 0 283.1 0 0.94
   lod "../models/zone/vegetation/sapling_a_lod1.glb" 35
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 69" "../models/zone/vegetation/sapling_shrub_a.glb" -5.7 -0.03 -307.86
+model "Far bush 69" "../models/zone/vegetation/bush_street_c.glb" -5.7 -0.03 -307.86
   parent "Far"
-  id 43c5065c4a6b5a8c
-  transform 0 48.5 0 0.989
-  lod "../models/zone/vegetation/sapling_shrub_a_lod1.glb" 25
+  id c23b1e87c99989ac
+  transform 0 48.5 0 0.659
+  lod "../models/zone/vegetation/bush_street_c_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
-model "Far bush 70" "../models/zone/vegetation/bush_dense_a.glb" -4.77 -0.03 -329.38
+model "Far bush 70" "../models/zone/vegetation/bush_street_a.glb" -4.77 -0.03 -329.38
   parent "Far"
-  id 1e02b67275363a44
-  transform 0 96.9 0 1.33
-  lod "../models/zone/vegetation/bush_dense_a_lod1.glb" 25
+  id aa7ecf2dedfe54e6
+  transform 0 96.9 0 0.884
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 25
   cull_distance 600
   collision 0
   cast_shadows 0
   sway 1
 model "Lyokha" "../models/zone/skrunda/graffiti_lyokha.glb" -9.63 0.51 138.96
   parent "Wall writing"
-  id 7174d3cafffdff53
+  id 98406cdc430f0c3e
   transform 0 180 0 0.935
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Dmb" "../models/zone/skrunda/graffiti_dmb.glb" -12.34 0.73 175.04
   parent "Wall writing"
-  id 500ac8e259e63887
+  id 0f472c28f44ac314
   transform 0 0 0 0.954
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -14.4 0.4 138.98
   parent "Wall writing"
-  id 857c8ae9f5ed293f
+  id dfd479e2c10238aa
   transform 0 180 0 1.02
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -16.26 6.56 175.02
   parent "Wall writing"
-  id 3c8389ac75701011
+  id 9e40a35e73406f29
   transform 0 0 0 1.35
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -18.89 10.77 175.02
   parent "Wall writing"
-  id 574b513d16a7f24a
+  id eb43a3d55cb63c0e
   transform 0 0 0 1.25
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -20.59 10.69 138.98
   parent "Wall writing"
-  id efce62e70fdc093f
+  id 673ac13384ee6c3c
   transform 0 180 0 1.01
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Arrow clear" "../models/zone/skrunda/graffiti_arrow_clear.glb" -17.23 1.48 175.02
   parent "Wall writing"
-  id d4915635b8fc9b1f
+  id 69f6db1a252f35fe
   transform 0 0 0 0.805
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Lyokha" "../models/zone/skrunda/graffiti_lyokha.glb" -19.47 1.09 139.22
   parent "Wall writing"
-  id e93929937b2b9cc3
+  id 8cd3edb431e386e8
   transform 0 0 0 0.778
   cull_distance 70
   collision 0
   cast_shadows 0
 model "No exit" "../models/zone/skrunda/graffiti_no_exit.glb" -13.3 1.23 109.18
   parent "Wall writing"
-  id 8e21b4dd4710a52d
+  id 3df68696cfa054ce
   transform 0 180 0 0.772
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -16.79 0.43 109.18
   parent "Wall writing"
-  id 770b0a815da0623a
+  id badb3a5dd1b444a5
   transform 0 180 0 1.1
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -20.21 0.4 109.18
   parent "Wall writing"
-  id 7dc36c2dcd85534e
+  id 9eab11e9d1898d14
   transform 0 180 0 1.03
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -7.98 16.99 127.86
   parent "Wall writing"
-  id 4ca27bc459bdd069
+  id 21ace9c0f480bcd5
   transform 0 90 0 1.14
   cull_distance 70
   collision 0
   cast_shadows 0
 model "No exit" "../models/zone/skrunda/graffiti_no_exit.glb" -14.86 0.83 67.36
   parent "Wall writing"
-  id b419dcba70cfc3b0
+  id bfc692c68f41cefa
   transform 0 180 0 0.716
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -11.49 0.29 67.36
   parent "Wall writing"
-  id c3e3efbccc2a838c
+  id 04cfe4951211e6b4
   transform 0 180 0 0.813
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -8.38 13.63 75.79
   parent "Wall writing"
-  id 9c10a86b34cf3082
+  id d8ab20c076fe0806
   transform 0 90 0 1.39
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Arrow clear" "../models/zone/skrunda/graffiti_arrow_clear.glb" -21.81 1.2 67.38
   parent "Wall writing"
-  id 5e808eb18682fdf6
+  id 257a8fb7acd78f2c
   transform 0 180 0 0.823
   cull_distance 70
   collision 0
   cast_shadows 0
 model "No exit" "../models/zone/skrunda/graffiti_no_exit.glb" -11.73 0.82 43.56
   parent "Wall writing"
-  id 93566484c4ccb10b
+  id 5341b75546292a11
   transform 0 180 0 0.757
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -15.55 0.32 43.58
   parent "Wall writing"
-  id a5f17d35d76320fa
+  id 8b352caff4675a26
   transform 0 180 0 1.01
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -18.66 0.27 43.58
   parent "Wall writing"
-  id 73cc71c44b58f628
+  id b8be5d2971545354
   transform 0 180 0 1.08
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -19.46 10.17 43.58
   parent "Wall writing"
-  id 4f195c62fd49482d
+  id f9808ee05734598a
   transform 0 180 0 1.13
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -9.69 7.99 43.58
   parent "Wall writing"
-  id 16fe59dbb84c3fa8
+  id ae7d5460da9af7fb
   transform 0 180 0 1.25
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" -15.02 0.67 10.76
   parent "Wall writing"
-  id e00c92f9b838651a
+  id 5c92cf5871630855
   transform 0 180 0 0.902
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" -21.37 0.86 10.76
   parent "Wall writing"
-  id 3fe233f8882f10e7
+  id d241f2fff34ae151
   transform 0 180 0 0.794
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -17.59 0.45 10.78
   parent "Wall writing"
-  id 2169626fb9d83dbf
+  id 22d10a29bf1baaf5
   transform 0 180 0 0.903
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -11.65 0.5 10.78
   parent "Wall writing"
-  id 62e93504457a6a00
+  id b066d1560a07d6a5
   transform 0 180 0 1.03
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -12.06 13.21 43.82
   parent "Wall writing"
-  id 476f03f4be10dae2
+  id be165f6b30f82238
   transform 0 0 0 1.32
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -20.36 17.33 43.82
   parent "Wall writing"
-  id 394c74c3b31d7e38
+  id 369693971bffacc2
   transform 0 0 0 1.21
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -20.1 16.61 10.78
   parent "Wall writing"
-  id 63c5602299e2f95e
+  id f22236364a5c4a2a
   transform 0 180 0 1.35
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Arrow clear" "../models/zone/skrunda/graffiti_arrow_clear.glb" -8.52 1.55 41.29
   parent "Wall writing"
-  id 44e56db8347a0513
+  id 0a794badee2b0f88
   transform 0 90 0 0.87
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Lyokha" "../models/zone/skrunda/graffiti_lyokha.glb" -10.96 0.65 -16.04
   parent "Wall writing"
-  id d345721732e00e1e
+  id 7ddddd23f77e3a2c
   transform 0 180 0 0.753
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Lyokha" "../models/zone/skrunda/graffiti_lyokha.glb" -8.68 0.51 11.04
   parent "Wall writing"
-  id dd8edef09890db86
+  id aebe86adbeea10b9
   transform 0 0 0 0.737
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -14.26 0.36 -16.04
   parent "Wall writing"
-  id a48db75e437e5611
+  id 73052f743e5f32fe
   transform 0 180 0 0.845
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -12.3 12.4 11.02
   parent "Wall writing"
-  id 822a24ca508beed3
+  id 3f80c7c767575621
   transform 0 0 0 1.13
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Lyokha" "../models/zone/skrunda/graffiti_lyokha.glb" -11.07 0.88 -23.96
   parent "Wall writing"
-  id e7e90454c2485165
+  id 0de1c1adcb542f53
   transform 0 0 0 0.714
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Keep out" "../models/zone/skrunda/graffiti_keep_out.glb" -13.96 1.07 -69.02
   parent "Wall writing"
-  id e065867b1df90987
+  id f37bf1126f1e9332
   transform 0 180 0 0.909
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -16.23 0.45 -23.98
   parent "Wall writing"
-  id 678d97777728b00e
+  id b82e119f10e99a08
   transform 0 0 0 1.08
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -15.63 12.23 -23.98
   parent "Wall writing"
-  id 3602bc818d7a89f1
+  id 405be4faf1781a88
   transform 0 0 0 1.11
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -8.23 7.92 -45.22
   parent "Wall writing"
-  id d89f84ef5056cc5a
+  id a14a0e319543d1d5
   transform 0 90 0 1.13
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -17.49 12.51 -69.02
   parent "Wall writing"
-  id 1fa6e405aaa26327
+  id d0ca50ec66f920fc
   transform 0 180 0 1.32
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Arrow clear" "../models/zone/skrunda/graffiti_arrow_clear.glb" -21.26 1.21 -23.98
   parent "Wall writing"
-  id 2ca742fc0f5486eb
+  id d184469ea3948f25
   transform 0 0 0 0.916
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Lyokha" "../models/zone/skrunda/graffiti_lyokha.glb" -15.83 0.71 -104.84
   parent "Wall writing"
-  id 61c91d7ef22d6161
+  id bf89c6df978098de
   transform 0 180 0 0.818
   cull_distance 70
   collision 0
   cast_shadows 0
 model "No exit" "../models/zone/skrunda/graffiti_no_exit.glb" -18.59 1.08 -68.78
   parent "Wall writing"
-  id 83802c0a3825346e
+  id d1ccac34f610cbe9
   transform 0 0 0 0.912
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -10.66 0.42 -68.78
   parent "Wall writing"
-  id f4cfb2edea943bd9
+  id 7a566ec012ad1825
   transform 0 0 0 1.04
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -12.48 15.49 -68.78
   parent "Wall writing"
-  id 8e8f99011907dfcd
+  id d162deea94fe0fee
   transform 0 0 0 1.03
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -15.41 8.47 -68.78
   parent "Wall writing"
-  id bf578fa814608da2
+  id 37a19acb8f354c71
   transform 0 0 0 1.05
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Arrow clear" "../models/zone/skrunda/graffiti_arrow_clear.glb" -21.41 1.58 -104.82
   parent "Wall writing"
-  id f1546719dc45968c
+  id b51d26eb3cc8fa1d
   transform 0 180 0 0.918
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Dmb" "../models/zone/skrunda/graffiti_dmb.glb" -18.39 0.75 -134.64
   parent "Wall writing"
-  id 96ee984976cd8a70
+  id 6ff03155baa12076
   transform 0 180 0 0.955
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -9.6 0.26 -134.64
   parent "Wall writing"
-  id 177a1ee15f5de62f
+  id b860e3ef6085454e
   transform 0 180 0 0.895
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -13.2 0.38 -104.58
   parent "Wall writing"
-  id e1417599c19fb37f
+  id 53d41b246b6d1471
   transform 0 0 0 0.988
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -14.52 14.75 -134.62
   parent "Wall writing"
-  id c16c4f9befb9daf4
+  id 9cd81c23924ac61c
   transform 0 180 0 1.24
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -15.47 16.3 -104.58
   parent "Wall writing"
-  id ba386c8655bf761a
+  id 1859e0a076be2895
   transform 0 0 0 1.08
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -11.74 13.2 -104.58
   parent "Wall writing"
-  id 489dee473897c18a
+  id 97a2d38a1cbf1cd3
   transform 0 0 0 1.27
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" -12.6 1.34 -134.38
   parent "Wall writing"
-  id 461f4364a3519227
+  id 97455d724c26c0f6
   transform 0 0 0 0.764
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Keep out" "../models/zone/skrunda/graffiti_keep_out.glb" -10.84 0.97 -176.42
   parent "Wall writing"
-  id 7a5c508281c76e7e
+  id f592f10f733b50db
   transform 0 180 0 0.862
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -16.43 0.26 -176.44
   parent "Wall writing"
-  id 2b2a0b56b1f62204
+  id 5a036d1ad8e71efb
   transform 0 180 0 0.841
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -20.49 0.36 -176.44
   parent "Wall writing"
-  id dfb810bc8b6ca80f
+  id 1130dc646b241d07
   transform 0 180 0 0.83
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -10.49 13.41 -176.42
   parent "Wall writing"
-  id 09dbd787508974fe
+  id 5036f4accf657d84
   transform 0 180 0 1.38
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -18.82 14.12 -134.38
   parent "Wall writing"
-  id 1c5cd2905e69f9b0
+  id a4cefda4d64f6a1e
   transform 0 0 0 1.13
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -7.98 10.84 -171.66
   parent "Wall writing"
-  id ef7b0df1f8d326e5
+  id 30c7f6b08d22ecf4
   transform 0 90 0 1.18
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Arrow clear" "../models/zone/skrunda/graffiti_arrow_clear.glb" -7.98 1.4 -149.2
   parent "Wall writing"
-  id 4088298e891ac424
+  id a54444cd0d424098
   transform 0 90 0 0.931
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" -8.52 1.23 -194.38
   parent "Wall writing"
-  id 9515dbcebc8e7888
+  id 6f43a78f0f7f5590
   transform 0 90 0 0.973
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -12.08 0.5 -200.22
   parent "Wall writing"
-  id 784d7ddc3e73f8cf
+  id dfac4bf49c8ce32a
   transform 0 180 0 1.01
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -21.03 0.45 -200.22
   parent "Wall writing"
-  id 3db66e6ce31e6e63
+  id a60f6cb6981ddbc6
   transform 0 180 0 0.854
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -16.93 12.56 -176.18
   parent "Wall writing"
-  id 66245ca1a5d72960
+  id 0a3e598817dfd257
   transform 0 0 0 1.02
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Arrow clear" "../models/zone/skrunda/graffiti_arrow_clear.glb" -15.77 1.22 -200.22
   parent "Wall writing"
-  id d8dc097323562cd3
+  id 77db80e42c35ffe1
   transform 0 180 0 0.912
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Dmb" "../models/zone/skrunda/graffiti_dmb.glb" -7.97 1.28 -226.71
   parent "Wall writing"
-  id da07f531b998f326
+  id 92d25f8b762e5893
   transform 0 90 0 0.821
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Keep out" "../models/zone/skrunda/graffiti_keep_out.glb" -9.27 0.68 -199.96
   parent "Wall writing"
-  id 420aa50477b2f99d
+  id c445b61531c893a7
   transform 0 0 0 0.755
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -9.59 0.32 -233.02
   parent "Wall writing"
-  id 4c4d324ddce9e7db
+  id d0e84b6cb646e8d3
   transform 0 180 0 1.01
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -13.27 16.88 -233.02
   parent "Wall writing"
-  id 496efb020114a7ca
+  id 913c5d653ca839b7
   transform 0 180 0 1.15
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Dmb" "../models/zone/skrunda/graffiti_dmb.glb" -13.34 0.57 -232.76
   parent "Wall writing"
-  id d118c05c35902a4f
+  id 8c3d1a026bfacc06
   transform 0 0 0 0.712
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" -16.22 1.05 -259.82
   parent "Wall writing"
-  id 19be8c9ba458e00e
+  id dd6eda53a974491d
   transform 0 180 0 0.927
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -18.82 0.36 -232.78
   parent "Wall writing"
-  id d5d5874ebf5307c8
+  id 5f63547c0e13a3bc
   transform 0 0 0 1.04
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -7.78 6.41 -254.69
   parent "Wall writing"
-  id 2a0544597f317658
+  id 8bf313f64824eb55
   transform 0 90 0 1.19
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -15.35 13.08 -259.82
   parent "Wall writing"
-  id 69222244bb94eb5e
+  id 2ceb5d7f6331873b
   transform 0 180 0 1.27
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" -16.42 0.7 -298.64
   parent "Wall writing"
-  id debe5248f9429e8b
+  id ee171a7bdcf74fee
   transform 0 180 0 0.897
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Lyokha" "../models/zone/skrunda/graffiti_lyokha.glb" -11.78 1.03 -259.58
   parent "Wall writing"
-  id 6f22899e40dc3a5b
+  id 2ff0af426b2222b8
   transform 0 0 0 0.864
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -13.1 0.36 -298.64
   parent "Wall writing"
-  id b2e3a5e7e7a7ac62
+  id 76c1fed354c9c738
   transform 0 180 0 0.808
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -13.35 8.2 -298.62
   parent "Wall writing"
-  id d92d1a4aa773b222
+  id d398d6df9c2c5ef6
   transform 0 180 0 1.11
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -17.33 11.05 -259.58
   parent "Wall writing"
-  id ad64c27bbe47db00
+  id d49eaa9dd34a6eb6
   transform 0 0 0 1.38
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Dmb" "../models/zone/skrunda/graffiti_dmb.glb" -19.06 0.76 -298.36
   parent "Wall writing"
-  id d731e371dccfd83b
+  id 7becc96378e46183
   transform 0 0 0 0.737
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -10.43 0.29 -328.42
   parent "Wall writing"
-  id b7b643f471366794
+  id 2fa633f70da44c13
   transform 0 180 0 1.03
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -7.98 6.59 -324.99
   parent "Wall writing"
-  id 6a54c06ccac24c20
+  id 8bb2452a81f0bc77
   transform 0 90 0 1.3
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -10.68 14.31 -328.42
   parent "Wall writing"
-  id d237478ec877e46b
+  id 9ff1beb2c73e6553
   transform 0 180 0 1.32
   cull_distance 70
   collision 0
   cast_shadows 0
 model "No exit" "../models/zone/skrunda/graffiti_no_exit.glb" 10.99 0.91 172.02
   parent "Wall writing"
-  id bc23ddada88460a7
+  id 8a83f5b84a1efdac
   transform 0 0 0 0.778
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Dmb" "../models/zone/skrunda/graffiti_dmb.glb" 20.47 0.66 172.04
   parent "Wall writing"
-  id f7859267de90c733
+  id b8a81f4fe836fe28
   transform 0 0 0 0.864
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 19.41 0.34 144.98
   parent "Wall writing"
-  id d2d8c1bb8ccf1693
+  id 08d6501f959c546c
   transform 0 180 0 0.922
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 9.86 0.41 144.96
   parent "Wall writing"
-  id 60b116c5bc6039f1
+  id 1f9cc1bf2009cd20
   transform 0 180 0 0.804
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 15 10.31 172.02
   parent "Wall writing"
-  id 498732457c4611c0
+  id a1c8764ce0e917dd
   transform 0 0 0 1.29
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 7.78 9.19 170.41
   parent "Wall writing"
-  id 1257b02708f00c33
+  id 15c0c6e53e165cf4
   transform 0 270 0 1.38
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Dmb" "../models/zone/skrunda/graffiti_dmb.glb" 11.29 1.27 106.18
   parent "Wall writing"
-  id 5d4516107a075657
+  id a5d27c0cf75c6abe
   transform 0 180 0 0.827
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Dmb" "../models/zone/skrunda/graffiti_dmb.glb" 18.74 1.14 106.18
   parent "Wall writing"
-  id 48d446e4bc81d36d
+  id 78041ec700712e0d
   transform 0 180 0 0.965
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 16.2 0.25 145.22
   parent "Wall writing"
-  id dcefbffe3373ac39
+  id 94cce18036f401eb
   transform 0 0 0 1.05
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 14.34 7.73 145.22
   parent "Wall writing"
-  id 89cf15e4c428bd5a
+  id ba4fd173ad8291ce
   transform 0 0 0 1.32
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 17.45 7.66 106.18
   parent "Wall writing"
-  id 78267dee31d73db4
+  id 7c30524a45a2bc05
   transform 0 180 0 1
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Arrow clear" "../models/zone/skrunda/graffiti_arrow_clear.glb" 14.86 1.51 128.73
   parent "Wall writing"
-  id 2dec7b90bd6fceb6
+  id bd2143b310552d26
   transform 0 270 0 0.913
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Dmb" "../models/zone/skrunda/graffiti_dmb.glb" 11.37 0.9 76.36
   parent "Wall writing"
-  id 67f9245915533b99
+  id f11769323f0be9fe
   transform 0 180 0 0.963
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 18.29 0.28 76.38
   parent "Wall writing"
-  id 0b7d7f844232f7c3
+  id 394e195b46a44a24
   transform 0 180 0 1.07
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 14.46 15.05 76.38
   parent "Wall writing"
-  id 06e0f0c0e857083e
+  id 2712745f6e529d49
   transform 0 180 0 1.18
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 19.78 15.47 76.38
   parent "Wall writing"
-  id e4a5e4d2582e6f9f
+  id e2c1f36021d8afa5
   transform 0 180 0 1.09
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 16.46 15.75 106.42
   parent "Wall writing"
-  id 8b99b19f19674e42
+  id f5aba4c5446f674b
   transform 0 0 0 1.04
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Arrow clear" "../models/zone/skrunda/graffiti_arrow_clear.glb" 8.62 1.51 92.8
   parent "Wall writing"
-  id ba0171589062c85b
+  id 7ec1ee3bd0b36a63
   transform 0 270 0 0.833
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Dmb" "../models/zone/skrunda/graffiti_dmb.glb" 19.89 1.26 40.58
   parent "Wall writing"
-  id f39b55312653833f
+  id 92d090bc089912af
   transform 0 180 0 0.918
   cull_distance 70
   collision 0
   cast_shadows 0
 model "No exit" "../models/zone/skrunda/graffiti_no_exit.glb" 8.31 0.58 54.99
   parent "Wall writing"
-  id f09a0be312364a25
+  id 88d2994105e6fa9d
   transform 0 270 0 0.773
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 10.46 0.39 40.58
   parent "Wall writing"
-  id 9f6835d506bd5f5d
+  id 9d025cb29b9b003f
   transform 0 180 0 0.902
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 14.92 0.45 40.58
   parent "Wall writing"
-  id 8b41ea2fac10b155
+  id f55610cb60cd5ecc
   transform 0 180 0 0.893
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 13.01 13.62 40.58
   parent "Wall writing"
-  id 26d4bb9793951c68
+  id 6976b9554c1a9e46
   transform 0 180 0 1.22
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 18.7 13.89 40.58
   parent "Wall writing"
-  id 99310b27e26b5785
+  id 82adf0b057e07f76
   transform 0 180 0 1.16
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Lyokha" "../models/zone/skrunda/graffiti_lyokha.glb" 8.31 0.59 23.42
   parent "Wall writing"
-  id adb7fb94bf2b0357
+  id e3d7ba3ea13708a9
   transform 0 270 0 0.775
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" 10.76 0.54 -4.24
   parent "Wall writing"
-  id 0ba5c4450a42dabf
+  id 40312270b22c0dd3
   transform 0 180 0 0.762
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 13.73 0.45 -4.22
   parent "Wall writing"
-  id a198cee0b8084b2f
+  id 7ff850948dff1f2e
   transform 0 180 0 1.09
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 12.71 6.24 40.82
   parent "Wall writing"
-  id d7c1eb2c39207f94
+  id fc30b23d167ea7db
   transform 0 0 0 1.18
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" 8.31 0.61 -56.65
   parent "Wall writing"
-  id a7cb2d53362d11a3
+  id 70610a08be38aeae
   transform 0 270 0 0.794
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 12.34 0.28 -66.02
   parent "Wall writing"
-  id f6cba35d0c336623
+  id 9ec82cdb7291db6a
   transform 0 180 0 1.04
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 12.52 0.35 -23.96
   parent "Wall writing"
-  id b6a3b259a330047e
+  id abf067010bebe0b7
   transform 0 0 0 0.841
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 20.17 9.03 -23.98
   parent "Wall writing"
-  id 0d21e8494dadd565
+  id 2d1e5f5a0523d517
   transform 0 0 0 1.25
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 12.11 8.27 -23.98
   parent "Wall writing"
-  id 76b79ba6e24e18c4
+  id a47ee14eb5bc9a62
   transform 0 0 0 1.31
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 18.37 10.54 -66.02
   parent "Wall writing"
-  id ef0dbcff9de113dc
+  id 0cce2137ec13d7cf
   transform 0 180 0 1.11
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Arrow clear" "../models/zone/skrunda/graffiti_arrow_clear.glb" 19.59 1.32 -23.98
   parent "Wall writing"
-  id 0e91d8f3ad466c85
+  id 81698a3ed807c559
   transform 0 0 0 0.852
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Keep out" "../models/zone/skrunda/graffiti_keep_out.glb" 15.1 0.83 -89.84
   parent "Wall writing"
-  id af626709f915ba5b
+  id 5e14f729220e1951
   transform 0 180 0 0.928
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 10.77 0.41 -89.82
   parent "Wall writing"
-  id 8c48eba80dc291c0
+  id 1116e40330d100b4
   transform 0 180 0 0.932
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 14.01 10.14 -89.82
   parent "Wall writing"
-  id e933281490e08056
+  id b40cb8f5405239ff
   transform 0 180 0 1.27
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 15.56 10.41 -65.75
   parent "Wall writing"
-  id 3c9d2ed23a3ce016
+  id 60c0c3c55b3f6dcb
   transform 0 0 0 1.05
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Arrow clear" "../models/zone/skrunda/graffiti_arrow_clear.glb" 19.4 1.4 -65.78
   parent "Wall writing"
-  id 4da9b747db750394
+  id ccb5a61167aebab3
   transform 0 0 0 0.845
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Keep out" "../models/zone/skrunda/graffiti_keep_out.glb" 13.03 0.88 -122.64
   parent "Wall writing"
-  id d837f6560adf09b8
+  id ae298537a3a0c806
   transform 0 180 0 0.757
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Lyokha" "../models/zone/skrunda/graffiti_lyokha.glb" 17.48 1.23 -122.62
   parent "Wall writing"
-  id ad74d1cc86fee18e
+  id 74cfe33e168f2fa7
   transform 0 180 0 0.988
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 10.37 0.27 -122.64
   parent "Wall writing"
-  id 88edcd84e4ba507c
+  id 0c3073b972268290
   transform 0 180 0 0.829
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 20.32 0.32 -89.56
   parent "Wall writing"
-  id 9d8a1005be276265
+  id 5e7c64ef4cb53fce
   transform 0 0 0 0.927
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 13.64 6.91 -122.62
   parent "Wall writing"
-  id 0fa755b38013cbec
+  id ff10bd8cc6ba5772
   transform 0 180 0 1.12
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 10.57 16.79 -122.62
   parent "Wall writing"
-  id f1d1903a96b9370d
+  id 5c6a52f358d79d0a
   transform 0 180 0 1.04
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Keep out" "../models/zone/skrunda/graffiti_keep_out.glb" 7.71 0.66 -145.58
   parent "Wall writing"
-  id fbe31f1b2d16ecf5
+  id 916fb0a4fc6c5722
   transform 0 270 0 0.748
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Dmb" "../models/zone/skrunda/graffiti_dmb.glb" 7.71 0.72 -130.05
   parent "Wall writing"
-  id 9ad8cc5b1ddef3f8
+  id 2f91c068282ea775
   transform 0 270 0 0.79
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 17.45 0.26 -149.44
   parent "Wall writing"
-  id 8ccdf90e14d6a811
+  id 98e993315badfea5
   transform 0 180 0 0.878
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 9.18 0.43 -149.42
   parent "Wall writing"
-  id 97a9f5444c31ae62
+  id 3ddafbb1043dad81
   transform 0 180 0 0.994
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 16.98 13.76 -122.38
   parent "Wall writing"
-  id ce2fbfdd01de5402
+  id c1ac6268aeff022b
   transform 0 0 0 1.14
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" 12.97 0.97 -188.22
   parent "Wall writing"
-  id 53b5072c849a5ecb
+  id 992a54ee3e3bf86c
   transform 0 180 0 0.971
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 18.6 0.46 -188.22
   parent "Wall writing"
-  id c72328994db036a1
+  id f1d1d903e3d8415f
   transform 0 180 0 1.06
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 15.66 0.35 -188.24
   parent "Wall writing"
-  id 47cb0fc803ae66f0
+  id 69cfb3a1dc351de3
   transform 0 180 0 0.822
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 7.78 9.13 -155.96
   parent "Wall writing"
-  id 52c82837df55b4f9
+  id 3534f05cbc212e26
   transform 0 270 0 1.17
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 18.42 9.37 -188.22
   parent "Wall writing"
-  id 88e3a336147863c8
+  id 9c6a43307a969075
   transform 0 180 0 1.1
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 13.83 11.35 -149.18
   parent "Wall writing"
-  id 8ba335c0d9d526fb
+  id 313378d8c87b7a62
   transform 0 0 0 1.33
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Arrow clear" "../models/zone/skrunda/graffiti_arrow_clear.glb" 7.78 1.53 -167.18
   parent "Wall writing"
-  id e2b50a2b520521d2
+  id 316fe744cd20d6e1
   transform 0 270 0 0.983
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" 19.3 0.9 -218.02
   parent "Wall writing"
-  id 5aea70c2f900b836
+  id 922d72ad0fdbed86
   transform 0 180 0 0.888
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 15.71 0.26 -218.04
   parent "Wall writing"
-  id 483ffe1ef08d2cba
+  id 2bcc0779eaf45c3e
   transform 0 180 0 0.849
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 12.9 0.36 -218.02
   parent "Wall writing"
-  id 53e427802a762c24
+  id 497765bf66352946
   transform 0 180 0 1.1
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 14.45 17.73 -218.02
   parent "Wall writing"
-  id 8ef5d1c55b4e8e7f
+  id aeb5d88e6ed85254
   transform 0 180 0 1.37
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 17.07 14.44 -187.98
   parent "Wall writing"
-  id 86668c7ed6a27a0b
+  id ce8f7752d3d726cd
   transform 0 0 0 1.1
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Arrow clear" "../models/zone/skrunda/graffiti_arrow_clear.glb" 7.98 1.43 -205.98
   parent "Wall writing"
-  id 3b8c9a08e5041b64
+  id d493ef2152f8883e
   transform 0 270 0 0.93
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" 8.31 0.5 -252.87
   parent "Wall writing"
-  id 6c3ad0b79f62c57a
+  id 8141a32309858573
   transform 0 270 0 0.727
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 13.47 0.37 -253.82
   parent "Wall writing"
-  id 304c5347bc13298b
+  id cbc679a8360dbc77
   transform 0 180 0 1.1
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 20.67 15.02 -217.78
   parent "Wall writing"
-  id 128be1ac6a96dac0
+  id 524a32cb66265153
   transform 0 0 0 1.39
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 8.38 15.23 -221.81
   parent "Wall writing"
-  id 7bf5c0eed7fb0248
+  id 9aeec45b2c39e410
   transform 0 270 0 1.32
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Arrow clear" "../models/zone/skrunda/graffiti_arrow_clear.glb" 19.32 1.53 -253.82
   parent "Wall writing"
-  id c74de8779b4a2072
+  id 1055698ab4f345a2
   transform 0 180 0 0.83
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Dmb" "../models/zone/skrunda/graffiti_dmb.glb" 19.82 1.3 -298.62
   parent "Wall writing"
-  id ce67f4154e9097f9
+  id 4a0d39d0c5935b37
   transform 0 180 0 0.718
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 11.29 0.39 -298.62
   parent "Wall writing"
-  id 2426289ea35232d8
+  id 411a1d8c168cee80
   transform 0 180 0 0.957
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 16.75 0.44 -298.62
   parent "Wall writing"
-  id 022dd395ab8a9a5d
+  id 36ff549f99608c7a
   transform 0 180 0 1
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 11.86 10.09 -253.58
   parent "Wall writing"
-  id a98dd4547e21075b
+  id 20a01e10cc104100
   transform 0 0 0 1.37
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" 20.31 1.25 -334.42
   parent "Wall writing"
-  id e9a9b834c5d6c66b
+  id c22d4c0256195593
   transform 0 180 0 0.992
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" 12.18 1.19 -334.42
   parent "Wall writing"
-  id 47e4193a9658dd02
+  id f174a563a1a90fe5
   transform 0 180 0 0.837
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 13.97 0.44 -298.38
   parent "Wall writing"
-  id 19b9da6cedd36635
+  id 9ce84d3599de0143
   transform 0 0 0 0.835
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 10.46 9.28 -298.38
   parent "Wall writing"
-  id 6e0d9693a9534924
+  id c0837f850589c6eb
   transform 0 0 0 1.18
   cull_distance 70
   collision 0
   cast_shadows 0
 model "No exit" "../models/zone/skrunda/graffiti_no_exit.glb" -61.52 1.14 -1.88
   parent "Wall writing"
-  id a144dd647da2e1fe
+  id 043e3173a4c501c0
   transform 0 270 0 0.912
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -61.52 0.48 0.78
   parent "Wall writing"
-  id ef33cee0e370d379
+  id 308b8d1414c13e72
   transform 0 270 0 0.884
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -61.52 0.46 -5.08
   parent "Wall writing"
-  id 90133f85b252cd56
+  id 9f8a34a2641b09c3
   transform 0 270 0 1.08
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -30.63 9.06 -10.02
   parent "Wall writing"
-  id 75bc5c8ece582b2b
+  id 8038d2be45d33c9e
   transform 0 180 0 1.29
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -22.48 12.33 -0.83
   parent "Wall writing"
-  id 5a3d7902b3dcce54
+  id 6d34cb8402f8fc9e
   transform 0 90 0 1.08
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Lyokha" "../models/zone/skrunda/graffiti_lyokha.glb" -64.52 1.31 -35.8
   parent "Wall writing"
-  id a41dd67dba219d73
+  id 33613c158c57d63b
   transform 0 270 0 0.869
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" -22.48 0.99 -28.87
   parent "Wall writing"
-  id d1a347053dbeacf1
+  id 7ccc5694f0191ecb
   transform 0 90 0 0.948
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -64.52 0.31 -30.92
   parent "Wall writing"
-  id a2206cbd9a4d6d9b
+  id cd957a4b7c8bf7d1
   transform 0 270 0 0.998
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -64.52 0.39 -25.99
   parent "Wall writing"
-  id c9cf67a1800c4ad1
+  id 07783ac6f33fc053
   transform 0 270 0 0.882
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -22.48 11.41 -25.17
   parent "Wall writing"
-  id 1e1ec1b84c59ba0e
+  id bf9b542dcf24f520
   transform 0 90 0 1.15
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Arrow clear" "../models/zone/skrunda/graffiti_arrow_clear.glb" -22.48 1.22 -33.33
   parent "Wall writing"
-  id 294eeb0047312599
+  id f7b6ae60e08c5200
   transform 0 90 0 0.806
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" -78.76 0.76 -33.54
   parent "Wall writing"
-  id 3fd802670a8b783c
+  id ab50943e79067232
   transform 0 180 0 0.72
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -75.37 0.42 -33.52
   parent "Wall writing"
-  id 573f952566fe72b4
+  id 92836bf617ee2874
   transform 0 180 0 0.901
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -75.39 9.36 -0.48
   parent "Wall writing"
-  id 1d128c38cd59b28a
+  id 64fed48af8c9992e
   transform 0 0 0 1.17
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -77.41 14.59 -33.52
   parent "Wall writing"
-  id 7c0426325785399b
+  id 567169864fc18eb7
   transform 0 180 0 1.19
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -84.16 6.26 -33.52
   parent "Wall writing"
-  id aecd908729d6f42c
+  id 22b6891672785836
   transform 0 180 0 1.2
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Lyokha" "../models/zone/skrunda/graffiti_lyokha.glb" 22.46 0.64 -1.8
   parent "Wall writing"
-  id 5069882ac3c96d20
+  id 2470e751a41d6245
   transform 0 270 0 0.775
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" 64.52 1.02 -5.31
   parent "Wall writing"
-  id 83a8ebc36a3a2bbc
+  id ae90a9e37a6807d0
   transform 0 90 0 0.982
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 22.48 0.41 2.35
   parent "Wall writing"
-  id 07d884c38e6b222a
+  id e2953ddbe3fc6836
   transform 0 270 0 0.971
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 22.48 0.48 -7.56
   parent "Wall writing"
-  id 68de9f7aac626916
+  id c92c35926b330fcf
   transform 0 270 0 1.01
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 40.41 11.3 -10.02
   parent "Wall writing"
-  id a3f456330e04c2ee
+  id 40163ba59893fa64
   transform 0 180 0 1.02
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Arrow clear" "../models/zone/skrunda/graffiti_arrow_clear.glb" 25.02 1.27 -9.88
   parent "Wall writing"
-  id 6963d33e969914c3
+  id 298eda15ad58e685
   transform 0 180 0 0.965
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" 61.54 0.53 -36
   parent "Wall writing"
-  id 7eda4d5228da66f3
+  id cc2ce056c7e0ce59
   transform 0 90 0 0.878
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Keep out" "../models/zone/skrunda/graffiti_keep_out.glb" 22.48 0.99 -26.51
   parent "Wall writing"
-  id 7a259df4bfd678b2
+  id bd90fa800060ccef
   transform 0 270 0 0.834
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 22.46 0.29 -31.08
   parent "Wall writing"
-  id b217c6347ffa9411
+  id bdb805f79f232d36
   transform 0 270 0 0.813
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 61.52 8.53 -30.77
   parent "Wall writing"
-  id 962d6798b5e34a13
+  id 0061f6dc3f1f6e72
   transform 0 90 0 1.07
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 43.94 12.58 -23.98
   parent "Wall writing"
-  id 5e2737cb04b528a5
+  id a8fc01853c83d4bc
   transform 0 0 0 1.06
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Lyokha" "../models/zone/skrunda/graffiti_lyokha.glb" 81.37 0.46 -0.46
   parent "Wall writing"
-  id 50c846226ceb3d59
+  id ed3eb9f09c707c34
   transform 0 0 0 0.887
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" 76.26 0.59 -33.54
   parent "Wall writing"
-  id 9f8c43cbfd58e4e6
+  id 72b3d16baae44949
   transform 0 180 0 0.857
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 81.05 0.4 -33.52
   parent "Wall writing"
-  id a0af950a72582d99
+  id 196656661a5a1f18
   transform 0 180 0 0.88
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 73.69 0.46 -33.52
   parent "Wall writing"
-  id 4deab7761a6ae055
+  id 409777d0ca5837cc
   transform 0 180 0 0.961
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 75.82 15.39 -33.52
   parent "Wall writing"
-  id d24b0552466b8aa8
+  id 0636df5fd4d9e5bd
   transform 0 180 0 1.21
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 72.75 12.64 -33.52
   parent "Wall writing"
-  id 46636177a969515c
+  id 9e586a1d6f75237c
   transform 0 180 0 1.34
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 24.02 22.49 -333.63
   parent "Wall writing"
-  id d778de90e266d6b4
+  id 3208f66137ecd0a4
   transform 0 90 0 1.33
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 24.02 15.06 -332.13
   parent "Wall writing"
-  id e9deb97197a6a056
+  id 22d0e1e6bf53a911
   transform 0 90 0 1.47
   cull_distance 70
   collision 0
   cast_shadows 0
 model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -24.02 0.37 -341.82
   parent "Wall writing"
-  id a6c63df1c42a8146
+  id 7604b526594cddbf
   transform 0 270 0 1.02
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Dmb" "../models/zone/skrunda/graffiti_dmb.glb" -95.85 0.65 -386.2
+  parent "Wall writing"
+  id 90f69d7a701c5fef
+  transform 0 188 0 1.16
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Dmb" "../models/zone/skrunda/graffiti_dmb.glb" -37.04 0.43 -388.21
+  parent "Wall writing"
+  id 6bc7620ff584da4b
+  transform 0 98 0 1.15
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -99.93 0.39 -384.47
+  parent "Wall writing"
+  id 48fe5a6c63798d06
+  transform 0 278 0 0.862
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -94.41 27.58 -381.32
+  parent "Wall writing"
+  id 2944c6b6950a84fb
+  transform 0 188 0 1.11
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Dmb" "../models/zone/skrunda/graffiti_dmb.glb" 53.65 0.53 -445.33
+  parent "Wall writing"
+  id 1edc968588127492
+  transform 0 174 0 1.21
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" 27.66 0.34 -437.09
+  parent "Wall writing"
+  id cd3370fa2a701ede
+  transform 0 264 0 1.1
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" 99.07 0.54 -431.51
+  parent "Wall writing"
+  id 517ee6fac6bb3b8d
+  transform 0 84 0 1.02
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 91.69 0.28 -445.33
+  parent "Wall writing"
+  id 1a062f57142ec53e
+  transform 0 84 0 0.874
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 73.45 29.91 -443.46
+  parent "Wall writing"
+  id 52947116062b42f3
+  transform 0 174 0 1.23
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 37.63 21.03 -447.22
+  parent "Wall writing"
+  id 289e12983b5e0f34
+  transform 0 174 0 1.16
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" 140.03 0.46 -343.73
+  parent "Wall writing"
+  id c3fd700592ea2207
+  transform 0 355 0 1.12
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" 146.23 0.51 -334.35
+  parent "Wall writing"
+  id f55176d53dde9b63
+  transform 0 355 0 1.23
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "No exit" "../models/zone/skrunda/graffiti_no_exit.glb" 161.78 0.31 -373.21
+  parent "Wall writing"
+  id 40491c9b52dfa6b6
+  transform 0 85 0 1.22
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 144.18 0.23 -397.6
+  parent "Wall writing"
+  id 69444581242d693c
+  transform 0 175 0 0.867
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 145.83 21.01 -373.17
+  parent "Wall writing"
+  id b6bb27c86a32283e
+  transform 0 265 0 1.29
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" -145.94 0.49 -464.89
+  parent "Wall writing"
+  id a249d470cf11aa1a
+  transform 0 30 0 1
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" -124.28 0.34 -479.66
+  parent "Wall writing"
+  id 43f41d6e86de7a9f
+  transform 0 120 0 1.14
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -187.16 0.32 -462.98
+  parent "Wall writing"
+  id 5c61e2073720f375
+  transform 0 300 0 0.83
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -191.53 10.29 -452.55
+  parent "Wall writing"
+  id 428426d5f5146d14
+  transform 0 300 0 1.2
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -128.7 15.66 -487.83
+  parent "Wall writing"
+  id c507fb726af14d13
+  transform 0 120 0 1
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "No exit" "../models/zone/skrunda/graffiti_no_exit.glb" -12.34 0.5 -548.31
+  parent "Wall writing"
+  id 85c296e89f80f0f1
+  transform 0 272 0 1.23
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" 0.49 0.29 -543.71
+  parent "Wall writing"
+  id 74fed0d991d4dc26
+  transform 0 182 0 1.13
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "No exit" "../models/zone/skrunda/graffiti_no_exit.glb" 50.71 0.36 -542.33
+  parent "Wall writing"
+  id 84132973c47523c6
+  transform 0 92 0 1.3
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 41.69 0.24 -548.86
+  parent "Wall writing"
+  id 52a17a5be7d5991d
+  transform 0 92 0 0.705
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -12.23 0.38 -545.26
+  parent "Wall writing"
+  id a21f10cfee9c40de
+  transform 0 272 0 0.746
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 49.96 28.4 -529.6
+  parent "Wall writing"
+  id 4a1814ffa6406589
+  transform 0 2 0 1.15
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -20.79 18.5 -532.67
+  parent "Wall writing"
+  id 41bb2929589ca54e
+  transform 0 272 0 1.13
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "No exit" "../models/zone/skrunda/graffiti_no_exit.glb" -66.22 0.3 -116.15
+  parent "Wall writing"
+  id 11bf8910ee53bdc3
+  transform 0 270 0 1.26
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "No exit" "../models/zone/skrunda/graffiti_no_exit.glb" -66.22 0.43 -100.99
+  parent "Wall writing"
+  id e4dfff22dd314b0c
+  transform 0 270 0 1.05
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "No exit" "../models/zone/skrunda/graffiti_no_exit.glb" -71.45 0.45 -131.28
+  parent "Wall writing"
+  id 0103192292676f01
+  transform 0 270 0 1.11
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -50.54 0.19 -95.49
+  parent "Wall writing"
+  id d0f5a6f66d2cdfcf
+  transform 0 90 0 0.701
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -66.43 17.08 -150.86
+  parent "Wall writing"
+  id 860be24cb18b6ea1
+  transform 0 270 0 1.24
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -51.84 14.1 -166.03
+  parent "Wall writing"
+  id f415e7038c711de2
+  transform 0 180 0 1.03
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" 71.64 0.58 -24.16
+  parent "Wall writing"
+  id b4b20c84540c2a3d
+  transform 0 0 0 1.11
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Dmb" "../models/zone/skrunda/graffiti_dmb.glb" 70.94 0.28 -95.77
+  parent "Wall writing"
+  id c2615fed8dd8a63a
+  transform 0 180 0 1.29
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 61.63 0.18 -32.97
+  parent "Wall writing"
+  id 63ed8beb518c790a
+  transform 0 0 0 0.73
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 62.72 0.22 -86.98
+  parent "Wall writing"
+  id ca406c1cacef5321
+  transform 0 180 0 0.703
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 65.57 13.32 -52.58
+  parent "Wall writing"
+  id ee79dac28897cd10
+  transform 0 270 0 1.02
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Dmb" "../models/zone/skrunda/graffiti_dmb.glb" -57.38 0.62 45.85
+  parent "Wall writing"
+  id dc260aae94a90c0b
+  transform 0 92 0 1.18
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" -66.68 0.55 105.81
+  parent "Wall writing"
+  id d7cc9bf0d4b25dfe
+  transform 0 2 0 1.25
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" -72.65 0.34 57.76
+  parent "Wall writing"
+  id b5c8011a87ccfeba
+  transform 0 272 0 1.22
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -73.1 0.29 97.23
+  parent "Wall writing"
+  id 103968db309b4ffd
+  transform 0 2 0 0.715
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -78.15 0.32 43.35
+  parent "Wall writing"
+  id 7ed3c46c382c1447
+  transform 0 182 0 0.809
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -72 22.1 82.23
+  parent "Wall writing"
+  id 069245d673977e17
+  transform 0 272 0 1.27
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" 77.7 0.55 175.99
+  parent "Wall writing"
+  id 1f00d9e90631e8d7
+  transform 0 358 0 1.02
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 67.33 0.15 112.77
+  parent "Wall writing"
+  id 846b9eb28eda784c
+  transform 0 178 0 0.792
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 65.43 0.39 114.7
+  parent "Wall writing"
+  id acd60977cd4578bb
+  transform 0 268 0 0.787
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 83.55 18.12 104.28
+  parent "Wall writing"
+  id 8cd6337b8a455ac1
+  transform 0 178 0 1.15
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "No exit" "../models/zone/skrunda/graffiti_no_exit.glb" -46.98 0.67 268.89
+  parent "Wall writing"
+  id 794ab3a88873a92a
+  transform 0 270 0 1.15
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" -7.08 0.61 248.54
+  parent "Wall writing"
+  id 8c782c6a9790188c
+  transform 0 180 0 1.08
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -55.77 0.18 254.59
+  parent "Wall writing"
+  id 5cd982bc3348d882
+  transform 0 270 0 0.707
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 7.04 0.27 265.95
+  parent "Wall writing"
+  id 70773a26eb99dbd9
+  transform 0 90 0 0.767
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -37.28 28.18 264.43
+  parent "Wall writing"
+  id 99254f1b10e82539
+  transform 0 0 0 1.02
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Dmb" "../models/zone/skrunda/graffiti_dmb.glb" 92.19 0.32 291.31
+  parent "Wall writing"
+  id 3de1f9931503261d
+  transform 0 175 0 1.16
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Tsoi" "../models/zone/skrunda/graffiti_tsoi.glb" 55.03 0.36 288.06
+  parent "Wall writing"
+  id dad6485c134baa8a
+  transform 0 175 0 1.18
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Damp" "../models/zone/skrunda/graffiti_damp.glb" 86.45 0.29 307.92
+  parent "Wall writing"
+  id 909fdc703c9bf909
+  transform 0 85 0 0.717
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 65.47 14.42 304.92
+  parent "Wall writing"
+  id f1b2023e8bf2e8b5
+  transform 0 355 0 1.13
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Leak" "../models/zone/skrunda/graffiti_leak.glb" 79.56 17.88 290.05
+  parent "Wall writing"
+  id a739617a7ecb1496
+  transform 0 175 0 1.03
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Dmb" "../models/zone/skrunda/graffiti_dmb.glb" -106.89 0.45 254.3
+  parent "Wall writing"
+  id 2e1b772bc83a3d4e
+  transform 0 300 0 1.09
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "No exit" "../models/zone/skrunda/graffiti_no_exit.glb" -121.02 0.38 195.06
+  parent "Wall writing"
+  id 0fa67498fae15224
+  transform 0 210 0 1.29
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -130.14 0.36 210.47
+  parent "Wall writing"
+  id 00a413b25511d81d
+  transform 0 210 0 0.899
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Damp" "../models/zone/skrunda/graffiti_damp.glb" -104.74 0.26 258.18
+  parent "Wall writing"
+  id e300c17385f0ceca
+  transform 0 30 0 0.752
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -122.44 23.57 195.58
+  parent "Wall writing"
+  id 9051799c5ce09e61
+  transform 0 210 0 1.29
+  cull_distance 70
+  collision 0
+  cast_shadows 0
+model "Leak" "../models/zone/skrunda/graffiti_leak.glb" -121.51 16.21 218.92
+  parent "Wall writing"
+  id 859a94b40e5f42a3
+  transform 0 300 0 1.19
   cull_distance 70
   collision 0
   cast_shadows 0
@@ -4302,6 +4911,6 @@ weapon "../weapons/ak74.weapon"
 weapon "../weapons/pistol.weapon"
 weapon "../weapons/knife.weapon"
 entity "Почтовая" "map_marker" 0 0 60 0 1 1 1 0.85 0.3 0.2 ""
-  id 0aeb984c7233f2ed
+  id df6e5e9fe4414065
 entity "Перекрёсток" "map_marker" 0 0 -17 0 1 1 1 0.85 0.3 0.2 ""
-  id 2b31f121236534cc
+  id 7ccb8cdac34e7335

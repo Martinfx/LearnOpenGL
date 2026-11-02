@@ -22,5 +22,7 @@ All sources are CC0 1.0 (public domain). Credit is given anyway.
 | spruce and broadleaf bark | [bark_brown_02](https://polyhaven.com/a/bark_brown_02) | Rob Tuytel |
 | dead tree bark | [bark_willow](https://polyhaven.com/a/bark_willow) | Dario Barresi, Dimitrios Savva |
 
-Tree geometry (`maple_*`, `ash_*`, `sapling_*` except `sapling_shrub_*`, `broadleaf_young`, `birch_*`, `pine_*`, `spruce_*`, `broadleaf_*`, `dead_*`, `snag_a`) and the birch bark texture were
+The street leaf atlas (`source/cards/leaves_street.png`, `_dark`) is drawn procedurally by `source/leafcards.py` (CC0).
+
+Tree geometry (`maple_*`, `ash_*`, `sapling_*` except `sapling_shrub_*`, `broadleaf_young`, `birch_*`, `pine_*`, `spruce_*`, `broadleaf_*`, `dead_*`, `snag_a`, `bush_street_*`) and the birch bark texture were
 generated for this project by `source/treegen.py` and `source/birchbark.py` (CC0).

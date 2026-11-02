@@ -23,7 +23,9 @@ out vec4 vPaint;
 out vec3 vWorldPos;
 out vec3 vNormal;
 out vec2 vUV;
+out float vSway; // the fragment shader lets light through thin leaves
 void main() {
+    vSway = uSway;
     mat4 skin = mat4(1.0);
     if (uSkinned)
         skin = aWeights.x * uJoints[aJoints.x] + aWeights.y * uJoints[aJoints.y]

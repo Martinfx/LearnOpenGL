@@ -118,5 +118,49 @@ def twigs(seed=7):
     return m
 
 
+def planks(seed=8):
+    """Rotten boards from a fence or a shop front, fallen across each other (2 - 3 m)."""
+    rng = np.random.default_rng(seed)
+    m = Mesh(PALETTE)
+    lift = 0.0
+    for _ in range(rng.integers(3, 6)):
+        _piece(m, str(rng.choice(['wood_dark', 'wood', 'wood_dark'])), rng.uniform(-0.4, 0.4), rng.uniform(-0.4, 0.4),
+               (rng.uniform(1.6, 2.8), 0.025, rng.uniform(0.1, 0.18)), 6, rng.uniform(0, 180), rng, lift=lift)
+        lift += 0.02
+    return m
+
+
+def sheet(seed=9):
+    """A sheet of rusty corrugated roofing blown off a roof: 1.8 x 1.0 m, buckled, one edge lifted."""
+    rng = np.random.default_rng(seed)
+    m = Mesh(PALETTE)
+    n = 8
+    w, d = 1.8, 1.0
+    pts = []
+    for i in range(n + 1):
+        x = -w / 2 + w * i / n
+        y = 0.02 + 0.12 * max(0.0, (x / (w / 2))) ** 2 + 0.03 * math.sin(i * 1.7)
+        pts.append((x, y))
+    for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+        m.poly('corr_rust', [(x0, y0, -d / 2), (x1, y1, -d / 2), (x1, y1, d / 2), (x0, y0, d / 2)][::-1])
+        m.poly('corr_rust', [(x0, y0, -d / 2), (x1, y1, -d / 2), (x1, y1, d / 2), (x0, y0, d / 2)])
+    return m
+
+
+def brick_heap(seed=10):
+    """A low heap of red bricks and mortar lumps from a collapsed parapet or balcony (1.5 m across)."""
+    rng = np.random.default_rng(seed)
+    m = Mesh(PALETTE)
+    for _ in range(rng.integers(26, 38)):
+        r = rng.uniform(0, 0.75) ** 1.3
+        a = rng.uniform(0, 2 * math.pi)
+        x, z = math.cos(a) * r, math.sin(a) * r
+        lift = max(0.0, 0.35 * (1 - r / 0.75)) * rng.uniform(0.3, 1.0)
+        _piece(m, str(rng.choice(['brick_red', 'brick_red', 'brick', 'concrete'])), x, z,
+               (0.25 if rng.random() < 0.6 else 0.13, 0.065, 0.12), 35, rng.uniform(0, 360), rng, lift=lift)
+    return m
+
+
 MODELS = {'silicate_bricks': silicate_bricks, 'plaster_chunks': plaster_chunks, 'concrete_chunks': concrete_chunks,
-          'glass_shards': glass_shards, 'tin_cans': tin_cans, 'bottles': bottles, 'twigs': twigs}
+          'glass_shards': glass_shards, 'tin_cans': tin_cans, 'bottles': bottles, 'twigs': twigs, 'planks': planks,
+          'sheet': sheet, 'brick_heap': brick_heap}

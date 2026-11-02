@@ -19,6 +19,7 @@ of the crown, so they light like a volume rather than flat planes.
 | `broadleaf_young` | young deciduous tree | 6.7 | 944 |
 | `maple_a`, `maple_b` | middle-aged maple, round full crown (outer leaves light, inner crown darker) | 11.0 / 9.3 | 1964 / 1756 |
 | `ash_a`, `ash_b` | middle-aged ash, taller oval crown | 13.1 / 9.4 | 1680 / 1362 |
+| `bush_street_a`, `bush_street_b`, `bush_street_c` | dense self-seeded shrub (elder / hazel / lilac gone wild), a mound of leaves on many stems | 3.5 / 2.6 / 4.2 | 982 / 676 / 1264 |
 | `log_fallen_a` | fallen dead trunk (Poly Haven scan, decimated) | 4.05 long | 4000 |
 
 ## Ground cover (Poly Haven scans, split per variant)
@@ -45,6 +46,11 @@ The Poly Haven plant scans are of young plants (a nettle scan is 22 cm). Tall gr
 bushes were scaled 1.5x to 5x up to the size of adult plants in an overgrown zone; short grass is at scan size.
 
 ## Rebuilding
+
+The trees and bushes of the overgrown street (`maple_*`, `ash_*`, `broadleaf_*`, `sapling_*`, `birch_a`,
+`birch_young`, `bush_street_*`) use the street leaf atlas drawn leaf by leaf by `source/leafcards.py` (maple and lime
+sprigs, `cards/leaves_street.png`) and crowns of leaf rosettes facing out of the crown (`crown: out` in
+`source/treegen.py`); `source/trees_street.sh` rebuilds them and sets their leaves to alpha-test.
 
 `source/trees.sh` regenerates all trees (seeded, deterministic). `source/cardbake.py` renders a Poly Haven scan to an
 unlit RGBA card, `source/atlas.py` packs the cards into the 2x2 atlases in `source/cards/`, `source/birchbark.py`
