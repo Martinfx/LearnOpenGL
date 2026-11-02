@@ -6,6 +6,7 @@
 #include "engine/Scene.h"
 #include <glm/mat4x4.hpp>
 #include <array>
+#include <atomic>
 #include <cstdint>
 #include <filesystem>
 #include "engine/TextureCook.h"
@@ -144,6 +145,10 @@ struct RenderQuality {
     // Occlusion culling: objects hidden behind nearer geometry in a recent frame's depth
     // (read back asynchronously, small screen copy) are skipped in the depth and main passes.
     bool occlusionCulling = true;
+    // Frame preparation on workers: model culling of the main view and the sun's shadow
+    // cascades starts as jobs at the beginning of the frame and runs while the main thread
+    // submits the rain map, environment, probes and lights; off = culled when drawn.
+    bool asyncCull = true;
     float renderScale = 1.0f; // scene resolution relative to the window (0.5 = half), HUD stays sharp
     // Shadows of local lights: the nearest shadow-casting lights get layers of one map
     // (a spot light 1, a point light 6), 0 = no local shadows.
@@ -216,6 +221,8 @@ public:
         double cpuMs[PassCount] = {};
         double gpuMs[PassCount] = {};
         double cpuTotalMs = 0.0, gpuTotalMs = 0.0;
+        double cullMs = 0.0;     // model culling, all views, on any thread (CPU time)
+        double cullWaitMs = 0.0; // of that, the main thread waited for culling jobs
         int drawCalls = 0, instanced = 0, culled = 0;
         int meshDraws = 0;       // meshes drawn by multi-draw-indirect calls (each call counts once in drawCalls)
         long long triangles = 0;
@@ -384,9 +391,39 @@ private:
         int rebuilds = 0;
     };
     ModelGrid grid_;
-    std::vector<std::uint32_t> cullCandidates_; // scratch of drawGeometry()
-    std::vector<float> cullDistances_;
-    std::vector<std::uint8_t> cullDrawn_;
+    // Model culling of one view (grid cells, then frustum, distance and occlusion per model),
+    // apart from drawing so it can run on a worker (RenderQuality::asyncCull). Reads only the
+    // packed grid arrays, quality_ and occ_, no GL. A result is kept for the whole frame, so
+    // the depth and the main pass of one view cull once.
+    struct CullRequest {
+        glm::mat4 cull{1.0f};
+        glm::vec3 eye{0.0f};
+        bool skipNear = false;
+        int cascade = -1;        // shadow cascade or -1
+        float minCaster = 0.0f;  // smallest shadow caster (far cascades)
+        bool occlusion = false;  // test against the occlusion depth
+        bool same(const CullRequest& o) const;
+    };
+    struct CullResult {
+        std::vector<std::uint32_t> candidates; // models of the cells that passed
+        std::vector<float> distances;
+        std::vector<std::uint8_t> drawn;       // per candidate: 0 culled, 1 drawn, 2 hidden (occlusion)
+        std::vector<std::uint32_t> culledCells;
+        int hiddenCells = 0;
+    };
+    struct CullJob {
+        CullRequest request;
+        CullResult result;
+        std::future<void> done; // invalid when computed on the main thread
+    };
+    std::vector<std::unique_ptr<CullJob>> cullJobs_; // this frame's results
+    double cullWaitMs_ = 0.0;                         // main thread waiting for cull jobs (this frame)
+    std::atomic<std::int64_t> cullNs_{0};             // culling time, all threads (this frame)
+    void cullModels(const CullRequest& request, CullResult& out) const;
+    void startCull(const CullRequest& request);       // on a worker; no-op if already there
+    const CullResult& cullFor(const CullRequest& request); // started earlier (waits) or culled now
+    void finishCullJobs();                            // waits for every job (end of frame, shutdown)
+    bool hiddenByOcclusion(const Aabb& box) const;   // occluded() without counting
     // Occlusion culling (CPU test against a small max-depth copy read back without stalls).
     struct OcclusionReadback {
         unsigned pbo = 0;

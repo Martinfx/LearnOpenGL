@@ -589,13 +589,15 @@ int main(int argc, char** argv)
         return 1;
     }
     // For comparing optimisations (with FPS_ENGINE_STATS=1).
-    if (std::getenv("FPS_ENGINE_NO_INSTANCING") || std::getenv("FPS_ENGINE_NO_OCCLUSION") || std::getenv("FPS_ENGINE_NO_IMPOSTORS")) {
+    if (std::getenv("FPS_ENGINE_NO_INSTANCING") || std::getenv("FPS_ENGINE_NO_OCCLUSION") || std::getenv("FPS_ENGINE_NO_IMPOSTORS") ||
+        std::getenv("FPS_ENGINE_NO_ASYNC_CULL")) {
         engine::RenderQuality q = renderer.quality();
         q.instancing = !std::getenv("FPS_ENGINE_NO_INSTANCING");
         if (std::getenv("FPS_ENGINE_NO_VOLUMETRIC"))
             q.volumetricFog = 0;
         q.impostors = !std::getenv("FPS_ENGINE_NO_IMPOSTORS");
         q.occlusionCulling = !std::getenv("FPS_ENGINE_NO_OCCLUSION");
+        q.asyncCull = !std::getenv("FPS_ENGINE_NO_ASYNC_CULL");
         renderer.setQuality(q);
     }
     LOG_INFO("render", "%s", renderer.glInfo().c_str());
@@ -1174,6 +1176,7 @@ int main(int argc, char** argv)
                     q.volumetricFog = 0;
                 q.impostors = q.impostors && !std::getenv("FPS_ENGINE_NO_IMPOSTORS");
                 q.occlusionCulling = q.occlusionCulling && !std::getenv("FPS_ENGINE_NO_OCCLUSION");
+                q.asyncCull = q.asyncCull && !std::getenv("FPS_ENGINE_NO_ASYNC_CULL");
                 if (const engine::CVar* blur = cvars.find("r_motionblur"))
                     q.motionBlur = blur->number();
                 if (const engine::CVar* aa = cvars.find("r_aa")) {
@@ -2964,6 +2967,7 @@ int main(int argc, char** argv)
                 int n = std::snprintf(line, sizeof line, "%.1f FPS, %.2f ms | %d draws (%d meshes), %lld tris, %d instanced, %d culled, %d occluded, %d uploads | CPU %.2f ms, GPU %.2f ms |",
                                       fpsFrames / fpsTimer, 1000.0 * fpsTimer / fpsFrames, st.drawCalls, st.meshDraws, st.triangles, st.instanced, st.culled, st.occluded, st.uploads,
                                       st.cpuTotalMs, st.gpuTotalMs);
+                n += std::snprintf(line + n, sizeof line - static_cast<std::size_t>(n), " cull %.2f (wait %.2f) |", st.cullMs, st.cullWaitMs);
                 for (int p = 0; p < engine::Renderer::PassCount && n > 0 && n < static_cast<int>(sizeof line); ++p)
                     n += std::snprintf(line + n, sizeof line - static_cast<std::size_t>(n), " %s %.2f/%.2f", engine::Renderer::passName(p), st.cpuMs[p], st.gpuMs[p]);
                 // Frame update tasks (last frame): what runs side by side before rendering.

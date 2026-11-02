@@ -10,6 +10,7 @@
 #include "engine/Paths.h"
 #include "engine/Profile.h"
 #include <chrono>
+#include <thread>
 #include <optional>
 #ifdef TRACY_ENABLE
 #include <tracy/TracyOpenGL.hpp> // after glad: GPU zones use its timer queries
@@ -744,6 +745,7 @@ bool Renderer::init(GlLoader loader, std::string* error)
 
 void Renderer::shutdown()
 {
+    finishCullJobs();
 #ifdef TRACY_ENABLE
     if (tracyGpuOwner() == this)
         tracyGpuOwner() = nullptr;
@@ -1140,6 +1142,116 @@ bool Renderer::visible(const Aabb& box) const
     return true;
 }
 
+bool Renderer::CullRequest::same(const CullRequest& o) const
+{
+    return std::memcmp(&cull, &o.cull, sizeof cull) == 0 && eye == o.eye && skipNear == o.skipNear && cascade == o.cascade &&
+           minCaster == o.minCaster && occlusion == o.occlusion;
+}
+
+void Renderer::cullModels(const CullRequest& request, CullResult& out) const
+{
+    const auto start = std::chrono::steady_clock::now();
+    const glm::mat4 t = glm::transpose(request.cull);
+    const std::array<glm::vec4, 6> planes = {t[3] + t[0], t[3] - t[0], t[3] + t[1], t[3] - t[1], t[3] + t[2], t[3] - t[2]};
+    auto inside = [&](const Aabb& box) {
+        for (int i = 0; i < 6; ++i) {
+            if (request.skipNear && i == 4)
+                continue;
+            const glm::vec4& p = planes[static_cast<std::size_t>(i)];
+            const glm::vec3 corner(p.x >= 0.0f ? box.max.x : box.min.x, p.y >= 0.0f ? box.max.y : box.min.y,
+                                   p.z >= 0.0f ? box.max.z : box.min.z);
+            if (glm::dot(glm::vec3(p), corner) + p.w < 0.0f)
+                return false;
+        }
+        return true;
+    };
+    const ModelGrid& grid = grid_;
+    const bool shadowPass = request.cascade >= 0;
+    out.candidates.clear();
+    out.culledCells.clear();
+    out.hiddenCells = 0;
+    // 1. Whole cells first: beyond every cull distance inside, out of the frustum, or
+    //    (far shadow cascades) only small casters. The models of the rest are candidates.
+    for (std::size_t c = 0; c < grid.cells.size(); ++c) {
+        const ModelCell& cell = grid.cells[c];
+        const float cellDistance = distanceTo(request.eye, cell.bounds);
+        const bool cellFar = cell.maxCull > 0.0f && cellDistance > cell.maxCull;
+        const bool cellTiny = request.minCaster > 0.0f && cell.maxDiagonal < request.minCaster;
+        bool hidden = false;
+        if (cellFar || cellTiny || !inside(cell.bounds) || (hidden = request.occlusion && hiddenByOcclusion(cell.bounds))) {
+            out.culledCells.push_back(static_cast<std::uint32_t>(c));
+            out.hiddenCells += hidden;
+            continue;
+        }
+        out.candidates.insert(out.candidates.end(), cell.models.begin(), cell.models.end());
+    }
+    // 2. Per model, on the job system: only the packed arrays of the grid are read
+    //    (bounds, cull distance, flags), no GL.
+    out.distances.resize(out.candidates.size());
+    out.drawn.resize(out.candidates.size());
+    JobSystem::global().parallelFor(out.candidates.size(), 512, [&](std::size_t begin, std::size_t end) {
+        for (std::size_t k = begin; k < end; ++k) {
+            const std::uint32_t i = out.candidates[k];
+            const Aabb& bounds = grid.bounds[i];
+            const float distance = distanceTo(request.eye, bounds);
+            const float cull = grid.cullDistance[i];
+            bool skip = (cull > 0.0f && distance > cull) || (shadowPass && !(grid.flags[i] & ModelGrid::kCastShadows)) ||
+                        (request.minCaster > 0.0f && grid.diagonal[i] < request.minCaster);
+            if (!skip && grid.detail[i]) {
+                // Grass and weeds: fewer of them with distance, shadows only up close.
+                const float keep = 1.0f - (1.0f - quality_.detailDensityFar) * glm::smoothstep(0.3f, 1.0f, distance / cull);
+                skip = grid.random[i] > keep || (shadowPass && (request.cascade > 0 || distance > quality_.detailShadowDistance));
+            }
+            out.distances[k] = distance;
+            out.drawn[k] = skip || !inside(bounds) ? 0 : request.occlusion && hiddenByOcclusion(bounds) ? 2 : 1;
+        }
+    });
+    const_cast<Renderer*>(this)->cullNs_ +=
+        std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start).count();
+}
+
+void Renderer::startCull(const CullRequest& request)
+{
+    for (const auto& job : cullJobs_)
+        if (job->request.same(request))
+            return;
+    auto job = std::make_unique<CullJob>();
+    job->request = request;
+    CullJob* raw = job.get();
+    job->done = JobSystem::global().submit([this, raw] { cullModels(raw->request, raw->result); });
+    cullJobs_.push_back(std::move(job));
+}
+
+const Renderer::CullResult& Renderer::cullFor(const CullRequest& request)
+{
+    for (const auto& job : cullJobs_)
+        if (job->request.same(request)) {
+            if (job->done.valid()) {
+                const auto start = std::chrono::steady_clock::now();
+                // Help with queued jobs instead of sleeping while the result is not there yet.
+                while (job->done.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+                    if (!JobSystem::global().runOne())
+                        std::this_thread::yield();
+                job->done.get(); // rethrows a failure
+                cullWaitMs_ += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
+            }
+            return job->result;
+        }
+    auto job = std::make_unique<CullJob>();
+    job->request = request;
+    cullModels(job->request, job->result);
+    cullJobs_.push_back(std::move(job));
+    return cullJobs_.back()->result;
+}
+
+void Renderer::finishCullJobs()
+{
+    for (const auto& job : cullJobs_)
+        if (job->done.valid())
+            job->done.wait();
+    cullJobs_.clear();
+}
+
 void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool depthOnly, const glm::mat4& cull, bool skipNear)
 {
     // Frustum planes (Gribb/Hartmann): left, right, bottom, top, near, far.
@@ -1208,47 +1320,27 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
     const bool mainPass = !depthOnly && shadowCascade_ < 0;
     const bool shadowPass = shadowCascade_ >= 0;
     const ModelGrid& grid = grid_;
-    // 1. Whole cells first: beyond every cull distance inside, out of the frustum, or
-    //    (far shadow cascades) only small casters. The models of the rest are candidates.
-    std::vector<std::uint32_t>& candidates = cullCandidates_;
-    candidates.clear();
-    for (const ModelCell& cell : grid.cells) {
-        const float cellDistance = distanceTo(view.cameraPosition, cell.bounds);
-        const bool cellFar = cell.maxCull > 0.0f && cellDistance > cell.maxCull;
-        const bool cellTiny = shadowMinCaster_ > 0.0f && cell.maxDiagonal < shadowMinCaster_;
-        if (cellFar || cellTiny || !visible(cell.bounds) || occluded(cell.bounds)) {
-            if (mainPass)
-                for (std::uint32_t i : cell.models)
-                    keepAliveLods(scene.models[i], nullptr); // stays uploaded while out of view
-            culled_ += static_cast<int>(cell.models.size());
-            continue;
-        }
-        candidates.insert(candidates.end(), cell.models.begin(), cell.models.end());
+    // 1.+2. Cells, then models (cullModels): this frame's result for the same view if one was
+    //       started on a worker (startCull) or already made by another pass of the view.
+    CullRequest request;
+    request.cull = cull;
+    request.eye = view.cameraPosition;
+    request.skipNear = skipNear;
+    request.cascade = shadowCascade_;
+    request.minCaster = shadowMinCaster_;
+    request.occlusion = occ_.testing && shadowCascade_ < 0;
+    const CullResult& result = cullFor(request);
+    for (std::uint32_t c : result.culledCells) {
+        const ModelCell& cell = grid.cells[c];
+        if (mainPass)
+            for (std::uint32_t i : cell.models)
+                keepAliveLods(scene.models[i], nullptr); // stays uploaded while out of view
+        culled_ += static_cast<int>(cell.models.size());
     }
-    // 2. Per model, on the job system: only the packed arrays of the grid are read
-    //    (bounds, cull distance, flags), no GL.
-    std::vector<float>& distances = cullDistances_;
-    std::vector<std::uint8_t>& drawn = cullDrawn_;
-    distances.resize(candidates.size());
-    drawn.resize(candidates.size());
-    const glm::vec3 eye = view.cameraPosition;
-    JobSystem::global().parallelFor(candidates.size(), 512, [&](std::size_t begin, std::size_t end) {
-        for (std::size_t k = begin; k < end; ++k) {
-            const std::uint32_t i = candidates[k];
-            const Aabb& bounds = grid.bounds[i];
-            const float distance = distanceTo(eye, bounds);
-            const float cull = grid.cullDistance[i];
-            bool skip = (cull > 0.0f && distance > cull) || (shadowPass && !(grid.flags[i] & ModelGrid::kCastShadows)) ||
-                        (shadowMinCaster_ > 0.0f && grid.diagonal[i] < shadowMinCaster_);
-            if (!skip && grid.detail[i]) {
-                // Grass and weeds: fewer of them with distance, shadows only up close.
-                const float keep = 1.0f - (1.0f - quality_.detailDensityFar) * glm::smoothstep(0.3f, 1.0f, distance / cull);
-                skip = grid.random[i] > keep || (shadowPass && (shadowCascade_ > 0 || distance > quality_.detailShadowDistance));
-            }
-            distances[k] = distance;
-            drawn[k] = !skip && visible(bounds) && !occluded(bounds);
-        }
-    });
+    occ_.hidden += result.hiddenCells;
+    const std::vector<std::uint32_t>& candidates = result.candidates;
+    const std::vector<float>& distances = result.distances;
+    const std::vector<std::uint8_t>& drawn = result.drawn;
     // 3. Draw (in grid order, so batches and texture streaming stay deterministic).
     for (std::size_t k = 0; k < candidates.size(); ++k) {
         {
@@ -1256,9 +1348,10 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         const Model& model = scene.models[i];
         const Aabb& modelBounds = grid.bounds[i];
         drawDistance_ = distances[k];
-        if (!drawn[k]) {
+        if (drawn[k] != 1) {
             if (mainPass)
                 keepAliveLods(model, nullptr);
+            occ_.hidden += drawn[k] == 2;
             ++culled_;
             continue;
         }
@@ -2077,6 +2170,7 @@ void resetGlState()
 void Renderer::render(const Scene& scene, const RenderView& view)
 {
     ENGINE_ZONE("Renderer::render");
+    finishCullJobs(); // culling results of the previous render() (and of overlays after it)
     frameArena_.reset(); // scratch arrays of the previous frame
     resetGlState();
     // Free GPU data nothing drew since the previous render() (removed models).
@@ -2093,6 +2187,9 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     building_.occluded = lastOccluded_;
     building_.lights = static_cast<int>(frameLights_.size());
     building_.lightShadows = static_cast<int>(localShadows_.size());
+    building_.cullMs = static_cast<double>(cullNs_.exchange(0)) / 1e6;
+    building_.cullWaitMs = cullWaitMs_;
+    cullWaitMs_ = 0.0;
     uploads_ = 0;
     collectQueries(); // finishes building_ into stats_ and starts the next frame
     drawCalls_ = 0;
@@ -2156,6 +2253,21 @@ void Renderer::render(const Scene& scene, const RenderView& view)
         taaJitteredViewProj_ = projection_ * view.view;
     }
 
+    // Occlusion depends on where the eye is, not where it looks: grow boxes by the distance moved.
+    const bool occlusionTesting = occ_.valid && quality_.occlusionCulling && view.shading != Shading::Wireframe && !view.capture &&
+                                  glm::distance(occ_.eye, view.cameraPosition) < 3.0f;
+    occ_.inflate = glm::distance(occ_.eye, view.cameraPosition) + 0.05f;
+    // Frame preparation on workers: the main view's models are culled while the main thread
+    // submits the rain map, environment, probes, lights and shadows (same request as the
+    // depth and main passes below, so they find this result).
+    if (quality_.asyncCull) {
+        CullRequest main;
+        main.cull = projection_ * view.view;
+        main.eye = view.cameraPosition;
+        main.occlusion = occlusionTesting;
+        startCull(main);
+    }
+
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, jointBuffer_);
     wetness_ = std::clamp(view.wetness >= 0.0f ? view.wetness : resolvedEnv_.rain, 0.0f, 1.0f);
     lightning_ = std::clamp(view.lightning, 0.0f, 1.0f);
@@ -2163,6 +2275,17 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     if (rainActive_)
         renderRainMap(scene, view); // before the environment block: it carries the map's matrix
     updateEnvironment(scene, view);
+    if (quality_.asyncCull && shadowTex_ && quality_.shadowResolution > 0) // the sun's cascades due this frame (renderShadows)
+        for (int i = 0; i < cascadeCount_; ++i)
+            if (cascadeUpdate_ & (1u << i)) {
+                CullRequest c;
+                c.cull = cascades_[i].matrix;
+                c.eye = view.cameraPosition;
+                c.skipNear = true;
+                c.cascade = i;
+                c.minCaster = quality_.shadowCache && i > 0 ? cascades_[i].radius * 0.03f : 0.0f;
+                startCull(c);
+            }
     updateEnvironmentMap(scene);
     collectLights(scene, view);
     uploadInteriors(scene);
@@ -2195,10 +2318,7 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     glUniformMatrix4fv(loc_.viewProj, 1, GL_FALSE, glm::value_ptr(viewProj));
     glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
     beginPass(PassDepth);
-    occ_.testing = occ_.valid && quality_.occlusionCulling && view.shading != Shading::Wireframe && !view.capture &&
-                   glm::distance(occ_.eye, view.cameraPosition) < 3.0f;
-    // Occlusion depends on where the eye is, not where it looks: grow boxes by the distance moved.
-    occ_.inflate = glm::distance(occ_.eye, view.cameraPosition) + 0.05f;
+    occ_.testing = occlusionTesting;
     drawGeometry(scene, view, true, viewProj);
     endPass();
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
@@ -2330,6 +2450,7 @@ void Renderer::render(const Scene& scene, const RenderView& view)
             drawCube(glm::scale(glm::translate(glm::mat4(1.0f), b.center), b.size), b.color, 0.0f, b.emissive);
     }
     glBindVertexArray(0);
+    finishCullJobs(); // nothing may read the model grid after render() returns
     pendingPresent_ = true;
     if (!view.deferPresent)
         present();
@@ -3678,6 +3799,8 @@ void Renderer::collectQueries()
     stats_.triangles = building_.triangles;
     stats_.uploads = building_.uploads;
     stats_.occluded = building_.occluded;
+    stats_.cullMs = building_.cullMs;
+    stats_.cullWaitMs = building_.cullWaitMs;
     stats_.cpuTotalMs = 0.0;
     for (int p = 0; p < PassCount; ++p) {
         stats_.cpuMs[p] = building_.cpuMs[p];
@@ -4840,8 +4963,14 @@ void Renderer::releaseOcclusion()
 
 bool Renderer::occluded(const Aabb& box) const
 {
-    if (!occ_.testing || shadowCascade_ >= 0)
+    if (!occ_.testing || shadowCascade_ >= 0 || !hiddenByOcclusion(box))
         return false;
+    ++const_cast<Renderer*>(this)->occ_.hidden;
+    return true;
+}
+
+bool Renderer::hiddenByOcclusion(const Aabb& box) const
+{
     const glm::vec3 lo = box.min - glm::vec3(occ_.inflate), hi = box.max + glm::vec3(occ_.inflate);
     glm::vec2 mn(1e30f), mx(-1e30f);
     float nearest = 1.0f;
@@ -4878,7 +5007,6 @@ bool Renderer::occluded(const Aabb& box) const
             if (row[x] >= nearest)
                 return false;
     }
-    ++const_cast<Renderer*>(this)->occ_.hidden;
     return true;
 }
 

@@ -2635,6 +2635,11 @@ void MainWindow::buildDocks()
     occlusionCheck->setToolTip(tr("Skip objects hidden behind nearer ones (depth of a recent frame, read back without stalls)"));
     occlusionCheck->setChecked(viewport_->quality().occlusionCulling);
     frameOptions->addWidget(occlusionCheck);
+    auto* asyncCullCheck = new QCheckBox(tr("Parallel culling"), framePanel);
+    asyncCullCheck->setToolTip(tr("Culling of the view and the shadow cascades starts on worker threads at the beginning of the frame,\n"
+                                  "while the main thread sends other GL work (off = each pass culls when it draws)"));
+    asyncCullCheck->setChecked(viewport_->quality().asyncCull);
+    frameOptions->addWidget(asyncCullCheck);
     auto* volumetricCheck = new QCheckBox(tr("Volumetric fog"), framePanel);
     volumetricCheck->setToolTip(tr("Light shafts, lamps and the flashlight in the fog near the camera (compute shaders)"));
     volumetricCheck->setChecked(viewport_->quality().volumetricFog > 0);
@@ -2646,17 +2651,19 @@ void MainWindow::buildDocks()
     frameLabel->setAlignment(Qt::AlignTop | Qt::AlignLeft);
     frameLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
     frameLayout->addWidget(frameLabel, 1);
-    auto applyFrameOption = [this, instancingCheck, shadowCacheCheck, occlusionCheck, volumetricCheck] {
+    auto applyFrameOption = [this, instancingCheck, shadowCacheCheck, occlusionCheck, volumetricCheck, asyncCullCheck] {
         engine::RenderQuality q = viewport_->quality();
         if (volumetricCheck->isChecked() != (q.volumetricFog > 0))
             q.volumetricFog = volumetricCheck->isChecked() ? 2 : 0;
         q.occlusionCulling = occlusionCheck->isChecked();
+        q.asyncCull = asyncCullCheck->isChecked();
         q.instancing = instancingCheck->isChecked();
         q.shadowCache = shadowCacheCheck->isChecked();
         viewport_->setQuality(q);
     };
     connect(instancingCheck, &QCheckBox::toggled, this, applyFrameOption);
     connect(volumetricCheck, &QCheckBox::toggled, this, applyFrameOption);
+    connect(asyncCullCheck, &QCheckBox::toggled, this, applyFrameOption);
     connect(shadowCacheCheck, &QCheckBox::toggled, this, applyFrameOption);
     connect(occlusionCheck, &QCheckBox::toggled, this, applyFrameOption);
     auto* frameScroll = new QScrollArea(this);
@@ -2668,7 +2675,7 @@ void MainWindow::buildDocks()
     addDockWidget(Qt::BottomDockWidgetArea, frameDock);
     tabifyDockWidget(logDock_, frameDock);
     auto* frameTimer = new QTimer(this);
-    connect(frameTimer, &QTimer::timeout, this, [this, frameLabel, frameDock, instancingCheck, shadowCacheCheck, volumetricCheck] {
+    connect(frameTimer, &QTimer::timeout, this, [this, frameLabel, frameDock, instancingCheck, shadowCacheCheck, volumetricCheck, asyncCullCheck] {
         if (!frameDock->isVisible() || frameDock->visibleRegion().isEmpty())
             return;
         instancingCheck->blockSignals(true); // quality presets change these too
@@ -2680,6 +2687,9 @@ void MainWindow::buildDocks()
         volumetricCheck->blockSignals(true);
         volumetricCheck->setChecked(viewport_->quality().volumetricFog > 0);
         volumetricCheck->blockSignals(false);
+        asyncCullCheck->blockSignals(true);
+        asyncCullCheck->setChecked(viewport_->quality().asyncCull);
+        asyncCullCheck->blockSignals(false);
         const engine::Renderer::FrameStats& f = viewport_->frameStats();
         const auto ms = [](double v) { return QString::number(v, 'f', 2); };
         QString html = "<table cellspacing='2'><tr><td><b>" + tr("Pass") + "</b></td><td align='right'>&nbsp;&nbsp;<b>CPU ms</b></td>"
@@ -2697,6 +2707,7 @@ void MainWindow::buildDocks()
                     .arg(f.occluded)
                     .arg(f.uploads)
                     .arg(f.meshDraws);
+        html += tr("<p>Culling %1 ms CPU (all threads), main thread waited %2 ms</p>").arg(ms(f.cullMs), ms(f.cullWaitMs));
         if (!f.gpuValid)
             html += tr("<p>GPU timer queries are not available on this driver.</p>");
         frameLabel->setText(html);
