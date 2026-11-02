@@ -586,6 +586,8 @@ private:
     unsigned envRaw_ = 0, envMap_ = 0, brdfLut_ = 0, captureFbo_ = 0;
     std::size_t envHash_ = 0;
     // Physical atmosphere: sky-view table (engine/Atmosphere.h) on texture unit 31, rebuilt when the sun or the air changes.
+    float rainTop_ = 0.0f;
+    bool skipPlants_ = false; // drawGeometry leaves out swaying models and foliage (top-down map) // world height of the top-down map's camera
     unsigned int skyLut_ = 0;
     std::size_t skyLutHash_ = 0;
     glm::vec3 skyLutZenith_{0.0f}, skyLutHorizon_{0.0f}, skyLutSunTint_{1.0f};

@@ -25,7 +25,7 @@ layout(std140, binding = 1) uniform Environment {
     vec4 uProbeParams;     // x: 1 = baked probes on (0 while baking them), y: reflection cube max mip
     mat4 uPrevViewProj;    // previous frame (no TAA jitter): screen-space reflections reproject into it
     vec4 uSsr;             // x: 1 = SSR on, y: max distance (m), z: intensity, w: max roughness
-    vec4 uAtmosphere;      // x: physical sky 0..1, y: radiance scale (sun illuminance)
+    vec4 uAtmosphere;      // x: physical sky 0..1, y: radiance scale (sun illuminance), z: sky occlusion, w: top-down map top height
 };
 // Physical sky table (engine/Atmosphere.h): azimuth from the sun by elevation, linear radiance.
 layout(binding = 31) uniform sampler2D uSkyLut;
@@ -251,6 +251,41 @@ float rainExposure(vec3 worldPos) {
         open += c.z <= texture(uRainMap, c.xy + o).r + 0.4 / 300.0 ? 1.0 : 0.0;
     }
     return open * 0.25;
+}
+
+// Large-scale sky visibility (0..1) for sky light at `worldPos` with normal `n`: the horizon of
+// the surroundings in the top-down height map, in 6 directions out to ~40 m. For each direction
+// the sky above the horizon angle t lights a surface by cos^2 t (Lambert over the arc), weighted
+// toward the directions the surface faces. 1 without the map.
+float skyVisibility(vec3 worldPos, vec3 n) {
+    if (uAtmosphere.z <= 0.0 || uWeather.z < 0.5)
+        return 1.0;
+    float rot = fract(sin(dot(floor(gl_FragCoord.xy), vec2(12.9898, 78.233))) * 43758.5453) * 1.047;
+    float vis = 0.0, wsum = 0.0;
+    for (int i = 0; i < 6; ++i) {
+        float a = rot + float(i) * 1.0472;
+        vec2 dir = vec2(cos(a), sin(a));
+        float facing = n.y > 0.7 ? 1.0 : max(0.15, 0.5 + 0.5 * dot(dir, normalize(n.xz + 1e-5)) * (1.0 - max(n.y, 0.0)));
+        float horizon = 0.0; // tan of the highest occluder's elevation
+        float d = 0.6;
+        for (int s = 0; s < 6; ++s, d *= 1.9) {
+            vec3 q = worldPos + vec3(dir.x, 0.0, dir.y) * d;
+            vec4 c = uRainMatrix * vec4(q, 1.0);
+            vec2 uv = c.xy / c.w * 0.5 + 0.5;
+            if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0))))
+                break;
+            float top = uAtmosphere.w - texture(uRainMap, uv).r * 300.0;
+            horizon = max(horizon, (top - worldPos.y - 0.25) / d);
+        }
+        float c2 = 1.0 / (1.0 + horizon * horizon); // cos^2 of the horizon elevation
+        vis += c2 * facing;
+        wsum += facing;
+    }
+    // A roof right above: the map's surface is well above the point.
+    vec4 c = uRainMatrix * vec4(worldPos, 1.0);
+    float above = uAtmosphere.w - texture(uRainMap, c.xy / c.w * 0.5 + 0.5).r * 300.0 - worldPos.y;
+    float roofed = smoothstep(0.4, 1.2, above);
+    return mix(1.0, mix(vis / max(wsum, 1e-4), 0.2, roofed), uAtmosphere.z);
 }
 #endif
 

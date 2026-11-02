@@ -975,6 +975,8 @@ void Renderer::updateEnvironment(const Scene& scene, const RenderView& view)
     b.groundColor = glm::vec4(linear(e.groundColor), e.ambientIntensity);
     b.fogColor = glm::vec4(linear(e.fogColor), view.fog ? e.fogDensity : 0.0f);
     b.fogParams = glm::vec4(e.fogHeight, e.fogHeightFalloff, e.fogSunScatter, e.ssaoIntensity);
+    // z: sky occlusion strength, w: world height of the top-down map's top (its depth spans 300 m down).
+    b.atmosphere = glm::vec4(0.0f, 0.0f, rainActive_ && rainTex_ ? std::clamp(e.skyOcclusion, 0.0f, 1.0f) : 0.0f, rainTop_);
     if (const float a = std::clamp(e.atmosphere, 0.0f, 1.0f); a > 0.0f) {
         // Physical atmosphere: the sky table for the shaders, and the colours the rest of the
         // lighting reads (clouds, fog, ground haze) from the same model, so they agree.
@@ -1008,7 +1010,8 @@ void Renderer::updateEnvironment(const Scene& scene, const RenderView& view)
         }
         // Radiance for the authored sun (not the day cycle's dimmed one: the table has the dimming).
         const float scale = std::max(0.0f, scene.environment.sunIntensity) * std::max(0.0f, e.atmosphereBrightness);
-        b.atmosphere = glm::vec4(a, scale, 0.0f, 0.0f);
+        b.atmosphere.x = a;
+        b.atmosphere.y = scale;
         const float cover = std::clamp(e.cloudCover, 0.0f, 1.0f);
         b.skyZenith = glm::vec4(glm::mix(glm::vec3(b.skyZenith), skyLutZenith_ * scale, a), b.skyZenith.w);
         b.skyHorizon = glm::vec4(glm::mix(glm::vec3(b.skyHorizon), skyLutHorizon_ * scale, a), b.skyHorizon.w);
@@ -1405,6 +1408,8 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
             ++culled_;
             continue;
         }
+        if (skipPlants_ && model.sway > 0.0f) // the top-down map: leaves let rain drip and sky light through
+            continue;
         const bool selected = static_cast<int>(scene.boxes.size() + i) == view.selectedObject;
         // Distance LOD: the simpler copy beyond lodDistance (the other one stays uploaded).
         const Model* draw = &model;
@@ -1614,6 +1619,7 @@ void Renderer::renderRainMap(const Scene& scene, const RenderView& view)
     rainCenter_ = glm::vec3(std::round(eye.x / 4.0f) * 4.0f, eye.y, std::round(eye.z / 4.0f) * 4.0f);
     rainFrame_ = frameNumber_;
     const glm::vec3 top(rainCenter_.x, eye.y + kHeight * 0.5f, rainCenter_.z);
+    rainTop_ = top.y;
     const glm::mat4 lightView = glm::lookAt(top, top - glm::vec3(0, 1, 0), glm::vec3(0, 0, -1));
     rainMatrix_ = glm::ortho(-kHalf, kHalf, -kHalf, kHalf, 0.0f, kHeight) * lightView;
     useMeshProgram(programs_.depth);
@@ -1628,7 +1634,9 @@ void Renderer::renderRainMap(const Scene& scene, const RenderView& view)
     topView.drawPlayerStart = false;
     shadowCascade_ = 2;       // like a far shadow cascade: simple LODs, no grass
     shadowMinCaster_ = 0.6f;  // debris does not keep the rain off
+    skipPlants_ = true;       // nor do leaves (they drip), and the sky shows through crowns
     drawGeometry(scene, topView, true, rainMatrix_, true);
+    skipPlants_ = false;
     shadowCascade_ = -1;
     shadowMinCaster_ = 0.0f;
     glEnable(GL_CULL_FACE);
@@ -2321,7 +2329,8 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, jointBuffer_);
     wetness_ = std::clamp(view.wetness >= 0.0f ? view.wetness : resolvedEnv_.rain, 0.0f, 1.0f);
     lightning_ = std::clamp(view.lightning, 0.0f, 1.0f);
-    rainActive_ = (wetness_ > 0.0f || resolvedEnv_.rain > 0.0f) && view.fog; // not in the editor's ortho views
+    // The top-down height map serves the rain and the large-scale sky occlusion.
+    rainActive_ = (wetness_ > 0.0f || resolvedEnv_.rain > 0.0f || resolvedEnv_.skyOcclusion > 0.0f) && view.fog; // not in ortho views
     if (rainActive_)
         renderRainMap(scene, view); // before the environment block: it carries the map's matrix
     updateEnvironment(scene, view);
@@ -2907,7 +2916,7 @@ void Renderer::addFoliage(const Terrain& t, const RenderView& view)
         for (const FoliageType::Lod& lod : type.lods)
             if (lod.model)
                 keepAliveOnce(*lod.model);
-        if (shadowCascade_ >= 0 && !type.castShadows)
+        if ((shadowCascade_ >= 0 && !type.castShadows) || (skipPlants_ && type.sway > 0.0f))
             continue;
         const Aabb& lb = type.model->localBounds;
         const float diagonal = glm::length(lb.max - lb.min) * type.maxScale;

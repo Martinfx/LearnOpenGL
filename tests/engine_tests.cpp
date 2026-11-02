@@ -3817,10 +3817,12 @@ void testAtmosphere()
     s.environment.atmosphere = 0.8f;
     s.environment.atmosphereHaze = 2.5f;
     s.environment.atmosphereBrightness = 1.3f;
+    s.environment.skyOcclusion = 0.7f;
     std::string err;
     engine::Scene r;
     check(engine::saveScene(s, "atmosphere.level", &err) && engine::loadScene(r, "atmosphere.level", &err), "atmosphere level: " + err);
-    check(r.environment.atmosphere == 0.8f && r.environment.atmosphereHaze == 2.5f && r.environment.atmosphereBrightness == 1.3f,
+    check(r.environment.atmosphere == 0.8f && r.environment.atmosphereHaze == 2.5f && r.environment.atmosphereBrightness == 1.3f &&
+              r.environment.skyOcclusion == 0.7f,
           "atmosphere settings survive save + load");
     std::filesystem::remove("atmosphere.level");
 }

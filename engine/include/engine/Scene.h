@@ -380,6 +380,10 @@ struct Environment {
     float atmosphere = 0.0f;
     float atmosphereHaze = 1.0f;                // Mie haze: 0.3 crisp air .. 1 normal .. 5 smog / humid
     float atmosphereBrightness = 1.0f;          // the model's sky radiance multiplier
+    // Large-scale sky occlusion (0 off .. 1): buildings, roofs and walls within ~40 m hide part
+    // of the sky from the sky light and its reflections (a street canyon is darker at the
+    // bottom, a room under a roof gets little sky). Traced in a top-down height map.
+    float skyOcclusion = 0.0f;
     float exposure = 1.0f;
     float bloomIntensity = 0.06f;
     float bloomThreshold = 1.2f;

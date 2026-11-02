@@ -552,8 +552,10 @@ void main() {
     vec3 rWorld = uOverlay ? uEnvRotation * reflect(-v, n) : reflect(-v, n);
     float maxMip = uShadowParams.w;
     // Sky light (dimmed inside interiors), replaced by baked probes where there are any.
-    vec3 irradiance = textureLod(uEnvMap, nWorld, maxMip).rgb * uGroundColor.w * interiorSky;
-    vec3 prefiltered = textureLod(uEnvMap, rWorld, rough * maxMip).rgb * uGroundColor.w * interiorSky;
+    // Buildings and roofs hide part of the sky (large scale; baked probes already know it).
+    float skyVis = uOverlay ? 1.0 : skyVisibility(vWorldPos + normalize(vNormal) * 0.05, nWorld);
+    vec3 irradiance = textureLod(uEnvMap, nWorld, maxMip).rgb * uGroundColor.w * interiorSky * skyVis;
+    vec3 prefiltered = textureLod(uEnvMap, rWorld, rough * maxMip).rgb * uGroundColor.w * interiorSky * mix(sqrt(skyVis), skyVis, rough);
     {
         vec3 probePos = uOverlay ? uCameraPos.xyz : vWorldPos;
         float w;
@@ -573,7 +575,18 @@ void main() {
         occlusion *= mix(1.0, texture(uSsao, gl_FragCoord.xy * uViewport.zw).r, uFogParams.w);
     // Direct light leaks less into crevices than sky light: soften AO on the sun term.
     color *= mix(1.0, occlusion, 0.3);
-    vec3 ambient = ((1.0 - Fa) * (1.0 - metal) * albedo * irradiance + prefiltered * (Fa * brdf.x + brdf.y)) * occlusion;
+    // Energy of light scattered more than once between microfacets (Fdez-Aguera 2019): rough
+    // metals (rust, old paint) keep their brightness instead of turning dark and dull.
+    vec3 FssEss = Fa * brdf.x + brdf.y;
+    float Ess = brdf.x + brdf.y;
+    float Ems = 1.0 - Ess;
+    vec3 Favg = f0 + (1.0 - f0) / 21.0;
+    vec3 Fms = FssEss * Favg / (1.0 - Ems * Favg);
+    vec3 specularEnergy = FssEss + Fms * Ems;
+    // Specular occlusion (Lagarde 2014): a crevice that hides the sky hides its reflection too,
+    // more for glossy surfaces, so corners and gaps stop shining with the sky.
+    float specOcclusion = clamp(pow(nv + occlusion, exp2(-16.0 * rough - 1.0)) - 1.0 + occlusion, 0.0, 1.0);
+    vec3 ambient = (1.0 - specularEnergy) * (1.0 - metal) * albedo * irradiance * occlusion + prefiltered * specularEnergy * specOcclusion;
     color += ambient;
     color += albedo * (1.0 - metal) * vec3(0.7, 0.75, 0.9) * uWeather.y * 0.45 * skyOpen * interiorSky * (0.4 + 0.6 * max(nWorld.y, 0.0)); // lightning
 
