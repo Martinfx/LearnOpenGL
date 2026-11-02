@@ -125,12 +125,13 @@ def build():
     nz = Noise(77)
     lv = Level()
     for g, p in (('Houses', ''), ('Street', ''), ('Kerbs', 'Street'), ('Lamps and cables', 'Street'), ('Wrecks', 'Street'),
-                 ('Rubble', 'Street'), ('Barricades', 'Street'), ('Far', '')):
+                 ('Rubble', 'Street'), ('Barricades', 'Street'), ('Plates', 'Houses'), ('Far', '')):
         lv.group(g, p)
 
     # ------------------------------------------------------------------ houses along both sides
     houses = []                 # (x0, z0, x1, z1) footprints, for the ground and the vegetation
     order = [h[0] for h in HOUSES if h[0] != 'house_end']
+    fronts = []                 # (side, facade x, south corner z) of the houses along the playable street
 
     def row(side, z_from, z_to, start):
         """Houses along x = side * FACADE from z_from down to z_to (z_from > z_to); facade towards the axis."""
@@ -151,6 +152,8 @@ def build():
                      ST + name + '.glb', cx, WALK, cz, 90.0 if side < 0 else -90.0, group='Houses',
                      lod=(ST + name + '_lod1.glb', 70), cull=600)
             houses.append((cx - DEPTH / 2, cz - L / 2, cx + DEPTH / 2, cz + L / 2, name))
+            if NORTH_END - 10 < cz < SOUTH_END + 10:
+                fronts.append((side, side * (FACADE + setback), cz + L / 2))
             z -= L
         return k
 
@@ -178,6 +181,19 @@ def build():
         lv.model('Tower', G + f'skyline_tower_{t}.glb', tx, -0.2, tz, rng.uniform(0, 90), group='Far', cull=1200, coll=False)
     lv.lines.append(f'box "Far street ground" 0 -0.06 -265 140 0.1 150 0.36 0.37 0.33')
     lv.lines.append('  parent "Far"')
+
+    # enamel plates at the south corner of each house: the street name over the house number (odd west, even east)
+    num = {-1: 1, 1: 2}
+    for side, fx, zc in sorted(fronts, key=lambda f: -f[2]):
+        x = fx - side * 0.02
+        yaw = 90.0 if side < 0 else -90.0
+        if num[side] <= 24:
+            lv.model('House number', SK + f'plate_house_{num[side]}.glb', x, WALK + 2.4, zc - 0.95, yaw, group='Plates',
+                     cull=45, coll=False, shadows=False)
+        if rng.random() < 0.6:
+            lv.model('Street plate', SK + 'plate_street_pochta.glb', x, WALK + 2.8, zc - 0.95, yaw, group='Plates',
+                     cull=45, coll=False, shadows=False)
+        num[side] += 2
 
     # ------------------------------------------------------------------ street furniture
     def kerb_run(z_a, z_b, side):
@@ -241,10 +257,14 @@ def build():
             'car_estate_red', 'car_burnt']
     spots = [(3.0, 96.0, 172), (-3.1, 74.0, 8), (2.6, 41.0, 186), (-2.8, 12.0, -10), (0.8, -48.0, 150), (-3.0, -66.0, 2),
              (3.2, -92.0, 176), (-2.5, -112.0, 25), (6.1, 60.0, 182), (-6.0, -84.0, 3)]
+    pirozhok = {0: 'car_pirozhok_rust_green', 2: 'car_pirozhok_wreck', 4: 'car_pirozhok_rust_blue', 7: 'car_pirozhok_rust_green'}
     for i, (x, z, yaw) in enumerate(spots):
         c = cars[i % len(cars)]
         y = (WALK if abs(x) > KERB else 0.0) - 0.06
-        lv.model('Wreck', G + c + '.glb', x, y, z, yaw + rng.uniform(-6, 6), group='Wrecks', cull=260,
+        path = G + c + '.glb'
+        if i in pirozhok:              # the scanned Izh vans (length along X): sunk deeper, the tyres are flat
+            path, yaw, y = '../models/zone/' + pirozhok[i] + '.glb', yaw + 90.0, y - 0.05
+        lv.model('Wreck', path, x, y, z, yaw + rng.uniform(-6, 6), group='Wrecks', cull=260,
                  tilt=(rng.uniform(-2, 2), rng.uniform(-2.5, 2.5)))
         reclaim_pts.append((x, z, 3.5))
     lv.model('Bus', G + 'bus_small_cream.glb', 1.0, -0.08, -126.0, 62.0, group='Barricades', cull=320)
@@ -298,8 +318,8 @@ def build():
             '# edit in the editor afterwards (re-running the script rebuilds it).', '# Original CC0 content.',
             'version 5', 'player_start 1.5 0 104',
             'sun -0.42 -0.82 -0.39']
-    env = {'sun_color': '1 0.97 0.92', 'sun_intensity': '3.6', 'sky_zenith': '0.36 0.47 0.62', 'sky_horizon': '0.76 0.79 0.8',
-           'ground_color': '0.46 0.43 0.35', 'cloud_cover': '0.35', 'ambient_intensity': '0.9', 'fog_color': '0.7 0.77 0.86',
+    env = {'sun_color': '1 0.97 0.92', 'sun_intensity': '3.6', 'sky_zenith': '0.3 0.45 0.7', 'sky_horizon': '0.74 0.79 0.84',
+           'ground_color': '0.46 0.43 0.35', 'cloud_cover': '0.45', 'ambient_intensity': '0.8', 'fog_color': '0.7 0.77 0.86',
            'fog_density': '0.0032', 'fog_height': '2', 'fog_height_falloff': '0.02', 'fog_sun_scatter': '0.6',
            'exposure': '0.9', 'bloom_intensity': '0.04', 'bloom_threshold': '1.4', 'ssao_radius': '0.8', 'ssao_intensity': '1.3',
            'shadow_distance': '110', 'saturation': '1.0', 'contrast': '1.06', 'tint': '1.03 1 0.95', 'vignette': '0.18',
