@@ -15,6 +15,8 @@ of the crown, so they light like a volume rather than flat planes.
 | `broadleaf_a`, `broadleaf_b` | alder/oak-like deciduous tree | 10.1 / 7.8 | 944 / 734 |
 | `dead_a`, `dead_b` | dead leafless tree | 10.0 / 6.9 | 952 / 864 |
 | `snag_a` | broken dead trunk | 3.7 | 320 |
+| `sapling_a`, `sapling_b`, `sapling_c` | self-seeded young broadleaf (maple / ash / locust) from cracks, 2-4 slender stems | 4.5 / 5.6 / 2.8 | 1026 / 1224 / 1120 |
+| `broadleaf_young` | young deciduous tree | 6.7 | 944 |
 | `log_fallen_a` | fallen dead trunk (Poly Haven scan, decimated) | 4.05 long | 4000 |
 
 ## Ground cover (Poly Haven scans, split per variant)
@@ -30,6 +32,9 @@ of the crown, so they light like a volume rather than flat planes.
 | `fern_a/b` | fern | 0.43 / 0.52 |
 | `bush_a/b/c` | shrub | 1.1 to 1.2 |
 | `bush_wide_a` | low spreading shrub, 2.3 m wide | 0.87 |
+| `dandelion_a/b/c` | dandelion rosettes, a and b flowering | 0.06 to 0.27 |
+| `celandine_a/b` | greater celandine | 0.55 |
+| `sapling_shrub_a/b` | willow-like sapling sprouts | 1.7 / 1.5 |
 | `grass_patch_tall` | 2.5 m patch of tall and dry grass, ready to scatter (6.4k tris) | 1.0 |
 | `weed_patch` | 3 m patch of nettles, weeds and tall grass (8k tris) | 1.2 |
 | `bush_dense_a` | dense shrub clump of 7 bushes (6k tris) | 1.3 |

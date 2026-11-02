@@ -82,6 +82,19 @@ if sp in('birch','broadleaf','dead','snag'):
                 for j in range(2):
                     q=at(lp,R.uniform(0.3,0.8)); b=a+R.uniform(-1,1); sl=path(q,Vector((math.cos(b),math.sin(b),R.uniform(0,1))),L*0.45,3,noise=0.3)
                     tube(sl,r0*0.1,0.01,4,'bark')
+elif sp=='sapling':   # self-seeded young broadleaf (maple / ash / locust) growing out of cracks: 2-4 slender stems, leafy top
+    ctr=Vector((0,0,H*0.62)); ns=R.choice([2,3,3,4])
+    for m in range(ns):
+        a=m*6.28/ns+R.uniform(-0.5,0.5); sl=R.uniform(0.08,0.28)
+        st=path(Vector((math.cos(a)*0.05,math.sin(a)*0.05,0)),Vector((math.cos(a)*sl,math.sin(a)*sl,1)),H*R.uniform(0.75,1.0),7 if not LOD else 4,noise=0.06,gravity=0.05)
+        tube(st,0.035*max(H/5,0.6),0.008,6,'bark')
+        nb=int(4+H)
+        for j in range(nb):
+            t=0.35+0.6*j/nb; p=at(st,t); b=R.uniform(0,6.28); d=Vector((math.cos(b),math.sin(b),R.uniform(0.3,1.0)))
+            L=H*0.25*(1.15-t)*R.uniform(0.7,1.1); lp=path(p,d,L,3,noise=0.15,gravity=0.35); tube(lp,0.012,0.004,4,'bark')
+            if keep(): cross_cluster(at(lp,1.0),csz(R.uniform(0.9,1.4)*max(H/5,0.6)),[0,1,2,3],ctr,nh=j%2==0)
+            if keep() and t>0.5: cross_cluster(at(lp,0.5),csz(R.uniform(0.7,1.1)*max(H/5,0.6)),[0,1,2,3],ctr,nh=False)
+        cross_cluster(at(st,1.0),csz(1.3*max(H/5,0.6)),[0,1,2,3],ctr)
 elif sp in('pine','spruce'):
     trunk=path(Vector((0,0,0)),Vector((R.uniform(-0.02,0.02),R.uniform(-0.02,0.02),1)),H,10 if not LOD else 6,noise=0.02 if sp=='spruce' else 0.035)
     r0=(0.22 if sp=='pine' else 0.2)*max(S,0.3); tube(trunk,r0,0.02,8,'bark'); ctr=Vector((0,0,H*(0.8 if sp=='pine' else 0.5)))
