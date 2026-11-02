@@ -1634,6 +1634,34 @@ void testQuestsAndDialogs()
     for (int i : talk.choices())
         offersWork = offersWork || talk.node()->choices[static_cast<std::size_t>(i)].text == "@dialog.grisha.start.1"; // "Máš pro mě nějakou práci?"
     check(!offersWork, "no job offered again once it is done");
+    // Tolik's radio: offered from the radio talk, the waiting line, the reward, not offered again.
+    {
+        engine::DialogDef tolik;
+        engine::loadDialog(tolik, ENGINE_TEST_ASSETS "/dialogs/tolik.dialog");
+        const engine::QuestDef* radio = quests.find("tolik_radio");
+        check(radio && radio->stages.size() == 2 && radio->stage("find") && radio->stage("find")->target == "Locomotive radio",
+              "tolik_radio: find the locomotive radio, then report");
+        check(talk.start(tolik, quests) && talk.node()->id == "start", "Tolik: the greeting");
+        choose("@dialog.tolik.start.1");
+        choose("@dialog.tolik.radio.3");
+        check(talk.node() && talk.node()->id == "job", "asking about the weak radio offers the job");
+        choose("@dialog.tolik.job.1");
+        check(quests.status("tolik_radio") == engine::Quests::Status::Active && quests.stage("tolik_radio") == "find", "the radio quest starts");
+        check(talk.start(tolik, quests) && talk.node()->id == "waiting", "Tolik says where the locomotive is");
+        talk.end();
+        quests.advance("tolik_radio");
+        check(talk.start(tolik, quests) && talk.node()->id == "fixed", "the amplifier brought back: the reward line");
+        choose("@dialog.tolik.fixed.1");
+        check(quests.is("tolik_radio", "done"), "the radio quest is done");
+        check(talk.start(tolik, quests) && talk.node()->id == "start", "later: the ordinary greeting");
+        choose("@dialog.tolik.start.1");
+        bool offered = false;
+        for (int i : talk.choices())
+            offered = offered || talk.node()->choices[static_cast<std::size_t>(i)].text == "@dialog.tolik.radio.3";
+        check(!offered, "the radio job is not offered again");
+        talk.end();
+        quests.takeEvents();
+    }
     // Saved games.
     const std::vector<std::string> saved = quests.save();
     engine::Quests back;

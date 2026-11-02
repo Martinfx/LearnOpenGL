@@ -6466,9 +6466,17 @@ entity "Ambience wind" "sound" 0 -100 0 0 4000 400 4000 0.25 0.55 0.95 ""
 entity "Hospital stash" "objective" 101.6 6.05 85.6 30 0.6 0.6 0.6 0.95 0.75 0.2 "../scripts/objective.lua"
   id 45157bde6db75a18
   character "../models/props/pickups/ammo_can_rifle.glb" 1 0 ""
-  prop "message" "Našel jsi Hřišovy zásoby"
+  prop "message" "@quest.camp_stash.found"
   prop "quest" "camp_stash"
   prop "radius" "1.6"
+  prop "stage" "find"
+entity "Locomotive radio" "objective" -77.9 1.63 16.4 90 0.6 0.6 0.6 0.95 0.75 0.2 "../scripts/objective.lua"
+  parent "Rolling stock"
+  id a803c70ed2330526
+  character "../models/props/vintage_radio_transceiver/vintage_radio_transceiver.gltf" 1 0 ""
+  prop "message" "@quest.tolik_radio.found"
+  prop "quest" "tolik_radio"
+  prop "radius" "1.8"
   prop "stage" "find"
 entity "Medkit at the camp" "pickup" -102.6 0 34.4 30 0.245 0.1 0.165 0.9 0.8 0.3 ""
   id 64bbd77815ff3102

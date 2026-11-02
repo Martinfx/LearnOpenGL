@@ -963,7 +963,7 @@ int main(int argc, char** argv)
     scripts.setSoundHandler([&audio](const std::string& sound, const glm::vec3* position, float volume) {
         audio.playAsset(sound, position, volume);
     });
-    scripts.setMessageHandler([&hud](const std::string& text) { hud.notify(text); }); // ShowMessage input, game.message()
+    scripts.setMessageHandler([&hud](const std::string& text) { hud.notify(engine::localize(text)); }); // ShowMessage input, game.message()
     scripts.setDuckHandler([&audio](float gain, float seconds) {
         audio.system().duck(engine::AudioGroup::Ambient, gain, seconds, 2.0f);
         audio.system().duck(engine::AudioGroup::Music, gain, seconds, 2.0f);

@@ -186,7 +186,8 @@ Editor: Assets > Dialog / Quest otevře strom dialogu nebo úkol (dvojklik v Con
 New quest založí nový; dole se hlásí chyby (odpověď vede na neexistující uzel, neznámý úkol). Lua: `game.quest`,
 `start_quest`, `set_quest_stage`, `advance_quest`, `complete_quest`, `fail_quest`, `flag`, `set_flag`. Konzole
 `quest`, `quest start|next|done|fail <id>`, `talk <jméno>`. Postup se ukládá s hrou a přenáší mezi levely.
-V zóně: Hřiša v táboře dává úkol „Zásoby z nemocnice“ (skrýš v horním patře nemocnice), Tolik vypráví o bouřích.
+V zóně: Hřiša v táboře dává úkol „Zásoby z nemocnice“ (skrýš v horním patře nemocnice). Tolik vypráví o bouřích
+a když se ho zeptáš na slabé rádio, dá úkol „Tolikovo rádio“ (zesilovač z vysílačky v kabině lokomotivy u tábora).
 
 ### Obchod, peníze, opotřebení
 

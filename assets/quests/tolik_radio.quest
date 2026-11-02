@@ -1,0 +1,10 @@
+# Quest (editor: Assets > Quests). Stages run in order; dialogs and scripts can jump.
+id "tolik_radio"
+title "@quest.tolik_radio.title"
+description "@quest.tolik_radio.description"
+giver "Stalker Tolik"
+stage "find" "@quest.tolik_radio.find" "Locomotive radio"
+stage "report" "@quest.tolik_radio.report" "Stalker Tolik"
+reward money 500
+reward medkits 1
+reward goodwill stalker 10

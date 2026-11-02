@@ -1,6 +1,17 @@
 # Dialog (editor: Assets > Dialogs). The talk starts at the first node whose conditions hold.
 speaker "@dialog.tolik.speaker"
 
+node "fixed"
+  if quest "tolik_radio" "report"
+  text "@dialog.tolik.fixed"
+  choice "@dialog.tolik.fixed.1" ""
+    do complete_quest "tolik_radio"
+
+node "waiting"
+  if quest "tolik_radio" "find"
+  text "@dialog.tolik.waiting"
+  choice "@dialog.tolik.waiting.1" ""
+
 node "start"
   text "@dialog.tolik.start"
   choice "@dialog.tolik.start.1" "radio"
@@ -10,6 +21,8 @@ node "start"
 node "radio"
   text "@dialog.tolik.radio"
   choice "@dialog.tolik.radio.1" "storm"
+  choice "@dialog.tolik.radio.3" "job"
+    if quest "tolik_radio" none
   choice "@dialog.tolik.radio.2" ""
 
 node "storm"
@@ -20,3 +33,9 @@ node "storm"
 node "boss"
   text "@dialog.tolik.boss"
   choice "@dialog.tolik.boss.1" ""
+
+node "job"
+  text "@dialog.tolik.job"
+  choice "@dialog.tolik.job.1" ""
+    do start_quest "tolik_radio"
+  choice "@dialog.tolik.job.2" ""
