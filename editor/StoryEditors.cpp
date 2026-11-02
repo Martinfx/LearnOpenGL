@@ -135,6 +135,50 @@ void StoryTab::setModified(bool on)
     emit modificationChanged();
 }
 
+void StoryTab::loadTexts(const std::filesystem::path& folder)
+{
+    texts_.clear();
+    for (const std::string& language : engine::availableLanguages(folder)) {
+        engine::StringTable table;
+        if (table.load(folder / (language + ".strings")))
+            texts_.emplace_back(language, std::move(table));
+    }
+}
+
+QString StoryTab::shown(const std::string& text) const
+{
+    if (text.empty() || text[0] != '@' || texts_.empty())
+        return QString::fromStdString(text);
+    const auto& table = texts_.front().second.texts; // the base language (cs) comes first
+    const auto it = table.find(text.substr(1));
+    return it != table.end() ? QString::fromStdString(it->second) : QString::fromStdString(text);
+}
+
+QString StoryTab::preview(const std::string& text) const
+{
+    if (text.empty() || text[0] != '@')
+        return QString();
+    QString html = "<small>";
+    for (const auto& [language, table] : texts_) {
+        const auto it = table.texts.find(text.substr(1));
+        html += "<b>" + QString::fromStdString(language) + "</b>: " +
+                (it != table.texts.end() && !it->second.empty() ? QString::fromStdString(it->second).toHtmlEscaped()
+                                                                 : "<span style='color:#e8a33c'>" + tr("missing") + "</span>") +
+                "<br>";
+    }
+    return html + "</small>";
+}
+
+QLabel* StoryTab::previewLabel(QWidget* parent) const
+{
+    auto* label = new QLabel(parent);
+    label->setWordWrap(true);
+    label->setTextFormat(Qt::RichText);
+    label->setToolTip(tr("\"@key\" texts come from assets/text/<language>.strings (Assets > Texts and translations)"));
+    return label;
+}
+
+
 // ------------------------------------------------------------------ dialogs
 
 DialogEditor::DialogEditor(QWidget* parent)
@@ -192,6 +236,8 @@ DialogEditor::DialogEditor(QWidget* parent)
         nodeDo_ = lines(page, tr("Actions when this node is shown.\n") + kActionHelp, 3);
         form->addRow(tr("Node id"), nodeId_);
         form->addRow(tr("Says"), nodeText_);
+        nodePreview_ = previewLabel(page);
+        form->addRow(QString(), nodePreview_);
         form->addRow(tr("Starts if"), nodeIf_);
         form->addRow(tr("Does"), nodeDo_);
         form->addRow(new QLabel(tr("<small>Conditions: quest &lt;id&gt; none|active|done|failed|&lt;stage&gt;, flag &lt;name&gt;, "
@@ -214,6 +260,8 @@ DialogEditor::DialogEditor(QWidget* parent)
         choiceIf_ = lines(page, tr("Conditions to offer this answer.\n") + kConditionHelp, 3);
         choiceDo_ = lines(page, tr("Actions when the player picks it.\n") + kActionHelp, 3);
         form->addRow(tr("Answer"), choiceText_);
+        choicePreview_ = previewLabel(page);
+        form->addRow(QString(), choicePreview_);
         form->addRow(tr("Leads to"), choiceNext_);
         form->addRow(tr("Offered if"), choiceIf_);
         form->addRow(tr("Does"), choiceDo_);
@@ -240,6 +288,7 @@ bool DialogEditor::load(const QString& path, QString* error)
         return false;
     }
     path_ = path;
+    loadTexts(toPath(path).parent_path().parent_path() / "text");
     updating_ = true;
     speaker_->setText(QString::fromStdString(dialog_.speaker));
     updating_ = false;
@@ -275,7 +324,7 @@ void DialogEditor::rebuildTree(int selectNode, int selectChoice)
     updating_ = true;
     tree_->clear();
     for (const engine::DialogNode& n : dialog_.nodes) {
-        auto* item = new QTreeWidgetItem(tree_, {QString::fromStdString(n.id), QString::fromStdString(n.text)});
+        auto* item = new QTreeWidgetItem(tree_, {QString::fromStdString(n.id), shown(n.text)});
         QFont bold = item->font(0);
         bold.setBold(true);
         item->setFont(0, bold);
@@ -283,7 +332,7 @@ void DialogEditor::rebuildTree(int selectNode, int selectChoice)
             item->setToolTip(0, tr("Starts if: %1").arg(conditionsText(n.conditions)));
         for (const engine::DialogChoice& c : n.choices) {
             auto* child = new QTreeWidgetItem(item, {QString::fromStdString(c.next.empty() ? "→ (end)" : "→ " + c.next),
-                                                     QString::fromStdString(c.text)});
+                                                     shown(c.text)});
             if (!c.conditions.empty())
                 child->setToolTip(1, tr("Offered if: %1").arg(conditionsText(c.conditions)));
         }
@@ -312,12 +361,14 @@ void DialogEditor::showSelection()
         const engine::DialogNode& node = dialog_.nodes[static_cast<std::size_t>(n)];
         nodeId_->setText(QString::fromStdString(node.id));
         nodeText_->setPlainText(QString::fromStdString(node.text));
+        nodePreview_->setText(preview(node.text));
         nodeIf_->setPlainText(conditionsText(node.conditions));
         nodeDo_->setPlainText(actionsText(node.actions));
         pages_->setCurrentIndex(1);
     } else {
         const engine::DialogChoice& choice = dialog_.nodes[static_cast<std::size_t>(n)].choices[static_cast<std::size_t>(c)];
         choiceText_->setText(QString::fromStdString(choice.text));
+        choicePreview_->setText(preview(choice.text));
         choiceNext_->clear();
         choiceNext_->addItem(tr("(end)"), QString());
         for (const engine::DialogNode& other : dialog_.nodes)
@@ -357,7 +408,8 @@ void DialogEditor::edited()
         node.conditions = parseConditions(nodeIf_->toPlainText());
         node.actions = parseActions(nodeDo_->toPlainText());
         item->setText(0, QString::fromStdString(node.id));
-        item->setText(1, QString::fromStdString(node.text));
+        item->setText(1, shown(node.text));
+        nodePreview_->setText(preview(node.text));
         for (int i = 0; i < tree_->topLevelItemCount(); ++i) // renamed targets
             for (int k = 0; k < tree_->topLevelItem(i)->childCount(); ++k) {
                 const std::string& next = dialog_.nodes[static_cast<std::size_t>(i)].choices[static_cast<std::size_t>(k)].next;
@@ -370,7 +422,8 @@ void DialogEditor::edited()
         choice.conditions = parseConditions(choiceIf_->toPlainText());
         choice.actions = parseActions(choiceDo_->toPlainText());
         item->child(c)->setText(0, QString::fromStdString(choice.next.empty() ? "→ (end)" : "→ " + choice.next));
-        item->child(c)->setText(1, QString::fromStdString(choice.text));
+        item->child(c)->setText(1, shown(choice.text));
+        choicePreview_->setText(preview(choice.text));
     }
     setModified(true);
     checkProblems();
@@ -470,7 +523,11 @@ QuestEditor::QuestEditor(QWidget* parent)
     giver_->setToolTip(tr("Entity name of the character who gives it"));
     form->addRow(tr("Id"), id_);
     form->addRow(tr("Title"), title_);
+    titlePreview_ = previewLabel(this);
+    form->addRow(QString(), titlePreview_);
     form->addRow(tr("Description"), description_);
+    descriptionPreview_ = previewLabel(this);
+    form->addRow(QString(), descriptionPreview_);
     form->addRow(tr("Given by"), giver_);
     stages_ = new QTableWidget(0, 3, this);
     stages_->setHorizontalHeaderLabels({tr("Stage id"), tr("Text in the PDA"), tr("Target entity (map)")});
@@ -539,6 +596,7 @@ bool QuestEditor::load(const QString& path, QString* error)
         return false;
     }
     path_ = path;
+    loadTexts(toPath(path).parent_path().parent_path() / "text");
     refresh();
     setModified(false);
     return true;
@@ -568,13 +626,17 @@ void QuestEditor::refresh()
     for (int r = 0; r < static_cast<int>(quest_.stages.size()); ++r) {
         const engine::QuestStage& s = quest_.stages[static_cast<std::size_t>(r)];
         stages_->setItem(r, 0, new QTableWidgetItem(QString::fromStdString(s.id)));
-        stages_->setItem(r, 1, new QTableWidgetItem(QString::fromStdString(s.text)));
+        auto* text = new QTableWidgetItem(QString::fromStdString(s.text));
+        text->setToolTip(preview(s.text));
+        stages_->setItem(r, 1, text);
         stages_->setItem(r, 2, new QTableWidgetItem(QString::fromStdString(s.target)));
     }
     QStringList rewards;
     for (const auto& r : quest_.rewards)
         rewards << QString::fromStdString(joinWords(r));
     rewards_->setPlainText(rewards.join('\n'));
+    titlePreview_->setText(preview(quest_.title));
+    descriptionPreview_->setText(preview(quest_.description));
     updating_ = false;
 }
 
@@ -597,6 +659,8 @@ void QuestEditor::edited()
     quest_.description = description_->toPlainText().toStdString();
     quest_.giver = giver_->text().trimmed().toStdString();
     readStages();
+    titlePreview_->setText(preview(quest_.title));
+    descriptionPreview_->setText(preview(quest_.description));
     quest_.rewards.clear();
     for (const QString& line : rewards_->toPlainText().split('\n'))
         if (auto w = splitWords(line.toStdString()); !w.empty())
@@ -685,6 +749,7 @@ bool ItemsEditor::load(const QString& path, QString* error)
         return false;
     }
     path_ = path;
+    loadTexts(toPath(path).parent_path() / "text");
     refresh();
     setModified(false);
     return true;
@@ -728,6 +793,7 @@ void ItemsEditor::refresh()
                                    art ? QStringLiteral("%1 %2 %3").arg(d.heal).arg(d.rad).arg(d.carry) : QString()};
         for (int c = 0; c < cells.size(); ++c)
             table_->setItem(r, c, new QTableWidgetItem(cells[c]));
+        table_->item(r, 2)->setToolTip(preview(d.name));
     }
     updating_ = false;
 }

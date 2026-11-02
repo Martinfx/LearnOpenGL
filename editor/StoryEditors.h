@@ -6,6 +6,8 @@
 
 #include <QWidget>
 
+#include <filesystem>
+
 class QComboBox;
 class QLabel;
 class QLineEdit;
@@ -32,6 +34,13 @@ signals:
 
 protected:
     void setModified(bool on);
+    // "@key" texts: what they say in each language. `textFolder` is assets/text (next to the
+    // dialogs, quests and items.cfg).
+    void loadTexts(const std::filesystem::path& textFolder);
+    QString shown(const std::string& text) const;   // the base language text of a key, else as written
+    QString preview(const std::string& text) const; // every language, for labels and tooltips; empty if not a key
+    QLabel* previewLabel(QWidget* parent) const;
+    std::vector<std::pair<std::string, engine::StringTable>> texts_;
     QString path_;
     bool modified_ = false;
     bool updating_ = false;
@@ -76,6 +85,8 @@ private:
     QPlainTextEdit* choiceIf_ = nullptr;
     QPlainTextEdit* choiceDo_ = nullptr;
     QLabel* problems_ = nullptr;
+    QLabel* nodePreview_ = nullptr;
+    QLabel* choicePreview_ = nullptr;
 };
 
 // A quest: id, title, description for the PDA, who gives it, the stages in order (text in the
@@ -99,6 +110,8 @@ private:
     QLineEdit* giver_ = nullptr;
     QTableWidget* stages_ = nullptr;
     QPlainTextEdit* rewards_ = nullptr;
+    QLabel* titlePreview_ = nullptr;
+    QLabel* descriptionPreview_ = nullptr;
 };
 
 // The item catalog (assets/items.cfg): start money, carry limits, belt size and every medkit, ammo
