@@ -119,7 +119,7 @@ def plate(name):
 CABLE_SPANS = (6, 10, 14, 18, 24, 32)
 
 
-def cable(span, sag=0.045, r=0.011, seed=0):
+def cable(span, sag=0.045, r=0.016, seed=0):
     """A sagging cable between x = -span/2 and +span/2 at y = 0 (parabolic catenary, sag `sag` x span), with a
     porcelain-less steel clamp at each end. Uniform scale keeps the shape."""
     m = Mesh(PALETTE)
@@ -158,4 +158,104 @@ def kerb(length=6.0, seed=0):
                 x1 -= cut
         m.box('concrete', (x0, -0.2, -0.15 + dz), (x1, top, 0.0 + dz))
         m.box('concrete', (x0, top - 0.02, -0.01 + dz), (x1, top, 0.01 + dz))     # chamfer lip
+    return m
+
+
+# Shop signs of the ground floor: one long panel over a shop front, big condensed letters as the town's trade
+# organisation painted them, faded for decades, a letter fallen off here and there.
+# name: (text, background, letters, width m)
+RED, GREEN, CREAM, DARK = (0.55, 0.12, 0.08), (0.16, 0.3, 0.2), (0.86, 0.82, 0.7), (0.14, 0.15, 0.17)
+SIGNS = {
+    'gastronom':  ('ГАСТРОНОМ', RED, CREAM, 5.4),
+    'khleb':      ('ХЛЕБ', CREAM, RED, 2.8),
+    'moloko':     ('МОЛОКО', BLUE, WHITE, 3.6),
+    'ovoshchi':   ('ОВОЩИ  ФРУКТЫ', GREEN, CREAM, 5.6),
+    'apteka':     ('АПТЕКА', CREAM, GREEN, 3.6),
+    'parikmakh':  ('ПАРИКМАХЕРСКАЯ', BLUE, WHITE, 5.8),
+    'knigi':      ('КНИГИ', RED, CREAM, 3.2),
+    'obuv':       ('ОБУВЬ', DARK, CREAM, 3.2),
+    'pochta':     ('ПОЧТА  ТЕЛЕГРАФ', BLUE, WHITE, 5.8),
+    'produkty':   ('ПРОДУКТЫ', RED, WHITE, 4.6),
+    'galantereya': ('ГАЛАНТЕРЕЯ', GREEN, WHITE, 5.0),
+    'remont':     ('РЕМОНТ ЧАСОВ', DARK, (0.8, 0.62, 0.25), 5.0),
+    'stolovaya':  ('СТОЛОВАЯ', CREAM, RED, 4.4),
+    'univermag':  ('УНИВЕРМАГ', RED, CREAM, 5.4),
+    'tkani':      ('ТКАНИ', BLUE, CREAM, 3.2),
+    'khoztovary': ('ХОЗТОВАРЫ', GREEN, CREAM, 5.0),
+}
+SIGN_H = 0.55
+SCOLS, SROWS, SCELL_W, SCELL_H = 2, 8, 1024, 128
+PALETTE['signs'] = dict(tex='signs', decal=True, tile=1.0, color=(1, 1, 1), rough=0.75, metal=0.0)
+
+
+def make_sign_atlas(force=False):
+    path = f'{TEX_OUT}/signs_albedo.png'
+    if os.path.exists(path) and not force:
+        return path
+    rng = np.random.default_rng(11)
+    atlas = Image.new('RGBA', (SCOLS * SCELL_W, SROWS * SCELL_H), (0, 0, 0, 0))
+    font_path = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
+    for k, (name, (text, bg, fg, wm)) in enumerate(SIGNS.items()):
+        col, row = k % SCOLS, k // SCOLS
+        w, h = SCELL_W - 8, SCELL_H - 8
+        bgc = tuple(int(c * 255) for c in bg) + (255,)
+        im = Image.new('RGBA', (w, h), bgc)
+        # letters drawn wide, then squeezed into the panel: the tall condensed lettering of Soviet shop signs
+        size = int(h * 0.78)
+        f = ImageFont.truetype(font_path, size)
+        tmp = Image.new('L', (int(f.getlength(text)) + 20, h), 0)
+        ImageDraw.Draw(tmp).text((10, (h - size) / 2 - size * 0.12), text, font=f, fill=255)
+        # natural letter shapes squeezed to 80 % width on the real panel (cell pixels are not square on it)
+        px_per_m_x, px_per_m_y = w / wm, h / SIGN_H
+        tw = min(int(w * 0.92), int(tmp.width * px_per_m_x / px_per_m_y * 0.8))
+        mask = np.asarray(tmp.resize((tw, h), Image.LANCZOS), np.float32) / 255
+        # a letter or two fell off: only the paler, cleaner ghost of it stays on the panel
+        cols = np.where(mask.max(0) > 0.3)[0]
+        ghost = np.ones_like(mask)
+        if len(cols) and rng.random() < 0.7:
+            gaps = np.split(cols, np.where(np.diff(cols) > 2)[0] + 1)
+            for g in rng.choice(len(gaps), size=min(len(gaps), int(rng.integers(1, 3))), replace=False):
+                ghost[:, gaps[g][0]:gaps[g][-1] + 1] = 0.25
+        a = np.asarray(im, np.float32) / 255
+        x0 = (w - tw) // 2
+        fgv = np.array(fg, np.float32)
+        lm = (mask * ghost)[..., None]
+        a[:, x0:x0 + tw, :3] = a[:, x0:x0 + tw, :3] * (1 - lm) + fgv * lm
+        ghost_m = (mask * (1 - ghost) * 0.25)[..., None]
+        a[:, x0:x0 + tw, :3] = a[:, x0:x0 + tw, :3] * (1 - ghost_m) + np.array([0.9, 0.9, 0.85]) * ghost_m
+        # decades of sun and rain: faded, rust running from the fixings, dirt collected along the bottom edge
+        yy, xx = np.mgrid[0:h, 0:w]
+        a[..., :3] = a[..., :3] * 0.72 + 0.16 * np.array([0.92, 0.9, 0.84])
+        for _ in range(int(rng.integers(3, 7))):
+            cx, length = rng.uniform(0, w), rng.uniform(0.3, 1.0) * h
+            run = np.exp(-((xx - cx) / rng.uniform(2, 6)) ** 2) * (yy < length) * (1 - yy / max(length, 1)) * 0.75
+            a[..., :3] = a[..., :3] * (1 - run[..., None]) + np.array([0.36, 0.2, 0.09]) * run[..., None]
+        blot = np.asarray(Image.fromarray((rng.random((5, 40)) * 255).astype(np.uint8))
+                          .resize((w, h), Image.BICUBIC), np.float32) / 255
+        flake = np.clip((blot - 0.86) / 0.04, 0, 1)[..., None] * 0.55
+        a[..., :3] = a[..., :3] * (1 - flake) + np.array([0.42, 0.4, 0.37]) * flake       # paint gone, bare sheet
+        dirt = np.clip((yy / h - 0.55) / 0.45, 0, 1)[..., None] * 0.4
+        a[..., :3] = a[..., :3] * (1 - dirt) + np.array([0.2, 0.17, 0.12]) * dirt
+        atlas.alpha_composite(Image.fromarray(np.clip(a * 255, 0, 255).astype(np.uint8), 'RGBA'),
+                              (col * SCELL_W + 4, row * SCELL_H + 4))
+    atlas.save(path)
+    return path
+
+
+def sign(name, flat=False, m=None):
+    """A shop sign over a shop front: a sheet-metal box 12 cm deep on the wall (z = 0, facing +Z), the lettered panel
+    on its face; origin at the bottom centre. `flat` leaves out the box (far LOD). Drawn into `m` (with its current
+    transform) when given."""
+    k = list(SIGNS).index(name)
+    col, row = k % SCOLS, k // SCOLS
+    wm = SIGNS[name][3]
+    W, H = SCOLS * SCELL_W, SROWS * SCELL_H
+    u0, u1 = (col * SCELL_W + 4) / W, (col * SCELL_W + SCELL_W - 4) / W
+    v0, v1 = (row * SCELL_H + 4) / H, (row * SCELL_H + SCELL_H - 4) / H
+    m = m if m is not None else Mesh(PALETTE)
+    d = 0.12
+    if not flat:
+        m.box('rust_dark', (-wm / 2, 0.0, 0.0), (wm / 2, SIGN_H, d - 0.005), faces='xXyYZ')
+    m.poly('signs', [(-wm / 2, 0, d), (wm / 2, 0, d), (wm / 2, SIGN_H, d), (-wm / 2, SIGN_H, d)],
+           uvs=[(u0, -v1), (u1, -v1), (u1, -v0), (u0, -v0)])
     return m

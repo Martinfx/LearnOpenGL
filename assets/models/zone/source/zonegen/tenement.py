@@ -15,6 +15,7 @@ from .buildings import wall_x, wall_z, slab, railing_x
 from .mats import PALETTE
 from .mesh import Mesh, rot_y
 from .skrunda import _frame, facade_grime, grime
+from .fixtures import SIGNS, SIGN_H, sign
 
 GROUND = 4.0        # tall shop floor
 STOREY = 3.2        # pre-war storey
@@ -153,6 +154,35 @@ def tenement(length=36.0, floors=5, depth=14.0, seed=0, lod=0, skin='st_brick_re
             cx = bays[gate_bay]
             m.box('st_metal_paint', (cx - 1.5, 0.0, hz - 0.3), (cx + 1.5, 3.4, hz - 0.24))
             m.box('interior_dark', (cx - 1.5, 3.4, hz - 0.5), (cx + 1.5, 3.42, hz))
+
+    # ---------------------------------------------------------------- shop signs over runs of shop fronts
+    if shops:
+        srng = np.random.default_rng(seed + 1000)      # own stream: the rest of the house stays as it was
+        runs, cur = [], []
+        for i in range(nb):
+            if i % 3 != 1 and i != gate_bay:
+                cur.append(i)
+            elif cur:
+                runs.append(cur)
+                cur = []
+        if cur:
+            runs.append(cur)
+        for r in runs:
+            if srng.random() > 0.7:
+                continue
+            room = len(r) * bay - 0.5
+            fits = [k for k, v in SIGNS.items() if v[3] <= room]
+            if not fits:
+                continue
+            name = fits[int(srng.integers(len(fits)))]
+            cx = (bays[r[0]] + bays[r[-1]]) / 2
+            m.push((cx, 3.2, hz), rot_y(0))
+            if srng.random() < 0.15:                    # the panel is gone, its rusty box stays
+                w = SIGNS[name][3]
+                m.box('rust_dark', (-w / 2, 0.0, 0.0), (w / 2, SIGN_H, 0.115), faces='xXyYZ')
+            else:
+                sign(name, flat=lod > 0, m=m)
+            m.pop()
 
     # ---------------------------------------------------------------- roof
     if roof == 'pitched':

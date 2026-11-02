@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Wall writing and stains on the buildings of an existing, hand-edited level (zone.level), in place.
+"""Wall writing and stains on the buildings of a level, in place.
 
-    python3 -I assets/levels/source/add_wall_writing.py [zone]
+    python3 -I assets/levels/source/add_wall_writing.py [overgrown_street]
 
 Decal quads from assets/models/zone/skrunda/graffiti_*.glb (zonegen/graffiti.py), 2 cm off the walls, no collision,
 no shadows, in the group "Wall writing" (under "Debris"); every run replaces that group's models. Each kind has a
@@ -11,7 +11,9 @@ reason in the zone's story:
   - soot over the ruined garages that burnt;
   - stalker marks: arrows along the way from the rail-yard camp to the town, crosses on the wagons next to the
     anomaly field;
-  - the bandits' "keep out" around the hospital they hold, radiation signs and warnings at the power plant.
+  - the bandits' "keep out" around the hospital they hold, radiation signs and warnings at the power plant;
+  - on the overgrown street (Почтовая): slogans and chalk low on the house fronts, leaks from the roof edges and
+    the balconies, damp at the plinths, and stalkers' arrows along the way north.
 
 Placement is checked against the real geometry, not the bounding box: rays from outside hit the model's triangles,
 and a decal goes only where its corners and centre all land on one flat, outward-facing wall (no windows, doors,
@@ -57,6 +59,13 @@ RULES = {
     'rail_carriage_rust': [(['dmb', 'tsoi'], (0, 1), (0.9, 1.4), (0.8, 1.0))],     # red paint is lost on the rust
     'rail_carriage_green': [(['dmb', 'tsoi', 'no_exit'], (0, 1), (0.9, 1.4), (0.8, 1.0))],
 }
+# the tenements of the overgrown street (zonegen/tenement.py): only the street front and the gable ends are seen
+_STREET = [(SLOGANS + ['lyokha', 'keep_out'], (1, 2), (0.3, 1.2), (0.7, 1.0)), (['damp'], (1, 2), (0.1, 0.35), (0.8, 1.1)),
+           (['leak'], (1, 3), (6.0, 18.0), (1.0, 1.4)), (['arrow_clear'], (0, 1), (1.0, 1.5), (0.8, 1.0))]
+for _h in 'abcdefghij':
+    RULES[f'house_{_h}'] = _STREET
+RULES['house_end'] = [(['leak'], (2, 4), (6.0, 24.0), (1.1, 1.5)), (['damp'], (1, 2), (0.1, 0.35), (0.9, 1.1))]
+SIDES = {k: ['+z', '+x', '-x'] for k in RULES if k.startswith('house_')}
 CAMP = (-101.0, 33.0)
 TOWN_EDGE_X = 75.0                 # stalker arrows on the west faces of the first town buildings
 
@@ -174,8 +183,9 @@ def build(name):
             drop.update(range(o['i'], o['j']))
     lines = [ln for k, ln in enumerate(lines) if k not in drop]
     if not any(ln.startswith(f'group "{GROUP}"') for ln in lines):
-        gi = next(k for k, ln in enumerate(lines) if ln.startswith('group "Debris"'))
-        lines.insert(gi + 1, f'group "{GROUP}" "Debris"')
+        parent = next((p for p in ('Debris', 'Houses') if any(ln.startswith(f'group "{p}"') for ln in lines)), '')
+        gi = max(k for k, ln in enumerate(lines) if ln.startswith('group '))
+        lines.insert(gi + 1, f'group "{GROUP}" "{parent}"')
     objs = parse(lines)
     anomalies = [(o['x'], o['z']) for o in objs if o['kind'] == 'entity' and '"anomaly"' in lines[o['i']]]
 
@@ -223,7 +233,7 @@ def build(name):
             meshes[mp] = (T, T.reshape(-1, 3).min(0), T.reshape(-1, 3).max(0))
         T, lo, hi = meshes[mp]
         # wagons: the long sides only (the ends are coupled to the next wagon)
-        sides = ['+x', '-x'] if stem.startswith('rail_carriage') else ['+x', '-x', '+z', '-z']
+        sides = ['+x', '-x'] if stem.startswith('rail_carriage') else SIDES.get(stem, ['+x', '-x', '+z', '-z'])
         for designs, (n0, n1), y_range, s_range in RULES[stem]:
             for _ in range(rng.randint(n0, n1)):
                 place(o, T, lo, hi, rng.choice(designs), y_range, s_range, sides)
@@ -250,5 +260,5 @@ def build(name):
 
 
 if __name__ == '__main__':
-    for a in sys.argv[1:] or ['zone']:
+    for a in sys.argv[1:] or ['overgrown_street']:
         build(a)

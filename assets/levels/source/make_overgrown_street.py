@@ -51,7 +51,7 @@ X0, Z0, SIZE, RES = -165.0, -195.0, 330.0, 0.5     # engine terrain
 SPLAT_N = 1536
 
 # layers: (material, tiling = 1 / real size)
-LAYERS = [(PB + 'cracked_concrete.material', 0.5), (PB + 'road_damaged.material', 0.4545),
+LAYERS = [(PB + 'cracked_concrete.material', 0.5), (PB + 'asphalt_02.material', 0.3333),
           (PB + 'concrete_pavement.material', 0.5556), (PB + 'concrete_moss.material', 0.3333),
           ('../materials/skrunda/terrain_dirt.material', 0.5), ('../materials/skrunda/terrain_lush.material', 0.5),
           ('../materials/skrunda/terrain_leaves.material', 0.33), (PB + 'rubble.material', 0.5)]
@@ -74,6 +74,7 @@ def build_models():
     out = os.path.join(ROOT, 'models', 'zone', 'street')
     os.makedirs(out, exist_ok=True)
     mats.ensure_textures()
+    fixtures.make_sign_atlas(force=True)
     for name, L, fl, skin, roof, seed in HOUSES:
         for lod in (0, 1):
             m = tenement.tenement(L, fl, DEPTH, seed=seed, lod=lod, skin=skin, roof=roof)
@@ -101,7 +102,7 @@ class Level:
         self.groups.append(f'group "{name}" "{parent}"')
 
     def model(self, label, path, x, y, z, yaw=0.0, scale=1.0, group=None, lod=None, cull=None, coll=True, shadows=True,
-              tilt=(0.0, 0.0)):
+              tilt=(0.0, 0.0), sway=0.0, impostor=0.0):
         k = self.n.get(label, 0) + 1
         self.n[label] = k
         name = label if k == 1 else f'{label} {k}'
@@ -118,6 +119,10 @@ class Level:
             self.lines.append('  collision 0')
         if not shadows:
             self.lines.append('  cast_shadows 0')
+        if sway:
+            self.lines.append(f'  sway {sway:g}')
+        if impostor:
+            self.lines.append(f'  impostor {impostor:g}')
 
 
 def build():
@@ -179,8 +184,9 @@ def build():
     lv.model('House at the end', ST + 'house_end.glb', 0.0, WALK, -338.0, 0.0, group='Far', lod=(ST + 'house_end_lod1.glb', 70), cull=900)
     for (tx, tz, t) in ((-40, -420, 'a'), (35, -460, 'c'), (90, -380, 'b'), (-110, -400, 'b')):
         lv.model('Tower', G + f'skyline_tower_{t}.glb', tx, -0.2, tz, rng.uniform(0, 90), group='Far', cull=1200, coll=False)
-    lv.lines.append(f'box "Far street ground" 0 -0.06 -265 140 0.1 150 0.36 0.37 0.33')
+    lv.lines.append(f'box "Far street ground" 0 -0.06 -265 140 0.1 150 1 1 1')
     lv.lines.append('  parent "Far"')
+    lv.lines.append('  material "../materials/skrunda/terrain_lush.material"')
 
     # enamel plates at the south corner of each house: the street name over the house number (odd west, even east)
     num = {-1: 1, 1: 2}
@@ -253,6 +259,7 @@ def build():
 
     # ------------------------------------------------------------------ wrecks, rubble, barricades
     reclaim_pts = []            # places nature had time to grow over: around wrecks and heaps
+    wrecks = []                 # (x, z, yaw of the length axis) for the grass packed around them
     cars = ['car_estate_rust', 'car_burnt', 'car_estate_rust', 'car_sedan_green', 'car_van_green', 'car_sedan_cream',
             'car_estate_red', 'car_burnt']
     spots = [(3.0, 96.0, 172), (-3.1, 74.0, 8), (2.6, 41.0, 186), (-2.8, 12.0, -10), (0.8, -48.0, 150), (-3.0, -66.0, 2),
@@ -264,9 +271,11 @@ def build():
         path = G + c + '.glb'
         if i in pirozhok:              # the scanned Izh vans (length along X): sunk deeper, the tyres are flat
             path, yaw, y = '../models/zone/' + pirozhok[i] + '.glb', yaw + 90.0, y - 0.05
-        lv.model('Wreck', path, x, y, z, yaw + rng.uniform(-6, 6), group='Wrecks', cull=260,
+        jitter = rng.uniform(-6, 6)
+        lv.model('Wreck', path, x, y, z, yaw + jitter, group='Wrecks', cull=260,
                  tilt=(rng.uniform(-2, 2), rng.uniform(-2.5, 2.5)))
         reclaim_pts.append((x, z, 3.5))
+        wrecks.append((x, z, spots[i][2] + jitter))
     lv.model('Bus', G + 'bus_small_cream.glb', 1.0, -0.08, -126.0, 62.0, group='Barricades', cull=320)
     for (x, z, s, yaw) in ((-4.0, -132, 2.4, 0), (3.5, -136, 2.1, 70), (-1.0, -140, 2.8, 30), (6.0, -130, 1.6, 120),
                            (-6.5, -127, 1.4, 200)):
@@ -277,6 +286,7 @@ def build():
     # south: wrecks pushed together across the street, concrete blocks in the gaps
     for (x, z, yaw, c) in ((-4.2, 117.0, 78, 'car_burnt'), (-0.6, 118.5, 96, 'car_estate_rust'), (3.4, 117.4, 70, 'car_van_green')):
         lv.model('Barricade wreck', G + c + '.glb', x, -0.06, z, yaw, group='Barricades', cull=260)
+        wrecks.append((x, z, yaw))
     for (x, z) in ((6.3, 118.0), (-6.6, 118.4)):
         lv.model('Rubble heap', G + 'rubble_a.glb', x, 0.0, z, rng.uniform(0, 360), 1.3, group='Barricades', cull=200)
     reclaim_pts += [(0.0, 118.0, 7.0)]
@@ -311,15 +321,37 @@ def build():
     S = splat(nz, reclaim_pts)
 
     # ------------------------------------------------------------------ vegetation (terrain foliage)
-    inst, types = vegetation(nz, rng, S, H, reclaim_pts, lamps)
+    inst, types = vegetation(nz, rng, S, H, reclaim_pts, lamps, wrecks)
+
+    # ------------------------------------------------------------------ the street beyond the ground: trees and bushes
+    # Past the north barricade the street runs on for 140 m to the house at its end; the terrain stops at z = -195,
+    # so the green that fills the far view there is made of models (impostors far away), on the far street ground.
+    far = random.Random(4242)
+    placed = []
+    for _ in range(4000):
+        if len(placed) >= 46:
+            break
+        x, z = far.uniform(-FACADE + 1.0, FACADE - 1.0), far.uniform(-330.0, Z0 + 1.0)
+        if any(math.hypot(x - a, z - b) < 4.2 for a, b in placed):
+            continue
+        placed.append((x, z))
+        key = far.choice(('maple_a', 'maple_b', 'ash_a', 'ash_b', 'birch_a', 'broadleaf_a', 'broadleaf_b', 'maple_b'))
+        lv.model('Far tree', V + key + '.glb', x, -0.05, z, far.uniform(0, 360), far.uniform(0.75, 1.05), group='Far',
+                 lod=(V + key + '_lod1.glb', 45), cull=900, coll=False, sway=0.3, impostor=120)
+    for _ in range(70):
+        x, z = far.uniform(-FACADE + 0.5, FACADE - 0.5), far.uniform(-330.0, Z0 + 1.0)
+        key = far.choice(('bush_dense_a', 'bush_wide_a', 'sapling_shrub_a', 'sapling_shrub_b', 'sapling_a'))
+        lv.model('Far bush', V + key + '.glb', x, -0.03, z, far.uniform(0, 360), far.uniform(0.9, 1.5), group='Far',
+                 lod=(V + key + '_lod1.glb', 25 if 'sapling_a' not in key else 35), cull=600, coll=False, shadows=False,
+                 sway=1.0)
 
     # ------------------------------------------------------------------ header and entities
     head = ['# FPS engine level', '# Overgrown street (Почтовая): made by assets/levels/source/make_overgrown_street.py;',
             '# edit in the editor afterwards (re-running the script rebuilds it).', '# Original CC0 content.',
             'version 5', 'player_start 1.5 0 104',
             'sun -0.42 -0.82 -0.39']
-    env = {'sun_color': '1 0.97 0.92', 'sun_intensity': '3.6', 'sky_zenith': '0.3 0.45 0.7', 'sky_horizon': '0.74 0.79 0.84',
-           'ground_color': '0.46 0.43 0.35', 'cloud_cover': '0.45', 'ambient_intensity': '0.8', 'fog_color': '0.7 0.77 0.86',
+    env = {'sun_color': '1 0.97 0.92', 'sun_intensity': '3.6', 'sky_zenith': '0.26 0.42 0.72', 'sky_horizon': '0.74 0.79 0.84',
+           'ground_color': '0.46 0.43 0.35', 'cloud_cover': '0.5', 'ambient_intensity': '0.8', 'fog_color': '0.7 0.77 0.86',
            'fog_density': '0.0032', 'fog_height': '2', 'fog_height_falloff': '0.02', 'fog_sun_scatter': '0.6',
            'exposure': '0.9', 'bloom_intensity': '0.04', 'bloom_threshold': '1.4', 'ssao_radius': '0.8', 'ssao_intensity': '1.3',
            'shadow_distance': '110', 'saturation': '1.0', 'contrast': '1.06', 'tint': '1.03 1 0.95', 'vignette': '0.18',
@@ -379,7 +411,8 @@ def reclaim(nz, X, Z, reclaim_pts):
     near = np.zeros_like(X)
     for (x, z, r) in reclaim_pts:
         near = np.maximum(near, smoothstep(r + 2.0, r * 0.4, np.hypot(X - x, Z - z)))
-    R = 0.75 * kerb + 0.6 * wall + 0.75 * blob + 0.3 * fine + 0.6 * near + 0.12 - 0.5 * path
+    beyond = smoothstep(NORTH_END + 2, NORTH_END - 25, Z) + smoothstep(SOUTH_END - 2, SOUTH_END + 12, Z)   # nobody walks there
+    R = 0.75 * kerb + 0.6 * wall + 0.75 * blob + 0.3 * fine + 0.6 * near + 0.12 - 0.5 * path * (1 - beyond) + 0.55 * beyond
     return np.clip(R, 0.0, 1.0)
 
 
@@ -415,7 +448,7 @@ def splat(nz, reclaim_pts):
     W = np.zeros(X.shape + (8,), np.float32)
     road = rd < 0
     # carriageway: concrete slabs with patches of old asphalt
-    asph = smoothstep(0.6, 0.68, nz.fbm(X + 11, Z - 90, 9.0, 2)) * 0.85     # a few old patches, the rest slabs
+    asph = smoothstep(0.6, 0.615, nz.fbm(X + 11, Z - 90, 9.0, 2))     # a few old patches, the rest slabs
     W[..., SLAB] = np.where(road, 1.0 - asph, 0.0)
     W[..., ASPH] = np.where(road, asph, 0.0)
     W[..., PAVE] = np.where(road, 0.0, 1.0)
@@ -426,7 +459,7 @@ def splat(nz, reclaim_pts):
         W[..., layer] += cover
     # moss creeping out of the joints, soil and grass in them; whole slabs gone under the grass where R is high
     cw = 0.03 + 0.45 * R ** 1.6
-    put(MOSS, smoothstep(cw + 0.35, cw, ce) * (0.12 + 0.3 * R) * road)
+    put(MOSS, smoothstep(cw + 0.35, cw, ce) * (0.1 + 0.12 * R) * road)
     put(SOIL, smoothstep(cw * 0.5 + 0.05, cw * 0.5 - 0.03, ce) * road * 0.8)
     heaved = (R + 0.3 * cid > 0.85) & road
     put(SOIL, heaved * 0.35)
@@ -486,7 +519,7 @@ FOLIAGE = {
 }
 
 
-def vegetation(nz, rng, S, H, reclaim_pts, lamps):
+def vegetation(nz, rng, S, H, reclaim_pts, lamps, wrecks):
     """Plants from the splat (grass where the ground is soil or grass) and the reclaim field: crack grass and weeds in
     the joints, tall grass and flowers where the slabs are gone, shrubs and young trees where nature has had longest."""
     types, inst = {}, []
@@ -519,13 +552,13 @@ def vegetation(nz, rng, S, H, reclaim_pts, lamps):
         occupied.append((x, z, 1.0))
 
     def street(x, z):
-        main = abs(x) < FACADE - 0.3 and NORTH_END + 4 < z < SOUTH_END + 22
+        main = abs(x) < FACADE - 0.3 and Z0 + 3 < z < SOUTH_END + 22
         cross = CROSS[0] + 0.3 < z < CROSS[1] - 0.3 and abs(x) < 70.0
         return main or cross
 
     # ground plants on a jittered 0.42 m grid
     step = 0.34
-    for gz in np.arange(NORTH_END - 10, SOUTH_END + 22, step):
+    for gz in np.arange(Z0 + 3, SOUTH_END + 22, step):
         for gx in np.arange(-72.0, 72.0, step):
             if abs(gx) > FACADE and not (CROSS[0] < gz < CROSS[1]):
                 continue
@@ -556,8 +589,8 @@ def vegetation(nz, rng, S, H, reclaim_pts, lamps):
                 put('nettle', x, z, rng.uniform(0.8, 1.2))
 
     # shrubs: at the foot of the walls, along the kerbs, in the heaved patches of the road
-    for _ in range(4000):
-        x, z = rng.uniform(-FACADE, FACADE), rng.uniform(NORTH_END + 3, SOUTH_END - 3)
+    for _ in range(5200):
+        x, z = rng.uniform(-FACADE, FACADE), rng.uniform(Z0 + 3, Z0 + SIZE - 3)
         if rng.random() < 0.18:
             x, z = rng.uniform(-70, 70), rng.uniform(CROSS[0] + 0.5, CROSS[1] - 0.5)
         if not street(x, z):
@@ -570,10 +603,35 @@ def vegetation(nz, rng, S, H, reclaim_pts, lamps):
         put(rng.choice(('shrub_a', 'shrub_b', 'shrub_a', 'bush_dense', 'bush_wide')), x, z, rng.uniform(0.8, 1.35))
         occupied.append((x, z, 0.6))
 
-    # young trees on the road and pavements (self-seeded ash and maple, birch), big ones in a few places
+    # wrecks sunk in the green: tall grass and nettles packed around the body up to the doors, a bush or a sapling
+    # grown against one end
+    for (wx, wz, yaw) in wrecks:
+        a = math.radians(yaw)
+        ax, az = math.sin(a), math.cos(a)               # length axis
+        for _ in range(170):
+            u, v = rng.uniform(-3.8, 3.8), rng.uniform(-2.6, 2.6)
+            out = max(abs(u) - 2.1, abs(v) - 0.8, 0.0)  # distance out of the body's footprint
+            if abs(u) < 1.9 and abs(v) < 0.65 or rng.random() > math.exp(-out / 0.9):
+                continue
+            x, z = wx + u * ax + v * az, wz + u * az - v * ax
+            if not street(x, z):
+                continue
+            r = rng.random()
+            key = (rng.choice(('grass_tall_a', 'grass_tall_b')) if r < 0.5 else 'nettle' if r < 0.68 else
+                   'grass_clump' if r < 0.84 else rng.choice(('weed_a', 'weed_b')))
+            put(key, x, z, rng.uniform(1.05, 1.5))
+        if rng.random() < 0.75:
+            u, v = rng.choice((-1, 1)) * rng.uniform(2.4, 2.9), rng.uniform(-0.7, 0.7)
+            x, z = wx + u * ax + v * az, wz + u * az - v * ax
+            if street(x, z):
+                put(rng.choice(('shrub_a', 'shrub_b', 'bush_dense', 'sapling_a', 'sapling_c')), x, z, rng.uniform(0.9, 1.3))
+                occupied.append((x, z, 0.8))
+
+    # young trees on the road and pavements (self-seeded ash and maple, birch), big ones in a few places; past the
+    # barricades, where nobody has walked for decades, the street is a young wood
     planted = 0
     tries = 0
-    while planted < 72 and tries < 30000:
+    while planted < 95 and tries < 30000:
         tries += 1
         x, z = rng.uniform(-FACADE + 1.2, FACADE - 1.2), rng.uniform(NORTH_END + 6, SOUTH_END - 10)
         if rng.random() < 0.15:
@@ -585,7 +643,7 @@ def vegetation(nz, rng, S, H, reclaim_pts, lamps):
             continue
         if abs(x) < 1.8 and rng.random() < 0.7:
             continue                    # keep the trodden middle mostly open
-        big = rng.random() < 0.28
+        big = rng.random() < 0.32
         if big:
             key = rng.choice(('maple_a', 'maple_b', 'ash_a', 'ash_b', 'maple_b', 'birch_a', 'broadleaf_young'))
             sc = rng.uniform(0.75, 1.0)
@@ -595,6 +653,20 @@ def vegetation(nz, rng, S, H, reclaim_pts, lamps):
         put(key, x, z, sc, sink=0.05)
         occupied.append((x, z, 2.8 if big else 1.6))
         planted += 1
+    for (z_a, z_b, count) in ((Z0 + 3, NORTH_END - 8, 34), (SOUTH_END + 5, Z0 + SIZE - 3, 6)):
+        planted = 0
+        for _ in range(8000):
+            if planted >= count:
+                break
+            x, z = rng.uniform(-FACADE + 1.0, FACADE - 1.0), rng.uniform(z_a, z_b)
+            if not street(x, z) or not free(x, z, 2.2):
+                continue
+            big = rng.random() < 0.6
+            key = (rng.choice(('maple_a', 'maple_b', 'ash_a', 'ash_b', 'birch_a', 'broadleaf_a', 'broadleaf_b')) if big else
+                   rng.choice(('sapling_a', 'sapling_b', 'sapling_c', 'birch_young', 'broadleaf_young')))
+            put(key, x, z, rng.uniform(0.75, 1.05) if big else rng.uniform(0.9, 1.3), sink=0.05)
+            occupied.append((x, z, 3.0 if big else 1.6))
+            planted += 1
     return inst, types
 
 

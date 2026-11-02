@@ -171,14 +171,27 @@ vec3 skyColor(vec3 dir, bool withSun) {
     }
     if (up > 0.0 && cover > 0.0) {
         vec2 uv = dir.xz / (up + 0.12) * 0.6 + vec2(uSkyHorizon.w * 0.004, uSkyHorizon.w * 0.002);
+        // Cumulus: a broad shape with finer billows eroding its edge, so clouds have crisp bright rims.
         float n = fbm(uv * 2.0);
-        float clouds = smoothstep(1.0 - cover, 1.0 - cover + 0.35, n) * smoothstep(0.0, 0.12, up);
+        float d = n + 0.16 * (fbm(uv * 7.3 + vec2(3.1, 7.7)) - 0.5);
+        float body = smoothstep(1.0 - cover, 1.0 - cover + 0.16, d);
+        float clouds = body * smoothstep(0.0, 0.12, up);
+        // Self-shadowing: where the cloud thins toward the sun it is lit, the far side and the thick
+        // core are grey-blue (the sky seen through and under it).
+        vec3 toSun = -normalize(uSunDir.xyz);
+        float ns = fbm((uv + normalize(toSun.xz + 1e-5) * 0.07) * 2.0);
+        float sunSide = clamp(0.55 + (n - ns) * 5.0, 0.0, 1.0);
+        float core = smoothstep(1.0 - cover + 0.1, 1.0 - cover + 0.4, d);
+        vec3 white = uSkyHorizon.rgb * vec3(1.32, 1.3, 1.26);
+        vec3 shade = mix(uSkyZenith.rgb, uSkyHorizon.rgb, 0.55) * 0.92;
+        vec3 cloudColor = mix(shade, white, clamp(sunSide * (1.0 - 0.45 * core) + 0.15, 0.0, 1.0));
+        // Silver lining toward the sun.
+        cloudColor += uSunColor.rgb * uSunDir.w * 0.05 * pow(max(dot(dir, toSun), 0.0), 6.0) * (1.0 - core);
+        // Overcast: a thick cover turns the whole layer into a flat grey ceiling.
+        cloudColor = mix(cloudColor, uSkyHorizon.rgb * 0.85, smoothstep(0.6, 0.95, cover));
         // Lightning lights the clouds from inside.
         color += vec3(0.75, 0.8, 1.0) * uWeather.y * 0.8 * clouds;
-        vec3 lit = uSunColor.rgb * uSunDir.w;
-        vec3 cloudColor = mix(uSkyHorizon.rgb * 1.05, lit * 0.12 + uSkyHorizon.rgb * 0.6, pow(max(dot(dir, -normalize(uSunDir.xyz)), 0.0), 4.0) * 0.5);
-        cloudColor *= mix(1.0, 0.7, n);
-        color = mix(color, cloudColor, clouds * 0.9);
+        color = mix(color, cloudColor, clouds * 0.95);
     }
     color += vec3(0.55, 0.6, 0.75) * uWeather.y * 0.25 * smoothstep(-0.05, 0.3, up); // the whole sky flashes
     return color;
