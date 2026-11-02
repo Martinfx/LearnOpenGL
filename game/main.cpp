@@ -1590,6 +1590,10 @@ int main(int argc, char** argv)
     }
     bool captured = !menu.active();
     setCaptured(window, captured);
+    // Capturing moves the cursor to the window centre: that jump is not a look movement
+    // (the camera turned at the start of a level, wherever the pointer was).
+    mouse.first = true;
+    mouse.delta = glm::vec2(0.0f);
 
     // Test helpers: FPS_ENGINE_AUTOFIRE=1 holds the trigger, FPS_ENGINE_SCREENSHOT=file.ppm saves the last frame.
     const bool autoFire = std::getenv("FPS_ENGINE_AUTOFIRE") != nullptr;
@@ -1852,6 +1856,8 @@ int main(int argc, char** argv)
             glfwSetWindowTitle(window, "FPS Engine");
             lastTime += glfwGetTime() - pausedAt; // the game does not catch up on the time it stood
             setCaptured(window, captured);
+            mouse.first = true; // the pointer went to the editor and back: no turn
+            mouse.delta = glm::vec2(0.0f);
             return action;
         });
     }
@@ -2053,6 +2059,7 @@ int main(int argc, char** argv)
             captured = wantCapture;
             setCaptured(window, captured);
             mouse.first = true;
+            mouse.delta = glm::vec2(0.0f);
         }
         engine::InputState padInput;
         const PadState pad = cvars.find("joy_deadzone") ? readGamepad(padInput, cvars.find("joy_deadzone")->number()) : PadState{};
