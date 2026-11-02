@@ -271,3 +271,6 @@ quest.camp_stash.found = Našel jsi Hřišovy zásoby
 storm.radio_warning = Tolikovo rádio píská: bouře se blíží. Najdi si včas střechu.
 hud.talk_to = Mluvit: {0}
 hud.trade_with = Obchodovat: {0}
+objective.hospital_street.medicine = Skrýš s léky nalezena. Vrať se do tábora.
+objective.skrunda1.lyokha_pda = PDA Ljochy nalezeno: "skrýš je pod vodárnou". Vrať se do štábu.
+objective.skrunda1.lyokha_stash = Ljochova skrýš nalezena.

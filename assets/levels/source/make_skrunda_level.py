@@ -722,7 +722,7 @@ prop('Lyokha backpack', 'old_military_crate', ox, oy, oz, 'Loot', yaw=b['yaw'] +
 prop('Lyokha gas mask', 'old_gas_mask', ox + 0.6, oy, oz + 0.2, 'Loot', yaw=40)
 prop('Lyokha ammo', 'ammo_box', ox - 0.4, oy + 0.36, oz, 'Loot', yaw=-20)
 entity('Objective: Lyokha PDA', 'objective', ox, oy, oz, 0, None, 'Loot', script='../scripts/objective.lua',
-       props=(('radius', '2'), ('message', 'PDA Ljochy nalezeno: "skrys je pod vodarnou". Vrat se do Stabu.')),
+       props=(('radius', '2'), ('message', '@objective.skrunda1.lyokha_pda')),
        size=(0.05, 0.05, 0.05))
 b = BUILD[TOWER]
 tx, ty, tz = b['cx'], b['y'], b['cz']
@@ -730,7 +730,7 @@ prop('Stash crate', 'wooden_military_crate', tx + 0.8, ty + 0.05, tz - 0.6, 'Loo
 prop('Stash jerrycan', 'metal_jerrycan_green', tx - 1.0, ty + 0.05, tz - 0.2, 'Loot', yaw=70)
 prop('Stash ammo', 'ammo_box', tx + 0.8, ty + 0.5, tz - 0.6, 'Loot', yaw=10)
 entity('Objective: water tower stash', 'objective', tx, ty + 0.1, tz, 0, None, 'Loot', script='../scripts/objective.lua',
-       props=(('radius', '2.2'), ('message', 'Ljochova skrys nalezena.')), size=(0.05, 0.05, 0.05))
+       props=(('radius', '2.2'), ('message', '@objective.skrunda1.lyokha_stash')), size=(0.05, 0.05, 0.05))
 x, y, z = to_world(VENTA, 6, floor_y(0), -6.5)
 prop('Bandit ammo', 'ammo_box', x, y, z, 'Loot', yaw=15)
 x, y, z = to_world('845508052', 0, 0.15, 0)

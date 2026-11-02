@@ -326,7 +326,7 @@ prop('Stash crate', 'old_military_crate', SX, SY, SZ, 'Loot', yaw=5)
 prop('Stash jerrycan', 'metal_jerrycan_green', SX + 1.0, SY, SZ + 0.2, 'Loot', yaw=40)
 prop('Stash ammo', 'ammo_box', SX - 0.2, SY + 0.36, SZ, 'Loot', yaw=-20)
 entity('Objective: medicine stash', 'objective', SX, SY, SZ + 0.6, 0, None, 'Loot', script='../scripts/objective.lua',
-       props=(('radius', '2'), ('message', 'Skrys s leky nalezena. Vrat se do tabora.')), size=(0.05, 0.05, 0.05))
+       props=(('radius', '2'), ('message', '@objective.hospital_street.medicine')), size=(0.05, 0.05, 0.05))
 
 # ---------------------------------------------------------------------------- map markers (minimap and PDA)
 for name, x, z in (('Tabor stalkeru', -46.5, 56), ('Nemocnice', 40, -12), ('Skrys s leky', 55.4, -15),
