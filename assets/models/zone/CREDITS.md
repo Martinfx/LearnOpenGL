@@ -16,6 +16,7 @@
 | `bus_stop.glb` | [Old Soviet Bus Stop](https://sketchfab.com/3d-models/fe4d132434c24e1c8447a6d1190e8c6d) | [GameDev Nick](https://sketchfab.com/GameDevNick) | CC-BY 4.0 |
 | `rubble_pile.glb` | [Rubble Pile - Photoscan (Optimized)](https://sketchfab.com/3d-models/5986d1487d9443b883d67b121c2c903c) | [GameDev Nick](https://sketchfab.com/GameDevNick) | CC-BY 4.0 |
 | `car_pirozhok.glb` | [Pirozhok Scan Retopo (Free Scan)](https://sketchfab.com/3d-models/07bc48134b364d4f8a43d288b3a0282d) | [Renafox](https://sketchfab.com/kryik1023) | CC-BY 4.0 |
+| `car_pirozhok_rust_green.glb`, `car_pirozhok_rust_blue.glb`, `car_pirozhok_wreck.glb` | same scan, base colour repainted and rusted for this project (`source/pirozhok_rust/rustvar.py`, rust: Poly Haven rust_coarse_01, CC0) | [Renafox](https://sketchfab.com/kryik1023) | CC-BY 4.0 |
 
 CC-BY 4.0 items: "This work is based on <title> by <author>, licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)". Converted to metres, textures resized, some decimated.
 

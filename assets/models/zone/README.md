@@ -20,6 +20,7 @@ weathered (desaturated, grime toward the ground) by `source/bldconv.py`. `*_lod1
 | `bus_stop.glb` | rusty Soviet bus stop shelter | 2.1 x 5.2 x 3.9 | 4364 |
 | `rubble_pile.glb` | concrete rubble pile (photoscan, decimated) | 3.1 x 3.2 x 1 | 18k |
 | `car_pirozhok.glb` | abandoned IZh-2715 "Pirozhok" van (scan) | 4.4 x 1.8 x 1.8 | 4851 |
+| `car_pirozhok_rust_green.glb`, `car_pirozhok_rust_blue.glb`, `car_pirozhok_wreck.glb` | the same van, faded green / faded blue paint eaten by rust, and a burnt-out rust wreck (only the base colour differs) | 4.4 x 1.8 x 1.8 | 4851 |
 | `sign_gantry_18m.glb` | highway overhead sign gantry, 18 m span, 5.5 m clearance, blank panels (procedural, see `rail/README.md`) | 18.8 x 0.9 x 7.2 | 2088 |
 
 Credits: see `CREDITS.md`.
