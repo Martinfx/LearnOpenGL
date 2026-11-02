@@ -12,7 +12,9 @@ What it does to <level>.level (in place) and writes next to it (<level>.terrain,
   - 8 ground layers (Skrunda-1 materials): the old box regions become soft-edged layer areas (grass, mud,
     gravel, leaf litter ...), plus gravel along roads, trodden dirt at buildings, bare soil on steep banks;
   - trees, bushes, grass models and loose rubble are dropped onto the new ground (y only);
-  - ground cover: clumps of straw and fresh grass and weeds by walls as terrain foliage (Foliage mode);
+  - ground cover: clumps of straw and fresh grass as terrain foliage (Foliage mode); nettles and weeds along
+    walls, fences and wrecks, bushes by the buildings, brick/plaster debris under the walls, litter at the road
+    edges, twigs under the trees and grass in the cracks along the kerbs;
   - environment: thinner haze and more natural colour (CONFIG 'env').
 
 Footprints come from the models' glTF bounds (accessor min/max through the node tree), rotated by the yaw.
@@ -50,7 +52,9 @@ CONFIG = {
         remove=['Ground south', 'Ground north', 'Rail yard mud', 'Plant yard', 'Town yard', 'Shoulder', 'Shoulder 2',
                 'Median', 'Median north'],
         # former box regions -> (layer, x0, z0, x1, z1), later ones on top
-        regions=[(DRY, -280, -200, 280, 260), (DIRT, -280, -470, 280, -274), (MUD, -107, -170, -61, 170),
+        # a 6th value makes a region patchy: the share of it the layer covers, in noise-shaped patches
+        regions=[(DRY, -280, -200, 280, 260), (DIRT, -280, -470, 280, -274), (GRAVEL, -107, -170, -61, 170, 0.45),
+                 (MUD, -107, -170, -61, 170, 0.22),
                  (GRAVEL, 45, -170, 235, -20), (LEAVES, 10, 15, 230, 135), (GRAVEL, -14, -194, -11, 260),
                  (GRAVEL, 11, -194, 14, 260), (GRAVEL, -14, -470, -11, -280), (GRAVEL, 11, -470, 14, -280)],
         rim=('w', 'e', 's'),           # high ground at these edges (the north meets the far ground box)
@@ -60,16 +64,20 @@ CONFIG = {
                       ('River 9', '../models/zone/gen/river_80m.glb', 320.0, 0.0, -237.0, 'River')],
         sparse_z=-276.0,               # thinner grass in the dead city beyond the river
         weather_fog_max=0.007,         # the day cycle's fog keys (0.018 - 0.03 was a brown wall at 60 m)
-        env={'fog_density': '0.0055', 'saturation': '0.84', 'contrast': '1.08', 'ambient_intensity': '0.85',
-             'sky_horizon': '0.72 0.69 0.62', 'fog_color': '0.66 0.65 0.6', 'tint': '1.02 1 0.94', 'vignette': '0.28'}),
+        # the day cycle reddens the sun by the air mass itself, so the authored sun colour is near white (an orange
+        # one doubled the evening glow into sepia); neutral tint, a little more saturation
+        env={'fog_density': '0.0055', 'saturation': '0.93', 'contrast': '1.08', 'ambient_intensity': '0.9',
+             'sun_color': '1 0.94 0.86', 'sky_zenith': '0.33 0.39 0.46', 'sky_horizon': '0.7 0.71 0.68',
+             'ground_color': '0.3 0.29 0.23', 'fog_color': '0.64 0.65 0.63', 'tint': '1 1 0.98', 'vignette': '0.25'}),
     'hospital_street': dict(
         x0=-150.0, z0=-170.0, size=300.0, seed=57,
         remove=['Ground', 'Courtyard ground', 'Worn path', 'Worn path 2', 'Worn path 3', 'Embankment'],
-        regions=[(DRY, -150, -170, 150, 120), (MUD, -110, 50, 110, 78), (GRAVEL, -110, 56, 110, 72), (DIRT, -27, -60, 16, 5), (PATH, -6, -30, -3, 5), (PATH, -6, -33, 14, -30),
+        regions=[(DRY, -150, -170, 150, 120), (MUD, -110, 50, 110, 78, 0.35), (GRAVEL, -110, 56, 110, 72, 0.6), (DIRT, -27, -60, 16, 5), (PATH, -6, -30, -3, 5), (PATH, -6, -33, 14, -30),
                  (PATH, 11, -30, 14, -12)],
         rim=('w', 'e', 'n', 's'), hill_std=0.9, rim_h=7.0, sink=[], extra_models=[], sparse_z=None, weather_fog_max=0.007,
-        env={'fog_density': '0.005', 'saturation': '0.84', 'contrast': '1.08', 'ambient_intensity': '0.8',
-             'sky_horizon': '0.76 0.7 0.6', 'fog_color': '0.68 0.64 0.58', 'tint': '1.02 1 0.94', 'vignette': '0.3'}),
+        env={'fog_density': '0.005', 'saturation': '0.92', 'contrast': '1.08', 'ambient_intensity': '0.85',
+             'sun_color': '1 0.93 0.84', 'sky_zenith': '0.33 0.38 0.45', 'sky_horizon': '0.72 0.71 0.66',
+             'ground_color': '0.29 0.28 0.22', 'fog_color': '0.66 0.65 0.62', 'tint': '1 1 0.97', 'vignette': '0.28'}),
 }
 
 _GLTF = {}
@@ -228,6 +236,9 @@ def build(name):
     build_d = np.full(X.shape, 1e9)         # distance to buildings and big objects (trodden aprons)
     hard = np.zeros(X.shape, dtype=bool)    # under kept boxes (roads, sidewalks): no grass
     road_d = np.full(X.shape, 1e9)
+    kerbs = []                              # kept boxes (roads, sidewalks): grass in the cracks along their edges
+    wall_d = np.full(X.shape, 1e9)          # distance to fixed models (walls, fences, wrecks): weeds grow there
+    ent_d = np.full(X.shape, 1e9)           # distance to characters and spawners: camps are trodden bare
     loose = []
     for o in objs:
         if o['kind'] == 'model' and o['name'].startswith(LOOSE):
@@ -242,11 +253,17 @@ def build(name):
         d = rect_dist(r0, sl)
         fixed[sl] = np.minimum(fixed[sl], d)
         big = (r0[2] - r0[0]) * (r0[3] - r0[1]) > 30
-        if big:
+        if big and o['kind'] == 'model':
             build_d[sl] = np.minimum(build_d[sl], d)
+        if o['kind'] == 'model' and 2.5 < max(r0[2] - r0[0], r0[3] - r0[1]) < 150:   # not crates, fire pits, signs
+            wall_d[sl] = np.minimum(wall_d[sl], d)
+        if o['kind'] == 'entity':
+            ent_d[sl] = np.minimum(ent_d[sl], d)
         if o['kind'] == 'box':
             hard[sl] |= d <= 0.0
             road_d[sl] = np.minimum(road_d[sl], d)
+            if min(o['sx'], o['sz']) < 50:
+                kerbs.append((r0, o['y'] + o['sy'] / 2))
 
     # ---------------------------------------------------------------- heights
     base = -0.02                            # top of the old ground boxes: everything stands on it
@@ -280,13 +297,18 @@ def build(name):
 
     put(DRY, smoothstep(0.42, 0.6, nz.fbm(X - 400, Z + 250, 26.0, 2)))
     put(LUSH, smoothstep(0.5, 0.64, nz.fbm(X + 60, Z - 900, 20.0, 2)) * (0.5 + 0.5 * smoothstep(0.3, -0.6, H - base)))
-    for (layer, rx0, rz0, rx1, rz1) in cfg['regions'][1:]:
+    for (layer, rx0, rz0, rx1, rz1, *amount) in cfg['regions'][1:]:
         d = np.hypot(np.maximum(np.maximum(rx0 - X, X - rx1), 0), np.maximum(np.maximum(rz0 - Z, Z - rz1), 0))
         inside = np.minimum(np.minimum(X - rx0, rx1 - X), np.minimum(Z - rz0, rz1 - Z))
         sd = np.where(d > 0, d, -np.maximum(inside, 0))
         # patchy inside (the old surface shows through in places), soft wandering edge outside
         patch = 0.75 + 0.5 * (nz.fbm(X * 1.0 + 11 * layer, Z, 7.0, 2) - 0.5)
-        put(layer, smoothstep(2.5, -1.5, sd + warp) * np.clip(patch + 0.25, 0, 1))
+        cover = smoothstep(2.5, -1.5, sd + warp) * np.clip(patch + 0.25, 0, 1)
+        if amount:                     # patchy region: only the highest `amount` of a slow noise
+            pn = nz.fbm(X - 57 * layer, Z + 91 * layer, 11.0, 3)
+            t = float(np.quantile(pn, 1.0 - amount[0]))
+            cover *= smoothstep(t - 0.04, t + 0.04, pn)
+        put(layer, cover)
     put(LEAVES, smoothstep(0.62, 0.7, nz.fbm(X + 1300, Z - 700, 22.0, 2)) * 0.9)
     put(DIRT, smoothstep(0.3, 0.55, slope) * 0.85)
     put(GRAVEL, smoothstep(1.4, 0.2, road_d + 0.8 * (nz(X - 31, Z + 17, 3.0) - 0.5)) * (road_d > 0))
@@ -351,15 +373,88 @@ def build(name):
                 veg('fresh' if rng.random() < fresh else 'dry', x, z, rng.uniform(0.7, 0.95) + 0.3 * dense)
                 if dense > 0.4 and not far:
                     veg('dry' if rng.random() < 0.7 else 'fresh', x + 1.25, z + 1.25, rng.uniform(0.55, 0.8))
-    FILES = {'dry': (SK + 'veg/grass_dry', SK + 'veg/grass_dry_far.glb', 'Tall grass', 0.25),
-             'fresh': (SK + 'veg/grass_fresh', SK + 'veg/grass_fresh_far.glb', 'Tall grass', 0.25),
-             'weed': (V + 'weed_patch', SK + 'veg/weed_patch_far.glb', 'Weeds', 0.1)}
+
+    # ---------------------------------------------------------------- details at walls, wrecks, trees and kerbs
+    # (own random stream, so the grass above keeps its layout): nettles and weeds along every wall, fence and
+    # wreck, a bush now and then by the buildings, brick and plaster fallen off them, litter at the road edges,
+    # twigs under the trees and grass in the cracks along the kerbs.
+    drng = random.Random(cfg['seed'] + 7)
+
+    def pick(table):
+        r, acc = drng.random(), 0.0
+        for key, pr in table:
+            acc += pr
+            if r < acc:
+                return key
+        return table[-1][0]
+
+    def add(key, x, z, scale, y=None):
+        if key not in types:
+            types[key] = len(types)
+        yy = sample(H, x, z) - 0.03 if y is None else y
+        inst.append((x, yy, z, drng.uniform(0, 360), scale, types[key]))
+
+    WEEDS = [('nettle_tall_a', 0.2), ('nettle_tall_b', 0.12), ('nettle_medium_a', 0.18), ('weed_a', 0.1), ('weed_b', 0.1),
+             ('weed_c', 0.1), ('weed', 0.1), ('grass_tall_a', 0.1)]
+    WALL = [('d:silicate_bricks', 0.3), ('d:plaster_chunks', 0.35), ('d:glass_shards', 0.15), ('d:concrete_chunks', 0.2)]
+    KERB = [('d:tin_cans', 0.35), ('d:bottles', 0.25), ('d:glass_shards', 0.2), ('d:concrete_chunks', 0.2)]
+    CRACK = [('grass_clump_a', 0.3), ('grass_short_a', 0.25), ('weed_a', 0.15), ('weed_b', 0.15), ('grass_tall_b', 0.15)]
+    ground = (H > -1.0) & ~hard & (ent_d > 3.5)
+    if cfg['sparse_z'] is not None:
+        town = Z >= cfg['sparse_z']
+    else:
+        town = np.ones(X.shape, dtype=bool)
+    for j, i in zip(*np.nonzero(ground & (wall_d > 0.15) & (wall_d < 3.2))):
+        d = wall_d[j, i]
+        for _ in range(2):
+            if drng.random() < 0.42 * (1.0 - d / 3.4):
+                add(pick(WEEDS), X[j, i] + drng.uniform(-0.5, 0.5), Z[j, i] + drng.uniform(-0.5, 0.5), drng.uniform(0.75, 1.2))
+    for j, i in zip(*np.nonzero(ground & town & (build_d > 1.5) & (build_d < 5.0))):
+        if drng.random() < 0.022:
+            add(drng.choice(['bush_a', 'bush_b', 'bush_c', 'bush_dense_a']), X[j, i] + drng.uniform(-0.5, 0.5),
+                Z[j, i] + drng.uniform(-0.5, 0.5), drng.uniform(0.7, 1.1))
+    for j, i in zip(*np.nonzero(ground & (build_d > 0.1) & (build_d < 2.6))):
+        if drng.random() < 0.35 * (1.0 - build_d[j, i] / 3.0):
+            add(pick(WALL), X[j, i] + drng.uniform(-0.5, 0.5), Z[j, i] + drng.uniform(-0.5, 0.5), drng.uniform(0.8, 1.2))
+    for j, i in zip(*np.nonzero(ground & (road_d > 0.05) & (road_d < 1.5))):
+        if drng.random() < 0.035:
+            add(pick(KERB), X[j, i] + drng.uniform(-0.5, 0.5), Z[j, i] + drng.uniform(-0.5, 0.5), 1.0)
+    for (bx0, bz0, bx1, bz1), top in kerbs:
+        for (ax, az, bx, bz, nx, nz_) in ((bx0, bz0, bx1, bz0, 0, 1), (bx0, bz1, bx1, bz1, 0, -1),
+                                         (bx0, bz0, bx0, bz1, 1, 0), (bx1, bz0, bx1, bz1, -1, 0)):
+            length = math.hypot(bx - ax, bz - az)
+            for k in range(int(length)):
+                if drng.random() < 0.55:
+                    t, inset = (k + drng.random()) / length, drng.uniform(0.08, 0.5)
+                    x, z = ax + (bx - ax) * t + nx * inset, az + (bz - az) * t + nz_ * inset
+                    if x0 < x < x0 + size and z0 < z < z0 + size:
+                        add(pick(CRACK), x, z, drng.uniform(1.0, 1.6), y=top + 0.01)
+    for o in loose:
+        if o['name'].startswith(('birch', 'dead_tree')) and drng.random() < 0.5:
+            for _ in range(drng.randint(1, 3)):
+                a, r = drng.uniform(0, 2 * math.pi), drng.uniform(0.8, 3.0)
+                x, z = o['x'] + r * math.cos(a), o['z'] + r * math.sin(a)
+                if x0 < x < x0 + size and z0 < z < z0 + size:
+                    add('d:twigs', x, z, drng.uniform(0.8, 1.3))
+
+    # key -> (model without .glb, [(lod model, distance)], brush density, cull distance, shadows, far density)
+    FILES = {'dry': (SK + 'veg/grass_dry', [(SK + 'veg/grass_dry_lod1.glb', 8), (SK + 'veg/grass_dry_far.glb', 18)], 0.25, 50, 0, 0.5),
+             'fresh': (SK + 'veg/grass_fresh', [(SK + 'veg/grass_fresh_lod1.glb', 8), (SK + 'veg/grass_fresh_far.glb', 18)], 0.25, 50, 0, 0.5),
+             'weed': (V + 'weed_patch', [(V + 'weed_patch_lod1.glb', 8), (SK + 'veg/weed_patch_far.glb', 18)], 0.1, 50, 0, 0.6)}
+    for key in ('nettle_tall_a', 'nettle_tall_b', 'nettle_medium_a', 'weed_a', 'weed_b', 'weed_c', 'grass_tall_a', 'grass_tall_b',
+                'grass_clump_a', 'grass_short_a'):
+        FILES[key] = (V + key, [(V + key + '_lod1.glb', 8)], 0.1, 45, 0, 0.6)
+    for key in ('bush_a', 'bush_b', 'bush_c', 'bush_dense_a'):
+        FILES[key] = (V + key, [(V + key + '_lod1.glb', 25)], 0.02, 120, 1, 0.8)
+    for key in ('silicate_bricks', 'plaster_chunks', 'glass_shards', 'concrete_chunks', 'tin_cans', 'bottles', 'twigs'):
+        FILES['d:' + key] = ('../models/zone/skrunda/debris_' + key, [], 0.1, 40, 0, 0.5)
     header = [f'terrain "{name}.terrain"'] + [f'terrain_layer {i} "{SKM}{LAYERS[i]}.material" {TILING[i]:g}' for i in range(8)]
     for key, _ in sorted(types.items(), key=lambda kv: kv[1]):
-        f, farf, _kind, dens = FILES[key]
-        header.append(f'foliage_type "{f}.glb" {dens:g} 0.85 1.15 50 0 0 0 0.5')
-        header.append(f'foliage_lod "{f}_lod1.glb" 8')
-        header.append(f'foliage_lod "{farf}" 18')
+        f, lods, dens, cull, shadows, far = FILES[key]
+        lo, hi = (0.8, 1.2) if key.startswith('d:') else (0.85, 1.15)
+        header.append(f'foliage_type "{f}.glb" {dens:g} {lo:g} {hi:g} {cull:g} 0 0 {shadows} {far:g}')
+        for lf, ld in lods:
+            header.append(f'foliage_lod "{lf}" {ld:g}')
 
     # ---------------------------------------------------------------- environment
     for k, v in cfg['env'].items():

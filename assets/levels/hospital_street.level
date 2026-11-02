@@ -5,14 +5,14 @@
 version 6
 player_start -58 0 56.5
 sun 0.78 -0.3 0.22
-env sun_color 1 0.72 0.48
+env sun_color 1 0.93 0.84
 env sun_intensity 2.3
-env sky_zenith 0.33 0.36 0.4
-env sky_horizon 0.76 0.7 0.6
-env ground_color 0.22 0.21 0.17
+env sky_zenith 0.33 0.38 0.45
+env sky_horizon 0.72 0.71 0.66
+env ground_color 0.29 0.28 0.22
 env cloud_cover 0.75
-env ambient_intensity 0.8
-env fog_color 0.68 0.64 0.58
+env ambient_intensity 0.85
+env fog_color 0.66 0.65 0.62
 env fog_density 0.005
 env fog_height 2
 env fog_height_falloff 0.05
@@ -23,10 +23,10 @@ env bloom_threshold 1.2
 env ssao_radius 0.7
 env ssao_intensity 1.25
 env shadow_distance 70
-env saturation 0.84
+env saturation 0.92
 env contrast 1.08
-env tint 1.02 1 0.94
-env vignette 0.3
+env tint 1 1 0.97
+env vignette 0.28
 env grain 0.035
 env rain 0
 env wind 0
@@ -46,9 +46,43 @@ foliage_lod "../models/zone/skrunda/veg/grass_fresh_far.glb" 18
 foliage_type "../models/zone/skrunda/veg/grass_dry.glb" 0.25 0.85 1.15 50 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
 foliage_lod "../models/zone/skrunda/veg/grass_dry_lod1.glb" 8
 foliage_lod "../models/zone/skrunda/veg/grass_dry_far.glb" 18
-foliage_type "../models/zone/vegetation/weed_patch.glb" 0.1 0.85 1.15 50 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
+foliage_type "../models/zone/vegetation/weed_patch.glb" 0.1 0.85 1.15 50 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
 foliage_lod "../models/zone/vegetation/weed_patch_lod1.glb" 8
 foliage_lod "../models/zone/skrunda/veg/weed_patch_far.glb" 18
+foliage_type "../models/zone/vegetation/grass_tall_a.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/grass_tall_a_lod1.glb" 8
+foliage_type "../models/zone/vegetation/weed_b.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/weed_b_lod1.glb" 8
+foliage_type "../models/zone/vegetation/nettle_medium_a.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/nettle_medium_a_lod1.glb" 8
+foliage_type "../models/zone/vegetation/weed_c.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/weed_c_lod1.glb" 8
+foliage_type "../models/zone/vegetation/nettle_tall_b.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/nettle_tall_b_lod1.glb" 8
+foliage_type "../models/zone/vegetation/nettle_tall_a.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/nettle_tall_a_lod1.glb" 8
+foliage_type "../models/zone/vegetation/weed_a.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/weed_a_lod1.glb" 8
+foliage_type "../models/zone/vegetation/bush_c.glb" 0.02 0.85 1.15 120 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/bush_c_lod1.glb" 25
+foliage_type "../models/zone/vegetation/bush_a.glb" 0.02 0.85 1.15 120 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/bush_a_lod1.glb" 25
+foliage_type "../models/zone/vegetation/bush_dense_a.glb" 0.02 0.85 1.15 120 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/bush_dense_a_lod1.glb" 25
+foliage_type "../models/zone/vegetation/bush_b.glb" 0.02 0.85 1.15 120 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/bush_b_lod1.glb" 25
+foliage_type "../models/zone/skrunda/debris_silicate_bricks.glb" 0.1 0.8 1.2 40 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
+foliage_type "../models/zone/skrunda/debris_concrete_chunks.glb" 0.1 0.8 1.2 40 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
+foliage_type "../models/zone/skrunda/debris_glass_shards.glb" 0.1 0.8 1.2 40 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
+foliage_type "../models/zone/skrunda/debris_plaster_chunks.glb" 0.1 0.8 1.2 40 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
+foliage_type "../models/zone/skrunda/debris_bottles.glb" 0.1 0.8 1.2 40 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
+foliage_type "../models/zone/skrunda/debris_tin_cans.glb" 0.1 0.8 1.2 40 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
+foliage_type "../models/zone/vegetation/grass_clump_a.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/grass_clump_a_lod1.glb" 8
+foliage_type "../models/zone/vegetation/grass_short_a.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/grass_short_a_lod1.glb" 8
+foliage_type "../models/zone/vegetation/grass_tall_b.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/grass_tall_b_lod1.glb" 8
 group "Ground" ""
 group "Railway" ""
 group "Camp" "Railway"
