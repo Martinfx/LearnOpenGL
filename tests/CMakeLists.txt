@@ -16,6 +16,10 @@ target_link_libraries(asset_check PRIVATE engine)
 add_test(NAME asset_check COMMAND asset_check ${PROJECT_SOURCE_DIR}/assets --quiet)
 set_tests_properties(asset_check PROPERTIES LABELS assets)
 
+# Command line city generator (same as the editor's Tools > City generator).
+add_executable(city_gen city_gen.cpp)
+target_link_libraries(city_gen PRIVATE engine)
+
 # Smoke test of every level (ctest -L smoke; skip with ctest -LE smoke). Needs a
 # display or xvfb-run, so it is only added where one of them exists.
 find_program(XVFB_RUN xvfb-run)

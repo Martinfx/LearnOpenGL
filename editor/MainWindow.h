@@ -332,6 +332,8 @@ private:
     QTableWidget* materialSlots_ = nullptr;
     WeaponPanel* weapons_ = nullptr;
     EnvironmentPanel* environment_ = nullptr;
+    class CityGeneratorPanel* city_ = nullptr;
+    QDockWidget* cityDock_ = nullptr;
     HierarchyTree* outliner_ = nullptr;
     DependencyPanel* dependencies_ = nullptr;
     AssetBrowser* assets_ = nullptr;

@@ -1,0 +1,19 @@
+# City generator settings (engine/CityGen.h, docs/CITY_GENERATOR.md); edit in the editor: Tools > City generator.
+seed 1957
+origin 0 0 0
+rotation 0
+group "City"
+kit "postsoviet.citykit"
+columns 110 130 120
+rows 96 124
+streets_x side main main side
+streets_z side main side
+block 0 0 perimeter 0
+block 0 1 perimeter 0
+block 0 2 towers 0
+block 1 0 garages 0
+block 1 1 microdistrict 0
+block 1 2 ruin 0
+profile alley 4 1.5 lamps 0 trees 0 cross_cables 0
+profile side 7 2.5 lamps 1 trees 0 cross_cables 0
+profile main 9 3.5 lamps 1 trees 1 cross_cables 1

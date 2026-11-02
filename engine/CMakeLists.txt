@@ -40,6 +40,7 @@ add_library(engine STATIC
     src/HotReload.cpp
     src/AssetPalette.cpp
     src/Prefab.cpp
+    src/CityGen.cpp
     src/Scene.cpp
     src/JobSystem.cpp
     src/SceneGraph.cpp

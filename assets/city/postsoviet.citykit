@@ -1,0 +1,83 @@
+# City kit "post-Soviet zone town" for the city generator (engine/CityGen.h, docs/CITY_GENERATOR.md).
+# Edit in the editor: Tools > City generator > Kit. Paths are relative to this file. Sizes in metres, measured
+# from the models (Kit tab > Measure). Frame of a building: length along X centred, street facade facing +Z at z = front.
+
+material road "../materials/pbr/asphalt_02.material"
+material pavement "../materials/pbr/concrete_pavement.material"
+material yard "../materials/skrunda/terrain_lush.material"
+material lot "../materials/skrunda/terrain_dirt.material"
+material gate "../materials/pbr/rusty_painted_metal.material"
+material pillar "../materials/pbr/red_brick.material"
+
+# pre-war tenements of the overgrown street (zonegen/tenement.py): lengths in 3 m steps fill any frontage with gateways
+building "House A" "../models/zone/street/house_a.glb" role tenement length 36 depth 14.4 front 7 floors 5 height 22.4 weight 1 lod "../models/zone/street/house_a_lod1.glb" 70 cull 600
+building "House B" "../models/zone/street/house_b.glb" role tenement length 30 depth 14.4 front 7 floors 7 height 24.9 weight 1 lod "../models/zone/street/house_b_lod1.glb" 70 cull 600
+building "House C" "../models/zone/street/house_c.glb" role tenement length 42 depth 14.4 front 7 floors 6 height 25.6 weight 1 lod "../models/zone/street/house_c_lod1.glb" 70 cull 600
+building "House D" "../models/zone/street/house_d.glb" role tenement length 24 depth 14.4 front 7 floors 4 height 19.2 weight 1 lod "../models/zone/street/house_d_lod1.glb" 70 cull 600
+building "House E" "../models/zone/street/house_e.glb" role tenement length 33 depth 14.4 front 7 floors 8 height 28.1 weight 1 lod "../models/zone/street/house_e_lod1.glb" 70 cull 600
+building "House F" "../models/zone/street/house_f.glb" role tenement length 27 depth 14.4 front 7 floors 6 height 25.6 weight 1 lod "../models/zone/street/house_f_lod1.glb" 70 cull 600
+building "House G" "../models/zone/street/house_g.glb" role tenement length 39 depth 14.4 front 7 floors 5 height 18.5 weight 1 lod "../models/zone/street/house_g_lod1.glb" 70 cull 600
+building "House H" "../models/zone/street/house_h.glb" role tenement length 30 depth 14.4 front 7 floors 6 height 25.6 weight 1 lod "../models/zone/street/house_h_lod1.glb" 70 cull 600
+building "House I" "../models/zone/street/house_i.glb" role tenement length 36 depth 14.4 front 7 floors 7 height 24.9 weight 1 lod "../models/zone/street/house_i_lod1.glb" 70 cull 600
+building "House J" "../models/zone/street/house_j.glb" role tenement length 45 depth 14.4 front 7 floors 8 height 28.1 weight 1 lod "../models/zone/street/house_j_lod1.glb" 70 cull 600
+building "House end" "../models/zone/street/house_end.glb" role tenement length 48 depth 14.4 front 7 floors 9 height 31.3 weight 0.5 lod "../models/zone/street/house_end_lod1.glb" 70 cull 700
+# panel micro-district: 16-storey slab and the five-storey khrushchyovka
+building "Panel block" "../models/zone/panel_block_16.glb" role panel length 72 depth 23.2 front 11.6 floors 16 height 49.3 weight 1 lod "../models/zone/panel_block_16_lod1.glb" 90 cull 1200
+building "Khrushchyovka" "../models/zone/gen/apartment_khrushchevka.glb" role panel length 26 depth 14.7 front 7.6 floors 5 height 13.1 weight 1 lod "../models/zone/gen/apartment_khrushchevka_lod1.glb" 70 cull 700
+# point towers (simple far-view models: landmarks, not for close play)
+building "Tower A" "../models/zone/gen/skyline_tower_a.glb" role tower length 24.4 depth 18.4 front 9.2 floors 22 height 66 weight 1 lod "../models/zone/gen/skyline_tower_a_lod1.glb" 120 cull 1500
+building "Tower B" "../models/zone/gen/skyline_tower_b.glb" role tower length 30.4 depth 15.2 front 7.6 floors 16 height 48 weight 1 lod "../models/zone/gen/skyline_tower_b_lod1.glb" 120 cull 1500
+building "Tower C" "../models/zone/gen/skyline_tower_c.glb" role tower length 18.4 depth 18.4 front 9.2 floors 28 height 84 weight 1 lod "../models/zone/gen/skyline_tower_c_lod1.glb" 120 cull 1500
+building "Garages" "../models/zone/garage_block.glb" role garage length 7.74 depth 16.3 front 8.15 floors 1 height 2.85 weight 1 lod "../models/zone/garage_block_lod1.glb" 60 cull 500
+
+prop kerb "../models/zone/street/kerb_6m.glb" size 6 cull 90 collision 0 shadows 0
+prop kerb "../models/zone/street/kerb_6m_b.glb" size 6 cull 90 collision 0 shadows 0
+prop lamp "../models/zone/gen/lamp_post.glb" cull 300 collision 1 shadows 1
+prop lamp_leaning "../models/zone/gen/lamp_post_leaning.glb" cull 300 collision 1 shadows 1
+prop cable "../models/zone/street/cable_6m.glb" size 6 cull 160 collision 0 shadows 1
+prop cable "../models/zone/street/cable_10m.glb" size 10 cull 160 collision 0 shadows 1
+prop cable "../models/zone/street/cable_14m.glb" size 14 cull 160 collision 0 shadows 1
+prop cable "../models/zone/street/cable_18m.glb" size 18 cull 160 collision 0 shadows 1
+prop cable "../models/zone/street/cable_24m.glb" size 24 cull 160 collision 0 shadows 1
+prop cable "../models/zone/street/cable_32m.glb" size 32 cull 160 collision 0 shadows 1
+prop car "../models/zone/gen/car_burnt.glb" lod "../models/zone/gen/car_burnt_lod1.glb" 50 cull 260 collision 1 shadows 1
+prop car "../models/zone/gen/car_estate_rust.glb" lod "../models/zone/gen/car_estate_rust_lod1.glb" 50 cull 260 collision 1 shadows 1
+prop car "../models/zone/gen/car_sedan_green.glb" lod "../models/zone/gen/car_sedan_green_lod1.glb" 50 cull 260 collision 1 shadows 1
+prop car "../models/zone/gen/car_van_green.glb" lod "../models/zone/gen/car_van_green_lod1.glb" 50 cull 260 collision 1 shadows 1
+prop car "../models/zone/gen/car_sedan_cream.glb" lod "../models/zone/gen/car_sedan_cream_lod1.glb" 50 cull 260 collision 1 shadows 1
+prop car "../models/zone/gen/car_estate_red.glb" lod "../models/zone/gen/car_estate_red_lod1.glb" 50 cull 260 collision 1 shadows 1
+prop car "../models/zone/gen/car_sedan_blue.glb" lod "../models/zone/gen/car_sedan_blue_lod1.glb" 50 cull 260 collision 1 shadows 1
+prop tree "../models/zone/vegetation/maple_a.glb" lod "../models/zone/vegetation/maple_a_lod1.glb" 45 cull 400 sway 0.3 impostor 120 scale_min 0.85 scale_max 1.15 collision 1 shadows 1
+prop tree "../models/zone/vegetation/maple_b.glb" lod "../models/zone/vegetation/maple_b_lod1.glb" 45 cull 400 sway 0.3 impostor 120 scale_min 0.85 scale_max 1.15 collision 1 shadows 1
+prop tree "../models/zone/vegetation/ash_a.glb" lod "../models/zone/vegetation/ash_a_lod1.glb" 45 cull 400 sway 0.3 impostor 120 scale_min 0.85 scale_max 1.15 collision 1 shadows 1
+prop tree "../models/zone/vegetation/ash_b.glb" lod "../models/zone/vegetation/ash_b_lod1.glb" 45 cull 400 sway 0.3 impostor 120 scale_min 0.85 scale_max 1.15 collision 1 shadows 1
+prop tree "../models/zone/vegetation/broadleaf_a.glb" lod "../models/zone/vegetation/broadleaf_a_lod1.glb" 45 cull 400 sway 0.3 impostor 120 scale_min 0.85 scale_max 1.15 collision 1 shadows 1
+prop tree "../models/zone/vegetation/broadleaf_b.glb" lod "../models/zone/vegetation/broadleaf_b_lod1.glb" 45 cull 400 sway 0.3 impostor 120 scale_min 0.85 scale_max 1.15 collision 1 shadows 1
+prop sapling "../models/zone/vegetation/sapling_a.glb" lod "../models/zone/vegetation/sapling_a_lod1.glb" 30 cull 220 sway 1 scale_min 0.7 scale_max 1.2 collision 0 shadows 1
+prop sapling "../models/zone/vegetation/sapling_b.glb" lod "../models/zone/vegetation/sapling_b_lod1.glb" 30 cull 220 sway 1 scale_min 0.7 scale_max 1.2 collision 0 shadows 1
+prop sapling "../models/zone/vegetation/sapling_c.glb" lod "../models/zone/vegetation/sapling_c_lod1.glb" 30 cull 220 sway 1 scale_min 0.7 scale_max 1.2 collision 0 shadows 1
+prop sapling "../models/zone/vegetation/broadleaf_young.glb" lod "../models/zone/vegetation/broadleaf_young_lod1.glb" 30 cull 220 sway 1 scale_min 0.7 scale_max 1.2 collision 0 shadows 1
+prop snag "../models/zone/vegetation/snag_a.glb" lod "../models/zone/vegetation/snag_a_lod1.glb" 45 cull 300 sway 0.3 scale_min 0.8 scale_max 1.1 collision 1 shadows 1
+prop snag "../models/zone/vegetation/dead_a.glb" lod "../models/zone/vegetation/dead_a_lod1.glb" 45 cull 300 sway 0.3 scale_min 0.8 scale_max 1.1 collision 1 shadows 1
+prop bush "../models/zone/vegetation/bush_a.glb" lod "../models/zone/vegetation/bush_a_lod1.glb" 25 cull 160 sway 1 scale_min 0.8 scale_max 1.4 collision 0 shadows 0
+prop bush "../models/zone/vegetation/bush_b.glb" lod "../models/zone/vegetation/bush_b_lod1.glb" 25 cull 160 sway 1 scale_min 0.8 scale_max 1.4 collision 0 shadows 0
+prop bush "../models/zone/vegetation/bush_c.glb" lod "../models/zone/vegetation/bush_c_lod1.glb" 25 cull 160 sway 1 scale_min 0.8 scale_max 1.4 collision 0 shadows 0
+prop bush "../models/zone/vegetation/bush_dense_a.glb" lod "../models/zone/vegetation/bush_dense_a_lod1.glb" 25 cull 160 sway 1 scale_min 0.8 scale_max 1.4 collision 0 shadows 0
+prop bush "../models/zone/vegetation/bush_wide_a.glb" lod "../models/zone/vegetation/bush_wide_a_lod1.glb" 25 cull 160 sway 1 scale_min 0.8 scale_max 1.4 collision 0 shadows 0
+prop bush "../models/zone/vegetation/sapling_shrub_a.glb" lod "../models/zone/vegetation/sapling_shrub_a_lod1.glb" 25 cull 160 sway 1 scale_min 0.8 scale_max 1.4 collision 0 shadows 0
+prop bush "../models/zone/vegetation/sapling_shrub_b.glb" lod "../models/zone/vegetation/sapling_shrub_b_lod1.glb" 25 cull 160 sway 1 scale_min 0.8 scale_max 1.4 collision 0 shadows 0
+prop grass "../models/zone/vegetation/grass_tall_a.glb" lod "../models/zone/vegetation/grass_tall_a_lod1.glb" 12 cull 70 sway 1 scale_min 0.8 scale_max 1.3 collision 0 shadows 0
+prop grass "../models/zone/vegetation/grass_tall_b.glb" lod "../models/zone/vegetation/grass_tall_b_lod1.glb" 12 cull 70 sway 1 scale_min 0.8 scale_max 1.3 collision 0 shadows 0
+prop grass "../models/zone/vegetation/grass_clump_a.glb" lod "../models/zone/vegetation/grass_clump_a_lod1.glb" 12 cull 70 sway 1 scale_min 0.8 scale_max 1.3 collision 0 shadows 0
+prop weed "../models/zone/vegetation/weed_a.glb" lod "../models/zone/vegetation/weed_a_lod1.glb" 12 cull 80 sway 1 scale_min 0.8 scale_max 1.2 collision 0 shadows 0
+prop weed "../models/zone/vegetation/weed_b.glb" lod "../models/zone/vegetation/weed_b_lod1.glb" 12 cull 80 sway 1 scale_min 0.8 scale_max 1.2 collision 0 shadows 0
+prop weed "../models/zone/vegetation/weed_c.glb" lod "../models/zone/vegetation/weed_c_lod1.glb" 12 cull 80 sway 1 scale_min 0.8 scale_max 1.2 collision 0 shadows 0
+prop weed "../models/zone/vegetation/weed_patch.glb" lod "../models/zone/vegetation/weed_patch_lod1.glb" 12 cull 80 sway 1 scale_min 0.8 scale_max 1.2 collision 0 shadows 0
+prop nettle "../models/zone/vegetation/nettle_tall_a.glb" lod "../models/zone/vegetation/nettle_tall_a_lod1.glb" 12 cull 70 sway 1 scale_min 0.8 scale_max 1.2 collision 0 shadows 0
+prop nettle "../models/zone/vegetation/nettle_tall_b.glb" lod "../models/zone/vegetation/nettle_tall_b_lod1.glb" 12 cull 70 sway 1 scale_min 0.8 scale_max 1.2 collision 0 shadows 0
+prop nettle "../models/zone/vegetation/nettle_medium_a.glb" lod "../models/zone/vegetation/nettle_medium_a_lod1.glb" 12 cull 70 sway 1 scale_min 0.8 scale_max 1.2 collision 0 shadows 0
+prop rubble "../models/zone/gen/rubble_a.glb" lod "../models/zone/gen/rubble_a_lod1.glb" 40 cull 200 collision 1 shadows 1
+prop rubble "../models/zone/gen/rubble_b.glb" lod "../models/zone/gen/rubble_b_lod1.glb" 40 cull 200 collision 1 shadows 1
+prop meadow "../models/zone/vegetation/grass_patch_tall.glb" lod "../models/zone/vegetation/grass_patch_tall_lod1.glb" 15 cull 90 sway 1 scale_min 0.8 scale_max 1.4 collision 0 shadows 0
+prop meadow "../models/zone/vegetation/weed_patch.glb" lod "../models/zone/vegetation/weed_patch_lod1.glb" 15 cull 90 sway 1 scale_min 0.8 scale_max 1.2 collision 0 shadows 0
+prop slab "../models/zone/gen/slab_fallen.glb" lod "../models/zone/gen/slab_fallen_lod1.glb" 40 cull 200 collision 1 shadows 1

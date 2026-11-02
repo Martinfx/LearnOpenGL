@@ -13,6 +13,8 @@ add_executable(fps_editor
     PaletteDialog.cpp
     AssetValidationDialog.cpp
     EnvironmentPanel.h
+    CityGeneratorPanel.cpp
+    CityGeneratorPanel.h
     MainWindow.h
     MaterialEditor.cpp
     MaterialEditor.h

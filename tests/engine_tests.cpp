@@ -58,6 +58,7 @@
 #include <engine/AssetRegistry.h>
 #include <engine/FileWatcher.h>
 #include <engine/HotReload.h>
+#include <engine/CityGen.h>
 #include <engine/Items.h>
 #include <engine/ScriptDebug.h>
 #include <engine/Prefab.h>
@@ -4364,6 +4365,145 @@ void testTaskGraph()
 
 // Tests that load the real models, textures and levels (Git LFS). A checkout without LFS
 // (the Windows and FreeBSD CI jobs) has pointer files instead; those tests are skipped there.
+// ---------------------------------------------------------------- city generator (engine/CityGen.h)
+engine::city::Kit cityKit()
+{
+    engine::city::Kit kit;
+    std::string err;
+    check(engine::city::loadKit(kit, ENGINE_TEST_ASSETS "/city/postsoviet.citykit", &err), "load city kit: " + err);
+    return kit;
+}
+
+engine::city::Settings citySettings()
+{
+    engine::city::Settings s;
+    std::string err;
+    check(engine::city::loadSettings(s, ENGINE_TEST_ASSETS "/city/zone_town.city", &err), "load city settings: " + err);
+    return s;
+}
+
+void testCityKitAndSettings()
+{
+    using namespace engine::city;
+    const Kit kit = cityKit();
+    check(kit.buildingsWithRole("tenement").size() >= 8, "kit has tenements");
+    check(!kit.buildingsWithRole("panel").empty() && !kit.buildingsWithRole("garage").empty(), "kit has panels and garages");
+    for (const auto& role : propRoles())
+        check(!kit.propsWithRole(role).empty(), "kit has props for role " + role);
+    for (const auto& b : kit.buildings)
+        check(std::filesystem::exists(b.path) && (b.lodPath.empty() || std::filesystem::exists(b.lodPath)), "kit file exists: " + b.path.string());
+    for (const auto& p : kit.props)
+        check(std::filesystem::exists(p.path), "kit file exists: " + p.path.string());
+    // Round trips: what the editor saves reads back the same.
+    const auto dir = std::filesystem::temp_directory_path() / "city_test";
+    std::filesystem::create_directories(dir);
+    check(saveKit(kit, dir / "k.citykit"), "save kit");
+    Kit again;
+    check(loadKit(again, dir / "k.citykit") && again == kit, "kit round trip");
+    Settings s = citySettings();
+    s.kit = dir / "k.citykit";
+    s.rotation = 12.5f;
+    s.setBlock(1, 2, {BlockKind::Park, 7});
+    s.profiles[2].trees = true;
+    s.overgrowth = 0.35f;
+    check(saveSettings(s, dir / "c.city"), "save city");
+    Settings back;
+    check(loadSettings(back, dir / "c.city") && back == s, "city settings round trip");
+    std::filesystem::remove_all(dir);
+}
+
+void testCityFrontageIsExact()
+{
+    using namespace engine::city;
+    const Kit kit = cityKit();
+    Settings s = citySettings();
+    // Many grids: every perimeter frontage is closed exactly by houses and gateways.
+    for (int seed = 1; seed <= 12; ++seed) {
+        s.seed = static_cast<std::uint32_t>(seed);
+        s.columns = {60.0f + 7.3f * static_cast<float>(seed), 133.7f, 91.0f};
+        s.rows = {84.0f + 3.1f * static_cast<float>(seed)};
+        s.blocks.clear();
+        s.normalize();
+        const Plan p = generate(s, kit);
+        check(p.stats.worstFill <= 0.03f, "frontage exact for seed " + std::to_string(seed) + " (off by " + std::to_string(p.stats.worstFill) + " m)");
+        check(p.stats.buildings > 10 && p.stats.frontage > 300.0f, "perimeter blocks built");
+        for (const auto& w : p.warnings)
+            check(w.find("frontage") == std::string::npos, "no frontage warning: " + w);
+    }
+}
+
+void testCityRulesAndScale()
+{
+    using namespace engine::city;
+    const Kit kit = cityKit();
+    const Settings s = citySettings();
+    const Plan a = generate(s, kit), b = generate(s, kit);
+    // Pure and deterministic.
+    check(a.placements.size() == b.placements.size(), "same plan twice");
+    bool same = a.placements.size() == b.placements.size();
+    for (std::size_t i = 0; same && i < a.placements.size(); ++i)
+        same = a.placements[i].name == b.placements[i].name && a.placements[i].position == b.placements[i].position;
+    check(same, "identical placements");
+    check(a.stats.lamps > 10 && a.stats.trees > 10 && a.stats.wrecks > 2 && a.stats.gateways > 0 && a.stats.plants > 200,
+          "streets dressed: lamps " + std::to_string(a.stats.lamps) + " trees " + std::to_string(a.stats.trees));
+    // Houses of a perimeter row: never the same module side by side, floors within the step.
+    std::vector<const Placement*> houses;
+    for (const auto& p : a.placements)
+        if (p.group == "City A1" && p.path.filename().string().rfind("house_", 0) == 0)
+            houses.push_back(&p);
+    check(houses.size() >= 6, "block A1 has houses");
+    for (std::size_t i = 1; i < houses.size(); ++i)
+        if (std::abs(houses[i]->rotation.y - houses[i - 1]->rotation.y) < 1.0f)
+            check(houses[i]->path != houses[i - 1]->path, "no identical neighbours");
+    // Main street: 16 m facade to facade (9 m carriageway + 2 x 3.5 m), as the overgrown street.
+    check(std::abs(s.profiles[3].width() - 16.0f) < 1e-4f, "main street 16 m");
+    // Nothing grows inside a building footprint (house origins are 7 m behind the facade).
+    // Editing one block leaves the others as they were.
+    Settings s2 = s;
+    s2.setBlock(1, 1, {BlockKind::Park, 0});
+    const Plan c = generate(s2, kit);
+    auto groupPlacements = [](const Plan& p, const std::string& g) {
+        std::vector<glm::vec3> v;
+        for (const auto& x : p.placements)
+            if (x.group == g)
+                v.push_back(x.position);
+        return v;
+    };
+    check(groupPlacements(a, "City A1") == groupPlacements(c, "City A1"), "block A1 unchanged when B2 changes");
+    check(groupPlacements(a, "City B2") != groupPlacements(c, "City B2"), "block B2 changed");
+    // Turning the city keeps the layout.
+    Settings s3 = s;
+    s3.rotation = 90.0f;
+    const Plan d = generate(s3, kit);
+    check(d.placements.size() == a.placements.size(), "rotated city has the same objects");
+    if (!d.placements.empty()) {
+        const glm::vec3 p0 = a.placements[0].position, q0 = d.placements[0].position;
+        check(std::abs(q0.x - p0.z) < 0.01f && std::abs(q0.z + p0.x) < 0.01f, "rotation by 90 degrees");
+    }
+    for (const auto& w : a.warnings)
+        check(false, "default city warning: " + w);
+}
+
+void testCityReplace()
+{
+    using namespace engine::city;
+    engine::Scene scene;
+    scene.boxes.push_back({"Keep me", {0, 0, 0}, {1, 1, 1}, {1, 1, 1}});
+    Plan p;
+    p.groups = {{"City", ""}, {"City A1", "City"}};
+    Placement b;
+    b.kind = Placement::Kind::Box;
+    b.name = "Keep me";
+    b.group = "City A1";
+    p.placements.push_back(b);
+    replaceCity(scene, "City", buildObjects(p));
+    check(scene.boxes.size() == 2 && scene.groups.size() == 2, "city added");
+    check(scene.boxes[1].name != "Keep me" && scene.boxes[1].parent == "City A1", "unique names, parent kept");
+    const int removed = replaceCity(scene, "City", buildObjects(p));
+    check(removed == 1 && scene.boxes.size() == 2 && scene.groups.size() == 2, "regeneration replaces only the city");
+    check(scene.boxes[0].name == "Keep me", "hand-placed object stays");
+}
+
 bool lfsAssetsPresent()
 {
     std::ifstream in(ENGINE_TEST_ASSETS "/models/zone/vegetation/spruce_a_lod1.glb", std::ios::binary);
@@ -4371,8 +4511,10 @@ bool lfsAssetsPresent()
     return in.read(magic, 4) && std::memcmp(magic, "glTF", 4) == 0;
 }
 
-int main()
+int main(int argc, char** argv)
 {
+    // engine_tests [part of a test name]: only the matching tests.
+    const std::string only = argc > 1 ? argv[1] : "";
     // Hermetic cook cache for the tests.
     engine::textureCookConfig().cacheDir = std::filesystem::current_path() / "texture_cache";
     std::filesystem::remove_all(engine::textureCookConfig().cacheDir);
@@ -4468,9 +4610,13 @@ int main()
         {"testThirdPartyLicenses", testThirdPartyLicenses},
         {"testAssetCredits", testAssetCredits},
         {"testWorldStreaming", testWorldStreaming},
+        {"testCityKitAndSettings", testCityKitAndSettings},
+        {"testCityFrontageIsExact", testCityFrontageIsExact},
+        {"testCityRulesAndScale", testCityRulesAndScale},
+        {"testCityReplace", testCityReplace},
     };
     for (const auto& [name, run] : tests)
-        if (assets || !needAssets.count(name)) {
+        if ((assets || !needAssets.count(name)) && (only.empty() || std::string(name).find(only) != std::string::npos)) {
             // Name first and flushed: a test that crashes the process (Windows CI) is still named in the log.
             std::printf("== %s\n", name);
             std::fflush(stdout);

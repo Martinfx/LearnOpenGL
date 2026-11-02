@@ -26,6 +26,7 @@
 #include "Viewport.h"
 #include "WeaponPanel.h"
 #include "EnvironmentPanel.h"
+#include "CityGeneratorPanel.h"
 #include "ShaderEditor.h"
 #include "SoundEditor.h"
 #include "SurfacesEditor.h"
@@ -226,6 +227,12 @@ void MainWindow::buildMenus()
     edit->addAction(tr("Add empty en&tity"), this, [this] { addEntity("empty"); });
     edit->addAction(tr("Add &sound source"), this, [this] { addEntity("sound"); });
     edit->addAction(tr("Add &particle effect"), this, [this] { addEntity("particle"); });
+    edit->addAction(tr("&City generator..."), this, [this] {
+        if (cityDock_) {
+            cityDock_->show();
+            cityDock_->raise();
+        }
+    });
     {
         QMenu* light = edit->addMenu(tr("Add &light"));
         light->addAction(tr("Point light (bulb, fire)"), this, [this] { addLight(false); });
@@ -2416,12 +2423,53 @@ void MainWindow::buildDocks()
     environmentScroll->setWidgetResizable(true);
     environmentDock->setWidget(environmentScroll);
     addDockWidget(Qt::RightDockWidgetArea, environmentDock);
+    // City generator (engine/CityGen.h): settings, kit, layout preview, Generate as one undo step.
+    city_ = new CityGeneratorPanel(this);
+    city_->setCameraPosition([this] { return viewport_->camera().position; });
+    city_->setGroupSize([this](const std::string& group) {
+        return engine::findGroup(scene_, group) >= 0 ? static_cast<int>(engine::descendantObjects(scene_, group).size()) : 0;
+    });
+    auto cityOverlay = [this] {
+        if (streamShow_ && streamShow_->isChecked())
+            return; // the streaming cells own the overlay while they are shown
+        viewport_->setOverlayGeometry(city_->previewShown() && cityDock_ && cityDock_->isVisible() ? city_->preview() : nullptr);
+    };
+    connect(city_, &CityGeneratorPanel::previewChanged, this, cityOverlay);
+    connect(city_, &CityGeneratorPanel::message, this, [this](const QString& text) { notify(text, 5000); });
+    connect(city_, &CityGeneratorPanel::generated, this,
+            [this](std::shared_ptr<engine::city::CityObjects> objects, const QString& root, const QString& summary) {
+                const int removed = engine::city::replaceCity(scene_, root.toStdString(), std::move(*objects));
+                select(-1);
+                refreshOutliner();
+                markDirty();
+                notify(removed ? tr("%1 (replaced %2 objects)").arg(summary).arg(removed) : summary, 8000);
+            });
+    connect(city_, &CityGeneratorPanel::clearRequested, this, [this](const QString& root) {
+        const int removed = engine::city::replaceCity(scene_, root.toStdString(), {});
+        select(-1);
+        refreshOutliner();
+        markDirty();
+        notify(tr("Removed the town (%1 objects)").arg(removed), 5000);
+    });
+    cityDock_ = new QDockWidget(tr("City generator"), this);
+    cityDock_->setObjectName("cityGenerator");
+    cityDock_->setWidget(city_);
+    addDockWidget(Qt::RightDockWidgetArea, cityDock_);
+    connect(cityDock_, &QDockWidget::visibilityChanged, this, cityOverlay);
+    if (qEnvironmentVariableIsSet("FPS_EDITOR_CITY_GENERATE")) // test hook: open the dock and generate the town
+        QTimer::singleShot(1500, this, [this] {
+            cityDock_->show();
+            cityDock_->raise();
+            city_->generateNow();
+        });
+
     // Scythe-like layout: outliner top right, details (properties, relations, weapons) below it,
     // content browser at the bottom, tools on the left.
     splitDockWidget(outlinerDock, propsDock, Qt::Vertical);
     tabifyDockWidget(propsDock, depsDock);
     tabifyDockWidget(propsDock, weaponsDock);
     tabifyDockWidget(propsDock, environmentDock);
+    tabifyDockWidget(propsDock, cityDock_);
     propsDock->raise();
 
     // Output log: editor messages, Qt warnings and the running game's output.
