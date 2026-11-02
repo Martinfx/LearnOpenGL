@@ -51,6 +51,11 @@ Kevin Lynch (The Image of the City, 1960) popsal, z čeho si lidé skládají ma
 - Věci mají důvod: prošlapaná pěšina od tábora ke studni, odpadky tam, kde se sedělo, saze nad oknem bytu,
   který hořel, zatékání pod děravou střechou, stalkerské značky na cestě. (naše pravidlo, platí od Skrundy)
 - Hráčovy činy mění místo: vyrabovaný obchod, vyklizený tábor. (GMTK o Deus Ex)
+- Rozbitý dům (`tenement(..., ruin=(od, do, patro))`, v ulici `RUINS` v `make_overgrown_street.py`): horní patra
+  zřícená mezi dvěma zlomky délky, zlom se nahoru nepravidelně rozšiřuje a zeď končí zubatými cihlami, ne
+  schodem; stropy visí přes okraj, trčí z nich pruty, střecha má holé krokve, okna u zlomu jsou vyhořelá se sazemi
+  a suť leží v hromadě u fasády i na ulici. Takové domy dávají ulici siluetu (vidět jimi oblohu a vzdálená
+  sídliště) a jsou orientační body; víc než dva tři na ulici z nich udělá kulisu války místo opuštěného města.
 
 ## 4. Jak příroda bere opuštěné město
 

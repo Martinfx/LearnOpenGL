@@ -1,7 +1,9 @@
 # Zone vegetation
 
 Metres, +Y up, base at y = 0, centred on X/Z (see `assets/SCALE.md`). Every model has a `_lod1.glb`
-(about 40 to 60 % of the triangles, textures halved). Foliage materials are **alpha-tested** (`alphaMode MASK`,
+(about 40 to 60 % of the triangles, textures halved). The dense ground cover (grass_clump_a, weed_a/b, nettle_tall_a,
+dandelion_a/c, celandine_b) also has a `_far.glb` of about 10 %: `source/vegthin.py` keeps the biggest whole blades
+and leaves and widens them about their base, so a clump keeps its coverage instead of collapsing into slivers. Foliage materials are **alpha-tested** (`alphaMode MASK`,
 cutoff 0.5, double-sided); render them without back-face culling. Leaf materials have roughness 1 and low specular so cards do not catch sky reflections at grazing angles. Tree foliage cards carry normals that point out
 of the crown, so they light like a volume rather than flat planes.
 

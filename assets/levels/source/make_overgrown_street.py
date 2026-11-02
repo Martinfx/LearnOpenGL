@@ -67,6 +67,8 @@ HOUSES = [('house_a', 36.0, 5, 'st_brick_red', 'pitched', 1), ('house_b', 30.0, 
           ('house_i', 36.0, 7, 'st_plaster_beige', 'flat', 9), ('house_j', 45.0, 8, 'st_brick_red', 'flat', 10),
           ('house_end', 48.0, 9, 'st_brick_patch', 'flat', 11)]
 DEPTH = 14.0
+# shelled houses (second reference): (from, to) of the break as fractions of the length, first storey gone
+RUINS = {'house_c': (0.55, 0.75, 4), 'house_e': (0.2, 0.36, 5), 'house_i': (0.62, 0.8, 4)}
 
 
 def build_models():
@@ -77,7 +79,8 @@ def build_models():
     fixtures.make_sign_atlas(force=True)
     for name, L, fl, skin, roof, seed in HOUSES:
         for lod in (0, 1):
-            m = tenement.tenement(L, fl, DEPTH, seed=seed, lod=lod, skin=skin, roof=roof)
+            m = tenement.tenement(L, fl, DEPTH, seed=seed, lod=lod, skin=skin, roof=roof,
+                                  ruin=RUINS.get(name))
             fn = f'{name}.glb' if lod == 0 else f'{name}_lod1.glb'
             glb.write_glb(os.path.join(out, fn), m, tex_rel_dir='../textures', name=name)
         print(name, m.triangles(), 'tris (lod1)')
@@ -137,6 +140,7 @@ def build():
     houses = []                 # (x0, z0, x1, z1) footprints, for the ground and the vegetation
     order = [h[0] for h in HOUSES if h[0] != 'house_end']
     fronts = []                 # (side, facade x, south corner z) of the houses along the playable street
+    ruins = []                  # (facade x, z from, z to) of the shelled houses: their rubble spills onto the street
 
     def row(side, z_from, z_to, start):
         """Houses along x = side * FACADE from z_from down to z_to (z_from > z_to); facade towards the axis."""
@@ -157,6 +161,9 @@ def build():
                      ST + name + '.glb', cx, WALK, cz, 90.0 if side < 0 else -90.0, group='Houses',
                      lod=(ST + name + '_lod1.glb', 70), cull=600)
             houses.append((cx - DEPTH / 2, cz - L / 2, cx + DEPTH / 2, cz + L / 2, name))
+            if name in RUINS:           # where the break is, along the street (local +x runs along side * z)
+                za, zb = sorted(cz + side * (-L / 2 + f * L) for f in RUINS[name][:2])
+                ruins.append((side * (FACADE + setback), za, zb))
             if NORTH_END - 10 < cz < SOUTH_END + 10:
                 fronts.append((side, side * (FACADE + setback), cz + L / 2))
             z -= L - 0.2           # 20 cm overlap: no sunlit slit between the party walls
@@ -329,7 +336,7 @@ def build():
     S = splat(nz, reclaim_pts)
 
     # ------------------------------------------------------------------ vegetation (terrain foliage)
-    inst, types = vegetation(nz, rng, S, H, reclaim_pts, lamps, wrecks)
+    inst, types = vegetation(nz, rng, S, H, reclaim_pts, lamps, wrecks, ruins)
 
     # ------------------------------------------------------------------ the street beyond the ground: trees and bushes
     # Past the north barricade the street runs on for 140 m to the house at its end; the terrain stops at z = -195,
@@ -361,7 +368,7 @@ def build():
     # a storm coming (martin's second reference): heavy dark clouds with a pale band low over the horizon, grey
     # diffuse light with weak shadows, mist that swallows the far blocks, the road wet from the last shower
     env = {'sun_color': '0.82 0.86 0.92', 'sun_intensity': '1.5', 'sky_zenith': '0.085 0.095 0.11', 'sky_horizon': '0.46 0.48 0.48',
-           'ground_color': '0.2 0.2 0.18', 'cloud_cover': '0.74', 'atmosphere': '0.6', 'atmosphere_haze': '3', 'ambient_intensity': '0.95', 'fog_color': '0.36 0.39 0.4',
+           'ground_color': '0.2 0.2 0.18', 'cloud_cover': '0.74', 'atmosphere': '0.6', 'atmosphere_haze': '3', 'sky_occlusion': '0.8', 'ambient_intensity': '0.95', 'fog_color': '0.36 0.39 0.4',
            'fog_density': '0.011', 'fog_height': '6', 'fog_height_falloff': '0.012', 'fog_sun_scatter': '0.25',
            'exposure': '1.05', 'bloom_intensity': '0.05', 'bloom_threshold': '1.2', 'ssao_radius': '0.8', 'ssao_intensity': '1.4',
            'shadow_distance': '110', 'saturation': '0.72', 'contrast': '1.12', 'tint': '0.96 1 1.02', 'vignette': '0.32',
@@ -505,15 +512,15 @@ FOLIAGE = {
     'grass_patch': _f(SK + 'veg/grass_fresh.glb', 0.25, cull=70, far=0.5, lods=[(SK + 'veg/grass_fresh_lod1.glb', 10), (SK + 'veg/grass_fresh_far.glb', 24)]),
     'grass_tall_a': _f(V + 'grass_tall_a.glb', lods=[(V + 'grass_tall_a_lod1.glb', 10)], cull=55),
     'grass_tall_b': _f(V + 'grass_tall_b.glb', lods=[(V + 'grass_tall_b_lod1.glb', 10)], cull=55),
-    'grass_clump': _f(V + 'grass_clump_a.glb', lods=[(V + 'grass_clump_a_lod1.glb', 10)], cull=45),
+    'grass_clump': _f(V + 'grass_clump_a.glb', lods=[(V + 'grass_clump_a_lod1.glb', 10), (V + 'grass_clump_a_far.glb', 22)], cull=45),
     'grass_short': _f(V + 'grass_short_a.glb', lods=[(V + 'grass_short_a_lod1.glb', 10)], cull=40),
-    'weed_a': _f(V + 'weed_a.glb', lods=[(V + 'weed_a_lod1.glb', 10)], cull=45),
-    'weed_b': _f(V + 'weed_b.glb', lods=[(V + 'weed_b_lod1.glb', 10)], cull=45),
-    'nettle': _f(V + 'nettle_tall_a.glb', lods=[(V + 'nettle_tall_a_lod1.glb', 10)], cull=50),
-    'dandelion_a': _f(V + 'dandelion_a.glb', lods=[(V + 'dandelion_a_lod1.glb', 8)], cull=22),
-    'dandelion_c': _f(V + 'dandelion_c.glb', lods=[(V + 'dandelion_c_lod1.glb', 8)], cull=22),
+    'weed_a': _f(V + 'weed_a.glb', lods=[(V + 'weed_a_lod1.glb', 10), (V + 'weed_a_far.glb', 22)], cull=45),
+    'weed_b': _f(V + 'weed_b.glb', lods=[(V + 'weed_b_lod1.glb', 10), (V + 'weed_b_far.glb', 22)], cull=45),
+    'nettle': _f(V + 'nettle_tall_a.glb', lods=[(V + 'nettle_tall_a_lod1.glb', 10), (V + 'nettle_tall_a_far.glb', 22)], cull=50),
+    'dandelion_a': _f(V + 'dandelion_a.glb', lods=[(V + 'dandelion_a_lod1.glb', 8), (V + 'dandelion_a_far.glb', 14)], cull=22),
+    'dandelion_c': _f(V + 'dandelion_c.glb', lods=[(V + 'dandelion_c_lod1.glb', 8), (V + 'dandelion_c_far.glb', 14)], cull=22),
     'celandine_a': _f(V + 'celandine_a.glb', lods=[(V + 'celandine_a_lod1.glb', 8)], cull=22),
-    'celandine_b': _f(V + 'celandine_b.glb', lods=[(V + 'celandine_b_lod1.glb', 8)], cull=22),
+    'celandine_b': _f(V + 'celandine_b.glb', lods=[(V + 'celandine_b_lod1.glb', 8), (V + 'celandine_b_far.glb', 14)], cull=22),
     'shrub_a': _f(V + 'bush_street_b.glb', 0.03, cull=160, shadows=1, far=0.8, lods=[(V + 'bush_street_b_lod1.glb', 25)]),
     'shrub_b': _f(V + 'bush_street_a.glb', 0.03, cull=160, shadows=1, far=0.8, lods=[(V + 'bush_street_a_lod1.glb', 25)]),
     'bush_dense': _f(V + 'bush_street_c.glb', 0.02, cull=160, shadows=1, far=0.8, lods=[(V + 'bush_street_c_lod1.glb', 25)]),
@@ -538,7 +545,7 @@ for _k, _c in DEBRIS.items():
     FOLIAGE['deb_' + _k] = _f(SK + f'debris_{_k}.glb', 0.02, cull=_c, far=0.7, shadows=1 if _k in ('brick_heap', 'sheet', 'planks') else 0)
 
 
-def vegetation(nz, rng, S, H, reclaim_pts, lamps, wrecks):
+def vegetation(nz, rng, S, H, reclaim_pts, lamps, wrecks, ruins=()):
     """Plants from the splat (grass where the ground is soil or grass) and the reclaim field: crack grass and weeds in
     the joints, tall grass and flowers where the slabs are gone, shrubs and young trees where nature has had longest."""
     types, inst = {}, []
@@ -694,6 +701,18 @@ def vegetation(nz, rng, S, H, reclaim_pts, lamps, wrecks):
         if key == 'brick_heap' and not free(x, z, 0.8):
             continue
         put('deb_' + key, x, z, rng.uniform(0.8, 1.3), sink=0.0)
+    rrng = random.Random(77)    # own stream: everything else stays where it was
+    for fx, za, zb in ruins:    # the collapse: brick heaps, slabs, planks and glass in front of the break
+        for _ in range(int((zb - za + 4) * 2.2)):
+            z = rrng.uniform(za - 2, zb + 2)
+            x = fx - math.copysign(rrng.random() ** 1.3 * 6.5, fx)
+            if not street(x, z):
+                continue
+            key = rrng.choice(('brick_heap', 'brick_heap', 'concrete_chunks', 'silicate_bricks', 'plaster_chunks',
+                               'planks', 'glass_shards', 'sheet'))
+            if 'deb_' + key not in types:
+                types['deb_' + key] = len(types)
+            inst.append((x, height(x, z), z, rrng.uniform(0, 360), rrng.uniform(0.9, 1.6), types['deb_' + key]))
     for (z_a, z_b, count) in ((Z0 + 3, NORTH_END - 8, 34), (SOUTH_END + 5, Z0 + SIZE - 3, 6)):
         planted = 0
         for _ in range(8000):
