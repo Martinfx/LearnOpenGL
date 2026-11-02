@@ -122,7 +122,7 @@ void GameHud::draw(engine::Ui2D& ui, int width, int height, const HudState& s) c
     // Weapon and ammo: "AK-74   23 / 90" (magazine / rounds of its type left), reload progress under it.
     {
         const float y = pos.y + text * 2.2f;
-        ui.text(s.weapon, {x, y + text * 0.15f}, std::round(text * 0.85f), dim, true);
+        ui.text(engine::localize(s.weapon), {x, y + text * 0.15f}, std::round(text * 0.85f), dim, true);
         if (!s.melee) {
             char mag[16], cur[16];
             std::snprintf(cur, sizeof cur, "%d", s.ammo);

@@ -1,10 +1,10 @@
 # Quest (editor: Assets > Quests). Stages run in order; dialogs and scripts can jump.
 id "camp_stash"
-title "Zásoby z nemocnice"
-description "Hřiša v táboře na seřaďovacím nádraží schoval před bouří zásoby v nemocnici ve městě. Pak ho od nich zahnali bandité."
+title "@quest.camp_stash.title"
+description "@quest.camp_stash.description"
 giver "Stalker Grisha"
-stage "find" "Najdi Hřišovu skrýš v nemocnici (horní patro, oddělení na severní straně)" "Hospital stash"
-stage "report" "Přines zásoby Hřišovi do tábora" "Stalker Grisha"
+stage "find" "@quest.camp_stash.find" "Hospital stash"
+stage "report" "@quest.camp_stash.report" "Stalker Grisha"
 reward ammo "5.45x39" 60
 reward medkits 1
 reward money 800

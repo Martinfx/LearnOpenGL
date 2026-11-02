@@ -1,4 +1,5 @@
 #pragma once
+#include <engine/Localization.h>
 #include <filesystem>
 #include <map>
 #include <string>
@@ -40,6 +41,9 @@ private:
 
 Localization& localization();
 inline std::string tr(std::string_view key) { return localization().text(key); }
+// Data text shown to the player (item, weapon, dialog, quest, level names): "@key" is
+// looked up in the current language, anything else is shown as written.
+inline std::string localize(const std::string& text) { return localization().localize(text); }
 inline std::string trn(std::string_view key, long n) { return localization().plural(key, n); }
 // Replaces {0}, {1}, ... with the arguments.
 std::string formatText(std::string text, const std::vector<std::string>& args);

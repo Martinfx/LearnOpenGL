@@ -2,6 +2,7 @@
 #include "GameArtifacts.h"
 #include "GameAudio.h"
 
+#include <engine/Localization.h>
 #include <engine/Lights.h>
 #include <engine/Log.h>
 #include <engine/Physics.h>
@@ -99,7 +100,7 @@ void GameArtifacts::setLying(std::vector<Lying> lying)
 std::string GameArtifacts::name(const std::string& id) const
 {
     const engine::ItemDef* d = items_ ? items_->find(engine::ItemDef::Kind::Artifact, id) : nullptr;
-    return d ? d->name : id;
+    return d ? engine::localize(d->name) : id;
 }
 
 void GameArtifacts::update(float dt, glm::vec3 eye)

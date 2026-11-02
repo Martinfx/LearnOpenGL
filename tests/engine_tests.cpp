@@ -602,6 +602,30 @@ void testLocalization()
         if (sound.caption[0] == '@' && !shipped.texts.count(sound.caption.substr(1)))
             noCaption.push_back(entry.path().filename().string() + ": " + sound.caption);
     }
+    // "@key" texts in the game data (dialogs, quests, items, weapons, levels) exist in cs.strings.
+    std::vector<std::string> noDataKey;
+    for (const char* folder : {"dialogs", "quests", "weapons", "levels"})
+        for (const auto& entry : fs::directory_iterator(fs::path(ENGINE_TEST_ASSETS) / folder)) {
+            const std::string ext = entry.path().extension().string();
+            if (!entry.is_regular_file() || (ext != ".dialog" && ext != ".quest" && ext != ".weapon" && ext != ".level"))
+                continue;
+            std::ifstream in(entry.path());
+            const std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+            for (std::size_t at = text.find("\"@"); at != std::string::npos; at = text.find("\"@", at + 1)) {
+                const std::size_t end = text.find('"', at + 1);
+                const std::string key = text.substr(at + 2, end - at - 2);
+                if (!key.empty() && !shipped.texts.count(key))
+                    noDataKey.push_back(entry.path().filename().string() + ": @" + key);
+            }
+        }
+    {
+        engine::ItemCatalog items;
+        engine::loadItems(items, ENGINE_TEST_ASSETS "/items.cfg");
+        for (const engine::ItemDef& d : items.items)
+            if (!d.name.empty() && d.name[0] == '@' && !shipped.texts.count(d.name.substr(1)))
+                noDataKey.push_back("items.cfg: " + d.name);
+    }
+    check(noDataKey.empty(), "\"@key\" texts of the data exist in cs.strings" + (noDataKey.empty() ? std::string() : ": " + noDataKey.front()));
     check(captioned > 10 && noCaption.empty(),
           "sound captions exist in cs.strings" + (noCaption.empty() ? std::string() : ": " + noCaption.front()));
 }
@@ -1582,9 +1606,9 @@ void testQuestsAndDialogs()
         return std::vector<engine::DialogAction>{};
     };
     check(talk.start(grisha, quests) && talk.node()->id == "first", "first meeting: the greeting");
-    choose("Co se tu");
+    choose("@dialog.grisha.first.1"); // "Co se tu dá dělat?" (texts are keys of assets/text)
     check(talk.node() && talk.node()->id == "work" && quests.flag("met_grisha"), "asks for work; the meeting is remembered");
-    choose("Platí");
+    choose("@dialog.grisha.work.1");
     check(!talk.active() && quests.status("camp_stash") == engine::Quests::Status::Active && quests.stage("camp_stash") == "find",
           "the quest starts at its first stage");
     auto events = quests.takeEvents();
@@ -1593,12 +1617,12 @@ void testQuestsAndDialogs()
     talk.end();
     check(quests.advance("camp_stash") && quests.stage("camp_stash") == "report", "the stash found: report back");
     check(talk.start(grisha, quests) && talk.node()->id == "found", "back at the camp: the reward line");
-    choose("Rádo");
+    choose("@dialog.grisha.found.1");
     check(quests.status("camp_stash") == engine::Quests::Status::Completed && quests.is("camp_stash", "done"), "completed");
     check(talk.start(grisha, quests) && talk.node()->id == "start", "later: the ordinary greeting");
     bool offersWork = false;
     for (int i : talk.choices())
-        offersWork = offersWork || talk.node()->choices[static_cast<std::size_t>(i)].text.starts_with("Máš");
+        offersWork = offersWork || talk.node()->choices[static_cast<std::size_t>(i)].text == "@dialog.grisha.start.1"; // "Máš pro mě nějakou práci?"
     check(!offersWork, "no job offered again once it is done");
     // Saved games.
     const std::vector<std::string> saved = quests.save();

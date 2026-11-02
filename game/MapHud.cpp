@@ -205,9 +205,9 @@ void MapHud::drawFullMap(engine::Ui2D& ui, int width, int height, glm::vec3 play
         std::vector<std::pair<std::string, glm::vec4>> rows; // text, colour (titles coloured, stage text plain)
         for (const QuestView& q : quests) {
             const glm::vec4 c = q.active ? kQuest : (q.failed ? glm::vec4(0.7f, 0.35f, 0.3f, 1.0f) : glm::vec4(0.55f, 0.55f, 0.5f, 1.0f));
-            rows.push_back({(q.active ? std::string() : engine::tr(q.failed ? "map.quest_failed" : "map.quest_done") + " ") + q.title, c});
+            rows.push_back({(q.active ? std::string() : engine::tr(q.failed ? "map.quest_failed" : "map.quest_done") + " ") + engine::localize(q.title), c});
             if (q.active)
-                for (const std::string& l : wrap(q.stage, textSize * 0.9f))
+                for (const std::string& l : wrap(engine::localize(q.stage), textSize * 0.9f))
                     rows.push_back({"  " + l, kText});
             rows.push_back({std::string(), kText});
         }

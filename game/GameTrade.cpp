@@ -101,20 +101,20 @@ std::vector<GameTrade::Row> GameTrade::rows(const Inventory& inv, const std::vec
         r.index = static_cast<int>(i);
         if (s.kind == Stock::Medkit) {
             const engine::ItemDef* d = items.find(engine::ItemDef::Kind::Medkit);
-            r.label = d ? d->name : engine::tr("item.medkit");
+            r.label = d ? engine::localize(d->name) : engine::tr("item.medkit");
             r.detail = "× " + std::to_string(s.count);
             r.price = engine::buyPrice(d ? d->price : 250, markup_);
         } else if (s.kind == Stock::Ammo) {
             const engine::ItemDef* d = items.find(engine::ItemDef::Kind::Ammo, s.id);
             const int lot = std::min(kAmmoLot, s.count);
-            r.label = (d ? d->name : s.id) + " (" + std::to_string(lot) + " ks)";
+            r.label = engine::trf("trade.lot", d ? engine::localize(d->name) : s.id, std::to_string(lot));
             r.detail = "× " + std::to_string(s.count);
             r.price = engine::buyPrice((d ? d->price : 3) * lot, markup_);
         } else if (s.kind == Stock::Weapon) {
             const engine::WeaponSettings* w = weaponInfo(s.id);
             if (!w)
                 continue;
-            r.label = w->name;
+            r.label = engine::localize(w->name);
             r.detail = "× " + std::to_string(s.count);
             r.price = engine::buyPrice(w->price, markup_);
             const std::filesystem::path abs = (assetDir_ / std::filesystem::path(std::u8string(s.id.begin(), s.id.end()))).lexically_normal();
@@ -126,14 +126,14 @@ std::vector<GameTrade::Row> GameTrade::rows(const Inventory& inv, const std::vec
             const engine::ItemDef* d = items.find(engine::ItemDef::Kind::Artifact, s.id);
             if (!d)
                 continue;
-            r.label = d->name;
+            r.label = engine::localize(d->name);
             r.detail = engine::trf("trade.artifact_count", std::to_string(s.count));
             r.price = engine::buyPrice(d->price, markup_);
         } else {
             const engine::ItemDef* d = items.find(engine::ItemDef::Kind::Armor, s.id);
             if (!d)
                 continue;
-            r.label = d->name;
+            r.label = engine::localize(d->name);
             r.detail = engine::trf("trade.protection", percent(d->protection));
             r.price = engine::buyPrice(d->price, markup_);
         }
@@ -146,7 +146,7 @@ std::vector<GameTrade::Row> GameTrade::rows(const Inventory& inv, const std::vec
         r.action = 2;
         r.index = static_cast<int>(i);
         r.key = "weapon";
-        r.label = weapons[i].settings.name;
+        r.label = engine::localize(weapons[i].settings.name);
         r.detail = i == current ? engine::tr("trade.in_hand") : engine::trf("trade.condition", percent(weapons[i].condition));
         r.price = engine::sellPrice(weapons[i].settings.price, buyRate_, weapons[i].condition);
         r.enabled = i != current && weapons.size() > 1;
@@ -160,7 +160,7 @@ std::vector<GameTrade::Row> GameTrade::rows(const Inventory& inv, const std::vec
         Row r;
         r.action = 2;
         r.detail = "× " + std::to_string(rounds);
-        r.label = (d ? d->name : type) + " (" + std::to_string(lot) + " ks)";
+        r.label = engine::trf("trade.lot", d ? engine::localize(d->name) : type, std::to_string(lot));
         r.price = engine::sellPrice((d ? d->price : 3) * lot, buyRate_);
         r.key = "ammo:" + type;
         out.push_back(r);
@@ -170,7 +170,7 @@ std::vector<GameTrade::Row> GameTrade::rows(const Inventory& inv, const std::vec
         Row r;
         r.action = 2;
         r.key = "medkit";
-        r.label = d ? d->name : engine::tr("item.medkit");
+        r.label = d ? engine::localize(d->name) : engine::tr("item.medkit");
         r.detail = "× " + std::to_string(inv.medkits);
         r.price = engine::sellPrice(d ? d->price : 250, buyRate_);
         out.push_back(r);
@@ -179,7 +179,7 @@ std::vector<GameTrade::Row> GameTrade::rows(const Inventory& inv, const std::vec
         Row r;
         r.action = 2;
         r.key = "armor";
-        r.label = d->name;
+        r.label = engine::localize(d->name);
         r.detail = engine::trf("trade.worn", percent(inv.armorCondition));
         r.price = engine::sellPrice(d->price, buyRate_, inv.armorCondition);
         out.push_back(r);
@@ -192,7 +192,7 @@ std::vector<GameTrade::Row> GameTrade::rows(const Inventory& inv, const std::vec
         r.action = 2;
         r.key = "artifact";
         r.index = static_cast<int>(a);
-        r.label = d->name;
+        r.label = engine::localize(d->name);
         r.detail = static_cast<int>(a) < items.beltSlots ? engine::tr("trade.artifact_belt") : engine::tr("trade.artifact");
         r.price = engine::sellPrice(d->price, buyRate_);
         out.push_back(r);
@@ -201,7 +201,7 @@ std::vector<GameTrade::Row> GameTrade::rows(const Inventory& inv, const std::vec
     if (repairs_ && current < weapons.size() && weapons[current].condition < 0.995f) {
         Row r;
         r.action = 3;
-        r.label = engine::trf("trade.repair", weapons[current].settings.name, percent(weapons[current].condition));
+        r.label = engine::trf("trade.repair", engine::localize(weapons[current].settings.name), percent(weapons[current].condition));
         r.price = std::max(1, engine::repairPrice(weapons[current].settings.price, weapons[current].condition));
         r.enabled = inv.money >= r.price;
         out.push_back(r);
@@ -210,7 +210,7 @@ std::vector<GameTrade::Row> GameTrade::rows(const Inventory& inv, const std::vec
         d && inv.armorCondition < 0.995f) {
         Row r;
         r.action = 4;
-        r.label = engine::trf("trade.repair", d->name, percent(inv.armorCondition));
+        r.label = engine::trf("trade.repair", engine::localize(d->name), percent(inv.armorCondition));
         r.price = std::max(1, engine::repairPrice(d->price, inv.armorCondition));
         r.enabled = inv.money >= r.price;
         out.push_back(r);

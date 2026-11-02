@@ -1,42 +1,42 @@
 # Dialog (editor: Assets > Dialogs). The talk starts at the first node whose conditions hold.
-speaker "Hřiša"
+speaker "@dialog.grisha.speaker"
 
 node "first"
   if not flag "met_grisha"
-  text "Další, co přežil cestu po dálnici? Sedni si k ohni, tady tě nikdo střílet nebude. Já jsem Hřiša."
+  text "@dialog.grisha.first"
   do set_flag "met_grisha"
-  choice "Co se tu dá dělat?" "work"
-  choice "Prodáváš něco?" ""
+  choice "@dialog.grisha.first.1" "work"
+  choice "@dialog.grisha.first.2" ""
     do trade
-  choice "Jen se ohřeju. Měj se." ""
+  choice "@dialog.grisha.first.3" ""
 
 node "found"
   if quest "camp_stash" "report"
-  text "No ne, ty jsi to fakt přinesl? I s obvazy? Tady máš za to náboje, ty se ti budou hodit víc než mně."
-  choice "Rádo se stalo." ""
+  text "@dialog.grisha.found"
+  choice "@dialog.grisha.found.1" ""
     do complete_quest "camp_stash"
 
 node "waiting"
   if quest "camp_stash" "find"
-  text "Nemocnice je ve městě na východ odtud. Horní patro, oddělení na severní straně. Dej pozor na bandity u cihelny."
-  choice "Už jdu." ""
+  text "@dialog.grisha.waiting"
+  choice "@dialog.grisha.waiting.1" ""
 
 node "start"
-  text "Zase ty. Co potřebuješ?"
-  choice "Máš pro mě nějakou práci?" "work"
+  text "@dialog.grisha.start"
+  choice "@dialog.grisha.start.1" "work"
     if quest "camp_stash" none
-  choice "Co je nového v Zóně?" "news"
-  choice "Ukaž, co máš na prodej." ""
+  choice "@dialog.grisha.start.2" "news"
+  choice "@dialog.grisha.start.3" ""
     do trade
-  choice "Nic, měj se." ""
+  choice "@dialog.grisha.start.4" ""
 
 node "work"
-  text "Práce by byla. Před poslední bouří jsem schoval zásoby v nemocnici ve městě, horní patro. Pak mě odtamtud vyhnali bandité. Přines mi je a nebudeš litovat."
-  choice "Platí, dojdu tam." ""
+  text "@dialog.grisha.work"
+  choice "@dialog.grisha.work.1" ""
     if quest "camp_stash" none
     do start_quest "camp_stash"
-  choice "Teď ne." ""
+  choice "@dialog.grisha.work.2" ""
 
 node "news"
-  text "Psi se zase drží severně od tábora a bandité se usadili u cihelny. A když uslyšíš sirénu, nehraj si na hrdinu a zalez pod střechu."
-  choice "Díky za radu." "start"
+  text "@dialog.grisha.news"
+  choice "@dialog.grisha.news.1" "start"

@@ -768,7 +768,7 @@ int main(int argc, char** argv)
         const engine::LoadingScreen look = engine::readLoadingScreen(levelPath);
         int imageW = 0, imageH = 0;
         const unsigned background = look.image.empty() ? 0u : engine::Ui2D::loadImage(look.image, &imageW, &imageH);
-        const std::string title = look.title.empty() ? levelPath.stem().string() : look.title;
+        const std::string title = look.title.empty() ? levelPath.stem().string() : engine::localize(look.title);
         levelTitle = title;
         engine::LoadProgress progress;
         std::atomic<bool> finished{false};
@@ -828,7 +828,7 @@ int main(int argc, char** argv)
             const float barH = std::max(6.0f, std::round(H * 0.012f));
             ui.text(title, {margin, barY - titleSize * 1.55f - textSize * 1.4f}, titleSize, bone, true);
             if (!look.hint.empty())
-                ui.text(look.hint, {margin, barY - textSize * 1.9f}, textSize, dim);
+                ui.text(engine::localize(look.hint), {margin, barY - textSize * 1.9f}, textSize, dim);
             // Progress bar: frame, fill and a moving highlight at its end.
             const float barW = W - 2.0f * margin;
             fraction = std::clamp(fraction, 0.0f, 1.0f);
@@ -2221,17 +2221,17 @@ int main(int argc, char** argv)
                     continue;
                 std::string line;
                 if (ev.kind == engine::Quests::Event::Started) {
-                    line = engine::trf("quest.new", q->title);
+                    line = engine::trf("quest.new", engine::localize(q->title));
                 } else if (ev.kind == engine::Quests::Event::Stage) {
                     const engine::QuestStage* st = q->stage(quests.stage(ev.quest));
-                    line = q->title + ": " + (st ? st->text : std::string());
+                    line = engine::localize(q->title) + ": " + (st ? engine::localize(st->text) : std::string());
                 } else if (ev.kind == engine::Quests::Event::Completed) {
-                    line = engine::trf("quest.done", q->title);
+                    line = engine::trf("quest.done", engine::localize(q->title));
                     for (const auto& r : q->rewards)
                         if (const std::string got = giveReward(r); !got.empty())
                             line += ", " + got;
                 } else {
-                    line = engine::trf("quest.failed", q->title);
+                    line = engine::trf("quest.failed", engine::localize(q->title));
                 }
                 LOG_INFO("quests", "%s", line.c_str());
                 news += (news.empty() ? "" : "  |  ") + line;
@@ -2782,7 +2782,7 @@ int main(int argc, char** argv)
                         continue;
                     QuestView v;
                     v.title = q->title;
-                    v.description = q->description;
+                    v.description = engine::localize(q->description);
                     v.active = quests.status(*id) == engine::Quests::Status::Active;
                     v.failed = quests.status(*id) == engine::Quests::Status::Failed;
                     if (const engine::QuestStage* st = v.active ? q->stage(quests.stage(*id)) : nullptr) {
@@ -2801,9 +2801,9 @@ int main(int argc, char** argv)
                     const float kg = carriedWeight(inventory, weapons, items);
                     std::ostringstream st;
                     st << inventory.money << " RU   " << std::fixed << std::setprecision(1) << kg << " / " << items.carryFree << " kg   "
-                       << weapons[current].settings.name << " " << static_cast<int>(std::lround(weapons[current].condition * 100.0f)) << " %";
+                       << engine::localize(weapons[current].settings.name) << " " << static_cast<int>(std::lround(weapons[current].condition * 100.0f)) << " %";
                     if (const engine::ItemDef* ar = inventory.armor.empty() ? nullptr : items.find(engine::ItemDef::Kind::Armor, inventory.armor))
-                        st << "   " << ar->name << " " << static_cast<int>(std::lround(inventory.armorCondition * 100.0f)) << " %";
+                        st << "   " << engine::localize(ar->name) << " " << static_cast<int>(std::lround(inventory.armorCondition * 100.0f)) << " %";
                     if (!inventory.artifacts.empty()) {
                         st << "   " << engine::tr("hud.belt") << ":";
                         for (std::size_t a = 0; a < inventory.artifacts.size(); ++a)

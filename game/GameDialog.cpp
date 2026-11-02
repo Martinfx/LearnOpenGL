@@ -86,10 +86,10 @@ void GameDialog::draw(engine::Ui2D& ui, int width, int height, int hover) const
     const glm::vec4 frame(0.05f, 0.055f, 0.045f, 0.88f), bone(0.88f, 0.84f, 0.74f, 1.0f), amber(0.93f, 0.62f, 0.2f, 1.0f),
         dim(0.6f, 0.6f, 0.55f, 1.0f);
 
-    const std::vector<std::string> said = wrapText(ui, node->text, text, inner);
+    const std::vector<std::string> said = wrapText(ui, engine::localize(node->text), text, inner);
     std::vector<std::string> answers;
     for (int index : session_.choices())
-        answers.push_back(node->choices[static_cast<std::size_t>(index)].text);
+        answers.push_back(engine::localize(node->choices[static_cast<std::size_t>(index)].text));
     if (answers.empty())
         answers.push_back(engine::tr("dialog.leave"));
     std::vector<std::vector<std::string>> answerLines;
@@ -104,7 +104,7 @@ void GameDialog::draw(engine::Ui2D& ui, int width, int height, int hover) const
     ui.rect(pos, {panelW, panelH}, frame);
     ui.rect(pos, {panelW, std::max(2.0f, text * 0.12f)}, amber);
     float y = pos.y + text * 0.8f;
-    ui.text(speaker_, {pos.x + text, y}, text, amber, true);
+    ui.text(engine::localize(speaker_), {pos.x + text, y}, text, amber, true);
     y += text * 1.4f;
     for (const std::string& line : said) {
         ui.text(line, {pos.x + text, y}, text, bone);
