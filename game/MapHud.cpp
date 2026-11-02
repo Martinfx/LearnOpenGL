@@ -120,7 +120,7 @@ void MapHud::drawMinimap(engine::Ui2D& ui, int width, int height, glm::vec3 play
     north /= std::max(std::abs(north.x), std::abs(north.y));
     const float textSize = std::round(side * 0.09f);
     const glm::vec2 n = center + north * (side * 0.5f - textSize * 0.6f);
-    ui.text("N", n - glm::vec2(ui.textWidth("N", textSize, true) * 0.5f, textSize * 0.55f), textSize, kText, true);
+    ui.text(engine::tr("map.north"), n - glm::vec2(ui.textWidth(engine::tr("map.north"), textSize, true) * 0.5f, textSize * 0.55f), textSize, kText, true);
     char coords[48];
     std::snprintf(coords, sizeof coords, "%.0f / %.0f", player.x, player.z);
     ui.text(coords, pos + glm::vec2(side - ui.textWidth(coords, textSize * 0.8f) - 4.0f, side + 6.0f), textSize * 0.8f, kText);
@@ -230,5 +230,5 @@ void MapHud::drawFullMap(engine::Ui2D& ui, int width, int height, glm::vec3 play
     ui.text("PDA", pos + glm::vec2(0.0f, -textSize * 2.2f), textSize * 1.4f, kText, true);
     const std::string help = engine::tr("map.close_hint");
     ui.text(help, pos + glm::vec2(side - ui.textWidth(help, textSize), -textSize * 1.9f), textSize, kText);
-    ui.text("N", pos + glm::vec2(side * 0.5f - textSize * 0.4f, 4.0f), textSize, kText, true);
+    ui.text(engine::tr("map.north"), pos + glm::vec2(side * 0.5f - textSize * 0.4f, 4.0f), textSize, kText, true);
 }

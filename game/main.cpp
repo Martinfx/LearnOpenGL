@@ -841,22 +841,25 @@ int main(int argc, char** argv)
             char percent[16];
             std::snprintf(percent, sizeof percent, "%d %%", static_cast<int>(fraction * 100.0f + 0.5f));
             ui.text(percent, {margin + barW - ui.textWidth(percent, textSize, true), barY + barH + textSize * 0.5f}, textSize, bone, true);
-            ui.text("Loading " + step, {margin, barY + barH + textSize * 0.5f}, textSize, dim);
+            ui.text(engine::trf("loading.step", step), {margin, barY + barH + textSize * 0.5f}, textSize, dim);
             ui.end();
             glfwSwapBuffers(window);
             glfwPollEvents(); // the window stays responsive (moving, resizing)
         };
         while (!finished)
-            drawLoading(0.85f * progress.fraction(), progress.step());
+            drawLoading(0.85f * progress.fraction(), [&] { // engine steps by name, else a file name
+                const std::string step = progress.step();
+                return step == "level" ? engine::tr("loading.level") : step == "physics" ? engine::tr("loading.physics") : step;
+            }());
         loader.join();
         if (!loaded)
             LOG_ERROR("level", "%s, using the built-in level", loadError.c_str());
         std::size_t cursor = 0;
         for (float uploaded = 0.0f; uploaded < 1.0f;) {
             uploaded = renderer.preload(scene, cursor, 12.0, scene.playerStart); // full textures near the start
-            drawLoading(0.85f + 0.15f * uploaded, "textures to the GPU");
+            drawLoading(0.85f + 0.15f * uploaded, engine::tr("loading.textures"));
         }
-        drawLoading(1.0f, "map");
+        drawLoading(1.0f, engine::tr("loading.map"));
         map.init(renderer, scene);
         LOG_INFO("level", "%s loaded in %.1f s", levelPath.filename().string().c_str(), glfwGetTime() - loadStart);
 #ifndef NDEBUG
