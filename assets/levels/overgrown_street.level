@@ -85,16 +85,22 @@ foliage_type "../models/zone/vegetation/birch_young.glb" 0.03 0.85 1.15 220 0 0 
 foliage_lod "../models/zone/vegetation/birch_young_lod1.glb" 35
 foliage_type "../models/zone/vegetation/broadleaf_young.glb" 0.03 0.85 1.15 300 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
 foliage_lod "../models/zone/vegetation/broadleaf_young_lod1.glb" 40
-foliage_type "../models/zone/vegetation/broadleaf_b.glb" 0.03 0.85 1.15 400 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/broadleaf_b_lod1.glb" 45
-foliage_impostor 120
 foliage_type "../models/zone/vegetation/birch_a.glb" 0.03 0.85 1.15 400 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
 foliage_lod "../models/zone/vegetation/birch_a_lod1.glb" 45
 foliage_impostor 120
+foliage_type "../models/zone/vegetation/ash_b.glb" 0.03 0.85 1.15 400 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/ash_b_lod1.glb" 45
+foliage_impostor 120
 foliage_type "../models/zone/vegetation/sapling_b.glb" 0.03 0.85 1.15 220 0 0 1 1 1 0.15 1 1 1 1 1 1 1 1
 foliage_lod "../models/zone/vegetation/sapling_b_lod1.glb" 35
-foliage_type "../models/zone/vegetation/broadleaf_a.glb" 0.03 0.85 1.15 400 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/broadleaf_a_lod1.glb" 45
+foliage_type "../models/zone/vegetation/maple_b.glb" 0.03 0.85 1.15 400 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/maple_b_lod1.glb" 45
+foliage_impostor 120
+foliage_type "../models/zone/vegetation/maple_a.glb" 0.03 0.85 1.15 400 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/maple_a_lod1.glb" 45
+foliage_impostor 120
+foliage_type "../models/zone/vegetation/ash_a.glb" 0.03 0.85 1.15 400 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../models/zone/vegetation/ash_a_lod1.glb" 45
 foliage_impostor 120
 loading_title "Почтовая улица"
 loading_hint "Projdi ulicí na sever, k domu na jejím konci."
@@ -109,1764 +115,1764 @@ group "Plates" "Houses"
 group "Far" ""
 box "Far street ground" 0 -0.06 -265 140 0.1 150 0.36 0.37 0.33
   parent "Far"
-  id d1a38f3bc3e293ce
+  id 11ed5a771969a6c6
 model "House A" "../models/zone/street/house_a.glb" -14.8 0.15 157
   parent "Houses"
-  id 275592dab90639e9
+  id 402b3d7b18f54a0d
   transform 0 90 0 1
   lod "../models/zone/street/house_a_lod1.glb" 70
   cull_distance 600
 model "House B" "../models/zone/street/house_b.glb" -15 0.15 124
   parent "Houses"
-  id bda91edda09ce650
+  id 050c9e3dcb8b8905
   transform 0 90 0 1
   lod "../models/zone/street/house_b_lod1.glb" 70
   cull_distance 600
 model "House C" "../models/zone/street/house_c.glb" -15.4 0.15 88
   parent "Houses"
-  id 635929c8a4d70276
+  id 639d7c216eda1740
   transform 0 90 0 1
   lod "../models/zone/street/house_c_lod1.glb" 70
   cull_distance 600
 model "House D" "../models/zone/street/house_d.glb" -15.25 0.15 55
   parent "Houses"
-  id 9fdf5f760e93bcca
+  id acef03ab2ce4fdbf
   transform 0 90 0 1
   lod "../models/zone/street/house_d_lod1.glb" 70
   cull_distance 600
 model "House E" "../models/zone/street/house_e.glb" -15.4 0.15 26.5
   parent "Houses"
-  id 639fbb4c4c4f498e
+  id 147c61bde8d611fd
   transform 0 90 0 1
   lod "../models/zone/street/house_e_lod1.glb" 70
   cull_distance 600
 model "House F" "../models/zone/street/house_f.glb" -15 0.15 -3.5
   parent "Houses"
-  id 79db3f390703a219
+  id 9ca41354c7fe9c98
   transform 0 90 0 1
   lod "../models/zone/street/house_f_lod1.glb" 70
   cull_distance 600
 model "House J" "../models/zone/street/house_j.glb" -15.25 0.15 -46.5
   parent "Houses"
-  id 48c9c80925ad7e5e
+  id 59b70c3716e3b289
   transform 0 90 0 1
   lod "../models/zone/street/house_j_lod1.glb" 70
   cull_distance 600
 model "House A 2" "../models/zone/street/house_a.glb" -15 0.15 -87
   parent "Houses"
-  id e448e57681207146
+  id 3e3fcb9d01467da7
   transform 0 90 0 1
   lod "../models/zone/street/house_a_lod1.glb" 70
   cull_distance 600
 model "House B 2" "../models/zone/street/house_b.glb" -15.25 0.15 -120
   parent "Houses"
-  id e685d467579a32bc
+  id b9a15909ee6c6486
   transform 0 90 0 1
   lod "../models/zone/street/house_b_lod1.glb" 70
   cull_distance 600
 model "House C 2" "../models/zone/street/house_c.glb" -15 0.15 -156
   parent "Houses"
-  id e4703a8ad8e3132b
+  id 94f6710679ed44b4
   transform 0 90 0 1
   lod "../models/zone/street/house_c_lod1.glb" 70
   cull_distance 600
 model "House D 2" "../models/zone/street/house_d.glb" -15.4 0.15 -189
   parent "Houses"
-  id c11672d7bf477600
+  id 7be85ff566f73b27
   transform 0 90 0 1
   lod "../models/zone/street/house_d_lod1.glb" 70
   cull_distance 600
 model "House E 2" "../models/zone/street/house_e.glb" -15 0.15 -217.5
   parent "Houses"
-  id e6053b29961a91bd
+  id 10fcd7cd23695857
   transform 0 90 0 1
   lod "../models/zone/street/house_e_lod1.glb" 70
   cull_distance 600
 model "House F 2" "../models/zone/street/house_f.glb" -14.8 0.15 -247.5
   parent "Houses"
-  id e6074f9983dc46bc
+  id 62bb8d2166b49b3c
   transform 0 90 0 1
   lod "../models/zone/street/house_f_lod1.glb" 70
   cull_distance 600
 model "House G" "../models/zone/street/house_g.glb" -14.8 0.15 -280.5
   parent "Houses"
-  id c669bdf349116add
+  id d85e858737965620
   transform 0 90 0 1
   lod "../models/zone/street/house_g_lod1.glb" 70
   cull_distance 600
 model "House H" "../models/zone/street/house_h.glb" -15 0.15 -315
   parent "Houses"
-  id 330f40c3e5de12d8
+  id aafef4515bb87a7b
   transform 0 90 0 1
   lod "../models/zone/street/house_h_lod1.glb" 70
   cull_distance 600
 model "House F 3" "../models/zone/street/house_f.glb" 14.8 0.15 158.5
   parent "Houses"
-  id a5b74196a3edf7af
+  id 148db129ad46e451
   transform 0 -90 0 1
   lod "../models/zone/street/house_f_lod1.glb" 70
   cull_distance 600
 model "House G 2" "../models/zone/street/house_g.glb" 15 0.15 125.5
   parent "Houses"
-  id 755871f4b4e7ead6
+  id 150db0ef9bb85636
   transform 0 -90 0 1
   lod "../models/zone/street/house_g_lod1.glb" 70
   cull_distance 600
 model "House H 2" "../models/zone/street/house_h.glb" 15.4 0.15 91
   parent "Houses"
-  id 92af438336dda18f
+  id 5b849037e7d2a8bc
   transform 0 -90 0 1
   lod "../models/zone/street/house_h_lod1.glb" 70
   cull_distance 600
 model "House I" "../models/zone/street/house_i.glb" 15.4 0.15 58
   parent "Houses"
-  id 63efca339f35e044
+  id 7b8e6a4ad3e46083
   transform 0 -90 0 1
   lod "../models/zone/street/house_i_lod1.glb" 70
   cull_distance 600
 model "House J 2" "../models/zone/street/house_j.glb" 15.4 0.15 17.5
   parent "Houses"
-  id ef8c2f83fcc20a96
+  id 13336c86c3f9853a
   transform 0 -90 0 1
   lod "../models/zone/street/house_j_lod1.glb" 70
   cull_distance 600
 model "House C 3" "../models/zone/street/house_c.glb" 15.4 0.15 -45
   parent "Houses"
-  id 7703b488733787a0
+  id f4e7cadfa6059555
   transform 0 -90 0 1
   lod "../models/zone/street/house_c_lod1.glb" 70
   cull_distance 600
 model "House D 3" "../models/zone/street/house_d.glb" 14.8 0.15 -78
   parent "Houses"
-  id 0391d4439b9f87e9
+  id 59407504d3947d4b
   transform 0 -90 0 1
   lod "../models/zone/street/house_d_lod1.glb" 70
   cull_distance 600
 model "House E 3" "../models/zone/street/house_e.glb" 15 0.15 -106.5
   parent "Houses"
-  id 73ab627c3e803af7
+  id 92044cd3a5a64138
   transform 0 -90 0 1
   lod "../models/zone/street/house_e_lod1.glb" 70
   cull_distance 600
 model "House F 4" "../models/zone/street/house_f.glb" 14.8 0.15 -136.5
   parent "Houses"
-  id 03dbee51e58e5ca8
+  id f4659bd9f9865358
   transform 0 -90 0 1
   lod "../models/zone/street/house_f_lod1.glb" 70
   cull_distance 600
 model "House G 3" "../models/zone/street/house_g.glb" 14.8 0.15 -169.5
   parent "Houses"
-  id 9758822a8dc3473c
+  id f89b789782f49450
   transform 0 -90 0 1
   lod "../models/zone/street/house_g_lod1.glb" 70
   cull_distance 600
 model "House H 3" "../models/zone/street/house_h.glb" 15 0.15 -204
   parent "Houses"
-  id a2c860b85e9ba3af
+  id 1a68b0c125c76d12
   transform 0 -90 0 1
   lod "../models/zone/street/house_h_lod1.glb" 70
   cull_distance 600
 model "House I 2" "../models/zone/street/house_i.glb" 15.4 0.15 -237
   parent "Houses"
-  id 6777ad10747093bc
+  id 6447c89b547d8eeb
   transform 0 -90 0 1
   lod "../models/zone/street/house_i_lod1.glb" 70
   cull_distance 600
 model "House J 3" "../models/zone/street/house_j.glb" 15 0.15 -277.5
   parent "Houses"
-  id 4d77655c900bdcbb
+  id 0268e8d365134907
   transform 0 -90 0 1
   lod "../models/zone/street/house_j_lod1.glb" 70
   cull_distance 600
 model "House A 3" "../models/zone/street/house_a.glb" 15.25 0.15 -318
   parent "Houses"
-  id cd65e37e5fd5d4af
+  id 21fac301167a747c
   transform 0 -90 0 1
   lod "../models/zone/street/house_a_lod1.glb" 70
   cull_distance 600
 model "House G 4" "../models/zone/street/house_g.glb" -42 0.15 -3
   parent "Houses"
-  id cdc8964afaa02a17
+  id 3a60c60c5b32a5a1
   transform 0 180 0 1
   lod "../models/zone/street/house_g_lod1.glb" 70
   cull_distance 600
 model "House C 4" "../models/zone/street/house_c.glb" -43.5 0.15 -31
   parent "Houses"
-  id ff29301be2ef688a
+  id 1c569df4de465d6e
   lod "../models/zone/street/house_c_lod1.glb" 70
   cull_distance 600
 model "House E 4" "../models/zone/street/house_e.glb" -78 0.15 -17
   parent "Houses"
-  id 72155a09f7ed3379
+  id 769fbd7e51513c56
   transform 0 -90 0 1
   lod "../models/zone/street/house_e_lod1.glb" 70
   cull_distance 600
 model "House C 5" "../models/zone/street/house_c.glb" 43.5 0.15 -3
   parent "Houses"
-  id c2a131d4c949e0e7
+  id aa7340e3cf610dbd
   transform 0 180 0 1
   lod "../models/zone/street/house_c_lod1.glb" 70
   cull_distance 600
 model "House G 5" "../models/zone/street/house_g.glb" 42 0.15 -31
   parent "Houses"
-  id 19cbc7896227ae72
+  id 6ed53d62981dd4f9
   lod "../models/zone/street/house_g_lod1.glb" 70
   cull_distance 600
 model "House E 5" "../models/zone/street/house_e.glb" 78 0.15 -17
   parent "Houses"
-  id a0cfcc05ed9a31f4
+  id bfaca717ff03ab87
   transform 0 90 0 1
   lod "../models/zone/street/house_e_lod1.glb" 70
   cull_distance 600
 model "House at the end" "../models/zone/street/house_end.glb" 0 0.15 -338
   parent "Far"
-  id c53887fea88073c6
+  id 0bab7d4f2724dab6
   lod "../models/zone/street/house_end_lod1.glb" 70
   cull_distance 900
 model "Tower" "../models/zone/gen/skyline_tower_a.glb" -40 -0.2 -420
   parent "Far"
-  id d6fd7b231c244d23
+  id 6cc10ad33f734d5d
   transform 0 84 0 1
   cull_distance 1200
   collision 0
 model "Tower 2" "../models/zone/gen/skyline_tower_c.glb" 35 -0.2 -460
   parent "Far"
-  id 39f6046ca322acde
+  id 39058b76b2bce7f7
   transform 0 13.8 0 1
   cull_distance 1200
   collision 0
 model "Tower 3" "../models/zone/gen/skyline_tower_b.glb" 90 -0.2 -380
   parent "Far"
-  id a3e4b16b83d12a95
+  id 2c2ffeb5c4099d29
   transform 0 74 0 1
   cull_distance 1200
   collision 0
 model "Tower 4" "../models/zone/gen/skyline_tower_b.glb" -110 -0.2 -400
   parent "Far"
-  id 7e16043fcae3973d
+  id b1d2811fc5fbf4e3
   transform 0 79.8 0 1
   cull_distance 1200
   collision 0
 model "House number" "../models/zone/skrunda/plate_house_2.glb" 7.98 2.55 144.05
   parent "Plates"
-  id 5214e49a3823b68a
+  id 58d3fad4edc7bfb3
   transform 0 -90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "Street plate" "../models/zone/skrunda/plate_street_pochta.glb" 7.98 2.95 144.05
   parent "Plates"
-  id 7195e800fb75af1b
+  id 8ce362cc181dcfba
   transform 0 -90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "House number 2" "../models/zone/skrunda/plate_house_1.glb" -7.98 2.55 138.05
   parent "Plates"
-  id 04d4c2d7f2ba1363
+  id 5fd7f087495bb895
   transform 0 90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "House number 3" "../models/zone/skrunda/plate_house_3.glb" -8.38 2.55 108.05
   parent "Plates"
-  id aae8d5802da469ba
+  id 0a34d9516efe4ea0
   transform 0 90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "Street plate 2" "../models/zone/skrunda/plate_street_pochta.glb" -8.38 2.95 108.05
   parent "Plates"
-  id 68dfe402398ac59d
+  id d4c92667cfbb9663
   transform 0 90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "House number 4" "../models/zone/skrunda/plate_house_4.glb" 8.38 2.55 105.05
   parent "Plates"
-  id 8e682617361a611d
+  id 53a4f49e3d6ca50b
   transform 0 -90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "Street plate 3" "../models/zone/skrunda/plate_street_pochta.glb" 8.38 2.95 105.05
   parent "Plates"
-  id 9e55524feae3dff4
+  id df587e187d0d97cb
   transform 0 -90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "House number 5" "../models/zone/skrunda/plate_house_6.glb" 8.38 2.55 75.05
   parent "Plates"
-  id 65456dd06c7e52e7
+  id 6eea6841ae771088
   transform 0 -90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "House number 6" "../models/zone/skrunda/plate_house_5.glb" -8.23 2.55 66.05
   parent "Plates"
-  id 53c8bbf8102c98a8
+  id 858142e178ffb0bb
   transform 0 90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "House number 7" "../models/zone/skrunda/plate_house_7.glb" -8.38 2.55 42.05
   parent "Plates"
-  id 6d48b3b15c3d9d28
+  id e018dbd42bc7f4f9
   transform 0 90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "Street plate 4" "../models/zone/skrunda/plate_street_pochta.glb" -8.38 2.95 42.05
   parent "Plates"
-  id 41555c7e258d2591
+  id 0c9df3f6022d9b2a
   transform 0 90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "House number 8" "../models/zone/skrunda/plate_house_8.glb" 8.38 2.55 39.05
   parent "Plates"
-  id f276022fb5930b40
+  id 033f0811bdf27d16
   transform 0 -90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "House number 9" "../models/zone/skrunda/plate_house_9.glb" -7.98 2.55 9.05
   parent "Plates"
-  id 7942dae82c927189
+  id 0a4cde9a655e126a
   transform 0 90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "Street plate 5" "../models/zone/skrunda/plate_street_pochta.glb" -7.98 2.95 9.05
   parent "Plates"
-  id c7c871f3d49e66e4
+  id e3e6caacadf3af0d
   transform 0 90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "House number 10" "../models/zone/skrunda/plate_house_11.glb" -8.23 2.55 -24.95
   parent "Plates"
-  id 8825cdf89b9f9814
+  id 3feffa221b5b4016
   transform 0 90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "Street plate 6" "../models/zone/skrunda/plate_street_pochta.glb" -8.23 2.95 -24.95
   parent "Plates"
-  id 50dedbca5e6da046
+  id f28efb4f2f7144d1
   transform 0 90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "House number 11" "../models/zone/skrunda/plate_house_10.glb" 8.38 2.55 -24.95
   parent "Plates"
-  id cbfa0342dd63acdc
+  id d5d156d7c5a0b628
   transform 0 -90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "House number 12" "../models/zone/skrunda/plate_house_12.glb" 7.78 2.55 -66.95
   parent "Plates"
-  id e477a62864390cdb
+  id c42642370eddeb8c
   transform 0 -90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "Street plate 7" "../models/zone/skrunda/plate_street_pochta.glb" 7.78 2.95 -66.95
   parent "Plates"
-  id 9782aba858770bee
+  id 067af35305682cf2
   transform 0 -90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "House number 13" "../models/zone/skrunda/plate_house_13.glb" -7.98 2.55 -69.95
   parent "Plates"
-  id 267679484a8ae21b
+  id 9aa0649b864239dd
   transform 0 90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "House number 14" "../models/zone/skrunda/plate_house_14.glb" 7.98 2.55 -90.95
   parent "Plates"
-  id bdcb3d61978cb834
+  id 7b869aebfbc8b6c6
   transform 0 -90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "Street plate 8" "../models/zone/skrunda/plate_street_pochta.glb" 7.98 2.95 -90.95
   parent "Plates"
-  id 03fa46738d9aacde
+  id ef47b99a0d8a0d4f
   transform 0 -90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "House number 15" "../models/zone/skrunda/plate_house_15.glb" -8.23 2.55 -105.95
   parent "Plates"
-  id af3031d8f1b8b7a4
+  id 57254d0409653893
   transform 0 90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "Street plate 9" "../models/zone/skrunda/plate_street_pochta.glb" -8.23 2.95 -105.95
   parent "Plates"
-  id 2e52776d9151596d
+  id 6e8e1eaad58ae7af
   transform 0 90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "House number 16" "../models/zone/skrunda/plate_house_16.glb" 7.78 2.55 -123.95
   parent "Plates"
-  id b6a6d1674bb29795
+  id 452308bda36aed96
   transform 0 -90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "Street plate 10" "../models/zone/skrunda/plate_street_pochta.glb" 7.78 2.95 -123.95
   parent "Plates"
-  id cab06b1262d4f71f
+  id 0ec48eee85efbc64
   transform 0 -90 0 1
   cull_distance 45
   collision 0
   cast_shadows 0
 model "Kerb" "../models/zone/street/kerb_6m.glb" -4.5 0 147
   parent "Kerbs"
-  id d3a8c7ad4e8abaf8
+  id bce0662ae5cad8a2
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 2" "../models/zone/street/kerb_6m.glb" -4.5 0 141
   parent "Kerbs"
-  id 384e9f95645cc2d0
+  id 3caa9e6d9aa99396
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 3" "../models/zone/street/kerb_6m.glb" -4.5 0 135
   parent "Kerbs"
-  id ae8fb6d414ac99cd
+  id 3fed0197c32e865c
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 4" "../models/zone/street/kerb_6m.glb" -4.5 0 129
   parent "Kerbs"
-  id 3b5b69a8e18e7286
+  id 73cb056c83db8d8d
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 5" "../models/zone/street/kerb_6m.glb" -4.5 0 123
   parent "Kerbs"
-  id 2eb3da77e0106839
+  id 01fb9ab4d659aa5b
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 6" "../models/zone/street/kerb_6m_b.glb" -4.5 0 117
   parent "Kerbs"
-  id 1d36cf0f790699ce
+  id 9dda642719527ff1
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 7" "../models/zone/street/kerb_6m.glb" -4.5 0 111
   parent "Kerbs"
-  id d6bb984836ed1039
+  id 267c15bb89df7193
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 8" "../models/zone/street/kerb_6m.glb" -4.5 0 105
   parent "Kerbs"
-  id fc17a1ec3306814d
+  id 063cd7c1c169aa25
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 9" "../models/zone/street/kerb_6m.glb" -4.5 0 99
   parent "Kerbs"
-  id 99e8e750ceee2900
+  id 7b93b80d1449c215
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 10" "../models/zone/street/kerb_6m.glb" -4.5 0 93
   parent "Kerbs"
-  id 76654fe7b91acad2
+  id 0c25930601e3bd6c
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 11" "../models/zone/street/kerb_6m_b.glb" -4.5 0 87
   parent "Kerbs"
-  id d4a213c1e8e4a3ab
+  id 7eed69873a2b1e11
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 12" "../models/zone/street/kerb_6m_b.glb" -4.5 0 81
   parent "Kerbs"
-  id 5d515fb359b79ebf
+  id 04dd61de1bcf745c
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 13" "../models/zone/street/kerb_6m.glb" -4.5 0 75
   parent "Kerbs"
-  id e4535178f6c680d8
+  id b3cb91ff510fb11d
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 14" "../models/zone/street/kerb_6m_b.glb" -4.5 0 69
   parent "Kerbs"
-  id 110768d8727523a4
+  id aece27b3935251aa
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 15" "../models/zone/street/kerb_6m_b.glb" -4.5 0 63
   parent "Kerbs"
-  id f7839a45d6530f56
+  id cdccd6a07123d711
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 16" "../models/zone/street/kerb_6m_b.glb" -4.5 0 57
   parent "Kerbs"
-  id 81f75cee9683d076
+  id dc45c39700f68ac8
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 17" "../models/zone/street/kerb_6m.glb" -4.5 0 51
   parent "Kerbs"
-  id 6bd2b2d42dd290c5
+  id f48626c37c64eeea
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 18" "../models/zone/street/kerb_6m_b.glb" -4.5 0 45
   parent "Kerbs"
-  id 83dc1a3ef6308a7e
+  id fa043cbfe8fddeab
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 19" "../models/zone/street/kerb_6m_b.glb" -4.5 0 39
   parent "Kerbs"
-  id a112c9105c5b0437
+  id c16f6b006468f6ed
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 20" "../models/zone/street/kerb_6m_b.glb" -4.5 0 33
   parent "Kerbs"
-  id 1ffa66e65c7f9923
+  id f6f9411fd26ae22e
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 21" "../models/zone/street/kerb_6m.glb" -4.5 0 27
   parent "Kerbs"
-  id a41143a3b8b5e15c
+  id d344f462d1aa96de
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 22" "../models/zone/street/kerb_6m.glb" -4.5 0 21
   parent "Kerbs"
-  id 32961c9a3b86b270
+  id 6b9e46571d9c1090
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 23" "../models/zone/street/kerb_6m_b.glb" -4.5 0 15
   parent "Kerbs"
-  id 47b65c7d7218f1aa
+  id f49ee45b6b57db7e
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 24" "../models/zone/street/kerb_6m_b.glb" -4.5 0 9
   parent "Kerbs"
-  id b8b469be4ff334a7
+  id 35eb49a8981cc174
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 25" "../models/zone/street/kerb_6m_b.glb" -4.5 0 3
   parent "Kerbs"
-  id a8515f869164ce09
+  id 37d2cfed813826b5
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 26" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -33
   parent "Kerbs"
-  id 0277716a78791642
+  id cd6d3418bea28afe
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 27" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -39
   parent "Kerbs"
-  id 2e6145ccdc76892c
+  id 184b6e1df7020622
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 28" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -45
   parent "Kerbs"
-  id 6b8ecb5f6b234fa6
+  id 03001e983ad7f835
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 29" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -51
   parent "Kerbs"
-  id ffd597db36036bf9
+  id 3f6378eaa8f1e529
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 30" "../models/zone/street/kerb_6m.glb" -4.5 0 -57
   parent "Kerbs"
-  id c1b4c2969f75b5f2
+  id 6005fb03ab0eecff
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 31" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -63
   parent "Kerbs"
-  id 8c2597a3b96430b0
+  id 557d859dbdc4aa3c
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 32" "../models/zone/street/kerb_6m.glb" -4.5 0 -69
   parent "Kerbs"
-  id cdb3493bbd8610be
+  id 6e0c104cefb8a83a
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 33" "../models/zone/street/kerb_6m.glb" -4.5 0 -75
   parent "Kerbs"
-  id 9de13070d4e11f51
+  id 103a038c22e0f949
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 34" "../models/zone/street/kerb_6m.glb" -4.5 0 -81
   parent "Kerbs"
-  id 1b1948d3de0d64e1
+  id d9b7b225ee179100
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 35" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -87
   parent "Kerbs"
-  id 6ff051e3e6616f29
+  id 85d54183c5434523
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 36" "../models/zone/street/kerb_6m.glb" -4.5 0 -93
   parent "Kerbs"
-  id 4ce96ebf472b0017
+  id 108d1b92ef8d01ec
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 37" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -99
   parent "Kerbs"
-  id c8ab7918fd73fb16
+  id cb8718b9974868ce
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 38" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -105
   parent "Kerbs"
-  id a84cd1919504c551
+  id c75ee593f9901532
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 39" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -111
   parent "Kerbs"
-  id 619cfc37ec3c90e9
+  id 5f68d0bdfa462c82
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 40" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -117
   parent "Kerbs"
-  id 8b87defc02f7d3b6
+  id 8a6470258e1befa8
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 41" "../models/zone/street/kerb_6m.glb" -4.5 0 -123
   parent "Kerbs"
-  id bb0a1c71e2a02a1f
+  id 16c9ef11e3ddbe50
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 42" "../models/zone/street/kerb_6m.glb" -4.5 0 -129
   parent "Kerbs"
-  id d4f96a10f658ea78
+  id a4eaff8f6137d0b9
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 43" "../models/zone/street/kerb_6m.glb" -4.5 0 -135
   parent "Kerbs"
-  id ffc196ffbbaed227
+  id 98add8cdb8cf7573
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 44" "../models/zone/street/kerb_6m.glb" -4.5 0 -141
   parent "Kerbs"
-  id 3d760c43ee21ecf7
+  id b5dc39a66103ca7b
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 45" "../models/zone/street/kerb_6m.glb" -4.5 0 -147
   parent "Kerbs"
-  id c66bc385efa21f81
+  id 0c449d9a4b994821
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 46" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -153
   parent "Kerbs"
-  id 128d01b0ad69c33e
+  id a97a33cba42ddb8d
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 47" "../models/zone/street/kerb_6m.glb" -4.5 0 -159
   parent "Kerbs"
-  id 7add34322e8f0139
+  id 6f54e10f339092ad
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 48" "../models/zone/street/kerb_6m_b.glb" -4.5 0 -165
   parent "Kerbs"
-  id d79379f50f15e5e6
+  id 7c1c3aedb69acd09
   transform 0 90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 49" "../models/zone/street/kerb_6m_b.glb" 4.5 0 147
   parent "Kerbs"
-  id bb0674f82da45e7b
+  id cb86d0294d140864
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 50" "../models/zone/street/kerb_6m_b.glb" 4.5 0 141
   parent "Kerbs"
-  id 34070a4d4fc8d61a
+  id 33778fe99bb6c894
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 51" "../models/zone/street/kerb_6m_b.glb" 4.5 0 135
   parent "Kerbs"
-  id ee7116c19077ff82
+  id 101b4f16b61d7b1c
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 52" "../models/zone/street/kerb_6m.glb" 4.5 0 129
   parent "Kerbs"
-  id 882165a608d853b3
+  id a996ee5171b2b11d
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 53" "../models/zone/street/kerb_6m.glb" 4.5 0 123
   parent "Kerbs"
-  id 8620b1f2f5b07eda
+  id 91b68f3c71c40a13
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 54" "../models/zone/street/kerb_6m.glb" 4.5 0 117
   parent "Kerbs"
-  id da80bbd4d2079ae4
+  id b11be633dc7a44e2
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 55" "../models/zone/street/kerb_6m_b.glb" 4.5 0 111
   parent "Kerbs"
-  id 5c685d5b32d7d2b7
+  id 00816fb06441683b
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 56" "../models/zone/street/kerb_6m_b.glb" 4.5 0 105
   parent "Kerbs"
-  id c2524c92c77ceee7
+  id 838c1741250daa98
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 57" "../models/zone/street/kerb_6m_b.glb" 4.5 0 99
   parent "Kerbs"
-  id 9a4242ebae00adaf
+  id 712d38db3c309ef9
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 58" "../models/zone/street/kerb_6m_b.glb" 4.5 0 93
   parent "Kerbs"
-  id 8deee4d5d198937c
+  id fbeed98cfb65c9e2
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 59" "../models/zone/street/kerb_6m.glb" 4.5 0 87
   parent "Kerbs"
-  id 60f0b2706cf9c393
+  id eba28665f7e5d8fb
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 60" "../models/zone/street/kerb_6m.glb" 4.5 0 81
   parent "Kerbs"
-  id 662c9e9ab4f33d87
+  id 05b3bad004c8b56a
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 61" "../models/zone/street/kerb_6m.glb" 4.5 0 75
   parent "Kerbs"
-  id 7ad22f4a893a4945
+  id 2db755a539a0f1b7
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 62" "../models/zone/street/kerb_6m_b.glb" 4.5 0 69
   parent "Kerbs"
-  id 9979bd4e638e9c91
+  id 9aeb71759dd0d9d3
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 63" "../models/zone/street/kerb_6m_b.glb" 4.5 0 63
   parent "Kerbs"
-  id 7fef0dfd920573f3
+  id 2421153a87e29c82
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 64" "../models/zone/street/kerb_6m.glb" 4.5 0 57
   parent "Kerbs"
-  id 8f42d16593a75b3b
+  id ff072072682348d7
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 65" "../models/zone/street/kerb_6m.glb" 4.5 0 51
   parent "Kerbs"
-  id 305923bdf5d2460d
+  id 71b463abfc0dcddd
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 66" "../models/zone/street/kerb_6m_b.glb" 4.5 0 45
   parent "Kerbs"
-  id a3bd9022cc17f512
+  id ca5fe6857380b71b
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 67" "../models/zone/street/kerb_6m.glb" 4.5 0 39
   parent "Kerbs"
-  id b5fe01e521cf4722
+  id 96b27f785aa25bd2
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 68" "../models/zone/street/kerb_6m_b.glb" 4.5 0 33
   parent "Kerbs"
-  id 656ec4627af995f9
+  id 06572f58a676a5a0
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 69" "../models/zone/street/kerb_6m_b.glb" 4.5 0 27
   parent "Kerbs"
-  id 4188afba1bd9a686
+  id 212e7745a1a0e3fd
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 70" "../models/zone/street/kerb_6m_b.glb" 4.5 0 21
   parent "Kerbs"
-  id 240fb95c720b87e1
+  id 5ed4405348f0c250
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 71" "../models/zone/street/kerb_6m.glb" 4.5 0 15
   parent "Kerbs"
-  id 5d07e219f9318005
+  id def2dfaf2a8889ce
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 72" "../models/zone/street/kerb_6m.glb" 4.5 0 9
   parent "Kerbs"
-  id 60246be1420a44bf
+  id 7efb6721c6c917e9
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 73" "../models/zone/street/kerb_6m.glb" 4.5 0 3
   parent "Kerbs"
-  id 0e485100ccddafdc
+  id ca12baedaefc7888
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 74" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -33
   parent "Kerbs"
-  id 9f12666705729c7a
+  id 2684a8f216b28a03
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 75" "../models/zone/street/kerb_6m.glb" 4.5 0 -39
   parent "Kerbs"
-  id 43339cb9903d6f04
+  id 486e66f87c9db811
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 76" "../models/zone/street/kerb_6m.glb" 4.5 0 -45
   parent "Kerbs"
-  id 228d4d56052c74f9
+  id 1e514a4ab1a8a1b6
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 77" "../models/zone/street/kerb_6m.glb" 4.5 0 -51
   parent "Kerbs"
-  id ba4db6204113b518
+  id cf16704a123b20c7
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 78" "../models/zone/street/kerb_6m.glb" 4.5 0 -57
   parent "Kerbs"
-  id fd66b0180bb3b8e6
+  id d2d3c08f53f2ad91
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 79" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -63
   parent "Kerbs"
-  id 940afb5397b07e63
+  id 9c53ca96f5692d08
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 80" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -69
   parent "Kerbs"
-  id c383c776cc97fae3
+  id 896275030604d107
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 81" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -75
   parent "Kerbs"
-  id d3bc5df3f9577087
+  id 866613b7fee28279
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 82" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -81
   parent "Kerbs"
-  id 01af71554ab32911
+  id fbaf09882d17d6c0
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 83" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -87
   parent "Kerbs"
-  id 81d5c4b0ddf6d79d
+  id b97a54edf189b493
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 84" "../models/zone/street/kerb_6m.glb" 4.5 0 -93
   parent "Kerbs"
-  id 19a1c5aca9a05372
+  id c73cbc2de58fdbb6
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 85" "../models/zone/street/kerb_6m.glb" 4.5 0 -99
   parent "Kerbs"
-  id 05be56ae70cb27a1
+  id 06706e345ccc0c46
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 86" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -105
   parent "Kerbs"
-  id 87eaf56c71289a85
+  id e894c9e10031b3a3
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 87" "../models/zone/street/kerb_6m.glb" 4.5 0 -111
   parent "Kerbs"
-  id 56104a0e03e9b9ee
+  id d843a36fe03de828
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 88" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -117
   parent "Kerbs"
-  id 5b3b2f4e6980a8f8
+  id 8526e0897cf79d9e
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 89" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -123
   parent "Kerbs"
-  id 25e1db67aefbed2a
+  id b0c74a01dc3ba769
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 90" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -129
   parent "Kerbs"
-  id 07aaeb273b2b0916
+  id ae49e1252b51cce1
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 91" "../models/zone/street/kerb_6m.glb" 4.5 0 -135
   parent "Kerbs"
-  id 36de29fccd94bfe2
+  id 02d7ab3185c765e9
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 92" "../models/zone/street/kerb_6m.glb" 4.5 0 -141
   parent "Kerbs"
-  id 4ee5529d7a7ccebb
+  id 39b3a36750e550f1
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 93" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -147
   parent "Kerbs"
-  id 5208377013dff7be
+  id 111338aa18a3c537
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 94" "../models/zone/street/kerb_6m.glb" 4.5 0 -153
   parent "Kerbs"
-  id a96da513f06b8159
+  id ac586e1c2adf9556
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 95" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -159
   parent "Kerbs"
-  id fec5c6ea310db897
+  id 5196a09c16d5fa78
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 96" "../models/zone/street/kerb_6m_b.glb" 4.5 0 -165
   parent "Kerbs"
-  id e7cff29dc450f9f0
+  id 7a1f023a13dae531
   transform 0 -90 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 97" "../models/zone/street/kerb_6m.glb" -12 0 -12.5
   parent "Kerbs"
-  id 9ac50b39c7af8f59
+  id 56999769d4f7a54a
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 98" "../models/zone/street/kerb_6m.glb" -18 0 -12.5
   parent "Kerbs"
-  id 29c5d654d55546af
+  id 1820cbc2e38d48fe
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 99" "../models/zone/street/kerb_6m.glb" -24 0 -12.5
   parent "Kerbs"
-  id 7b6d6cad38e91cf7
+  id 06094647c5d2337a
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 100" "../models/zone/street/kerb_6m.glb" -30 0 -12.5
   parent "Kerbs"
-  id abd848a09541a320
+  id 34e7f04d50910b3c
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 101" "../models/zone/street/kerb_6m.glb" -36 0 -12.5
   parent "Kerbs"
-  id 56f034dd705bae69
+  id 25662e6fcb138de9
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 102" "../models/zone/street/kerb_6m.glb" -42 0 -12.5
   parent "Kerbs"
-  id f757796cea835a44
+  id ee25dd2da4cafc09
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 103" "../models/zone/street/kerb_6m.glb" -48 0 -12.5
   parent "Kerbs"
-  id c329940dbddc5b20
+  id 4c598459ab194bb4
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 104" "../models/zone/street/kerb_6m.glb" -54 0 -12.5
   parent "Kerbs"
-  id f64ee7707991d9de
+  id b714175eb9b5f8fc
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 105" "../models/zone/street/kerb_6m.glb" -60 0 -12.5
   parent "Kerbs"
-  id 23bf53f131da6d68
+  id df348611b9e17577
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 106" "../models/zone/street/kerb_6m.glb" -66 0 -12.5
   parent "Kerbs"
-  id 4d919809f93d1832
+  id 7e08733251afe548
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 107" "../models/zone/street/kerb_6m.glb" -12 0 -21.5
   parent "Kerbs"
-  id 74fc40573113e51b
+  id f00ae8b45c48ed16
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 108" "../models/zone/street/kerb_6m.glb" -18 0 -21.5
   parent "Kerbs"
-  id de2052c6aa38b754
+  id 6915934a4d8583ca
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 109" "../models/zone/street/kerb_6m.glb" -24 0 -21.5
   parent "Kerbs"
-  id c465d226db3be7f7
+  id de98ab9ca54c0f52
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 110" "../models/zone/street/kerb_6m.glb" -30 0 -21.5
   parent "Kerbs"
-  id cedb0a2e39e36a36
+  id e1f7c40d119afab7
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 111" "../models/zone/street/kerb_6m.glb" -36 0 -21.5
   parent "Kerbs"
-  id bd2861de0eb84c6d
+  id 5e6aef41abeb9a7a
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 112" "../models/zone/street/kerb_6m.glb" -42 0 -21.5
   parent "Kerbs"
-  id 3de4f541c01c5f5a
+  id acdd95ad14255d05
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 113" "../models/zone/street/kerb_6m.glb" -48 0 -21.5
   parent "Kerbs"
-  id 78523aba37bb211c
+  id 30fdad82ed4a180f
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 114" "../models/zone/street/kerb_6m.glb" -54 0 -21.5
   parent "Kerbs"
-  id c9f86b1cc4cdd252
+  id 21ac49f8142450e5
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 115" "../models/zone/street/kerb_6m.glb" -60 0 -21.5
   parent "Kerbs"
-  id 6d824311a5b33a28
+  id e3b1d345324d066c
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 116" "../models/zone/street/kerb_6m.glb" -66 0 -21.5
   parent "Kerbs"
-  id 09247206cf7c9488
+  id 3b01183aeb8581e2
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 117" "../models/zone/street/kerb_6m.glb" 12 0 -12.5
   parent "Kerbs"
-  id 9e3dbbd5938e5574
+  id 6b2b2f66366fc266
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 118" "../models/zone/street/kerb_6m.glb" 18 0 -12.5
   parent "Kerbs"
-  id b874e0a5796632c6
+  id cc08dcf52f111a01
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 119" "../models/zone/street/kerb_6m.glb" 24 0 -12.5
   parent "Kerbs"
-  id 87d67342cc989452
+  id ad75f7fba66076c7
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 120" "../models/zone/street/kerb_6m.glb" 30 0 -12.5
   parent "Kerbs"
-  id 0ca22ff86b815b07
+  id 6ec6454c54e9f0d7
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 121" "../models/zone/street/kerb_6m.glb" 36 0 -12.5
   parent "Kerbs"
-  id 4784bd76d5e8a25f
+  id b2fe54c6bef1c117
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 122" "../models/zone/street/kerb_6m.glb" 42 0 -12.5
   parent "Kerbs"
-  id 2c879558fd5be418
+  id 3e611a5eef24ef3d
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 123" "../models/zone/street/kerb_6m.glb" 48 0 -12.5
   parent "Kerbs"
-  id 3693c53cc4f04731
+  id 6f739cacbcb01880
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 124" "../models/zone/street/kerb_6m.glb" 54 0 -12.5
   parent "Kerbs"
-  id 1f4f69a00391ef9a
+  id 4e33a63f0a67130c
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 125" "../models/zone/street/kerb_6m.glb" 60 0 -12.5
   parent "Kerbs"
-  id 706726ef31483314
+  id 6b733a501450b0ba
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 126" "../models/zone/street/kerb_6m.glb" 66 0 -12.5
   parent "Kerbs"
-  id 6ab5d746102d89eb
+  id 2dd639e4ea840743
   transform 0 180 0 1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 127" "../models/zone/street/kerb_6m.glb" 12 0 -21.5
   parent "Kerbs"
-  id 7e8450e29ce69b32
+  id 45d1c33e5b553678
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 128" "../models/zone/street/kerb_6m.glb" 18 0 -21.5
   parent "Kerbs"
-  id 20cd204ec317ae1f
+  id ca5c4c24a0c005de
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 129" "../models/zone/street/kerb_6m.glb" 24 0 -21.5
   parent "Kerbs"
-  id 78e5161c7f2a03c1
+  id 2b948435001703c1
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 130" "../models/zone/street/kerb_6m.glb" 30 0 -21.5
   parent "Kerbs"
-  id b1db2ee28cff29ef
+  id 7eb2dea6860f7cb4
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 131" "../models/zone/street/kerb_6m.glb" 36 0 -21.5
   parent "Kerbs"
-  id 7b366df355072fb1
+  id 540010db536fa75b
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 132" "../models/zone/street/kerb_6m.glb" 42 0 -21.5
   parent "Kerbs"
-  id c0399ff7e97b298e
+  id a1245a0bc3440897
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 133" "../models/zone/street/kerb_6m.glb" 48 0 -21.5
   parent "Kerbs"
-  id 1aa86906b7704a37
+  id e0968e6ddc871fef
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 134" "../models/zone/street/kerb_6m.glb" 54 0 -21.5
   parent "Kerbs"
-  id b3acf2ac849b60a2
+  id 4a7c45a5b0383595
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 135" "../models/zone/street/kerb_6m.glb" 60 0 -21.5
   parent "Kerbs"
-  id 747d27230f7b16c0
+  id 4e12ff567a3f8c66
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Kerb 136" "../models/zone/street/kerb_6m.glb" 66 0 -21.5
   parent "Kerbs"
-  id ca4a5df881c48e07
+  id 5ec2c8bce5d88d2d
   cull_distance 90
   collision 0
   cast_shadows 0
 model "Lamp post" "../models/zone/gen/lamp_post.glb" 5.2 0.13 112
   parent "Lamps and cables"
-  id bca60f25e8b007cd
+  id 08a710e8f1a8926e
   transform 0 184.1 0 1
   cull_distance 300
 model "Lamp post 2" "../models/zone/gen/lamp_post_leaning.glb" -5.2 0.13 83.76
   parent "Lamps and cables"
-  id bc2c2a43a9c6d768
+  id b3b958d1f32dfe75
   transform 0 -3.3 0 1
   cull_distance 300
 model "Lamp post 3" "../models/zone/gen/lamp_post.glb" 5.2 0.13 52.45
   parent "Lamps and cables"
-  id a084811e30f58f05
+  id 5501a32feb925a48
   transform 0 185.7 0 1
   cull_distance 300
 model "Lamp post 4" "../models/zone/gen/lamp_post.glb" -5.2 0.13 22.39
   parent "Lamps and cables"
-  id 6da86779d07fb5f4
+  id 9bd3252440e16733
   transform 0 -3.2 0 1
   cull_distance 300
 model "Lamp post 5" "../models/zone/gen/lamp_post.glb" 5.2 0.13 -34.99
   parent "Lamps and cables"
-  id 029a85b3c5704f92
+  id 1b223b768cdfdd98
   transform 0 184.5 0 1
   cull_distance 300
 model "Lamp post 6" "../models/zone/gen/lamp_post.glb" -5.2 0.13 -62.31
   parent "Lamps and cables"
-  id eb6f03b10192a138
+  id 99c8a2b36828edd7
   transform 0 -4 0 1
   cull_distance 300
 model "Lamp post 7" "../models/zone/gen/lamp_post.glb" 5.2 0.13 -89.78
   parent "Lamps and cables"
-  id 49791e2698a2e34d
+  id 4d20176480c558d5
   transform 0 181.9 0 1
   cull_distance 300
 model "Lamp post 8" "../models/zone/gen/lamp_post.glb" -5.2 0.13 -117.33
   parent "Lamps and cables"
-  id 6dae7762cd7a2d80
+  id a033554ad6f7b7fc
   transform 0 -1.3 0 1
   cull_distance 300
 model "Lamp post 9" "../models/zone/gen/lamp_post.glb" 5.2 0.13 -148.11
   parent "Lamps and cables"
-  id 91b3fa988a6be7c6
+  id f9a3f11c57696bac
   transform 0 177 0 1
   cull_distance 300
 model "Lamp post 10" "../models/zone/gen/lamp_post_leaning.glb" -5.2 0.13 -174.68
   parent "Lamps and cables"
-  id 3058c1374f2400bc
+  id b687094c2261cd54
   transform 0 -0.4 0 1
   cull_distance 300
 model "Cable" "../models/zone/street/cable_32m.glb" 0 8.1 68.11
   parent "Lamps and cables"
-  id e0acdc938ef6a0d9
+  id 46b5871a11ac91eb
   transform 0 71.6 0 1.03
   cull_distance 160
   collision 0
 model "Cable 2" "../models/zone/street/cable_32m.glb" 0 8.1 37.42
   parent "Lamps and cables"
-  id d48a979001ba8caa
+  id fc6a22b5450d3fb1
   transform 0 109.1 0 0.994
   cull_distance 160
   collision 0
 model "Cable 3" "../models/zone/street/cable_32m.glb" 0 8.1 -6.3
   parent "Lamps and cables"
-  id d91f6077b9a856aa
+  id 5de051af05bc12aa
   transform 0 79.7 0 1.82
   cull_distance 160
   collision 0
 model "Cable 4" "../models/zone/street/cable_32m.glb" 0 8.1 -76.05
   parent "Lamps and cables"
-  id 979c71876df41e01
+  id b447a9370375483f
   transform 0 69.3 0 0.918
   cull_distance 160
   collision 0
 model "Cable 5" "../models/zone/street/cable_32m.glb" 0 8.1 -103.56
   parent "Lamps and cables"
-  id b8d308da534f0409
+  id 92b0bd57b7e13c4b
   transform 0 110.7 0 0.92
   cull_distance 160
   collision 0
 model "Cable 6" "../models/zone/street/cable_32m.glb" 0 8.1 -161.4
   parent "Lamps and cables"
-  id c5c8fbf8ba11a9c3
+  id 923c0b8d267c3526
   transform 0 111.4 0 0.891
   cull_distance 160
   collision 0
 model "Cable 7" "../models/zone/street/cable_18m.glb" 0 9.378 81.97
   parent "Lamps and cables"
-  id b22c48f8a63d88ad
+  id 73284497e2333129
   transform 0 7.4 2.9534 0.891
   cull_distance 160
   collision 0
 model "Cable 8" "../models/zone/street/cable_14m.glb" 0 8.96 65.86
   parent "Lamps and cables"
-  id 4d2a623d631f1796
+  id 3e52158f855aef72
   transform 0 1 -7.98123 1.14
   cull_distance 160
   collision 0
 model "Cable 9" "../models/zone/street/cable_14m.glb" 0 8.866 49.8
   parent "Lamps and cables"
-  id 09d3bfc62b2536d1
+  id ad6489d37c07eeb5
   transform 0 -5.7 -2.86583 1.14
   cull_distance 160
   collision 0
 model "Cable 10" "../models/zone/street/cable_14m.glb" 0 8.211 32.64
   parent "Lamps and cables"
-  id 75cc2f8cb752a458
+  id b68a337ca9f80914
   transform 0 -4.6 -5.94879 1.14
   cull_distance 160
   collision 0
 model "Cable 11" "../models/zone/street/cable_18m.glb" 0 9.071 -3.1
   parent "Lamps and cables"
-  id 541cdb4621b7ab1d
+  id b8c3d3b8dbc251ca
   transform 0 7.9 4.416 0.892
   cull_distance 160
   collision 0
 model "Cable 12" "../models/zone/street/cable_14m.glb" 0 10.39 -52.12
   parent "Lamps and cables"
-  id d1c4f5ee10ec1698
+  id ec34ca72677e83b6
   transform 0 -6.3 -3.81755 1.14
   cull_distance 160
   collision 0
 model "Cable 13" "../models/zone/street/cable_18m.glb" 0 9.402 -88.32
   parent "Lamps and cables"
-  id 1b77ac8244ed135a
+  id 515552a47f878a94
   transform 0 9.4 -5.15769 0.895
   cull_distance 160
   collision 0
 model "Cable 14" "../models/zone/street/cable_18m.glb" 0 7.948 -105.5
   parent "Lamps and cables"
-  id c30e80da6e7209b7
+  id b8d2ff7a370d78e3
   transform 0 10.7 -4.80946 0.899
   cull_distance 160
   collision 0
 model "Cable 15" "../models/zone/street/cable_18m.glb" 0 7.671 -119.8
   parent "Lamps and cables"
-  id 85675ccd091e5502
+  id 2232a81380c797cf
   transform 0 -8.6 -1.28813 0.893
   cull_distance 160
   collision 0
 model "Cable 16" "../models/zone/street/cable_18m.glb" 0 8.615 -139.23
   parent "Lamps and cables"
-  id a746805397a698bc
+  id 0dab9f6094ad8d23
   transform 0 8.8 10.6181 0.894
   cull_distance 160
   collision 0
 model "Cable 17" "../models/zone/street/cable_18m.glb" 0 9.548 -153.41
   parent "Lamps and cables"
-  id 983c6d0f8a4791c7
+  id a5d5055e22ab69ce
   transform 0 -11.3 8.54352 0.901
   cull_distance 160
   collision 0
 model "Cable 18" "../models/zone/street/cable_14m.glb" 0 8.215 -172.19
   parent "Lamps and cables"
-  id 244e2c225293aecf
+  id 6dec71137772252e
   transform 0 1.3 8.68553 1.14
   cull_distance 160
   collision 0
 model "Wreck" "../models/zone/car_pirozhok_rust_green.glb" 3 -0.11 96
   parent "Wrecks"
-  id bd8df957f83afcfc
+  id 6b69db021492dda7
   transform 0.405267 264.9 1.82463 1
   cull_distance 260
 model "Wreck 2" "../models/zone/gen/car_burnt.glb" -3.1 -0.06 74
   parent "Wrecks"
-  id 5b2c1bf98f3eef84
+  id f4c7a21d07cfb8af
   transform 0.730181 5 -2.11258 1
   cull_distance 260
 model "Wreck 3" "../models/zone/car_pirozhok_wreck.glb" 2.6 -0.11 41
   parent "Wrecks"
-  id 05d1e4b91f9bc5b7
+  id 44cd8fcca6fb6ce5
   transform 1.00228 272.3 -0.97948 1
   cull_distance 260
 model "Wreck 4" "../models/zone/gen/car_sedan_green.glb" -2.8 -0.06 12
   parent "Wrecks"
-  id 48a2e0909f4c3c7e
+  id b5af7c8a5f37c3ad
   transform -0.223689 -4.1 0.375739 1
   cull_distance 260
 model "Wreck 5" "../models/zone/car_pirozhok_rust_blue.glb" 0.8 -0.11 -48
   parent "Wrecks"
-  id 22d345e12e7631e4
+  id dd529367c208813a
   transform 0.566213 236 1.92992 1
   cull_distance 260
 model "Wreck 6" "../models/zone/gen/car_sedan_cream.glb" -3 -0.06 -66
   parent "Wrecks"
-  id 385d3f60cb31aa28
+  id a5d5381b7bbee014
   transform 1.81777 5.8 0.582335 1
   cull_distance 260
 model "Wreck 7" "../models/zone/gen/car_estate_red.glb" 3.2 -0.06 -92
   parent "Wrecks"
-  id fac35e07028c3508
+  id 1ebe3b11e59e89db
   transform 0.935347 181.6 1.6997 1
   cull_distance 260
 model "Wreck 8" "../models/zone/car_pirozhok_rust_green.glb" -2.5 -0.11 -112
   parent "Wrecks"
-  id 83abbb98468d102d
+  id d2214e672f41e724
   transform -1.12114 116.6 1.0971 1
   cull_distance 260
 model "Wreck 9" "../models/zone/gen/car_estate_rust.glb" 6.1 0.09 60
   parent "Wrecks"
-  id f888dbab76aaff05
+  id b875b32ede0bc935
   transform -1.89727 179.3 -2.23517 1
   cull_distance 260
 model "Wreck 10" "../models/zone/gen/car_burnt.glb" -6 0.09 -84
   parent "Wrecks"
-  id ea1b4bd74a977a8f
+  id 8f64f257441bfe4a
   transform -0.457328 0.4 0.90311 1
   cull_distance 260
 model "Bus" "../models/zone/gen/bus_small_cream.glb" 1 -0.08 -126
   parent "Barricades"
-  id 9cb997d0605181e6
+  id 38e3b4d96375ad0b
   transform 0 62 0 1
   cull_distance 320
 model "Rubble heap" "../models/zone/gen/rubble_b.glb" -4 -0.2 -132
   parent "Barricades"
-  id 89bfc00a2666dd0c
+  id f261102278df7388
   transform 0 0 0 2.4
   cull_distance 320
 model "Rubble heap 2" "../models/zone/gen/rubble_b.glb" 3.5 -0.2 -136
   parent "Barricades"
-  id fdab7cd3f0baf53b
+  id e87f8905eda70a44
   transform 0 70 0 2.1
   cull_distance 320
 model "Rubble heap 3" "../models/zone/gen/rubble_b.glb" -1 -0.2 -140
   parent "Barricades"
-  id d746de32e93a8a9d
+  id e38815421eb0ade9
   transform 0 30 0 2.8
   cull_distance 320
 model "Rubble heap 4" "../models/zone/gen/rubble_b.glb" 6 -0.2 -130
   parent "Barricades"
-  id 34e45aeeec6086d4
+  id 607752a20cc417da
   transform 0 120 0 1.6
   cull_distance 320
 model "Rubble heap 5" "../models/zone/gen/rubble_b.glb" -6.5 -0.2 -127
   parent "Barricades"
-  id 3bf19cbca3868799
+  id 39135c27ba6e667b
   transform 0 200 0 1.4
   cull_distance 320
 model "Fallen slab" "../models/zone/gen/slab_fallen.glb" -2 0.6 -129
   parent "Barricades"
-  id 946f6d0fa3e865f7
+  id 5abcd3af6141c0a9
   transform 12 15 0 1
   cull_distance 200
 model "Fallen slab 2" "../models/zone/gen/slab_fallen.glb" 2.5 0.6 -133
   parent "Barricades"
-  id 9edc5edf1de3132f
+  id 43ecf1145199b2f2
   transform 12 100 0 1
   cull_distance 200
 model "Barricade wreck" "../models/zone/gen/car_burnt.glb" -4.2 -0.06 117
   parent "Barricades"
-  id de2d5e6918a2e845
+  id 13c176735747edb4
   transform 0 78 0 1
   cull_distance 260
 model "Barricade wreck 2" "../models/zone/gen/car_estate_rust.glb" -0.6 -0.06 118.5
   parent "Barricades"
-  id 290eabea1bc9444a
+  id 9311ad9d2c90d080
   transform 0 96 0 1
   cull_distance 260
 model "Barricade wreck 3" "../models/zone/gen/car_van_green.glb" 3.4 -0.06 117.4
   parent "Barricades"
-  id 50aa7729642b58c7
+  id dc188fcc02d30153
   transform 0 70 0 1
   cull_distance 260
 model "Rubble heap 6" "../models/zone/gen/rubble_a.glb" 6.3 0 118
   parent "Barricades"
-  id 3ddf26d248df19d5
+  id b892cd7002cfbb66
   transform 0 83.8 0 1.3
   cull_distance 200
 model "Rubble heap 7" "../models/zone/gen/rubble_a.glb" -6.6 0 118.4
   parent "Barricades"
-  id d8d0b1d584c1e74f
+  id c2a29e59a3dde70e
   transform 0 223.3 0 1.3
   cull_distance 200
 model "Rubble" "../models/zone/gen/rubble_b.glb" -6.02 -0.1 88.42
   parent "Rubble"
-  id b998188c84b73c48
+  id ba8051acf7a13f44
   transform 0 23.4 0 0.378
   cull_distance 120
 model "Rubble 2" "../models/zone/gen/rubble_b.glb" 7.22 -0.1 17.37
   parent "Rubble"
-  id ae801f4752136570
+  id ab79456a9a3a53ad
   transform 0 329.9 0 0.45
   cull_distance 120
 model "Rubble 3" "../models/zone/gen/rubble_a.glb" 6.54 -0.1 -114.52
   parent "Rubble"
-  id 57d2b24e195e34f6
+  id c0451e7616c0fe17
   transform 0 137.5 0 0.485
   cull_distance 120
 model "Rubble 4" "../models/zone/gen/rubble_b.glb" -7.23 -0.1 26.69
   parent "Rubble"
-  id 643692d14b5e171a
+  id 583a00c366bb5fc1
   transform 0 115.7 0 0.415
   cull_distance 120
 model "Rubble 5" "../models/zone/gen/rubble_b.glb" 7.22 -0.1 -92.89
   parent "Rubble"
-  id a7a1c93efd9f3d33
+  id 107fd002009fc3ba
   transform 0 359.4 0 0.524
   cull_distance 120
 model "Rubble 6" "../models/zone/gen/rubble_b.glb" 6.8 -0.1 -29.49
   parent "Rubble"
-  id eb708bedf581094a
+  id 1c75987a359af7b2
   transform 0 248.5 0 0.47
   cull_distance 120
 model "Rubble 7" "../models/zone/gen/rubble_a.glb" -7.08 -0.1 61.67
   parent "Rubble"
-  id a870c511333fd85b
+  id 58325ea6582fc476
   transform 0 168.1 0 0.559
   cull_distance 120
 model "Rubble 8" "../models/zone/gen/rubble_b.glb" 6.1 -0.1 -88.27
   parent "Rubble"
-  id 72ab16daa2633a1a
+  id 80cf81a7f9e0f26b
   transform 0 112.7 0 0.393
   cull_distance 120
 model "Rubble 9" "../models/zone/gen/rubble_a.glb" -7.27 -0.1 -127.92
   parent "Rubble"
-  id 89d725574a3b20f0
+  id 87aca63749cbb9c6
   transform 0 33.1 0 0.391
   cull_distance 120
 model "Rubble 10" "../models/zone/gen/rubble_a.glb" -7.03 -0.1 86.55
   parent "Rubble"
-  id 97424a2db145e3cf
+  id 3399c18ff89ca6b2
   transform 0 122.7 0 0.519
   cull_distance 120
 model "Rubble 11" "../models/zone/gen/rubble_b.glb" -7.04 -0.1 -99.42
   parent "Rubble"
-  id b12fa98170d2f212
+  id 6fa369ca36d110a9
   transform 0 270.9 0 0.567
   cull_distance 120
 model "Rubble 12" "../models/zone/gen/rubble_a.glb" 6.99 -0.1 100.56
   parent "Rubble"
-  id 2ce2543d96c57546
+  id e9a1a6ba72f1d579
   transform 0 229.9 0 0.491
   cull_distance 120
 model "Rubble 13" "../models/zone/gen/rubble_a.glb" 6.3 -0.1 -1.03
   parent "Rubble"
-  id cb2b4860051ca8d5
+  id 93b846ee5f9e0dd3
   transform 0 124.2 0 0.591
   cull_distance 120
 model "Rubble 14" "../models/zone/gen/rubble_b.glb" 7.26 -0.1 79.81
   parent "Rubble"
-  id 76b45d200359c4b7
+  id 4d5301decff23184
   transform 0 64.5 0 0.564
   cull_distance 120
 model "Rubble 15" "../models/zone/gen/rubble_a.glb" 6.23 -0.1 79.6
   parent "Rubble"
-  id e5df9f665747041c
+  id c8492b1efacf175c
   transform 0 29.5 0 0.434
   cull_distance 120
 model "Rubble 16" "../models/zone/gen/rubble_b.glb" 6.57 -0.1 -88.8
   parent "Rubble"
-  id 91736a7a4253941c
+  id f57ec879413bb979
   transform 0 124.4 0 0.376
   cull_distance 120
 model "Rubble 17" "../models/zone/gen/rubble_a.glb" 6.52 -0.1 84.6
   parent "Rubble"
-  id 806b18c20ba03e09
+  id ad366919d9b196a6
   transform 0 61.8 0 0.518
   cull_distance 120
 model "Rubble 18" "../models/zone/gen/rubble_a.glb" -6.25 -0.1 42.72
   parent "Rubble"
-  id 02ab4dcb12cc4052
+  id b8a023b7fd26595b
   transform 0 298.8 0 0.427
   cull_distance 120
 model "Rubble 19" "../models/zone/gen/rubble_a.glb" -6.12 -0.1 5.27
   parent "Rubble"
-  id 9388d2b785042aaa
+  id c37729e2428ef4cc
   transform 0 353.2 0 0.372
   cull_distance 120
 model "Rubble 20" "../models/zone/gen/rubble_b.glb" -6.99 -0.1 99.9
   parent "Rubble"
-  id 66b8914ed887c646
+  id 93bd2f5928f500a0
   transform 0 51.7 0 0.497
   cull_distance 120
 model "Rubble 21" "../models/zone/gen/rubble_a.glb" -6.81 -0.1 -102.33
   parent "Rubble"
-  id ce0c4b50d78fd7c5
+  id 4aaf70d574609ff0
   transform 0 93.5 0 0.541
   cull_distance 120
 model "Rubble 22" "../models/zone/gen/rubble_a.glb" 6.13 -0.1 -102.42
   parent "Rubble"
-  id c7263f994170acc7
+  id 805da6b209d57a6e
   transform 0 293.1 0 0.454
   cull_distance 120
 model "Rubble 23" "../models/zone/gen/rubble_a.glb" -6.6 -0.1 -83.73
   parent "Rubble"
-  id c1c274219061c9aa
+  id bc682a35a1f1473f
   transform 0 237.2 0 0.407
   cull_distance 120
 model "Rubble 24" "../models/zone/gen/rubble_a.glb" 7.11 -0.1 -102.72
   parent "Rubble"
-  id 89dc1dcefa354f2d
+  id ea289031c1a20276
   transform 0 64.7 0 0.355
   cull_distance 120
 model "Rubble 25" "../models/zone/gen/rubble_a.glb" -6.11 -0.1 -61.94
   parent "Rubble"
-  id b7e13d87346d9bde
+  id 173de5da006cd74d
   transform 0 284 0 0.544
   cull_distance 120
 model "Slab" "../models/zone/gen/slab_fallen.glb" -0.53 -0.3 19.58
   parent "Rubble"
-  id 017f1ca357ef3aad
+  id 15c50a40bfd461ad
   transform 4.53881 62.9 -7.60555 0.536
   cull_distance 140
 model "Slab 2" "../models/zone/gen/slab_fallen.glb" 1.45 -0.3 86.21
   parent "Rubble"
-  id a3b9e50744fa90a4
+  id 3f97b1419596ff6d
   transform -2.64437 121.4 -3.57824 0.715
   cull_distance 140
 player 5 8.5 5.5 18 0.15 1.8 1.7 0.4 45 100
@@ -1875,6 +1881,6 @@ weapon "../weapons/ak74.weapon"
 weapon "../weapons/pistol.weapon"
 weapon "../weapons/knife.weapon"
 entity "Почтовая" "map_marker" 0 0 60 0 1 1 1 0.85 0.3 0.2 ""
-  id 0fa9cffe307bbdbb
+  id ae38853acab362b5
 entity "Перекрёсток" "map_marker" 0 0 -17 0 1 1 1 0.85 0.3 0.2 ""
-  id a19b6319670f9bf3
+  id 32f6d2f56180bf18

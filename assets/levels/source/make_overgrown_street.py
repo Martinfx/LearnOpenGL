@@ -478,6 +478,10 @@ FOLIAGE = {
     'broadleaf_young': _f(V + 'broadleaf_young.glb', 0.03, cull=300, coll=1, shadows=1, far=1.0, lods=[(V + 'broadleaf_young_lod1.glb', 40)]),
     'broadleaf_a': _f(V + 'broadleaf_a.glb', 0.03, cull=400, coll=1, shadows=1, far=1.0, lods=[(V + 'broadleaf_a_lod1.glb', 45)], imp=120),
     'broadleaf_b': _f(V + 'broadleaf_b.glb', 0.03, cull=400, coll=1, shadows=1, far=1.0, lods=[(V + 'broadleaf_b_lod1.glb', 45)], imp=120),
+    'maple_a': _f(V + 'maple_a.glb', 0.03, cull=400, coll=1, shadows=1, far=1.0, lods=[(V + 'maple_a_lod1.glb', 45)], imp=120),
+    'maple_b': _f(V + 'maple_b.glb', 0.03, cull=400, coll=1, shadows=1, far=1.0, lods=[(V + 'maple_b_lod1.glb', 45)], imp=120),
+    'ash_a': _f(V + 'ash_a.glb', 0.03, cull=400, coll=1, shadows=1, far=1.0, lods=[(V + 'ash_a_lod1.glb', 45)], imp=120),
+    'ash_b': _f(V + 'ash_b.glb', 0.03, cull=400, coll=1, shadows=1, far=1.0, lods=[(V + 'ash_b_lod1.glb', 45)], imp=120),
     'birch_a': _f(V + 'birch_a.glb', 0.03, cull=400, coll=1, shadows=1, far=1.0, lods=[(V + 'birch_a_lod1.glb', 45)], imp=120),
 }
 
@@ -581,9 +585,9 @@ def vegetation(nz, rng, S, H, reclaim_pts, lamps):
             continue
         if abs(x) < 1.8 and rng.random() < 0.7:
             continue                    # keep the trodden middle mostly open
-        big = rng.random() < 0.18
+        big = rng.random() < 0.28
         if big:
-            key = rng.choice(('broadleaf_a', 'broadleaf_b', 'birch_a', 'broadleaf_young'))
+            key = rng.choice(('maple_a', 'maple_b', 'ash_a', 'ash_b', 'maple_b', 'birch_a', 'broadleaf_young'))
             sc = rng.uniform(0.75, 1.0)
         else:
             key = rng.choice(('sapling_a', 'sapling_b', 'sapling_c', 'sapling_a', 'birch_young', 'broadleaf_young'))
