@@ -159,7 +159,7 @@ def build():
             houses.append((cx - DEPTH / 2, cz - L / 2, cx + DEPTH / 2, cz + L / 2, name))
             if NORTH_END - 10 < cz < SOUTH_END + 10:
                 fronts.append((side, side * (FACADE + setback), cz + L / 2))
-            z -= L
+            z -= L - 0.2           # 20 cm overlap: no sunlit slit between the party walls
         return k
 
     k = row(-1, 175.0, CROSS[1], 0)
@@ -458,12 +458,15 @@ def splat(nz, reclaim_pts):
         W[...] *= (1.0 - cover)[..., None]
         W[..., layer] += cover
     # moss creeping out of the joints, soil and grass in them; whole slabs gone under the grass where R is high
-    cw = 0.03 + 0.45 * R ** 1.6
-    put(MOSS, smoothstep(cw + 0.35, cw, ce) * (0.1 + 0.12 * R) * road)
-    put(SOIL, smoothstep(cw * 0.5 + 0.05, cw * 0.5 - 0.03, ce) * road * 0.8)
+    # (the slab joints stop at the old asphalt patches: poured in one piece, they crack in their own texture, and a
+    # grass-filled joint running straight through them read as a painted yellow line)
+    cw = 0.05 + 0.5 * R ** 1.4
+    joint = road * (1.0 - asph)
+    put(MOSS, smoothstep(cw + 0.35, cw, ce) * (0.1 + 0.12 * R) * joint)
+    put(SOIL, smoothstep(cw * 0.5 + 0.05, cw * 0.5 - 0.03, ce) * joint * 0.8)
     heaved = (R + 0.3 * cid > 0.85) & road
     put(SOIL, heaved * 0.35)
-    put(GRASS, (smoothstep(cw * 0.7 + 0.04, cw * 0.7 - 0.04, ce) * smoothstep(0.2, 0.55, R) + heaved * 0.85) * road)
+    put(GRASS, (smoothstep(cw * 0.7 + 0.04, cw * 0.7 - 0.04, ce) * smoothstep(0.05, 0.4, R) * joint + heaved * 0.85 * road))
     # pavement: moss along its joints near the walls, a band of soil, leaves and plaster rubble at the foot of the walls
     walk = ~road & (fd > 0)
     put(MOSS, smoothstep(0.35, 0.8, R + 0.3 * (nz(X + 7, Z, 1.3) - 0.5)) * 0.7 * walk)
