@@ -2020,6 +2020,7 @@ void MainWindow::buildDocks()
         {"Gravity", &engine::PlayerSettings::gravity, 0, 100, 1, " m/s²"},
         {"Air control", &engine::PlayerSettings::airControl, 0, 1, 0.05, ""},
         {"Swim speed", &engine::PlayerSettings::swimSpeed, 0.1, 20, 0.25, " m/s"},
+        {"Bush slowdown", &engine::PlayerSettings::bushSlow, 0, 1, 0.05, " (share of walk speed in a bush)"},
         {"Height", &engine::PlayerSettings::height, 0.5, 4, 0.05, " m"},
         {"Eye height", &engine::PlayerSettings::eyeHeight, 0.3, 4, 0.05, " m"},
         {"Step height", &engine::PlayerSettings::stepHeight, 0, 2, 0.05, " m"},

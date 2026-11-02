@@ -3777,6 +3777,42 @@ void testProbes()
     check(engine::probeFile("a/b.level") == std::filesystem::path("a/b.probes"), "probe file sits next to the level");
 }
 
+void testThickets()
+{
+    engine::Scene s;
+    auto plant = [&](const char* name, glm::vec3 pos, glm::vec3 size, float sway) {
+        engine::Model m;
+        m.name = name;
+        m.position = pos;
+        m.localBounds = {glm::vec3(-size.x * 0.5f, 0.0f, -size.z * 0.5f), glm::vec3(size.x * 0.5f, size.y, size.z * 0.5f)};
+        m.sway = sway;
+        s.models.push_back(m);
+    };
+    plant("Bush", {10, 0, 0}, {2.0f, 1.4f, 2.0f}, 0.7f);
+    plant("Grass", {20, 0, 0}, {1.0f, 0.3f, 1.0f}, 1.0f);   // too low: no rustle, no slowdown
+    plant("Birch", {30, 0, 0}, {4.0f, 12.0f, 4.0f}, 0.3f);  // a tree: its trunk collides
+    plant("Crate", {40, 0, 0}, {1.0f, 1.0f, 1.0f}, 0.0f);
+    engine::Thickets t;
+    t.build(s);
+    check(t.size() == 1, "only the bush is a thicket");
+    check(t.densityAt({10, 0, 0}) > 0.95f, "the middle of a bush is dense");
+    const float edge = t.densityAt({10.9f, 0, 0});
+    check(edge > 0.0f && edge < 0.5f, "its edge thins out");
+    check(t.densityAt({12.0f, 0, 0}) == 0.0f, "outside the bush nothing");
+    check(t.densityAt({10, 1.5f, 0}) == 0.0f, "standing above the bush is not in it");
+    check(t.densityAt({20, 0, 0}) == 0.0f && t.densityAt({30, 0, 0}) == 0.0f && t.densityAt({40, 0, 0}) == 0.0f,
+          "grass, trees and props are not thickets");
+
+    // The slowdown is a level setting (editor: Player > Bush slowdown).
+    s.player.bushSlow = 0.55f;
+    std::string err;
+    engine::Scene back;
+    s.models.clear(); // test models have no files
+    check(engine::saveScene(s, "thickets.level", &err) && engine::loadScene(back, "thickets.level", &err), "reload: " + err);
+    check(std::abs(back.player.bushSlow - 0.55f) < 1e-4f, "bush slowdown survives save + load");
+    std::filesystem::remove("thickets.level");
+}
+
 void testPlantCollision()
 {
     // A "tree": a 16-sided stem (r = 0.1 m) 5 m high at the origin and a branch at 1 m reaching out to x = 3.
@@ -4394,6 +4430,7 @@ int main()
         {"testAnomalies", testAnomalies},
         {"testPhysicsProps", testPhysicsProps},
         {"testPlantCollision", testPlantCollision},
+        {"testThickets", testThickets},
         {"testEntityIO", testEntityIO},
         {"testTimeOfDay", testTimeOfDay},
         {"testAssetPalette", testAssetPalette},

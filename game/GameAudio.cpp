@@ -207,6 +207,23 @@ void GameAudio::water(glm::vec3 feet, glm::vec3 velocity, bool inWater, bool swi
     }
 }
 
+void GameAudio::brush(glm::vec3 feet, glm::vec3 velocity, float density, float dt)
+{
+    const float speed = glm::length(glm::vec2(velocity.x, velocity.z));
+    const bool entered = density > 0.15f && brushDensity_ <= 0.15f;
+    brushDensity_ = density;
+    if (density < 0.05f || speed < 0.4f) {
+        brushTimer_ = std::min(brushTimer_, 0.15f); // the next push starts with a rustle
+        return;
+    }
+    brushTimer_ -= dt;
+    if (entered || brushTimer_ <= 0.0f) { // a rustle about every stride, denser when running
+        brushTimer_ = std::clamp(0.9f - speed * 0.1f, 0.35f, 0.8f);
+        const float volume = std::clamp(0.35f + 0.65f * density, 0.0f, 1.0f) * std::clamp(speed / 4.0f, 0.45f, 1.0f);
+        play((assetDir_ / "sounds/player/bush.sound").lexically_normal(), feet + glm::vec3(0.0f, 0.6f, 0.0f), volume);
+    }
+}
+
 void GameAudio::impact(glm::vec3 point, const std::string& surface, const std::filesystem::path& fallback)
 {
     if (const engine::SurfaceType* t = surface.empty() ? nullptr : surfaces_.find(surface); t && !t->impact.empty())

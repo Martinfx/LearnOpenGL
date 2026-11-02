@@ -318,6 +318,8 @@ void writeLevelPlayer(std::ostream& out, const Scene& scene, const std::filesyst
         << pl.maxSlopeDegrees << ' ' << pl.maxHealth << '\n';
     if (pl.swimSpeed != PlayerSettings{}.swimSpeed)
         out << "player_swim " << pl.swimSpeed << '\n';
+    if (pl.bushSlow != PlayerSettings{}.bushSlow)
+        out << "player_bush " << pl.bushSlow << '\n';
     if (pl.radiationDamage != PlayerSettings{}.radiationDamage || pl.radiationDecay != PlayerSettings{}.radiationDecay)
         out << "player_radiation " << pl.radiationDamage << ' ' << pl.radiationDecay << '\n';
     {
@@ -1022,6 +1024,8 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                                       >> pl.height >> pl.eyeHeight >> pl.stepHeight >> pl.maxSlopeDegrees >> pl.maxHealth);
         } else if (key == "player_swim") {
             ok = static_cast<bool>(ls >> result.player.swimSpeed);
+        } else if (key == "player_bush") {
+            ok = static_cast<bool>(ls >> result.player.bushSlow);
         } else if (key == "player_radiation") {
             ok = static_cast<bool>(ls >> result.player.radiationDamage >> result.player.radiationDecay);
         } else if (key == "player_flashlight") {
@@ -1582,6 +1586,85 @@ Trunk trunkOf(const Model& model)
     if (key)
         cache[key] = t;
     return t;
+}
+
+} // namespace engine
+
+namespace engine {
+
+void Thickets::add(const Bush& bush)
+{
+    const auto index = static_cast<std::uint32_t>(bushes_.size());
+    bushes_.push_back(bush);
+    const int x0 = static_cast<int>(std::floor((bush.center.x - bush.radius) / kCell));
+    const int x1 = static_cast<int>(std::floor((bush.center.x + bush.radius) / kCell));
+    const int z0 = static_cast<int>(std::floor((bush.center.y - bush.radius) / kCell));
+    const int z1 = static_cast<int>(std::floor((bush.center.y + bush.radius) / kCell));
+    for (int z = z0; z <= z1; ++z)
+        for (int x = x0; x <= x1; ++x)
+            grid_[key(x, z)].push_back(index);
+}
+
+void Thickets::build(const Scene& scene)
+{
+    bushes_.clear();
+    grid_.clear();
+    // A bush from a world box: the footprint circle covers 80 % of the box (crowns are round).
+    auto addBox = [this](const Aabb& box) {
+        const float height = box.max.y - box.min.y;
+        if (height < kMinHeight || height > kMaxHeight)
+            return;
+        const glm::vec2 half = glm::vec2(box.max.x - box.min.x, box.max.z - box.min.z) * 0.5f;
+        if (2.0f * std::max(half.x, half.y) < kMinWidth)
+            return;
+        Bush b;
+        b.center = glm::vec2(box.min.x + half.x, box.min.z + half.y);
+        b.radius = std::clamp(0.8f * 0.5f * (half.x + half.y), 0.2f, 3.0f);
+        b.bottom = box.min.y;
+        b.top = box.max.y;
+        add(b);
+    };
+    for (const Model& m : scene.models)
+        if (!m.dynamic && !m.skeleton && m.sway >= kBushSway)
+            addBox(m.bounds());
+    if (const Terrain* t = scene.terrain.get()) {
+        for (const FoliageInstance& f : t->foliage) {
+            if (f.type >= t->foliageTypes.size())
+                continue;
+            const FoliageType& type = t->foliageTypes[f.type];
+            if (!type.model || (type.collision && type.sway < kBushSway))
+                continue; // trees: their trunk collides
+            const Aabb& local = type.model->localBounds;
+            const float s = f.scale;
+            // A square of the mean footprint (any yaw); the width test uses the widest side.
+            const float wide = s * std::max(local.max.x - local.min.x, local.max.z - local.min.z);
+            if (wide < kMinWidth)
+                continue;
+            const float r = 0.25f * s * ((local.max.x - local.min.x) + (local.max.z - local.min.z));
+            addBox({f.position + glm::vec3(-r, local.min.y * s, -r), f.position + glm::vec3(r, local.max.y * s, r)});
+        }
+    }
+}
+
+float Thickets::densityAt(glm::vec3 feet, float radius) const
+{
+    if (bushes_.empty())
+        return 0.0f;
+    const auto it = grid_.find(key(static_cast<int>(std::floor(feet.x / kCell)), static_cast<int>(std::floor(feet.z / kCell))));
+    if (it == grid_.end())
+        return 0.0f;
+    float density = 0.0f;
+    for (const std::uint32_t i : it->second) {
+        const Bush& b = bushes_[i];
+        if (feet.y > b.top - 0.2f || feet.y + 1.8f < b.bottom)
+            continue; // standing on top of it (a wall, a wreck) or far below
+        const float d = glm::length(glm::vec2(feet.x, feet.z) - b.center);
+        const float reach = b.radius + radius;
+        if (d >= reach)
+            continue;
+        density = std::max(density, std::clamp((reach - d) / std::max(b.radius, 0.2f), 0.0f, 1.0f));
+    }
+    return density;
 }
 
 } // namespace engine

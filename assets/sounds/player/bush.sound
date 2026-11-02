@@ -1,0 +1,16 @@
+# Sound: variations (one is picked at random per play) and playback settings
+# Leaves brushing past while pushing through bushes (source/bush_rustle.py, procedural CC0).
+file "bush_1.wav"
+file "bush_2.wav"
+file "bush_3.wav"
+file "bush_4.wav"
+file "bush_5.wav"
+volume 0.45
+pitch 0.9 1.1
+distance 1 20
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group sfx
+max_instances 4

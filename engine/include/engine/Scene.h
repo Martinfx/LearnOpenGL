@@ -23,6 +23,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <unordered_map>
 #include <vector>
 
 namespace engine {
@@ -331,6 +332,7 @@ struct PlayerSettings {
     float maxSlopeDegrees = 45.0f;
     float killY = -50.0f;       // respawn when falling below this
     float swimSpeed = 3.0f;     // m/s in deep water (wading slows walking by depth)
+    float bushSlow = 0.4f;      // share of the walking speed taken in the middle of a bush (Thickets)
     float maxHealth = 100.0f;
     // Sounds (absolute paths of .sound or audio files, empty = silent).
     std::filesystem::path footstepSound; // one play per stride while walking
@@ -607,5 +609,30 @@ struct Trunk {
     float height = 3.0f;
 };
 Trunk trunkOf(const Model& model);
+
+// Bushes the player walks through (plantCollider None, 0.5..6 m tall and at least 0.9 m across:
+// not grass or nettles, not trees, which collide by their trunk):
+// a flat grid of their footprints, so the game can slow the player and rustle the leaves
+// while pushing through. Built once per level (and after foliage edits), queried per step.
+class Thickets {
+public:
+    struct Bush {
+        glm::vec2 center{0.0f};
+        float radius = 0.5f;  // footprint (m), from the model's bounds
+        float top = 1.0f;     // world height of the top
+        float bottom = 0.0f;
+    };
+    static constexpr float kMinHeight = 0.5f, kMaxHeight = 6.0f, kMinWidth = 0.9f;
+    void build(const Scene& scene);
+    // 0..1: how deep the circle (feet, radius) is in bushes (1 = at a bush's middle).
+    float densityAt(glm::vec3 feet, float radius = 0.3f) const;
+    std::size_t size() const { return bushes_.size(); }
+    void add(const Bush& bush); // tests and tools
+private:
+    static constexpr float kCell = 4.0f;
+    std::vector<Bush> bushes_;
+    std::unordered_map<std::uint64_t, std::vector<std::uint32_t>> grid_;
+    static std::uint64_t key(int x, int z) { return (static_cast<std::uint64_t>(static_cast<std::uint32_t>(x)) << 32) | static_cast<std::uint32_t>(z); }
+};
 
 } // namespace engine

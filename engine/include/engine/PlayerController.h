@@ -4,6 +4,7 @@
 #include "engine/Input.h"
 #include "engine/Scene.h"
 #include <glm/vec3.hpp>
+#include <algorithm>
 
 namespace engine {
 
@@ -31,7 +32,7 @@ public:
     // next step only (a pull). slow(): 0..1 of the walking speed taken away next step.
     void push(glm::vec3 velocityChange);
     void drift(glm::vec3 velocity) { drift_ += velocity; }
-    void slow(float amount) { slow_ = amount; }
+    void slow(float amount) { slow_ = std::max(slow_, amount); } // the strongest slowdown wins (anomaly, bushes)
     // Water around the player for the next step: surface height and current (m/s).
     // Wading slows walking with depth; deeper than the chest the player swims
     // (Jump up, Crouch down, forward follows the view, floats with the head out).

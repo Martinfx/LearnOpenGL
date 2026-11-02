@@ -48,6 +48,8 @@ public:
     // Water: strokes while swimming, a splash when falling in, muffled world with the head under.
     // Sounds: sounds/player/swim.sound, splash.sound, sounds/ambient/underwater.sound (each optional).
     void water(glm::vec3 feet, glm::vec3 velocity, bool inWater, bool swimming, bool headUnder, float dt);
+    // Leaves rustling while the player pushes through bushes (density 0..1 from Thickets).
+    void brush(glm::vec3 feet, glm::vec3 velocity, float density, float dt);
 
 private:
     std::shared_ptr<const engine::SoundDef> get(const std::filesystem::path& sound);
@@ -86,6 +88,8 @@ private:
     engine::AudioSystem::Handle underwater_ = 0;      // loop while the head is under water
     bool wasInWater_ = false, headUnder_ = false;
     float strokeTimer_ = 0.0f;
+    float brushTimer_ = 0.0f;
+    float brushDensity_ = 0.0f;
     float underMix_ = 0.0f;     // 0 above .. 1 head under water, eased
     float shelterMix_ = 0.0f;   // 0 open .. 1 sheltered, eased
     float stride_ = 0.0f;       // metres walked since the last footstep

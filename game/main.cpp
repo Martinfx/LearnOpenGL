@@ -759,6 +759,7 @@ int main(int argc, char** argv)
     engine::setCrashContext("level", levelPath.string());
     engine::Scene scene;
     engine::PhysicsWorld physics;
+    engine::Thickets thickets; // bushes the player pushes through (slower, rustling)
     // Dead characters whose animation graph lists ragdoll bones: entity index -> ragdoll.
     std::map<std::size_t, engine::Ragdoll> ragdolls;
     std::map<std::size_t, std::pair<glm::vec3, glm::vec3>> killShots; // entity -> (point, impulse) of the shot that killed it
@@ -792,6 +793,8 @@ int main(int argc, char** argv)
             ragdolls.clear(); // setLevel removes their bodies
             killShots.clear();
             physics.setLevel(scene);
+            thickets.build(scene);
+            LOG_INFO("level", "%zu bushes to push through", thickets.size());
             physicsSeconds = glfwGetTime() - physicsStart;
             ++progress.done;
             finished = true;
@@ -2363,6 +2366,9 @@ int main(int argc, char** argv)
             engine::DebugDraw::global().tick(dt);
             if (engine::WaterBody water; engine::waterAt(scene, player.feet(), &water))
                 player.setWater(water.level, water.flow);
+            const float thicket = player.noclip ? 0.0f : thickets.densityAt(player.feet());
+            if (thicket > 0.0f)
+                player.slow(scene.player.bushSlow * thicket); // pushing through bushes
             player.fixedUpdate(input, camera, dt);
             // Pickups the player touches (ammo, medkits, weapons).
             for (const PickupResult& r : collectPickups(scene, player.feet(), inventory, weapons, current, assetRoot)) {
@@ -2610,6 +2616,7 @@ int main(int argc, char** argv)
                     ground = "water"; // wading: splashing steps
                 audio.walk(scene.player, player.feet(), player.velocity(), player.grounded(), dt, ground);
                 audio.water(player.feet(), player.velocity(), player.waterDepth() > 0.0f, player.swimming(), player.headUnderwater(), dt);
+                audio.brush(player.feet(), player.velocity(), player.noclip ? 0.0f : thickets.densityAt(player.feet()), dt);
             }
             // Characters that died this step go limp: a ragdoll from their current pose.
             for (std::size_t i = 0; i < scene.entities.size(); ++i) {
