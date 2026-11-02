@@ -68,62 +68,11 @@ levé tlačítko střelba, pravé tlačítko míření přes mířidla (přiblí
 levé tlačítko výběr, F zaměří výběr, Ctrl+B přidá box, Ctrl+I importuje glTF model, Ctrl+D duplikuje, Del smaže,
 **F5 spustí úroveň ve hře**.
 
-**Level Zóna** (`fps_game assets/levels/zone.level`, v editoru File > Open): dálnice E-95 ucpaná zrezlými auty
-a autobusy, železniční hřbitov s vagony a táborem stalkerů (start), město s nemocnicí a paneláky, elektrárna
-s chladicími věžemi, řeka s rozbitými mosty a mrtvé město. Do paneláků, nemocnice, strojovny, dílny, vagonů,
-autobusů a mezi nohy chladicích věží se dá vejít (kolize podle meshe, schody do všech pater). Plán:
-`assets/levels/source/zone_map.png` (`draw_zone_map.py` ho překreslí z levelu i po úpravách v editoru).
-Výchozí rozložení vytvořil `assets/levels/source/make_zone_level.py`, modely `assets/models/zone/gen/`
-generuje `assets/models/zone/source/build_zone.py`.
-
-**Level Ulice u nemocnice** (`fps_game assets/levels/hospital_street.level`): menší ručně složená mapa
-s úkolem. Start v táboře stalkerů u vagonů, cíl je skrýš s léky v horním patře nemocnice (`objective.lua`
-ohlásí nalezení), pak návrat do tábora. Hlavní cesta vede dírou v plotu kolem havarované evakuační kolony,
-boční cesta přes garáže a dvůr po požárním schodišti. Bandité hlídají ulici (odstřelovač v paneláku),
-vchod a chodby nemocnice; na východě je staré město (scéna "Postwar City", CC-BY, viz
-`assets/models/zone/postwar/CREDITS.md`). Na mapě (M) jsou značky míst. Plán s trasami:
-`assets/levels/source/hospital_street_map.png`, rozložení `assets/levels/source/make_street_level.py`.
-Oba levely (Zóna i Ulice u nemocnice) stojí na terénu enginu (`zone.terrain`, `hospital_street.terrain`): kopce
-a val na okrajích mapy, u budov, vraků, kolejí a postav rovná zem, 8 vrstev povrchu a tráva ve shlucích. Podél
-zdí, plotů, svodidel a vraků rostou kopřivy a plevel, u budov keře a leží cihly a omítka, u silnic plechovky
-a lahve, pod stromy větvičky a v prasklinách u obrubníků tráva (vše jako foliage, štětcem upravitelné).
-Na zdech Zóny jsou nápisy a skvrny, každý s důvodem: „Цой жив“ a DMB na garážích, kontejnerech a vagónech,
-„Не входить“ u nemocnice, kterou drží bandité, radiace na elektrárně, stalkerské šipky „чисто“ od tábora do města,
-kříže na vagónech u pole anomálií, zatékání a vlhko na štítech a soklech
-(`python3 -I assets/levels/source/add_wall_writing.py zone`; místo ověřuje paprsky proti skutečné geometrii zdi).
-Spoje se zemí (hlína u obrubníků, rozbitá krajnice, špína u paty zdí, štěrk z kolejí) přidává
-`python3 -I assets/levels/source/add_joints.py zone hospital_street skrunda1`, paletu a hustotu textur kontroluje
-`python3 -I assets/levels/source/material_audit.py zone hospital_street skrunda1`. Pravidla a rešerše:
-`docs/LEVEL_ART_GUIDE.md`.
-Přidal ho `python3 -I assets/levels/source/add_terrain.py zone hospital_street` přímo do upravených levelů
-(nic z editoru se neztratí; stromy a suť posadí na nový povrch), dál se ladí v režimech Landscape a Foliage.
-
-**Level Skrunda-1** (`fps_game assets/levels/skrunda1.level`): opuštěné sovětské radarové městečko Skrunda-1
-v Lotyšsku. Budovy, ulice a rybník jsou 1:1 podle OpenStreetMap (© OpenStreetMap contributors, ODbL,
-`assets/levels/source/osm/`), budovy mají skutečné rozměry půdorysů: chruščovky, posádková nemocnice
-(Госпиталь), štáb, obchod „Venta", jídelna, vodárna. Textury jsou reálné fotoskeny Poly Haven (CC0).
-Úkol: najít PDA stalkera Ljochy ve 3. patře nemocnice a vrátit se do Štábu, volitelně jeho skrýš ve vodárně.
-Trasy: hlavní po Nové ulici pod odstřelovačem, boční přes dvory k zadnímu vchodu nemocnice, třetí k vodárně.
-Plán s trasami: `assets/levels/source/skrunda1_plan.png` (`draw_skrunda_plan.py` ho překreslí z levelu).
-Zem je terén enginu (`skrunda1.terrain`, 577 × 577 výšek po 1 m: kopce k lesu, zvlnění, hromady hlíny a suti;
-8 vrstev textur: louka, suchá a zelená tráva, hlína, listí, štěrk, bláto, šlapaná cesta) a stromy, keře a tráva
-jsou jeho foliage, takže se upravují štětci v režimech Landscape a Foliage. Asfalt a rybník jsou přehozené
-overlay modely ve skupině Terrain. Budovy: `python3 -I assets/models/zone/source/build_skrunda.py`,
-overlaye `... build_skrunda.py overlays`, rozložení, terén a foliage `python3 -I assets/levels/source/make_skrunda_level.py`
-(přepíše i ruční úpravy terénu; objemy interiérů, nastavení streamingu a impostory zachová). Po vygenerování
-level otevři a ulož v editoru, doplní se tím `bounds` modelů pro streaming.
-Vzhled je laděný podle reálných fotek Skrundy-1 (jaro): souvislá loňská slaměná tráva, břízy, světlá
-silikátová cihla, prázdná okna, stékající špína pod parapety a střechou (alfa decaly, atlas `zone/textures/grime_albedo.png`
-z `skrunda.make_grime()`), nepořádek ve skupině Clutter (papíry v bytech, suť pod balkony, kořist banditů).
-Barvu zemních vrstev ladí materiály `assets/materials/skrunda/terrain_*.material` (editovatelné v editoru).
-Světlo v budovách: každé patro má objem irradiance sond (skupina Light probes, `skrunda_probes.py` je vytvoří
-z objemů interiérů), takže místnosti svítí od oken a sluneční skvrny na podlaze odrážejí teplé světlo na stěny.
-Upečené sondy jsou v `skrunda1.probes` (po přesunu budovy znovu Render › Bake lighting probes). Automatická
-expozice (Environment, `auto_exposure`) nechá oko přivyknout šeru uvnitř, okna se přepálí jako ve skutečnosti.
-Detaily zóny: nápisy a skvrny na zdech (skupina Wall writing, vlastní graffiti v azbuce, čísla vchodů, saze nad
-vyhořelými byty, zatékání, Ljochovy značky k nemocnici; `build_skrunda.py decals`), drobný nepořádek jako foliage
-terénu (cihly, omítka, sklo, plechovky, lahve, větvičky; `build_skrunda.py debris`, v režimu Foliage se dá
-domalovat štětcem), rádia s chrčivým zvukem (`assets/sounds/source/radio.py`) a prach ve světle v místnostech.
+**Herní levely**: 2026-11-02 byly dosavadní mapy (Zóna, Ulice u nemocnice, Skrunda-1) smazány (zůstávají v historii gitu)
+a staví se jeden nový level podle referenční nálady: zarostlá post-sovětská ulice mezi vysokými zchátralými domy.
+Nástroje pro levely zůstávají: spoje se zemí `assets/levels/source/add_joints.py`, nápisy na zdech `add_wall_writing.py`,
+kontrola palety a hustoty textur `material_audit.py`, terén `add_terrain.py`. Modely budov Skrundy (`build_skrunda.py`),
+svody a smaltované cedule (`build_skrunda.py fixtures`) jsou dál k dispozici. Pravidla a rešerše: `docs/LEVEL_ART_GUIDE.md`.
 
 **Testovací levely** (`water_test`, `physics_test`, `anomaly_test`, `lights_test`, `io_test`): každý je malé
 navržené místo v Zóně, které ukazuje jednu funkci enginu. Kanál s čerpací stanicí (voda), garáže s dvorem

@@ -428,25 +428,25 @@ def build(name):
         W[...] *= (1.0 - cover)[..., None]
         W[..., layer] += cover
 
-    put(DRY, smoothstep(0.42, 0.6, nz.fbm(X - 400, Z + 250, 26.0, 2)))
-    put(LUSH, smoothstep(0.5, 0.64, nz.fbm(X + 60, Z - 900, 20.0, 2)) * (0.5 + 0.5 * smoothstep(0.3, -0.6, H - base)))
+    put(DRY, smoothstep(0.34, 0.7, nz.fbm(X - 400, Z + 250, 26.0, 2)))
+    put(LUSH, smoothstep(0.42, 0.72, nz.fbm(X + 60, Z - 900, 20.0, 2)) * 0.8 * (0.5 + 0.5 * smoothstep(0.3, -0.6, H - base)))
     for (layer, rx0, rz0, rx1, rz1, *amount) in cfg['regions'][1:]:
         d = np.hypot(np.maximum(np.maximum(rx0 - X, X - rx1), 0), np.maximum(np.maximum(rz0 - Z, Z - rz1), 0))
         inside = np.minimum(np.minimum(X - rx0, rx1 - X), np.minimum(Z - rz0, rz1 - Z))
         sd = np.where(d > 0, d, -np.maximum(inside, 0))
         # patchy inside (the old surface shows through in places), soft wandering edge outside
         patch = 0.75 + 0.5 * (nz.fbm(X * 1.0 + 11 * layer, Z, 7.0, 2) - 0.5)
-        cover = smoothstep(2.5, -1.5, sd + warp) * np.clip(patch + 0.25, 0, 1)
+        cover = smoothstep(4.0, -3.0, sd + warp) * np.clip(patch + 0.25, 0, 1)
         if amount:                     # patchy region: only the highest `amount` of a slow noise
             pn = nz.fbm(X - 57 * layer, Z + 91 * layer, 11.0, 3)
             t = float(np.quantile(pn, 1.0 - amount[0]))
-            cover *= smoothstep(t - 0.04, t + 0.04, pn)
+            cover *= smoothstep(t - 0.12, t + 0.14, pn) * (0.7 if layer == MUD else 1.0)
         put(layer, cover)
-    put(LEAVES, smoothstep(0.62, 0.7, nz.fbm(X + 1300, Z - 700, 22.0, 2)) * 0.9)
+    put(LEAVES, smoothstep(0.56, 0.76, nz.fbm(X + 1300, Z - 700, 22.0, 2)) * 0.7)
     put(DIRT, smoothstep(0.3, 0.55, slope) * 0.85)
     put(GRAVEL, smoothstep(1.4, 0.2, road_d + 0.8 * (nz(X - 31, Z + 17, 3.0) - 0.5)) * (road_d > 0))
     put(DIRT, smoothstep(2.2, 0.3, build_d + 1.2 * (nz(X + 5, Z - 5, 2.5) - 0.5)) * 0.85)
-    put(MUD, smoothstep(0.6, 0.85, nz.fbm(X - 77, Z + 41, 8.0, 2)) * smoothstep(0.0, -0.5, H - base))
+    put(MUD, smoothstep(0.55, 0.9, nz.fbm(X - 77, Z + 41, 8.0, 2)) * smoothstep(0.0, -0.6, H - base) * 0.75)
     # ---------------------------------------------------------------- trodden paths (desire lines)
     # People walk the cheapest way between the places they go to: camps, characters, stashes, map markers and
     # the roads. Dijkstra on a 2 m grid (open ground cheap, roads a bit cheaper, steep banks dear, objects

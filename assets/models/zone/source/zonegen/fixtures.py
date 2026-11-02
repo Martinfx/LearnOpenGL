@@ -1,0 +1,116 @@
+"""Facade fixtures (original, CC0): the middle layer of detail that makes a wall read as a building someone built
+and lived in (docs/LEVEL_ART_GUIDE.md, "Proč to působí amatérsky", point 4).
+
+- downpipe(h): a rain-water downpipe of height h metres: a rusty sheet-metal pipe 11 cm across held 12 cm off the
+  wall by clamps every 2 m, a hopper head under the roof edge and a shoe at the bottom turned away from the wall.
+  The wall is the plane z = 0, the pipe stands in front of it (+Z), origin at the foot.
+- plates: enamel house-number plates and street signs of a Soviet town (blue and white), one RGBA atlas
+  (zone/textures/plates_albedo.png) and one decal quad per plate, same convention as the graffiti (XY plane facing
+  +Z, origin bottom centre).
+The level script assets/levels/source/add_fixtures.py places them where the wall is really flat (ray test)."""
+import math
+import os
+
+import numpy as np
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
+
+from .mats import PALETTE, TEX_OUT
+from .mesh import Mesh
+
+PIPE_HEIGHTS = (3, 6, 9, 12, 15, 18, 24, 30)
+R = 0.055                   # pipe radius
+OFF = 0.12                  # wall to pipe axis
+
+
+def downpipe(h):
+    m = Mesh(PALETTE)
+    top = h - 0.35
+    m.cylinder('rust_dark', (0, 0.18, OFF), (0, top, OFF), R, seg=10, caps=False)
+    # shoe: a short bend out of the wall at the foot
+    m.cylinder('rust_dark', (0, 0.18, OFF), (0, 0.06, OFF + 0.16), R, seg=10, caps=True)
+    # hopper head under the roof edge, and its outlet into the pipe
+    m.box('rust_dark', (-0.16, top + 0.05, 0.02), (0.16, h, OFF + 0.14))
+    m.cylinder('rust_dark', (0, top - 0.02, OFF), (0, top + 0.06, OFF), R * 1.15, seg=10, caps=False)
+    # clamps every 2 m: a collar and a flat bracket into the wall
+    y = 1.2
+    while y < top - 0.3:
+        m.cylinder('rust_dark', (0, y - 0.03, OFF), (0, y + 0.03, OFF), R * 1.25, seg=10, caps=True)
+        m.box('rust_dark', (-0.015, y - 0.02, 0.0), (0.015, y + 0.02, OFF - R))
+        y += 2.0
+    return m
+
+
+# name: (text, colours (background, text), width m, height m)
+BLUE, WHITE, INK = (0.12, 0.25, 0.52), (0.92, 0.93, 0.9), (0.1, 0.12, 0.2)
+PLATES = {f'house_{n}': (str(n), (BLUE, WHITE), 0.36 if n < 10 else 0.42, 0.3) for n in range(1, 25)}
+PLATES.update({
+    'street_zavod':  ('УЛ. ЗАВОДСКАЯ', (WHITE, INK), 1.0, 0.24),
+    'street_mira':   ('ПР. МИРА', (WHITE, INK), 0.8, 0.24),
+    'street_lenin':  ('УЛ. ЛЕНИНА', (BLUE, WHITE), 0.9, 0.24),
+    'street_novaya': ('УЛ. НОВАЯ', (BLUE, WHITE), 0.9, 0.24),
+    'street_pochta': ('УЛ. ПОЧТОВАЯ', (WHITE, INK), 1.0, 0.24),
+    'shelter':       ('УБЕЖИЩЕ', ((0.82, 0.2, 0.12), (0.95, 0.94, 0.9)), 0.7, 0.3),
+})
+STREETS = [k for k in PLATES if k.startswith('street_')]
+PCOLS, PROWS, PCELL_W, PCELL_H = 4, 8, 512, 160
+PALETTE['plates'] = dict(tex='plates', decal=True, tile=1.0, color=(1, 1, 1), rough=0.6, metal=0.0)
+
+
+def make_plate_atlas(force=False):
+    path = f'{TEX_OUT}/plates_albedo.png'
+    if os.path.exists(path) and not force:
+        return path
+    rng = np.random.default_rng(7)
+    W, H = PCOLS * PCELL_W, PROWS * PCELL_H
+    atlas = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    font_path = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
+    for k, (name, (text, (bg, fg), wm, hm)) in enumerate(PLATES.items()):
+        col, row = k % PCOLS, k // PCOLS
+        # the plate fills its cell's width or height, keeping its aspect
+        s = min((PCELL_W - 16) / wm, (PCELL_H - 16) / hm)
+        w, h = int(wm * s), int(hm * s)
+        im = Image.new('RGBA', (w, h), (0, 0, 0, 0))
+        d = ImageDraw.Draw(im)
+        bgc = tuple(int(c * 255) for c in bg) + (255,)
+        fgc = tuple(int(c * 255) for c in fg) + (255,)
+        d.rounded_rectangle((0, 0, w - 1, h - 1), radius=int(h * 0.12), fill=bgc)
+        d.rounded_rectangle((4, 4, w - 5, h - 5), radius=int(h * 0.1), outline=fgc, width=max(2, h // 30))
+        size = int(h * 0.62)
+        f = ImageFont.truetype(font_path, size)
+        while d.textlength(text, font=f) > w * 0.86 and size > 8:
+            size -= 2
+            f = ImageFont.truetype(font_path, size)
+        tw = d.textlength(text, font=f)
+        d.text(((w - tw) / 2, (h - size) / 2 - size * 0.08), text, font=f, fill=fgc)
+        # decades outside: chipped enamel (rusty spots), faded, dirty bottom edge
+        a = np.asarray(im, np.float32) / 255
+        yy, xx = np.mgrid[0:h, 0:w]
+        for _ in range(int(rng.integers(3, 9))):
+            cx, cy, r = rng.random() * w, rng.random() * h, rng.uniform(2, h * 0.06)
+            m = np.hypot(xx - cx, yy - cy) < r
+            a[m, :3] = a[m, :3] * 0.3 + np.array([0.33, 0.18, 0.08]) * 0.7
+        a[..., :3] = a[..., :3] * 0.85 + 0.08
+        dirt = np.clip((yy / h - 0.6) / 0.4, 0, 1)[..., None]
+        a[..., :3] = a[..., :3] * (1 - 0.35 * dirt) + np.array([0.2, 0.17, 0.12]) * 0.35 * dirt
+        im = Image.fromarray(np.clip(a * 255, 0, 255).astype(np.uint8), 'RGBA')
+        atlas.alpha_composite(im, (col * PCELL_W + (PCELL_W - w) // 2, row * PCELL_H + (PCELL_H - h) // 2))
+    atlas.save(path)
+    return path
+
+
+def plate(name):
+    """Decal quad of one plate (see module doc)."""
+    k = list(PLATES).index(name)
+    col, row = k % PCOLS, k // PCOLS
+    _t, _c, wm, hm = PLATES[name]
+    s = min((PCELL_W - 16) / wm, (PCELL_H - 16) / hm)
+    w, h = wm * s, hm * s
+    W, H = PCOLS * PCELL_W, PROWS * PCELL_H
+    u0 = (col * PCELL_W + (PCELL_W - w) / 2) / W
+    u1 = (col * PCELL_W + (PCELL_W + w) / 2) / W
+    v0 = (row * PCELL_H + (PCELL_H - h) / 2) / H
+    v1 = (row * PCELL_H + (PCELL_H + h) / 2) / H
+    m = Mesh(PALETTE)
+    m.poly('plates', [(-wm / 2, 0, 0), (wm / 2, 0, 0), (wm / 2, hm, 0), (-wm / 2, hm, 0)],
+           uvs=[(u0, -v1), (u1, -v1), (u1, -v0), (u0, -v0)])
+    return m

@@ -76,17 +76,17 @@ def _design(name, rng, w, h):
     v = (np.arange(h, dtype=np.float32)[:, None] + 0.5) / h * np.ones((1, w), np.float32)
     if name == 'kerb_soil':
         edge = 0.35 + 0.45 * _fbm(rng, w, h, 160, 600)          # how far the soil reaches, wandering
-        a = np.clip((edge - v) / 0.12, 0, 1) * (0.55 + 0.45 * _fbm(rng, w, h, 40, 40))
+        a = np.clip((edge - v) / 0.3, 0, 1) ** 1.5 * (0.4 + 0.4 * _fbm(rng, w, h, 40, 40))     # thins out, no hard rim
         leaves, lc = _blobs(rng, w, h, 1400, 4, 11, lambda t: 1.0 - t)
-        base = np.array([0.44, 0.39, 0.3])            # dry dust and sand: lighter than the asphalt
+        base = np.array([0.4, 0.38, 0.33])            # dry dust and sand: a little lighter than the asphalt, grey-brown
         dust = _fbm(rng, w, h, 30, 30)
-        rgb = base[None, None, :] * (0.75 + 0.5 * dust[..., None])
-        leaf = np.stack([0.36 + 0.14 * lc, 0.27 + 0.1 * lc, 0.13 + 0.04 * lc], -1)
+        rgb = base[None, None, :] * (0.88 + 0.24 * dust[..., None])
+        leaf = np.stack([0.3 + 0.08 * lc, 0.26 + 0.06 * lc, 0.18 + 0.03 * lc], -1)
         rgb = rgb * (1 - leaves[..., None] * 0.9) + leaf * leaves[..., None] * 0.9
-        a = np.maximum(a, leaves * 0.9 * (v < edge + 0.1))
+        a = np.maximum(a, leaves * 0.75 * (v < edge))
         moss = np.clip((0.12 - v) / 0.12, 0, 1) * _fbm(rng, w, h, 20, 20)        # moss right in the joint
         rgb = rgb * (1 - moss[..., None] * 0.7) + np.array([0.22, 0.28, 0.1]) * moss[..., None] * 0.7
-        return rgb, np.clip(a, 0, 0.95)
+        return rgb, np.clip(a, 0, 0.8)
     if name == 'wall_grime':
         top = 0.45 + 0.4 * _fbm(rng, w, h, 120, 400)           # splash-back height, uneven
         streak = _fbm(rng, w, h, 6, 200)                         # vertical rain streaks

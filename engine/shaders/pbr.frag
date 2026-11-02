@@ -333,7 +333,7 @@ void main() {
         albedo = vec3(0.0);
         float wsum = 0.0;
         for (int i = 0; i < 8; ++i) {
-            float w = hgt[i] < 0.0 ? 0.0 : max(hgt[i] - hmax + 0.12, 0.0);
+            float w = hgt[i] < 0.0 ? 0.0 : max(hgt[i] - hmax + 0.2, 0.0);
             terrainW[i] = w;
             wsum += w;
         }
@@ -344,8 +344,9 @@ void main() {
         // Large-scale variation: patches of lighter and darker, greener and more yellow ground
         // (tens of metres), so a meadow is not one flat colour to the horizon.
         float m1 = fbm(p * 0.017 + vec2(3.7, 1.9)), m2 = fbm(p * 0.043 + vec2(11.0, 5.0));
-        albedo *= mix(0.78, 1.18, m1);
-        albedo *= mix(vec3(1.07, 1.0, 0.84), vec3(0.93, 1.02, 1.06), m2);
+        // Kept gentle: stronger swings read as stains, not as a meadow drying out unevenly.
+        albedo *= mix(0.9, 1.08, m1);
+        albedo *= mix(vec3(1.035, 1.0, 0.93), vec3(0.97, 1.01, 1.03), m2);
     }
     float alpha = uOpacity;
     if (uHasTexture) {
