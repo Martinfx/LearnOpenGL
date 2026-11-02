@@ -5,6 +5,10 @@
 
 namespace engine {
 
+// Players set the horizontal field of view as on a 16:9 screen (the usual "FOV 90"); the
+// camera keeps the matching vertical one, so wider screens see more at the sides (Hor+).
+float verticalFov(float horizontalDegrees16x9);
+
 class FpsCamera {
 public:
     glm::vec3 position{0.0f, 1.7f, 0.0f};

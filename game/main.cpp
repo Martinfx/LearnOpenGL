@@ -1177,7 +1177,9 @@ int main(int argc, char** argv)
         using engine::CVarType;
         cvars.add("m_sensitivity", CVarType::Float, "1", "Mouse sensitivity multiplier", engine::CVarConfig, 0.05, 10.0);
         cvars.add("m_invert_y", CVarType::Bool, "0", "Invert vertical mouse look", engine::CVarConfig);
-        cvars.add("fov", CVarType::Float, "90", "Vertical field of view (degrees, hip fire)", engine::CVarConfig, 50.0, 120.0);
+        // Horizontal at 16:9 (90 = vertical 59). It used to be vertical: 90 then meant 121 degrees
+        // across, a fish-eye stretch at the screen edges that makes players dizzy.
+        cvars.add("fov", CVarType::Float, "90", "Horizontal field of view on a 16:9 screen (degrees, hip fire)", engine::CVarConfig, 60.0, 120.0);
         cvars.add("vsync", CVarType::Bool, "0", "Wait for the monitor refresh (no tearing, adds latency)", engine::CVarConfig)
             .onChange = [](const engine::CVar& v) { glfwSwapInterval(v.boolean() ? 1 : 0); };
         cvars.add("fps_max", CVarType::Int, "0", "Frame rate limit, 0 = none", engine::CVarConfig, 0.0, 1000.0);
@@ -2724,8 +2726,9 @@ int main(int argc, char** argv)
             {
                 const engine::Weapon& w = weapons[current];
                 const float zoom = w.canAim() ? smoothAim(w) : 0.0f;
-                const float hip = cvFov.number();
-                camera.fovDegrees = glm::mix(hip, w.canAim() ? w.settings.aimFov : hip, zoom);
+                // Weapons' aim_fov is the zoom against the old 90-degree default (55 = 1.6x).
+                const float hip = engine::verticalFov(static_cast<float>(cvFov.number()));
+                camera.fovDegrees = glm::mix(hip, w.canAim() ? hip * w.settings.aimFov / 90.0f : hip, zoom);
                 camera.sensitivity = baseSensitivity * cvSensitivity.number() * camera.fovDegrees / hip;
             }
             static const float testTurn = std::getenv("FPS_ENGINE_TURN") ? std::strtof(std::getenv("FPS_ENGINE_TURN"), nullptr) : 0.0f;

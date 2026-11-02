@@ -6,6 +6,12 @@
 
 namespace engine {
 
+float verticalFov(float horizontalDegrees16x9)
+{
+    const float h = glm::radians(glm::clamp(horizontalDegrees16x9, 1.0f, 179.0f));
+    return glm::degrees(2.0f * std::atan(std::tan(h * 0.5f) * 9.0f / 16.0f));
+}
+
 void FpsCamera::look(glm::vec2 mouseDelta)
 {
     yawDegrees += mouseDelta.x * sensitivity;

@@ -3779,6 +3779,12 @@ void testProbes()
     check(engine::probeFile("a/b.level") == std::filesystem::path("a/b.probes"), "probe file sits next to the level");
 }
 
+void testFieldOfView()
+{
+    check(std::abs(engine::verticalFov(90.0f) - 58.72f) < 0.05f, "FOV 90 across a 16:9 screen is 58.7 degrees vertical");
+    check(engine::verticalFov(60.0f) < engine::verticalFov(120.0f), "a wider FOV setting widens the view");
+}
+
 void testAtmosphere()
 {
     engine::AtmosphereParams air;
@@ -4615,6 +4621,7 @@ int main(int argc, char** argv)
         {"testPlantCollision", testPlantCollision},
         {"testThickets", testThickets},
         {"testAtmosphere", testAtmosphere},
+        {"testFieldOfView", testFieldOfView},
         {"testEntityIO", testEntityIO},
         {"testTimeOfDay", testTimeOfDay},
         {"testAssetPalette", testAssetPalette},
