@@ -68,20 +68,15 @@ levé tlačítko střelba, pravé tlačítko míření přes mířidla (přiblí
 levé tlačítko výběr, F zaměří výběr, Ctrl+B přidá box, Ctrl+I importuje glTF model, Ctrl+D duplikuje, Del smaže,
 **F5 spustí úroveň ve hře**.
 
-**Herní levely**: 2026-11-02 byly dosavadní mapy (Zóna, Ulice u nemocnice, Skrunda-1) smazány (zůstávají v historii gitu)
-a staví se jeden nový level podle referenční nálady: zarostlá post-sovětská ulice mezi vysokými zchátralými domy.
+**Herní levely**: 2026-11-02 byly všechny dosavadní mapy (Zóna, Ulice u nemocnice, Skrunda-1 i testovací levely) smazány (zůstávají v historii gitu)
+a staví se jeden nový level podle referenční nálady: zarostlá post-sovětská ulice mezi vysokými zchátralými domy
+(`assets/levels/overgrown_street.level`, výchozí level hry i editoru).
 Nástroje pro levely zůstávají: spoje se zemí `assets/levels/source/add_joints.py`, nápisy na zdech `add_wall_writing.py`,
 kontrola palety a hustoty textur `material_audit.py`, terén `add_terrain.py`. Modely budov Skrundy (`build_skrunda.py`),
 svody a smaltované cedule (`build_skrunda.py fixtures`) jsou dál k dispozici. Pravidla a rešerše: `docs/LEVEL_ART_GUIDE.md`.
 
-**Testovací levely** (`water_test`, `physics_test`, `anomaly_test`, `lights_test`, `io_test`): každý je malé
-navržené místo v Zóně, které ukazuje jednu funkci enginu. Kanál s čerpací stanicí (voda), garáže s dvorem
-z panelů (fyzikální bedny, sudy a pneumatiky), opuštěný statek (jedna anomálie od každého druhu tam, kde by
-vznikla), noční jídelna s táborem u ohně (světla) a obchod „Venta" za soumraku (triggery a výstupy entit).
-Mají terén s kopci, trávou, keři, háji a nepořádkem jako Skrunda. Generuje je
-`python3 -I assets/levels/source/make_test_levels.py [jméno …]` (společný kód `zone_place.py`); po vygenerování
-level otevři a ulož v editoru (doplní `bounds` pro streaming). Jména entit drží unit testy a golden snímky,
-proto je při úpravách neměň. `test.level` zůstává jednoduchý, unit testy kontrolují jeho přesný obsah.
+**Testovací scény**: technické testovací levely byly 2026-11-02 smazány spolu s herními mapami. Unit testy
+používají vlastní scény v `tests/data/` (`scene.level`, `physics_scene.level`) a kontrolují jejich přesný obsah.
 
 ## Skriptování a AI (Lua)
 

@@ -604,7 +604,7 @@ int main(int argc, char** argv)
     engine::setCrashContext("gpu", renderer.glInfo());
 
     // Command line: [level] [--shaders DIR] (shaders edited in the editor replace the built-in ones).
-    std::filesystem::path levelPath = std::filesystem::path(argv[0]).parent_path() / "assets/levels/test.level";
+    std::filesystem::path levelPath = std::filesystem::path(argv[0]).parent_path() / "assets/levels/overgrown_street.level";
     std::vector<std::string> cvarArgs; // "+name value" pairs, applied once the variables exist
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];

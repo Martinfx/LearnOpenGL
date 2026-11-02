@@ -1,0 +1,617 @@
+# FPS engine level
+version 6
+player_start 0 -0.07 6
+sun 0.3 -0.8 -0.5
+env sun_color 0.92 0.92 0.9
+env sun_intensity 1.3
+env sky_zenith 0.42 0.47 0.53
+env sky_horizon 0.68 0.7 0.72
+env ground_color 0.3 0.29 0.25
+env cloud_cover 0.85
+env ambient_intensity 1.15
+env fog_color 0.62 0.65 0.68
+env fog_density 0.006
+env fog_height 2
+env fog_height_falloff 0.04
+env fog_sun_scatter 0.3
+env exposure 1.05
+env bloom_intensity 0.03
+env bloom_threshold 1.4
+env ssao_radius 0.8
+env ssao_intensity 1.2
+env shadow_distance 80
+env saturation 0.85
+env contrast 1.05
+env tint 1 1 1
+env vignette 0.2
+env grain 0.025
+env rain 0
+env wind 0
+map_bounds -96 -96 192
+terrain "physics_scene.terrain"
+terrain_layer 0 "../../assets/materials/skrunda/terrain_meadow.material" 0.4
+terrain_layer 1 "../../assets/materials/skrunda/terrain_dry.material" 0.5
+terrain_layer 2 "../../assets/materials/skrunda/terrain_lush.material" 0.5
+terrain_layer 3 "../../assets/materials/skrunda/terrain_dirt.material" 0.5
+foliage_type "../../assets/models/zone/vegetation/grass_short_a.glb" 0.3 0.85 1.15 45 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../../assets/models/zone/vegetation/grass_short_a_lod1.glb" 8
+foliage_type "../../assets/models/zone/vegetation/grass_short_b.glb" 0.3 0.85 1.15 45 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../../assets/models/zone/vegetation/grass_short_b_lod1.glb" 8
+foliage_type "../../assets/models/zone/vegetation/grass_tall_b.glb" 0.3 0.85 1.15 45 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../../assets/models/zone/vegetation/grass_tall_b_lod1.glb" 8
+foliage_type "../../assets/models/zone/vegetation/grass_clump_a.glb" 0.3 0.85 1.15 45 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../../assets/models/zone/vegetation/grass_clump_a_lod1.glb" 8
+foliage_type "../../assets/models/zone/skrunda/veg/spruce_b.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../../assets/models/zone/skrunda/veg/spruce_b_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../../assets/models/zone/skrunda/veg/spruce_a.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../../assets/models/zone/skrunda/veg/spruce_a_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../../assets/models/zone/skrunda/veg/pine_a.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../../assets/models/zone/skrunda/veg/pine_a_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../../assets/models/zone/skrunda/veg/broadleaf_a.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../../assets/models/zone/skrunda/veg/broadleaf_a_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../../assets/models/zone/skrunda/veg/broadleaf_b_spring.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../../assets/models/zone/skrunda/veg/broadleaf_b_spring_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../../assets/models/zone/skrunda/veg/birch_b_spring.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../../assets/models/zone/skrunda/veg/birch_b_spring_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../../assets/models/zone/skrunda/veg/birch_young.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../../assets/models/zone/skrunda/veg/birch_young_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../../assets/models/zone/skrunda/veg/birch_b.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../../assets/models/zone/skrunda/veg/birch_b_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../../assets/models/zone/skrunda/veg/pine_b.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../../assets/models/zone/skrunda/veg/pine_b_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../../assets/models/zone/skrunda/veg/birch_a.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../../assets/models/zone/skrunda/veg/birch_a_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../../assets/models/zone/skrunda/veg/spruce_young.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../../assets/models/zone/skrunda/veg/spruce_young_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../../assets/models/zone/skrunda/veg/birch_a_spring.glb" 0.03 0.85 1.15 200 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../../assets/models/zone/skrunda/veg/birch_a_spring_lod1.glb" 30
+foliage_impostor 90
+foliage_type "../../assets/models/zone/vegetation/bush_c.glb" 0.02 0.85 1.15 110 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../../assets/models/zone/vegetation/bush_c_lod1.glb" 20
+foliage_type "../../assets/models/zone/vegetation/bush_wide_a.glb" 0.02 0.85 1.15 110 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../../assets/models/zone/vegetation/bush_wide_a_lod1.glb" 20
+foliage_type "../../assets/models/zone/vegetation/bush_b.glb" 0.02 0.85 1.15 110 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../../assets/models/zone/vegetation/bush_b_lod1.glb" 20
+foliage_type "../../assets/models/zone/vegetation/bush_a.glb" 0.02 0.85 1.15 110 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../../assets/models/zone/vegetation/bush_a_lod1.glb" 20
+foliage_type "../../assets/models/zone/vegetation/bush_dense_a.glb" 0.02 0.85 1.15 110 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../../assets/models/zone/vegetation/bush_dense_a_lod1.glb" 20
+foliage_type "../../assets/models/zone/vegetation/weed_patch.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../../assets/models/zone/vegetation/weed_patch_lod1.glb" 8
+foliage_lod "../../assets/models/zone/skrunda/veg/weed_patch_far.glb" 16
+foliage_type "../../assets/models/zone/vegetation/nettle_medium_a.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../../assets/models/zone/vegetation/nettle_medium_a_lod1.glb" 8
+foliage_type "../../assets/models/zone/vegetation/nettle_tall_a.glb" 0.1 0.85 1.15 45 0 0 0 0.6 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../../assets/models/zone/vegetation/nettle_tall_a_lod1.glb" 8
+foliage_type "../../assets/models/zone/skrunda/veg/grass_dry.glb" 0.25 0.85 1.15 55 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../../assets/models/zone/skrunda/veg/grass_dry_lod1.glb" 8
+foliage_lod "../../assets/models/zone/skrunda/veg/grass_dry_far.glb" 18
+foliage_type "../../assets/models/zone/vegetation/grass_short_a.glb" 0.3 0.85 1.15 55 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../../assets/models/zone/vegetation/grass_short_a_lod1.glb" 8
+foliage_type "../../assets/models/zone/skrunda/veg/grass_fresh.glb" 0.25 0.85 1.15 55 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../../assets/models/zone/skrunda/veg/grass_fresh_lod1.glb" 8
+foliage_lod "../../assets/models/zone/skrunda/veg/grass_fresh_far.glb" 18
+foliage_type "../../assets/models/zone/vegetation/grass_tall_a.glb" 0.3 0.85 1.15 55 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../../assets/models/zone/vegetation/grass_tall_a_lod1.glb" 8
+foliage_type "../../assets/models/zone/vegetation/grass_dry_a.glb" 0.3 0.85 1.15 55 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../../assets/models/zone/vegetation/grass_dry_a_lod1.glb" 8
+foliage_type "../../assets/models/zone/vegetation/grass_clump_a.glb" 0.3 0.85 1.15 55 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../../assets/models/zone/vegetation/grass_clump_a_lod1.glb" 8
+foliage_type "../../assets/models/zone/vegetation/weed_a.glb" 0.3 0.85 1.15 55 0 0 0 0.5 1 0.15 1 1 1 1 1 1 1 1
+foliage_lod "../../assets/models/zone/vegetation/weed_a_lod1.glb" 8
+loading_image "../../assets/textures/ui/loading_zone.jpg"
+loading_title "Test: fyzikální předměty – dvůr u garáží"
+loading_hint "Bedny, sudy, kanystry a pneumatiky ve dvoře u garáží padají, dají se odstrčit a rozstřílet."
+group "Yard" ""
+group "Garages" ""
+group "Props" ""
+group "Junk" ""
+box "Road plate" -10 -0.097 -12 5.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id db8707f353e5b5fe
+  rotation 0.51 0 -0.36
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 2" -4 -0.091 -12 5.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id 0b3cb90b09a5b310
+  rotation -0.41 0 0.58
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 3" 2 -0.095 -12 5.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id f5367fc57fb3032a
+  rotation -0.18 0 0.16
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 4" 8 -0.104 -12 5.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id 69cfeeb344cefe0d
+  rotation 0.2 0 0.41
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 5" 12 -0.113 -12 1.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id c22d1fe5528a64ae
+  rotation 0.13 0 0.12
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 6" -11.5 -0.086 -10 2.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id edc32cc03a56352a
+  rotation 0.75 0 0.41
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 7" -7 -0.096 -10 5.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id a7a273bbbf2dad13
+  rotation -0.42 0 -0.76
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 8" -1 -0.114 -10 5.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id 0f498af722516cbf
+  rotation 0.47 0 0.03
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 9" 5 -0.084 -10 5.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id f92d8658b94d37c4
+  rotation 0.54 0 -0.59
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 10" 10.5 -0.111 -10 4.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id f8a134bd61d1a160
+  rotation 0.57 0 -0.31
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 11" -10 -0.12 -8 5.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id 095e7bd27242b0bb
+  rotation 0.53 0 0.26
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 12" -4 -0.101 -8 5.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id 4580d53ca9da0e51
+  rotation 0.13 0 -0.29
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 13" 2 -0.121 -8 5.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id 69b7473c3525d28e
+  rotation 0.1 0 0.39
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 14" 8 -0.1 -8 5.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id e5ff9ef06ef2e364
+  rotation 0.53 0 -0.4
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 15" 12 -0.1 -8 1.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id 00b59a31f803098a
+  rotation 0.18 0 -0.64
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 16" -11.5 -0.083 -6 2.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id 62be66a6933d2f9b
+  rotation 0.59 0 0.6
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 17" -7 -0.09 -6 5.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id ea76effe3be3b968
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 18" -1 -0.09 -6 5.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id 8f9d553edafa7d65
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 19" 5 -0.09 -6 5.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id 78bbf14b436b941b
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 20" 10.5 -0.107 -6 4.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id 25abae78f0e0f63d
+  rotation 0.16 0 -0.79
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 21" -10 -0.085 -4 5.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id a6466170a07aec57
+  rotation -0.54 0 -0.12
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 22" -4 -0.09 -4 5.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id e808d64cd1141194
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 23" 2 -0.09 -4 5.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id bb4bd53c448e04f1
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 24" 8 -0.09 -4 5.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id e0b1d88ec89d5488
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 25" 12 -0.083 -4 1.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id 539f94e7df6891ec
+  rotation 0.35 0 0.69
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 26" -11.5 -0.116 -2 2.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id f063a014e81d9479
+  rotation 0.61 0 -0.63
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 27" -7 -0.09 -2 5.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id 938840f04d85a0af
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 28" -1 -0.09 -2 5.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id 50771eb4c19e9c32
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 29" 5 -0.09 -2 5.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id 00b8cea31c74aed2
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 30" 10.5 -0.107 -2 4.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id 8265541d558596c6
+  rotation -0.68 0 -0.66
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 31" -10 -0.122 0 5.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id 4f79a31bcf96f449
+  rotation 0.18 0 -0.42
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 32" -4 -0.09 0 5.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id a74b3353c6d29ec6
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 33" 2 -0.09 0 5.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id 9923c3c9ed2c66a9
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 34" 8 -0.09 0 5.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id 5935fbc2817ffeee
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 35" -11.5 -0.111 2 2.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id 44ddda557d21bf4c
+  rotation -0.27 0 0.17
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 36" -7 -0.09 2 5.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id f01d8cd2c298881c
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 37" -1 -0.09 2 5.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id fcd13009d85b8800
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 38" 5 -0.09 2 5.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id 9983fece413aca01
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 39" 10.5 -0.119 2 4.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id fc5ea73bd9af511d
+  rotation -0.08 0 0.38
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 40" -10 -0.096 4 5.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id 1ca9bda1318806db
+  rotation 0.23 0 0.19
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 41" -4 -0.106 4 5.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id 53961364aa52b726
+  rotation -0.13 0 0.71
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 42" 2 -0.121 4 5.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id b97e26fa124343ea
+  rotation 0.19 0 -0.27
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 43" 8 -0.108 4 5.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id 1657f6832f2806e0
+  rotation -0.62 0 -0.19
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 44" 12 -0.113 4 1.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id db89a1c1b2e1f8a8
+  rotation 0.57 0 0.1
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 45" -11.5 -0.118 6 2.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id e5d7f43efd13f443
+  rotation -0.51 0 -0.61
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 46" -7 -0.11 6 5.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id 2dc884eaf672d88e
+  rotation -0.73 0 -0.69
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 47" -1 -0.093 6 5.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id fdd58eb1daa45f2e
+  rotation -0.28 0 0.71
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 48" 5 -0.096 6 5.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id 9be0fa186ed039f8
+  rotation -0.67 0 -0.22
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 49" 10.5 -0.081 6 4.94 0.18 1.94 0.6 0.6 0.6
+  parent "Yard"
+  id 902aaf150145806c
+  rotation -0.73 0 -0.22
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 50" -10 -0.088 7.5 5.94 0.18 0.94 0.6 0.6 0.6
+  parent "Yard"
+  id aa082d5d16c67110
+  rotation -0.07 0 0.45
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 51" -4 -0.101 7.5 5.94 0.18 0.94 0.6 0.6 0.6
+  parent "Yard"
+  id 9a4dd3521a2e823c
+  rotation -0.48 0 0.54
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 52" 2 -0.1 7.5 5.94 0.18 0.94 0.6 0.6 0.6
+  parent "Yard"
+  id d6b9191f8db6fb0a
+  rotation 0.79 0 0.4
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 53" 8 -0.116 7.5 5.94 0.18 0.94 0.6 0.6 0.6
+  parent "Yard"
+  id 8d8a5654a4aa5f14
+  rotation 0.01 0 -0.19
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Road plate 54" 12 -0.112 7.5 1.94 0.18 0.94 0.6 0.6 0.6
+  parent "Yard"
+  id c04ef60fd4e64e3b
+  rotation 0.26 0 0.74
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+box "Back wall" 0 1.25 -16.2 34 2.5 0.25 0.6 0.6 0.6
+  parent "Yard"
+  id f307345900d013d4
+  material "../../assets/materials/pbr/concrete_wall_008.material"
+box "Ramp" 4.5 0.25 -3 3 0.3 4 0.6 0.6 0.6
+  parent "Yard"
+  id 56e6cd69960a436e
+  rotation 6 0 0
+  material "../../assets/materials/pbr/concrete_floor_02.material"
+model "Garages 1" "../../assets/models/zone/garage_block.glb" -9 -0.12 -11.5
+  parent "Garages"
+  id 9d53b82357128c6f
+  transform 0 -90 0 1
+  lod "../../assets/models/zone/garage_block_lod1.glb" 70
+model "Garages 2" "../../assets/models/zone/garage_block.glb" -1 -0.12 -11.5
+  parent "Garages"
+  id 7f9866dec477a45f
+  transform 0 -90 0 1
+  lod "../../assets/models/zone/garage_block_lod1.glb" 70
+model "Garages 3" "../../assets/models/zone/garage_block.glb" 7 -0.12 -11.5
+  parent "Garages"
+  id fe15bd93db355d56
+  transform 0 -90 0 1
+  lod "../../assets/models/zone/garage_block_lod1.glb" 70
+model "Crate 1" "../../assets/models/props/wooden_crate_01/wooden_crate_01.gltf" -1.29 0 -4
+  parent "Props"
+  id 09a2787720ea8212
+  cull_distance 80
+  physics 18 "box"
+model "Crate 2" "../../assets/models/props/wooden_crate_01/wooden_crate_01.gltf" -0.43 0 -4
+  parent "Props"
+  id c29db6cb56db332d
+  cull_distance 80
+  physics 18 "box"
+model "Crate 3" "../../assets/models/props/wooden_crate_01/wooden_crate_01.gltf" 0.43 0 -4
+  parent "Props"
+  id c429738f6e325dcb
+  cull_distance 80
+  physics 18 "box"
+model "Crate 4" "../../assets/models/props/wooden_crate_01/wooden_crate_01.gltf" 1.29 0 -4
+  parent "Props"
+  id 541a2fc4c09b8826
+  cull_distance 80
+  physics 18 "box"
+model "Crate 5" "../../assets/models/props/wooden_crate_01/wooden_crate_01.gltf" -0.86 0.36 -4
+  parent "Props"
+  id 192bcecd100eb6d9
+  cull_distance 80
+  physics 18 "box"
+model "Crate 6" "../../assets/models/props/wooden_crate_01/wooden_crate_01.gltf" 0 0.36 -4
+  parent "Props"
+  id 4b29c62d88bc8c1c
+  cull_distance 80
+  physics 18 "box"
+model "Crate 7" "../../assets/models/props/wooden_crate_01/wooden_crate_01.gltf" 0.86 0.36 -4
+  parent "Props"
+  id 8901e207f5679da0
+  cull_distance 80
+  physics 18 "box"
+model "Crate 8" "../../assets/models/props/wooden_crate_01/wooden_crate_01.gltf" -0.43 0.72 -4
+  parent "Props"
+  id df9b0aa7671222c7
+  cull_distance 80
+  physics 18 "box"
+model "Crate 9" "../../assets/models/props/wooden_crate_01/wooden_crate_01.gltf" 0.43 0.72 -4
+  parent "Props"
+  id 7642b35f817b57c4
+  cull_distance 80
+  physics 18 "box"
+model "Crate 10" "../../assets/models/props/wooden_crate_01/wooden_crate_01.gltf" 0 1.08 -4
+  parent "Props"
+  id d289868b34ef12de
+  cull_distance 80
+  physics 18 "box"
+model "Crate 11" "../../assets/models/props/wooden_crate_02/wooden_crate_02.gltf" -2.6 0 -4.2
+  parent "Props"
+  id 1a91e175127019f9
+  cull_distance 80
+  physics 25 "box"
+model "Crate 12" "../../assets/models/props/wooden_crate_02/wooden_crate_02.gltf" -2.6 0.48 -4.2
+  parent "Props"
+  id c3a320039c056c20
+  cull_distance 80
+  physics 25 "box"
+model "Jerrycan 1" "../../assets/models/props/metal_jerrycan/metal_jerrycan.gltf" -4 0 -2
+  parent "Props"
+  id 0cbbf8efab241b0f
+  cull_distance 60
+  physics 4 "box"
+model "Jerrycan 2" "../../assets/models/props/metal_jerrycan/metal_jerrycan.gltf" -3.3 0 -1.7
+  parent "Props"
+  id dcb9170b129b5bce
+  transform 0 20 0 1
+  cull_distance 60
+  physics 4 "box"
+model "Jerrycan 3" "../../assets/models/props/metal_jerrycan/metal_jerrycan.gltf" -3.65 0 -1.4
+  parent "Props"
+  id b005a404f31cf2c2
+  transform 0 40 0 1
+  cull_distance 60
+  physics 4 "box"
+model "Cardboard 1" "../../assets/models/props/clutter/cardboard_box_small.glb" 3 0.5 1
+  parent "Props"
+  id 2099710f73613371
+  cull_distance 60
+  physics 2 "box"
+model "Cardboard 2" "../../assets/models/props/clutter/cardboard_box_small.glb" 3.6 0.8 1
+  parent "Props"
+  id 2d2f2af4b3f33fdd
+  cull_distance 60
+  physics 2 "box"
+model "Cardboard 3" "../../assets/models/props/clutter/cardboard_box_small.glb" 4.2 1.1 1
+  parent "Props"
+  id a501f0b789d51e07
+  cull_distance 60
+  physics 2 "box"
+model "Gas tank" "../../assets/models/props/propane_tank/propane_tank.gltf" -2 0 0
+  parent "Props"
+  id dd43d598ac6d6b35
+  physics 12 "cylinder"
+model "Tyre" "../../assets/models/props/old_tyre/old_tyre.gltf" 2 1.5 -1
+  parent "Props"
+  id b4a51f604e1abc9c
+  physics 9 "cylinder"
+model "Tyre 2" "../../assets/models/props/old_tyre/old_tyre.gltf" 8.6 0 -5.6
+  parent "Props"
+  id 9a1415eafe4aac27
+  transform 0 30 0 1
+  physics 9 "cylinder"
+model "Tyre 3" "../../assets/models/props/old_tyre/old_tyre.gltf" 8.8 0.25 -5.4
+  parent "Props"
+  id 4605c5bdfad22ef0
+  transform 0 75 0 1
+  physics 9 "cylinder"
+model "Barrel 1" "../../assets/models/props/Barrel_01/Barrel_01.gltf" -9.5 0 -5.8
+  parent "Props"
+  id 6782ac6be8302b6c
+  physics 30 "cylinder"
+model "Barrel 2" "../../assets/models/props/barrel_03/barrel_03.gltf" -8.7 0 -6.1
+  parent "Props"
+  id 3c1ae5bd8c63e2b1
+  physics 30 "cylinder"
+model "Bucket" "../../assets/models/props/wooden_bucket_01/wooden_bucket_01.gltf" -6 0 1.5
+  parent "Props"
+  id d1d7112248c0ecc7
+  physics 2 "cylinder"
+model "Car on blocks" "../../assets/models/zone/gen/car_burnt.glb" 9.5 0 3.5
+  parent "Junk"
+  id c39c3386e42b6ab1
+  transform 0 -15 0 1
+  lod "../../assets/models/zone/gen/car_burnt_lod1.glb" 70
+model "Car block" "../../assets/models/props/clutter/cinder_block.glb" 8.56 0 2.26
+  parent "Junk"
+  id 9f2787a14e35b811
+  transform 0 184.6 0 1
+  cull_distance 45
+model "Car block 2" "../../assets/models/props/clutter/cinder_block.glb" 9.28 0 5.06
+  parent "Junk"
+  id 29f27297371b35ea
+  transform 0 259.2 0 1
+  cull_distance 45
+model "Car block 3" "../../assets/models/props/clutter/cinder_block.glb" 9.72 0 1.94
+  parent "Junk"
+  id cece035b790d315b
+  transform 0 78.5 0 1
+  cull_distance 45
+model "Car block 4" "../../assets/models/props/clutter/cinder_block.glb" 10.44 0 4.74
+  parent "Junk"
+  id ee3f93efd11929ca
+  transform 0 76.1 0 1
+  cull_distance 45
+model "Pallets" "../../assets/models/props/clutter/wooden_pallet.glb" -11 0 1
+  parent "Junk"
+  id bc32d9bb4f417fc2
+  transform 0 10 0 1
+  cull_distance 45
+model "Pallets 2" "../../assets/models/props/clutter/wooden_pallet.glb" -11.1 0.14 1
+  parent "Junk"
+  id c5fbebae5111577b
+  transform 0 14 0 1
+  cull_distance 45
+model "Broken pallet" "../../assets/models/props/clutter/wooden_pallet_broken.glb" -10.6 0 3.2
+  parent "Junk"
+  id 59665a94b268a4c9
+  transform 0 258.7 0 1
+  cull_distance 45
+model "Workbench vice" "../../assets/models/props/bench_vice_01/bench_vice_01.gltf" -1 0.8 -8.2
+  parent "Junk"
+  id 9ca7d4755eb24fe0
+  transform 0 180 0 1
+  cull_distance 70
+  collision 0
+model "Tool chest" "../../assets/models/props/metal_tool_chest/metal_tool_chest.gltf" 0.6 0 -8.4
+  parent "Junk"
+  id 9a6a05887c9d24bf
+  transform 0 180 0 1
+  cull_distance 70
+model "Wheel rim" "../../assets/models/props/rusted_wheel_rim_01/rusted_wheel_rim_01.gltf" 12 0 -6.5
+  parent "Junk"
+  id b56d236774f0eac9
+  transform 0 325.8 0 1
+  cull_distance 70
+model "Scrap planks" "../../assets/models/props/clutter/planks_scrap_pile.glb" -13 -0.14 6.5
+  parent "Junk"
+  id 7ee202d33eb54163
+  transform 0 174 0 1
+  cull_distance 45
+model "Rubble" "../../assets/models/props/clutter/rubble_pile_small.glb" 13.2 0 -7
+  parent "Junk"
+  id db4c91427c0662a5
+  transform 0 326 0 1
+  cull_distance 45
+model "Trash bag" "../../assets/models/props/trashbag/trashbag.gltf" -7.4 0 -6.6
+  parent "Junk"
+  id a2bfd814d2373efa
+  transform 0 215.3 0 1
+  cull_distance 70
+model "Trash bag 2" "../../assets/models/props/trashbag/trashbag.gltf" -6.8 0 -6.9
+  parent "Junk"
+  id 2000956d57592cd4
+  transform 0 173.3 0 1
+  cull_distance 70
+model "Lamp post" "../../assets/models/zone/gen/lamp_post.glb" -13.2 -0.06 8.4
+  parent "Yard"
+  id 097246057cb19fe0
+model "Puddle" "../../assets/models/zone/gen/puddle_b.glb" -6.5 0.01 4
+  parent "Yard"
+  id 7c7ec42dfa65a9d6
+  collision 0
+model "Puddle 2" "../../assets/models/zone/gen/puddle_a.glb" 5.5 0.01 6.2
+  parent "Yard"
+  id 2668d2882c3fe30f
+  transform 0 70 0 1
+  collision 0
+model "Puddle 3" "../../assets/models/zone/gen/puddle_b.glb" -2 0.01 -6.2
+  parent "Yard"
+  id 519922e9eac4a2b4
+  transform 0 140 0 1
+  collision 0
+player 5 8.5 5.5 18 0.15 1.8 1.7 0.4 45 100
+player_sounds "../../assets/sounds/player/step_gravel.sound" "../../assets/sounds/player/land.sound" "../../assets/sounds/player/hurt.sound"
+navmesh 1 0.25 0.1 0.35 1.8 0.4 45 32 4
+weapon "../../assets/weapons/ak74.weapon"

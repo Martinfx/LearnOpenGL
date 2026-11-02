@@ -1,18 +1,4 @@
 # Asset GUIDs (engine/AssetRegistry.h): kept when an asset is renamed in the editor.
-f4f50d2af90b2308 levels/anomaly_test.level
-07aec73e8a819f2c levels/anomaly_test.terrain
-445fc50ee5c09d1b levels/io_test.level
-2d88df5b0e8fd10d levels/io_test.terrain
-e4d934740cc114f2 levels/lights_test.level
-d6829d839834d54d levels/lights_test.terrain
-75977116bd816e29 levels/physics_test.level
-aa7ef36058a496a3 levels/physics_test.terrain
-917803baa0dbdce3 levels/source/hospital_street_map.png
-8a5493e160fd19ff levels/source/skrunda1_plan.png
-04ae7082748a0b8e levels/source/zone_map.png
-c977985b1b77c564 levels/test.level
-d71fdc253874d2f4 levels/water_test.level
-5c73bcb3e054f39e levels/water_test.terrain
 795312dd3622823e materials/bricks.material
 386a2c09e258b16f materials/concrete.material
 bbde7209239d4283 materials/metal_plate.material

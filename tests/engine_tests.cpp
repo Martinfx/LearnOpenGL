@@ -218,7 +218,7 @@ void testLevelWithModel()
 {
     engine::Scene s;
     std::string err;
-    check(engine::loadScene(s, ENGINE_TEST_ASSETS "/levels/test.level", &err), "load test.level: " + err);
+    check(engine::loadScene(s, ENGINE_TEST_DATA "/scene.level", &err), "load scene.level: " + err);
     check(s.models.size() > 40 && engine::findObject(s, "Ramp") >= 0, "test level references the ramp and the zone street");
     const int panel = engine::findObject(s, "Panel block");
     check(panel >= 0 && s.model(panel).lod && s.model(panel).lodDistance == 90.0f, "panel block has its LOD loaded");
@@ -959,7 +959,7 @@ void testWeaponFilesAndLoadout()
 {
     engine::Scene level;
     std::string err;
-    check(engine::loadScene(level, ENGINE_TEST_ASSETS "/levels/test.level", &err), "load level: " + err);
+    check(engine::loadScene(level, ENGINE_TEST_DATA "/scene.level", &err), "load level: " + err);
     check(level.loadout.size() == 4, "test level gives the player AK-74M, pistol, knife and SMG");
     engine::WeaponSettings ak;
     check(engine::loadWeaponFile(ak, level.loadout.at(0), &err), "load ak74.weapon: " + err);
@@ -1047,7 +1047,7 @@ void testHierarchyAndDependencies()
 {
     std::string err;
     engine::Scene s;
-    check(engine::loadScene(s, ENGINE_TEST_ASSETS "/levels/test.level", &err), "load level: " + err);
+    check(engine::loadScene(s, ENGINE_TEST_DATA "/scene.level", &err), "load level: " + err);
     check(s.groups.size() == 10 && engine::nodeParent(s, "Crate B") == "Crate A", "test level has a hierarchy");
     // Start from a flat scene.
     s.groups.clear();
@@ -2036,7 +2036,7 @@ void testMaterialsAndTextures()
 
     // Level with box materials and a model slot override.
     engine::Scene s;
-    check(engine::loadScene(s, ENGINE_TEST_ASSETS "/levels/test.level", &err), "load test level: " + err);
+    check(engine::loadScene(s, ENGINE_TEST_DATA "/scene.level", &err), "load scene.level: " + err);
     check(!s.boxes.empty() && s.boxes[0].material && s.boxes[0].material->name == "Concrete", "floor uses the concrete material");
     engine::Model& ramp = s.models[0];
     const auto slots = ramp.materialSlots();
@@ -2300,7 +2300,7 @@ void testSharedMeshes()
     b.parts.push_back(engine::MeshPart{});
     check(!b.parts.sharedWith(a.parts) && b.parts.size() == a.parts.size() + 1, "changing a copy detaches it");
     engine::Scene s;
-    check(engine::loadScene(s, ENGINE_TEST_ASSETS "/levels/test.level", &err), "load test level: " + err);
+    check(engine::loadScene(s, ENGINE_TEST_DATA "/scene.level", &err), "load scene.level: " + err);
     int shared = 0;
     for (std::size_t i = 0; i < s.models.size(); ++i)
         for (std::size_t j = i + 1; j < s.models.size(); ++j)
@@ -2927,7 +2927,7 @@ void testPhysicsProps()
 {
     engine::Scene s;
     std::string err;
-    check(engine::loadScene(s, ENGINE_TEST_ASSETS "/levels/physics_test.level", &err), "load physics_test.level: " + err);
+    check(engine::loadScene(s, ENGINE_TEST_DATA "/physics_scene.level", &err), "load physics_scene.level: " + err);
     const int dynamicModels = static_cast<int>(std::count_if(s.models.begin(), s.models.end(), [](const engine::Model& m) { return m.dynamic; }));
     check(dynamicModels >= 15, "physics test level has dynamic props");
     check(engine::saveScene(s, "physics_props.level", &err), "save props: " + err);

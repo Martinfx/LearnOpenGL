@@ -7,7 +7,8 @@ if(WIN32)
                        COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_RUNTIME_DLLS:engine_tests> $<TARGET_FILE_DIR:engine_tests>
                        COMMAND_EXPAND_LISTS)
 endif()
-target_compile_definitions(engine_tests PRIVATE ENGINE_TEST_ASSETS="${PROJECT_SOURCE_DIR}/assets")
+target_compile_definitions(engine_tests PRIVATE ENGINE_TEST_ASSETS="${PROJECT_SOURCE_DIR}/assets"
+                                               ENGINE_TEST_DATA="${CMAKE_CURRENT_SOURCE_DIR}/data")
 
 # Asset validation (missing references; `asset_check --models` also checks the scale).
 add_executable(asset_check asset_check.cpp)

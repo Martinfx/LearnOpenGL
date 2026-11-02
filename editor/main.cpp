@@ -69,8 +69,8 @@ int main(int argc, char** argv)
         else
             assetsToOpen << QFileInfo(arg).absoluteFilePath();
     }
-    if (level.isEmpty() && QFileInfo::exists(assetPath("levels/test.level")))
-        level = assetPath("levels/test.level");
+    if (level.isEmpty() && QFileInfo::exists(assetPath("levels/overgrown_street.level")))
+        level = assetPath("levels/overgrown_street.level");
     if (level.isEmpty()) {
         splash.finish(&window);
     } else {
