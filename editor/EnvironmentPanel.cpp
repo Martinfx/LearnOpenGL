@@ -161,6 +161,8 @@ EnvironmentPanel::EnvironmentPanel(engine::Scene* scene, QWidget* parent)
     addFloat(form, tr("Intensity"), &E::sunIntensity, 0, 20, 0.1, 2);
     addFloat(form, tr("Size (soft shadows)"), &E::sunSize, 0, 10, 0.05, 2,
              tr("Angular diameter of the sun in degrees (0.53 real): shadows are sharp at the contact and softer far from the caster; clouds soften them more"));
+    addFloat(form, tr("Contact shadows"), &E::contactShadowLength, 0, 2, 0.05, 2,
+             tr("Length (m) of a short ray toward the sun that adds small shadows the shadow map misses (grass, kerbs, rubble), 0 off"));
     section(tr("Time of day"));
     buildTimeOfDay(form);
     section(tr("Sky"));

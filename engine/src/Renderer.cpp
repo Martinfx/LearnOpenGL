@@ -155,6 +155,7 @@ struct EnvironmentBlock {
     glm::vec4 atmosphere;   // x: physical sky 0..1, y: radiance scale
     glm::vec4 shadowSoft;   // x: PCSS on, y: tan of the sun's angular radius, z: max caster distance, w: max filter radius
     glm::vec4 groundHaze;   // x: density, y: ground height, z: thickness
+    glm::vec4 contact;      // contact shadows: x ray length (0 = off), y thickness, z fade-out distance
 };
 
 constexpr int kEnvSize = 128;  // environment cubemap face size
@@ -464,6 +465,7 @@ RenderQuality RenderQuality::preset(int level)
         q.parallax = false;
         q.softShadows = false;
         q.ssgi = false;
+        q.contactShadows = false;
         break;
     case 1:
         q.shadowResolution = 1024; q.shadowCascades = 3; q.ssao = true; q.bloom = true;
@@ -1061,6 +1063,10 @@ void Renderer::updateEnvironment(const Scene& scene, const RenderView& view)
     ssgiActive_ = ssgiView && ssrValid_;
     ssgiViewToPrev_ = ssrViewProj_ * glm::inverse(view.view);
     b.probes.z = ssgiActive_ ? std::clamp(e.bounceLight, 0.0f, 2.0f) : 0.0f;
+    // Contact shadows march through the pre-pass depth copy (taken when SSR or this needs it).
+    contactActive_ = quality_.contactShadows && historyView && e.contactShadowLength > 0.0f && quality_.shadowResolution > 0;
+    if (contactActive_)
+        b.contact = glm::vec4(std::min(e.contactShadowLength, 2.0f), 0.25f + e.contactShadowLength, 40.0f, 0.0f);
     b.prevViewProj = ssrViewProj_;                     // the frame now in ssrColor_
     ssrPrevViewProj_ = view.projection * view.view;    // becomes ssrViewProj_ once this frame is recorded
     if (ssrView && ssrValid_)
@@ -2430,7 +2436,7 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     if (quality_.occlusionCulling && !view.capture)
         captureOcclusion(view);
-    if (ssrRecord_ && ssrValid_) // SSR marches through the opaque depth while the main pass writes it
+    if ((ssrRecord_ && ssrValid_) || contactActive_) // SSR / contact shadows march through the opaque depth while the main pass writes it
         glCopyImageSubData(depthTex_, GL_TEXTURE_2D, 0, 0, 0, 0, sceneDepthCopy_, GL_TEXTURE_2D, 0, 0, 0, 0, width_, height_, 1);
 
     if (quality_.ssao) {

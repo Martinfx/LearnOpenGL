@@ -89,6 +89,39 @@ out vec4 fragColor;
 #include "probes.glsl"
 #include "ssr.glsl"
 
+// Contact shadows: a short ray toward the sun through this frame's depth (the pre-pass copy
+// SSR reads) finds small casters the shadow map is too coarse for - grass, kerbs, rubble,
+// window frames, a foot on the ground. 1 = lit, 0 = in contact shadow.
+float contactShadow(vec3 worldPos, vec3 n) {
+    if (uContact.x <= 0.0)
+        return 1.0;
+    vec3 origin = (uView * vec4(worldPos + n * 0.01, 1.0)).xyz;
+    float fade = 1.0 - smoothstep(uContact.z * 0.6, uContact.z, -origin.z);
+    if (fade <= 0.0)
+        return 1.0;
+    vec3 dir = mat3(uView) * -normalize(uSunDir.xyz);
+    const int kSteps = 10;
+    float stepLen = uContact.x / float(kSteps);
+    float t = stepLen * (0.3 + 0.7 * hash12(gl_FragCoord.xy + uSkyHorizon.w * 37.0));
+    for (int i = 0; i < kSteps; ++i, t += stepLen) {
+        vec3 p = origin + dir * t;
+        if (p.z > -0.05)
+            break;
+        vec4 clip = uProj * vec4(p, 1.0);
+        vec2 uv = clip.xy / clip.w * 0.5 + 0.5;
+        if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0))))
+            break;
+        float depth = textureLod(uSsrDepth, uv, 0.0).r;
+        float behind = ssrViewZ(depth) - p.z; // > 0: the ray is behind a surface
+        // A margin that grows with distance (depth precision) and a thickness: thin casters
+        // only, so the ray does not hit the far side of the same wall.
+        float margin = 0.004 * -p.z + 0.01;
+        if (depth < 1.0 && behind > margin && behind < uContact.y)
+            return 1.0 - fade * (1.0 - float(i) / float(kSteps) * 0.5);
+    }
+    return 1.0;
+}
+
 float gridLines(vec3 p, vec3 n) {
     vec2 uv = abs(n.y) > 0.5 ? p.xz : (abs(n.x) > 0.5 ? p.zy : p.xy);
     vec2 g = abs(fract(uv - 0.5) - 0.5) / fwidth(uv);
@@ -575,6 +608,8 @@ void main() {
     float shadow = uOverlay || nl <= 0.0 ? 1.0 : sunShadow(vWorldPos, normalize(vNormal), nl);
     if (!uOverlay && nl > 0.0)
         shadow *= cloudShadow(vWorldPos);
+    if (!uOverlay && shadow > 0.01)
+        shadow *= contactShadow(vWorldPos, normalize(vNormal));
     // Inside an interior volume the sky light is dimmed (the first-person layer: where the camera is,
     // and the sun too, as the overlay has no shadows).
     float interiorSky = interiorFactors(uOverlay ? uCameraPos.xyz : vWorldPos).x;

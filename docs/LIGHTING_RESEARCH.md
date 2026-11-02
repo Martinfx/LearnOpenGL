@@ -119,8 +119,8 @@ Vegetace: translucenci listů a trávy (průsvit proti slunci) přidává vlákn
 | 6. Přízemní opar, barva oparu podle směru | b054eb9 | `ground_haze`, `ground_haze_height`, `ground_haze_thickness` (Environment > Fog) |
 | 7. Tónové mapování ACES / AgX / neutral | viz git log | `tonemap` 0/1/2 (Environment > Camera and image: „Tone mapping“) |
 
-Contact shadows (krátký paprsek v hloubce) zatím nejsou: v hlavním průchodu už není volná
-texturová jednotka; přijdou s odloženým (deferred) stínovým průchodem nebo spolu s bodem 8.
+Kontaktní stíny: krátký paprsek ke slunci v hloubce předprůchodu (kopie, kterou čte SSR),
+`contact_shadow_length` (Environment > Sun „Contact shadows“), kvalita „Contact shadows“.
 
 ## 5. Ověření
 

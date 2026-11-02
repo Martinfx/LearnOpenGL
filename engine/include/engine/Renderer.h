@@ -128,6 +128,9 @@ struct RenderQuality {
     // Screen-space indirect light: walls and ground seen on screen light their neighbours
     // (one bounce, gathered with the ambient occlusion; needs ssao). Environment::bounceLight.
     bool ssgi = true;
+    // Contact shadows: a short screen-space ray toward the sun adds the small shadows the
+    // shadow map misses (grass, kerbs, rubble). Environment::contactShadowLength.
+    bool contactShadows = true;
     float motionBlur = 0.0f; // camera motion blur in continuous views, shutter fraction 0..1 (0 = off)
     int textureUploadsPerFrame = 6; // new textures sent to the GPU per frame, 0 = all at once
     // Memory. Textures larger than textureMaxSize drop their top mip levels (0 = full size).
@@ -571,6 +574,7 @@ private:
     unsigned ssaoFbo_ = 0, ssaoTex_ = 0, ssaoBlurFbo_ = 0, ssaoBlurTex_ = 0;
     unsigned ssgiTex_ = 0;           // screen-space bounce light, second target of the SSAO pass
     bool ssgiActive_ = false;        // this frame's SSAO pass gathers bounce light
+    bool contactActive_ = false;     // the lit pass traces contact shadows in the depth copy
     glm::mat4 ssgiViewToPrev_{1.0f}; // view space -> clip space of the frame in ssrColor_
     std::vector<unsigned> bloomTex_, bloomFbo_;
     std::vector<glm::ivec2> bloomSize_;

@@ -199,6 +199,8 @@ bool writeLevelSettings(std::ostream& out, const Scene& scene, const std::filesy
             f1("ground_haze_height", e.groundHazeHeight);
             f1("ground_haze_thickness", e.groundHazeThickness);
         }
+        if (e.contactShadowLength != Environment{}.contactShadowLength)
+            f1("contact_shadow_length", e.contactShadowLength);
         if (e.bounceLight != Environment{}.bounceLight)
             f1("bounce_light", e.bounceLight);
         f1("exposure", e.exposure);
@@ -679,7 +681,7 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                 {"green_magenta", &e.greenMagenta}, {"fog_volumetric_range", &e.fogVolumetricRange},
                 {"fog_light_shafts", &e.fogLightShafts}, {"fog_anisotropy", &e.fogAnisotropy}, {"fog_noise", &e.fogNoise},
                 {"fog_local_lights", &e.fogLocalLights}, {"atmosphere", &e.atmosphere}, {"atmosphere_haze", &e.atmosphereHaze},
-                {"atmosphere_brightness", &e.atmosphereBrightness}, {"sky_occlusion", &e.skyOcclusion}, {"sun_size", &e.sunSize}, {"bounce_light", &e.bounceLight}, {"ground_haze", &e.groundHaze}, {"ground_haze_height", &e.groundHazeHeight}, {"ground_haze_thickness", &e.groundHazeThickness}};
+                {"atmosphere_brightness", &e.atmosphereBrightness}, {"sky_occlusion", &e.skyOcclusion}, {"sun_size", &e.sunSize}, {"bounce_light", &e.bounceLight}, {"contact_shadow_length", &e.contactShadowLength}, {"ground_haze", &e.groundHaze}, {"ground_haze_height", &e.groundHazeHeight}, {"ground_haze_thickness", &e.groundHazeThickness}};
             if (ok && name == "tonemap")
                 ok = static_cast<bool>(ls >> e.tonemap);
             else if (ok) {

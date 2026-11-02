@@ -393,6 +393,8 @@ struct Environment {
     // Angular diameter of the sun in degrees (0.53 real): soft shadows (quality option softShadows)
     // are sharp at the contact and widen with the distance to the caster; clouds widen them more.
     float sunSize = 0.53f;
+    // Length (m) of the contact shadow ray toward the sun (quality option contactShadows), 0 = off.
+    float contactShadowLength = 0.3f;
     // Light bounced between surfaces on screen (quality option ssgi): sunlit walls and ground
     // light the shade around them in their colour. 0 off, 1 physical, more = stronger.
     float bounceLight = 1.0f;
