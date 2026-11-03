@@ -505,7 +505,7 @@ def build():
     # a storm coming (martin's second reference): heavy dark clouds with a pale band low over the horizon, grey
     # diffuse light with weak shadows, mist that swallows the far blocks, the road wet from the last shower
     env = {'sun_color': '0.82 0.86 0.92', 'sun_intensity': '1.5', 'sky_zenith': '0.085 0.095 0.11', 'sky_horizon': '0.46 0.48 0.48',
-           'ground_color': '0.2 0.2 0.18', 'cloud_cover': '0.74', 'atmosphere': '0.6', 'atmosphere_haze': '3', 'sky_occlusion': '0.8', 'ground_haze': '0.025', 'ground_haze_height': '0.15', 'ground_haze_thickness': '1.6', 'ambient_intensity': '0.95', 'fog_color': '0.36 0.39 0.4',
+           'ground_color': '0.2 0.2 0.18', 'cloud_cover': '0.88', 'volumetric_clouds': '1', 'cloud_base': '600', 'cloud_thickness': '3000', 'cloud_density': '3', 'atmosphere': '0.6', 'atmosphere_haze': '3', 'sky_occlusion': '0.8', 'ground_haze': '0.025', 'ground_haze_height': '0.15', 'ground_haze_thickness': '1.6', 'ambient_intensity': '0.95', 'fog_color': '0.36 0.39 0.4',
            'fog_density': '0.011', 'fog_height': '6', 'fog_height_falloff': '0.012', 'fog_sun_scatter': '0.25',
            'exposure': '1.05', 'bloom_intensity': '0.05', 'bloom_threshold': '1.2', 'ssao_radius': '0.8', 'ssao_intensity': '1.4',
            'shadow_distance': '110', 'saturation': '0.72', 'contrast': '1.12', 'tint': '0.96 1 1.02', 'vignette': '0.32',
