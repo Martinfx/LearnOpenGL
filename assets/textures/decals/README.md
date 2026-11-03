@@ -16,3 +16,13 @@ counted from the top of the image. Roughness: concrete 0.95, metal 0.35, wood 0.
 Made for this project by `source/decals.py` (procedural), **CC0 1.0**.
 
 `scorch.png` (2x2 atlas of burnt-ground soot marks left by fire): made for this project by `source/scorch.py` (procedural), **CC0 1.0**.
+
+## Road damage
+
+- `crack_a/b/c.png` (RGBA 1024², ~2 × 2 m on the ground): a long asphalt crack with side branches and a patch of
+  alligator cracking. Colour is dark crack + asphalt tone from `road_damaged`, so it also sits on other asphalts.
+- `pothole_a/b.png` (RGBA, ~1.5 × 1.5 m) + `pothole_a/b_normal.png` (OpenGL, +Y up): irregular pothole with a dark
+  broken rim and gravel/dirt bottom (`a` long in V, `b` long in U).
+
+Made for this project by `../../models/props/deadcity/source/textures.py` (procedural plus Poly Haven CC0 scan
+colours), **CC0 1.0**.

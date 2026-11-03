@@ -144,3 +144,12 @@ A ready material for each set is in `assets/materials/pbr/<name>.material`.
 | `rusty_painted_metal` | Rusty Painted Metal | Amal Kumar | 2.2 × 2.2 m | https://polyhaven.com/a/rusty_painted_metal |
 | `rusted_shutter` | Rusted Shutter | Dimitrios Savva | 1.8 × 1.8 m | https://polyhaven.com/a/rusted_shutter |
 | `metal_grate_rusty` | Metal Grate Rusty | Rob Tuytel, Dimitrios Savva | 0.5 × 0.5 m | https://polyhaven.com/a/metal_grate_rusty |
+| `asphalt_05` | Asphalt 05 | Amal Kumar | 2 × 2 m | https://polyhaven.com/a/asphalt_05 |
+| `asphalt_06` | Asphalt 06 | Jan Martens | 3 × 3 m | https://polyhaven.com/a/asphalt_06 |
+| `asphalt_07` | Asphalt 07 | Charlotte Baglioni | 2.5 × 2.5 m | https://polyhaven.com/a/asphalt_07 |
+| `pavement_01` | Pavement 01 | Rob Tuytel | 1.5 × 1.5 m | https://polyhaven.com/a/pavement_01 |
+| `pavement_03` | Pavement 03 | Dario Barresi, Charlotte Baglioni | 2 × 2 m | https://polyhaven.com/a/pavement_03 |
+| `pavement_04` | Pavement 04 | Jan Burghardt | 3.1 × 3.1 m | https://polyhaven.com/a/pavement_04 |
+| `pavement_06` | Pavement 06 | Jan Martens | 1.8 × 1.8 m | https://polyhaven.com/a/pavement_06 |
+| `square_concrete_pavers` | Square Concrete Pavers | Amal Kumar | 1.8 × 1.8 m | https://polyhaven.com/a/square_concrete_pavers |
+| `concrete_pavers_02` | Concrete Pavers 02 | Amal Kumar | 2 × 2 m | https://polyhaven.com/a/concrete_pavers_02 |
