@@ -5,6 +5,8 @@ layout(location = 2) in vec2 aUV;
 layout(location = 3) in uvec4 aJoints;
 layout(location = 4) in vec4 aWeights;
 layout(location = 5) in uint aInstance; // base instance + instance number (mesh pool VAO)
+// Trees (vegetation/source/treegen2.py): r crown occlusion, g branch flexibility, b branch phase, a leaf flutter.
+layout(location = 6) in vec4 aFoliage;
 #include "common.glsl"
 // The depth pre-pass and the lit pass compile this separately: identical depth in both, so the
 // lit pass can test against the pre-pass depth without writing it.
@@ -27,11 +29,13 @@ out vec3 vWorldPos;
 out vec3 vNormal;
 out vec2 vUV;
 out float vSway; // the fragment shader lets light through thin leaves
+out float vFoliageAo; // baked crown occlusion (1 = open)
 // LOD crossfade: an instance's share dissolved (> 0: this level fades out, < 0: fades in),
 // carried in its transform's unused m[0][3] (Renderer: both levels drawn within the band).
 flat out float vDissolve;
 void main() {
     vSway = uSway;
+    vFoliageAo = aFoliage.r;
     mat4 skin = mat4(1.0);
     if (uSkinned)
         skin = aWeights.x * uJoints[aJoints.x] + aWeights.y * uJoints[aJoints.y]
@@ -54,6 +58,22 @@ void main() {
         float flutter = uSway * uWind.y * min(h, 1.5) * 0.015 * sin(t * 7.0 + dot(world.xyz, vec3(2.1, 1.7, 2.9)));
         world.xz += dir * bend + vec2(-dir.y, dir.x) * flutter;
         world.y -= bend * bend * 0.5 / max(h, 0.5); // keep the length roughly
+        if (aFoliage.g > 0.0 || aFoliage.a > 0.0) {
+            // Tree hierarchy: every limb swings on its own phase (and its shoots with it), more toward the
+            // outer twigs; the leaves at a twig's tip flutter fast and lightly. Gusts drive both.
+            float ph = aFoliage.b * 6.2832;
+            float strength = uWind.y * gust;
+            float flex = aFoliage.g * aFoliage.g;
+            vec2 across = vec2(-dir.y, dir.x);
+            float swing = sin(t * (1.6 + 0.5 * uWind.y) + ph) + 0.4 * sin(t * (3.1 + 0.4 * uWind.y) + ph * 2.3);
+            vec2 limb = dir * (0.55 + 0.45 * swing) * 0.35 + across * 0.18 * sin(t * 1.3 + ph * 1.7);
+            world.xz += limb * flex * strength * 1.2;
+            world.y += 0.12 * sin(t * 2.2 + ph * 3.1) * flex * strength;
+            vec3 wn = normalize(mat3(model) * aNormal);
+            float leaf = aFoliage.a * strength * (0.035 + 0.03 * uWind.w);
+            world.xyz += wn * leaf * sin(t * 11.0 + ph * 13.0 + dot(world.xyz, vec3(3.1, 2.3, 2.7)))
+                       + vec3(across.x, 0.0, across.y) * leaf * 0.6 * sin(t * 8.3 + ph * 7.0 + world.y * 4.0);
+        }
     }
     if (uSway > 0.0 && uBenderInfo.x > 0.0) {
         // Benders (anomalies): plants lean away from, toward or around a centre, the

@@ -123,6 +123,9 @@ struct MeshPart {
     int skin = -1;                   // animated models: skinned part (uses joints/weights)
     std::vector<glm::u16vec4> joints;   // indices into the skin's joint list
     std::vector<glm::vec4> weights;
+    // Foliage data per vertex (glTF attribute _FOLIAGE, written by vegetation/source/treegen2.py):
+    // R crown occlusion, G branch flexibility, B branch phase, A leaf flutter. Empty = none.
+    std::vector<glm::u8vec4> foliage;
 };
 
 // The mesh parts of a model, shared by every copy: placing the same .glb twenty

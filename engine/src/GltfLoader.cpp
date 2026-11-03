@@ -263,6 +263,17 @@ bool loadPrimitive(const cgltf_primitive& prim, const glm::mat4& world, MeshPart
         for (cgltf_size i = 0; i < uv->count; ++i)
             cgltf_accessor_read_float(uv, i, &part.texcoords[i].x, 2);
     }
+    for (cgltf_size i = 0; i < prim.attributes_count; ++i) {
+        const cgltf_attribute& a = prim.attributes[i];
+        if (a.type != cgltf_attribute_type_custom || !a.name || std::strcmp(a.name, "_FOLIAGE") != 0 || a.data->count != pos->count)
+            continue;
+        part.foliage.resize(pos->count);
+        for (cgltf_size k = 0; k < pos->count; ++k) {
+            glm::vec4 c(1.0f, 0.0f, 0.0f, 0.0f);
+            cgltf_accessor_read_float(a.data, k, glm::value_ptr(c), 4);
+            part.foliage[k] = glm::u8vec4(glm::round(glm::clamp(c, 0.0f, 1.0f) * 255.0f));
+        }
+    }
     part.id = nextPartId++;
     return !part.indices.empty();
 }

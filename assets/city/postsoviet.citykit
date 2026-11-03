@@ -47,16 +47,16 @@ prop car "../models/zone/gen/car_van_green.glb" lod "../models/zone/gen/car_van_
 prop car "../models/zone/gen/car_sedan_cream.glb" lod "../models/zone/gen/car_sedan_cream_lod1.glb" 50 cull 260 collision 1 shadows 1
 prop car "../models/zone/gen/car_estate_red.glb" lod "../models/zone/gen/car_estate_red_lod1.glb" 50 cull 260 collision 1 shadows 1
 prop car "../models/zone/gen/car_sedan_blue.glb" lod "../models/zone/gen/car_sedan_blue_lod1.glb" 50 cull 260 collision 1 shadows 1
-prop tree "../models/zone/vegetation/maple_a.glb" lod "../models/zone/vegetation/maple_a_lod1.glb" 45 cull 400 sway 0.3 impostor 120 scale_min 0.85 scale_max 1.15 collision 1 shadows 1
-prop tree "../models/zone/vegetation/maple_b.glb" lod "../models/zone/vegetation/maple_b_lod1.glb" 45 cull 400 sway 0.3 impostor 120 scale_min 0.85 scale_max 1.15 collision 1 shadows 1
-prop tree "../models/zone/vegetation/ash_a.glb" lod "../models/zone/vegetation/ash_a_lod1.glb" 45 cull 400 sway 0.3 impostor 120 scale_min 0.85 scale_max 1.15 collision 1 shadows 1
-prop tree "../models/zone/vegetation/ash_b.glb" lod "../models/zone/vegetation/ash_b_lod1.glb" 45 cull 400 sway 0.3 impostor 120 scale_min 0.85 scale_max 1.15 collision 1 shadows 1
-prop tree "../models/zone/vegetation/broadleaf_a.glb" lod "../models/zone/vegetation/broadleaf_a_lod1.glb" 45 cull 400 sway 0.3 impostor 120 scale_min 0.85 scale_max 1.15 collision 1 shadows 1
-prop tree "../models/zone/vegetation/broadleaf_b.glb" lod "../models/zone/vegetation/broadleaf_b_lod1.glb" 45 cull 400 sway 0.3 impostor 120 scale_min 0.85 scale_max 1.15 collision 1 shadows 1
-prop sapling "../models/zone/vegetation/sapling_a.glb" lod "../models/zone/vegetation/sapling_a_lod1.glb" 30 cull 220 sway 1 scale_min 0.7 scale_max 1.2 collision 0 shadows 1
-prop sapling "../models/zone/vegetation/sapling_b.glb" lod "../models/zone/vegetation/sapling_b_lod1.glb" 30 cull 220 sway 1 scale_min 0.7 scale_max 1.2 collision 0 shadows 1
-prop sapling "../models/zone/vegetation/sapling_c.glb" lod "../models/zone/vegetation/sapling_c_lod1.glb" 30 cull 220 sway 1 scale_min 0.7 scale_max 1.2 collision 0 shadows 1
-prop sapling "../models/zone/vegetation/broadleaf_young.glb" lod "../models/zone/vegetation/broadleaf_young_lod1.glb" 30 cull 220 sway 1 scale_min 0.7 scale_max 1.2 collision 0 shadows 1
+prop tree "../models/zone/vegetation/maple_a.glb" lod "../models/zone/vegetation/maple_a_lod1.glb" 30 cull 400 sway 0.3 impostor 120 scale_min 0.85 scale_max 1.15 collision 1 shadows 1
+prop tree "../models/zone/vegetation/maple_b.glb" lod "../models/zone/vegetation/maple_b_lod1.glb" 30 cull 400 sway 0.3 impostor 120 scale_min 0.85 scale_max 1.15 collision 1 shadows 1
+prop tree "../models/zone/vegetation/ash_a.glb" lod "../models/zone/vegetation/ash_a_lod1.glb" 30 cull 400 sway 0.3 impostor 120 scale_min 0.85 scale_max 1.15 collision 1 shadows 1
+prop tree "../models/zone/vegetation/ash_b.glb" lod "../models/zone/vegetation/ash_b_lod1.glb" 30 cull 400 sway 0.3 impostor 120 scale_min 0.85 scale_max 1.15 collision 1 shadows 1
+prop tree "../models/zone/vegetation/broadleaf_a.glb" lod "../models/zone/vegetation/broadleaf_a_lod1.glb" 30 cull 400 sway 0.3 impostor 120 scale_min 0.85 scale_max 1.15 collision 1 shadows 1
+prop tree "../models/zone/vegetation/broadleaf_b.glb" lod "../models/zone/vegetation/broadleaf_b_lod1.glb" 30 cull 400 sway 0.3 impostor 120 scale_min 0.85 scale_max 1.15 collision 1 shadows 1
+prop sapling "../models/zone/vegetation/sapling_a.glb" lod "../models/zone/vegetation/sapling_a_lod1.glb" 18 cull 220 sway 1 scale_min 0.7 scale_max 1.2 collision 0 shadows 1
+prop sapling "../models/zone/vegetation/sapling_b.glb" lod "../models/zone/vegetation/sapling_b_lod1.glb" 18 cull 220 sway 1 scale_min 0.7 scale_max 1.2 collision 0 shadows 1
+prop sapling "../models/zone/vegetation/sapling_c.glb" lod "../models/zone/vegetation/sapling_c_lod1.glb" 18 cull 220 sway 1 scale_min 0.7 scale_max 1.2 collision 0 shadows 1
+prop sapling "../models/zone/vegetation/broadleaf_young.glb" lod "../models/zone/vegetation/broadleaf_young_lod1.glb" 18 cull 220 sway 1 scale_min 0.7 scale_max 1.2 collision 0 shadows 1
 prop snag "../models/zone/vegetation/snag_a.glb" lod "../models/zone/vegetation/snag_a_lod1.glb" 45 cull 300 sway 0.3 scale_min 0.8 scale_max 1.1 collision 1 shadows 1
 prop snag "../models/zone/vegetation/dead_a.glb" lod "../models/zone/vegetation/dead_a_lod1.glb" 45 cull 300 sway 0.3 scale_min 0.8 scale_max 1.1 collision 1 shadows 1
 prop bush "../models/zone/vegetation/bush_a.glb" lod "../models/zone/vegetation/bush_a_lod1.glb" 25 cull 160 sway 1 scale_min 0.8 scale_max 1.4 collision 0 shadows 0

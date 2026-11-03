@@ -51,6 +51,7 @@ uniform vec3 uDetail;
 // Blend layers painted on the vertices (vPaint: red = layer 0, green = layer 1, blue = wet).
 in vec4 vPaint;
 in float vSway;
+in float vFoliageAo; // baked crown occlusion of trees (mesh.vert), 1 elsewhere
 layout(binding = 24) uniform sampler2D uBlendAlbedo[2];
 layout(binding = 26) uniform sampler2D uBlendNormal[2];
 layout(binding = 28) uniform sampler2D uBlendRoughMap[2];
@@ -654,8 +655,15 @@ void main() {
     // shadowed side of a tree is a deep green, not black, and a leaf against the sun glows.
     if (!uOverlay && uAlphaMode == 1 && vSway > 0.0) {
         float sh = nl > 0.0 ? shadow : sunShadow(vWorldPos, -normalize(vNormal), 0.5, true) * cloudShadow(vWorldPos);
-        float through = 0.07 + 0.25 * pow(max(dot(-v, l), 0.0), 3.0);
-        color += albedo * uSunColor.rgb * uSunDir.w * through * mix(0.4, 1.0, sh);
+        // Diffuse transmission on the side away from the sun plus a forward glow looking into the sun.
+        // Light that came through a leaf is deeper and more saturated than the light it reflects, and a
+        // crown passes less of it the deeper inside a leaf sits (baked occlusion).
+        float back = max(dot(-n, l), 0.0);
+        float through = 0.05 + 0.2 * back + 0.3 * pow(max(dot(-v, l), 0.0), 4.0);
+        vec3 tint = albedo / max(max(albedo.r, max(albedo.g, albedo.b)), 1e-3);
+        vec3 transmitted = albedo * mix(vec3(1.0), tint, 0.4) * 1.15;
+        color *= mix(0.55, 1.0, vFoliageAo); // the cheap foliage shadow misses the crown's own depth
+        color += transmitted * uSunColor.rgb * uSunDir.w * through * mix(0.3, 1.0, sh) * mix(0.3, 1.0, vFoliageAo);
     }
     if (uOverlay) // view space -> world
         color += localLights(uEnvRotation * vWorldPos + uCameraPos.xyz, uEnvRotation * n, uEnvRotation * normalize(vNormal), uEnvRotation * v,
@@ -686,7 +694,7 @@ void main() {
     }
     vec2 brdf = texture(uBrdfLut, vec2(nv, rough)).rg;
     vec3 Fa = fresnelRoughness(nv, f0, rough);
-    float occlusion = ao;
+    float occlusion = ao * vFoliageAo;
     vec3 bounce = vec3(0.0); // light from nearby surfaces on screen (SSGI)
     if (!uOverlay && uCameraPos.w > 0.5) {
         vec4 screenAo = texture(uSsao, gl_FragCoord.xy * uViewport.zw);

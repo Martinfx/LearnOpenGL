@@ -141,8 +141,8 @@ class Level:
             self.lines.append(f'  parent "{group}"')
         if yaw or scale != 1.0 or tilt != (0.0, 0.0):
             self.lines.append(f'  transform {tilt[0]:g} {yaw:.1f} {tilt[1]:g} {scale:.3g}')
-        if lod:
-            self.lines.append(f'  lod "{lod[0]}" {lod[1]:g}')
+        for lp, ld in ([lod] if lod and isinstance(lod[0], str) else lod or []):   # one (file, m) or a list of them
+            self.lines.append(f'  lod "{lp}" {ld:g}')
         if cull:
             self.lines.append(f'  cull_distance {cull:g}')
         if not coll:
@@ -268,7 +268,7 @@ def build():
                 key, sc = (('birch_young', irng.uniform(0.5, 0.9)) if r < 0.45 else ('sapling_c', irng.uniform(0.7, 1.1))
                            if r < 0.75 else ('sapling_a', irng.uniform(0.5, 0.8)))
             lv.model('Roof plant', V + key + '.glb', x, WALK + ly, z, irng.uniform(0, 360), sc, group='Ivy',
-                     lod=(V + key + '_lod1.glb', 25), cull=120 if kind != 'balcony' or sc > 0.6 else 60,
+                     lod=[(V + key + '_lod1.glb', 18), (V + key + '_lod2.glb', 40)], cull=120 if kind != 'balcony' or sc > 0.6 else 60,
                      coll=False, shadows=kind != 'balcony', sway=0.7 if key.startswith(('sapling', 'birch')) else 1.0)
 
     # ------------------------------------------------------------------ people were here: a stalkers' camp
@@ -512,12 +512,12 @@ def build():
         placed.append((x, z))
         key = far.choice(('maple_a', 'maple_b', 'ash_a', 'ash_b', 'birch_a', 'broadleaf_a', 'broadleaf_b', 'maple_b'))
         lv.model('Far tree', V + key + '.glb', x, -0.05, z, far.uniform(0, 360), far.uniform(0.75, 1.05), group='Far',
-                 lod=(V + key + '_lod1.glb', 45), cull=900, coll=False, sway=0.3, impostor=120)
+                 lod=[(V + key + '_lod1.glb', 30), (V + key + '_lod2.glb', 70)], cull=900, coll=False, sway=0.3, impostor=120)
     for _ in range(70):
         x, z = far.uniform(-FACADE + 0.5, FACADE - 0.5), far.uniform(-330.0, Z0 + 1.0)
         key = far.choice(('bush_street_a', 'bush_street_b', 'bush_street_c', 'bush_street_a', 'sapling_a'))
         lv.model('Far bush', V + key + '.glb', x, -0.03, z, far.uniform(0, 360), far.uniform(0.6, 1.0), group='Far',
-                 lod=(V + key + '_lod1.glb', 25 if 'sapling_a' not in key else 35), cull=600, coll=False, shadows=False,
+                 lod=[(V + key + '_lod1.glb', 18), (V + key + '_lod2.glb', 40)], cull=600, coll=False, shadows=False,
                  sway=1.0)
 
     # ------------------------------------------------------------------ header and entities
@@ -696,22 +696,22 @@ FOLIAGE = {
     'dandelion_c': _f(V + 'dandelion_c.glb', lods=[(V + 'dandelion_c_lod1.glb', 6), (V + 'dandelion_c_far.glb', 11)], cull=22),
     'celandine_a': _f(V + 'celandine_a.glb', lods=[(V + 'celandine_a_lod1.glb', 8)], cull=22),
     'celandine_b': _f(V + 'celandine_b.glb', lods=[(V + 'celandine_b_lod1.glb', 6), (V + 'celandine_b_far.glb', 11), (V + 'celandine_b_far2.glb', 16)], cull=22),
-    'shrub_a': _f(V + 'bush_street_b.glb', 0.03, cull=160, shadows=1, far=0.8, lods=[(V + 'bush_street_b_lod1.glb', 25)]),
-    'shrub_b': _f(V + 'bush_street_a.glb', 0.03, cull=160, shadows=1, far=0.8, lods=[(V + 'bush_street_a_lod1.glb', 25)]),
-    'bush_dense': _f(V + 'bush_street_c.glb', 0.02, cull=160, shadows=1, far=0.8, lods=[(V + 'bush_street_c_lod1.glb', 25)]),
-    'bush_wide': _f(V + 'bush_street_a.glb', 0.02, cull=160, shadows=1, far=0.8, lods=[(V + 'bush_street_a_lod1.glb', 25)]),
-    'sapling_a': _f(V + 'sapling_a.glb', 0.03, cull=220, shadows=1, far=1.0, lods=[(V + 'sapling_a_lod1.glb', 35)]),
-    'sapling_b': _f(V + 'sapling_b.glb', 0.03, cull=220, shadows=1, far=1.0, lods=[(V + 'sapling_b_lod1.glb', 35)]),
-    'sapling_c': _f(V + 'sapling_c.glb', 0.03, cull=200, shadows=1, far=1.0, lods=[(V + 'sapling_c_lod1.glb', 35)]),
-    'birch_young': _f(V + 'birch_young.glb', 0.03, cull=220, shadows=1, far=1.0, lods=[(V + 'birch_young_lod1.glb', 35)]),
-    'broadleaf_young': _f(V + 'broadleaf_young.glb', 0.03, cull=300, coll=1, shadows=1, far=1.0, lods=[(V + 'broadleaf_young_lod1.glb', 40)]),
-    'broadleaf_a': _f(V + 'broadleaf_a.glb', 0.03, cull=400, coll=1, shadows=1, far=1.0, lods=[(V + 'broadleaf_a_lod1.glb', 45)], imp=120),
-    'broadleaf_b': _f(V + 'broadleaf_b.glb', 0.03, cull=400, coll=1, shadows=1, far=1.0, lods=[(V + 'broadleaf_b_lod1.glb', 45)], imp=120),
-    'maple_a': _f(V + 'maple_a.glb', 0.03, cull=400, coll=1, shadows=1, far=1.0, lods=[(V + 'maple_a_lod1.glb', 45)], imp=120),
-    'maple_b': _f(V + 'maple_b.glb', 0.03, cull=400, coll=1, shadows=1, far=1.0, lods=[(V + 'maple_b_lod1.glb', 45)], imp=120),
-    'ash_a': _f(V + 'ash_a.glb', 0.03, cull=400, coll=1, shadows=1, far=1.0, lods=[(V + 'ash_a_lod1.glb', 45)], imp=120),
-    'ash_b': _f(V + 'ash_b.glb', 0.03, cull=400, coll=1, shadows=1, far=1.0, lods=[(V + 'ash_b_lod1.glb', 45)], imp=120),
-    'birch_a': _f(V + 'birch_a.glb', 0.03, cull=400, coll=1, shadows=1, far=1.0, lods=[(V + 'birch_a_lod1.glb', 45)], imp=120),
+    'shrub_a': _f(V + 'bush_street_b.glb', 0.03, cull=160, shadows=1, far=0.8, lods=[(V + 'bush_street_b_lod1.glb', 18), (V + 'bush_street_b_lod2.glb', 40)]),
+    'shrub_b': _f(V + 'bush_street_a.glb', 0.03, cull=160, shadows=1, far=0.8, lods=[(V + 'bush_street_a_lod1.glb', 18), (V + 'bush_street_a_lod2.glb', 40)]),
+    'bush_dense': _f(V + 'bush_street_c.glb', 0.02, cull=160, shadows=1, far=0.8, lods=[(V + 'bush_street_c_lod1.glb', 18), (V + 'bush_street_c_lod2.glb', 40)]),
+    'bush_wide': _f(V + 'bush_street_a.glb', 0.02, cull=160, shadows=1, far=0.8, lods=[(V + 'bush_street_a_lod1.glb', 18), (V + 'bush_street_a_lod2.glb', 40)]),
+    'sapling_a': _f(V + 'sapling_a.glb', 0.03, cull=220, shadows=1, far=1.0, lods=[(V + 'sapling_a_lod1.glb', 18), (V + 'sapling_a_lod2.glb', 40)]),
+    'sapling_b': _f(V + 'sapling_b.glb', 0.03, cull=220, shadows=1, far=1.0, lods=[(V + 'sapling_b_lod1.glb', 18), (V + 'sapling_b_lod2.glb', 40)]),
+    'sapling_c': _f(V + 'sapling_c.glb', 0.03, cull=200, shadows=1, far=1.0, lods=[(V + 'sapling_c_lod1.glb', 18), (V + 'sapling_c_lod2.glb', 40)]),
+    'birch_young': _f(V + 'birch_young.glb', 0.03, cull=220, shadows=1, far=1.0, lods=[(V + 'birch_young_lod1.glb', 18), (V + 'birch_young_lod2.glb', 40)]),
+    'broadleaf_young': _f(V + 'broadleaf_young.glb', 0.03, cull=300, coll=1, shadows=1, far=1.0, lods=[(V + 'broadleaf_young_lod1.glb', 18), (V + 'broadleaf_young_lod2.glb', 40)]),
+    'broadleaf_a': _f(V + 'broadleaf_a.glb', 0.03, cull=400, coll=1, shadows=1, far=1.0, lods=[(V + 'broadleaf_a_lod1.glb', 30), (V + 'broadleaf_a_lod2.glb', 70)], imp=120),
+    'broadleaf_b': _f(V + 'broadleaf_b.glb', 0.03, cull=400, coll=1, shadows=1, far=1.0, lods=[(V + 'broadleaf_b_lod1.glb', 30), (V + 'broadleaf_b_lod2.glb', 70)], imp=120),
+    'maple_a': _f(V + 'maple_a.glb', 0.03, cull=400, coll=1, shadows=1, far=1.0, lods=[(V + 'maple_a_lod1.glb', 30), (V + 'maple_a_lod2.glb', 70)], imp=120),
+    'maple_b': _f(V + 'maple_b.glb', 0.03, cull=400, coll=1, shadows=1, far=1.0, lods=[(V + 'maple_b_lod1.glb', 30), (V + 'maple_b_lod2.glb', 70)], imp=120),
+    'ash_a': _f(V + 'ash_a.glb', 0.03, cull=400, coll=1, shadows=1, far=1.0, lods=[(V + 'ash_a_lod1.glb', 30), (V + 'ash_a_lod2.glb', 70)], imp=120),
+    'ash_b': _f(V + 'ash_b.glb', 0.03, cull=400, coll=1, shadows=1, far=1.0, lods=[(V + 'ash_b_lod1.glb', 30), (V + 'ash_b_lod2.glb', 70)], imp=120),
+    'birch_a': _f(V + 'birch_a.glb', 0.03, cull=400, coll=1, shadows=1, far=1.0, lods=[(V + 'birch_a_lod1.glb', 30), (V + 'birch_a_lod2.glb', 70)], imp=120),
 }
 # ground debris (zonegen/debris.py), scattered like plants: what fell off the houses, what the wind brought
 DEBRIS = {'concrete_chunks': 60, 'plaster_chunks': 50, 'silicate_bricks': 50, 'glass_shards': 40, 'tin_cans': 40, 'bottles': 40,

@@ -12,7 +12,7 @@ namespace engine {
 
 namespace {
 
-constexpr char kMagic[8] = {'F', 'P', 'S', 'M', 'E', 'S', 'H', '3'};
+constexpr char kMagic[8] = {'F', 'P', 'S', 'M', 'E', 'S', 'H', '4'};
 
 std::uint64_t fnv1a(const std::string& s)
 {
@@ -138,6 +138,7 @@ bool writeMeshCache(const Model& model, const std::filesystem::path& source, con
             w.vec(p.indices);
             w.vec(p.joints);
             w.vec(p.weights);
+            w.vec(p.foliage);
             for (auto slot : kTextureSlots) {
                 const Texture* t = (p.*slot).get();
                 w.put(t ? static_cast<std::int32_t>(textureIndex[t]) : -1);
@@ -237,6 +238,7 @@ bool readMeshCache(Model& model, const std::filesystem::path& source)
         r.vec(p.indices);
         r.vec(p.joints);
         r.vec(p.weights);
+        r.vec(p.foliage);
         for (auto slot : kTextureSlots) {
             std::int32_t t = -1;
             r.get(t);

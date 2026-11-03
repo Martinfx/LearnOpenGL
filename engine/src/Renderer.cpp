@@ -73,6 +73,7 @@ struct Vertex {
     glm::vec2 uv{0.0f};
     glm::u16vec4 joints{0};
     glm::vec4 weights{0.0f};
+    glm::u8vec4 foliage{255, 0, 0, 0}; // occlusion, branch flex, phase, leaf flutter (MeshPart::foliage)
 };
 
 constexpr int kMaxJoints = 256; // size of the Joints uniform block
@@ -80,7 +81,7 @@ constexpr int kMaxJoints = 256; // size of the Joints uniform block
 void setupVertexArray(unsigned vao, unsigned vbo)
 {
     glVertexArrayVertexBuffer(vao, 0, vbo, 0, sizeof(Vertex));
-    for (unsigned attr = 0; attr < 5; ++attr) {
+    for (unsigned attr : {0u, 1u, 2u, 3u, 4u, 6u}) {
         glEnableVertexArrayAttrib(vao, attr);
         glVertexArrayAttribBinding(vao, attr, 0);
     }
@@ -89,6 +90,7 @@ void setupVertexArray(unsigned vao, unsigned vbo)
     glVertexArrayAttribFormat(vao, 2, 2, GL_FLOAT, GL_FALSE, offsetof(Vertex, uv));
     glVertexArrayAttribIFormat(vao, 3, 4, GL_UNSIGNED_SHORT, offsetof(Vertex, joints));
     glVertexArrayAttribFormat(vao, 4, 4, GL_FLOAT, GL_FALSE, offsetof(Vertex, weights));
+    glVertexArrayAttribFormat(vao, 6, 4, GL_UNSIGNED_BYTE, GL_TRUE, offsetof(Vertex, foliage));
 }
 
 Vertex vtx(glm::vec3 position, glm::vec3 normal)
@@ -717,6 +719,7 @@ bool Renderer::init(GlLoader loader, std::string* error)
     glNamedBufferStorage(vbo_, static_cast<GLsizeiptr>(cube.size() * sizeof(Vertex)), cube.data(), 0);
     glCreateVertexArrays(1, &vao_);
     setupVertexArray(vao_, vbo_);
+    glVertexAttrib4f(6, 1.0f, 0.0f, 0.0f, 0.0f); // foliage data where a vertex array has none: open, rigid
     glCreateVertexArrays(1, &emptyVao_);
 
     // 1x1 stand-ins so samplers are always valid.
@@ -4529,6 +4532,8 @@ const Renderer::GpuMesh& Renderer::upload(const MeshPart& part)
             vertices[i].joints = part.joints[i];
             vertices[i].weights = part.weights[i];
         }
+        if (part.foliage.size() == vertices.size())
+            vertices[i].foliage = part.foliage[i];
     }
 
     GpuMesh m;

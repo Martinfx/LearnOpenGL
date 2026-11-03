@@ -22,6 +22,8 @@ All sources are CC0 1.0 (public domain). Credit is given anyway.
 | spruce and broadleaf bark | [bark_brown_02](https://polyhaven.com/a/bark_brown_02) | Rob Tuytel |
 | dead tree bark | [bark_willow](https://polyhaven.com/a/bark_willow) | Dario Barresi, Dimitrios Savva |
 
+Twig atlases `textures/twigs_*.png` (treegen2 trees): twigs built and rendered by `source/twigbake.py` from the scanned leaves of [tree_small_02](https://polyhaven.com/a/tree_small_02) (Rico Cilliers) and [island_tree_02](https://polyhaven.com/a/island_tree_02) (Rob Tuytel, Rico Cilliers), with their young-shoot bark textures; tree bark [bark_brown_02](https://polyhaven.com/a/bark_brown_02) (Rob Tuytel) and [bark_willow](https://polyhaven.com/a/bark_willow) (Dario Barresi, Dimitrios Savva). Tree geometry (`maple_*`, `ash_*`, `broadleaf_*`, `birch_*`, `sapling_*`, `bush_street_*` and their `_lod1`/`_lod2`) by `source/treegen2.py` (CC0).
+
 The street leaf atlas (`source/cards/leaves_street.png`, `_dark`) is drawn procedurally by `source/leafcards.py` (CC0).
 
 Tree geometry (`maple_*`, `ash_*`, `sapling_*` except `sapling_shrub_*`, `broadleaf_young`, `birch_*`, `pine_*`, `spruce_*`, `broadleaf_*`, `dead_*`, `snag_a`, `bush_street_*`) and the birch bark texture were
