@@ -2157,6 +2157,9 @@ int main(int argc, char** argv)
     renderer.setDeterministic(fixedDt > 0.0);
     double fpsTimer = 0.0;
     int fpsFrames = 0;
+    // Frame pacing for FPS_ENGINE_STATS: the slowest frame and the time spent waiting in the swap
+    // (long waits = the GPU or vsync holds the frame; short ones and slow frames = the CPU).
+    double worstFrame = 0.0, swapWait = 0.0, frameTimeSum2 = 0.0;
     bool escHeld = false;
     bool padStartHeld = false, padWeaponHeld = false;
     bool quickSaveHeld = false, quickLoadHeld = false;
@@ -3409,7 +3412,9 @@ int main(int argc, char** argv)
         }
         {
             ENGINE_ZONE("Swap buffers");
+            const double swapStart = glfwGetTime();
             glfwSwapBuffers(window);
+            swapWait += glfwGetTime() - swapStart;
         }
         ENGINE_FRAME_MARK;
         if (const int maxFps = cvFpsMax.integer(); maxFps > 0) { // frame limiter (sleep, then spin the last bit)
@@ -3437,6 +3442,8 @@ int main(int argc, char** argv)
         ++frame;
         ++fpsFrames;
         fpsTimer += frameTime;
+        worstFrame = std::max(worstFrame, frameTime);
+        frameTimeSum2 += frameTime * frameTime;
         if (fpsTimer >= 0.5) {
             char title[256];
             char ammo[32];
@@ -3454,11 +3461,16 @@ int main(int argc, char** argv)
             // FPS_ENGINE_STATS=1 prints frame statistics (profiling, comparing optimizations).
             if (std::getenv("FPS_ENGINE_STATS")) {
                 const engine::Renderer::FrameStats& st = renderer.frameStats();
-                char line[512];
+                char line[1024];
                 int n = std::snprintf(line, sizeof line, "%.1f FPS, %.2f ms | %d draws (%d meshes), %lld tris, %d instanced, %d culled, %d occluded, %d uploads | CPU %.2f ms, GPU %.2f ms |",
                                       fpsFrames / fpsTimer, 1000.0 * fpsTimer / fpsFrames, st.drawCalls, st.meshDraws, st.triangles, st.instanced, st.culled, st.occluded, st.uploads,
                                       st.cpuTotalMs, st.gpuTotalMs);
                 n += std::snprintf(line + n, sizeof line - static_cast<std::size_t>(n), " cull %.2f (wait %.2f) | scale %.2f |", st.cullMs, st.cullWaitMs, st.renderScale);
+                // Pacing: the frame time's spread (standard deviation), the slowest frame, the swap wait.
+                const double mean = fpsTimer / fpsFrames;
+                const double spread = std::sqrt(std::max(0.0, frameTimeSum2 / fpsFrames - mean * mean));
+                n += std::snprintf(line + n, sizeof line - static_cast<std::size_t>(n), " pacing +-%.2f ms, worst %.2f ms, swap %.2f ms |",
+                                   1000.0 * spread, 1000.0 * worstFrame, 1000.0 * swapWait / fpsFrames);
                 for (int p = 0; p < engine::Renderer::PassCount && n > 0 && n < static_cast<int>(sizeof line); ++p)
                     n += std::snprintf(line + n, sizeof line - static_cast<std::size_t>(n), " %s %.2f/%.2f", engine::Renderer::passName(p), st.cpuMs[p], st.gpuMs[p]);
                 // Frame update tasks (last frame): what runs side by side before rendering.
@@ -3478,6 +3490,7 @@ int main(int argc, char** argv)
             }
             fpsTimer = 0.0;
             fpsFrames = 0;
+            worstFrame = swapWait = frameTimeSum2 = 0.0;
         }
     }
 
