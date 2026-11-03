@@ -142,7 +142,7 @@ def build():
     nz = Noise(77)
     lv = Level()
     for g, p in (('Houses', ''), ('Street', ''), ('Kerbs', 'Street'), ('Lamps and cables', 'Street'), ('Wrecks', 'Street'),
-                 ('Rubble', 'Street'), ('Barricades', 'Street'), ('Plates', 'Houses'), ('Ivy', 'Houses'), ('Camp', 'Street'), ('Far', '')):
+                 ('Rubble', 'Street'), ('Barricades', 'Street'), ('Plates', 'Houses'), ('Ivy', 'Houses'), ('Camp', 'Street'), ('Zone', 'Street'), ('Far', '')):
         lv.group(g, p)
 
     # ------------------------------------------------------------------ houses along both sides
@@ -289,6 +289,28 @@ def build():
                       '  prop "sound" "sounds/ambient/campfire.sound"')
     ents_extra.append(f'entity "Camp radio" "sound" {cx - 1.75:.2f} 0.8 {cz + 0.6:.2f} 0 0.3 0.3 0.3 0.25 0.55 0.95 ""\n'
                       '  parent "Camp"\n  prop "sound" "sounds/ambient/radio_waltz.sound"\n  prop "volume" "0.6"')
+    # the stalkers' stash on the crate: a first-aid pouch and a can of rifle rounds
+    ents_extra.append(f'entity "Camp medkit" "pickup" {cx - 2.6:.2f} 0.4 {cz - 0.7:.2f} 30 0.245 0.1 0.165 0.9 0.8 0.3 ""\n'
+                      '  parent "Camp"\n  character "../models/props/pickups/medkit_pouch.glb" 1 0 ""\n'
+                      '  prop "amount" "1"\n  prop "item" "medkit"')
+    ents_extra.append(f'entity "Camp ammo" "pickup" {cx - 2.1:.2f} 0.4 {cz - 1.2:.2f} 75 0.285 0.105 0.197 0.9 0.8 0.3 ""\n'
+                      '  parent "Camp"\n  character "../models/props/pickups/ammo_can_rifle.glb" 1 0 ""\n'
+                      '  prop "ammo_type" "5.45x39"\n  prop "amount" "60"\n  prop "item" "ammo"')
+    # ------------------------------------------------------------------ the Zone in the street
+    # an electric field across the road past the camp (the way on bends round it), a fire vent by the burnt car it
+    # burnt, an acid pool in the cross street, radiation in the rubble of the shelled house_e; crows on two heaps
+    for name, kind, (ax, ay, az), size, col, extra in (
+            ('Discharge on the road', 'discharge', (0.8, 0.1, 47.0), (3.5, 3.0, 3.5), (0.35, 0.6, 1.0), '\n  prop "artifacts" "1"'),
+            ('Vent by the burnt car', 'vent', (-3.4, 0.05, -81.5), (2.0, 5.0, 2.0), (1.0, 0.45, 0.15), ''),
+            ('Acid in the cross street', 'acid', (22.0, 0.02, -17.0), (6.0, 1.0, 6.0), (0.45, 0.85, 0.2), '\n  prop "artifacts" "1"'),
+            ('Radiation in the rubble', 'radiation', (-6.0, 0.0, 34.5), (9.0, 4.0, 8.0), (0.9, 0.85, 0.2), '')):
+        ents_extra.append(f'entity "{name}" "anomaly" {ax:g} {ay:g} {az:g} 0 {size[0]:g} {size[1]:g} {size[2]:g} '
+                          f'{col[0]:g} {col[1]:g} {col[2]:g} ""\n  parent "Zone"\n  prop "kind" "{kind}"{extra}')
+    for name, (fx_, fz_), n in (('Crows on the rubble', (6.4, 66.0), 7), ('Crows up the street', (-1.5, -58.0), 6)):
+        ents_extra.append(f'entity "{name}" "crow_flock" {fx_:g} 0.2 {fz_:g} 0 0.35 0.3 0.35 0.12 0.12 0.14 "../scripts/crow.lua"\n'
+                          f'  parent "Zone"\n  character "../models/characters/animals/crow.glb" 1 0 "Idle_Loop"\n'
+                          f'  prop "count" "{n}"')
+
     # smoke of fires somewhere in the town, rising over the roofs: there are others out there
     for k, (sx_, sy_, sz_) in enumerate(((46.0, 4.0, -70.0), (-60.0, 4.0, 30.0), (30.0, 4.0, -200.0))):
         ents_extra.append(f'entity "Far smoke" "particle" {sx_:g} {sy_:g} {sz_:g} 0 1 1 1 0.5 0.5 0.5 ""\n  parent "Camp"\n'
