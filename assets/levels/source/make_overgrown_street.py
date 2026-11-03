@@ -25,6 +25,7 @@ import os
 import random
 import struct
 import sys
+import zlib
 
 import numpy as np
 
@@ -414,7 +415,7 @@ def build():
     # ------------------------------------------------------------------ houses on their lots
     lots = []                   # dict per lot
     for f in LY.faces():
-        frng = random.Random(hash(f.name) & 0xffffffff ^ 1957)
+        frng = random.Random(zlib.crc32(f.name.encode()) ^ 1957)
         prev = None
         for s, w, kind in fill_face(f, frng):
             cx, cz = f.point(s + w / 2, f.depth / 2)
@@ -609,7 +610,7 @@ PLAN_NOTES = [(START[0], START[1], 'start', (60, 170, 60)), (CAMP[0], CAMP[1], '
 
 def street_furniture(lv, rng, lots, reclaim_pts):
     """Kerbs, lamps, cables, parked wrecks, hydrants, rubbish, signals and signs: what a Lower Manhattan street has."""
-    out = {'lamps': [], 'wrecks': [], 'potholes': [], 'clear': [(CAMP[0], CAMP[1], 4.0)]}
+    out = {'lamps': [], 'wrecks': [], 'potholes': [], 'clear': [(CAMP[0], CAMP[1], 4.0), (0.0, LY.CHURCH_Z + 6.0, 6.5)]}
     cw = carriageways()
     occupied = [(CAMP[0], CAMP[1], 4.0), (START[0], START[1], 4.0)]
 
