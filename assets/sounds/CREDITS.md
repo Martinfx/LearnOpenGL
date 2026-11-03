@@ -25,6 +25,7 @@ recordings with placeholders.
 | `weapons/ricochet_*`, `ricochet_metal_*` (built by `source/build_ricochets.py`: real metal pings, whine = the ring of struck metal bent down in pitch like a receding bullet) | [27 Metal Audio Samples](https://opengameart.org/content/27-metal-audio-samples-sfx) | blacklodgegames | CC0 |
 | `weapons/ricochet_*` (pings) | [Metal Impact Sounds](https://opengameart.org/content/metal-impact-sounds) | BMacZero | CC0 |
 | `impacts/impact_concrete_*`, `impact_metal_4..5` | [75 CC0 breaking / falling / hit sfx](https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx) | rubberduck | CC0 |
+| `weapons/molotov_break_*` | glass from [75 CC0 breaking / falling / hit sfx](https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx) + synthesized fuel whoomp (`source/build_molotov.py`) | rubberduck; made for this project | CC0 |
 | `impacts/impact_concrete_2`, `impact_flesh_*` | [Impact](https://opengameart.org/content/impact) | qubodup | CC0 |
 | `impacts/impact_metal_1..3` | [Metal Impact Sounds](https://opengameart.org/content/metal-impact-sounds) | BMacZero | CC0 |
 | `impacts/impact_metal_6` | [100 CC0 metal and wood SFX](https://opengameart.org/content/100-cc0-metal-and-wood-sfx) | rubberduck | CC0 |

@@ -7390,6 +7390,7 @@ navmesh 1 0.25 0.1 0.35 1.8 0.4 45 32 4
 weapon "../weapons/ak74.weapon"
 weapon "../weapons/service9.weapon"
 weapon "../weapons/knife.weapon"
+weapon "../weapons/molotov.weapon"
 entity "Mulberry Street" "map_marker" 0 0 60 0 1 1 1 0.85 0.3 0.2 ""
   id 2c5c2a9db12e6c6b
 entity "Hester Street crossing" "map_marker" 0 0 -17 0 1 1 1 0.85 0.3 0.2 ""
@@ -7433,6 +7434,13 @@ entity "Camp pistol rounds" "pickup" -4.4 0.4 67.9 20 0.1 0.042 0.06 0.9 0.8 0.3
   character "../models/props/pickups/ammo_box_pistol.glb" 1 0 ""
   prop "ammo_type" "9x19"
   prop "amount" "16"
+  prop "item" "ammo"
+entity "Camp bottles" "pickup" -4.9 0.4 67.4 20 0.06 0.17 0.06 0.9 0.8 0.3 ""
+  parent "Camp"
+  id 7cfb1c1b6bd1a8c2
+  character "../models/weapons/molotov/molotov_bottle.glb" 1 0 ""
+  prop "ammo_type" "molotov"
+  prop "amount" "2"
   prop "item" "ammo"
 entity "Discharge on the road" "anomaly" 0.8 0.1 47 0 3.5 3 3.5 0.35 0.6 1 ""
   parent "Zone"

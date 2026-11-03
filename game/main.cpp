@@ -26,6 +26,7 @@
 
 #include "UiScale.h"
 #include "GameAnomalies.h"
+#include "GameFire.h"
 #include "GameAudio.h"
 #include "GameEffects.h"
 #include "GameConsole.h"
@@ -1270,6 +1271,20 @@ int main(int argc, char** argv)
     GameAnomalies anomalies;
     anomalies.init(std::filesystem::path(argv[0]).parent_path() / "assets", audio);
     anomalies.startLevel(scene);
+    // Thrown weapons (incendiary bottles) and the fires they start.
+    GameFire fire;
+    fire.init(std::filesystem::path(argv[0]).parent_path() / "assets", audio);
+    fire.startLevel(scene);
+    // Throwables come with their ammo: a bottle picked up or bought puts the weapon in a slot.
+    std::vector<std::pair<std::string, std::filesystem::path>> throwables; // ammo type -> .weapon
+    {
+        std::error_code ec;
+        for (const auto& entry : std::filesystem::directory_iterator(std::filesystem::path(argv[0]).parent_path() / "assets/weapons", ec)) {
+            engine::WeaponSettings w;
+            if (entry.path().extension() == ".weapon" && engine::loadWeaponFile(w, entry.path()) && w.throwable() && !w.ammoType.empty())
+                throwables.emplace_back(w.ammoType, entry.path().lexically_normal());
+        }
+    }
     // Artifacts grow in the anomalies (kinds in assets/items.cfg); a saved game replaces them.
     GameArtifacts artifacts;
     artifacts.init(std::filesystem::path(argv[0]).parent_path() / "assets", audio);
@@ -1288,6 +1303,7 @@ int main(int argc, char** argv)
     bool healHeld = false;
     bool boltHeld = false;
     bool inspectHeld = false;
+    bool throwWound = false; // the throwable in hand is being wound up (whoosh played)
     bool wasReloading = false;
     if (const int errors = scripts.start())
         LOG_ERROR("script", "%d script error(s), see above", errors);
@@ -2595,6 +2611,30 @@ int main(int argc, char** argv)
                 audio.playAsset(r.sound, &at, 1.0f);
                 scripts.fireOutput(static_cast<int>(r.entity), "OnPickup", -1);
             }
+            // A throwable's ammo (picked up, bought, looted) brings the weapon to throw it with.
+            for (const auto& [type, file] : throwables) {
+                const auto have = inventory.ammo.find(type);
+                if (have == inventory.ammo.end() || have->second <= 0)
+                    continue;
+                bool carried = false;
+                for (const engine::Weapon& w : weapons)
+                    carried = carried || (w.settings.throwable() && w.settings.ammoType == type);
+                if (!carried && addWeapon(file))
+                    LOG_INFO("game", "%s: %d to throw", file.filename().string().c_str(), have->second);
+            }
+            // Test hook: FPS_ENGINE_FIRE="x y z" sets the first throwable's fuel alight there at the start.
+            if (static bool testFire = std::getenv("FPS_ENGINE_FIRE") != nullptr; testFire && frame >= 2) {
+                testFire = false;
+                glm::vec3 at(0.0f);
+                if (std::sscanf(std::getenv("FPS_ENGINE_FIRE"), "%f %f %f", &at.x, &at.y, &at.z) == 3)
+                    for (const auto& [type, file] : throwables) {
+                        engine::WeaponSettings w;
+                        if (engine::loadWeaponFile(w, file)) {
+                            fire.ignite(w, at, physics, scene);
+                            break;
+                        }
+                    }
+            }
             // Day/night cycle: dayMinutes real minutes per game day.
             if (engine::TimeOfDay& tod = scene.environment.time; tod.enabled && tod.dayMinutes > 0.0f)
                 tod.hour = std::fmod(tod.hour + dt * 24.0f / (tod.dayMinutes * 60.0f), 24.0f);
@@ -2616,7 +2656,8 @@ int main(int argc, char** argv)
             // Worn weapons jam: the trigger does nothing until R clears it.
             jammed.resize(weapons.size(), 0);
             unjamTimer = std::max(0.0f, unjamTimer - dt);
-            const bool fireHeld = ready && (autoFire || input.isDown(engine::Action::Fire));
+            static const long autoFireFrom = std::getenv("FPS_ENGINE_AUTOFIRE") ? std::atol(std::getenv("FPS_ENGINE_AUTOFIRE")) : 0; // "N": from frame N
+            const bool fireHeld = ready && ((autoFire && static_cast<long>(frame) >= autoFireFrom) || input.isDown(engine::Action::Fire));
             bool reloadHeld = ready && input.isDown(engine::Action::Reload);
             { // V: look the weapon over (its anim_inspect clip)
                 const bool v = ready && captured && !console.open() && keyDown(window, boundKey("in_inspect"));
@@ -2650,16 +2691,36 @@ int main(int argc, char** argv)
             if (next != current)
                 weapon.aim(1.0f, false); // switching drops the aim
             weapon.aim(dt, ready && (autoAim || input.isDown(engine::Action::Aim)));
-            if (shots > 0) {
+            const bool firearm = !weapon.settings.melee() && !weapon.settings.throwable();
+            if (weapon.settings.throwable() && weapon.throwing() && !throwWound) // the swing starts: whoosh
+                audio.play(weapon.settings.soundFire, player.eye() + camera.forward() * 0.3f);
+            throwWound = weapon.settings.throwable() && weapon.throwing();
+            if (shots > 0 && weapon.settings.throwable()) {
+                // Leaves the hand where the view model holds it, along the view and a little up.
+                const glm::vec3 v = player.velocity();
+                const float speed = player.grounded() ? std::sqrt(v.x * v.x + v.z * v.z) : 0.0f;
+                const glm::mat4 toWorld = glm::inverse(camera.view());
+                const glm::vec3 hand = fire.heldReleasePoint(weapon, weaponTransform(weapon, static_cast<float>(now), speed, lowered));
+                glm::vec3 from = glm::vec3(toWorld * glm::vec4(hand, 1.0f));
+                if (auto blocked = physics.raycast(player.eye(), glm::normalize(from - player.eye()), glm::distance(from, player.eye())))
+                    from = player.eye(); // hand in a wall: from the eye
+                const glm::vec3 fwd = camera.forward();
+                glm::vec3 right = glm::cross(fwd, glm::vec3(0.0f, 1.0f, 0.0f));
+                right = glm::length(right) > 1e-3f ? glm::normalize(right) : glm::vec3(1.0f, 0.0f, 0.0f);
+                const glm::vec3 up = glm::cross(right, fwd);
+                const glm::vec3 dir = glm::normalize(fwd + up * std::tan(glm::radians(weapon.settings.thrown.lift)));
+                fire.throwObject(weapon.settings, from, dir * weapon.settings.thrown.speed + v * 0.6f, -1);
+            }
+            if (shots > 0 && !weapon.settings.throwable()) {
                 audio.play(weapon.settings.soundFire, player.eye() + camera.forward() * 0.5f);
-                if (!weapon.settings.melee())
+                if (firearm)
                     scripts.makeNoise(player.eye(), 80.0f); // NPCs and crows hear it
-                if (const float duck = cvars.find("snd_duck")->number(); duck > 0.0f && !weapon.settings.melee()) {
+                if (const float duck = cvars.find("snd_duck")->number(); duck > 0.0f && firearm) {
                     // Gunfire pushes the ambience and music down for a moment, so the shot and what follows are heard.
                     audio.system().duck(engine::AudioGroup::Ambient, 1.0f - 0.55f * duck, 0.35f, 1.6f);
                     audio.system().duck(engine::AudioGroup::Music, 1.0f - 0.35f * duck, 0.35f, 1.6f);
                 }
-                if (!weapon.settings.melee()) {
+                if (firearm) {
                     const glm::vec3 v = player.velocity();
                     const float speed = player.grounded() ? std::sqrt(v.x * v.x + v.z * v.z) : 0.0f;
                     const glm::vec3 muzzleView =
@@ -2682,7 +2743,7 @@ int main(int argc, char** argv)
             wasReloading = weapon.reloading();
             const glm::vec3 moveVel = player.velocity();
             weapon.animate(dt, player.grounded() ? std::sqrt(moveVel.x * moveVel.x + moveVel.z * moveVel.z) : 0.0f);
-            const int rays = weapon.settings.melee() ? shots : shots * weapon.settings.pellets;
+            const int rays = weapon.settings.throwable() ? 0 : weapon.settings.melee() ? shots : shots * weapon.settings.pellets;
             for (int s = 0; s < rays; ++s) {
                 glm::vec3 origin = player.eye();
                 glm::vec3 dir = weapon.settings.melee() ? camera.forward() : weapon.spreadDirection(camera.forward());
@@ -2799,6 +2860,7 @@ int main(int argc, char** argv)
                 hurtFx = std::min(1.0f, hurtFx + 0.35f + (healthBefore - scripts.playerHealth()) / 30.0f);
             }
             anomalies.fixedUpdate(dt, scene, physics, player, scripts); // forces act on the next movement step
+            fire.fixedUpdate(dt, scene, physics, player.feet(), scripts, cvGod.boolean()); // flames hurt (armor applies below)
             // Armor takes part of every hit (and wears doing it).
             if (const engine::ItemDef* armor = inventory.armor.empty() ? nullptr : items.find(engine::ItemDef::Kind::Armor, inventory.armor);
                 armor && scripts.playerHealth() < healthBefore)
@@ -2902,6 +2964,7 @@ int main(int argc, char** argv)
                 weatherDirector.update(scene.environment, sim);
                 weather.update(sim, scene, camera.position, sheltered, audio);
                 anomalies.update(sim, physics, camera.position);
+                fire.update(sim, scene);
                 artifacts.update(sim, camera.position);
                 flashlight.update(sim, now, camera);
             }, {}, true);
@@ -2996,6 +3059,7 @@ int main(int argc, char** argv)
             engine::OverlayPass effectsOverlay; // muzzle flashes, drawn with the weapon below
             effects.fill(view, view.view, effectsOverlay);
             anomalies.fill(view, view.view);
+            fire.fill(view, view.view);
             artifacts.fill(view, scripts.time());
             flashlight.fill(view);
             addCharacterFlashlights(scene, view);
@@ -3019,12 +3083,13 @@ int main(int argc, char** argv)
             engine::environmentAt(scene.environment, scene.sunDirection, &sky);
             overlay.sunDirectionViewSpace = glm::mat3(view.view) * sky.lightDirection;
             const engine::Weapon& weapon = weapons[current];
-            overlay.model = weapon.viewModel.get();
+            overlay.model = weapon.holding() ? weapon.viewModel.get() : nullptr; // a throwable: none left in hand
             const glm::vec3 vel = player.velocity();
             const float moveSpeed = player.grounded() ? std::sqrt(vel.x * vel.x + vel.z * vel.z) : 0.0f;
             overlay.modelTransform = weaponTransform(weapon, static_cast<float>(now), moveSpeed, lowered);
             overlay.animator = &weapon.animator;
             overlay.sprites = std::move(effectsOverlay.sprites);
+            fire.fillHeld(weapon.settings.throwable() && next == current ? &weapon : nullptr, overlay.modelTransform, view.view, overlay);
             if (weapon.flash() && !weapon.settings.melee() && weapon.settings.effectFlash.empty()) {
                 const glm::vec3 muzzle = glm::vec3(overlay.modelTransform * glm::vec4(weapon.settings.muzzle, 1.0f));
                 overlay.boxes.push_back({muzzle, glm::vec3(0.05f), glm::vec3(1.0f, 0.85f, 0.35f), true});
@@ -3104,6 +3169,7 @@ int main(int argc, char** argv)
                 hs.magazine = w.reserve() >= 0 ? w.reserve() : w.settings.magazineSize; // stock of the ammo type, else the magazine
                 hs.medkits = inventory.medkits;
                 hs.melee = w.settings.melee();
+                hs.throwable = w.settings.throwable();
                 hs.reload = w.reloading() ? w.reloadProgress() : -1.0f;
                 hs.battery = flashlight.hasBattery() ? flashlight.charge() : -1.0f;
                 hs.flashlightOn = flashlight.on();
@@ -3202,9 +3268,26 @@ int main(int argc, char** argv)
             case GameMenu::Action::Quit: glfwSetWindowShouldClose(window, GLFW_TRUE); break;
             case GameMenu::Action::None: break;
             }
-            if (screenshotFile && frameLimit > 0 && frame + 1 == frameLimit) { // with the HUD
+            // FPS_ENGINE_SCREENSHOT_FRAMES="60,72": also <file>_<frame>.ppm at those frames (animation checks).
+            static const std::set<long> extraShots = [] {
+                std::set<long> out;
+                if (const char* list = std::getenv("FPS_ENGINE_SCREENSHOT_FRAMES"))
+                    for (std::istringstream in(list); in.good();) {
+                        long f = 0;
+                        char comma = 0;
+                        if (in >> f)
+                            out.insert(f);
+                        in >> comma;
+                    }
+                return out;
+            }();
+            const bool extraShot = screenshotFile && extraShots.count(static_cast<long>(frame));
+            if (screenshotFile && ((frameLimit > 0 && frame + 1 == frameLimit) || extraShot)) { // with the HUD
                 const std::vector<std::uint8_t> rgb = renderer.readPixels(width, height);
-                std::ofstream shot(screenshotFile, std::ios::binary);
+                std::string file = screenshotFile;
+                if (extraShot)
+                    file = file.substr(0, file.rfind('.')) + "_" + std::to_string(frame) + ".ppm";
+                std::ofstream shot(file, std::ios::binary);
                 shot << "P6\n" << width << ' ' << height << "\n255\n";
                 shot.write(reinterpret_cast<const char*>(rgb.data()), static_cast<std::streamsize>(rgb.size()));
             }
@@ -3244,6 +3327,8 @@ int main(int argc, char** argv)
             char ammo[32];
             if (weapons[current].settings.melee())
                 std::snprintf(ammo, sizeof ammo, "melee");
+            else if (weapons[current].settings.throwable())
+                std::snprintf(ammo, sizeof ammo, "x%d", std::max(0, weapons[current].reserve()));
             else
                 std::snprintf(ammo, sizeof ammo, "%d/%d%s", weapons[current].ammo(), weapons[current].settings.magazineSize,
                               weapons[current].reloading() ? " (reloading)" : "");

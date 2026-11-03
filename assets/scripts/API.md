@@ -89,6 +89,7 @@ methods `:length()`, `:normalized()`, `:flat()` (y = 0), `:dot(other)`.
 | `game.goodwill(faction)`, `game.change_goodwill(faction, delta)` | The player's standing with a faction (saved; shooting its members lowers it) |
 | `game.player_faction()`, `game.faction_name(id)` | The player's faction id; a faction's display name |
 | `game.make_noise(position, radius)` | A loud sound (a shot) heard within `radius` m for the next second |
+| `game.fire_near(position, [margin])` | The nearest burning ground (incendiary bottle) whose edge is within `margin` m (default 0): returns its centre and radius, or `nil, nil`. Enemies and dogs run out of it |
 | `game.noise_near(position)` | Where the nearest loud sound heard at `position` in the last second came from (`vec3`), or `nil`; the player's shots are noises too |
 | `game.storm()` | Anomaly storm now: phase (`"calm"`, `"warning"`, `"storm"`, `"fading"`), seconds left in it, danger 0..1 |
 | `game.start_storm([warning])` | An anomaly storm comes now, after `warning` seconds (default: the level's warning) |

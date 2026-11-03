@@ -1,0 +1,15 @@
+# Sound: variations (one is picked at random per play) and playback settings
+# Incendiary bottle breaking: glass and the fuel flaring up
+file "molotov_break_1.wav"
+file "molotov_break_2.wav"
+file "molotov_break_3.wav"
+volume 0.9
+pitch 0.93 1.07
+distance 3 70
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group sfx
+max_instances 4
+caption "@caption.molotov_break"

@@ -44,6 +44,7 @@ private:
     void fillClipNames();
     void fillBases();
     void markOverrides();
+    void buildThrowRows(class QFormLayout* form);
     void resetToBase();
 
     engine::Scene* scene_;
@@ -89,6 +90,33 @@ private:
     std::array<QComboBox*, 8> clips_{};  // idle, fire, reload, draw, reload empty, walk, last shot, inspect
     QLabel* clipInfo_ = nullptr;
     std::array<QWidget*, 14> firearmRows_{}; // rows hidden for melee weapons
+    // Throwables (incendiary bottle): flight, effects and the fire (WeaponSettings::Thrown).
+    QLabel* throwLabel_ = nullptr;
+    QLabel* fireLabel_ = nullptr;
+    std::vector<QWidget*> throwRows_;       // shown only for throwables
+    QDoubleSpinBox* throwSpeed_ = nullptr;
+    QDoubleSpinBox* throwLift_ = nullptr;
+    QDoubleSpinBox* throwRelease_ = nullptr;
+    QDoubleSpinBox* throwGravity_ = nullptr;
+    QDoubleSpinBox* fuse_ = nullptr;
+    Vec3Editor* throwOffset_ = nullptr;
+    SoundPicker* throwModel_ = nullptr;     // file pickers (SoundPicker set to other file kinds)
+    SoundPicker* effectTrail_ = nullptr;
+    SoundPicker* effectBurst_ = nullptr;
+    SoundPicker* effectFire_ = nullptr;
+    SoundPicker* soundLoop_ = nullptr;
+    QLineEdit* trailBone_ = nullptr;
+    Vec3Editor* trailOffset_ = nullptr;
+    QDoubleSpinBox* fireRadius_ = nullptr;
+    QDoubleSpinBox* fireDuration_ = nullptr;
+    QDoubleSpinBox* fireDamage_ = nullptr;
+    QDoubleSpinBox* burnTime_ = nullptr;
+    QDoubleSpinBox* burnDamage_ = nullptr;
+    QDoubleSpinBox* spread2_ = nullptr;      // fire spread through grass
+    QSpinBox* maxPatches_ = nullptr;
+    QDoubleSpinBox* lightIntensity_ = nullptr;
+    QDoubleSpinBox* lightRange_ = nullptr;
+    Vec3Editor* lightColor_ = nullptr;
     QFormLayout* formLayout_ = nullptr;
     QLabel* intervalLabel_ = nullptr;
     QLabel* spreadLabel_ = nullptr;

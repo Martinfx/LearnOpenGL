@@ -689,14 +689,15 @@ ItemsEditor::ItemsEditor(QWidget* parent)
     form->addRow(tr("Start money"), money_);
     form->addRow(tr("Free load"), carryFree_);
     form->addRow(tr("Maximum load"), carryMax_);
-    table_ = new QTableWidget(0, 11, this);
+    table_ = new QTableWidget(0, 12, this);
     table_->setHorizontalHeaderLabels({tr("Kind"), tr("Id"), tr("Name"), tr("Price (RU)"), tr("Weight (kg)"), tr("Protection"), tr("Wear"),
-                                       tr("Grows in"), tr("Model"), tr("Glow (r g b)"), tr("Heal / rad / carry")});
+                                       tr("Grows in"), tr("Model"), tr("Glow (r g b)"), tr("Heal / rad / carry"), tr("Trade lot")});
     table_->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
     table_->setToolTip(tr("Kind: medkit, ammo (id = ammo type of the weapons, price and weight per round), armor "
                           "(protection = share of damage it stops when new, wear = condition lost per hp stopped) or artifact "
                           "(grows in = anomaly kind: crusher, discharge, vent, acid, rift; model relative to assets/; "
-                          "protection = share of damage stopped on the belt; heal hp/s, rad rad/s (negative draws the dose out), carry kg)"));
+                          "protection = share of damage stopped on the belt; heal hp/s, rad rad/s (negative draws the dose out), carry kg). "
+                          "Trade lot: ammo rounds bought or sold per click (30; 1 for bottles)"));
     layout->addWidget(table_, 1);
     auto* buttons = new QHBoxLayout();
     auto* add = new QPushButton(tr("+ Item"), this);
@@ -790,7 +791,8 @@ void ItemsEditor::refresh()
                                    armor ? QString::number(d.wear) : QString(), art ? QString::fromStdString(d.anomaly) : QString(),
                                    art ? QString::fromStdString(d.model) : QString(),
                                    art ? QStringLiteral("%1 %2 %3").arg(d.glow[0]).arg(d.glow[1]).arg(d.glow[2]) : QString(),
-                                   art ? QStringLiteral("%1 %2 %3").arg(d.heal).arg(d.rad).arg(d.carry) : QString()};
+                                   art ? QStringLiteral("%1 %2 %3").arg(d.heal).arg(d.rad).arg(d.carry) : QString(),
+                                   d.kind == engine::ItemDef::Kind::Ammo ? QString::number(d.lot) : QString()};
         for (int c = 0; c < cells.size(); ++c)
             table_->setItem(r, c, new QTableWidgetItem(cells[c]));
         table_->item(r, 2)->setToolTip(preview(d.name));
@@ -819,6 +821,8 @@ void ItemsEditor::edited()
         d.name = text(2).toStdString();
         d.price = std::max(0, text(3).toInt());
         d.weight = std::max(0.0f, text(4).toFloat());
+        if (d.kind == engine::ItemDef::Kind::Ammo)
+            d.lot = text(11).isEmpty() ? 30 : std::max(1, text(11).toInt());
         if (d.kind == engine::ItemDef::Kind::Armor) {
             d.protection = std::clamp(text(5).toFloat(), 0.0f, 0.95f);
             d.wear = std::max(0.0f, text(6).toFloat());

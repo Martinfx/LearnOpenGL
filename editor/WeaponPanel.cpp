@@ -93,7 +93,7 @@ WeaponPanel::WeaponPanel(engine::Scene* scene, QWidget* parent) : QWidget(parent
     viewScale_ = spin(form_, 0.001, 10, 0.01, 3, QString());
 
     type_ = new QComboBox(form_);
-    type_->addItems({tr("Firearm (hitscan)"), tr("Melee (knife, no ammo)")});
+    type_->addItems({tr("Firearm (hitscan)"), tr("Melee (knife, no ammo)"), tr("Throwable (incendiary bottle)")});
     viewRotation_ = new Vec3Editor(-360.0, 360.0, 5.0, form_);
     viewRotation_->setToolTip(tr("Pitch, yaw, roll in degrees: turns the model so it points into the screen"));
     muzzle_ = new Vec3Editor(-100.0, 100.0, 0.05, form_);
@@ -183,6 +183,7 @@ WeaponPanel::WeaponPanel(engine::Scene* scene, QWidget* parent) : QWidget(parent
         form->addRow(tr(clipLabels[i]), clips_[static_cast<std::size_t>(i)]);
         connect(clips_[static_cast<std::size_t>(i)], &QComboBox::currentTextChanged, this, &WeaponPanel::edited);
     }
+    buildThrowRows(form);
     form->addRow(new QLabel(tr("<b>Sounds</b>"), form_));
     const char* soundLabels[] = {"Fire / swing", "Reload", "Draw", "Impact (world)", "Hit (character)",
                                  "Reload (empty mag)", "Dry fire"};
@@ -309,7 +310,33 @@ void WeaponPanel::showCurrent()
     if (!w)
         return;
     updating_ = true;
-    type_->setCurrentIndex(w->melee() ? 1 : 0);
+    type_->setCurrentIndex(w->melee() ? 1 : w->throwable() ? 2 : 0);
+    {
+        const engine::WeaponSettings::Thrown& t = w->thrown;
+        throwSpeed_->setValue(t.speed);
+        throwLift_->setValue(t.lift);
+        throwRelease_->setValue(t.release);
+        throwGravity_->setValue(t.gravity);
+        fuse_->setValue(t.fuse);
+        throwOffset_->setValue(t.handOffset);
+        throwModel_->setPath(toQString(t.model));
+        effectTrail_->setPath(toQString(t.effectTrail));
+        effectBurst_->setPath(toQString(t.effectBurst));
+        effectFire_->setPath(toQString(t.effectFire));
+        soundLoop_->setPath(toQString(t.soundLoop));
+        trailBone_->setText(QString::fromStdString(t.trailBone));
+        trailOffset_->setValue(t.trailOffset);
+        fireRadius_->setValue(t.fireRadius);
+        fireDuration_->setValue(t.fireDuration);
+        fireDamage_->setValue(t.fireDamage);
+        burnTime_->setValue(t.burnTime);
+        burnDamage_->setValue(t.burnDamage);
+        spread2_->setValue(t.spread);
+        maxPatches_->setValue(t.maxPatches);
+        lightIntensity_->setValue(t.lightIntensity);
+        lightRange_->setValue(t.lightRange);
+        lightColor_->setValue(t.lightColor);
+    }
     name_->setText(QString::fromStdString(w->name));
     model_->setText(w->modelPath.empty() ? QString() : toQString(w->modelPath.filename()));
     {
@@ -472,12 +499,28 @@ void WeaponPanel::fillClipNames()
 }
 
 // Melee weapons have no ammo: hide the firearm-only rows and rename the shared ones.
+// Throwables keep the ammo type (their stock) and show their own rows.
 void WeaponPanel::updateTypeRows()
 {
     const bool melee = type_->currentIndex() == 1;
+    const bool throwable = type_->currentIndex() == 2;
     for (QWidget* row : firearmRows_)
-        formLayout_->setRowVisible(row, !melee);
-    aimLabel_->setVisible(!melee);
+        formLayout_->setRowVisible(row, !melee && (!throwable || row == ammoType_ || row == startReserve_));
+    for (QWidget* row : throwRows_)
+        formLayout_->setRowVisible(row, throwable);
+    throwLabel_->setVisible(throwable);
+    fireLabel_->setVisible(throwable);
+    aimLabel_->setVisible(!melee && !throwable);
+    formLayout_->setRowVisible(spread_, !throwable);
+    formLayout_->setRowVisible(range_, !throwable);
+    if (throwable) {
+        damageLabel_->setText(tr("Direct hit damage"));
+        damage_->setSuffix(QString());
+        intervalLabel_->setText(tr("Throw time"));
+        automatic_->setText(tr("Hold to keep throwing"));
+        startReserve_->setToolTip(tr("How many the player gets with this weapon (bottles, grenades)"));
+        return;
+    }
     damageLabel_->setText(melee ? tr("Damage per hit") : tr("Damage"));
     damage_->setSuffix(melee ? QString() : tr(" per pellet"));
     intervalLabel_->setText(melee ? tr("Swing time") : tr("Fire interval"));
@@ -518,7 +561,35 @@ void WeaponPanel::edited()
     w->range = static_cast<float>(range_->value());
     w->viewOffset = viewOffset_->value();
     w->viewScale = static_cast<float>(viewScale_->value());
-    w->type = type_->currentIndex() == 1 ? engine::WeaponSettings::Type::Melee : engine::WeaponSettings::Type::Firearm;
+    w->type = type_->currentIndex() == 1   ? engine::WeaponSettings::Type::Melee
+              : type_->currentIndex() == 2 ? engine::WeaponSettings::Type::Throwable
+                                           : engine::WeaponSettings::Type::Firearm;
+    {
+        engine::WeaponSettings::Thrown& t = w->thrown;
+        t.speed = static_cast<float>(throwSpeed_->value());
+        t.lift = static_cast<float>(throwLift_->value());
+        t.release = static_cast<float>(throwRelease_->value());
+        t.gravity = static_cast<float>(throwGravity_->value());
+        t.fuse = static_cast<float>(fuse_->value());
+        t.handOffset = throwOffset_->value();
+        t.model = toPath(throwModel_->path());
+        t.effectTrail = toPath(effectTrail_->path());
+        t.effectBurst = toPath(effectBurst_->path());
+        t.effectFire = toPath(effectFire_->path());
+        t.soundLoop = toPath(soundLoop_->path());
+        t.trailBone = trailBone_->text().trimmed().toStdString();
+        t.trailOffset = trailOffset_->value();
+        t.fireRadius = static_cast<float>(fireRadius_->value());
+        t.fireDuration = static_cast<float>(fireDuration_->value());
+        t.fireDamage = static_cast<float>(fireDamage_->value());
+        t.burnTime = static_cast<float>(burnTime_->value());
+        t.burnDamage = static_cast<float>(burnDamage_->value());
+        t.spread = static_cast<float>(spread2_->value());
+        t.maxPatches = maxPatches_->value();
+        t.lightIntensity = static_cast<float>(lightIntensity_->value());
+        t.lightRange = static_cast<float>(lightRange_->value());
+        t.lightColor = lightColor_->value();
+    }
     w->viewRotation = viewRotation_->value();
     w->muzzle = muzzle_->value();
     w->animIdle = clips_[0]->currentText().toStdString();
@@ -533,6 +604,92 @@ void WeaponPanel::edited()
     list_->currentItem()->setText(QString("%1  %2").arg(list_->currentRow() + 1).arg(name_->text()));
     markOverrides();
     emit loadoutChanged();
+}
+
+// Rows of a throwable: how it flies, what it looks like, the fire it starts.
+void WeaponPanel::buildThrowRows(QFormLayout* form)
+{
+    auto row = [&](const QString& label, QWidget* w, const QString& tip, std::vector<std::string> keys) {
+        w->setToolTip(tip);
+        form->addRow(label, w);
+        throwRows_.push_back(w);
+        fieldKeys_.push_back({w, std::move(keys)});
+    };
+    auto file = [&](const QString& filter, const QString& folder, bool preview) {
+        auto* p = new SoundPicker(form_);
+        p->setFileKind(filter, folder, preview);
+        connect(p, &SoundPicker::pathChanged, this, &WeaponPanel::edited);
+        return p;
+    };
+    auto number = [&](double min, double max, double step, int decimals, const QString& suffix) {
+        QDoubleSpinBox* s = spin(form_, min, max, step, decimals, suffix);
+        connect(s, &QDoubleSpinBox::valueChanged, this, &WeaponPanel::edited);
+        return s;
+    };
+    auto vec = [&](double min, double max, double step) {
+        auto* v = new Vec3Editor(min, max, step, form_);
+        connect(v, &Vec3Editor::valueEdited, this, &WeaponPanel::edited);
+        return v;
+    };
+    throwLabel_ = new QLabel(tr("<b>Throw</b>"), form_);
+    form->addRow(throwLabel_);
+    throwSpeed_ = number(1, 60, 0.5, 1, tr(" m/s"));
+    row(tr("Throw speed"), throwSpeed_, tr("Speed when it leaves the hand (plus some of the player's own)"), {"throw"});
+    throwLift_ = number(-30, 60, 1, 0, tr(" °"));
+    row(tr("Throw lift"), throwLift_, tr("Thrown this much above the view direction (an arc)"), {"throw"});
+    throwRelease_ = number(0, 5, 0.01, 2, tr(" s"));
+    row(tr("Release"), throwRelease_, tr("Seconds from the trigger until it leaves the hand: match the throw clip"), {"throw"});
+    throwGravity_ = number(0, 5, 0.1, 2, tr(" ×"));
+    row(tr("Gravity"), throwGravity_, tr("Multiples of 9.81 m/s² pulling it down in flight"), {"throw"});
+    fuse_ = number(0, 30, 0.1, 1, tr(" s"));
+    fuse_->setSpecialValueText(tr("breaks on impact"));
+    row(tr("Fuse"), fuse_, tr("Goes off by itself after this time; 0 = breaks where it hits (a bottle)"), {"fuse"});
+    throwOffset_ = vec(-2.0, 2.0, 0.01);
+    row(tr("Release point"), throwOffset_, tr("Where it leaves the hand in view space (m), when the view model has no trail bone"), {"throw_offset"});
+    throwModel_ = file(tr("glTF 2.0 (*.gltf *.glb)"), QStringLiteral("models"), false);
+    row(tr("Flying model"), throwModel_, tr("The object in flight (tumbles about its origin)"), {"throw_model"});
+    trailBone_ = new QLineEdit(form_);
+    trailBone_->setPlaceholderText(tr("none"));
+    connect(trailBone_, &QLineEdit::editingFinished, this, &WeaponPanel::edited);
+    row(tr("Trail bone"), trailBone_, tr("View model node where the trail effect burns in first person (the rag); "
+                                          "a clip scaling it to nothing hides it after the release"), {"trail_bone"});
+    effectTrail_ = file(tr("Particle effects (*.particle)"), QStringLiteral("particles"), false);
+    row(tr("Trail effect"), effectTrail_, tr("Particles on it in hand and in flight (the burning rag)"), {"effect_trail"});
+    trailOffset_ = vec(-1.0, 1.0, 0.01);
+    row(tr("Trail offset"), trailOffset_, tr("Trail position on the flying model (model space, m)"), {"trail_offset"});
+    effectBurst_ = file(tr("Particle effects (*.particle)"), QStringLiteral("particles"), false);
+    row(tr("Break effect"), effectBurst_, tr("Where it breaks: glass and a flash of fuel (the Impact sound plays with it)"), {"effect_burst"});
+    fireLabel_ = new QLabel(tr("<b>Fire</b> (burning fuel on the ground)"), form_);
+    form->addRow(fireLabel_);
+    effectFire_ = file(tr("Particle effects (*.particle)"), QStringLiteral("particles"), false);
+    row(tr("Fire effect"), effectFire_, tr("One burning metre of ground (loops while it burns)"), {"effect_fire"});
+    soundLoop_ = new SoundPicker(form_);
+    connect(soundLoop_, &SoundPicker::pathChanged, this, &WeaponPanel::edited);
+    row(tr("Fire sound"), soundLoop_, tr("The fire's roar (a loop), louder as the fire grows"), {"sound_fire_loop"});
+    fireRadius_ = number(0, 10, 0.1, 1, tr(" m"));
+    row(tr("Splash radius"), fireRadius_, tr("The pool of burning fuel where it breaks"), {"fire"});
+    fireDuration_ = number(1, 120, 1, 0, tr(" s"));
+    row(tr("Burn time"), fireDuration_, tr("How long the fuel burns (thinner at the rim; grass a third of it; rain shortens it)"), {"fire"});
+    fireDamage_ = number(0, 500, 1, 0, tr(" hp/s"));
+    row(tr("Fire damage"), fireDamage_, tr("To the player and characters standing in the flames"), {"fire"});
+    burnTime_ = number(0, 30, 0.5, 1, tr(" s"));
+    row(tr("Keeps burning"), burnTime_, tr("Seconds a character keeps burning after leaving the fire (water puts it out)"), {"burn"});
+    burnDamage_ = number(0, 200, 1, 0, tr(" hp/s"));
+    row(tr("Burning damage"), burnDamage_, tr("Damage per second while burning outside the fire"), {"burn"});
+    spread2_ = number(0, 5, 0.1, 2, tr(" ×"));
+    spread2_->setSpecialValueText(tr("does not spread"));
+    row(tr("Spread in grass"), spread2_, tr("How readily the fire runs on through dry grass and weeds (more downwind, hardly in rain)"), {"fire_spread"});
+    maxPatches_ = new QSpinBox(form_);
+    maxPatches_->setRange(1, 400);
+    maxPatches_->setSuffix(tr(" m²"));
+    connect(maxPatches_, &QSpinBox::valueChanged, this, &WeaponPanel::edited);
+    row(tr("Largest fire"), maxPatches_, tr("Most ground one throw can set alight, pool and grass together (performance)"), {"fire_spread"});
+    lightIntensity_ = number(0, 100, 0.5, 1, QString());
+    row(tr("Light"), lightIntensity_, tr("Brightness of the fire's flickering light"), {"fire_light"});
+    lightRange_ = number(0, 60, 0.5, 1, tr(" m"));
+    row(tr("Light range"), lightRange_, tr("Reach of the fire's light (grows with the fire)"), {"fire_light"});
+    lightColor_ = vec(0.0, 1.0, 0.05);
+    row(tr("Light colour"), lightColor_, tr("sRGB colour of the fire's light"), {"fire_light"});
 }
 
 void WeaponPanel::addExisting()

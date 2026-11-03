@@ -202,6 +202,7 @@ struct ScriptSystem::Impl {
         double time = 0.0;
     };
     std::vector<Noise> noises; // the last second's loud sounds
+    std::vector<ScriptSystem::Hazard> hazards; // burning ground (setHazards)
     FactionTable ownFactions = defaultFactions();
     FactionTable* factions = &ownFactions;
     Quests ownQuests;
@@ -700,6 +701,23 @@ void ScriptSystem::Impl::bindApi()
             return sol::nullopt;
         return best->at;
     });
+    // Fire on the ground: game.fire_near(pos [, margin]) -> centre and radius of the nearest fire
+    // whose edge is within `margin` m of pos (default 0: pos stands in it), or nil.
+    game.set_function("fire_near", [this](const glm::vec3& at, sol::optional<float> margin) -> std::tuple<sol::object, sol::object> {
+        const ScriptSystem::Hazard* best = nullptr;
+        float bestDistance = 1e30f;
+        for (const ScriptSystem::Hazard& h : hazards) {
+            const glm::vec3 d = at - h.center;
+            const float flat = std::sqrt(d.x * d.x + d.z * d.z);
+            if (std::abs(d.y) < 3.0f && flat <= h.radius + margin.value_or(0.0f) && flat - h.radius < bestDistance) {
+                best = &h;
+                bestDistance = flat - h.radius;
+            }
+        }
+        if (!best)
+            return {sol::lua_nil, sol::lua_nil};
+        return {sol::make_object(lua, best->center), sol::make_object(lua, best->radius)};
+    });
     game.set_function("faction_name", [this](const std::string& f) {
         const Faction* faction = factions->find(f);
         return faction ? faction->name : f;
@@ -1088,6 +1106,11 @@ void ScriptSystem::damageEntity(int entityIndex, float amount, int attacker)
 void ScriptSystem::makeNoise(glm::vec3 at, float radius)
 {
     impl_->noises.push_back({at, radius, impl_->time});
+}
+
+void ScriptSystem::setHazards(std::vector<Hazard> hazards)
+{
+    impl_->hazards = std::move(hazards);
 }
 
 void ScriptSystem::setFactions(FactionTable* table) { impl_->factions = table ? table : &impl_->ownFactions; }

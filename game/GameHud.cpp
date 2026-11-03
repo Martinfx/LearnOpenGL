@@ -129,7 +129,10 @@ void GameHud::draw(engine::Ui2D& ui, int width, int height, const HudState& s) c
         std::snprintf(cur, sizeof cur, "%d", s.ammo);
         std::snprintf(mag, sizeof mag, " / %d", s.magazine);
         const float big = std::round(text * 1.35f);
-        if (!s.melee)
+        if (s.throwable) {
+            std::snprintf(cur, sizeof cur, "%d", std::max(0, s.magazine));
+            nameRoom -= ui.textWidth(cur, big, true) + text * 0.6f;
+        } else if (!s.melee)
             nameRoom -= ui.textWidth(mag, text, true) + ui.textWidth(cur, big, true) + text * 0.6f;
         float nameSize = std::round(text * 0.85f);
         const float nameWidth = ui.textWidth(name, nameSize, true);
@@ -144,7 +147,10 @@ void GameHud::draw(engine::Ui2D& ui, int width, int height, const HudState& s) c
             shown = kept + "\u2026";
         }
         ui.text(shown, {x, y + text * 0.15f + (std::round(text * 0.85f) - nameSize) * 0.5f}, nameSize, dim, true);
-        if (!s.melee) {
+        if (s.throwable) {
+            ui.text(cur, {x + innerW - ui.textWidth(cur, big, true), y - text * 0.15f}, big,
+                    s.magazine <= 0 ? glm::vec4(0.9f, 0.3f, 0.2f, 1.0f) : bone, true);
+        } else if (!s.melee) {
             const float magW = ui.textWidth(mag, text, true);
             const bool empty = s.ammo == 0;
             ui.text(mag, {x + innerW - magW, y + (big - text) * 0.8f}, text, dim, true);

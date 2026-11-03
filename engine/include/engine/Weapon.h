@@ -13,8 +13,12 @@ class PhysicsWorld;
 
 // Weapon definition, stored as a text .weapon file (see assets/weapons/).
 struct WeaponSettings {
-    enum class Type { Firearm, Melee };
-    Type type = Type::Firearm;   // melee: no ammo, `fire_interval` is the swing time, `spread` the swing arc
+    enum class Type { Firearm, Melee, Throwable };
+    // melee: no ammo, `fire_interval` is the swing time, `spread` the swing arc.
+    // throwable (incendiary bottle, grenade): every throw takes one from the stock of `ammo_type`
+    // (no magazine), `fire_interval` is the whole throw until the next one is in hand, `damage`
+    // what a direct hit does; the rest is in `thrown`.
+    Type type = Type::Firearm;
     std::string name = "Weapon";
     std::filesystem::path modelPath; // absolute path of the first-person glTF model
     float damage = 20.0f;        // per pellet
@@ -72,11 +76,42 @@ struct WeaponSettings {
     float wearPerShot = 0.0005f;  // condition lost per shot or swing (1 = new, 0 = wrecked)
     float jamChance = 0.08f;      // chance per shot to jam at condition 0 (none above 60 %)
 
+    // Throwable: the flight, the break and the fire it leaves (Type::Throwable only).
+    struct Thrown {
+        float speed = 15.0f;           // m/s at release, along the view
+        float lift = 10.0f;            // degrees above the view direction (an arc rather than a line)
+        float release = 0.42f;         // s from the trigger to the moment it leaves the hand (throw clip)
+        float gravity = 1.0f;          // multiples of 9.81 m/s²
+        glm::vec3 handOffset{0.18f, 0.08f, -0.35f}; // release point, view space (m)
+        std::filesystem::path model;   // the flying object (world glTF), absolute
+        std::filesystem::path effectTrail; // particles on it in flight and on the view model's `trail_bone` (burning rag)
+        glm::vec3 trailOffset{0.0f, 0.15f, 0.0f}; // trail position on the flying model (model space, m)
+        std::string trailBone;         // view model node the trail follows in first person, empty = none
+        std::filesystem::path effectBurst; // where it breaks (glass, flash of fuel)
+        std::filesystem::path effectFire;  // one burning patch of ground (loops while it burns)
+        std::filesystem::path soundLoop;   // the fire's roar (loop)
+        float fuse = 0.0f;             // s until it goes off by itself, 0 = breaks on impact (a bottle)
+        // Fire: a pool of burning fuel where it breaks, spreading through dry grass.
+        float fireRadius = 1.8f;       // m of the splash
+        float fireDuration = 14.0f;    // s a patch burns (grass burns a third of that)
+        float fireDamage = 22.0f;      // hp/s to someone standing in the flames
+        float burnTime = 3.0f;         // s a character keeps burning after leaving the fire
+        float burnDamage = 7.0f;       // hp/s while burning
+        float spread = 1.0f;           // how readily the fire runs through grass (0 = stays in the pool)
+        int maxPatches = 60;           // patches (1 m) one throw may set alight, pool and grass together
+        float lightIntensity = 6.0f;   // fire light, flickering
+        float lightRange = 9.0f;       // m
+        glm::vec3 lightColor{1.0f, 0.55f, 0.22f}; // sRGB
+        bool operator==(const Thrown&) const = default;
+    };
+    Thrown thrown;
+
     // Inheritance: `base "ak74.weapon"` (relative to this file) takes every value this file does
     // not set itself from that weapon, so a variant lists only what differs and follows the base.
     std::string base;
 
     bool melee() const { return type == Type::Melee; }
+    bool throwable() const { return type == Type::Throwable; }
 };
 
 // Wear: a worn weapon scatters more (x1 new .. x2.5 wrecked) and jams below 60 % condition.
@@ -129,11 +164,14 @@ public:
     glm::vec3 spreadDirection(glm::vec3 aim);
 
     int ammo() const { return ammo_; }
+    // Throwable: something in hand to throw (one left in the stock, or the throw in progress).
+    bool holding() const;
+    bool throwing() const { return throwTimer_ > 0.0f; } // wind-up before the release
     // Shared stock of the weapon's ammo type (the player's inventory); null = endless reserve.
     void setReserve(int* stock) { reserve_ = stock; }
     int reserve() const { return reserve_ ? *reserve_ : -1; } // -1 = endless
-    void refill() { ammo_ = settings.melee() ? 0 : settings.magazineSize; } // cheat `give ammo`
-    void setAmmo(int ammo) { ammo_ = settings.melee() ? 0 : std::clamp(ammo, 0, settings.magazineSize); } // level change, saves
+    void refill() { ammo_ = settings.melee() || settings.throwable() ? 0 : settings.magazineSize; } // cheat `give ammo`
+    void setAmmo(int ammo) { ammo_ = settings.melee() || settings.throwable() ? 0 : std::clamp(ammo, 0, settings.magazineSize); } // level change, saves
     bool reloadingFromEmpty() const { return reloadFromEmpty_; } // the current / last reload started on an empty magazine   // melee weapons always report 0
     float swing() const;                 // melee: 0..1 through the current swing, 0 when idle
 
@@ -152,7 +190,7 @@ public:
     // Raises the sights while `held` (not while reloading or for melee); 0 hip .. 1 aimed.
     void aim(float dt, bool held);
     float aimAmount() const { return aim_; }
-    bool canAim() const { return !settings.melee() && settings.aimFov > 0.0f; }
+    bool canAim() const { return settings.type == WeaponSettings::Type::Firearm && settings.aimFov > 0.0f; }
     bool flash() const { return flashTimer_ > 0.0f; }
     float condition = 1.0f; // 1 new .. 0 wrecked: widens the spread (wornSpreadScale); the game wears it per shot
 
@@ -169,6 +207,8 @@ private:
     float recoil_ = 0.0f;
     float flashTimer_ = 0.0f;
     float swingTimer_ = 0.0f;
+    float throwTimer_ = 0.0f;   // throwable: s until the release
+    bool redraw_ = false;       // throwable: take the next one in hand when the throw clip ends
     bool firedEvent_ = false;
     bool reloadEvent_ = false;
     bool drawEvent_ = true;

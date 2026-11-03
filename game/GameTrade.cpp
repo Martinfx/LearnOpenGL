@@ -8,7 +8,8 @@
 #include <sstream>
 
 namespace {
-constexpr int kAmmoLot = 30; // rounds per click
+constexpr int kAmmoLot = 30; // rounds per click when the item list has no lot
+int lotOf(const engine::ItemDef* d) { return d ? d->lot : kAmmoLot; }
 
 std::string percent(float c)
 {
@@ -106,7 +107,7 @@ std::vector<GameTrade::Row> GameTrade::rows(const Inventory& inv, const std::vec
             r.price = engine::buyPrice(d ? d->price : 250, markup_);
         } else if (s.kind == Stock::Ammo) {
             const engine::ItemDef* d = items.find(engine::ItemDef::Kind::Ammo, s.id);
-            const int lot = std::min(kAmmoLot, s.count);
+            const int lot = std::min(lotOf(d), s.count);
             r.label = engine::trf("trade.lot", d ? engine::localize(d->name) : s.id, std::to_string(lot));
             r.detail = "× " + std::to_string(s.count);
             r.price = engine::buyPrice((d ? d->price : 3) * lot, markup_);
@@ -149,14 +150,14 @@ std::vector<GameTrade::Row> GameTrade::rows(const Inventory& inv, const std::vec
         r.label = engine::localize(weapons[i].settings.name);
         r.detail = i == current ? engine::tr("trade.in_hand") : engine::trf("trade.condition", percent(weapons[i].condition));
         r.price = engine::sellPrice(weapons[i].settings.price, buyRate_, weapons[i].condition);
-        r.enabled = i != current && weapons.size() > 1;
+        r.enabled = i != current && weapons.size() > 1 && !weapons[i].settings.throwable(); // bottles are sold as ammo
         out.push_back(r);
     }
     for (const auto& [type, rounds] : inv.ammo) {
         if (rounds <= 0)
             continue;
         const engine::ItemDef* d = items.find(engine::ItemDef::Kind::Ammo, type);
-        const int lot = std::min(kAmmoLot, rounds);
+        const int lot = std::min(lotOf(d), rounds);
         Row r;
         r.action = 2;
         r.detail = "× " + std::to_string(rounds);
@@ -248,7 +249,7 @@ void GameTrade::click(glm::vec2 mouse, Inventory& inv, std::vector<engine::Weapo
             int price = r.price;
             if (s.kind == Stock::Ammo) {
                 const engine::ItemDef* d = items.find(engine::ItemDef::Kind::Ammo, s.id);
-                price = engine::buyPrice((d ? d->price : 3) * std::min(kAmmoLot, s.count), markup_);
+                price = engine::buyPrice((d ? d->price : 3) * std::min(lotOf(d), s.count), markup_);
             }
             if (inv.money < price) {
                 message_ = engine::tr("trade.no_money");
@@ -258,7 +259,7 @@ void GameTrade::click(glm::vec2 mouse, Inventory& inv, std::vector<engine::Weapo
                 inv.medkits += 1;
                 s.count -= 1;
             } else if (s.kind == Stock::Ammo) {
-                const int lot = std::min(kAmmoLot, s.count);
+                const int lot = std::min(lotOf(items.find(engine::ItemDef::Kind::Ammo, s.id)), s.count);
                 inv.ammo[s.id] += lot;
                 s.count -= lot;
                 inv.link(weapons);
@@ -306,7 +307,7 @@ void GameTrade::click(glm::vec2 mouse, Inventory& inv, std::vector<engine::Weapo
             const std::string type = r.key.substr(5);
             const engine::ItemDef* d = items.find(engine::ItemDef::Kind::Ammo, type);
             for (int t = 0; t < times && inv.ammo[type] > 0; ++t) {
-                const int lot = std::min(kAmmoLot, inv.ammo[type]);
+                const int lot = std::min(lotOf(d), inv.ammo[type]);
                 inv.money += engine::sellPrice((d ? d->price : 3) * lot, buyRate_);
                 inv.ammo[type] -= lot;
                 addStock(Stock::Ammo, type, lot);

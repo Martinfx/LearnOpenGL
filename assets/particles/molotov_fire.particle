@@ -1,0 +1,109 @@
+# Incendiary bottle: one burning metre of ground (spilled fuel or grass). +Y = up. Loops until it
+# burns out; the game lights the fire (one flickering light per fire), not this effect.
+emitter "Flames"
+texture "../textures/particles/fire_8x8.png"
+flipbook 8 8 26 1
+blend additive
+lit 0
+rate 13
+max 20
+life 0.55 1
+shape disc 0.42 0 0
+direction 0 1 0
+spread 10
+speed 0.7 1.4
+gravity -0.06
+level_wind 0.25
+size 0.45 0.8
+size_key 0 0.55
+size_key 0.35 1
+size_key 1 0.3
+color 1 0.5 0.12
+intensity 3.2
+color_key 0 1 1 1 0
+color_key 0.12 1 1 1 1
+color_key 1 1 0.45 0.18 0
+rotation -15 15
+emitter "Low flames"
+texture "../textures/particles/fire_8x8.png"
+flipbook 8 8 30 1
+blend additive
+lit 0
+rate 9
+max 12
+life 0.3 0.55
+shape disc 0.5 0 0
+direction 0 1 0
+spread 25
+speed 0.2 0.5
+gravity -0.02
+size 0.3 0.45
+size_key 0 0.6
+size_key 0.4 1
+size_key 1 0.4
+color 1 0.45 0.1
+intensity 3
+color_key 0 1 1 1 0
+color_key 0.15 1 1 1 0.9
+color_key 1 1 0.4 0.15 0
+rotation 0 360
+emitter "Embers"
+texture "../textures/particles/spark.png"
+blend additive
+lit 0
+stretch 1 0.03
+rate 2.5
+max 10
+life 0.8 1.8
+shape disc 0.4 0 0
+direction 0 1 0
+spread 25
+speed 0.8 2.2
+gravity -0.07
+level_wind 0.5
+size 0.01 0.018
+color 1 0.6 0.25
+intensity 6
+color_key 0 1 1 1 1
+color_key 1 1 0.4 0.1 0
+emitter "Smoke"
+texture "../textures/particles/smoke_8x8.png"
+flipbook 8 8 0 1
+lit 1
+rate 1.6
+max 9
+delay 0.4
+life 3 5
+shape disc 0.35 0 0
+direction 0 1 0
+spread 8
+speed 0.9 1.5
+gravity -0.03
+level_wind 0.6
+size 0.5 0.75
+size_key 0 0.6
+size_key 1 3.8
+color 0.08 0.075 0.07
+color_key 0 1 1 1 0
+color_key 0.12 1 1 1 0.55
+color_key 1 1 1 1 0
+rotation 0 360
+spin -20 20
+emitter "Heat haze"
+blend distort
+lit 0
+rate 3
+max 6
+life 0.9 1.4
+shape disc 0.35 0 0
+direction 0 1 0
+spread 6
+speed 0.8 1.2
+gravity -0.03
+size 0.9 1.3
+size_key 0 0.6
+size_key 1 1.6
+intensity 1.2
+color_key 0 1 1 1 0
+color_key 0.2 1 1 1 1
+color_key 1 1 1 1 0

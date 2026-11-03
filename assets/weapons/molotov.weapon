@@ -1,0 +1,59 @@
+# FPS engine weapon
+version 2
+type throwable
+name "@weapon.molotov"
+model "../models/weapons/fps/fp_molotov.glb"
+damage 12
+fire_interval 1.15
+automatic 0
+pellets 1
+magazine 1
+ammo_type "molotov" 3
+reload_time 0
+spread 0
+range 40
+view_offset 0 0.04 0
+view_scale 1
+view_rotation 0 0 0
+muzzle 0 0 0
+anim_idle "idle"
+anim_fire "throw"
+anim_reload ""
+anim_draw "draw"
+anim_reload_empty ""
+reload_empty_time 0
+anim_walk ""
+aim_offset 0 0 0
+aim_rotation 0 0 0
+aim_fov 0
+aim_time 0.2
+aim_spread 1
+price 120
+weight 0
+wear 0 0
+sound_fire "../sounds/weapons/molotov_throw.sound"
+sound_reload ""
+sound_draw "../sounds/weapons/draw.sound"
+sound_impact "../sounds/weapons/molotov_break.sound"
+sound_hit "../sounds/impacts/impact_flesh.sound"
+sound_reload_empty ""
+sound_dry_fire ""
+effect_flash ""
+effect_smoke ""
+casing ""
+casing_offset 0.08 -0.06 -0.3
+casing_velocity 1.6 1.2 0.3
+throw 15 9 0.42 1
+throw_offset 0.12 0.05 -0.45
+throw_model "../models/weapons/molotov/molotov_bottle.glb"
+effect_trail "../particles/molotov_rag.particle"
+trail_offset 0 0.2 0
+trail_bone "W_rag"
+effect_burst "../particles/molotov_burst.particle"
+effect_fire "../particles/molotov_fire.particle"
+sound_fire_loop "../sounds/weapons/molotov_fire.sound"
+fuse 0
+fire 1.8 14 22
+burn 3 7
+fire_spread 1 60
+fire_light 6 9 1 0.55 0.22

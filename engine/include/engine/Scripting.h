@@ -53,6 +53,13 @@ public:
     // A loud sound (a shot) heard within `radius` m for the next second: game.noise_near() in
     // scripts (NPCs come to look, crows take off).
     void makeNoise(glm::vec3 at, float radius);
+    // Burning ground (incendiary bottles) scripts keep away from: game.fire_near(pos [, margin]).
+    // The game replaces the list every step; also a fire coming (a bottle in flight to `center`).
+    struct Hazard {
+        glm::vec3 center{0.0f};
+        float radius = 1.0f;
+    };
+    void setHazards(std::vector<Hazard> hazards);
     FactionTable& factions();
     // Quests (engine/Quests.h) scripts read and move on (game.quest, game.set_quest_stage...).
     // Defaults to an empty log; the game sets its own (assets/quests/, saved with the game).

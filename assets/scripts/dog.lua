@@ -23,6 +23,7 @@ properties = {
     { "anim_run",       "Run_Loop",    "Clip while hunting or fleeing" },
     { "anim_attack",    "Attack_Bite", "Clip of a bite" },
     { "anim_hit",       "Hit",         "Clip when hurt" },
+    { "fire_fear",      3.0,           "Keeps this far from fire on the ground (incendiary bottles), m; bolts out of it" },
     { "anim_death",     "Death",       "Clip when killed (holds its last frame)" },
 }
 
@@ -142,6 +143,20 @@ function on_update(self, dt)
     local phase = game.storm()
     local lying_low = phase == "warning" or phase == "storm"
     if lying_low and state ~= "flee" and state ~= "idle" then target, state, timer = nil, "flee", 0 end
+
+    -- Fire on the ground (incendiary bottles): a dog keeps well away and bolts out of the flames.
+    if props.fire_fear > 0 then
+        local at, r = game.fire_near(self.position, props.fire_fear)
+        if at then
+            local away = (self.position - at):flat()
+            if away:length() < 0.1 then away = self:forward() end
+            local spot = at + away:normalized() * (r + props.fire_fear + 1)
+            play(self, props.anim_run)
+            go(self, spot, props.run_speed)
+            if state == "idle" or state == "wander" then state, timer, wander_to = "wander", 0, spot end
+            return
+        end
+    end
 
     if (state == "idle" or state == "wander") and look <= 0 and not lying_low then
         look = 0.3 + 0.1 * math.random()

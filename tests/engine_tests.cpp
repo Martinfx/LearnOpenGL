@@ -899,6 +899,76 @@ void testWeaponFireRateAndReload()
     check(!w.reloading() && w.ammo() == w.settings.magazineSize, "reload refills the magazine");
 }
 
+// Throwables (incendiary bottle): one per throw from the ammo stock, let go after the wind-up,
+// nothing in hand when the stock is empty; the .weapon keys round-trip.
+void testThrowableWeapon()
+{
+    engine::WeaponSettings s;
+    s.type = engine::WeaponSettings::Type::Throwable;
+    s.name = "Bottle";
+    s.ammoType = "molotov";
+    s.fireInterval = 1.0f;
+    s.automatic = false;
+    s.thrown.release = 0.4f;
+    s.thrown.speed = 13.5f;
+    s.thrown.fireRadius = 2.5f;
+    s.thrown.maxPatches = 33;
+    s.thrown.trailBone = "W_rag";
+    s.thrown.lightColor = {1.0f, 0.5f, 0.2f};
+    std::string err;
+    check(engine::saveWeaponFile(s, "throw.weapon", &err), "save throwable: " + err);
+    engine::WeaponSettings back;
+    check(engine::loadWeaponFile(back, "throw.weapon", &err), "load throwable: " + err);
+    check(back.throwable() && back.thrown == s.thrown && back.ammoType == "molotov", "throwable settings round trip");
+    check(!engine::Weapon(back).canAim(), "a throwable does not aim down sights");
+
+    engine::Weapon w(back);
+    int stock = 2;
+    w.setReserve(&stock);
+    int thrown = 0, releasedAt = -1;
+    for (int i = 0; i < 60; ++i) { // trigger held 1 s: one throw (not automatic)
+        const int n = w.update(1.0f / 60.0f, true, false);
+        if (n && releasedAt < 0)
+            releasedAt = i;
+        thrown += n;
+    }
+    check(thrown == 1 && stock == 1, "one throw per pull, one bottle used");
+    check(releasedAt >= 22 && releasedAt <= 25, "it leaves the hand after the wind-up (0.4 s)");
+    w.update(1.0f / 60.0f, false, false);
+    for (int i = 0; i < 120; ++i)
+        thrown += w.update(1.0f / 60.0f, i < 60, false);
+    check(thrown == 2 && stock == 0, "second throw uses the last bottle");
+    check(!w.holding(), "nothing left in hand");
+    for (int i = 0; i < 120; ++i)
+        thrown += w.update(1.0f / 60.0f, (i / 10) % 2 == 0, false);
+    check(thrown == 2, "no throw without bottles");
+}
+
+// game.fire_near(): an enemy standing in fire on the ground runs out of it.
+void testEnemyRunsOutOfFire()
+{
+    auto s = flatFloor();
+    s.playerStart = {0, 0, 40}; // far away and out of sight
+    s.entities.push_back(enemyAt({5, 0, 0}, 0.0f));
+    s.entities[0].properties["patrol_radius"] = "0"; // stands still unless something moves it
+    s.entities[0].properties["rest_chance"] = "0";
+    engine::PhysicsWorld world;
+    world.setLevel(s);
+    engine::PlayerController player;
+    player.spawn(world, s.playerStart);
+    engine::ScriptSystem scripts(s, world, player);
+    check(scripts.start() == 0, "enemy.lua starts");
+    scripts.setHazards({{glm::vec3(5.0f, 0.0f, 0.3f), 1.5f}});
+    engine::FpsCamera cam;
+    engine::InputState idle;
+    for (int i = 0; i < 90; ++i) {
+        player.fixedUpdate(idle, cam, 1.0f / 60.0f);
+        scripts.fixedUpdate(1.0f / 60.0f);
+    }
+    const glm::vec3 d = s.entities[0].position - glm::vec3(5.0f, 0.0f, 0.3f);
+    check(std::sqrt(d.x * d.x + d.z * d.z) > 2.5f, "the enemy ran out of the fire (and a metre beyond its edge)");
+}
+
 void testShotHitsEnemyNotWallBehind()
 {
     auto s = flatFloor();
@@ -1219,7 +1289,7 @@ void testScriptPropertiesFromEditor()
     std::vector<engine::ScriptProperty> props;
     std::string err;
     check(engine::readScriptProperties(ENGINE_TEST_ASSETS "/scripts/enemy.lua", props, &err), "read enemy.lua properties: " + err);
-    check(props.size() == 36 && props[0].name == "health" && props[0].defaultValue == "100", "enemy.lua declares 36 tunables, health first");
+    check(props.size() == 37 && props[0].name == "health" && props[0].defaultValue == "100", "enemy.lua declares 37 tunables, health first");
 
     // An editor override changes the behaviour: 40 hp dies after two 20-damage hits.
     auto s = flatFloor();
@@ -4965,6 +5035,8 @@ int main(int argc, char** argv)
         {"testEnemyChasesAndAttacks", testEnemyChasesAndAttacks},
         {"testEnemyBlockedBySight", testEnemyBlockedBySight},
         {"testWeaponFireRateAndReload", testWeaponFireRateAndReload},
+        {"testThrowableWeapon", testThrowableWeapon},
+        {"testEnemyRunsOutOfFire", testEnemyRunsOutOfFire},
         {"testShotHitsEnemyNotWallBehind", testShotHitsEnemyNotWallBehind},
         {"testEnemyDiesAndReactsToDamage", testEnemyDiesAndReactsToDamage},
         {"testTexturedWeaponModel", testTexturedWeaponModel},

@@ -1,0 +1,13 @@
+# Sound: variations (one is picked at random per play) and playback settings
+# Incendiary bottle: the arm swinging through, the rag's flame fluttering
+file "swing_1.wav"
+file "swing_2.wav"
+volume 0.55
+pitch 0.62 0.72
+distance 1 10
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group sfx
+max_instances 2

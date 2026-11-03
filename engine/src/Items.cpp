@@ -69,6 +69,9 @@ bool loadItems(ItemCatalog& catalog, const std::filesystem::path& file, std::str
             d.kind = ItemDef::Kind::Ammo;
             if (!(s >> std::quoted(d.id) >> std::quoted(d.name) >> d.price >> d.weight))
                 return fail("ammo needs type name price weight");
+            if (!(s >> d.lot))
+                d.lot = 30; // optional trade lot
+            d.lot = std::max(1, d.lot);
             c.items.push_back(d);
         } else if (key == "belt") {
             if (!(s >> c.beltSlots))
@@ -123,7 +126,10 @@ bool saveItems(const ItemCatalog& c, const std::filesystem::path& file, std::str
         switch (d.kind) {
         case ItemDef::Kind::Medkit: out << "medkit " << std::quoted(d.name) << ' ' << d.price << ' ' << d.weight << '\n'; break;
         case ItemDef::Kind::Ammo:
-            out << "ammo " << std::quoted(d.id) << ' ' << std::quoted(d.name) << ' ' << d.price << ' ' << d.weight << '\n';
+            out << "ammo " << std::quoted(d.id) << ' ' << std::quoted(d.name) << ' ' << d.price << ' ' << d.weight;
+            if (d.lot != 30)
+                out << ' ' << d.lot;
+            out << '\n';
             break;
         case ItemDef::Kind::Armor:
             out << "armor " << std::quoted(d.id) << ' ' << std::quoted(d.name) << ' ' << d.price << ' ' << d.weight << ' ' << d.protection

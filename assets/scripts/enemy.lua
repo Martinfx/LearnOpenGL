@@ -26,6 +26,7 @@ properties = {
     { "alife",           "",   "A-life: \"roam\" = its group travels between A-life points while the player is away; empty = stays" },
     { "shelter_range",   80.0, "Anomaly storm: looks this far for a roof to hide under, m (0 = stays out)" },
     { "patrol_radius",   4.0,  "Wanders this far from its start position, m" },
+    { "fire_avoid",      1.0,  "Fire on the ground (incendiary bottles): runs out of it and keeps this far from its edge, m (0 = ignores fire)" },
     { "rest_chance",     0.25, "Chance per patrol leg to sit at a free sit point within 3x the patrol radius" },
     { "rest_time",       30.0, "Seconds sitting before patrolling again" },
     { "trade",           0,    "1 = a trader: E (or a dialog's `do trade`) opens buying, selling and repairs" },
@@ -64,6 +65,9 @@ local anim_speed = 0    -- smoothed movement speed fed to the graph, m/s
 local punching = false  -- an explicit punch clip overrides the graph until it ends
 local shelter_at        -- anomaly storm: the spot under a roof it hides at
 local storm_check = 0   -- next look at the storm
+local fire_check = 0    -- next look for fire on the ground
+local flee_time = 0     -- seconds left running out of a fire
+local flee_spot         -- where it runs to, out of the flames
 
 local function distance(a, b) return (b - a):flat():length() end
 
@@ -361,6 +365,27 @@ function on_update(self, dt)
         set_state(self, target and "search" or "return")
     end
     local goal = target and t_pos(target) or last_seen
+
+    -- Fire on the ground (incendiary bottles): out of the flames first, whatever it was doing.
+    fire_check = fire_check - dt
+    if fire_check <= 0 and props.fire_avoid > 0 then
+        fire_check = 0.2
+        local at, r = game.fire_near(self.position, props.fire_avoid)
+        if at then
+            local away = (self.position - at):flat()
+            if away:length() < 0.1 then away = vec3(math.random() - 0.5, 0, math.random() - 0.5) end
+            flee_spot = at + away:normalized() * (r + props.fire_avoid + 1.5)
+            if flee_time <= 0 then release_seat(self) end
+            flee_time = 2.0
+        end
+    end
+    if flee_time > 0 then
+        flee_time = flee_time - dt
+        if walk_to(self, flee_spot, props.run_speed) then flee_time = 0 end
+        if state == "rest" then set_state(self, "patrol") end
+        animate(self, dt)
+        return
+    end
 
     -- Anomaly storm: when warned, run under the nearest roof (unless fighting) and stay there.
     storm_check = storm_check - dt

@@ -122,7 +122,7 @@ std::string weaponLines(const WeaponSettings& w, const std::filesystem::path& fi
         model = pathToUtf8(rel.empty() ? std::filesystem::absolute(w.modelPath) : rel);
     }
     out << std::setprecision(6)
-        << "type " << (w.melee() ? "melee" : "firearm") << '\n'
+        << "type " << (w.melee() ? "melee" : w.throwable() ? "throwable" : "firearm") << '\n'
         << "name " << std::quoted(w.name) << '\n'
         << "model " << std::quoted(model) << '\n'
         << "damage " << w.damage << '\n'
@@ -173,6 +173,24 @@ std::string weaponLines(const WeaponSettings& w, const std::filesystem::path& fi
         << "casing " << std::quoted(relative(w.casingModel)) << '\n'
         << "casing_offset " << w.casingOffset.x << ' ' << w.casingOffset.y << ' ' << w.casingOffset.z << '\n'
         << "casing_velocity " << w.casingVelocity.x << ' ' << w.casingVelocity.y << ' ' << w.casingVelocity.z << '\n';
+    if (w.throwable()) {
+        const WeaponSettings::Thrown& t = w.thrown;
+        out << "throw " << t.speed << ' ' << t.lift << ' ' << t.release << ' ' << t.gravity << '\n'
+            << "throw_offset " << t.handOffset.x << ' ' << t.handOffset.y << ' ' << t.handOffset.z << '\n'
+            << "throw_model " << std::quoted(relative(t.model)) << '\n'
+            << "effect_trail " << std::quoted(relative(t.effectTrail)) << '\n'
+            << "trail_offset " << t.trailOffset.x << ' ' << t.trailOffset.y << ' ' << t.trailOffset.z << '\n'
+            << "trail_bone " << std::quoted(t.trailBone) << '\n'
+            << "effect_burst " << std::quoted(relative(t.effectBurst)) << '\n'
+            << "effect_fire " << std::quoted(relative(t.effectFire)) << '\n'
+            << "sound_fire_loop " << std::quoted(relative(t.soundLoop)) << '\n'
+            << "fuse " << t.fuse << '\n'
+            << "fire " << t.fireRadius << ' ' << t.fireDuration << ' ' << t.fireDamage << '\n'
+            << "burn " << t.burnTime << ' ' << t.burnDamage << '\n'
+            << "fire_spread " << t.spread << ' ' << t.maxPatches << '\n'
+            << "fire_light " << t.lightIntensity << ' ' << t.lightRange << ' ' << t.lightColor.x << ' ' << t.lightColor.y << ' '
+            << t.lightColor.z << '\n';
+    }
     return out.str();
 }
 
@@ -289,8 +307,9 @@ bool loadWeaponFile(WeaponSettings& weapon, const std::filesystem::path& file, s
         else if (key == "version") { int v = 0; ok = static_cast<bool>(ls >> v) && v >= 1 && v <= 2; }
         else if (key == "type") {
             std::string t;
-            ok = static_cast<bool>(ls >> t) && (t == "firearm" || t == "melee");
-            w.type = t == "melee" ? WeaponSettings::Type::Melee : WeaponSettings::Type::Firearm;
+            ok = static_cast<bool>(ls >> t) && (t == "firearm" || t == "melee" || t == "throwable");
+            w.type = t == "melee" ? WeaponSettings::Type::Melee
+                   : t == "throwable" ? WeaponSettings::Type::Throwable : WeaponSettings::Type::Firearm;
         }
         else if (key == "name") ok = static_cast<bool>(ls >> std::quoted(w.name));
         else if (key == "model") {
@@ -361,6 +380,32 @@ bool loadWeaponFile(WeaponSettings& weapon, const std::filesystem::path& file, s
             }
         }
         else if (key == "muzzle") ok = static_cast<bool>(ls >> w.muzzle.x >> w.muzzle.y >> w.muzzle.z);
+        // Throwables
+        else if (key == "throw") ok = static_cast<bool>(ls >> w.thrown.speed >> w.thrown.lift >> w.thrown.release >> w.thrown.gravity);
+        else if (key == "throw_offset") ok = static_cast<bool>(ls >> w.thrown.handOffset.x >> w.thrown.handOffset.y >> w.thrown.handOffset.z);
+        else if (key == "trail_offset") ok = static_cast<bool>(ls >> w.thrown.trailOffset.x >> w.thrown.trailOffset.y >> w.thrown.trailOffset.z);
+        else if (key == "trail_bone") ok = static_cast<bool>(ls >> std::quoted(w.thrown.trailBone));
+        else if (key == "fuse") ok = static_cast<bool>(ls >> w.thrown.fuse);
+        else if (key == "fire") ok = static_cast<bool>(ls >> w.thrown.fireRadius >> w.thrown.fireDuration >> w.thrown.fireDamage);
+        else if (key == "burn") ok = static_cast<bool>(ls >> w.thrown.burnTime >> w.thrown.burnDamage);
+        else if (key == "fire_spread") ok = static_cast<bool>(ls >> w.thrown.spread >> w.thrown.maxPatches);
+        else if (key == "fire_light")
+            ok = static_cast<bool>(ls >> w.thrown.lightIntensity >> w.thrown.lightRange >> w.thrown.lightColor.x >> w.thrown.lightColor.y >>
+                                   w.thrown.lightColor.z);
+        else if (key == "throw_model" || key == "effect_trail" || key == "effect_burst" || key == "effect_fire" || key == "sound_fire_loop") {
+            std::filesystem::path* target = key == "throw_model" ? &w.thrown.model : key == "effect_trail" ? &w.thrown.effectTrail
+                                          : key == "effect_burst" ? &w.thrown.effectBurst : key == "effect_fire" ? &w.thrown.effectFire
+                                                                  : &w.thrown.soundLoop;
+            std::string m;
+            ok = static_cast<bool>(ls >> std::quoted(m));
+            target->clear();
+            if (ok && !m.empty()) {
+                std::filesystem::path p = pathFromUtf8(m);
+                if (p.is_relative())
+                    p = std::filesystem::absolute(file).parent_path() / p;
+                *target = p.lexically_normal();
+            }
+        }
         // Unknown keys are ignored so newer files still load.
         if (!ok) {
             if (error)
@@ -371,6 +416,8 @@ bool loadWeaponFile(WeaponSettings& weapon, const std::filesystem::path& file, s
     w.pellets = std::max(1, w.pellets);
     w.magazineSize = std::max(1, w.magazineSize);
     w.fireInterval = std::max(0.01f, w.fireInterval);
+    w.thrown.release = std::clamp(w.thrown.release, 0.0f, w.fireInterval);
+    w.thrown.maxPatches = std::clamp(w.thrown.maxPatches, 1, 400);
     weapon = std::move(w);
     return true;
 }
@@ -381,6 +428,31 @@ int Weapon::update(float dt, bool triggerHeld, bool reloadPressed)
     flashTimer_ = std::max(0.0f, flashTimer_ - dt);
     recoil_ = std::max(0.0f, recoil_ - dt * 8.0f);
     swingTimer_ = std::max(0.0f, swingTimer_ - dt);
+
+    if (settings.throwable()) {
+        // Wind up, let go at `release` (one taken from the stock), then the next one comes to hand.
+        ammo_ = 0;
+        reloadTimer_ = 0.0f;
+        const bool pulled = triggerHeld && (settings.automatic || !triggerWasHeld_);
+        triggerWasHeld_ = triggerHeld;
+        if (throwTimer_ > 0.0f) {
+            throwTimer_ -= dt;
+            if (throwTimer_ > 0.0f)
+                return 0;
+            throwTimer_ = 0.0f;
+            if (reserve_)
+                *reserve_ = std::max(0, *reserve_ - 1);
+            redraw_ = true;
+            return 1;
+        }
+        if (!pulled || cooldown_ > 0.0f || (reserve_ && *reserve_ <= 0))
+            return 0;
+        cooldown_ = settings.fireInterval;
+        swingTimer_ = settings.fireInterval;
+        throwTimer_ = std::max(settings.thrown.release, 1e-4f);
+        firedEvent_ = true;
+        return 0;
+    }
 
     if (settings.melee()) {
         const bool pulled = triggerHeld && (settings.automatic || !triggerWasHeld_);
@@ -435,6 +507,11 @@ int Weapon::update(float dt, bool triggerHeld, bool reloadPressed)
     return shots;
 }
 
+bool Weapon::holding() const
+{
+    return !settings.throwable() || throwTimer_ > 0.0f || !reserve_ || *reserve_ > 0;
+}
+
 bool Weapon::animated() const
 {
     return viewModel && viewModel->skeleton && !viewModel->skeleton->clips.empty();
@@ -486,6 +563,12 @@ void Weapon::animate(float dt, float moveSpeed)
     else if (inspectEvent_ && looping && !locked)
         play(settings.animInspect, false, 0.0f, 0.15f);
     firedEvent_ = reloadEvent_ = drawEvent_ = inspectEvent_ = false;
+    // Throwable: once the throw clip has played out, the next one is taken in hand (draw clip).
+    if (redraw_ && animator.current.clip >= 0 && !animator.current.loop && animator.finished(*skel)) {
+        redraw_ = false;
+        if (holding())
+            play(settings.animDraw, false, 0.0f, 0.05f);
+    }
     // Idle and walk loop; a one-shot clip (fire, reload, draw, inspect) plays to its end first.
     const bool nowLooping = animator.current.clip >= 0 && animator.current.loop;
     if (animator.current.clip < 0 || animator.finished(*skel) || nowLooping) {
@@ -528,7 +611,7 @@ float wornSpreadScale(float condition)
 
 float jamProbability(const WeaponSettings& weapon, float condition)
 {
-    if (weapon.melee() || condition >= 0.6f)
+    if (weapon.melee() || weapon.throwable() || condition >= 0.6f)
         return 0.0f;
     return std::max(0.0f, weapon.jamChance) * (0.6f - std::max(condition, 0.0f)) / 0.6f;
 }

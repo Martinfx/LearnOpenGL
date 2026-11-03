@@ -12,6 +12,7 @@ struct HudState {
     std::string weapon;
     int ammo = 0, magazine = 0;
     bool melee = false;
+    bool throwable = false; // incendiary bottles: just how many are left
     int medkits = 0;
     float reload = -1.0f; // 0..1 while reloading, else < 0
     float battery = -1.0f; // flashlight charge 0..1 (shown while on or not full), < 0 = no battery

@@ -34,6 +34,7 @@ struct ItemDef {
     std::string model;   // relative to assets/
     float glow[3] = {1.0f, 0.8f, 0.4f};
     float heal = 0.0f, rad = 0.0f, carry = 0.0f;
+    int lot = 30;        // ammo: rounds bought or sold per trade click (1 for incendiary bottles)
     bool operator==(const ItemDef&) const = default;
 };
 

@@ -1,0 +1,12 @@
+# Sound: variations (one is picked at random per play) and playback settings
+# Burning fuel on the ground (loop; the game turns it up as the fire grows)
+file "../ambient/campfire_loop.ogg"
+volume 1
+pitch 0.8 0.9
+distance 2 30
+rolloff 1
+loop 1
+stream 1
+spatial 1
+group sfx
+max_instances 6

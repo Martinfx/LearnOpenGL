@@ -14,3 +14,5 @@ Columns are 4 random variants of the same surface. UV of cell (row r, col c): `u
 counted from the top of the image. Roughness: concrete 0.95, metal 0.35, wood 0.8, soft 0.9.
 
 Made for this project by `source/decals.py` (procedural), **CC0 1.0**.
+
+`scorch.png` (2x2 atlas of burnt-ground soot marks left by fire): made for this project by `source/scorch.py` (procedural), **CC0 1.0**.
