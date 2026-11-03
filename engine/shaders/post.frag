@@ -34,6 +34,7 @@ uniform bool uDistortMask; // depth < 1 is the first-person weapon (own depth la
 layout(binding = 6) uniform sampler2D uSceneDepth; // depth of the world (before the weapon layer)
 uniform float uMotionBlur;     // 0 = off .. 1 = a whole frame of motion
 uniform mat4 uMotionReproject; // this frame's clip -> previous frame's clip
+uniform float uSharpen;        // scene drawn below the output size: 0 off .. 1 strong
 out vec4 fragColor;
 
 vec3 aces(vec3 x) {
@@ -99,8 +100,25 @@ vec2 distortedUV(vec2 uv) {
     return result;
 }
 
+// Contrast-adaptive sharpening of the scene stretched to the window (in the spirit of AMD CAS):
+// a cross of source texels, stronger where the neighbourhood is flat, never past its min/max.
+vec3 sharpened(vec2 uv, vec3 c) {
+    if (uSharpen <= 0.0)
+        return c;
+    vec2 t = 1.0 / vec2(textureSize(uHdr, 0));
+    vec3 n = texture(uHdr, uv + vec2(0.0, t.y)).rgb, s = texture(uHdr, uv - vec2(0.0, t.y)).rgb;
+    vec3 e = texture(uHdr, uv + vec2(t.x, 0.0)).rgb, w = texture(uHdr, uv - vec2(t.x, 0.0)).rgb;
+    vec3 lo = min(c, min(min(n, s), min(e, w)));
+    vec3 hi = max(c, max(max(n, s), max(e, w)));
+    // HDR: the contrast relative to the brightness (lo/hi), so bright sky edges don't ring.
+    vec3 amount = sqrt(clamp(lo / max(hi, vec3(1e-4)), 0.0, 1.0));
+    vec3 k = -amount * mix(0.125, 0.2, uSharpen) * uSharpen;
+    vec3 r = (c + k * (n + s + e + w)) / (1.0 + 4.0 * k);
+    return clamp(r, lo, hi);
+}
+
 vec3 sceneColor(vec2 uv) {
-    vec3 c = texture(uHdr, uv).rgb;
+    vec3 c = sharpened(uv, texture(uHdr, uv).rgb);
     if (uMotionBlur <= 0.0 || (uDistortMask && texture(uDepth, vUV).r < 1.0))
         return c; // the weapon moves with the camera: sharp
     float depth = texture(uSceneDepth, vUV).r;

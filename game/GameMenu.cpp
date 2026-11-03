@@ -47,6 +47,8 @@ const std::vector<SettingInfo>& settingInfos()
         {"r_fullscreen", "setting.r_fullscreen", 0, {"setting.r_fullscreen.0", "setting.r_fullscreen.1", "setting.r_fullscreen.2"}},
         {"r_monitor", "setting.r_monitor", 0, {"setting.r_monitor.0", "2", "3", "4", "5", "6", "7", "8"}},
         {"r_scale", "setting.r_scale", 0, {}},
+        {"r_dynres", "setting.r_dynres", 0, {"setting.r_dynres.0", "30 FPS", "60 FPS", "90 FPS", "120 FPS"}},
+        {"r_sharpen", "setting.r_sharpen", 0, {}},
         {"r_aa", "setting.r_aa", 0, {"setting.r_aa.0", "setting.r_aa.1", "setting.r_aa.2"}},
         {"r_motionblur", "setting.r_motionblur", 4, {}},
         {"m_sensitivity", "setting.m_sensitivity", 1, {}},

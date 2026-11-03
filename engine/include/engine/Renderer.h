@@ -160,6 +160,13 @@ struct RenderQuality {
     // submits the rain map, environment, probes and lights; off = culled when drawn.
     bool asyncCull = true;
     float renderScale = 1.0f; // scene resolution relative to the window (0.5 = half), HUD stays sharp
+    // Dynamic resolution: in the game view the scene resolution drops (down to dynamicMinScale of
+    // renderScale) while the GPU needs more than 1/dynamicTargetFps per frame, and climbs back when
+    // there is room again (GPU timer queries; 0 = off). The image is sharpened when smaller.
+    float dynamicTargetFps = 0.0f;
+    float dynamicMinScale = 0.5f;
+    // Sharpening of a scene drawn below the window resolution (0 off .. 1 strong).
+    float upscaleSharpness = 0.5f;
     // Shadows of local lights: the nearest shadow-casting lights get layers of one map
     // (a spot light 1, a point light 6), 0 = no local shadows.
     int localShadowResolution = 1024;
@@ -241,6 +248,7 @@ public:
         int lights = 0;          // local lights in view
         int lightShadows = 0;    // of those, with shadows
         bool gpuValid = false;   // timer queries available on this driver
+        float renderScale = 1.0f; // scene resolution used (renderScale x dynamic resolution)
     };
     const FrameStats& frameStats() const { return stats_; }
 
@@ -664,6 +672,11 @@ private:
     Environment resolvedEnv_;           // the scene's environment at its time of day
     SkyState sky_;                      // light direction, moon, stars of resolvedEnv_
     float time_ = 0.0f;
+    // Dynamic resolution (RenderQuality::dynamicTargetFps): current factor, smoothed GPU time.
+    float dynScale_ = 1.0f;
+    double dynGpuMs_ = 0.0;
+    double dynLastChange_ = 0.0;
+    void updateDynamicResolution();
     std::vector<SpriteInstance> distortionSprites_; // this frame: anomaly warps as camera-facing quads
     unsigned distortTex_ = 0, distortFbo_ = 0;      // screen offsets in pixels (rg), scene depth for the test
     unsigned distortBuffer_ = 0;

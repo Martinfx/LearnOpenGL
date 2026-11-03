@@ -2350,7 +2350,14 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     // final pass (post / FXAA), for slow GPUs; menus and HUD stay sharp.
     outWidth_ = std::max(1, view.viewportWidth);
     outHeight_ = std::max(1, view.viewportHeight);
-    const float scale = view.capture ? 1.0f : std::clamp(quality_.renderScale, 0.25f, 1.0f);
+    // Dynamic resolution only follows the game's continuous view (editor viewports and captures keep theirs).
+    const bool dynamic = quality_.dynamicTargetFps > 0.0f && view.temporal && !view.capture;
+    if (dynamic)
+        updateDynamicResolution();
+    else
+        dynScale_ = 1.0f;
+    const float scale = view.capture ? 1.0f : std::clamp(quality_.renderScale * dynScale_, 0.25f, 1.0f);
+    building_.renderScale = scale;
     ensureTargets(std::max(1, static_cast<int>(std::lround(outWidth_ * scale))), std::max(1, static_cast<int>(std::lround(outHeight_ * scale))));
     {
         // Motion blur: only a continuous perspective view knows its previous frame.
@@ -3768,6 +3775,11 @@ void Renderer::present()
     glUniform1i(post.loc("uDistortOn"), distortDrawn_ ? 1 : 0);
     glUniform1i(post.loc("uDistortMask"), overlayDrawn_ ? 1 : 0);
     glBindTextureUnit(5, distortDrawn_ ? distortTex_ : whiteTex_);
+    {
+        const float scale = static_cast<float>(width_) / static_cast<float>(std::max(outWidth_, 1));
+        const float sharpen = scale < 0.99f ? std::clamp(quality_.upscaleSharpness, 0.0f, 1.0f) * std::clamp((1.0f - scale) * 2.5f, 0.0f, 1.0f) : 0.0f;
+        glUniform1f(post.loc("uSharpen"), sharpen);
+    }
     glUniform1f(post.loc("uMotionBlur"), motionValid_ ? std::clamp(quality_.motionBlur, 0.0f, 1.0f) : 0.0f);
     if (motionValid_) {
         const glm::mat4 reproject = motionPrevViewProj_ * glm::inverse(projection_ * view_);
@@ -3936,6 +3948,7 @@ void Renderer::collectQueries()
     stats_.occluded = building_.occluded;
     stats_.cullMs = building_.cullMs;
     stats_.cullWaitMs = building_.cullWaitMs;
+    stats_.renderScale = building_.renderScale;
     stats_.cpuTotalMs = 0.0;
     for (int p = 0; p < PassCount; ++p) {
         stats_.cpuMs[p] = building_.cpuMs[p];
@@ -3951,6 +3964,32 @@ void Renderer::collectQueries()
     }
     building_ = FrameStats{};
     queryFrame_ = (queryFrame_ + 1) % kQueryFrames;
+}
+
+void Renderer::updateDynamicResolution()
+{
+    // GPU time grows with the pixel count (~ scale^2): aim a little under the budget, step in 5 %
+    // so the targets are not made again every frame, and wait between changes for the timer
+    // queries (a few frames behind) to show the new size.
+    if (!stats_.gpuValid || stats_.gpuTotalMs <= 0.0)
+        return;
+    const double now = std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    dynGpuMs_ = dynGpuMs_ > 0.0 ? dynGpuMs_ + (stats_.gpuTotalMs - dynGpuMs_) * 0.15 : stats_.gpuTotalMs;
+    if (now - dynLastChange_ < 0.4)
+        return;
+    const double budget = 1000.0 / std::max(quality_.dynamicTargetFps, 10.0f);
+    const float lo = std::clamp(quality_.dynamicMinScale, 0.25f, 1.0f);
+    float next = dynScale_;
+    if (dynGpuMs_ > budget)
+        next = static_cast<float>(dynScale_ * std::sqrt(budget * 0.9 / dynGpuMs_));
+    else if (dynGpuMs_ < budget * 0.72)
+        next = dynScale_ + 0.05f;
+    next = std::clamp(std::floor(next * 20.0f + 0.001f) / 20.0f, lo, 1.0f);
+    if (next == dynScale_)
+        return;
+    dynGpuMs_ *= static_cast<double>(next * next) / static_cast<double>(dynScale_ * dynScale_); // expected at the new size
+    dynScale_ = next;
+    dynLastChange_ = now;
 }
 
 const Model* Renderer::impostorFor(const Model& model)

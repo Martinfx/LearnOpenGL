@@ -42,16 +42,21 @@ float arcVisibility(float h0, float h1, float gamma) {
 }
 
 void main() {
-    float depth = textureLod(uDepth, vUV, 0.0).r;
+    // At half resolution vUV lies on the corner of 4 depth texels: snap it to one texel centre, or
+    // the nearest-filtered depth and its ±1 texel neighbours pick rows inconsistently (normals
+    // flip from row to row = horizontal bands on flat ground).
+    vec2 depthSize = vec2(textureSize(uDepth, 0));
+    vec2 uv = (floor(vUV * depthSize) + 0.5) / depthSize;
+    float depth = textureLod(uDepth, uv, 0.0).r;
     if (depth >= 1.0) {
         fragColor = vec2(1.0, 1e6);
         fragGi = vec3(0.0);
         return;
     }
-    vec3 p = viewPos(vUV);
+    vec3 p = viewPos(uv);
     vec2 texel = 1.0 / vec2(textureSize(uDepth, 0));
-    vec3 px = viewPos(vUV + vec2(texel.x, 0.0)) - p, nx = p - viewPos(vUV - vec2(texel.x, 0.0));
-    vec3 py = viewPos(vUV + vec2(0.0, texel.y)) - p, ny = p - viewPos(vUV - vec2(0.0, texel.y));
+    vec3 px = viewPos(uv + vec2(texel.x, 0.0)) - p, nx = p - viewPos(uv - vec2(texel.x, 0.0));
+    vec3 py = viewPos(uv + vec2(0.0, texel.y)) - p, ny = p - viewPos(uv - vec2(0.0, texel.y));
     vec3 dx = abs(px.z) < abs(nx.z) ? px : nx;   // the smoother side at edges
     vec3 dy = abs(py.z) < abs(ny.z) ? py : ny;
     vec3 n = normalize(cross(dx, dy));
@@ -91,7 +96,7 @@ void main() {
             float t = (float(i) + jitter) / float(kSteps);
             vec2 offset = dir * texel * max(1.0, t * t * radiusPx);
             for (int side = 0; side < 2; ++side) {
-                vec2 suv = vUV + (side == 0 ? offset : -offset);
+                vec2 suv = uv + (side == 0 ? offset : -offset);
                 if (any(lessThan(suv, vec2(0.0))) || any(greaterThan(suv, vec2(1.0))))
                     continue;
                 vec3 d = viewPos(suv) - p;
@@ -115,7 +120,7 @@ void main() {
                 float t = (float(i) + jitter) / float(kGiSteps);
                 vec2 offset = dir * texel * max(2.0, t * t * giRadiusPx);
                 for (int side = 0; side < 2; ++side) {
-                    vec2 suv = vUV + (side == 0 ? offset : -offset);
+                    vec2 suv = uv + (side == 0 ? offset : -offset);
                     if (any(lessThan(suv, vec2(0.0))) || any(greaterThan(suv, vec2(1.0))))
                         continue;
                     vec3 d = viewPos(suv) - p;

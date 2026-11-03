@@ -257,6 +257,15 @@ DemoState& demoState()
     static DemoState state;
     return state;
 }
+// r_dynres choice -> frame rate the dynamic resolution holds (0 = off; always off in a benchmark replay).
+float dynresFps(int choice)
+{
+    static const float fps[] = {0.0f, 30.0f, 60.0f, 90.0f, 120.0f};
+    // Screenshots and fixed-step runs (tests, tools) keep the full resolution: their images compare.
+    if (demoState().benchmark || std::getenv("FPS_ENGINE_SCREENSHOT") || std::getenv("FPS_ENGINE_FIXED_DT"))
+        return 0.0f;
+    return fps[std::clamp(choice, 0, 4)];
+}
 constexpr int kDemoFocus = 999; // pseudo key: the window has the focus
 // Settings that change what the same input does; a demo stores and replays them.
 const char* const kDemoCVars[] = {"m_sensitivity", "m_invert_y", "god", "noclip", "freecam", "timescale", "fov"};
@@ -1192,6 +1201,10 @@ int main(int argc, char** argv)
             .onChange = [&renderer, &cvars](const engine::CVar& v) {
                 engine::RenderQuality q = engine::RenderQuality::preset(v.integer());
                 q.renderScale = cvars.find("r_scale") ? cvars.find("r_scale")->number() : 1.0f;
+                if (const engine::CVar* dyn = cvars.find("r_dynres"))
+                    q.dynamicTargetFps = dynresFps(dyn->integer());
+                if (const engine::CVar* sharpen = cvars.find("r_sharpen"))
+                    q.upscaleSharpness = sharpen->number();
                 // Comparing optimisations (FPS_ENGINE_STATS=1): the switches outlive the preset.
                 q.instancing = q.instancing && !std::getenv("FPS_ENGINE_NO_INSTANCING");
                 if (std::getenv("FPS_ENGINE_NO_VOLUMETRIC"))
@@ -1219,6 +1232,22 @@ int main(int argc, char** argv)
                 engine::RenderQuality q = renderer.quality();
                 q.fxaa = v.integer() == 1;
                 q.taa = v.integer() == 2;
+                renderer.setQuality(q);
+            };
+        // Dynamic resolution: the scene resolution follows the GPU time to hold the frame rate.
+        // Off in a benchmark replay, so its numbers stay comparable.
+        cvars.add("r_dynres", CVarType::Int, "2", "Dynamic resolution, held frame rate: 0 off, 1 30, 2 60, 3 90, 4 120 FPS",
+                  engine::CVarConfig, 0.0, 4.0)
+            .onChange = [&renderer](const engine::CVar& v) {
+                engine::RenderQuality q = renderer.quality();
+                q.dynamicTargetFps = dynresFps(v.integer());
+                renderer.setQuality(q);
+            };
+        cvars.add("r_sharpen", CVarType::Float, "0.5", "Sharpening of a scene drawn below the window resolution (0 off .. 1)",
+                  engine::CVarConfig, 0.0, 1.0)
+            .onChange = [&renderer](const engine::CVar& v) {
+                engine::RenderQuality q = renderer.quality();
+                q.upscaleSharpness = v.number();
                 renderer.setQuality(q);
             };
         cvars.add("r_motionblur", CVarType::Float, "0", "Camera motion blur: share of a frame's motion (0 = off)", engine::CVarConfig, 0.0, 1.0)
@@ -3011,7 +3040,7 @@ int main(int argc, char** argv)
                 int n = std::snprintf(line, sizeof line, "%.1f FPS, %.2f ms | %d draws (%d meshes), %lld tris, %d instanced, %d culled, %d occluded, %d uploads | CPU %.2f ms, GPU %.2f ms |",
                                       fpsFrames / fpsTimer, 1000.0 * fpsTimer / fpsFrames, st.drawCalls, st.meshDraws, st.triangles, st.instanced, st.culled, st.occluded, st.uploads,
                                       st.cpuTotalMs, st.gpuTotalMs);
-                n += std::snprintf(line + n, sizeof line - static_cast<std::size_t>(n), " cull %.2f (wait %.2f) |", st.cullMs, st.cullWaitMs);
+                n += std::snprintf(line + n, sizeof line - static_cast<std::size_t>(n), " cull %.2f (wait %.2f) | scale %.2f |", st.cullMs, st.cullWaitMs, st.renderScale);
                 for (int p = 0; p < engine::Renderer::PassCount && n > 0 && n < static_cast<int>(sizeof line); ++p)
                     n += std::snprintf(line + n, sizeof line - static_cast<std::size_t>(n), " %s %.2f/%.2f", engine::Renderer::passName(p), st.cpuMs[p], st.gpuMs[p]);
                 // Frame update tasks (last frame): what runs side by side before rendering.
