@@ -992,7 +992,16 @@ int main(int argc, char** argv)
         }
         drawLoading(1.0f, engine::tr("loading.map"));
         const double mapStart = glfwGetTime();
-        map.init(renderer, scene);
+        // The map: from the cache, or rendered from above now (once per change of the level).
+        map.begin(renderer, scene, levelPath);
+        for (float done = 0.0f; done < 1.0f;) {
+            done = map.step(renderer, scene, 40.0);
+            if (done < 1.0f) {
+                char percent[16];
+                std::snprintf(percent, sizeof percent, " %d %%", static_cast<int>(done * 100.0f));
+                drawLoading(1.0f, engine::tr("loading.map_bake") + percent);
+            }
+        }
         const double now = glfwGetTime();
         LOG_INFO("level", "%s loaded in %.1f s (models %.1f, level %.1f, physics %.1f, GPU %.1f, map %.1f)",
                  levelPath.filename().string().c_str(), now - loadStart, progress.modelSeconds.load(),
@@ -2057,6 +2066,14 @@ int main(int argc, char** argv)
     bool padStartHeld = false, padWeaponHeld = false;
     bool quickSaveHeld = false, quickLoadHeld = false;
     bool mapOpen = std::getenv("FPS_ENGINE_MAP") != nullptr, mapHeld = false; // test hook: start with the PDA map open
+    if (mapOpen) { // test hooks: FPS_ENGINE_MAP_ZOOM=4, FPS_ENGINE_MAP_CENTER="x z" (world)
+        if (const char* z = std::getenv("FPS_ENGINE_MAP_ZOOM"))
+            map.setZoom(static_cast<float>(std::atof(z)));
+        map.opened(player.feet());
+        glm::vec2 c(0.0f);
+        if (const char* p = std::getenv("FPS_ENGINE_MAP_CENTER"); p && std::sscanf(p, "%f %f", &c.x, &c.y) == 2)
+            map.setCenter(c);
+    }
     // Talking (E at a character with a "dialog" property): the game pauses, answers by 1-9 or mouse.
     GameDialog talk;
     GameTrade trade; // trade = 1 characters: buy, sell, repair
@@ -2269,8 +2286,11 @@ int main(int argc, char** argv)
         }
         padStartHeld = pad.start;
         const bool mKey = (keyDown(window, boundKey("in_map")) || pad.back) && captured;
-        if (mKey && !mapHeld)
+        if (mKey && !mapHeld) {
             mapOpen = !mapOpen;
+            if (mapOpen)
+                map.opened(player.feet());
+        }
         mapHeld = mKey;
         // Talking: answers by number keys or a click; E at a character starts a talk.
         {
@@ -2467,7 +2487,11 @@ int main(int argc, char** argv)
         if (captured && pad.present) // right stick: like moving the mouse ~900 px/s at full tilt
             mouse.delta += pad.look * glm::vec2(1.0f, cvInvert.boolean() ? -1.0f : 1.0f) * static_cast<float>(frameTime) * 900.0f *
                            cvars.find("joy_sensitivity")->number();
-        if (captured)
+        if (captured && mapOpen) { // the PDA map: the mouse pans, the wheel zooms, the right button finds the player
+            map.control(mouse.delta, static_cast<float>(mouse.scroll), glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS,
+                        player.feet());
+            mouse.scroll = 0.0;
+        } else if (captured)
             camera.look(mouse.delta);
         mouse.delta = glm::vec2(0.0f);
         readInput(window, input);

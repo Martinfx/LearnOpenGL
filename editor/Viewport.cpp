@@ -101,6 +101,17 @@ void Viewport::bakeStep(engine::ProbeBaker& baker, double budgetMs)
     doneCurrent();
 }
 
+bool Viewport::mapBakeStep(engine::MapBaker& baker, double budgetMs)
+{
+    if (!ready_ || !scene_)
+        return false;
+    makeCurrent();
+    baker.step(renderer_, *scene_, budgetMs);
+    doneCurrent();
+    update();
+    return true;
+}
+
 void Viewport::bakeStop(engine::ProbeBaker& baker)
 {
     if (ready_)

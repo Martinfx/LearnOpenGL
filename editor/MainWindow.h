@@ -258,6 +258,7 @@ private:
     QLineEdit* loadingImageEdit_ = nullptr;
     QLineEdit* mapImageEdit_ = nullptr;
     Vec3Editor* mapBoundsEdit_ = nullptr;
+    class MapPanel* mapPanel_ = nullptr;
     QLineEdit* loadingTitleEdit_ = nullptr;
     QLineEdit* loadingHintEdit_ = nullptr;
     QLineEdit* lodEdit_ = nullptr;

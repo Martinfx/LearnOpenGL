@@ -89,6 +89,7 @@ struct Ui2D::Font {
     std::vector<unsigned char> data;
     stbtt_packedchar ascii[95];     // 32..126
     stbtt_packedchar latin[224];    // 160..383 (Latin-1 + Latin Extended-A: Czech letters)
+    stbtt_packedchar cyrillic[96];  // 0x400..0x45F (Russian / Ukrainian names in the Zone: map labels, signs)
     unsigned texture = 0;
     float ascent = 0.0f;            // at kBakedSize
 
@@ -98,6 +99,8 @@ struct Ui2D::Font {
             return &ascii[cp - 32];
         if (cp >= 160 && cp < 384)
             return &latin[cp - 160];
+        if (cp >= 0x400 && cp < 0x460)
+            return &cyrillic[cp - 0x400];
         return &ascii['?' - 32];
     }
 };
@@ -128,6 +131,7 @@ bool Ui2D::init(const std::filesystem::path& regular, const std::filesystem::pat
         stbtt_PackSetOversampling(&pack, 1, 1);
         stbtt_PackFontRange(&pack, font->data.data(), 0, kBakedSize, 32, 95, font->ascii);
         stbtt_PackFontRange(&pack, font->data.data(), 0, kBakedSize, 160, 224, font->latin);
+        stbtt_PackFontRange(&pack, font->data.data(), 0, kBakedSize, 0x400, 96, font->cyrillic);
         stbtt_PackEnd(&pack);
         glCreateTextures(GL_TEXTURE_2D, 1, &font->texture);
         glTextureStorage2D(font->texture, 1, GL_R8, kAtlasSize, kAtlasSize);

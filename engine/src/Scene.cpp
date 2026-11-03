@@ -303,7 +303,20 @@ bool writeLevelSettings(std::ostream& out, const Scene& scene, const std::filesy
     if (!scene.map.image.empty())
         out << "map_image " << std::quoted(relative(scene.map.image)) << '\n';
     if (scene.map.size > 0.0f)
-        out << "map_bounds " << scene.map.min.x << ' ' << scene.map.min.y << ' ' << scene.map.size << '\n';
+        out << "map_bounds " << scene.map.min.x << ' ' << scene.map.min.y << ' ' << scene.map.size << ' ' << scene.map.sizeZ << '\n';
+    {
+        const MapSettings& m = scene.map;
+        const MapSettings d;
+        if (m.pixelsPerMetre != d.pixelsPerMetre || m.daylight != d.daylight || m.sunAzimuth != d.sunAzimuth || m.sunElevation != d.sunElevation ||
+            m.exposure != d.exposure || m.saturation != d.saturation || m.contrast != d.contrast || m.outlines != d.outlines ||
+            m.heightShade != d.heightShade)
+            out << "map_bake " << m.pixelsPerMetre << ' ' << (m.daylight ? 1 : 0) << ' ' << m.sunAzimuth << ' ' << m.sunElevation << ' '
+                << m.exposure << ' ' << m.saturation << ' ' << m.contrast << ' ' << m.outlines << ' ' << m.heightShade << '\n';
+        if (m.tint != d.tint || m.scanlines != d.scanlines || m.grid != d.grid || m.minimapRadius != d.minimapRadius || m.maxZoom != d.maxZoom ||
+            m.showAnomalies != d.showAnomalies)
+            out << "map_pda " << m.tint.r << ' ' << m.tint.g << ' ' << m.tint.b << ' ' << m.scanlines << ' ' << m.grid << ' ' << m.minimapRadius << ' '
+                << m.maxZoom << ' ' << (m.showAnomalies ? 1 : 0) << '\n';
+    }
     if (scene.terrain && scene.terrain->valid()) {
         // Heights, splat map and foliage go to a binary file next to the level.
         std::filesystem::path data = file;
@@ -867,6 +880,19 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
             ok = lastObject == LastObject::Model && static_cast<bool>(ls >> result.models.back().impostorDistance);
         } else if (key == "map_bounds") {
             ok = static_cast<bool>(ls >> result.map.min.x >> result.map.min.y >> result.map.size);
+            if (ok && !(ls >> result.map.sizeZ))
+                result.map.sizeZ = 0.0f; // older levels: square
+        } else if (key == "map_bake") {
+            MapSettings& m = result.map;
+            int daylight = 1;
+            ok = static_cast<bool>(ls >> m.pixelsPerMetre >> daylight >> m.sunAzimuth >> m.sunElevation >> m.exposure >> m.saturation >> m.contrast >>
+                                   m.outlines >> m.heightShade);
+            m.daylight = daylight != 0;
+        } else if (key == "map_pda") {
+            MapSettings& m = result.map;
+            int anomalies = 1;
+            ok = static_cast<bool>(ls >> m.tint.r >> m.tint.g >> m.tint.b >> m.scanlines >> m.grid >> m.minimapRadius >> m.maxZoom >> anomalies);
+            m.showAnomalies = anomalies != 0;
         } else if (key == "loading_image" || key == "loading_title" || key == "loading_hint") {
             std::string value;
             ok = static_cast<bool>(ls >> std::quoted(value));

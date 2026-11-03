@@ -1,4 +1,5 @@
 #include "MainWindow.h"
+#include "MapPanel.h"
 
 #include <engine/EntityIO.h>
 #include <engine/Anomaly.h>
@@ -2019,9 +2020,15 @@ void MainWindow::buildDocks()
     mapImageLayout->addWidget(browseMap);
     mapImageLayout->addWidget(clearMap);
     mapBoundsEdit_ = new Vec3Editor(-100000.0, 100000.0, 10.0, levelPanel);
-    mapBoundsEdit_->setToolTip(tr("X and Z of the map's top-left (north-west) corner and its size in metres; size 0 = whole level"));
+    mapBoundsEdit_->setToolTip(tr("X and Z of the map's top-left (north-west) corner and its size along X in metres; size 0 = fitted around the solid objects of the level"));
     levelForm->addRow(tr("Map image"), mapImageRow);
     levelForm->addRow(tr("Map X, Z, size"), mapBoundsEdit_);
+    mapPanel_ = new MapPanel(levelPanel);
+    mapPanel_->setScene(&scene_);
+    mapPanel_->bakeStep = [this](engine::MapBaker& baker, double budgetMs) { return viewport_->mapBakeStep(baker, budgetMs); };
+    mapPanel_->levelFile = [this] { return currentFile_; };
+    connect(mapPanel_, &MapPanel::edited, this, [this] { markDirty(); });
+    levelForm->addRow(mapPanel_);
     auto* mapHint = new QLabel(tr("Points on the map: Add > Map marker (the name is the label)."), levelPanel);
     mapHint->setObjectName("dim");
     mapHint->setWordWrap(true);
@@ -2538,6 +2545,18 @@ void MainWindow::buildDocks()
     cityDock_->setWidget(city_);
     addDockWidget(Qt::RightDockWidgetArea, cityDock_);
     connect(cityDock_, &QDockWidget::visibilityChanged, this, cityOverlay);
+    if (qEnvironmentVariableIsSet("FPS_EDITOR_MAP_BAKE")) // test hook: Level > Map > Bake map once the viewport is up
+    {
+        auto* wait = new QTimer(this); // once the level has loaded
+        connect(wait, &QTimer::timeout, this, [this, wait] {
+            if (scene_.models.empty())
+                return;
+            wait->stop();
+            wait->deleteLater();
+            QTimer::singleShot(3000, this, [this] { mapPanel_->bakeNow(); });
+        });
+        wait->start(1000);
+    }
     if (qEnvironmentVariableIsSet("FPS_EDITOR_CITY_GENERATE")) // test hook: open the dock and generate the town
         QTimer::singleShot(1500, this, [this] {
             cityDock_->show();
@@ -3227,6 +3246,8 @@ void MainWindow::refreshLevelProperties()
     sunEdit_->setValue(scene_.sunDirection);
     mapImageEdit_->setText(QString::fromStdU16String(scene_.map.image.filename().u16string()));
     mapBoundsEdit_->setValue(glm::vec3(scene_.map.min.x, scene_.map.min.y, scene_.map.size));
+    if (mapPanel_)
+        mapPanel_->refresh();
     loadingImageEdit_->setText(QString::fromStdU16String(scene_.loading.image.filename().u16string()));
     loadingImageEdit_->setToolTip(QString::fromStdU16String(scene_.loading.image.u16string()));
     loadingTitleEdit_->setText(QString::fromStdString(scene_.loading.title));

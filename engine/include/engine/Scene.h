@@ -508,7 +508,26 @@ struct LoadingScreen {
 struct MapSettings {
     std::filesystem::path image; // absolute, empty = rendered from the level; top of the image = -Z (north)
     glm::vec2 min{0.0f};         // world X, Z of the image's top-left corner
-    float size = 0.0f;           // metres covered (square); 0 = around everything in the level
+    float size = 0.0f;           // metres covered along X; 0 = fitted around the level (engine/MapBake.h mapAreaOf)
+    float sizeZ = 0.0f;          // metres along Z, 0 = same as size (square)
+    // Render from above (engine/MapBake.h), level line `map_bake`: baked in tiles by the
+    // editor (Level > Map > Bake) or on the first load, kept in the cook cache.
+    float pixelsPerMetre = 6.0f; // detail (the image is 2048..4096 px)
+    bool daylight = true;        // clear daylight with readable shadows instead of the level's weather
+    float sunAzimuth = 315.0f;   // degrees from north (-Z) toward east (+X): 315 = from the north-west
+    float sunElevation = 50.0f;  // degrees above the horizon (lower = longer shadows)
+    float exposure = 1.0f;
+    float saturation = 0.75f;
+    float contrast = 1.08f;
+    float outlines = 0.6f;       // dark lines along height steps (house walls, kerbs)
+    float heightShade = 0.25f;   // roofs lighter, the street bottoms darker
+    // In the game, PDA look (level line `map_pda`).
+    glm::vec3 tint{0.86f, 0.9f, 0.76f}; // multiplied over the map (worn PDA screen)
+    float scanlines = 0.3f;      // 0..1
+    float grid = 50.0f;          // m between grid lines, 0 = none
+    float minimapRadius = 60.0f; // m from the minimap's middle to its edge
+    float maxZoom = 8.0f;        // full map: closest zoom, times the whole level
+    bool showAnomalies = true;   // anomaly fields drawn on the maps
 };
 
 // Progress of loadScene(), readable from another thread (the loading screen).

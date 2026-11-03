@@ -13,6 +13,7 @@
 #include <chrono>
 #include <future>
 #include <map>
+#include <optional>
 #include <unordered_map>
 #include <unordered_set>
 #include <string>
@@ -119,6 +120,12 @@ struct RenderView {
     // A continuous view (the game): temporal anti-aliasing may build on earlier frames.
     // Views drawn on demand or several per frame (editor panes) use FXAA instead.
     bool temporal = false;
+    // Map bake (engine/MapBake.h): the level's environment and sun replaced for this view,
+    // and the point distance LOD, culling and texture streaming measure from (the camera of a
+    // top-down orthographic view is far above everything; the bake puts this on the ground).
+    const Environment* environment = nullptr;
+    std::optional<glm::vec3> sunDirection;
+    std::optional<glm::vec3> lodEye;
 };
 
 // First-person layer drawn on top of the world (weapon, muzzle flash, crosshair).
@@ -243,11 +250,12 @@ public:
     // `viewer` (e.g. the player start) decides which textures start at full size (streaming).
     float preload(const Scene& scene, std::size_t& cursor, double budgetMs, glm::vec3 viewer = glm::vec3(0.0f));
 
-    // Renders the level from straight above (orthographic, no fog) into a new
-    // texture of `pixels` x `pixels` covering [minXZ, minXZ + size] in X and Z.
-    // Row 0 (bottom of the GL texture) is +Z, the top row is -Z (north up).
-    // The caller owns the texture (deleteTexture()).
-    unsigned renderTopDown(const Scene& scene, glm::vec2 minXZ, float size, int pixels);
+    // The level from straight above for the in-game map: engine/MapBake.h (MapBaker).
+    // Depth (0 near .. 1 far) of the last render(), rows from the bottom, scene resolution
+    // (width x height of the view at render scale 1). For the map bake's height map.
+    std::vector<float> readSceneDepth(int& width, int& height) const;
+    void setDeterministicStreaming(bool on) { deterministic_ = on; }
+    bool deterministicStreaming() const { return deterministic_; }
     static void deleteTexture(unsigned texture);
 
     // GPU memory held by this renderer (bytes), for the editor's memory panel.

@@ -64,6 +64,9 @@ float distanceTo(glm::vec3 p, const Aabb& b)
     return glm::length(glm::max(glm::max(b.min - p, p - b.max), glm::vec3(0.0f)));
 }
 
+// Where distance LOD, culling and streaming measure from (the map bake moves it to the ground).
+glm::vec3 lodEye(const RenderView& view) { return view.lodEye.value_or(view.cameraPosition); }
+
 struct Vertex {
     glm::vec3 position{0.0f};
     glm::vec3 normal{0.0f};
@@ -1433,7 +1436,7 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         const Box& b = scene.boxes[i];
         if (!visible(b.bounds())) {
             if (b.material) { // keep its maps on the GPU while out of view
-                drawDistance_ = distanceTo(view.cameraPosition, b.bounds());
+                drawDistance_ = distanceTo(lodEye(view), b.bounds());
                 for (const auto& asset : b.material->maps)
                     if (asset)
                         keepTextureAlive(asset->texture.get());
@@ -1441,7 +1444,7 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
             ++culled_;
             continue;
         }
-        drawDistance_ = distanceTo(view.cameraPosition, b.bounds());
+        drawDistance_ = distanceTo(lodEye(view), b.bounds());
         if (b.material && b.material->alphaMode == AlphaMode::Blend) {
             if (!depthOnly && collectTransparent_)
                 transparent_.push_back({nullptr, b.material.get(), &b, b.transform(), drawDistance_,
@@ -1474,7 +1477,7 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
     //       started on a worker (startCull) or already made by another pass of the view.
     CullRequest request;
     request.cull = cull;
-    request.eye = view.cameraPosition;
+    request.eye = lodEye(view);
     request.skipNear = skipNear;
     request.cascade = shadowCascade_;
     request.minCaster = shadowMinCaster_;
@@ -1511,14 +1514,14 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         // Distance LOD: the simpler copy beyond lodDistance (the other one stays uploaded).
         const Model* draw = &model;
         if (model.lod || model.deferred) {
-            draw = &model.lodFor(glm::distance(view.cameraPosition, (modelBounds.min + modelBounds.max) * 0.5f), quality_.lodScale);
+            draw = &model.lodFor(glm::distance(lodEye(view), (modelBounds.min + modelBounds.max) * 0.5f), quality_.lodScale);
             if (draw == &model && model.lod && (shadowCascade_ > 0 || (shadowPass && grid.detail[i])))
                 draw = model.lod.get(); // shadows: the simple copy is enough
             if (mainPass)
                 keepAliveLods(model, draw);
         }
         if (quality_.impostors && model.impostorDistance > 0.0f && !model.skeleton && !model.parts.empty() &&
-            glm::distance(view.cameraPosition, (modelBounds.min + modelBounds.max) * 0.5f) > model.impostorDistance * quality_.lodScale)
+            glm::distance(lodEye(view), (modelBounds.min + modelBounds.max) * 0.5f) > model.impostorDistance * quality_.lodScale)
             if (const Model* impostor = impostorFor(model))
                 draw = impostor;
         // Dissolve over the last 15 % before the cull distance instead of popping out.
@@ -1570,7 +1573,7 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         const float highlight = static_cast<int>(scene.boxes.size() + scene.models.size() + i) == view.selectedObject ? 1.0f : 0.0f;
         // Generous box: animations reach outside the rest pose.
         const float reach = std::max({e.size.x, e.size.y, e.size.z}) * 1.5f;
-        drawDistance_ = std::max(0.0f, glm::distance(view.cameraPosition, e.position) - reach);
+        drawDistance_ = std::max(0.0f, glm::distance(lodEye(view), e.position) - reach);
         if (!visible(Aabb::fromCenterSize(e.position + glm::vec3(0.0f, e.size.y * 0.5f, 0.0f), glm::vec3(reach)))) {
             if (e.model)
                 keepAlive(*e.model);
@@ -1843,7 +1846,7 @@ void Renderer::collectLights(const Scene& scene, const RenderView& view)
     }
     for (const LocalLight& l : view.lights)
         add(l);
-    auto distance = [&](const LocalLight& l) { return std::max(0.0f, glm::distance(l.position, view.cameraPosition) - l.range); };
+    auto distance = [&](const LocalLight& l) { return std::max(0.0f, glm::distance(l.position, lodEye(view)) - l.range); };
     if (frameLights_.size() > kMaxLights) {
         std::nth_element(frameLights_.begin(), frameLights_.begin() + kMaxLights, frameLights_.end(),
                          [&](const LocalLight& a, const LocalLight& b) { return distance(a) < distance(b); });
@@ -1859,7 +1862,7 @@ void Renderer::collectLights(const Scene& scene, const RenderView& view)
         if (frameLights_[i].castShadows)
             order.push_back(static_cast<int>(i));
     std::sort(order.begin(), order.end(), [&](int a, int b) {
-        return glm::distance(frameLights_[a].position, view.cameraPosition) < glm::distance(frameLights_[b].position, view.cameraPosition);
+        return glm::distance(frameLights_[a].position, lodEye(view)) < glm::distance(frameLights_[b].position, lodEye(view));
     });
     int layer = 0;
     for (int index : order) {
@@ -2374,9 +2377,9 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     targetX_ = view.viewportX;
     targetY_ = view.viewportY;
     bakePendingImpostors(); // binds its own target, restores targetFbo_
-    resolvedEnv_ = environmentAt(scene.environment, scene.sunDirection, &sky_);
-    // Post-process volumes around the camera change the image settings (not in probe captures).
-    if (!view.capture)
+    resolvedEnv_ = environmentAt(view.environment ? *view.environment : scene.environment, view.sunDirection.value_or(scene.sunDirection), &sky_);
+    // Post-process volumes around the camera change the image settings (not in probe captures or the map bake).
+    if (!view.capture && !view.environment)
         applyPostVolumes(postVolumes(scene), view.cameraPosition, resolvedEnv_);
     env_ = &resolvedEnv_;
     time_ = view.time;
@@ -2452,7 +2455,7 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     if (quality_.asyncCull) {
         CullRequest main;
         main.cull = projection_ * view.view;
-        main.eye = view.cameraPosition;
+        main.eye = lodEye(view);
         main.occlusion = occlusionTesting;
         startCull(main);
     }
@@ -2471,7 +2474,7 @@ void Renderer::render(const Scene& scene, const RenderView& view)
             if (cascadeUpdate_ & (1u << i)) {
                 CullRequest c;
                 c.cull = cascades_[i].matrix;
-                c.eye = view.cameraPosition;
+                c.eye = lodEye(view);
                 c.skipNear = true;
                 c.cascade = i;
                 c.minCaster = quality_.shadowCache && i > 0 ? cascades_[i].radius * 0.03f : 0.0f;
@@ -2836,7 +2839,7 @@ void Renderer::drawTerrain(const Terrain& t, const RenderView& view)
         terrain_.splatVersion = t.splatVersion;
     }
     const Aabb bounds = t.bounds();
-    drawDistance_ = distanceTo(view.cameraPosition, bounds);
+    drawDistance_ = distanceTo(lodEye(view), bounds);
     for (const TerrainLayer& layer : t.layers) // layer maps stay resident like everything near the camera
         if (layer.material)
             for (const auto& asset : layer.material->maps)
@@ -2889,7 +2892,7 @@ void Renderer::drawTerrain(const Terrain& t, const RenderView& view)
             ++culled_;
             continue;
         }
-        const float d = distanceTo(view.cameraPosition, chunk.bounds);
+        const float d = distanceTo(lodEye(view), chunk.bounds);
         int level = d < lodBase ? 0 : static_cast<int>(std::floor(std::log2(d / lodBase))) + 1;
         if (shadowCascade_ >= 0)
             level += shadowCascade_ == 0 ? 1 : 2;
@@ -3091,14 +3094,14 @@ void Renderer::addFoliage(const Terrain& t, const RenderView& view)
                                    ? glm::vec2(type.cullDistance * (1.0f - type.fade), type.cullDistance)
                                    : glm::vec2(0.0f);
         for (const FoliageCell& cell : c.types[ti]) {
-            const float cellDistance = distanceTo(view.cameraPosition, cell.bounds);
+            const float cellDistance = distanceTo(lodEye(view), cell.bounds);
             if ((type.cullDistance > 0.0f && cellDistance > type.cullDistance) || cellDistance > shadowReach ||
                 !visible(cell.bounds) || occluded(cell.bounds)) {
                 culled_ += static_cast<int>(cell.instances.size());
                 continue;
             }
             for (std::uint32_t i : cell.instances) {
-                const float d = glm::distance(view.cameraPosition, t.foliage[i].position);
+                const float d = glm::distance(lodEye(view), t.foliage[i].position);
                 if ((type.cullDistance > 0.0f && d > type.cullDistance + (fade.y > 0.0f ? 0.0f : 2.0f)) || d > shadowReach)
                     continue;
                 if (farDensity < 1.0f && type.cullDistance > 0.0f) {
@@ -3343,6 +3346,16 @@ void Renderer::drawTransparent(const RenderView& view)
     glDepthFunc(GL_LESS);
     glDisable(GL_BLEND);
     (void)view;
+}
+
+std::vector<float> Renderer::readSceneDepth(int& width, int& height) const
+{
+    width = width_;
+    height = height_;
+    std::vector<float> depth(static_cast<std::size_t>(width_) * static_cast<std::size_t>(height_));
+    if (depthTex_ && !depth.empty())
+        glGetTextureImage(depthTex_, 0, GL_DEPTH_COMPONENT, GL_FLOAT, static_cast<GLsizei>(depth.size() * sizeof(float)), depth.data());
+    return depth;
 }
 
 std::vector<std::uint8_t> Renderer::readPixels(int width, int height) const
@@ -5047,47 +5060,6 @@ void Renderer::keepAlive(const Model& model)
                                    part.occlusionTexture.get(), part.emissiveTexture.get()})
             keepTextureAlive(tex);
     }
-}
-
-unsigned Renderer::renderTopDown(const Scene& scene, glm::vec2 minXZ, float size, int pixels)
-{
-    unsigned tex = 0, fbo = 0, depth = 0;
-    glCreateTextures(GL_TEXTURE_2D, 1, &tex);
-    const int levels = 1 + static_cast<int>(std::floor(std::log2(pixels)));
-    glTextureStorage2D(tex, levels, GL_RGBA8, pixels, pixels);
-    glTextureParameteri(tex, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTextureParameteri(tex, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTextureParameteri(tex, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-    glTextureParameteri(tex, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-    const float border[4] = {0.05f, 0.05f, 0.045f, 1.0f};
-    glTextureParameterfv(tex, GL_TEXTURE_BORDER_COLOR, border);
-    glCreateRenderbuffers(1, &depth);
-    glNamedRenderbufferStorage(depth, GL_DEPTH24_STENCIL8, pixels, pixels);
-    glCreateFramebuffers(1, &fbo);
-    glNamedFramebufferTexture(fbo, GL_COLOR_ATTACHMENT0, tex, 0);
-    glNamedFramebufferRenderbuffer(fbo, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depth);
-    GLint previous = 0;
-    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &previous);
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-
-    const glm::vec3 center(minXZ.x + size * 0.5f, 0.0f, minXZ.y + size * 0.5f);
-    RenderView view;
-    view.viewportWidth = view.viewportHeight = pixels;
-    view.cameraPosition = center + glm::vec3(0.0f, 1500.0f, 0.0f);
-    view.view = glm::lookAt(view.cameraPosition, center, glm::vec3(0.0f, 0.0f, -1.0f));
-    const float h = size * 0.5f;
-    view.projection = glm::ortho(-h, h, -h, h, 1.0f, 3000.0f);
-    view.fog = false;
-    const RenderQuality saved = quality_;
-    quality_.ssao = true;
-    quality_.fxaa = true;
-    render(scene, view);
-    quality_ = saved;
-    glGenerateTextureMipmap(tex);
-    glBindFramebuffer(GL_FRAMEBUFFER, static_cast<unsigned>(previous));
-    glDeleteFramebuffers(1, &fbo);
-    glDeleteRenderbuffers(1, &depth);
-    return tex;
 }
 
 void Renderer::deleteTexture(unsigned texture)

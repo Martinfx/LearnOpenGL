@@ -34,6 +34,7 @@
 #include <engine/PlayerController.h>
 #include <engine/Probes.h>
 #include <engine/Renderer.h>
+#include <engine/MapBake.h>
 #include <engine/Scene.h>
 #include <engine/Scripting.h>
 #include <engine/JobSystem.h>
@@ -4778,6 +4779,60 @@ bool lfsAssetsPresent()
     return in.read(magic, 4) && std::memcmp(magic, "glTF", 4) == 0;
 }
 
+// In-game map (engine/MapBake.h): settings survive save/load, the area fits the solid
+// objects (not far scenery), the hash follows changes and the cache file reads back.
+void testMapBakeSettings()
+{
+    namespace fs = std::filesystem;
+    engine::Scene s;
+    s.playerStart = {0.0f, 0.0f, 0.0f};
+    engine::Box wall("Wall", {40.0f, 2.0f, -30.0f}, {4.0f, 4.0f, 4.0f}, {0.5f, 0.5f, 0.5f});
+    s.boxes.push_back(wall);
+    engine::Model far;
+    far.name = "Skyline";
+    far.collision = false; // scenery: does not stretch the map
+    far.position = {900.0f, 0.0f, 900.0f};
+    far.sourcePath = std::filesystem::temp_directory_path() / "engine_map_test" / "skyline.glb";
+    s.models.push_back(far);
+    const engine::MapArea a = engine::mapAreaOf(s);
+    check(a.min.x < 0.0f && a.min.y < -30.0f && a.min.x + a.size.x > 42.0f && a.min.y + a.size.y > 0.0f, "map area covers the start and the wall");
+    check(a.min.x + a.size.x < 200.0f && a.min.y + a.size.y < 200.0f, "map area leaves out scenery without collision");
+    const std::uint64_t h0 = engine::mapBakeHash(s);
+    s.map.sunAzimuth = 200.0f;
+    s.map.daylight = false;
+    s.map.tint = {0.7f, 0.8f, 0.6f};
+    s.map.minimapRadius = 90.0f;
+    s.map.min = {-10.0f, -20.0f};
+    s.map.size = 300.0f;
+    s.map.sizeZ = 120.0f;
+    check(engine::mapBakeHash(s) != h0, "map hash follows the bake settings");
+    const fs::path dir = fs::temp_directory_path() / "engine_map_test";
+    fs::create_directories(dir);
+    std::string error;
+    s.models.clear(); // no model file to load back
+    check(engine::saveScene(s, dir / "map.level", &error), "save map level: " + error);
+    engine::Scene back;
+    check(engine::loadScene(back, dir / "map.level", &error), "load map level: " + error);
+    check(back.map.sunAzimuth == 200.0f && !back.map.daylight && back.map.minimapRadius == 90.0f && back.map.sizeZ == 120.0f &&
+              std::abs(back.map.tint.g - 0.8f) < 1e-4f,
+          "map settings round trip");
+    const engine::MapArea fixed = engine::mapAreaOf(back);
+    check(fixed.size.x == 300.0f && fixed.size.y == 120.0f, "map bounds with a Z size");
+    // Cache file: a cooked picture and its area.
+    engine::MapImage img;
+    img.width = img.height = 64;
+    img.rgba.assign(64 * 64 * 4, 128);
+    img.area = fixed;
+    const engine::CookedTexture cooked = engine::cookMapImage(img);
+    check(engine::writeMapCache(dir / "m.ctex", cooked, img.area), "write map cache");
+    engine::CookedTexture read;
+    engine::MapArea readArea;
+    const bool readOk = engine::readMapCache(dir / "m.ctex", read, readArea);
+    check(readOk && read.width == 64 && readArea.size.y == 120.0f,
+          "read map cache (" + std::to_string(readOk) + ", " + std::to_string(read.width) + ", " + std::to_string(readArea.size.y) + ")");
+    fs::remove_all(dir);
+}
+
 int main(int argc, char** argv)
 {
     // engine_tests [part of a test name]: only the matching tests.
@@ -4802,6 +4857,7 @@ int main(int argc, char** argv)
         {"testClimbsSteps", testClimbsSteps},
         {"testJump", testJump},
         {"testSceneRoundTrip", testSceneRoundTrip},
+        {"testMapBakeSettings", testMapBakeSettings},
         {"testGltfRamp", testGltfRamp},
         {"testLevelWithModel", testLevelWithModel},
         {"testRaycast", testRaycast},

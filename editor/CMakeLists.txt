@@ -33,6 +33,8 @@ add_executable(fps_editor
     AnomalyPanel.cpp
     LightPanel.h
     LightPanel.cpp
+    MapPanel.h
+    MapPanel.cpp
     AmbienceEditor.h
     AmbienceEditor.cpp
     OutputsPanel.h

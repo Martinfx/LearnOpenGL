@@ -2,6 +2,7 @@
 #include <engine/Camera.h>
 #include <engine/Particles.h>
 #include <engine/ProbeBaker.h>
+#include <engine/MapBake.h>
 #include <engine/Renderer.h>
 #include <engine/Scene.h>
 
@@ -35,6 +36,7 @@ public:
     // Probe bake: runs `baker` with the GL context current for about `budgetMs`.
     void bakeStep(engine::ProbeBaker& baker, double budgetMs);
     void bakeStop(engine::ProbeBaker& baker); // cancelled: back to the level's own probes
+    bool mapBakeStep(engine::MapBaker& baker, double budgetMs); // Level > Map > Bake; false = no GL yet
     engine::Shading shading() const { return shading_; }
     void setShowGrid(bool on) { showGrid_ = on; update(); }
     // Helper geometry drawn over the level (navmesh), not owned; null = none.

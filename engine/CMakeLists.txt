@@ -15,6 +15,7 @@ add_library(engine STATIC
     src/Ragdoll.cpp
     src/VertexPaint.cpp
     src/TextureCook.cpp
+    src/MapBake.cpp
     src/Memory.cpp
     src/NavMesh.cpp
     src/Terrain.cpp
