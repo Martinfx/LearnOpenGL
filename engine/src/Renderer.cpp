@@ -646,6 +646,7 @@ void Renderer::useMeshProgram(const Program& p)
     loc_.fade = p.loc("uFade");
     loc_.instanceBase = p.loc("uInstanceBase");
     loc_.alphaCutoff = p.loc("uAlphaCutoff");
+    loc_.maskByDepth = p.loc("uMaskByDepth");
     loc_.opacity = p.loc("uOpacity");
     const char* names[9] = {"uHasTexture",      "uHasNormalMap",   "uHasRoughnessMap", "uHasMetallicMap", "uHasOcclusionMap",
                             "uHasEmissiveMap", "uHasDetailAlbedo", "uHasDetailNormal", "uHasHeightMap"};
@@ -2616,7 +2617,11 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     collectTransparent_ = !wireframe; // wireframe draws glass edges like everything else
     beginPass(PassOpaque);
     occ_.hidden = 0;
+    maskByDepth_ = !wireframe;
     drawGeometry(scene, view, false, viewProj);
+    maskByDepth_ = false;
+    glDepthFunc(GL_LEQUAL);
+    glUniform1i(loc_.maskByDepth, 0);
     lastOccluded_ = occ_.hidden;
     occ_.testing = false;
     collectTransparent_ = false;
@@ -4930,6 +4935,11 @@ void Renderer::applySurface(const Material* material, const MeshPart* part, glm:
     const SurfaceAlpha alpha = surfaceAlpha(material, part);
     glUniform1i(loc_.alphaMode, static_cast<int>(alpha.mode));
     glUniform1f(loc_.alphaCutoff, alpha.cutoff);
+    if (maskByDepth_ && !depthOnly_) {
+        const bool masked = alpha.mode == AlphaMode::Mask;
+        glDepthFunc(masked ? GL_EQUAL : GL_LEQUAL);
+        glUniform1i(loc_.maskByDepth, masked ? 1 : 0);
+    }
     glUniform1f(loc_.opacity, alpha.opacity);
     if (depthOnly_) {
         // Depth and shadows only need the albedo alpha of masked surfaces.

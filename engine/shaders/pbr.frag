@@ -333,6 +333,7 @@ vec2 parallaxUv(vec2 uv, vec3 n, vec3 toEye) {
 uniform int uDebugSkip;
 
 flat in float vDissolve; // LOD crossfade (mesh.vert)
+uniform bool uMaskByDepth; // main pass: alpha-masked surfaces cut by the depth pre-pass (GL_EQUAL)
 
 void main() {
     if (uFade.y > 0.0) {
@@ -489,8 +490,8 @@ void main() {
     }
     if (uHasDetailAlbedo && detailW > 0.0)
         albedo *= mix(1.0, texture(uDetailAlbedo, detailUv).r * 2.0, detailW);
-    if (uAlphaMode == 1 && alpha < uAlphaCutoff && uShading != 3)
-        discard; // leaves, fences, grates
+    if (uAlphaMode == 1 && alpha < uAlphaCutoff && uShading != 3 && !uMaskByDepth)
+        discard; // leaves, fences, grates (the main pass: the pre-pass depth, GL_EQUAL, already cut them)
     else if (uGrid)
         albedo *= 1.0 - 0.18 * gridLines(vWorldPos, n);
     if (uShading == 1) { // unlit: base color only
