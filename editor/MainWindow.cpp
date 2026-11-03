@@ -2814,6 +2814,13 @@ void MainWindow::buildDocks()
     ssrStepsSpin->setToolTip(tr("Ray steps of the screen-space reflections (Ultra 28, High 16); fewer steps reach as far, coarser"));
     ssrStepsSpin->setValue(viewport_->quality().ssrSteps);
     frameOptions->addWidget(ssrStepsSpin);
+    auto* ssrRoughSpin = new QDoubleSpinBox(framePanel);
+    ssrRoughSpin->setRange(0.1, 1.0);
+    ssrRoughSpin->setSingleStep(0.05);
+    ssrRoughSpin->setPrefix(tr("SSR max roughness: "));
+    ssrRoughSpin->setToolTip(tr("Rougher surfaces keep the probe / sky reflection without a screen-space ray (Ultra 0.6, High 0.4)"));
+    ssrRoughSpin->setValue(viewport_->quality().ssrMaxRoughness);
+    frameOptions->addWidget(ssrRoughSpin);
     auto* pcssTapsSpin = new QSpinBox(framePanel);
     pcssTapsSpin->setRange(8, 16);
     pcssTapsSpin->setSingleStep(8);
@@ -2828,8 +2835,9 @@ void MainWindow::buildDocks()
     frameLabel->setAlignment(Qt::AlignTop | Qt::AlignLeft);
     frameLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
     frameLayout->addWidget(frameLabel, 1);
-    auto applyFrameOption = [this, instancingCheck, shadowCacheCheck, occlusionCheck, volumetricCheck, asyncCullCheck, skyDirsSpin, ssrStepsSpin, pcssTapsSpin] {
+    auto applyFrameOption = [this, instancingCheck, shadowCacheCheck, occlusionCheck, volumetricCheck, asyncCullCheck, skyDirsSpin, ssrStepsSpin, pcssTapsSpin, ssrRoughSpin] {
         engine::RenderQuality q = viewport_->quality();
+        q.ssrMaxRoughness = static_cast<float>(ssrRoughSpin->value());
         q.skyOcclusionDirs = skyDirsSpin->value();
         q.ssrSteps = ssrStepsSpin->value();
         q.softShadowTaps = pcssTapsSpin->value();
@@ -2848,6 +2856,7 @@ void MainWindow::buildDocks()
     connect(occlusionCheck, &QCheckBox::toggled, this, applyFrameOption);
     for (QSpinBox* spin : {skyDirsSpin, ssrStepsSpin, pcssTapsSpin})
         connect(spin, qOverload<int>(&QSpinBox::valueChanged), this, applyFrameOption);
+    connect(ssrRoughSpin, qOverload<double>(&QDoubleSpinBox::valueChanged), this, applyFrameOption);
     auto* frameScroll = new QScrollArea(this);
     frameScroll->setWidget(framePanel);
     frameScroll->setWidgetResizable(true);
@@ -2857,7 +2866,7 @@ void MainWindow::buildDocks()
     addDockWidget(Qt::BottomDockWidgetArea, frameDock);
     tabifyDockWidget(logDock_, frameDock);
     auto* frameTimer = new QTimer(this);
-    connect(frameTimer, &QTimer::timeout, this, [this, frameLabel, frameDock, instancingCheck, shadowCacheCheck, volumetricCheck, asyncCullCheck, skyDirsSpin, ssrStepsSpin, pcssTapsSpin] {
+    connect(frameTimer, &QTimer::timeout, this, [this, frameLabel, frameDock, instancingCheck, shadowCacheCheck, volumetricCheck, asyncCullCheck, skyDirsSpin, ssrStepsSpin, pcssTapsSpin, ssrRoughSpin] {
         if (!frameDock->isVisible() || frameDock->visibleRegion().isEmpty())
             return;
         instancingCheck->blockSignals(true); // quality presets change these too
@@ -2881,6 +2890,11 @@ void MainWindow::buildDocks()
                 spin->setValue(value);
                 spin->blockSignals(false);
             }
+        if (!ssrRoughSpin->hasFocus()) {
+            ssrRoughSpin->blockSignals(true);
+            ssrRoughSpin->setValue(viewport_->quality().ssrMaxRoughness);
+            ssrRoughSpin->blockSignals(false);
+        }
         const engine::Renderer::FrameStats& f = viewport_->frameStats();
         const auto ms = [](double v) { return QString::number(v, 'f', 2); };
         QString html = "<table cellspacing='2'><tr><td><b>" + tr("Pass") + "</b></td><td align='right'>&nbsp;&nbsp;<b>CPU ms</b></td>"

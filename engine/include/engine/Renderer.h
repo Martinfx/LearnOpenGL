@@ -214,6 +214,8 @@ struct RenderQuality {
     int skyOcclusionDirs = 6;
     // Ray steps of the screen-space reflections (8..32; fewer steps grow faster, same reach).
     int ssrSteps = 28;
+    // Rougher surfaces than this keep the probe / sky reflection (no screen-space ray).
+    float ssrMaxRoughness = 0.6f;
     // Filter taps of the soft sun shadows (PCSS): 8 or 16.
     int softShadowTaps = 16;
 

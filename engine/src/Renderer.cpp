@@ -496,6 +496,7 @@ RenderQuality RenderQuality::preset(int level)
         q.volumetricFog = 1;
         q.skyOcclusionDirs = 4;
         q.ssrSteps = 16;
+        q.ssrMaxRoughness = 0.4f; // SSR was still the dearest part (3.7 ms) on the GTX 1060
         q.softShadowTaps = 8;
         break;
     case 3:
@@ -1126,7 +1127,7 @@ void Renderer::updateEnvironment(const Scene& scene, const RenderView& view)
     b.prevViewProj = ssrViewProj_;                     // the frame now in ssrColor_
     ssrPrevViewProj_ = view.projection * view.view;    // becomes ssrViewProj_ once this frame is recorded
     if (ssrView && ssrValid_)
-        b.ssr = glm::vec4(static_cast<float>(std::clamp(quality_.ssrSteps, 8, 32)), 60.0f, std::clamp(e.ssrIntensity, 0.0f, 1.0f), 0.6f);
+        b.ssr = glm::vec4(static_cast<float>(std::clamp(quality_.ssrSteps, 8, 32)), 60.0f, std::clamp(e.ssrIntensity, 0.0f, 1.0f), std::clamp(quality_.ssrMaxRoughness, 0.1f, 1.0f));
     if (volumetricActive(view)) {
         const float nearDepth = 0.5f, farDepth = std::clamp(e.fogVolumetricRange, 8.0f, 256.0f);
         b.volumetric = glm::vec4(1.0f, nearDepth, 1.0f / std::log(farDepth / nearDepth), farDepth);
