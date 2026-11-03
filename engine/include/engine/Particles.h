@@ -36,11 +36,18 @@ enum class SpriteBlend : std::uint8_t { Alpha, Additive, Distort };
 // renderer sorts batches back to front; instances are drawn in the given order).
 struct SpriteBatch {
     std::shared_ptr<TextureAsset> texture; // null = soft round dot
+    // Six-way lit smoke: `texture` rgb = light from the right, left and above (a = opacity),
+    // `lightMap` rgb = from below, the front and behind; the renderer mixes them by where the
+    // sun, the sky and the local lights are. Null = plain texture.
+    std::shared_ptr<TextureAsset> lightMap;
     int columns = 1, rows = 1;             // flipbook layout
     SpriteBlend blend = SpriteBlend::Alpha;
     bool lit = true;                       // shaded by sun and sky (smoke, dust); off for fire and sparks
     bool decal = false;                    // lies on a surface: drawn first, pulled toward the camera against z-fighting
     bool sheltered = false;                // hidden under roofs (rain occlusion map)
+    float soft = 0.0f;                     // m over which particles fade into the geometry behind them (0 = hard edge)
+    float nearFade = 0.0f;                 // m from the eye where they fade out (0 = never)
+    float scatter = 0.0f;                  // lit: forward scattering toward the eye
     float distance = 0.0f;                 // to the camera, for sorting batches
     std::vector<SpriteInstance> instances;
 };
@@ -65,6 +72,7 @@ struct ParticleEmitter {
     bool enabled = true;
     // Look
     std::filesystem::path texture;          // absolute image, empty = soft round dot
+    std::filesystem::path lightMap;         // six-way smoke: second sheet (light from below, front, behind), empty = off
     int columns = 1, rows = 1;              // flipbook cells
     float frameRate = 0.0f;                 // cells per second, 0 = once over the particle's life
     bool randomFrame = false;               // start on a random cell (debris, variants)
@@ -73,6 +81,9 @@ struct ParticleEmitter {
     bool stretch = false;                   // stretched along the velocity (sparks, rain)
     bool sheltered = false;                 // not drawn under roofs (rain, snow)
     float stretchFactor = 0.05f;            // seconds of travel the streak shows
+    float soft = 0.3f;                      // m: soft fade where particles meet geometry (0 = hard)
+    float nearFade = 0.0f;                  // m: fade out this close to the eye (big smoke, 0 = off)
+    float scatter = 1.5f;                   // lit: forward scattering, smoke glows between the eye and a light
     // Emission
     float rate = 10.0f;                     // particles per second
     int burst = 0;                          // particles at the start
@@ -81,6 +92,7 @@ struct ParticleEmitter {
     int maxParticles = 256;
     EmitterShape shape = EmitterShape::Point;
     glm::vec3 shapeSize{0.1f};              // sphere/disc: x = radius; box: half extents
+    glm::vec3 offset{0.0f};                 // m, the shape's centre in the effect's space (smoke above the flames)
     // Motion
     glm::vec3 direction{0.0f, 1.0f, 0.0f};
     float spread = 15.0f;                   // degrees around the direction (180 = all around)
@@ -91,6 +103,9 @@ struct ParticleEmitter {
     float levelWind = 0.0f;                 // 0..1 how much the level's wind (Environment) carries the particles
     float attract = 0.0f;                   // m/s² toward the effect's vertical axis (negative = away): vortices, anomalies
     float orbit = 0.0f;                     // m/s² around that axis (swirl), positive = counter-clockwise seen from above
+    float turbulence = 0.0f;                // m/s² of swirling, divergence-free noise (smoke curls, embers dance)
+    float turbulenceScale = 1.0f;           // m, size of the eddies
+    float buoyancy = 0.0f;                  // m/s² upward that fades over the life (hot smoke rises, then drifts)
     bool worldSpace = true;                 // particles stay where they were born when the effect moves
     // Appearance over life
     float lifeMin = 1.0f, lifeMax = 2.0f;   // seconds
@@ -98,6 +113,7 @@ struct ParticleEmitter {
     std::vector<ParticleKey> sizeCurve;     // multiplier (x), empty = constant
     std::vector<ParticleKey> colorCurve;    // rgba multiplier, empty = white
     glm::vec3 color{1.0f};                  // sRGB tint
+    float colorVariation = 0.0f;            // 0..1 random brightness and warmth per particle
     float intensity = 1.0f;                 // brightness (fire, sparks > 1 glow with bloom)
     float rotationMin = 0.0f, rotationMax = 0.0f;       // degrees at birth
     float spinMin = 0.0f, spinMax = 0.0f;               // degrees per second
@@ -125,6 +141,7 @@ struct ParticleEffect {
     std::vector<ParticleEmitter> emitters;
     // Runtime (loaded from the emitters' textures).
     std::vector<std::shared_ptr<TextureAsset>> textures;
+    std::vector<std::shared_ptr<TextureAsset>> lightMaps;
     bool looping() const; // some emitter runs until stopped
 };
 

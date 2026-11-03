@@ -1,24 +1,61 @@
-# Distant smoke column (a burning wreck on the horizon). Loops until stopped.
+# Distant smoke column (a burning wreck on the horizon): six-way lit puffs that rise, roll and lean
+# with the wind, thin wisps at the top. Loops until stopped.
 emitter "Smoke"
-texture "../textures/particles/smoke_8x8.png"
+texture "../textures/particles/smoke6_8x8_a.png"
+lightmap "../textures/particles/smoke6_8x8_b.png"
 flipbook 8 8 0 0
 lit 1
-rate 3
-max 80
+scatter 1.5
+soft 1
+rate 5
+max 120
 life 10 16
 shape disc 0.8 0 0
 direction 0 1 0
 spread 6
 speed 1.5 2.5
-gravity -0.01
+buoyancy 0.5
+drag 0.15
+turbulence 0.8 4
 wind 1.2 0 0.3
 level_wind 0.6
-size 2 3
+size 3 4.5
 size_key 0 0.5
 size_key 1 5
-color 0.15 0.15 0.15
+color 0.3 0.3 0.3
+color_var 0.3
 color_key 0 1 1 1 0
-color_key 0.08 1 1 1 0.7
+color_key 0.08 1 1 1 0.45
 color_key 1 1 1 1 0
 rotation 0 360
 spin -6 6
+emitter "Wisps"
+texture "../textures/particles/smoke6_wisp_8x8_a.png"
+lightmap "../textures/particles/smoke6_wisp_8x8_b.png"
+flipbook 8 8 0 0
+lit 1
+scatter 1.5
+soft 1
+rate 0.8
+max 20
+delay 4
+life 14 20
+shape disc 1.5 0 0
+offset 0 14 0
+direction 0 1 0
+spread 10
+speed 1 1.6
+drag 0.1
+turbulence 0.6 6
+wind 1.8 0 0.45
+level_wind 0.9
+size 6 9
+size_key 0 0.7
+size_key 1 2.5
+color 0.38 0.38 0.38
+color_var 0.25
+color_key 0 1 1 1 0
+color_key 0.15 1 1 1 0.4
+color_key 1 1 1 1 0
+rotation 0 360
+spin -3 3

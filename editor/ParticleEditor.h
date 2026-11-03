@@ -154,6 +154,15 @@ private:
     // Fields
     QLineEdit* name_ = nullptr;
     QLineEdit* texture_ = nullptr;
+    QLineEdit* lightMap_ = nullptr;
+    QDoubleSpinBox* soft_ = nullptr;
+    QDoubleSpinBox* nearFade_ = nullptr;
+    QDoubleSpinBox* scatter_ = nullptr;
+    class Vec3Editor* offset_ = nullptr;
+    QDoubleSpinBox* turbulence_ = nullptr;
+    QDoubleSpinBox* turbulenceScale_ = nullptr;
+    QDoubleSpinBox* buoyancy_ = nullptr;
+    QDoubleSpinBox* colorVariation_ = nullptr;
     QSpinBox* columns_ = nullptr;
     QSpinBox* rows_ = nullptr;
     QDoubleSpinBox* frameRate_ = nullptr;

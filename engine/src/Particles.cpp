@@ -139,7 +139,21 @@ bool loadParticleFile(ParticleEffect& effect, const std::filesystem::path& file,
                 std::filesystem::path path = fromUtf8(p);
                 e->texture = (path.is_relative() ? dir / path : path).lexically_normal();
             }
-        } else if (key == "flipbook") ok = static_cast<bool>(ls >> e->columns >> e->rows >> e->frameRate >> e->randomFrame);
+        } else if (key == "lightmap") {
+            std::string p;
+            ok = static_cast<bool>(ls >> std::quoted(p));
+            if (ok && !p.empty()) {
+                std::filesystem::path path = fromUtf8(p);
+                e->lightMap = (path.is_relative() ? dir / path : path).lexically_normal();
+            }
+        } else if (key == "soft") ok = static_cast<bool>(ls >> e->soft);
+        else if (key == "near_fade") ok = static_cast<bool>(ls >> e->nearFade);
+        else if (key == "scatter") ok = static_cast<bool>(ls >> e->scatter);
+        else if (key == "offset") ok = static_cast<bool>(ls >> e->offset.x >> e->offset.y >> e->offset.z);
+        else if (key == "turbulence") ok = static_cast<bool>(ls >> e->turbulence >> e->turbulenceScale);
+        else if (key == "buoyancy") ok = static_cast<bool>(ls >> e->buoyancy);
+        else if (key == "color_var") ok = static_cast<bool>(ls >> e->colorVariation);
+        else if (key == "flipbook") ok = static_cast<bool>(ls >> e->columns >> e->rows >> e->frameRate >> e->randomFrame);
         else if (key == "blend") {
             std::string v;
             ok = static_cast<bool>(ls >> v);
@@ -225,18 +239,29 @@ bool saveParticleFile(const ParticleEffect& effect, const std::filesystem::path&
             const std::filesystem::path rel = std::filesystem::absolute(e.texture).lexically_relative(dir);
             out << "texture " << std::quoted(toUtf8(rel.empty() ? e.texture : rel)) << '\n';
         }
+        if (!e.lightMap.empty()) {
+            const std::filesystem::path rel = std::filesystem::absolute(e.lightMap).lexically_relative(dir);
+            out << "lightmap " << std::quoted(toUtf8(rel.empty() ? e.lightMap : rel)) << '\n';
+        }
         out << "flipbook " << e.columns << ' ' << e.rows << ' ' << e.frameRate << ' ' << e.randomFrame << '\n';
         out << "blend " << (e.blend == SpriteBlend::Additive ? "additive" : e.blend == SpriteBlend::Distort ? "distort" : "alpha") << '\n';
         out << "lit " << e.lit << '\n';
         out << "stretch " << e.stretch << ' ' << e.stretchFactor << '\n';
         if (e.sheltered)
             out << "sheltered 1\n";
+        out << "soft " << e.soft << '\n';
+        if (e.nearFade != 0.0f)
+            out << "near_fade " << e.nearFade << '\n';
+        if (e.lit)
+            out << "scatter " << e.scatter << '\n';
         out << "rate " << e.rate << '\n';
         out << "burst " << e.burst << '\n';
         out << "duration " << e.duration << '\n';
         out << "delay " << e.delay << '\n';
         out << "max " << e.maxParticles << '\n';
         out << "shape " << emitterShapeName(e.shape) << ' ' << e.shapeSize.x << ' ' << e.shapeSize.y << ' ' << e.shapeSize.z << '\n';
+        if (e.offset != glm::vec3(0.0f))
+            out << "offset " << e.offset.x << ' ' << e.offset.y << ' ' << e.offset.z << '\n';
         out << "direction " << e.direction.x << ' ' << e.direction.y << ' ' << e.direction.z << '\n';
         out << "spread " << e.spread << '\n';
         out << "speed " << e.speedMin << ' ' << e.speedMax << '\n';
@@ -247,6 +272,10 @@ bool saveParticleFile(const ParticleEffect& effect, const std::filesystem::path&
             out << "level_wind " << e.levelWind << '\n';
         if (e.attract != 0.0f || e.orbit != 0.0f)
             out << "attract " << e.attract << ' ' << e.orbit << '\n';
+        if (e.turbulence != 0.0f)
+            out << "turbulence " << e.turbulence << ' ' << e.turbulenceScale << '\n';
+        if (e.buoyancy != 0.0f)
+            out << "buoyancy " << e.buoyancy << '\n';
         out << "world_space " << e.worldSpace << '\n';
         out << "life " << e.lifeMin << ' ' << e.lifeMax << '\n';
         out << "size " << e.sizeMin << ' ' << e.sizeMax << '\n';
@@ -254,6 +283,8 @@ bool saveParticleFile(const ParticleEffect& effect, const std::filesystem::path&
             out << "size_key " << k.t << ' ' << k.value.x << '\n';
         out << "color " << e.color.r << ' ' << e.color.g << ' ' << e.color.b << '\n';
         out << "intensity " << e.intensity << '\n';
+        if (e.colorVariation != 0.0f)
+            out << "color_var " << e.colorVariation << '\n';
         for (const ParticleKey& k : e.colorCurve)
             out << "color_key " << k.t << ' ' << k.value.r << ' ' << k.value.g << ' ' << k.value.b << ' ' << k.value.a << '\n';
         out << "rotation " << e.rotationMin << ' ' << e.rotationMax << '\n';
@@ -276,11 +307,15 @@ bool saveParticleFile(const ParticleEffect& effect, const std::filesystem::path&
 void loadParticleTextures(ParticleEffect& effect)
 {
     effect.textures.assign(effect.emitters.size(), nullptr);
+    effect.lightMaps.assign(effect.emitters.size(), nullptr);
     for (std::size_t i = 0; i < effect.emitters.size(); ++i) {
         const std::filesystem::path& p = effect.emitters[i].texture;
-        std::error_code ec;
         if (!p.empty() && fileExists(p))
             effect.textures[i] = loadTextureAsset(p, nullptr, true);
+        // The light maps hold gamma-encoded light like a colour image: read as sRGB too.
+        const std::filesystem::path& m = effect.emitters[i].lightMap;
+        if (!m.empty() && fileExists(m))
+            effect.lightMaps[i] = loadTextureAsset(m, nullptr, true);
     }
 }
 
@@ -357,6 +392,8 @@ struct Particle {
     float size = 0.1f;
     float rotation = 0.0f, spin = 0.0f;
     float frame = 0.0f;
+    float shade = 1.0f;          // colour variation: brightness
+    float warmth = 0.0f;         // and a shift toward warm (+) or cool (-)
 };
 
 struct EmitterState {
@@ -517,12 +554,31 @@ void ParticleSystem::setWind(glm::vec3 metresPerSecond) { impl_->wind = metresPe
 void ParticleSystem::setGroundQuery(std::function<float(glm::vec3)> query) { impl_->groundQuery = std::move(query); }
 
 namespace {
+// Divergence-free swirl (the curl of a sum of travelling sine waves): particles curl and
+// fold like smoke without bunching up or spreading out. About unit length on average.
+glm::vec3 curlNoise(glm::vec3 p, float time, float seed)
+{
+    // Wave vectors of three potentials, two octaves (fixed: same field every run).
+    static const glm::vec3 kWaves[6] = {{1.00f, 0.31f, -0.62f}, {-0.45f, 1.10f, 0.27f}, {0.38f, -0.53f, 1.04f},
+                                        {2.10f, -1.37f, 0.66f}, {0.71f, 1.93f, -1.48f}, {-1.62f, 0.58f, 2.05f}};
+    glm::vec3 grad[3] = {glm::vec3(0.0f), glm::vec3(0.0f), glm::vec3(0.0f)}; // gradients of the three potentials
+    for (int c = 0; c < 3; ++c)
+        for (int o = 0; o < 2; ++o) {
+            const glm::vec3 k = kWaves[o * 3 + (c + o) % 3];
+            const float amp = o == 0 ? 1.0f : 0.45f;
+            const float phase = glm::dot(k, p) + time * (0.6f + 0.35f * static_cast<float>(c + o)) + seed * (1.7f + static_cast<float>(c));
+            grad[c] += k * (amp * std::cos(phase));
+        }
+    // curl = (dψz/dy - dψy/dz, dψx/dz - dψz/dx, dψy/dx - dψx/dy)
+    return glm::vec3(grad[2].y - grad[1].z, grad[0].z - grad[2].x, grad[1].x - grad[0].y) * 0.55f;
+}
+
 // One new particle of emitter `e` at `origin` (world): the emitter's shape, cone, speed, life...
 void emitParticle(const ParticleEmitter& e, EmitterState& st, glm::vec3 origin, const glm::mat3& rotation, glm::vec3 effectPosition,
                   std::mt19937& rng, float back)
 {
     Particle p;
-    const glm::vec3 local = randomInShape(e, rng);
+    const glm::vec3 local = randomInShape(e, rng) + e.offset;
     const glm::vec3 dir = randomInCone(e.direction, e.spread, rng);
     p.position = e.worldSpace ? origin + rotation * local : glm::transpose(rotation) * (origin - effectPosition) + local;
     p.velocity = (e.worldSpace ? rotation * dir : dir) * range(e.speedMin, e.speedMax, rng);
@@ -532,6 +588,12 @@ void emitParticle(const ParticleEmitter& e, EmitterState& st, glm::vec3 origin, 
     p.spin = glm::radians(range(e.spinMin, e.spinMax, rng));
     const int cells = e.columns * e.rows;
     p.frame = e.randomFrame && cells > 1 ? static_cast<float>(std::uniform_int_distribution<int>(0, cells - 1)(rng)) : 0.0f;
+    if (e.colorVariation > 0.0f) {
+        std::uniform_real_distribution<float> v(-1.0f, 1.0f);
+        const float k = std::clamp(e.colorVariation, 0.0f, 1.0f);
+        p.shade = 1.0f + v(rng) * 0.5f * k;
+        p.warmth = v(rng) * k;
+    }
     p.age = back;
     p.position += p.velocity * back;
     st.particles.push_back(p);
@@ -569,9 +631,17 @@ void ParticleSystem::update(float dt)
             const float damp = std::exp(-std::max(0.0f, e.drag) * dt);
             const bool swirl = e.attract != 0.0f || e.orbit != 0.0f;
             const glm::vec3 axis = e.worldSpace ? inst.position : glm::vec3(0.0f);
+            const float invEddy = 1.0f / std::max(e.turbulenceScale, 0.01f);
+            const float seed = static_cast<float>(inst.id % 61u) * 0.73f + static_cast<float>(k) * 2.9f;
             for (Particle& p : st.particles) {
                 p.age += dt;
                 glm::vec3 a = accel;
+                if (e.buoyancy != 0.0f) { // rises while it is hot, then just drifts
+                    const float cool = 1.0f - std::clamp(p.age / p.life, 0.0f, 1.0f);
+                    a.y += e.buoyancy * cool * cool;
+                }
+                if (e.turbulence != 0.0f) // eddies grow with the particle (big old puffs roll slower)
+                    a += curlNoise(p.position * invEddy, inst.time * invEddy, seed) * e.turbulence;
                 if (swirl) { // pull toward / swirl around the effect's vertical axis
                     glm::vec3 in(axis.x - p.position.x, 0.0f, axis.z - p.position.z);
                     const float len = std::sqrt(in.x * in.x + in.z * in.z);
@@ -709,6 +779,10 @@ void ParticleSystem::appendSprites(glm::vec3 eye, const glm::mat3& camera, std::
                 continue;
             SpriteBatch b;
             b.texture = k < fx.textures.size() ? fx.textures[k] : nullptr;
+            b.lightMap = k < fx.lightMaps.size() ? fx.lightMaps[k] : nullptr;
+            b.soft = e.soft;
+            b.nearFade = e.nearFade;
+            b.scatter = e.scatter;
             b.columns = e.columns;
             b.rows = e.rows;
             b.blend = e.blend;
@@ -747,7 +821,10 @@ void ParticleSystem::appendSprites(glm::vec3 eye, const glm::mat3& camera, std::
                     frame = e.frameRate > 0.0f ? std::fmod(p.age * e.frameRate, static_cast<float>(cells))
                                                : t * static_cast<float>(cells - 1);
                 s.frame = frame;
-                s.color = glm::vec4(tint * glm::vec3(c), c.a);
+                glm::vec3 col = tint * glm::vec3(c);
+                if (p.shade != 1.0f || p.warmth != 0.0f)
+                    col *= p.shade * glm::vec3(1.0f + 0.12f * p.warmth, 1.0f, 1.0f - 0.12f * p.warmth);
+                s.color = glm::vec4(col, c.a);
                 b.instances.push_back(s);
                 center += s.position;
             }

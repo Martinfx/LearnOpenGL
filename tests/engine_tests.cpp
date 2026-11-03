@@ -3224,6 +3224,50 @@ void testTimeOfDay()
         check(engine::loadParticleFile(loaded, "sheltered.particle", &err) && !loaded.emitters.empty() && loaded.emitters[0].sheltered && loaded.emitters[0].levelWind == 0.6f,
               "particle sheltered round trip");
     }
+    {
+        // Smoke and fire keys: six-way light map, soft particles, turbulence, buoyancy, offset, colour variation.
+        engine::ParticleEffect fx;
+        fx.emitters.emplace_back();
+        engine::ParticleEmitter& e = fx.emitters[0];
+        e.lightMap = std::filesystem::absolute("smoke6_8x8_b.png");
+        e.soft = 0.4f;
+        e.nearFade = 0.8f;
+        e.scatter = 2.0f;
+        e.offset = glm::vec3(0.0f, 0.65f, 0.1f);
+        e.turbulence = 1.2f;
+        e.turbulenceScale = 1.5f;
+        e.buoyancy = 0.9f;
+        e.colorVariation = 0.35f;
+        check(engine::saveParticleFile(fx, "smoke6.particle", &err), "save particle: " + err);
+        engine::ParticleEffect loaded;
+        check(engine::loadParticleFile(loaded, "smoke6.particle", &err) && loaded.emitters.size() == 1, "load smoke particle: " + err);
+        const engine::ParticleEmitter& l = loaded.emitters[0];
+        check(l.lightMap.filename() == "smoke6_8x8_b.png" && l.soft == 0.4f && l.nearFade == 0.8f && l.scatter == 2.0f &&
+                  l.offset == glm::vec3(0.0f, 0.65f, 0.1f) && l.turbulence == 1.2f && l.turbulenceScale == 1.5f && l.buoyancy == 0.9f &&
+                  l.colorVariation == 0.35f,
+              "particle smoke keys round trip");
+        // Turbulence and buoyancy move the particles, and stay finite.
+        engine::ParticleEmitter& m = fx.emitters[0];
+        m.lightMap.clear();
+        m.rate = 50.0f;
+        m.speedMin = m.speedMax = 0.0f;
+        m.spread = 0.0f;
+        m.lifeMin = m.lifeMax = 3.0f;
+        engine::ParticleSystem ps;
+        const auto h = ps.spawn(std::make_shared<engine::ParticleEffect>(fx), glm::vec3(0.0f));
+        for (int i = 0; i < 60; ++i)
+            ps.update(1.0f / 30.0f);
+        std::vector<engine::SpriteBatch> batches;
+        ps.appendSprites(glm::vec3(0.0f, 1.0f, 5.0f), glm::mat3(1.0f), batches);
+        bool finite = !batches.empty(), rose = false, swirled = false;
+        for (const engine::SpriteBatch& b : batches)
+            for (const engine::SpriteInstance& s : b.instances) {
+                finite = finite && std::isfinite(s.position.x) && std::isfinite(s.position.y) && std::isfinite(s.position.z);
+                rose = rose || s.position.y > 1.0f;
+                swirled = swirled || std::abs(s.position.x) > 0.05f;
+            }
+        check(h != 0 && finite && rose && swirled && !batches.empty() && batches[0].soft == 0.4f, "particle turbulence and buoyancy");
+    }
     char text[8];
     check(std::string(engine::formatHour(21.25f, text)) == "21:15" && std::string(engine::formatHour(24.5f, text)) == "00:30", "format hour");
 }

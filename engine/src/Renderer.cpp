@@ -3409,6 +3409,20 @@ void Renderer::drawSprites(const std::vector<SpriteBatch>& batches, const glm::m
     glNamedBufferSubData(spriteBuffer_, 0, static_cast<GLsizeiptr>(all.size() * sizeof(SpriteInstance)), all.data());
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, spriteBuffer_);
 
+    // Soft particles read the opaque depth: a copy, the depth buffer itself stays bound for the test.
+    bool soft = false;
+    if (!overlay)
+        for (const SpriteBatch* b : order)
+            soft = soft || (b->soft > 0.0f && !b->decal);
+    if (soft) {
+        glCopyImageSubData(depthTex_, GL_TEXTURE_2D, 0, 0, 0, 0, sceneDepthCopy_, GL_TEXTURE_2D, 0, 0, 0, 0, width_, height_, 1);
+        glBindTextureUnit(1, sceneDepthCopy_);
+    }
+    if (!overlay) { // sun shadow in the air (raw depth like pbr.frag)
+        glBindTextureUnit(6, shadowTex_ ? shadowTex_ : shadowDummy_);
+        glBindSampler(6, shadowRawSampler_);
+    }
+
     const Program& p = programs_.sprite;
     glUseProgram(p.id);
     glUniformMatrix4fv(p.loc("uSpriteViewProj"), 1, GL_FALSE, glm::value_ptr(viewProj));
@@ -3429,6 +3443,14 @@ void Renderer::drawSprites(const std::vector<SpriteBatch>& batches, const glm::m
         }
         glBindTextureUnit(0, tex ? tex : whiteTex_);
         glUniform1i(p.loc("uSpriteHasTexture"), tex ? 1 : 0);
+        unsigned lightMap = 0;
+        if (tex && b.lightMap && b.lightMap->texture && b.lightMap->texture->valid())
+            lightMap = texture(*b.lightMap->texture);
+        glBindTextureUnit(2, lightMap ? lightMap : whiteTex_);
+        glUniform1i(p.loc("uSpriteSixWay"), lightMap ? 1 : 0);
+        glUniform1f(p.loc("uSpriteSoft"), soft && b.soft > 0.0f && !b.decal ? 1.0f / b.soft : 0.0f);
+        glUniform1f(p.loc("uSpriteNearFade"), overlay ? 0.0f : b.nearFade);
+        glUniform1f(p.loc("uSpriteScatter"), b.scatter);
         glUniform2i(p.loc("uSpriteGrid"), std::max(1, b.columns), std::max(1, b.rows));
         glUniform1i(p.loc("uSpriteLit"), b.lit && !overlay && shading != Shading::Unlit ? 1 : 0);
         glUniform1i(p.loc("uSpriteNoFog"), overlay ? 1 : 0);

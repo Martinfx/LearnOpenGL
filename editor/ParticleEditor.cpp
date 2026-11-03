@@ -537,6 +537,23 @@ ParticleEditor::ParticleEditor(QWidget* parent) : QWidget(parent)
     texLayout->addWidget(browse);
     texLayout->addWidget(clearTex);
     form->addRow(tr("Texture"), texRow);
+    lightMap_ = new QLineEdit(form_);
+    lightMap_->setReadOnly(true);
+    lightMap_->setPlaceholderText(tr("none (plain texture)"));
+    lightMap_->setToolTip(tr("Six-way lit smoke: second sheet with the light from below, the front and behind "
+                             "(the texture holds right, left, above and opacity). Picked automatically for *_a.png textures "
+                             "with a *_b.png next to them."));
+    auto* browseMap = new QPushButton(tr("..."), form_);
+    browseMap->setMaximumWidth(32);
+    auto* clearMap = new QPushButton(tr("x"), form_);
+    clearMap->setMaximumWidth(28);
+    auto* mapRow = new QWidget(form_);
+    auto* mapLayout = new QHBoxLayout(mapRow);
+    mapLayout->setContentsMargins(0, 0, 0, 0);
+    mapLayout->addWidget(lightMap_, 1);
+    mapLayout->addWidget(browseMap);
+    mapLayout->addWidget(clearMap);
+    form->addRow(tr("Six-way light map"), mapRow);
     columns_ = new QSpinBox(form_);
     rows_ = new QSpinBox(form_);
     for (QSpinBox* s : {columns_, rows_}) {
@@ -552,7 +569,11 @@ ParticleEditor::ParticleEditor(QWidget* parent) : QWidget(parent)
     blend_->addItems({tr("Alpha (smoke, dust)"), tr("Additive (fire, sparks, glow)"), tr("Distort (heat haze: bends the image, strength = alpha x intensity)")});
     form->addRow(tr("Blend"), blend_);
     lit_ = new QCheckBox(tr("Lit by sun and sky"), form_);
-    form->addRow(QString(), lit_);
+    scatter_ = number(0, 10, 0.1, 2, form_, tr("Forward scattering: lit smoke between the eye and the sun or a fire glows"));
+    form->addRow(lit_, scatter_);
+    soft_ = number(0, 10, 0.05, 2, form_, tr("Metres over which particles fade where they meet walls and ground (soft particles); 0 = hard edge"));
+    nearFade_ = number(0, 20, 0.1, 2, form_, tr("Particles fade out this close to the eye (no flat wall of smoke in the face); 0 = off"));
+    form->addRow(tr("Soft / near fade m"), pair(soft_, nearFade_, form_));
     stretch_ = new QCheckBox(tr("Stretch along motion"), form_);
     stretchFactor_ = number(0, 1, 0.01, 3, form_, tr("Seconds of travel the streak shows"));
     form->addRow(tr("Streaks"), pair(stretch_, stretchFactor_, form_));
@@ -581,6 +602,9 @@ ParticleEditor::ParticleEditor(QWidget* parent) : QWidget(parent)
     shapeSize_ = new Vec3Editor(0, 1000, 0.05, form_);
     shapeSize_->setToolTip(tr("Sphere/disc: X = radius; box: half size (m)"));
     form->addRow(tr("Shape size"), shapeSize_);
+    offset_ = new Vec3Editor(-100, 100, 0.05, form_);
+    offset_->setToolTip(tr("Centre of the shape in the effect's space (m): e.g. smoke starting above the flames"));
+    form->addRow(tr("Offset"), offset_);
 
     section(tr("Motion"));
     direction_ = new Vec3Editor(-1, 1, 0.1, form_);
@@ -603,6 +627,11 @@ ParticleEditor::ParticleEditor(QWidget* parent) : QWidget(parent)
     form->addRow(tr("Attract"), attract_);
     orbit_ = number(-100, 100, 0.5, 2, form_, tr("m/s² around the effect's vertical axis (swirl)"));
     form->addRow(tr("Orbit"), orbit_);
+    turbulence_ = number(0, 200, 0.1, 2, form_, tr("m/s² of swirling noise: smoke curls and folds, embers dance"));
+    turbulenceScale_ = number(0.01, 100, 0.1, 2, form_, tr("Size of the eddies in metres"));
+    form->addRow(tr("Turbulence / eddy m"), pair(turbulence_, turbulenceScale_, form_));
+    buoyancy_ = number(-50, 50, 0.1, 2, form_, tr("m/s² upward that fades over the life: hot smoke shoots up, cools and drifts"));
+    form->addRow(tr("Buoyancy"), buoyancy_);
     worldSpace_ = new QCheckBox(tr("World space (stays behind when the effect moves)"), form_);
     form->addRow(QString(), worldSpace_);
 
@@ -620,6 +649,8 @@ ParticleEditor::ParticleEditor(QWidget* parent) : QWidget(parent)
     form->addRow(tr("Tint / intensity"), pair(color_, intensity_, form_));
     colorCurve_ = new GradientWidget(form_);
     form->addRow(tr("Color curve"), colorCurve_);
+    colorVariation_ = number(0, 1, 0.05, 2, form_, tr("Random brightness and warmth per particle (0 = all alike)"));
+    form->addRow(tr("Color variation"), colorVariation_);
     rotationMin_ = number(-360, 360, 5, 0, form_);
     rotationMax_ = number(-360, 360, 5, 0, form_);
     form->addRow(tr("Rotation °"), pair(rotationMin_, rotationMax_, form_));
@@ -672,13 +703,14 @@ ParticleEditor::ParticleEditor(QWidget* parent) : QWidget(parent)
         connect(s, &QSpinBox::valueChanged, this, changed);
     for (QDoubleSpinBox* s : {frameRate_, stretchFactor_, rate_, duration_, delay_, spread_, speedMin_, speedMax_, gravity_, drag_, levelWind_, attract_, orbit_,
                               lifeMin_, lifeMax_, sizeMin_, sizeMax_, intensity_, rotationMin_, rotationMax_, spinMin_, spinMax_,
-                              bounce_, friction_, lightIntensity_, lightRange_, lightFlicker_})
+                              bounce_, friction_, lightIntensity_, lightRange_, lightFlicker_,
+                              soft_, nearFade_, scatter_, turbulence_, turbulenceScale_, buoyancy_, colorVariation_})
         connect(s, &QDoubleSpinBox::valueChanged, this, changed);
     for (QCheckBox* c : {randomFrame_, lit_, stretch_, sheltered_, worldSpace_, light_})
         connect(c, &QCheckBox::toggled, this, changed);
     for (QComboBox* c : {blend_, shape_, collision_, onDeath_})
         connect(c, &QComboBox::activated, this, changed);
-    for (Vec3Editor* v : {shapeSize_, direction_, wind_})
+    for (Vec3Editor* v : {shapeSize_, direction_, wind_, offset_})
         connect(v, &Vec3Editor::valueEdited, this, changed);
     connect(sizeCurve_, &CurveWidget::edited, this, changed);
     connect(colorCurve_, &GradientWidget::edited, this, changed);
@@ -713,6 +745,13 @@ ParticleEditor::ParticleEditor(QWidget* parent) : QWidget(parent)
         if (file.isEmpty())
             return;
         e->texture = toPath(file);
+        // Six-way smoke: name_a.png comes with name_b.png.
+        const QString base = QFileInfo(file).completeBaseName();
+        if (base.endsWith("_a")) {
+            const QString other = QFileInfo(file).absolutePath() + "/" + base.left(base.size() - 2) + "_b." + QFileInfo(file).suffix();
+            if (QFileInfo::exists(other))
+                e->lightMap = toPath(other);
+        }
         // Flipbook layout from names like smoke_8x8.png.
         const QRegularExpressionMatch m = QRegularExpression("(\\d+)x(\\d+)").match(QFileInfo(file).completeBaseName());
         if (m.hasMatch()) {
@@ -726,6 +765,27 @@ ParticleEditor::ParticleEditor(QWidget* parent) : QWidget(parent)
     connect(clearTex, &QPushButton::clicked, this, [this] {
         if (engine::ParticleEmitter* e = current()) {
             e->texture.clear();
+            engine::loadParticleTextures(*effect_);
+            showEmitter();
+            edited();
+        }
+    });
+    connect(browseMap, &QPushButton::clicked, this, [this] {
+        engine::ParticleEmitter* e = current();
+        if (!e)
+            return;
+        const QString start = e->texture.empty() ? assetPath("textures/particles") : QFileInfo(toQString(e->texture)).absolutePath();
+        const QString file = QFileDialog::getOpenFileName(this, tr("Six-way light map"), start, tr("Images (*.png *.jpg *.jpeg *.tga)"));
+        if (file.isEmpty())
+            return;
+        e->lightMap = toPath(file);
+        engine::loadParticleTextures(*effect_);
+        showEmitter();
+        edited();
+    });
+    connect(clearMap, &QPushButton::clicked, this, [this] {
+        if (engine::ParticleEmitter* e = current()) {
+            e->lightMap.clear();
             engine::loadParticleTextures(*effect_);
             showEmitter();
             edited();
@@ -897,6 +957,16 @@ void ParticleEditor::showEmitter()
     updating_ = true;
     name_->setText(QString::fromStdString(e->name));
     texture_->setText(e->texture.empty() ? QString() : QDir(assetRoot()).relativeFilePath(toQString(e->texture)));
+    lightMap_->setText(e->lightMap.empty() ? QString() : QDir(assetRoot()).relativeFilePath(toQString(e->lightMap)));
+    soft_->setValue(e->soft);
+    nearFade_->setValue(e->nearFade);
+    scatter_->setValue(e->scatter);
+    scatter_->setEnabled(e->lit);
+    offset_->setValue(e->offset);
+    turbulence_->setValue(e->turbulence);
+    turbulenceScale_->setValue(e->turbulenceScale);
+    buoyancy_->setValue(e->buoyancy);
+    colorVariation_->setValue(e->colorVariation);
     columns_->setValue(e->columns);
     rows_->setValue(e->rows);
     frameRate_->setValue(e->frameRate);
@@ -977,6 +1047,15 @@ void ParticleEditor::edited()
                : blend_->currentIndex() == 2 ? engine::SpriteBlend::Distort
                                              : engine::SpriteBlend::Alpha;
     e->lit = lit_->isChecked();
+    e->soft = static_cast<float>(soft_->value());
+    e->nearFade = static_cast<float>(nearFade_->value());
+    e->scatter = static_cast<float>(scatter_->value());
+    scatter_->setEnabled(e->lit);
+    e->offset = offset_->value();
+    e->turbulence = static_cast<float>(turbulence_->value());
+    e->turbulenceScale = static_cast<float>(turbulenceScale_->value());
+    e->buoyancy = static_cast<float>(buoyancy_->value());
+    e->colorVariation = static_cast<float>(colorVariation_->value());
     e->stretch = stretch_->isChecked();
     e->sheltered = sheltered_->isChecked();
     e->stretchFactor = static_cast<float>(stretchFactor_->value());

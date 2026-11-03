@@ -9,6 +9,9 @@ the name; frame 0 is the top-left tile, frames run left to right, then top to bo
 | `fire_8x8.png` | 2048² | 64, **seamless loop** (63 → 0) | Flame tongue, blackbody colours, rounded base at the bottom of the tile |
 | `explosion_8x8.png` | 2048² | 64, one-shot | Hot fireball that burns out over the first half and leaves dark rising smoke |
 | `muzzle_flash_2x2.png` | 1024² (512 px tiles) | 4 variants | Front view of a rifle muzzle blast: white core, 3–5 turbulent flame lobes |
+| `smoke6_8x8_a.png` + `_b.png` | 2048² (256 px tiles) | 64, one-shot | **Six-way lit** smoke puff: a: r = light from the right, g = left, b = above, a = opacity; b: r = below, g = front, b = behind |
+| `smoke6_wisp_8x8_a.png` + `_b.png` | 2048² | 64, one-shot | Thinner torn wisps for the top of a column, same six-way layout |
+| `fire_loop_8x8.png` | 2048² | 64, **seamless loop** | Wide fire with tongues that tear off, blackbody colours (additive) |
 | `spark.png` | 64×512 | 1 | Thin bright streak, head at the top; stretch along velocity |
 | `dust.png` | 512² | 1 | Soft brown-grey dust puff, lit from above |
 | `debris_4x4.png` | 1024² (256 px tiles) | 16 variants | Small chips: 12 concrete, 4 wood splinters (tiles 3, 7, 11, 15) |
@@ -26,3 +29,9 @@ Cycles (noise-shaped density, blackbody emission), muzzle flash, spark and raind
 debris chips are rendered with the Poly Haven CC0 scans `concrete_wall_007` and `rough_wood` from
 `../pbr/`. **CC0 1.0**. The anomaly textures (arc, acid sheen, marks) are procedural noise from `source/anomaly_textures.py` (numpy + Pillow, seconds). Rebuild: `python3 -I assets/textures/particles/source/particles.py [smoke fire ...]`
 (needs `pip install bpy numpy`, about 30 min on 4 CPU cores for everything).
+
+The six-way sheets and `fire_loop_8x8.png` come from `source/smoke_fire.py` (numpy + Pillow, no Blender): a 3D density
+volume is ray marched with self-shadowing from six directions; light maps are stored with a 1/2.2 gamma (read as sRGB).
+Use them with the emitter keys `texture "..._a.png"` and `lightmap "..._b.png"`: the renderer lights each particle by the
+sun (with shadows), the sky and nearby lights. Rebuild: `python3 -I assets/textures/particles/source/smoke_fire.py [smoke wisp fire]`
+(about 10 min).
