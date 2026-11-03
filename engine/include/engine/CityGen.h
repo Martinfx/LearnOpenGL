@@ -327,9 +327,19 @@ struct PlanMarker {
     glm::vec3 position{0.0f};
 };
 
+// A climbable ladder (entity type "ladder", style none: the mesh is the house's), e.g. a fire
+// escape's drop ladder let down to the ground.
+struct PlanLadder {
+    std::string name, group;
+    glm::vec3 position{0.0f}; // bottom centre
+    float yaw = 0.0f;         // the climber faces this way (entity yaw: 0 = +X)
+    float height = 3.0f;
+};
+
 struct Plan {
     std::vector<PlanGroup> groups;   // parents before children
     std::vector<PlanMarker> markers;
+    std::vector<PlanLadder> ladders;
     std::vector<Placement> placements;
     std::vector<GeneratedBuilding> generated;
     std::filesystem::path textures;  // texture sets of the generated houses
@@ -357,7 +367,7 @@ struct CityObjects {
     std::vector<Group> groups;
     std::vector<Box> boxes;
     std::vector<Model> models;
-    std::vector<Entity> entities;     // map markers
+    std::vector<Entity> entities;     // map markers, ladders
     std::shared_ptr<Terrain> terrain; // the ground, when the plan has one
     std::vector<std::string> errors;
     int housesWritten = 0;            // generated houses written now (others were cached)

@@ -4933,6 +4933,23 @@ void testCityGrammarHouse()
         check(m.localBounds.max.y > height - 0.5f && m.localBounds.max.y < height + 6.0f, "model as tall as the house");
         check(m.localBounds.min.x > -11.5f && m.localBounds.max.x < 11.5f, "model within its footprint (plus cornice)");
     }
+    // Fire escapes: some drop ladders are let down, each gives a climbable spot outside its railing.
+    {
+        int spots = 0, good = 0;
+        for (std::uint32_t seed = 1; seed <= 12; ++seed) {
+            BuildingSpec fe = b;
+            fe.seed = seed;
+            fe.floors = 6;
+            fe.style.fireEscapes = 1.0f;
+            for (const LadderSpot& sp : ladderSpots(fe)) {
+                ++spots;
+                const float firstPlatform = fe.style.groundStorey - 0.05f;
+                good += std::abs(glm::length(sp.normal) - 1.0f) < 1e-3f && sp.position.y == 0.0f && sp.height > firstPlatform + 0.9f &&
+                        sp.height < firstPlatform + 1.3f;
+            }
+        }
+        check(spots > 0 && good == spots, "fire escapes: let-down drop ladders are climbable (" + std::to_string(good) + "/" + std::to_string(spots) + ")");
+    }
     // A bare concrete frame on the same footprint: columns, slabs, a collapsed side.
     BuildingSpec sk = b;
     sk.style.role = "skeleton";

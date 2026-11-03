@@ -160,6 +160,7 @@ public:
     Mesh mesh;
     int windows = 0;
     std::vector<BalconySpot> balconies_;
+    std::vector<LadderSpot> ladders_;
 
     void run()
     {
@@ -648,13 +649,21 @@ private:
                 }
             }
         }
-        // The drop ladder at the first platform, pulled up (bottom 2.6 m above the pavement).
+        // The drop ladder at the first platform: on most houses pulled up (bottom 2.6 m above the
+        // pavement), on some let down to the ground long ago, so the player can climb up (ladderSpots).
+        // Its own random stream: the rest of the house stays as it was.
         if (lod_ == 0) {
-            const float y = floorY(1) - 0.05f, s = (s0 + s1) * 0.5f;
+            // At the end the first stair leaves free (it climbs from the far end towards this one).
+            const float y = floorY(1) - 0.05f, s = s0 + 0.55f;
+            Rng drop(b_.seed ^ (0xD70Full + static_cast<std::uint64_t>(j0) * 0x9E37ull + static_cast<std::uint64_t>(std::lround(F.o.x * 7.0f + F.o.z * 13.0f))));
+            const bool down = drop.chance(0.45f);
+            const float bottom = down ? 0.0f : std::max(2.6f, y - 1.8f);
             for (const float o : {-0.22f, 0.22f})
-                bar(mesh, iron, F.at(s + o, y + 0.9f, -D + 0.08f), F.at(s + o, std::max(2.6f, y - 1.8f), -D + 0.08f), 0.04f, 0.04f);
-            for (float yy = std::max(2.6f, y - 1.8f) + 0.1f; yy < y + 0.9f; yy += 0.3f)
+                bar(mesh, iron, F.at(s + o, y + 0.9f, -D + 0.08f), F.at(s + o, bottom, -D + 0.08f), 0.04f, 0.04f);
+            for (float yy = bottom + (down ? 0.3f : 0.1f); yy < y + 0.9f; yy += 0.3f)
                 bar(mesh, iron, F.at(s - 0.22f, yy, -D + 0.08f), F.at(s + 0.22f, yy, -D + 0.08f), 0.03f, 0.03f);
+            if (down) // the climbing box just outside the railing, up to over its top rail
+                ladders_.push_back({F.at(s, 0.0f, -D - 0.05f), F.n, y + 1.07f});
         }
     }
 
@@ -1646,6 +1655,24 @@ std::vector<BalconySpot> balconySpots(const BuildingSpec& spec)
     return std::move(bld.balconies_);
 }
 
+std::vector<LadderSpot> ladderSpots(const BuildingSpec& spec)
+{
+    if (spec.style.role == "hall" || isSkeleton(spec.style) || spec.footprint.size() < 3 || spec.style.fireEscapes <= 0.0f)
+        return {};
+    BuildingSpec b = spec;
+    if (signedArea(b.footprint) < 0.0f) { // as writeBuildingGlb does
+        std::reverse(b.footprint.begin(), b.footprint.end());
+        std::vector<EdgeRole> e(b.edges.size());
+        const std::size_t n = b.footprint.size();
+        for (std::size_t i = 0; i < n && n == b.edges.size(); ++i)
+            e[i] = b.edges[(2 * n - 2 - i) % n];
+        b.edges = e;
+    }
+    Builder bld(b, 0);
+    bld.run();
+    return std::move(bld.ladders_);
+}
+
 const std::vector<std::string>& grammarMaterials()
 {
     static const std::vector<std::string> names = [] {
@@ -1676,7 +1703,7 @@ std::string buildingKey(const BuildingSpec& b)
     if (s.arcade > 0.0f)
         o << "|arc" << s.arcade;
     if (s.fireEscapes > 0.0f)
-        o << "|fe" << s.fireEscapes;
+        o << "|fe" << s.fireEscapes << "|dl2"; // dl2: drop ladder at the free end, some let down (2026-11-03)
     if (s.shops > 0.0f || s.arcade > 0.0f)
         o << "|sg2"; // shop signs over the shop windows
     for (const auto& p : b.footprint)

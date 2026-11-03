@@ -76,6 +76,14 @@ struct BalconySpot {
     float width = 1.0f;
 };
 std::vector<BalconySpot> balconySpots(const BuildingSpec& b);
+// Fire escapes whose drop ladder is down (the player climbs it): just outside the platform's railing
+// at the ladder (local, like the footprint, y = 0 at the ground), the facade's outward normal and the
+// height from the ground to just over the first platform's top rail.
+struct LadderSpot {
+    glm::vec3 position{0.0f}, normal{0.0f};
+    float height = 3.0f;
+};
+std::vector<LadderSpot> ladderSpots(const BuildingSpec& b);
 
 struct GrammarStats {
     int triangles = 0;

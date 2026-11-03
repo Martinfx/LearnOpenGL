@@ -2398,6 +2398,13 @@ private:
         const float h = buildingHeight(g.spec);
         if (!frame && s_.overgrowth > 0.01f && (st.balconies > 0.0f || st.arcade > 0.0f))
             greenBalconies(L, c, balconySpots(g.spec), seed);
+        if (!frame && st.fireEscapes > 0.0f) // drop ladders let down: the player climbs onto the fire escape
+            for (const LadderSpot& sp : ladderSpots(g.spec)) {
+                const glm::vec2 into{-sp.normal.x, -sp.normal.z};
+                const glm::vec3 w = b_.world(c + glm::vec2(sp.position.x, sp.position.z), s_.kerbHeight + sp.position.y);
+                const glm::vec3 d = b_.world(c + glm::vec2(sp.position.x, sp.position.z) + into, 0.0f) - glm::vec3(w.x, 0.0f, w.z);
+                b_.plan.ladders.push_back({"Fire escape ladder " + std::to_string(b_.plan.ladders.size() + 1), L.group, w, deg(std::atan2(d.z, d.x)), sp.height});
+            }
         p.lodDistance = std::clamp(40.0f + h * 2.0f, 70.0f, 160.0f);
         p.cull = std::clamp(400.0f + h * 18.0f, 600.0f, 1600.0f);
         p.position = b_.world(c, s_.kerbHeight);
@@ -3823,6 +3830,18 @@ CityObjects buildObjects(const Plan& plan, const std::function<void(float)>& pro
     };
     for (const auto& g : plan.groups)
         out.groups.push_back({g.name, g.parent, {}});
+    for (const auto& l : plan.ladders) {
+        Entity e;
+        e.name = l.name;
+        e.parent = l.group;
+        e.type = "ladder";
+        e.position = l.position;
+        e.yawDegrees = l.yaw;
+        e.size = {0.5f, l.height, 0.06f};
+        e.color = {0.4f, 0.9f, 0.5f};
+        e.properties["style"] = "none";
+        out.entities.push_back(std::move(e));
+    }
     for (const auto& m : plan.markers) {
         Entity e;
         e.name = m.name;
