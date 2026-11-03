@@ -185,6 +185,15 @@ jedna s propadlou střechou) – `water_towers` = podíl plochých střech domů
 (Street furniture → Roof water towers). Role `hydrant` (litinové hydranty, `hydrant_spacing` m
 podél obrubníku, 0 = žádné). Vraky `car_taxi`, `car_taxi_rust` (žlutý lak, střešní cedule, šachovnice).
 
+### Uliční rekvizity Dead City (assets/models/props/deadcity)
+
+Kit role z rekvizit asset vlákna: `clutter` (sudy, pneumatiky, kontejnery na odpad, popelnice –
+Street furniture → Junk per 100 m, u fasád), `signal` (semafory s výložníkem nad vozovkou u konců
+hlavních a vedlejších ulic, Traffic signals = šance), `sign_stop` / `sign` (americké značky čelem
+k provozu, v uličkách hlavně STOP; Road signs = šance), `barricade` (betonové zábrany, kontejnery,
+dopravní sudy a kužely na silnicích u okraje mapy), `edge_ruin` (zbytky cihlových zdí, sutě,
+panely s výztuží v pásu na okraji mapy). Vše s vlastním RNG.
+
 ### Dominanta (Landmark tower)
 
 Town plan → Zoning → **Landmark tower** (`landmark`, `landmark_floors`, `landmark_name`): v bloku

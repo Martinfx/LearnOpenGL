@@ -55,7 +55,7 @@ const std::vector<std::string>& propRoles()
 {
     static const std::vector<std::string> roles{"kerb",  "lamp",  "lamp_leaning", "cable", "car",    "tree",  "sapling",
                                                 "snag",  "bush",  "grass",        "weed",  "nettle", "rubble", "slab",  "meadow",
-                                                "monument", "fountain", "bench", "kiosk", "ivy", "roof_tree", "road_crack", "road_crack_cross", "road_net", "pothole", "fern", "hanging", "water_tower", "hydrant"};
+                                                "monument", "fountain", "bench", "kiosk", "ivy", "roof_tree", "road_crack", "road_crack_cross", "road_net", "pothole", "fern", "hanging", "water_tower", "hydrant", "clutter", "barricade", "edge_ruin", "signal", "sign_stop", "sign"};
     return roles;
 }
 
@@ -134,6 +134,9 @@ void Settings::normalize()
     wrecksPer100m = std::clamp(wrecksPer100m, 0.0f, 20.0f);
     rubblePer100m = std::clamp(rubblePer100m, 0.0f, 50.0f);
     hydrantSpacing = std::clamp(hydrantSpacing, 0.0f, 1000.0f);
+    clutterPer100m = std::clamp(clutterPer100m, 0.0f, 50.0f);
+    signals = std::clamp(signals, 0.0f, 1.0f);
+    signs = std::clamp(signs, 0.0f, 1.0f);
     waterTowers = std::clamp(waterTowers, 0.0f, 1.0f);
     groundSpacing = std::clamp(groundSpacing, 0.25f, 4.0f);
     hills = std::clamp(hills, 0.0f, 100.0f);
@@ -473,6 +476,9 @@ const ScalarField kScalars[] = {
     {"wrecks_per_100m", &Settings::wrecksPer100m},
     {"rubble_per_100m", &Settings::rubblePer100m},
     {"hydrant_spacing", &Settings::hydrantSpacing},
+    {"clutter_per_100m", &Settings::clutterPer100m},
+    {"signals", &Settings::signals},
+    {"signs", &Settings::signs},
     {"water_towers", &Settings::waterTowers},
     {"overgrowth", &Settings::overgrowth},
     {"road_decay", &Settings::roadDecay},
@@ -3241,6 +3247,54 @@ private:
                     }
                 }
         }
+        // Street ends: traffic signals over the carriageway, stop / one-way / no-parking signs
+        // facing the traffic that comes up to the junction; junk along the facades. Own random numbers.
+        {
+            Rng sr(mix(s_.seed ^ 0x51C4ull, static_cast<std::uint64_t>(std::lround(r.points.front().x * 10.0f) * 73856093 ^
+                                                                        std::lround(r.points.front().y * 10.0f) * 19349663)));
+            const bool major = cls(r.cls) == StreetClass::Main || cls(r.cls) == StreetClass::Side;
+            for (const bool atEnd : {false, true}) {
+                const float s = atEnd ? L - jc + 2.5f : jc - 2.5f;
+                glm::vec2 p, t;
+                at(s, p, t);
+                const glm::vec2 toward = atEnd ? t : -t; // the traffic's way, into the junction
+                const glm::vec2 right{toward.y, -toward.x};
+                if (P.pavement >= 1.2f && major && sr.chance(s_.signals))
+                    if (const KitProp* k = b_.anyProp("signal", sr)) {
+                        const glm::vec2 pole = p + right * (cw + 0.7f);
+                        if (b_.free(pole, 0.5f)) {
+                            const glm::vec2 arm = -right; // out over the carriageway
+                            b_.prop(*k, "Traffic signal", lamps_, pole + arm * 3.1f, kh - 0.02f, b_.yawZ(arm), sr, {0.0f, 0.0f}, 1.0f);
+                            b_.addSolid({pole.x - 0.35f, pole.y - 0.35f, pole.x + 0.35f, pole.y + 0.35f});
+                            continue;
+                        }
+                    }
+                if (P.pavement >= 1.0f && sr.chance(s_.signs)) {
+                    const glm::vec2 q = p + right * (cw + 0.45f) - toward * 1.5f;
+                    if (!b_.free(q, 0.3f))
+                        continue;
+                    const KitProp* k = !major && sr.chance(0.7f) ? b_.anyProp("sign_stop", sr) : b_.anyProp("sign", sr);
+                    if (k) {
+                        b_.prop(*k, "Road sign", lamps_, q, kh - 0.02f, b_.yawZ(-toward) + sr.range(-8.0f, 8.0f), sr, {0.0f, 0.0f}, 1.0f);
+                        b_.addSolid({q.x - 0.2f, q.y - 0.2f, q.x + 0.2f, q.y + 0.2f});
+                    }
+                }
+            }
+            if (s_.clutterPer100m > 0.0f && P.pavement >= 1.5f)
+                for (const float side : {1.0f, -1.0f})
+                    for (float s = jc + sr.range(0.0f, 30.0f); s < L - jc; s += 100.0f / s_.clutterPer100m * sr.range(0.4f, 1.6f)) {
+                        glm::vec2 p, t;
+                        at(s, p, t);
+                        const glm::vec2 n{-t.y, t.x};
+                        const glm::vec2 q = p + n * side * (cw + P.pavement - sr.range(0.6f, 1.0f));
+                        if (!b_.free(q, 0.6f))
+                            continue;
+                        if (const KitProp* k = b_.anyProp("clutter", sr)) {
+                            b_.prop(*k, "Junk", wrecks_, q, kh, b_.yawX(t) + sr.range(-25.0f, 25.0f) + (sr.chance(0.5f) ? 180.0f : 0.0f), sr, {0.0f, 0.0f}, 1.0f);
+                            b_.addSolid({q.x - 0.6f, q.y - 0.6f, q.x + 0.6f, q.y + 0.6f});
+                        }
+                    }
+        }
         // Planted rows: one species per street, some lost, seedlings in the gaps.
         if (P.trees && P.pavement >= 2.5f) {
             const KitProp* sp = b_.anyProp("tree", rng);
@@ -3603,9 +3657,13 @@ private:
                 const glm::vec2 q = a + t * s + n * rng.range(-2.5f, 2.5f);
                 const bool road = !b_.free(q, 0.5f) || b_.cleared(q);
                 const float r = rng.uniform();
-                const char* role = road ? (r < 0.4f ? "car" : r < 0.75f ? "slab" : "rubble")
-                                        : (r < 0.45f ? "bush" : r < 0.65f ? "sapling" : r < 0.8f ? "rubble" : r < 0.88f ? "slab" : r < 0.94f ? "snag" : "car");
-                if (const KitProp* k = b_.anyProp(role, rng)) {
+                const char* role = road ? (r < 0.55f ? "barricade" : r < 0.8f ? "car" : "slab")
+                                        : (r < 0.38f ? "bush" : r < 0.52f ? "sapling" : r < 0.72f ? "edge_ruin" : r < 0.8f ? "rubble" : r < 0.86f ? "slab"
+                                                       : r < 0.92f ? "snag" : r < 0.96f ? "barricade" : "car");
+                const KitProp* k = b_.anyProp(role, rng);
+                if (!k && (std::string(role) == "barricade" || std::string(role) == "edge_ruin"))
+                    k = b_.anyProp(road ? "car" : "rubble", rng);
+                if (k) {
                     const float scale = std::string(role) == "bush" ? rng.range(1.2f, 1.8f) : -1.0f;
                     b_.prop(*k, road ? "Barricade" : "Map edge", grp, q, kh, b_.yawX(t) + rng.range(-35.0f, 35.0f), rng, {0.0f, 0.0f}, scale);
                 }

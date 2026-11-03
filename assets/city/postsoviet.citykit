@@ -145,3 +145,59 @@ prop fern "../models/zone/vegetation/fern_a.glb" lod "../models/zone/vegetation/
 prop fern "../models/zone/vegetation/fern_b.glb" lod "../models/zone/vegetation/fern_b_lod1.glb" 15 cull 70 sway 1 scale_min 0.8 scale_max 1.4 collision 0 shadows 0
 prop hanging "../models/zone/vegetation/ivy_low.glb" size 2.9 lod "../models/zone/vegetation/ivy_low_lod1.glb" 25 cull 70 sway 0.4 scale_min 0.9 scale_max 1.3 collision 0 shadows 1
 prop hanging "../models/zone/vegetation/ivy_a.glb" size 6.4 lod "../models/zone/vegetation/ivy_a_lod1.glb" 30 cull 90 sway 0.4 scale_min 0.7 scale_max 1.0 collision 0 shadows 1
+
+# Dead City street props (assets/models/props/deadcity, asset thread 92f3b59)
+prop clutter "../models/props/deadcity/drum_rust.glb" cull 140 collision 1 shadows 0
+prop clutter "../models/props/deadcity/drum_blue_dented.glb" cull 140 collision 1 shadows 0
+prop clutter "../models/props/deadcity/drum_red_lying.glb" cull 140 collision 1 shadows 0
+prop clutter "../models/props/deadcity/drum_rust_open.glb" cull 140 collision 1 shadows 0
+prop clutter "../models/props/deadcity/drum_yellow.glb" cull 140 collision 1 shadows 0
+prop clutter "../models/props/deadcity/drum_cluster.glb" cull 140 collision 1 shadows 1
+prop clutter "../models/props/deadcity/tyre_stack.glb" cull 140 collision 1 shadows 0
+prop clutter "../models/props/deadcity/tyre_pile.glb" cull 140 collision 1 shadows 1
+prop clutter "../models/props/deadcity/tyre_leaning.glb" cull 140 collision 1 shadows 0
+prop clutter "../models/props/deadcity/dumpster_green.glb" lod "../models/props/deadcity/dumpster_green_lod1.glb" 40 cull 140 collision 1 shadows 1
+prop clutter "../models/props/deadcity/dumpster_blue_open.glb" lod "../models/props/deadcity/dumpster_blue_open_lod1.glb" 40 cull 140 collision 1 shadows 1
+prop clutter "../models/props/deadcity/dumpster_green_tipped.glb" lod "../models/props/deadcity/dumpster_green_tipped_lod1.glb" 40 cull 140 collision 1 shadows 1
+prop clutter "../models/props/deadcity/wheelie_bin_green.glb" cull 140 collision 1 shadows 0
+prop clutter "../models/props/deadcity/wheelie_bin_grey_open.glb" cull 140 collision 1 shadows 0
+prop clutter "../models/props/deadcity/wheelie_bin_tipped.glb" cull 140 collision 1 shadows 0
+prop barricade "../models/props/deadcity/jersey_barrier.glb" cull 220 collision 1 shadows 1
+prop barricade "../models/props/deadcity/jersey_barrier_row.glb" lod "../models/props/deadcity/jersey_barrier_row_lod1.glb" 40 cull 220 collision 1 shadows 1
+prop barricade "../models/props/deadcity/jersey_barrier_tipped.glb" cull 220 collision 1 shadows 1
+prop barricade "../models/props/deadcity/jersey_barrier_broken.glb" cull 220 collision 1 shadows 1
+prop barricade "../models/props/deadcity/container_red.glb" lod "../models/props/deadcity/container_red_lod1.glb" 40 cull 320 collision 1 shadows 1
+prop barricade "../models/props/deadcity/container_blue.glb" lod "../models/props/deadcity/container_blue_lod1.glb" 40 cull 320 collision 1 shadows 1
+prop barricade "../models/props/deadcity/container_rust_open.glb" lod "../models/props/deadcity/container_rust_open_lod1.glb" 40 cull 320 collision 1 shadows 1
+prop barricade "../models/props/deadcity/traffic_drum.glb" cull 220 collision 1 shadows 1
+prop barricade "../models/props/deadcity/traffic_drum_fallen.glb" cull 220 collision 1 shadows 1
+prop barricade "../models/props/deadcity/traffic_cone.glb" cull 220 collision 1 shadows 1
+prop barricade "../models/props/deadcity/traffic_cone_fallen.glb" cull 220 collision 1 shadows 1
+prop edge_ruin "../models/props/deadcity/brick_wall_ruin_a.glb" lod "../models/props/deadcity/brick_wall_ruin_a_lod1.glb" 60 cull 450 collision 1 shadows 1
+prop edge_ruin "../models/props/deadcity/brick_wall_ruin_window.glb" lod "../models/props/deadcity/brick_wall_ruin_window_lod1.glb" 60 cull 450 collision 1 shadows 1
+prop edge_ruin "../models/props/deadcity/brick_wall_ruin_corner.glb" lod "../models/props/deadcity/brick_wall_ruin_corner_lod1.glb" 60 cull 450 collision 1 shadows 1
+prop edge_ruin "../models/props/deadcity/brick_wall_ruin_low.glb" cull 450 collision 1 shadows 1
+prop edge_ruin "../models/props/deadcity/brick_pile_large.glb" lod "../models/props/deadcity/brick_pile_large_lod1.glb" 60 cull 450 collision 1 shadows 1
+prop edge_ruin "../models/props/deadcity/concrete_rubble_pile.glb" lod "../models/props/deadcity/concrete_rubble_pile_lod1.glb" 60 cull 450 collision 1 shadows 1
+prop edge_ruin "../models/props/deadcity/rubble_mound_large.glb" lod "../models/props/deadcity/rubble_mound_large_lod1.glb" 60 cull 450 collision 1 shadows 1
+prop edge_ruin "../models/props/deadcity/concrete_slab_rebar.glb" lod "../models/props/deadcity/concrete_slab_rebar_lod1.glb" 60 cull 450 collision 1 shadows 1
+prop edge_ruin "../models/props/deadcity/container_rust_open.glb" lod "../models/props/deadcity/container_rust_open_lod1.glb" 60 cull 450 collision 1 shadows 1
+prop signal "../models/props/deadcity/traffic_signal_mast.glb" lod "../models/props/deadcity/traffic_signal_mast_lod1.glb" 60 cull 300 collision 1 shadows 1
+prop signal "../models/props/deadcity/traffic_signal_mast.glb" lod "../models/props/deadcity/traffic_signal_mast_lod1.glb" 60 cull 300 collision 1 shadows 1
+prop signal "../models/props/deadcity/traffic_signal_mast_sagging.glb" lod "../models/props/deadcity/traffic_signal_mast_sagging_lod1.glb" 60 cull 300 collision 1 shadows 1
+prop signal "../models/props/deadcity/traffic_signal_post_leaning.glb" cull 300 collision 1 shadows 1
+prop signal "../models/props/deadcity/traffic_signal_fallen.glb" lod "../models/props/deadcity/traffic_signal_fallen_lod1.glb" 60 cull 300 collision 1 shadows 1
+prop sign_stop "../models/props/deadcity/sign_stop.glb" cull 160 collision 1 shadows 0
+prop sign_stop "../models/props/deadcity/sign_stop.glb" cull 160 collision 1 shadows 0
+prop sign_stop "../models/props/deadcity/sign_stop_bent.glb" cull 160 collision 1 shadows 0
+prop sign "../models/props/deadcity/sign_oneway.glb" cull 160 collision 1 shadows 0
+prop sign "../models/props/deadcity/sign_oneway_leaning.glb" cull 160 collision 1 shadows 0
+prop sign "../models/props/deadcity/sign_noparking.glb" cull 160 collision 1 shadows 0
+prop sign "../models/props/deadcity/sign_speed35.glb" cull 160 collision 1 shadows 0
+prop sign "../models/props/deadcity/sign_speed35_leaning.glb" cull 160 collision 1 shadows 0
+prop sign "../models/props/deadcity/sign_donotenter.glb" cull 160 collision 1 shadows 0
+prop sign "../models/props/deadcity/sign_pedxing.glb" cull 160 collision 1 shadows 0
+prop sign "../models/props/deadcity/sign_yield.glb" cull 160 collision 1 shadows 0
+prop sign "../models/props/deadcity/sign_yield_bent.glb" cull 160 collision 1 shadows 0
+prop sign "../models/props/deadcity/sign_roadwork_fallen.glb" cull 160 collision 1 shadows 0
+prop sign "../models/props/deadcity/sign_curve.glb" cull 160 collision 1 shadows 0
