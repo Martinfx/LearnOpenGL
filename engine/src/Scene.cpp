@@ -203,6 +203,10 @@ bool writeLevelSettings(std::ostream& out, const Scene& scene, const std::filesy
             f1("contact_shadow_length", e.contactShadowLength);
         if (e.bounceLight != Environment{}.bounceLight)
             f1("bounce_light", e.bounceLight);
+        if (e.chromaticAberration != Environment{}.chromaticAberration)
+            f1("chromatic_aberration", e.chromaticAberration);
+        if (e.lensDirt != Environment{}.lensDirt)
+            f1("lens_dirt", e.lensDirt);
         if (e.volumetricClouds != Environment{}.volumetricClouds || e.cloudBase != Environment{}.cloudBase ||
             e.cloudThickness != Environment{}.cloudThickness || e.cloudDensity != Environment{}.cloudDensity) {
             f1("volumetric_clouds", e.volumetricClouds);
@@ -689,7 +693,8 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                 {"fog_light_shafts", &e.fogLightShafts}, {"fog_anisotropy", &e.fogAnisotropy}, {"fog_noise", &e.fogNoise},
                 {"fog_local_lights", &e.fogLocalLights}, {"atmosphere", &e.atmosphere}, {"atmosphere_haze", &e.atmosphereHaze},
                 {"atmosphere_brightness", &e.atmosphereBrightness}, {"sky_occlusion", &e.skyOcclusion}, {"sun_size", &e.sunSize}, {"bounce_light", &e.bounceLight}, {"contact_shadow_length", &e.contactShadowLength}, {"ground_haze", &e.groundHaze}, {"ground_haze_height", &e.groundHazeHeight}, {"ground_haze_thickness", &e.groundHazeThickness},
-                {"volumetric_clouds", &e.volumetricClouds}, {"cloud_base", &e.cloudBase}, {"cloud_thickness", &e.cloudThickness}, {"cloud_density", &e.cloudDensity}};
+                {"volumetric_clouds", &e.volumetricClouds}, {"cloud_base", &e.cloudBase}, {"cloud_thickness", &e.cloudThickness}, {"cloud_density", &e.cloudDensity},
+                {"chromatic_aberration", &e.chromaticAberration}, {"lens_dirt", &e.lensDirt}};
             if (ok && name == "tonemap")
                 ok = static_cast<bool>(ls >> e.tonemap);
             else if (ok) {

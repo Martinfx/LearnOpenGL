@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <cstdlib>
 
 namespace engine {
@@ -103,6 +104,60 @@ float interiorWeight(const std::vector<InteriorVolume>& volumes, glm::vec3 p)
         best = std::max(best, v.fade > 0.0f ? std::clamp(1.0f - d / v.fade, 0.0f, 1.0f) : (d <= 0.0f ? 1.0f : 0.0f));
     }
     return best;
+}
+
+const std::vector<std::string>& postVolumeKeys()
+{
+    static const std::vector<std::string> keys = {"exposure", "saturation", "contrast", "temperature", "green_magenta", "tint",
+                                                  "vignette", "grain", "bloom", "chromatic_aberration", "lens_dirt"};
+    return keys;
+}
+
+std::vector<PostVolume> postVolumes(const Scene& scene)
+{
+    std::vector<PostVolume> out;
+    for (const Entity& e : scene.entities) {
+        if (e.type != "post_volume" || !e.alive || !entityEnabled(e))
+            continue;
+        PostVolume v;
+        v.box.half = glm::max(e.size * 0.5f, glm::vec3(0.01f));
+        v.box.center = e.position + glm::vec3(0.0f, v.box.half.y, 0.0f);
+        v.box.yawDegrees = e.yawDegrees;
+        auto it = e.properties.find("fade");
+        v.box.fade = it == e.properties.end() || it->second.empty() ? 2.0f : std::max(0.0f, std::strtof(it->second.c_str(), nullptr));
+        it = e.properties.find("priority");
+        v.priority = it == e.properties.end() ? 0 : std::atoi(it->second.c_str());
+        for (const std::string& key : postVolumeKeys())
+            if (auto p = e.properties.find(key); p != e.properties.end() && !p->second.empty())
+                v.values.emplace_back(key, p->second);
+        out.push_back(std::move(v));
+    }
+    std::stable_sort(out.begin(), out.end(), [](const PostVolume& a, const PostVolume& b) { return a.priority < b.priority; });
+    return out;
+}
+
+void applyPostVolumes(const std::vector<PostVolume>& volumes, glm::vec3 p, Environment& e)
+{
+    for (const PostVolume& v : volumes) {
+        const float d = v.box.distance(p);
+        const float w = v.box.fade > 0.0f ? std::clamp(1.0f - d / v.box.fade, 0.0f, 1.0f) : (d <= 0.0f ? 1.0f : 0.0f);
+        if (w <= 0.0f)
+            continue;
+        for (const auto& [key, value] : v.values) {
+            if (key == "tint") {
+                glm::vec3 t(1.0f);
+                if (std::sscanf(value.c_str(), "%f %f %f", &t.x, &t.y, &t.z) == 3)
+                    e.tint = glm::mix(e.tint, t, w);
+                continue;
+            }
+            float* target = key == "exposure" ? &e.exposure : key == "saturation" ? &e.saturation : key == "contrast" ? &e.contrast
+                          : key == "temperature" ? &e.temperature : key == "green_magenta" ? &e.greenMagenta : key == "vignette" ? &e.vignette
+                          : key == "grain" ? &e.grain : key == "bloom" ? &e.bloomIntensity : key == "chromatic_aberration" ? &e.chromaticAberration
+                          : key == "lens_dirt" ? &e.lensDirt : nullptr;
+            if (target)
+                *target += (std::strtof(value.c_str(), nullptr) - *target) * w;
+        }
+    }
 }
 
 bool entityEnabled(const Entity& entity)

@@ -273,6 +273,9 @@ EnvironmentPanel::EnvironmentPanel(engine::Scene* scene, QWidget* parent)
     }
     addFloat(form, tr("Vignette"), &E::vignette, 0, 1, 0.02, 2);
     addFloat(form, tr("Film grain"), &E::grain, 0, 0.3, 0.005, 3);
+    addFloat(form, tr("Chromatic aberration"), &E::chromaticAberration, 0, 1, 0.05, 2,
+             tr("Colour fringes toward the screen edges, like a cheap lens (quality option lens effects)"));
+    addFloat(form, tr("Lens dirt"), &E::lensDirt, 0, 1, 0.05, 2, tr("Smudges on the lens that light up around bright lights and the sun (needs bloom)"));
     section(tr("Weather"));
     addFloat(form, tr("Rain"), &E::rain, 0, 1, 0.05, 2, tr("0 dry, 1 downpour: rain sound volume"));
     addFloat(form, tr("Wind"), &E::wind, 0, 1, 0.05, 2,

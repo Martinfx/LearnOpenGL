@@ -271,7 +271,7 @@ void Viewport::addIoHelpers(engine::RenderView& view) const
     for (std::size_t i = 0; i < scene_->entities.size(); ++i) {
         const engine::Entity& e = scene_->entities[i];
         if (e.type != "trigger" && e.type != "reverb" && e.type != "ambience" && e.type != "water" && e.type != "interior" &&
-            e.type != "reflection_probe" && e.type != "irradiance_volume") // volumes: triggers, zones, water
+            e.type != "reflection_probe" && e.type != "irradiance_volume" && e.type != "post_volume") // volumes: triggers, zones, water
             continue;
         const bool selected = selected_ == first + static_cast<int>(i);
         const glm::vec4 c = selected ? glm::vec4(1.0f, 0.75f, 0.2f, 0.95f) : glm::vec4(e.type == "water" ? glm::vec3(0.3f, 0.7f, 1.0f) : e.color, 0.6f);
@@ -294,7 +294,7 @@ void Viewport::addIoHelpers(engine::RenderView& view) const
             }
             continue;
         }
-        if (e.type == "interior" || e.type == "reflection_probe" || e.type == "irradiance_volume") { // turned box like the entity
+        if (e.type == "interior" || e.type == "reflection_probe" || e.type == "irradiance_volume" || e.type == "post_volume") { // turned box like the entity
             glm::mat4 m = glm::translate(glm::mat4(1.0f), e.position);
             m = glm::rotate(m, -glm::radians(e.yawDegrees), glm::vec3(0.0f, 1.0f, 0.0f));
             glm::vec3 q[8];

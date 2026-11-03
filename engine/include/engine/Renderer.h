@@ -80,6 +80,17 @@ struct RenderView {
     // Weather (the game drives these; the editor leaves the defaults).
     float wetness = -1.0f;    // 0 dry .. 1 soaked surfaces; < 0 = follow the environment's rain
     float lightning = 0.0f;   // 0..1 flash of a lightning strike this frame
+    // Screen effects (the game drives these; 0 = none): a hit (red edges, fades out), low health
+    // (greyer, a pulsing dark-red edge), radiation (yellow-green speckles and flicker), rain
+    // drops running on the lens (0..1).
+    float damage = 0.0f;
+    float lowHealth = 0.0f;
+    float radiation = 0.0f;
+    float lensRain = 0.0f;
+    // Depth of field (aiming): the world farther than focusDistance (m) blurs, up to dofBlur
+    // (0..1); the first-person layer stays sharp. 0 = off.
+    float focusDistance = 0.0f;
+    float dofBlur = 0.0f;
     // The game draws the first-person layer before post-processing: it sets this,
     // calls renderOverlay() and then present().
     bool deferPresent = false;
@@ -135,6 +146,9 @@ struct RenderQuality {
     // map of raymarched clouds, 2 512x256 (a quarter of its texels is traced per frame).
     int volumetricClouds = 2;
     bool ssaoFullRes = false; // ambient occlusion + bounce light at full resolution (Ultra), else half
+    bool depthOfField = true; // RenderView::focusDistance (the game blurs the far world while aiming)
+    bool lensEffects = true;  // Environment::chromaticAberration and lensDirt, rain drops on the lens
+    bool filmGrain = true;    // Environment::grain
     float motionBlur = 0.0f; // camera motion blur in continuous views, shutter fraction 0..1 (0 = off)
     int textureUploadsPerFrame = 6; // new textures sent to the GPU per frame, 0 = all at once
     // Memory. Textures larger than textureMaxSize drop their top mip levels (0 = full size).
@@ -169,7 +183,7 @@ struct RenderQuality {
     float dynamicTargetFps = 0.0f;
     float dynamicMinScale = 0.5f;
     // Sharpening of a scene drawn below the window resolution (0 off .. 1 strong).
-    float upscaleSharpness = 0.5f;
+    float upscaleSharpness = 0.3f;
     // Shadows of local lights: the nearest shadow-casting lights get layers of one map
     // (a spot light 1, a point light 6), 0 = no local shadows.
     int localShadowResolution = 1024;
@@ -683,6 +697,10 @@ private:
     Environment resolvedEnv_;           // the scene's environment at its time of day
     SkyState sky_;                      // light direction, moon, stars of resolvedEnv_
     float time_ = 0.0f;
+    // Screen effects and depth of field of the last render() (RenderView), for present().
+    struct ScreenEffects {
+        float damage = 0.0f, lowHealth = 0.0f, radiation = 0.0f, lensRain = 0.0f, focus = 0.0f, dofBlur = 0.0f;
+    } screenFx_;
     // Dynamic resolution (RenderQuality::dynamicTargetFps): current factor, smoothed GPU time.
     float dynScale_ = 1.0f;
     double dynGpuMs_ = 0.0;

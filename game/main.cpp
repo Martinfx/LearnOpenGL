@@ -75,6 +75,7 @@
 #include <set>
 #include <chrono>
 #include <functional>
+#include <tuple>
 #include <array>
 #include <iomanip>
 #include <sstream>
@@ -257,6 +258,93 @@ DemoState& demoState()
     static DemoState state;
     return state;
 }
+// Feature cost profile (FPS_ENGINE_PROFILE=1): the full-resolution GPU frame time with each
+// renderer feature off in turn, against all on, printed as a table at the end.
+struct FeatureProfile {
+    bool active = false;
+    int phase = -1, frame = 0;
+    double sum = 0.0, opaque = 0.0;
+    int samples = 0;
+    engine::RenderQuality base;
+    float baseSkyOcclusion = 0.0f;
+    std::vector<std::tuple<std::string, double, double>> results; // name, GPU ms, opaque ms
+    struct Change {
+        const char* name;
+        std::function<void(engine::RenderQuality&, engine::Environment&)> apply;
+    };
+    static const std::vector<Change>& changes()
+    {
+        static const std::vector<Change> list = {
+            {"all on (High, full resolution)", [](engine::RenderQuality&, engine::Environment&) {}},
+            {"soft shadows (PCSS) off", [](engine::RenderQuality& q, engine::Environment&) { q.softShadows = false; }},
+            {"contact shadows off", [](engine::RenderQuality& q, engine::Environment&) { q.contactShadows = false; }},
+            {"SSR off", [](engine::RenderQuality& q, engine::Environment&) { q.ssr = false; }},
+            {"SSGI off", [](engine::RenderQuality& q, engine::Environment&) { q.ssgi = false; }},
+            {"SSAO + SSGI off", [](engine::RenderQuality& q, engine::Environment&) { q.ssao = false; q.ssgi = false; }},
+            {"sky occlusion off", [](engine::RenderQuality&, engine::Environment& e) { e.skyOcclusion = 0.0f; }},
+            {"volumetric fog off", [](engine::RenderQuality& q, engine::Environment&) { q.volumetricFog = 0; }},
+            {"parallax off", [](engine::RenderQuality& q, engine::Environment&) { q.parallax = false; }},
+            {"shadow maps 1024", [](engine::RenderQuality& q, engine::Environment&) { q.shadowResolution = 1024; }},
+            {"grass density far 0.05", [](engine::RenderQuality& q, engine::Environment&) { q.detailDensityFar = 0.05f; }},
+            {"LOD distances x0.5", [](engine::RenderQuality& q, engine::Environment&) { q.lodScale = 0.5f; }},
+            {"render scale 0.7", [](engine::RenderQuality& q, engine::Environment&) { q.renderScale = 0.7f; }},
+            {"TAA -> FXAA", [](engine::RenderQuality& q, engine::Environment&) { q.taa = false; q.fxaa = true; }},
+            {"all on again (noise check)", [](engine::RenderQuality&, engine::Environment&) {}},
+        };
+        return list;
+    }
+    void step(engine::Renderer& renderer, engine::Environment& env)
+    {
+        if (!active)
+            return;
+        // FPS_ENGINE_PROFILE=<frames> measures each step that long (default 90, a third more to settle).
+        static const int kMeasure = std::max(4, std::atoi(std::getenv("FPS_ENGINE_PROFILE")) > 1 ? std::atoi(std::getenv("FPS_ENGINE_PROFILE")) : 90);
+        static const int kSettle = std::max(3, kMeasure / 3);
+        if (phase < 0) {
+            base = renderer.quality();
+            base.dynamicTargetFps = 0.0f;
+            base.renderScale = 1.0f;
+            baseSkyOcclusion = env.skyOcclusion;
+            phase = 0;
+            frame = 0;
+            apply(renderer, env);
+            LOG_INFO("profile", "Feature profile: stand still, %zu steps of %d frames", changes().size(), kSettle + kMeasure);
+            return;
+        }
+        const engine::Renderer::FrameStats& st = renderer.frameStats();
+        const int settle = phase == 0 ? kSettle * 4 : kSettle; // the first step also waits out loading
+        if (++frame > settle && st.gpuValid) {
+            sum += st.gpuTotalMs;
+            opaque += st.gpuMs[engine::Renderer::PassOpaque] + st.gpuMs[engine::Renderer::PassDepth];
+            ++samples;
+        }
+        if (frame < settle + kMeasure)
+            return;
+        results.emplace_back(changes()[static_cast<std::size_t>(phase)].name, samples ? sum / samples : 0.0, samples ? opaque / samples : 0.0);
+        sum = opaque = 0.0;
+        samples = 0;
+        frame = 0;
+        if (++phase < static_cast<int>(changes().size())) {
+            apply(renderer, env);
+            return;
+        }
+        renderer.setQuality(base);
+        env.skyOcclusion = baseSkyOcclusion;
+        const double all = std::get<1>(results[0]);
+        LOG_INFO("profile", "%-34s %9s %9s %9s", "feature", "GPU ms", "saved", "depth+opaque");
+        for (const auto& [name, gpu, opq] : results)
+            LOG_INFO("profile", "%-34s %9.2f %9.2f %9.2f", name.c_str(), gpu, all - gpu, opq);
+        active = false;
+    }
+    void apply(engine::Renderer& renderer, engine::Environment& env)
+    {
+        engine::RenderQuality q = base;
+        env.skyOcclusion = baseSkyOcclusion;
+        changes()[static_cast<std::size_t>(phase)].apply(q, env);
+        renderer.setQuality(q);
+    }
+};
+
 // r_dynres choice -> frame rate the dynamic resolution holds (0 = off; always off in a benchmark replay).
 float dynresFps(int choice)
 {
@@ -1205,6 +1293,12 @@ int main(int argc, char** argv)
                     q.dynamicTargetFps = dynresFps(dyn->integer());
                 if (const engine::CVar* sharpen = cvars.find("r_sharpen"))
                     q.upscaleSharpness = sharpen->number();
+                if (const engine::CVar* dof = cvars.find("r_dof"))
+                    q.depthOfField = q.depthOfField && dof->boolean();
+                if (const engine::CVar* lens = cvars.find("r_lens"))
+                    q.lensEffects = lens->boolean();
+                if (const engine::CVar* grain = cvars.find("r_grain"))
+                    q.filmGrain = grain->boolean();
                 // Comparing optimisations (FPS_ENGINE_STATS=1): the switches outlive the preset.
                 q.instancing = q.instancing && !std::getenv("FPS_ENGINE_NO_INSTANCING");
                 if (std::getenv("FPS_ENGINE_NO_VOLUMETRIC"))
@@ -1243,13 +1337,33 @@ int main(int argc, char** argv)
                 q.dynamicTargetFps = dynresFps(v.integer());
                 renderer.setQuality(q);
             };
-        cvars.add("r_sharpen", CVarType::Float, "0.5", "Sharpening of a scene drawn below the window resolution (0 off .. 1)",
+        cvars.add("r_sharpen", CVarType::Float, "0.3", "Sharpening of a scene drawn below the window resolution (0 off .. 1)",
                   engine::CVarConfig, 0.0, 1.0)
             .onChange = [&renderer](const engine::CVar& v) {
                 engine::RenderQuality q = renderer.quality();
                 q.upscaleSharpness = v.number();
                 renderer.setQuality(q);
             };
+        cvars.add("r_dof", CVarType::Bool, "1", "Depth of field while aiming (the far world blurs)", engine::CVarConfig)
+            .onChange = [&renderer](const engine::CVar& v) {
+                engine::RenderQuality q = renderer.quality();
+                q.depthOfField = v.boolean();
+                renderer.setQuality(q);
+            };
+        cvars.add("r_lens", CVarType::Bool, "1", "Lens effects: colour fringes, dirt lit by bright light, rain drops", engine::CVarConfig)
+            .onChange = [&renderer](const engine::CVar& v) {
+                engine::RenderQuality q = renderer.quality();
+                q.lensEffects = v.boolean();
+                renderer.setQuality(q);
+            };
+        cvars.add("r_grain", CVarType::Bool, "1", "Film grain", engine::CVarConfig)
+            .onChange = [&renderer](const engine::CVar& v) {
+                engine::RenderQuality q = renderer.quality();
+                q.filmGrain = v.boolean();
+                renderer.setQuality(q);
+            };
+        cvars.add("cl_screenfx", CVarType::Float, "1", "Strength of hit, low health and radiation screen effects (0 = off)",
+                  engine::CVarConfig, 0.0, 1.0);
         cvars.add("r_motionblur", CVarType::Float, "0", "Camera motion blur: share of a frame's motion (0 = off)", engine::CVarConfig, 0.0, 1.0)
             .onChange = [&renderer](const engine::CVar& v) {
                 engine::RenderQuality q = renderer.quality();
@@ -1480,6 +1594,8 @@ int main(int argc, char** argv)
     const engine::CVar& cvSensitivity = *cvars.find("m_sensitivity");
     const engine::CVar& cvInvert = *cvars.find("m_invert_y");
     const engine::CVar& cvFov = *cvars.find("fov");
+    const engine::CVar& cvScreenFx = *cvars.find("cl_screenfx");
+    const engine::CVar& cvDof = *cvars.find("r_dof");
     const engine::CVar& cvFpsMax = *cvars.find("fps_max");
     const engine::CVar& cvShowFps = *cvars.find("cl_showfps");
 
@@ -1926,6 +2042,13 @@ int main(int argc, char** argv)
     std::vector<char> jammed; // per weapon slot: jammed until R clears it
     float unjamTimer = 0.0f;
     bool overloadedShown = false;
+    // Screen effects: a hit's red edges fade out, radiation follows the dose rate, rain drops
+    // gather on the lens outdoors and dry indoors.
+    float hurtFx = 0.0f, radiationFx = 0.0f, lensWet = 0.0f, lastDose = -1.0f;
+    // FPS_ENGINE_PROFILE=1: stand still, and every feature is switched off in turn for a while;
+    // the GPU time saved by each is printed (what to lower on this graphics card).
+    FeatureProfile featureProfile;
+    featureProfile.active = std::getenv("FPS_ENGINE_PROFILE") != nullptr;
     GameTrade::Hooks tradeHooks;
     tradeHooks.addWeapon = [&](const std::filesystem::path& file) -> std::optional<std::size_t> {
         const std::size_t before = weapons.size();
@@ -2613,8 +2736,10 @@ int main(int argc, char** argv)
             }
             if (cvGod.boolean() && scripts.playerHealth() < healthBefore)
                 scripts.setPlayerHealth(healthBefore);
-            if (scripts.playerHealth() < healthBefore)
+            if (scripts.playerHealth() < healthBefore) {
                 audio.play2D(scene.player.hurtSound);
+                hurtFx = std::min(1.0f, hurtFx + 0.35f + (healthBefore - scripts.playerHealth()) / 30.0f);
+            }
             anomalies.fixedUpdate(dt, scene, physics, player, scripts); // forces act on the next movement step
             // Armor takes part of every hit (and wears doing it).
             if (const engine::ItemDef* armor = inventory.armor.empty() ? nullptr : items.find(engine::ItemDef::Kind::Armor, inventory.armor);
@@ -2774,6 +2899,40 @@ int main(int argc, char** argv)
             view.time = static_cast<float>(now);
             view.wetness = weather.wetness();
             view.lightning = weather.flash();
+            {
+                // Screen effects (Settings > Comfort scales them, 0 = off).
+                const float fxDt = static_cast<float>(std::min(frameTime, 0.1));
+                const float fx = static_cast<float>(cvScreenFx.number());
+                hurtFx = std::max(0.0f, hurtFx - fxDt * 1.6f);
+                const float dose = anomalies.dose();
+                const float rate = lastDose >= 0.0f && fxDt > 0.0f ? std::max(0.0f, dose - lastDose) / fxDt : 0.0f; // rad/s
+                lastDose = dose;
+                radiationFx += (std::clamp(rate / 3.0f, 0.0f, 1.0f) - radiationFx) * std::min(1.0f, fxDt * 3.0f);
+                const float health = scripts.playerHealth();
+                view.damage = hurtFx * fx;
+                view.lowHealth = health > 0.0f ? std::clamp((35.0f - health) / 25.0f, 0.0f, 1.0f) * fx : 0.0f;
+                view.radiation = radiationFx * fx;
+                // Rain on the lens: outdoors in the rain, more when looking up; dries indoors.
+                const float rain = engine::environmentAt(scene.environment, scene.sunDirection).rain;
+                const float outdoors = 1.0f - engine::interiorWeight(engine::interiorVolumes(scene), camera.position);
+                const float up = std::clamp((camera.pitchDegrees + 10.0f) / 50.0f, 0.0f, 1.0f);
+                const float wetTarget = rain * outdoors * (0.35f + 0.65f * up);
+                lensWet += (wetTarget - lensWet) * std::min(1.0f, fxDt * (wetTarget > lensWet ? 0.5f : 0.25f));
+                view.lensRain = lensWet;
+                // Depth of field while aiming: focus on what the crosshair is on.
+                const engine::Weapon& w = weapons[current];
+                const float zoom = w.canAim() ? smoothAim(w) : 0.0f;
+                if (zoom > 0.05f && cvDof.boolean()) {
+                    const auto hit = physics.raycast(camera.position, camera.forward(), 300.0f);
+                    view.focusDistance = hit ? std::max(hit->distance, 1.0f) : 300.0f;
+                    view.dofBlur = zoom * 0.7f;
+                }
+                // Test hook (screenshots): FPS_ENGINE_FX="hit lowHealth radiation lensRain focus".
+                if (const char* fxTest = std::getenv("FPS_ENGINE_FX"))
+                    if (std::sscanf(fxTest, "%f %f %f %f %f", &view.damage, &view.lowHealth, &view.radiation, &view.lensRain,
+                                    &view.focusDistance) == 5 && view.focusDistance > 0.0f)
+                        view.dofBlur = 0.7f;
+            }
             view.deferPresent = true; // the weapon layer is drawn before post-processing
             view.temporal = true;     // one continuous view: TAA can use the earlier frames
             engine::OverlayPass effectsOverlay; // muzzle flashes, drawn with the weapon below
@@ -2823,6 +2982,7 @@ int main(int argc, char** argv)
             }
             renderer.renderOverlay(view, overlay);
             renderer.present();
+            featureProfile.step(renderer, scene.environment);
             // HUD: minimap in the corner, or the full map (M).
             ui.begin(width, height);
             if (menu.active()) {

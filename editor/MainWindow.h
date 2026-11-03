@@ -285,6 +285,10 @@ private:
     QDoubleSpinBox* interiorFade_ = nullptr;
     QComboBox* interiorPreset_ = nullptr;
     QDoubleSpinBox* interiorAmount_ = nullptr;
+    QFormLayout* postVolumeForm_ = nullptr;        // entity type "post_volume"
+    QDoubleSpinBox* postFade_ = nullptr;
+    QSpinBox* postPriority_ = nullptr;
+    std::vector<std::pair<std::string, QLineEdit*>> postValues_; // engine::postVolumeKeys(), empty = the level's value
     QFormLayout* waterForm_ = nullptr;            // entity type "water"
     QFormLayout* prefabForm_ = nullptr;           // object of a prefab instance
     QLabel* prefabLabel_ = nullptr;

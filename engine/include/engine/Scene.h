@@ -296,7 +296,7 @@ struct Entity {
     bool helper() const { return type == "sound" || type == "map_marker" || type == "particle" || type == "anomaly" || type == "light" ||
                                  type == "sit_point" || type == "trigger" || type == "relay" || type == "reverb" || type == "ambience" ||
                                  type == "water" || type == "interior" || type == "reflection_probe" || type == "irradiance_volume" ||
-                                 type == "alife_point" || type == "crow_flock"; }
+                                 type == "alife_point" || type == "crow_flock" || type == "post_volume"; }
     // What the editor draws and picks: a sound zone can span the whole level, so
     // it is shown as a small speaker cube at its position; the zone is its size.
     Aabb markerBounds() const
@@ -304,7 +304,7 @@ struct Entity {
         if (type == "sound" || type == "particle")
             return {position, position + glm::vec3(type == "sound" ? 0.6f : 0.4f)};
         if (type == "relay" || type == "trigger" || type == "reverb" || type == "ambience" || type == "interior" ||
-            type == "irradiance_volume") // a node; a volume (its size) is drawn as lines
+            type == "irradiance_volume" || type == "post_volume") // a node; a volume (its size) is drawn as lines
             return {position - glm::vec3(0.2f, 0.0f, 0.2f), position + glm::vec3(0.2f, 0.4f, 0.2f)};
         if (type == "water") // a node at the middle of the surface; the surface is drawn as water
             return {position + glm::vec3(-0.25f, size.y - 0.05f, -0.25f), position + glm::vec3(0.25f, size.y + 0.25f, 0.25f)};
@@ -418,6 +418,10 @@ struct Environment {
     glm::vec3 tint{1.0f};                       // multiplied after tone mapping
     float vignette = 0.25f;
     float grain = 0.02f;
+    // Lens: colour fringes toward the screen edges (0 off .. 1 strong) and smudges on the lens
+    // lit up by bright light (bloom), 0 off .. 1. Quality option lensEffects.
+    float chromaticAberration = 0.0f;
+    float lensDirt = 0.0f;
     // Auto-exposure: the camera adapts to the brightness of the view like an eye.
     float autoExposure = 0.0f;                  // 0 manual (Exposure only) .. 1 fully automatic
     float exposureMinEv = -2.0f;                // darkest correction, stops (bright scenes)

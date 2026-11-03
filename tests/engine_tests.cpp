@@ -3825,6 +3825,8 @@ void testAtmosphere()
     s.environment.contactShadowLength = 0.5f;
     s.environment.groundHazeThickness = 2.5f;
     s.environment.volumetricClouds = 1.0f;
+    s.environment.chromaticAberration = 0.4f;
+    s.environment.lensDirt = 0.3f;
     s.environment.cloudBase = 700.0f;
     s.environment.cloudThickness = 2500.0f;
     s.environment.cloudDensity = 2.0f;
@@ -3835,8 +3837,35 @@ void testAtmosphere()
               r.environment.skyOcclusion == 0.7f && r.environment.sunSize == 1.5f && r.environment.bounceLight == 0.6f && r.environment.groundHaze == 0.05f &&
               r.environment.groundHazeThickness == 2.5f && r.environment.tonemap == 1 && r.environment.contactShadowLength == 0.5f &&
               r.environment.cloudBase == 700.0f && r.environment.cloudThickness == 2500.0f && r.environment.cloudDensity == 2.0f &&
-              r.environment.volumetricClouds == 1.0f,
+              r.environment.volumetricClouds == 1.0f && r.environment.chromaticAberration == 0.4f && r.environment.lensDirt == 0.3f,
           "atmosphere settings survive save + load");
+    {
+        // Post-process volumes: full value inside, blended over `fade` outside, nothing beyond;
+        // the higher priority wins where two overlap.
+        engine::Scene pv;
+        engine::Entity a;
+        a.type = "post_volume";
+        a.position = {0.0f, 0.0f, 0.0f};
+        a.size = {4.0f, 4.0f, 4.0f};
+        a.properties = {{"fade", "2"}, {"saturation", "0.2"}, {"tint", "1 0.5 0.5"}};
+        engine::Entity b = a;
+        b.properties = {{"fade", "0"}, {"saturation", "1.5"}, {"priority", "5"}};
+        b.size = {1.0f, 1.0f, 1.0f};
+        b.position = {10.0f, 0.0f, 0.0f};
+        pv.entities = {a, b};
+        const auto volumes = engine::postVolumes(pv);
+        auto at = [&](glm::vec3 p) {
+            engine::Environment e;
+            e.saturation = 1.0f;
+            engine::applyPostVolumes(volumes, p, e);
+            return e;
+        };
+        check(std::abs(at({0.0f, 1.0f, 0.0f}).saturation - 0.2f) < 1e-4f && std::abs(at({0.0f, 1.0f, 0.0f}).tint.y - 0.5f) < 1e-4f,
+              "post volume: its values inside");
+        check(std::abs(at({3.0f, 1.0f, 0.0f}).saturation - 0.6f) < 1e-3f, "post volume: half way through the blend");
+        check(at({5.0f, 1.0f, 0.0f}).saturation == 1.0f, "post volume: nothing beyond the blend");
+        check(at({10.0f, 0.5f, 0.0f}).saturation == 1.5f && volumes.back().priority == 5, "post volume: priority order");
+    }
     {
         // Cloud noise: bytes in range, every channel varies, and it tiles (opposite faces close).
         const int n = 16;

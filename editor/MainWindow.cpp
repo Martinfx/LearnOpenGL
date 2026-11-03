@@ -1,5 +1,6 @@
 #include "MainWindow.h"
 
+#include <engine/EntityIO.h>
 #include <engine/Anomaly.h>
 #include <engine/Memory.h>
 #include <QAbstractButton>
@@ -252,6 +253,7 @@ void MainWindow::buildMenus()
     edit->addAction(tr("Add re&verb zone"), this, [this] { addEntity("reverb"); });
     edit->addAction(tr("Add ambience &zone"), this, [this] { addEntity("ambience"); });
     edit->addAction(tr("Add &interior volume (dark building)"), this, [this] { addEntity("interior"); });
+    edit->addAction(tr("Add &post-process volume (own image look)"), this, [this] { addEntity("post_volume"); });
     edit->addAction(tr("Add reflection &probe"), this, [this] { addEntity("reflection_probe"); });
     edit->addAction(tr("Add irradiance volume (baked light in rooms)"), this, [this] { addEntity("irradiance_volume"); });
     edit->addAction(tr("Physics props from the catalogue (crates, barrels...)"), this, &MainWindow::applyPropCatalogueToLevel);
@@ -443,10 +445,13 @@ void MainWindow::buildMenus()
     quality.ssgi = settings.value("render/ssgi", quality.ssgi).toBool();
     quality.contactShadows = settings.value("render/contact_shadows", quality.contactShadows).toBool();
     quality.volumetricClouds = settings.value("render/volumetric_clouds", quality.volumetricClouds).toInt();
+    quality.depthOfField = settings.value("render/dof", quality.depthOfField).toBool();
+    quality.lensEffects = settings.value("render/lens", quality.lensEffects).toBool();
+    quality.filmGrain = settings.value("render/grain", quality.filmGrain).toBool();
     render->addAction(tr("&Bake lighting probes"), this, &MainWindow::bakeProbes);
     render->addSeparator();
     QMenu* qualityMenu = render->addMenu(tr("&Quality"));
-    auto toggles = std::make_shared<std::array<QAction*, 8>>(); // SSAO, bloom, FXAA, SSR, parallax, soft shadows, SSGI, contact shadows
+    auto toggles = std::make_shared<std::array<QAction*, 11>>(); // SSAO, bloom, FXAA, SSR, parallax, soft shadows, SSGI, contact shadows, DOF, lens, grain
     auto cloudsToggle = std::make_shared<QAction*>(nullptr);
     for (int i = 0; i < 4; ++i) {
         QAction* a = qualityMenu->addAction(tr(qualityNames[i]));
@@ -466,6 +471,9 @@ void MainWindow::buildMenus()
             (*toggles)[5]->setChecked(q.softShadows);
             (*toggles)[6]->setChecked(q.ssgi);
             (*toggles)[7]->setChecked(q.contactShadows);
+            (*toggles)[8]->setChecked(q.depthOfField);
+            (*toggles)[9]->setChecked(q.lensEffects);
+            (*toggles)[10]->setChecked(q.filmGrain);
             for (QAction* t : *toggles)
                 t->blockSignals(false);
             if (*cloudsToggle) {
@@ -476,15 +484,18 @@ void MainWindow::buildMenus()
             setRenderQuality(q);
         });
     }
-    const char* toggleNames[8] = {"Ambient occlusion (GTAO)", "Bloom", "Anti-aliasing (FXAA)", "Screen-space reflections (SSR)",
-                                  "Parallax (height maps)", "Soft shadows (PCSS)", "Bounce light (SSGI)", "Contact shadows"};
-    const char* toggleKeys[8] = {"render/ssao", "render/bloom", "render/fxaa", "render/ssr", "render/parallax", "render/soft_shadows",
-                                 "render/ssgi", "render/contact_shadows"};
-    bool engine::RenderQuality::*toggleMembers[8] = {&engine::RenderQuality::ssao, &engine::RenderQuality::bloom,
-                                                     &engine::RenderQuality::fxaa, &engine::RenderQuality::ssr,
-                                                     &engine::RenderQuality::parallax, &engine::RenderQuality::softShadows,
-                                                     &engine::RenderQuality::ssgi, &engine::RenderQuality::contactShadows};
-    for (int i = 0; i < 8; ++i) {
+    const char* toggleNames[11] = {"Ambient occlusion (GTAO)", "Bloom", "Anti-aliasing (FXAA)", "Screen-space reflections (SSR)",
+                                   "Parallax (height maps)", "Soft shadows (PCSS)", "Bounce light (SSGI)", "Contact shadows",
+                                   "Depth of field (aiming)", "Lens effects (fringes, dirt, rain drops)", "Film grain"};
+    const char* toggleKeys[11] = {"render/ssao", "render/bloom", "render/fxaa", "render/ssr", "render/parallax", "render/soft_shadows",
+                                  "render/ssgi", "render/contact_shadows", "render/dof", "render/lens", "render/grain"};
+    bool engine::RenderQuality::*toggleMembers[11] = {&engine::RenderQuality::ssao, &engine::RenderQuality::bloom,
+                                                      &engine::RenderQuality::fxaa, &engine::RenderQuality::ssr,
+                                                      &engine::RenderQuality::parallax, &engine::RenderQuality::softShadows,
+                                                      &engine::RenderQuality::ssgi, &engine::RenderQuality::contactShadows,
+                                                      &engine::RenderQuality::depthOfField, &engine::RenderQuality::lensEffects,
+                                                      &engine::RenderQuality::filmGrain};
+    for (int i = 0; i < 11; ++i) {
         (*toggles)[static_cast<std::size_t>(i)] = render->addAction(tr(toggleNames[i]));
         (*toggles)[static_cast<std::size_t>(i)]->setCheckable(true);
         (*toggles)[static_cast<std::size_t>(i)]->setChecked(quality.*toggleMembers[i]);
@@ -818,6 +829,7 @@ void MainWindow::buildDocks()
     outputsForm_ = makeSection(tr("Outputs (entity I/O)"), "Script");
     reverbForm_ = makeSection(tr("Reverb zone"), "Sound");
     interiorForm_ = makeSection(tr("Interior"), "Rendering");
+    postVolumeForm_ = makeSection(tr("Post-process volume"), "Rendering");
     reflectionForm_ = makeSection(tr("Reflection probe"), "Rendering");
     irradianceForm_ = makeSection(tr("Irradiance volume"), "Rendering");
     ambienceForm_ = makeSection(tr("Ambience zone"), "Sound");
@@ -1645,6 +1657,50 @@ void MainWindow::buildDocks()
         connect(interiorFade_, &QDoubleSpinBox::valueChanged, this, [setProp, number](double v) { setProp("fade", number(v)); });
         connect(interiorPreset_, &QComboBox::currentTextChanged, this, [setProp](const QString& t) { setProp("preset", t.toStdString()); });
         connect(interiorAmount_, &QDoubleSpinBox::valueChanged, this, [setProp, number](double v) { setProp("amount", number(v)); });
+    }
+    {
+        // Post-process volume (type "post_volume"): inside, its values replace the level's image
+        // settings, blended over `fade` metres (engine/EntityIO.h PostVolume).
+        postFade_ = new QDoubleSpinBox(boxPanel_);
+        postFade_->setRange(0.0, 50.0);
+        postFade_->setSingleStep(0.5);
+        postFade_->setSuffix(tr(" m"));
+        postFade_->setKeyboardTracking(false);
+        postFade_->setToolTip(tr("Blends in over this distance outside the box"));
+        postPriority_ = new QSpinBox(boxPanel_);
+        postPriority_->setRange(-100, 100);
+        postPriority_->setToolTip(tr("Where volumes overlap, the higher priority wins"));
+        postVolumeForm_->addRow(tr("Blend distance"), postFade_);
+        postVolumeForm_->addRow(tr("Priority"), postPriority_);
+        const std::map<std::string, QString> labels = {
+            {"exposure", tr("Exposure")}, {"saturation", tr("Saturation")}, {"contrast", tr("Contrast")},
+            {"temperature", tr("Temperature (-1 cold .. 1 warm)")}, {"green_magenta", tr("Green / magenta")},
+            {"tint", tr("Tint (r g b)")}, {"vignette", tr("Vignette")}, {"grain", tr("Film grain")}, {"bloom", tr("Bloom")},
+            {"chromatic_aberration", tr("Chromatic aberration")}, {"lens_dirt", tr("Lens dirt")}};
+        auto setProp = [this](const std::string& key, const std::string& value) {
+            engine::Entity* e = selectedEntity();
+            if (!e || e->type != "post_volume")
+                return;
+            auto it = e->properties.find(key);
+            if (value.empty() ? it == e->properties.end() : it != e->properties.end() && it->second == value)
+                return;
+            if (value.empty())
+                e->properties.erase(it);
+            else
+                e->properties[key] = value;
+            markDirty();
+        };
+        for (const std::string& key : engine::postVolumeKeys()) {
+            auto* edit = new QLineEdit(boxPanel_);
+            edit->setPlaceholderText(tr("level value"));
+            edit->setToolTip(tr("Empty = keep the level's value (Environment panel)"));
+            postVolumeForm_->addRow(labels.count(key) ? labels.at(key) : QString::fromStdString(key), edit);
+            connect(edit, &QLineEdit::editingFinished, this, [setProp, key, edit] { setProp(key, edit->text().trimmed().toStdString()); });
+            postValues_.emplace_back(key, edit);
+        }
+        auto number = [](double v) { return QString::number(v, 'g', 4).toStdString(); };
+        connect(postFade_, &QDoubleSpinBox::valueChanged, this, [setProp, number](double v) { setProp("fade", number(v)); });
+        connect(postPriority_, &QSpinBox::valueChanged, this, [setProp](int v) { setProp("priority", std::to_string(v)); });
     }
     {
         // Baked lighting probes (engine/Probes.h): reflection probes and irradiance volumes.
@@ -3061,6 +3117,19 @@ void MainWindow::refreshProperties()
         interiorPreset_->setCurrentText(prop("preset", "room"));
         interiorAmount_->setValue(prop("amount", "1").toDouble());
     }
+    if (e && e->type == "post_volume") {
+        const QSignalBlocker b1(postFade_), b2(postPriority_);
+        auto prop = [e](const std::string& key) {
+            const auto it = e->properties.find(key);
+            return it == e->properties.end() ? QString() : QString::fromStdString(it->second);
+        };
+        postFade_->setValue(prop("fade").isEmpty() ? 2.0 : prop("fade").toDouble());
+        postPriority_->setValue(prop("priority").toInt());
+        for (const auto& [key, edit] : postValues_) {
+            const QSignalBlocker b(edit);
+            edit->setText(prop(key));
+        }
+    }
     if (e && e->type == "reverb") {
         const QSignalBlocker b1(reverbPreset_), b2(reverbAmount_), b3(reverbFade_);
         auto prop = [e](const char* key, const char* fallback) {
@@ -3853,7 +3922,7 @@ void MainWindow::addEntity(const QString& type)
     engine::Entity e;
     e.type = type.toStdString();
     e.name = engine::uniqueNodeName(scene_, (type == "enemy" ? "Enemy " : type == "npc" ? "Stalker " : type == "alife_point" ? "Point " : type == "crow_flock" ? "Crows " : type == "sound" ? "Sound " : type == "particle" ? "Effect " : type == "light" ? "Light " :
-                                             type == "trigger" ? "Trigger " : type == "relay" ? "Relay " : type == "reverb" ? "Reverb " : type == "ambience" ? "Ambience " : type == "interior" ? "Interior " : type == "reflection_probe" ? "Reflection probe " :
+                                             type == "trigger" ? "Trigger " : type == "relay" ? "Relay " : type == "reverb" ? "Reverb " : type == "ambience" ? "Ambience " : type == "interior" ? "Interior " : type == "post_volume" ? "Post-process volume " : type == "reflection_probe" ? "Reflection probe " :
                                              type == "irradiance_volume" ? "Irradiance volume " :
                                              type == "water" ? "Water " : "Entity ") +
                                                 std::to_string(scene_.entities.size() + 1));
@@ -3951,6 +4020,11 @@ void MainWindow::addEntity(const QString& type)
         e.properties["fog"] = "0.2";
         e.properties["fade"] = "0.5";
         e.properties["preset"] = "room";
+    } else if (type == "post_volume") {
+        e.size = {10.0f, 4.0f, 10.0f};
+        e.color = {0.75f, 0.4f, 0.9f};
+        e.properties["fade"] = "2";
+        e.properties["saturation"] = "0.6";
     } else if (type == "reverb") {
         e.size = {8.0f, 4.0f, 8.0f};
         e.color = {0.3f, 0.75f, 0.9f};
@@ -5785,6 +5859,8 @@ void MainWindow::updateDetailsVisibility()
             relevant = e != nullptr && e->type == "reverb";
         if (d.form == interiorForm_)
             relevant = e != nullptr && e->type == "interior";
+        if (d.form == postVolumeForm_)
+            relevant = e != nullptr && e->type == "post_volume";
         if (d.form == reflectionForm_)
             relevant = e != nullptr && e->type == "reflection_probe";
         if (d.form == irradianceForm_)
@@ -5995,8 +6071,10 @@ void MainWindow::buildModePanel()
         connect(ambienceZone, &QPushButton::clicked, this, [this] { addEntity("ambience"); });
         auto* interior = toolButton("cube", tr("Interior volume (dark building: less sky light and fog, no rain, room reverb)"), page);
         connect(interior, &QPushButton::clicked, this, [this] { addEntity("interior"); });
+        auto* postVolume = toolButton("cube", tr("Post-process volume (own image look inside: colours, contrast, lens)"), page);
+        connect(postVolume, &QPushButton::clicked, this, [this] { addEntity("post_volume"); });
         auto* model = toolButton("model", tr("glTF model..."), page);
-        for (QPushButton* b : {box, enemy, npc, alifePoint, dogPack, crows, entity, sound, particles, anomaly, light, campfire, trigger, relay, reverbZone, ambienceZone, interior, model})
+        for (QPushButton* b : {box, enemy, npc, alifePoint, dogPack, crows, entity, sound, particles, anomaly, light, campfire, trigger, relay, reverbZone, ambienceZone, interior, postVolume, model})
             layout->addWidget(b);
         auto* hint = new QLabel(tr("Or drag a model from the Content Browser into the view: it lands where you drop it."), page);
         hint->setObjectName("dim");

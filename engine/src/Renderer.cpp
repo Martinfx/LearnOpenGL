@@ -468,6 +468,7 @@ RenderQuality RenderQuality::preset(int level)
         q.ssgi = false;
         q.contactShadows = false;
         q.volumetricClouds = 0;
+        q.depthOfField = false;
         break;
     case 1:
         q.shadowResolution = 1024; q.shadowCascades = 3; q.ssao = true; q.bloom = true;
@@ -1566,7 +1567,7 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
             continue;
         if (e.type == "sound" || e.type == "particle" || e.type == "anomaly" || e.type == "light" || e.type == "trigger" ||
             e.type == "relay" || e.type == "reverb" || e.type == "ambience" || e.type == "water" || e.type == "interior" ||
-            e.type == "reflection_probe" || e.type == "irradiance_volume") { // marker cube; a sound zone itself is the entity size
+            e.type == "reflection_probe" || e.type == "irradiance_volume" || e.type == "post_volume") { // marker cube; a sound zone itself is the entity size
             const Aabb m = e.markerBounds();
             const bool glow = e.type == "light" && !depthOnly; // a bulb: unlit, in the light's color
             if (glow)
@@ -2352,8 +2353,22 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     targetY_ = view.viewportY;
     bakePendingImpostors(); // binds its own target, restores targetFbo_
     resolvedEnv_ = environmentAt(scene.environment, scene.sunDirection, &sky_);
+    // Post-process volumes around the camera change the image settings (not in probe captures).
+    if (!view.capture)
+        applyPostVolumes(postVolumes(scene), view.cameraPosition, resolvedEnv_);
     env_ = &resolvedEnv_;
     time_ = view.time;
+    screenFx_ = {};
+    if (!view.capture && view.shading == Shading::Lit) {
+        screenFx_.damage = std::clamp(view.damage, 0.0f, 1.0f);
+        screenFx_.lowHealth = std::clamp(view.lowHealth, 0.0f, 1.0f);
+        screenFx_.radiation = std::clamp(view.radiation, 0.0f, 1.0f);
+        screenFx_.lensRain = quality_.lensEffects ? std::clamp(view.lensRain, 0.0f, 1.0f) : 0.0f;
+        if (quality_.depthOfField && view.focusDistance > 0.0f && view.projection[3][3] == 0.0f) {
+            screenFx_.focus = view.focusDistance;
+            screenFx_.dofBlur = std::clamp(view.dofBlur, 0.0f, 1.0f);
+        }
+    }
     collectDistortions(view);
     keptAlive_.clear();
     updateModelGrid(scene);
@@ -3498,7 +3513,7 @@ void Renderer::renderOverlay(const RenderView& view, const OverlayPass& pass)
     // First-person layer: own depth range and projection, so the weapon never clips into walls.
     beginPass(PassOverlay);
     overlayDrawn_ = true;
-    if (taaActive_ || motionActive_) // TAA and motion blur reproject through the scene depth, which the weapon layer clears
+    if (taaActive_ || motionActive_ || screenFx_.focus > 0.0f) // TAA, motion blur and depth of field read the scene depth, which the weapon layer clears
         glCopyImageSubData(depthTex_, GL_TEXTURE_2D, 0, 0, 0, 0, taaDepth_, GL_TEXTURE_2D, 0, 0, 0, 0, width_, height_, 1);
     glBindFramebuffer(GL_FRAMEBUFFER, hdrFbo_);
     glViewport(0, 0, width_, height_);
@@ -3796,7 +3811,12 @@ void Renderer::present()
     glUniform1f(post.loc("uContrast"), e.contrast);
     glUniform3fv(post.loc("uTint"), 1, glm::value_ptr(e.tint));
     glUniform1f(post.loc("uVignette"), e.vignette);
-    glUniform1f(post.loc("uGrain"), e.grain);
+    glUniform1f(post.loc("uGrain"), quality_.filmGrain ? e.grain : 0.0f);
+    glUniform1f(post.loc("uChromatic"), quality_.lensEffects && !wireframe_ ? std::clamp(e.chromaticAberration, 0.0f, 1.0f) : 0.0f);
+    glUniform1f(post.loc("uLensDirt"), quality_.lensEffects && quality_.bloom ? std::clamp(e.lensDirt, 0.0f, 1.0f) : 0.0f);
+    glUniform4f(post.loc("uScreenFx"), screenFx_.damage, screenFx_.lowHealth, screenFx_.radiation, screenFx_.lensRain);
+    // Depth of field: focus (m), blur, and the projection terms that turn depth into distance.
+    glUniform4f(post.loc("uDof"), screenFx_.focus, screenFx_.dofBlur * (static_cast<float>(width_) / 1920.0f) * 9.0f, projection_[2][2], projection_[3][2]);
     glUniform1f(post.loc("uTime"), time_);
     glUniform1i(post.loc("uLumaAlpha"), fxaa ? 1 : 0);
     glUniform1i(post.loc("uDistortOn"), distortDrawn_ ? 1 : 0);
@@ -3813,7 +3833,7 @@ void Renderer::present()
         glUniformMatrix4fv(post.loc("uMotionReproject"), 1, GL_FALSE, glm::value_ptr(reproject));
     }
     glBindSampler(6, 0);
-    glBindTextureUnit(6, overlayDrawn_ && (taaActive_ || motionActive_) ? taaDepth_ : depthTex_);
+    glBindTextureUnit(6, overlayDrawn_ && (taaActive_ || motionActive_ || screenFx_.focus > 0.0f) ? taaDepth_ : depthTex_);
     glBindTextureUnit(0, sceneTex_);
     glBindTextureUnit(1, bloomTex_.empty() ? whiteTex_ : bloomTex_[0]);
     glBindTextureUnit(2, depthTex_);

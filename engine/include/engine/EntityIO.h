@@ -43,6 +43,22 @@ std::vector<InteriorVolume> interiorVolumes(const Scene& scene);
 // 0 outside every interior .. 1 inside one (blends over `fade` outside the box).
 float interiorWeight(const std::vector<InteriorVolume>& volumes, glm::vec3 p);
 
+// Post-process volumes (entity type "post_volume"): inside, the image looks different (a
+// greenish basement, a washed-out radiation zone, a warm camp). Each property present overrides
+// the level's value: exposure, saturation, contrast, temperature, green_magenta, tint (r g b),
+// vignette, grain, bloom, chromatic_aberration, lens_dirt; fade (m outside the box over which it
+// blends out), priority (higher wins where volumes overlap).
+struct PostVolume {
+    InteriorVolume box;               // center, half, yaw, fade (sky / fog unused)
+    int priority = 0;
+    std::vector<std::pair<std::string, std::string>> values; // key, value as in the entity
+};
+std::vector<PostVolume> postVolumes(const Scene& scene);
+// The level's image settings blended toward the volumes around `p` (lowest priority first).
+void applyPostVolumes(const std::vector<PostVolume>& volumes, glm::vec3 p, Environment& e);
+// Keys a post volume may override, in the editor's order.
+const std::vector<std::string>& postVolumeKeys();
+
 // Entities named `target` (several may share a name), in scene order.
 std::vector<int> findEntitiesByName(const Scene& scene, const std::string& target);
 
