@@ -122,12 +122,29 @@ void GameHud::draw(engine::Ui2D& ui, int width, int height, const HudState& s) c
     // Weapon and ammo: "AK-74   23 / 90" (magazine / rounds of its type left), reload progress under it.
     {
         const float y = pos.y + text * 2.2f;
-        ui.text(engine::localize(s.weapon), {x, y + text * 0.15f}, std::round(text * 0.85f), dim, true);
+        // The name gets the room left of the rounds: long names ("9mm Service Pistol") get smaller, then cut.
+        const std::string name = engine::localize(s.weapon);
+        float nameRoom = innerW;
+        char mag[16], cur[16];
+        std::snprintf(cur, sizeof cur, "%d", s.ammo);
+        std::snprintf(mag, sizeof mag, " / %d", s.magazine);
+        const float big = std::round(text * 1.35f);
+        if (!s.melee)
+            nameRoom -= ui.textWidth(mag, text, true) + ui.textWidth(cur, big, true) + text * 0.6f;
+        float nameSize = std::round(text * 0.85f);
+        const float nameWidth = ui.textWidth(name, nameSize, true);
+        if (nameWidth > nameRoom && nameWidth > 0.0f)
+            nameSize = std::max(std::round(text * 0.6f), std::floor(nameSize * nameRoom / nameWidth));
+        std::string kept = name, shown = name;
+        while (!kept.empty() && ui.textWidth(shown, nameSize, true) > nameRoom) {
+            while (!kept.empty() && (static_cast<unsigned char>(kept.back()) & 0xC0) == 0x80)
+                kept.pop_back(); // continuation bytes of the last UTF-8 character
+            if (!kept.empty())
+                kept.pop_back(); // its first byte
+            shown = kept + "\u2026";
+        }
+        ui.text(shown, {x, y + text * 0.15f + (std::round(text * 0.85f) - nameSize) * 0.5f}, nameSize, dim, true);
         if (!s.melee) {
-            char mag[16], cur[16];
-            std::snprintf(cur, sizeof cur, "%d", s.ammo);
-            std::snprintf(mag, sizeof mag, " / %d", s.magazine);
-            const float big = std::round(text * 1.35f);
             const float magW = ui.textWidth(mag, text, true);
             const bool empty = s.ammo == 0;
             ui.text(mag, {x + innerW - magW, y + (big - text) * 0.8f}, text, dim, true);

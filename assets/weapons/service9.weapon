@@ -25,7 +25,7 @@ reload_empty_time 1.75
 anim_walk ""
 anim_fire_last "fire_last"
 anim_inspect "inspect"
-aim_offset -0.0397 0.0377 0
+aim_offset -0.0397 0.0262 0
 aim_rotation -3.47 0 0
 aim_fov 65
 aim_time 0.15

@@ -1,0 +1,47 @@
+# FPS engine weapon
+version 2
+type firearm
+name "@weapon.service9"
+model "assets/models/weapons/fps/fp_service9.glb"
+damage 25
+fire_interval 0.13
+automatic 0
+pellets 1
+magazine 8
+ammo_type "9x19" 32
+reload_time 2.33
+spread 0.75
+range 130
+view_offset 0 0 0
+view_scale 1
+view_rotation 0 0 0
+muzzle 0.04 -0.024 -0.49
+anim_idle "idle"
+anim_fire "fire"
+anim_reload "reload"
+anim_draw "draw"
+anim_reload_empty "reload_empty"
+reload_empty_time 1.75
+anim_walk ""
+anim_fire_last "fire_last"
+anim_inspect "inspect"
+aim_offset -0.0397 0.0262 0
+aim_rotation -3.47 0 0
+aim_fov 65
+aim_time 0.15
+aim_spread 0.4
+price 1100
+weight 0.96
+wear 0.0007 0.05
+sound_fire "assets/sounds/weapons/pistol_shot.sound"
+sound_reload "assets/sounds/weapons/reload_service9.sound"
+sound_draw "assets/sounds/weapons/draw.sound"
+sound_impact "assets/sounds/impacts/impact_hard.sound"
+sound_hit "assets/sounds/impacts/impact_flesh.sound"
+sound_reload_empty "assets/sounds/weapons/reload_service9_empty.sound"
+sound_dry_fire "assets/sounds/weapons/dry_fire_pistol.sound"
+effect_flash "assets/particles/muzzle_flash.particle"
+effect_smoke "assets/particles/muzzle_smoke.particle"
+casing "assets/models/weapons/casings/casing_9x19.glb"
+casing_offset 0.06 -0.03 -0.33
+casing_velocity 1.5 1.6 0.2

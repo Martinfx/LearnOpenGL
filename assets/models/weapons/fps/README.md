@@ -27,7 +27,7 @@ Bones: `PBody_058` (weapon body), `Pmag_062` (magazine), `Pmag2_063` (spare maga
 `python3 source/build_service9.py fp_heavy_pistol.glb ../world/service_pistol/service_pistol.gltf fp_service9.glb ../world/service9.gltf`
 (no Blender needed). Every Talon part is swapped for the matching service pistol part on the same `W_*` bone (`W_base`, `W_slide`,
 `W_hammer`, `W_trigger`, `W_clip`, `W_bullet*`; the slide catch is dropped), placed so trigger and back strap sit where the Talon's were.
-Muzzle about `0.04 -0.024 -0.49`, sights lined up by `aim_offset -0.0397 0.0377 0` + `aim_rotation -3.47 0 0`.
+Muzzle about `0.04 -0.024 -0.49`, sights lined up by `aim_offset -0.0397 0.0262 0` + `aim_rotation -3.47 0 0`.
 The same script writes the world model `../world/service9.gltf` (gun alone with the magazine in, lying on its right side, shares
 the Poly Haven textures).
 
