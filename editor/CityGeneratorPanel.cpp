@@ -477,6 +477,17 @@ QWidget* CityGeneratorPanel::townTab()
     addFlag(zone, tr("Town square in the centre"), &settings_.square,
             tr("The roomy block nearest the centre becomes the square: slabs with grass in the joints, a war memorial, "
                "a dry fountain, lime trees, benches, lamps and a kiosk (the goal of the map)"));
+    auto* squareName = new QLineEdit;
+    squareName->setToolTip(tr("The square's name on the map"));
+    zone->addRow(tr("Square name"), squareName);
+    connect(squareName, &QLineEdit::editingFinished, this, [this, squareName] {
+        settings_.squareName = squareName->text().trimmed().toStdString();
+        changed();
+    });
+    refreshers_.push_back([this, squareName] { squareName->setText(QString::fromStdString(settings_.squareName)); });
+    addFlag(zone, tr("Street names on the map"), &settings_.streetNames,
+            tr("New York style: avenues along the town's main direction (12th Ave ... 1st Ave, west to east), numbered streets across "
+               "(W 14th St ..., south to north); one label per street on the map"));
 
     QFormLayout* ground = section(tr("Ground"));
     addFlag(ground, tr("Terrain ground (grid layout)"), &settings_.terrainGround,

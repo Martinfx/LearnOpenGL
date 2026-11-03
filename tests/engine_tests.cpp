@@ -4739,9 +4739,16 @@ void testCityOrganic()
     bool memorial = false;
     for (const auto& p : a.placements)
         memorial = memorial || p.path.filename() == "square_monument.glb";
-    check(memorial && a.markers.size() == 1, "town square with a memorial and a map marker");
+    int squares = 0, avenues = 0, streets = 0;
+    for (const auto& m : a.markers) {
+        squares += m.name == s.squareName;
+        avenues += m.name.ends_with(" Ave") || m.name == "Broadway";
+        streets += m.name.starts_with("W ") && m.name.ends_with(" St");
+    }
+    check(memorial && squares == 1, "town square with a memorial and a map marker");
+    check(avenues >= 2 && streets >= 2, "New York street names: " + std::to_string(avenues) + " avenues, " + std::to_string(streets) + " streets");
     const CityObjects objects = buildObjects(Plan{.groups = a.groups, .markers = a.markers});
-    check(objects.entities.size() == 1 && objects.entities[0].type == "map_marker", "square marker becomes a map_marker entity");
+    check(objects.entities.size() == a.markers.size() && objects.entities[0].type == "map_marker", "markers become map_marker entities");
     bool same = a.placements.size() == b.placements.size() && a.generated.size() == b.generated.size();
     for (std::size_t i = 0; same && i < a.placements.size(); ++i)
         same = a.placements[i].position == b.placements[i].position && a.placements[i].path == b.placements[i].path;

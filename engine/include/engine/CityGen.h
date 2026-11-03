@@ -236,6 +236,8 @@ struct Settings {
     float parkShare = 0.08f;         // blocks left green
     float houseShare = 0.3f;         // outer blocks of private houses (cut into parcels by recursive subdivision)
     bool square = true;              // the block nearest the centre is the town square (the goal of the map)
+    std::string squareName = "Union Square"; // its name on the map
+    bool streetNames = true;         // name the streets (New York style: avenues one way, numbered streets across) on the map
     std::filesystem::path cache;     // generated houses (.glb), absolute; empty = next to the .city
 
     int blockCount() const { return static_cast<int>(rows.size() * columns.size()); }

@@ -472,6 +472,7 @@ const ScalarField kScalars[] = {
     {"park_share", &Settings::parkShare},
     {"house_share", &Settings::houseShare},
     {"square", nullptr, nullptr, &Settings::square},
+    {"street_names", nullptr, nullptr, &Settings::streetNames},
 };
 } // namespace
 
@@ -506,6 +507,7 @@ bool loadSettings(Settings& s, const fs::path& file, std::string* error)
         else if (k == "layout" && t.size() > 1) s.layout = t[1] == "organic" ? Layout::Organic : Layout::Grid;
         else if (k == "edge_road" && t.size() > 1) s.edgeRoad = streetClassFromName(t[1]);
         else if (k == "cache" && t.size() > 1) s.cache = resolve(dir, t[1]);
+        else if (k == "square_name" && t.size() > 1) s.squareName = t[1];
         else if (k == "columns" || k == "rows") {
             auto& v = k == "columns" ? s.columns : s.rows;
             v.clear();
@@ -571,6 +573,7 @@ bool saveSettings(const Settings& settings, const fs::path& file, std::string* e
     out << "edge_road " << streetClassName(s.edgeRoad) << '\n';
     if (!s.cache.empty())
         out << "cache " << q(relPath(s.cache, dir)) << '\n';
+    out << "square_name " << q(s.squareName) << '\n';
     out << "columns";
     for (float c : s.columns)
         out << ' ' << c;
@@ -2092,6 +2095,8 @@ public:
             layBlock(i);
         for (const auto& r : net_.roads)
             dressRoad(r);
+        if (s_.streetNames)
+            nameStreets();
         for (auto& L : lots_)
             green(L);
         outskirts();
@@ -2688,7 +2693,7 @@ private:
             const std::vector<EdgeRole> roles{EdgeRole::Street, EdgeRole::Yard, EdgeRole::Yard, EdgeRole::Yard};
             // Few variants per series: identical slabs repeat (as they did) and share one file.
             house(L, *st, fp, roles, floors, static_cast<std::uint32_t>(1 + rng.below(3)), L.ruined && rng.chance(0.5f),
-                  st->role == "khrushchyovka" ? "Khrushchyovka" : "Panel block");
+                  st->role == "khrushchyovka" ? "Walk-up" : "Housing project");
             L.entrances.push_back(sl.c - v * (D * 0.5f));
             ++b_.plan.stats.parcels;
         }
@@ -3116,7 +3121,7 @@ private:
             const glm::vec2 t = glm::normalize(b - a), n(-t.y, t.x); // inward for a counter-clockwise outline
             const glm::vec2 p = a + (b - a) * rng.range(0.25f, 0.4f) + n * 6.5f;
             if (b_.free(p, 2.0f))
-                place("kiosk", "Kiosk", p, b_.yawZ(n), 2.2f);
+                place("kiosk", "Newsstand", p, b_.yawZ(n), 2.2f);
         }
         // A few cracks have let saplings through; rubble from the memorial's cornice.
         for (int i = 0; i < static_cast<int>(signedArea(L.poly) / 900.0f * s_.overgrowth); ++i) {
@@ -3124,8 +3129,70 @@ private:
             if (randomIn(L.poly, rng, p))
                 b_.plant({"sapling", "bush"}, "Seedling", L.group, p, rng, kh, 1.0f);
         }
-        b_.plan.markers.push_back({"Площадь", L.group, b_.world(c, kh)});
+        b_.plan.markers.push_back({s_.squareName.empty() ? std::string("Square") : s_.squareName, L.group, b_.world(c, kh)});
         L.yard.clear(); // nothing else grows here (green() keeps off)
+    }
+
+    // Street names on the map, the New York way: the streets along the town's main direction are
+    // avenues (named from west to east), the ones across are numbered streets (south to north).
+    // Segments on one line share a name; each name is labelled once, on its longest segment.
+    void nameStreets()
+    {
+        static const char* kAvenues[] = {"12th Ave", "11th Ave", "10th Ave", "Amsterdam Ave", "Columbus Ave", "Broadway", "8th Ave", "7th Ave",
+                                         "6th Ave",  "5th Ave",  "Madison Ave", "Park Ave", "Lexington Ave", "3rd Ave", "2nd Ave", "1st Ave",
+                                         "York Ave", "East End Ave"};
+        constexpr int kAvenueCount = static_cast<int>(sizeof(kAvenues) / sizeof(kAvenues[0]));
+        // The main direction: length-weighted average of the main streets' directions (doubled angle).
+        glm::vec2 acc{0.0f};
+        for (const auto& r : net_.roads)
+            for (std::size_t i = 1; i < r.points.size(); ++i) {
+                const glm::vec2 d = r.points[i] - r.points[i - 1];
+                const float w = (r.cls == static_cast<int>(StreetClass::Main) ? 3.0f : 1.0f);
+                acc += glm::vec2(d.x * d.x - d.y * d.y, 2.0f * d.x * d.y) * w / std::max(glm::length(d), 1e-3f);
+            }
+        const float ang = 0.5f * std::atan2(acc.y, acc.x);
+        glm::vec2 A{std::cos(ang), std::sin(ang)};
+        if (std::abs(A.y) > std::abs(A.x) ? A.y > 0.0f : A.x < 0.0f) // avenues run "north" (towards -z)
+            A = -A;
+        const glm::vec2 P{-A.y, A.x};
+        struct Seg { float length; glm::vec2 mid; };
+        std::map<int, Seg> avenues, streets; // key: quantised offset across the line
+        const float q = std::max(20.0f, s_.sideSpacing * 0.6f);
+        for (const auto& r : net_.roads) {
+            if (r.points.size() < 2 || cls(r.cls) == StreetClass::None)
+                continue;
+            float L = 0.0f;
+            for (std::size_t i = 1; i < r.points.size(); ++i)
+                L += glm::length(r.points[i] - r.points[i - 1]);
+            const glm::vec2 d = r.points.back() - r.points.front();
+            if (L < 30.0f || glm::length(d) < 20.0f)
+                continue;
+            const glm::vec2 mid = r.points[r.points.size() / 2] * 0.5f + r.points[(r.points.size() - 1) / 2] * 0.5f;
+            if (std::abs(mid.x) > half_ - 5.0f || std::abs(mid.y) > half_ - 5.0f)
+                continue;
+            const bool avenue = std::abs(glm::dot(glm::normalize(d), A)) > 0.7071f;
+            auto& m = avenue ? avenues : streets;
+            const int key = static_cast<int>(std::lround(glm::dot(mid, avenue ? P : A) / q));
+            auto it = m.find(key);
+            if (it == m.end() || it->second.length < L)
+                m[key] = {L, mid};
+        }
+        const float kh = s_.kerbHeight;
+        int i = std::max(0, kAvenueCount / 2 - static_cast<int>(avenues.size()) / 2);
+        for (const auto& [key, sg] : avenues) {
+            (void)key;
+            if (i >= kAvenueCount)
+                break;
+            b_.plan.markers.push_back({kAvenues[i++], s_.group, b_.world(sg.mid, kh)});
+        }
+        int n = 14 + static_cast<int>(s_.seed % 20u);
+        for (const auto& [key, sg] : streets) {
+            (void)key;
+            const int t = n % 100;
+            const char* suf = (t >= 11 && t <= 13) ? "th" : n % 10 == 1 ? "st" : n % 10 == 2 ? "nd" : n % 10 == 3 ? "rd" : "th";
+            b_.plan.markers.push_back({"W " + std::to_string(n) + suf + " St", s_.group, b_.world(sg.mid, kh)});
+            ++n;
+        }
     }
 
     void green(Lot& L)

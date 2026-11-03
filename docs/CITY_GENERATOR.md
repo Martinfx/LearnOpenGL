@@ -114,6 +114,14 @@ holá železobetonová kostra na stejném půdorysu. Vlastní gramatika (`Skelet
 - Styly v kitu: „Concrete skeleton“, „Burnt frame“ (role skeleton), „Skeleton tower“ (role
   skeleton_tower, 14–22 pater – část věžáků v blocích Towers). Materiál `frame_concrete` je šedý beton.
 
+### Názvy ulic (New York)
+
+Town plan → Zoning → **Street names on the map** (`street_names`) pojmenuje ulice po newyorsku:
+ulice podél hlavního směru města jsou avenue (od západu 12th Ave … Broadway … 1st Ave, York Ave),
+příčné jsou číslované (W 14th St … od jihu k severu, počátek podle seedu). Úseky na jedné přímce sdílejí
+název, každý název má na mapě PDA jednu značku (na nejdelším úseku). Název náměstí: **Square name**
+(`square_name`, výchozí „Union Square“). Všechny názvy v generátoru jsou anglické/americké.
+
 ## 3. Editor
 
 - **Layout:** seed, střed (tlačítko *Camera*), otočení, kořenová skupina, šířky sloupců a řad, třídy ulic na
