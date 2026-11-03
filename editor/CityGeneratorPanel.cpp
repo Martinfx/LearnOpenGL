@@ -570,7 +570,7 @@ QWidget* CityGeneratorPanel::rulesTab()
     number(streets, tr("Wrecks per 100 m"), &settings_.wrecksPer100m, 0, 20, 0.1, tr("Parked at the kerb; side streets 70 %, alleys 30 %"), QString());
     number(streets, tr("Rubble per 100 m"), &settings_.rubblePer100m, 0, 50, 0.5, tr("Fallen bits of cornices and balconies under the facades"), QString());
     number(streets, tr("Junk per 100 m"), &settings_.clutterPer100m, 0, 50, 0.5, tr("Drums, tyres, dumpsters and bins along the facades (kit role clutter)"), QString());
-    number(streets, tr("Traffic signals"), &settings_.signals, 0, 1, 0.05,
+    number(streets, tr("Traffic signals"), &settings_.trafficSignals, 0, 1, 0.05,
            tr("Chance of a traffic signal (mast arm over the carriageway) where a main or side street meets a junction (kit role signal)"), QString());
     number(streets, tr("Road signs"), &settings_.signs, 0, 1, 0.05,
            tr("Chance of a road sign at a street's end, facing the traffic (alleys mostly stop signs; kit roles sign_stop, sign)"), QString());

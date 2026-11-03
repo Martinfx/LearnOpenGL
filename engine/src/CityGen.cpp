@@ -135,7 +135,7 @@ void Settings::normalize()
     rubblePer100m = std::clamp(rubblePer100m, 0.0f, 50.0f);
     hydrantSpacing = std::clamp(hydrantSpacing, 0.0f, 1000.0f);
     clutterPer100m = std::clamp(clutterPer100m, 0.0f, 50.0f);
-    signals = std::clamp(signals, 0.0f, 1.0f);
+    trafficSignals = std::clamp(trafficSignals, 0.0f, 1.0f);
     signs = std::clamp(signs, 0.0f, 1.0f);
     waterTowers = std::clamp(waterTowers, 0.0f, 1.0f);
     groundSpacing = std::clamp(groundSpacing, 0.25f, 4.0f);
@@ -477,7 +477,7 @@ const ScalarField kScalars[] = {
     {"rubble_per_100m", &Settings::rubblePer100m},
     {"hydrant_spacing", &Settings::hydrantSpacing},
     {"clutter_per_100m", &Settings::clutterPer100m},
-    {"signals", &Settings::signals},
+    {"signals", &Settings::trafficSignals},
     {"signs", &Settings::signs},
     {"water_towers", &Settings::waterTowers},
     {"overgrowth", &Settings::overgrowth},
@@ -3259,7 +3259,7 @@ private:
                 at(s, p, t);
                 const glm::vec2 toward = atEnd ? t : -t; // the traffic's way, into the junction
                 const glm::vec2 right{toward.y, -toward.x};
-                if (P.pavement >= 1.2f && major && sr.chance(s_.signals))
+                if (P.pavement >= 1.2f && major && sr.chance(s_.trafficSignals))
                     if (const KitProp* k = b_.anyProp("signal", sr)) {
                         const glm::vec2 pole = p + right * (cw + 0.7f);
                         if (b_.free(pole, 0.5f)) {

@@ -208,7 +208,7 @@ struct Settings {
     float wrecksPer100m = 1.2f;
     float rubblePer100m = 2.5f;
     float clutterPer100m = 2.5f;     // drums, tyres, dumpsters, bins along the facades (kit role clutter)
-    float signals = 0.25f;           // chance of a traffic signal at a main or side street's end (kit role signal)
+    float trafficSignals = 0.25f;         // chance of a traffic signal at a main or side street's end (kit role signal)
     float signs = 0.6f;              // chance of a road sign at a street's end (kit roles sign_stop, sign)
     float hydrantSpacing = 60.0f;    // fire hydrants at the kerb, about this far apart (0 = none)
     float waterTowers = 0.35f;       // share of flat-roofed houses of 5+ storeys with a wooden water tank on the roof
