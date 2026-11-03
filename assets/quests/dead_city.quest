@@ -1,0 +1,10 @@
+# Quest (editor: Assets > Quests). Stages run in order; dialogs and scripts can jump.
+id "dead_city"
+title "@quest.dead_city.title"
+description "@quest.dead_city.description"
+giver "Radio"
+stage "square" "@quest.dead_city.square" "Pomník"
+stage "stash" "@quest.dead_city.stash" "Skrýš u kiosku"
+reward ammo "5.45x39" 60
+reward medkits 1
+reward money 600

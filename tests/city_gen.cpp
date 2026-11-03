@@ -1,7 +1,7 @@
 // Command line city generator (engine/CityGen.h), the same as the editor's Tools > City generator > Generate.
 //   city_gen <settings.city> <out.level> [--base level-with-sky-and-sun.level] [--plan-only]
 // Without --base the level gets the default environment. With it, the base level's environment,
-// loading title and hint, player start and top-level map markers stay (pass the map itself to regenerate it). Prints the plan's statistics and warnings.
+// loading title and hint, player start and top-level entities (gameplay: quests, creatures, pickups) stay (pass the map itself to regenerate it). Prints the plan's statistics and warnings.
 #include <engine/CityGen.h>
 #include <engine/Scene.h>
 
@@ -81,10 +81,10 @@ int main(int argc, char** argv)
         return 1;
     }
     const bool baseStart = base && scene.playerStart != glm::vec3(0.0f);
-    if (base) { // keep the environment, the player start and the hand-placed map markers of the base level
+    if (base) { // keep the environment, the player start and the hand-placed entities of the base level
         scene.boxes.clear();
         scene.models.clear();
-        std::erase_if(scene.entities, [](const engine::Entity& e) { return e.type != "map_marker" || !e.parent.empty(); });
+        std::erase_if(scene.entities, [](const engine::Entity& e) { return !e.parent.empty(); }); // the city's own markers go with it
         scene.groups.clear();
         scene.prefabs.clear();
         scene.terrain.reset();
