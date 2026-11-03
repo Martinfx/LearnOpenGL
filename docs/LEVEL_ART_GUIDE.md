@@ -154,6 +154,49 @@ Pravidla pro ulici (Mulberry Street, příčná Hester Street):
 - Vozovka je asfalt rozpraskaný na bloky asi 3 m, s prasklinami podél pruhů, tmavými záplatami po výkopech a výtluky s blátem. Tráva v prasklinách roste jen tam, kde je ulice nejzelenější, protože zelená čára na čistém asfaltu vypadá jako namalovaná.
 - Cedule ulic jsou zelené s bílým písmem, nápisy obchodů anglicky (DELICATESSEN, BAKERY, PHARMACY…).
 
+## 10. Skutečná architektura Lower Manhattanu (rešerše 2026-11-03)
+
+martin: „spoj všechno do Mulberry Street, ať to vypadá realisticky… dělej to podle skutečné architektury“. Co je ověřené ze zdrojů (Z) a co je odhad (O):
+
+**Parcela a dům**
+- Typická newyorská parcela je 25 × 100 stop (7,6 × 30,5 m) (Z: Old Law Tenement, Tenement, Commissioners' Plan). **Ulice se proto skládá z úzkých samostatných domů po 7,6 m**, ne z dlouhých bloků. Každý dům má vlastní výšku, cihlu, římsu a rytmus oken. Občas stojí dvojdům na dvou parcelách (15,2 m). To je hlavní rozdíl proti našim 24–48 m dlouhým domům a důvod, proč ulice vypadá vymyšleně.
+- Činžák (tenement) má 5–6 pater (Z). Old Law (1879) „dumbbell“ dům má boky zúžené o 3 stopy (0,9 m), takže mezi sousedy vzniká úzká světlíková šachta (Z). Na podlaží jsou 4 byty po 3–4 pokojích, řazené za sebou jako „railroad“ (Z).
+- Zastavěnost parcely je nejvýš 65 % (1879) a 70 % (1901). Zákon z roku 1901 navíc požaduje zadní dvůr aspoň 12 stop (3,7 m) (Z). **Dům je tedy hluboký asi 18–21 m a za ním je dvůr. Uprostřed bloku se dvory dvou řad potkávají.** Manhattan v bloku nemá uličky, má ploty, prádelní šňůry a zadní domy.
+- Požární schodiště je ze zákona (1867) na každém bytě (Z). Tvoří ho plošina v každém patře, schody nebo žebříky mezi nimi a spodní spouštěcí žebřík na pantu či kolejnici (Z). Je na uliční fasádě přes dvě okenní osy (O, podle fotek).
+- Ozdoby: pískovcové a terakotové prvky, barevné cihly, styl Queen Anne a později Beaux-Arts, plechová římsa, letopočet a jméno na římse, např. „Anna Esposito 1926“ na č. 121 (Z: Forgotten NY).
+- Výška podlaží je asi 3,0–3,2 m (O). Parter s obchodem je vysoký 3,6–4 m a má výlohu, roletu, markýzu a štítovou ceduli (O). Sklep je napůl pod zemí, se schody z chodníku a zábradlím. V chodníku jsou ocelové poklopy do sklepa (O).
+
+**Ulice a blok**
+- Ve mřížce z roku 1811 mají běžné ulice 60 stop (18 m), široké ulice a avenue 100 stop (30 m). Blok ze severu na jih je asi 200 stop (61 m). Mulberry leží jižně od Houston Street, mimo mřížku, a je užší a nepravidelná (Z).
+- Mulberry Street vede mezi Baxter a Mott Street. Kříží ji Bayard, Canal, Hester, Grand, Broome, Kenmare, Spring a Prince (Z). Je srdcem Little Italy, s restauracemi, pekárnami a lahůdkami. Na jihu přechází do Chinatownu (Z).
+- Vozovka úzké ulice měří asi 9–10 m a chodníky asi 3–4 m (O, NYC DOT čísla nenašel).
+- Lampa je ocelový osmiboký stožár s „cobra head“ svítidlem. Dekorativní je „Bishop's Crook“ (Z: NYC Street Design Manual).
+- Vybavení ulice (O, z fotek): požární hydranty, stojany na kola, drátěné koše na rozích, hromady černých pytlů na chodníku, novinové boxy, telefonní budka, poštovní schránka, lešení s chodníkovou stříškou („sidewalk shed“) z dřevotřísky na zelených trubkách, rolety výloh pomalované graffiti, klimatizace v oknech, vodní nádrže na střechách vyšších domů, parkující auta podél obou obrubníků a semafory na rozích.
+
+## 11. Pravidla herního a level designu (martin: „řiď se podle design game pravidel“)
+
+1. **Kritická cesta a cíl na očích:** hráč na začátku vidí cíl nebo landmark („weenie“, Disney). Jde k němu, i když ho cesta vede jinudy.
+2. **Framing a centering** (Gaynor, GDC 2013): důležitou věc rámují dveře, průrazy, trosky a konec ulice. Hráč na ni hledí, když se událost děje. Mimo hlavní cíl platí pravidlo třetin, ne střed obrazu.
+3. **Vodicí linie:** obrubníky, kabely, řady aut a pruh vyšlapané cesty vedou oko ke cíli, často podvědomě (rozbor TLoU II).
+4. **Rytmus otevřeno–úzko:** široký prostor (orientace, boj) se střídá s úzkým (napětí, průchod domem). Uzly jsou křižovatky, kde se hráč rozhlíží.
+5. **Víc cest ke stejnému cíli** (wide-linear): ulice, dvory přes domy, požární schodiště a střechy. Smyčky vracejí hráče do známého prostoru.
+6. **Gating:** zával nebo barikáda zavře přímou cestu a ukáže, kudy dál (otevřené dveře, žebřík, světlo).
+7. **Kryty a průhledy:** žádný průhled delší než asi 100 m bez krytu. Auta, kontejnery a lešení dělí ulici na úseky. Kryt stojí 10–20 m od sebe.
+8. **Affordance:** kam hráč smí, to vypadá prostupně (otevřené dveře, světlo, vyšlapaná cesta, spouštěcí žebřík). Kam ne, to je jasně zavřené (zabedněno, zával, plot). Žádné neviditelné zdi tam, kde by se dalo jít; clip je jen za přirozenou hranicí.
+9. **Vertikalita:** sklepy, patra, požární schodiště a střechy. Výš je výhled a odměna.
+10. **Hustota detailu u očí hráče:** nejvíc detailu je do 10 m od cesty a ve výšce 0–3 m. Výš a dál stačí silueta.
+11. **Měřítko:** reálné rozměry se kvůli hratelnosti mírně stlačují (rozbor TLoU II), ale proporce (parcela, patro, okno, dveře) zůstávají skutečné.
+
+## 12. Plán: jedna Mulberry Street (2026-11-03)
+
+Plánek: `docs/images/mulberry_plan.png`. Souřadnice jsou v metrech, sever je −z.
+- **Ulice ze severu na jih:** Baxter (x = −74), Mulberry (x = 0, 16 m mezi fasádami), Mott (x = +74). **Ulice z východu na západ:** Canal na jihu (široká 30 m, otevřený start), Hester (z −24…−10) a Grand (asi z −110…−96).
+- **Bloky** mezi ulicemi jsou hluboké asi 58 m. Mají dvě řady domů po parcelách 7,6 m (občas 15,2 m), dům hluboký 18–20 m a za ním dvory s ploty. Asi pětina domů jde projít: otevřený vchod, chodba, schodiště do pater a zadní dveře do dvora. Některé parcely jsou proluky po zbouraném domě, kde je na štítu souseda vidět stopa schodů a pater. Na rozích stojí vyhořelé a zřícené domy a betonové skelety (podle martinových referencí, ve funkci vykuchaných „loftů“).
+- **Hranice:** na vnější straně Baxter, Mott a Canal jsou uzavřené fasády (přirozená zeď). Konce ulic zavírá zával, barikáda z autobusů a aut nebo zábor stavby s plotem. Clip je jen za nimi.
+- **Kritická cesta:** start na Canal Street → pohled na sever do Mulberry s věží kostela na konci (weenie) → Hester (uzel, tábor, úkol Eddie) → přímý průchod Mulberry na Grand zavírá zával → přes dům a dvory, nebo oklikou Mott Street → Grand → sever ke kostelu.
+- **Do levelu se slučuje:** skelety a vykuchané věže (Dead City), rekvizity z deadcity a zone/gen, žebříky a požární schodiště, Box.clip a úkoly, psi a nálezy (převezmu z Dead City vlákna).
+- **Výkon:** domy se skládají z knihovny asi 20 variant parcel, které se instancují. Interiéry má jen LOD 0. LOD 1 nastupuje na 70 m. Ulice se navzájem zakrývají, takže pomáhá occlusion culling. Cíl je 60 FPS na GTX 1060.
+
 ## Zdroje
 
 - Game Maker's Toolkit, How Level Design Can Tell a Story:
@@ -173,3 +216,13 @@ Pravidla pro ulici (Mulberry Street, příčná Hester Street):
 - Lynch legibility: https://ecampusontario.pressbooks.pub/studioskills/?p=172
 - Brian Upton, Landscaping game worlds (GDC 2007): https://gamedeveloper.com/game-platforms/post-gdc-i-rainbow-six-i-s-upton-talks-landscaping-game-worlds
 - Futura-Sciences, If humanity disappeared, how long would New York last: https://www.futura-sciences.com/en/if-humanity-disappeared-tomorrow-how-long-would-new-york-last_27788/
+- Wikipedia, Old Law Tenement: https://en.wikipedia.org/wiki/Old_Law_Tenement
+- Wikipedia, Tenement: https://en.wikipedia.org/wiki/Tenement
+- Wikipedia, Mulberry Street (Manhattan): https://en.wikipedia.org/wiki/Mulberry_Street_(Manhattan)
+- Wikipedia, Commissioners' Plan of 1811: https://en.wikipedia.org/wiki/Commissioners%27_Plan_of_1811
+- Wikipedia, Fire escape: https://en.wikipedia.org/wiki/Fire_escape
+- Forgotten NY, Mulberry Street: https://forgotten-ny.com/?p=93556
+- NYC Street Design Manual, lighting: https://www.nycstreetdesign.info/lighting/standard-street-lighting
+- Game Developer, Level design study: The Last of Us Part II trailer level: https://www.gamedeveloper.com/design/level-design-study-the-last-of-us-part-ii-gameplay-trailer-level
+- Game Developer, Framing and centering: https://www.gamedeveloper.com/design/framing-and-centering-directing-player-attention-in-open-3d-worlds
+- GDC 2024, Ania Bulavina, Urban Planning in Games: https://gdcvault.com/play/1034528/Level-Design-Summit-Urban-Planning

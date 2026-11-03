@@ -133,9 +133,9 @@ def grime(m, x0, x1, y_top, y_bot, z, region, k=0):
            uvs=[(u0, -v1), (u1, -v1), (u1, -v0), (u0, -v0)])
 
 
-def facade_grime(m, x0, x1, top, z, rng, plinth=None):
+def facade_grime(m, x0, x1, top, z, rng, plinth=None, skip=()):
     """Roof-edge drips along a wall from x0 to x1 (canonical frame, face at z) and, with plinth=(y0, y1, z),
-    splash dirt on the plinth."""
+    splash dirt on the plinth, left out over the x spans in skip (open doorways: the quad would block them)."""
     x0, x1 = x0 + 0.2, x1 - 0.2      # clear of the corners: the decal quads must not form a lip the player catches on
     x = x0
     while x < x1 - 0.5:
@@ -143,7 +143,15 @@ def facade_grime(m, x0, x1, top, z, rng, plinth=None):
         if rng.random() < 0.7:
             grime(m, x, x + w, top, top - rng.uniform(1.0, 3.2), z, 'roof')
         if plinth:
-            grime(m, x, x + w, plinth[1], plinth[0], plinth[2], 'plinth')
+            a = x
+            for sa, sb in sorted(skip) + [(x + w, x + w)]:
+                if sb <= a or sa >= x + w:
+                    continue
+                if sa - a > 0.3:
+                    grime(m, a, sa, plinth[1], plinth[0], plinth[2], 'plinth')
+                a = max(a, sb)
+            if x + w - a > 0.3:
+                grime(m, a, x + w, plinth[1], plinth[0], plinth[2], 'plinth')
         x += w
 
 

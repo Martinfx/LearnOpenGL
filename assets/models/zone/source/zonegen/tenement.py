@@ -13,7 +13,7 @@ rusty gate and the shop doors by shutters or boards.
 """
 import numpy as np
 
-from .buildings import wall_x, wall_z, slab, railing_x
+from .buildings import wall_x, wall_z, slab, railing_x, railing_z
 from .mats import PALETTE
 from .mesh import Mesh, rot_y
 from .skrunda import _frame, facade_grime, grime
@@ -25,6 +25,17 @@ T = 0.5             # outer wall
 SKINS = ('st_brick_red', 'st_brick_patch', 'st_plaster_brick', 'st_plaster_crack', 'st_paint_peel', 'st_brick_dark',
          'st_brick_slumped', 'st_brick_worn', 'st_plaster_beige')
 BRICK = {'st_brick_red', 'st_brick_patch', 'st_brick_dark', 'st_brick_slumped', 'st_brick_worn', 'st_brick_buff'}
+
+
+def stair_flight_x(m, x_start, x_end, z0, z1, y_start, y_end, mat, under_mat):
+    """Straight flight of steps from (x_start, y_start) to (x_end, y_end), walking along +-X."""
+    n = max(1, int(round(abs(y_end - y_start) / 0.18)))
+    rise, run = (y_end - y_start) / n, (x_end - x_start) / n
+    for i in range(n):
+        top = y_start + rise * (i + 1)
+        a, b = sorted((x_start + run * i, x_start + run * (i + 1)))
+        m.box(None, (a, top - 0.25, z0), (b, top, z1), mats={'Y': mat, 'y': under_mat, 'z': under_mat,
+                                                            'Z': under_mat, 'x': mat, 'X': mat})
 
 
 def _kind(rng, upper):
@@ -40,15 +51,21 @@ def _kind(rng, upper):
 
 
 def tenement(length=36.0, floors=5, depth=14.0, seed=0, lod=0, skin='st_brick_red', roof='pitched', gateway=None,
-             balconies=0.35, shops=True, ruin=None, style='soviet'):
+             balconies=0.35, shops=True, ruin=None, style='soviet', interior=False):
     """ruin=(a, b, keep): the upper floors collapsed between x = a and x = b (fractions of the length, 0..1), only
     floors below `keep` stand there; the break widens by about a bay per floor upwards, so the walls end in steps,
-    the floors hang open and the roof is gone over the gap (the second reference: houses gutted by shelling)."""
+    the floors hang open and the roof is gone over the gap (the second reference: houses gutted by shelling).
+    interior=True (LOD 0 only, not with ruin): the house can be walked through (martin 2026-11-03: "so you can
+    crawl through the houses"): the main street door stands open, a switchback stair behind it along the spine wall
+    climbs to every floor, the spine and the cross walls have doorways, the back door to the yard is open."""
     rng = np.random.default_rng(seed)
     m = Mesh(PALETTE)
     hx, hz = length / 2, depth / 2
     top = GROUND + (floors - 1) * STOREY
     inn = 'interior_dark'
+    enter = interior and lod == 0 and not ruin
+    if enter:
+        inn = 'plaster_peel'
     trim = 'concrete' if skin in BRICK else 'st_plaster_crack'
     # party walls were never meant to be seen: bare common brick (a patterned or plastered skin repeats on 30 m)
     party = {'st_brick_patch': 'st_brick_red', 'st_brick_dark': 'st_brick_dark'}.get(skin, 'st_brick_worn' if skin not in BRICK else skin)
@@ -74,6 +91,16 @@ def tenement(length=36.0, floors=5, depth=14.0, seed=0, lod=0, skin='st_brick_re
 
     def floor_y(f):
         return 0.0 if f == 0 else GROUND + (f - 1) * STOREY
+
+    # ---------------------------------------------------------------- the way in: main door, stair, back door
+    main = None
+    if enter:
+        doors = [i for i in range(nb) if (not shops or i % 3 == 1) and i != gate_bay]
+        main = min(doors, key=lambda i: abs(bays[i])) if doors else None
+    SX0 = bays[main] + 0.7 if main is not None else 0.0        # floor landing ends here, the flights run to +x
+    # (the stair starts beside the door: from the door a straight corridor leads through the spine to the back door)
+    SX1 = SX0 + 4.4                                             # the stair opening in the slabs, x
+    SZ0, SZ1 = 0.2, 2.75                                        # ... and z (front half, against the spine wall)
 
     rrng = np.random.default_rng(seed + 2000)
     m.spots = []        # (x, y, z, kind) where seeds could take root: 'balcony', 'roof', 'ledge' (the level plants them)
@@ -118,12 +145,53 @@ def tenement(length=36.0, floors=5, depth=14.0, seed=0, lod=0, skin='st_brick_re
         y = top if f == floors else floor_y(f)
         g = gap(f) if ruin and f > keep else None      # the floor of the lowest broken storey stays, under rubble
         holes = [] if g is None else [(g[0] + rrng.uniform(0.3, 1.5), -hz + T, g[1] - rrng.uniform(0.3, 1.5), hz - T)]
+        if main is not None and 0 < f < floors:
+            holes.append((SX0, SZ0, SX1, SZ1))
         slab(m, (-hx + T, -hz + T, hx - T, hz - T), holes, y + (0.0 if f else 0.02), 0.25 if f else 0.3,
              'roof_tar' if f == floors else 'flat_floor', inn, inn)
     if ruin:
         for f in range(floors):
             for a, b in segs(f, -hx + T, hx - T):
                 wall_x(m, a, b, 0.0, floor_y(f), floor_y(f + 1) if f < floors - 1 else top, 0.25, inn, inn)
+    elif enter:
+        erng = np.random.default_rng(seed + 5000)
+        for f in range(floors):
+            y0, y1 = floor_y(f), (floor_y(f + 1) if f < floors - 1 else top)
+            # doorways through the spine wall into the back flats, not where the stair runs along it
+            ops = [(cx, 1.0, y0 + 0.02, y0 + 2.2) for i, cx in enumerate(bays)
+                   if i == main or (i % 2 == 0 and not (SX0 - 1.4 < cx < SX1 + 0.8))]
+            wall_x(m, -hx + T, hx - T, 0.0, y0, y1, 0.25, inn, inn, ops)
+            # cross walls between the flats, a doorway on each side of the spine
+            for i in range(2, nb - 1, 3):
+                x = bays[i] - bay / 2
+                if SX0 - 0.3 < x < SX1 + 0.3:
+                    continue
+                wall_z(m, 0.125, hz - T, x, y0, y1, 0.12, inn, inn, [(1.6, 0.95, y0 + 0.02, y0 + 2.15)])
+                wall_z(m, -hz + T, -0.125, x, y0, y1, 0.12, inn, inn, [(-1.6, 0.95, y0 + 0.02, y0 + 2.15)])
+            # what is left inside: plaster fallen off the ceiling, a heap of junk, a wardrobe
+            for _ in range(int(length / 9)):
+                x, z = erng.uniform(-hx + 1.2, hx - 1.2), erng.uniform(-hz + 1.2, hz - 1.2)
+                if SX0 - 0.6 < x < SX1 + 0.6 and z > -0.3:
+                    continue
+                s_ = erng.uniform(0.3, 0.8)
+                m.push((x, y0 + 0.02, z), rot_y(erng.uniform(0, 360)))
+                if erng.random() < 0.7:
+                    m.box('plaster', (-s_, 0.0, -s_ * 0.7), (s_, s_ * 0.25, s_ * 0.7))
+                else:
+                    m.box('wood_dark', (-0.5, 0.0, -0.3), (0.5, 1.9, 0.3))
+                m.pop()
+        # the stair: two flights a storey along the spine wall, a landing at mid height, railings at the opening
+        for f in range(floors - 1):
+            y, h = floor_y(f) + (0.02 if f == 0 else 0.0), floor_y(f + 1) - floor_y(f) - (0.02 if f == 0 else 0.0)
+            n = int(round(h / 2 / 0.18))
+            run = n * 0.28
+            stair_flight_x(m, SX0, SX0 + run, SZ0, SZ0 + 1.2, y, y + h / 2, 'concrete_floor', 'plaster')
+            m.box(None, (SX0 + run, y + h / 2 - 0.22, SZ0), (SX1, y + h / 2, SZ1),
+                  mats={'Y': 'concrete_floor', 'y': 'plaster', 'x': 'plaster', 'X': 'plaster', 'z': 'plaster', 'Z': 'plaster'})
+            stair_flight_x(m, SX0 + run, SX0, SZ1 - 1.2, SZ1, y + h / 2, y + h, 'concrete_floor', 'plaster')
+            yt = floor_y(f + 1)
+            railing_x(m, SX0 + 0.05, SX1, SZ1 + 0.03, yt, 1.0)
+            railing_z(m, SZ0, SZ1, SX1 + 0.03, yt, 1.0)
     else:
         wall_x(m, -hx + T, hx - T, 0.0, 0.0, top, 0.25, inn, inn)
 
@@ -142,9 +210,13 @@ def tenement(length=36.0, floors=5, depth=14.0, seed=0, lod=0, skin='st_brick_re
                     win.append(('+z', cx, min(2.4, bay - 0.7), 0.7, 3.2, f, False, 'shop'))
                 else:
                     front.append((cx, 1.2, 0.0, 2.5))
-                    win.append(('+z', cx, 1.2, 0.0, 2.5, f, True, 'door'))
-                back.append((cx, 1.2, 1.2, 2.6))
-                win.append(('-z', cx, 1.2, 1.2, 2.6, f, False, ''))
+                    win.append(('+z', cx, 1.2, 0.0, 2.5, f, True, 'open' if i == main else 'door'))
+                if i == main:                                    # the back door to the yard
+                    back.append((cx, 1.1, 0.0, 2.3))
+                    win.append(('-z', cx, 1.1, 0.0, 2.3, f, True, 'open'))
+                else:
+                    back.append((cx, 1.2, 1.2, 2.6))
+                    win.append(('-z', cx, 1.2, 1.2, 2.6, f, False, ''))
             else:
                 ya, yb = y0 + 0.9, y0 + 2.75
                 w = min(1.35, bay - 1.1)
@@ -177,7 +249,12 @@ def tenement(length=36.0, floors=5, depth=14.0, seed=0, lod=0, skin='st_brick_re
 
     # ---------------------------------------------------------------- facade relief (street side)
     zf = hz
-    m.box('concrete', (-hx, -0.6, zf), (hx, 0.65, zf + 0.06), faces='xXYZ')                  # plinth
+    gaps = sorted([(bays[main] - 0.62, bays[main] + 0.62)] if main is not None else [])  # (the open door: no plinth)
+    xa = -hx
+    for ga, gb in gaps + [(hx, hx)]:
+        if ga - xa > 0.05:
+            m.box('concrete', (xa, -0.6, zf), (ga, 0.65, zf + 0.06), faces='xXYZ')            # plinth
+        xa = gb
     m.box(trim, (-hx, GROUND - 0.25, zf), (hx, GROUND + 0.05, zf + 0.18), faces='xXyYZ')    # string course
     for a, b in segs(floors, -hx - 0.1, hx + 0.1):
         m.box(trim, (a, top + 0.55, zf), (b, top + 0.9, zf + 0.5), faces='xXyYZ')  # cornice
@@ -228,6 +305,9 @@ def tenement(length=36.0, floors=5, depth=14.0, seed=0, lod=0, skin='st_brick_re
                     _frame(m, np.eye(3), 0, 0, ya, yb, w, rng, 'boarded')
                 else:
                     _frame(m, np.eye(3), 0, 0, ya, yb, w, rng, 'broken' if rng.random() < 0.6 else 'empty')
+            elif kind == 'open':
+                rng.random()                                    # (keeps the rest of the house as it was)
+                m.box('wood_dark', (-w / 2 - 0.08, yb, -0.22), (w / 2 + 0.08, yb + 0.08, -0.12))      # door head
             elif kind == 'door':
                 if rng.random() < 0.5:
                     m.box('st_metal_paint', (-w / 2, 0.0, -0.22), (w / 2, yb, -0.16))
@@ -472,7 +552,11 @@ def tenement(length=36.0, floors=5, depth=14.0, seed=0, lod=0, skin='st_brick_re
                         facade_grime(m, a, b, top + 0.3 if side == '+z' else top + 0.9, 0.03, rng)
                 facade_grime(m, -half, half, -10.0, 0.03, rng, plinth=(0.0, 1.1, 0.07 if side == '+z' else 0.02))
             else:
+                skip = ()
+                if enter and main is not None and side in ('+z', '-z'):   # the open front and back doors
+                    dx = bays[main] if side == '+z' else -bays[main]
+                    skip = ((dx - 0.75, dx + 0.75),)
                 facade_grime(m, -half, half, top + 0.3 if side == '+z' else top + 0.9, 0.03, rng,
-                             plinth=(0.0, 1.1, 0.07 if side == '+z' else 0.02))
+                             plinth=(0.0, 1.1, 0.07 if side == '+z' else 0.02), skip=skip)
             m.pop()
     return m
