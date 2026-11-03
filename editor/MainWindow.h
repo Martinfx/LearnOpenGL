@@ -300,6 +300,12 @@ private:
     QDoubleSpinBox* waterWaves_ = nullptr;
     QDoubleSpinBox* waterFoam_ = nullptr;
     QDoubleSpinBox* waterReflection_ = nullptr;
+    QFormLayout* ladderForm_ = nullptr;           // entity type "ladder"
+    QComboBox* ladderStyle_ = nullptr;
+    QDoubleSpinBox* ladderSpeed_ = nullptr;
+    QDoubleSpinBox* ladderRung_ = nullptr;
+    QLineEdit* ladderMaterial_ = nullptr;
+    QLineEdit* ladderSound_ = nullptr;
     QFormLayout* pickupForm_ = nullptr;           // entity type "pickup"
     QComboBox* pickupItem_ = nullptr;
     QLineEdit* pickupAmmoType_ = nullptr;

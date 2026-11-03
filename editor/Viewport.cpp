@@ -3,6 +3,7 @@
 #include <engine/EntityIO.h>
 
 #include <engine/Anomaly.h>
+#include <engine/Ladder.h>
 #include <engine/Lights.h>
 #include <engine/Water.h>
 
@@ -282,10 +283,32 @@ void Viewport::addIoHelpers(engine::RenderView& view) const
     for (std::size_t i = 0; i < scene_->entities.size(); ++i) {
         const engine::Entity& e = scene_->entities[i];
         if (e.type != "trigger" && e.type != "reverb" && e.type != "ambience" && e.type != "water" && e.type != "interior" &&
-            e.type != "reflection_probe" && e.type != "irradiance_volume" && e.type != "post_volume") // volumes: triggers, zones, water
+            e.type != "reflection_probe" && e.type != "irradiance_volume" && e.type != "post_volume" && e.type != "ladder") // volumes: triggers, zones, water
             continue;
         const bool selected = selected_ == first + static_cast<int>(i);
         const glm::vec4 c = selected ? glm::vec4(1.0f, 0.75f, 0.2f, 0.95f) : glm::vec4(e.type == "water" ? glm::vec3(0.3f, 0.7f, 1.0f) : e.color, 0.6f);
+        if (e.type == "ladder") { // the ladder box, where the player hangs, and arrows: climb from here, step off there
+            const engine::Ladder l = engine::ladderOf(e);
+            auto box = [&](float x0, float x1, float y0, float y1, float z0, float z1, glm::vec4 col) {
+                glm::vec3 q[8];
+                for (int k = 0; k < 8; ++k)
+                    q[k] = l.world({(k & 3) == 1 || (k & 3) == 2 ? x1 : x0, k >= 4 ? y1 : y0, (k & 3) >= 2 ? z1 : z0});
+                for (int k = 0; k < 4; ++k) {
+                    line(q[k], q[(k + 1) % 4], col);
+                    line(q[k + 4], q[(k + 1) % 4 + 4], col);
+                    line(q[k], q[k + 4], col);
+                }
+            };
+            const float hw = l.width * 0.5f, ht = l.thickness * 0.5f;
+            box(-hw, hw, 0.0f, l.height, -ht, ht, c);
+            if (selected) {
+                const glm::vec4 zone(0.4f, 0.9f, 0.5f, 0.5f);
+                box(-hw - 0.25f, hw + 0.25f, 0.0f, l.height, -ht - 0.75f, -ht, zone); // the climber's space
+                arrow(l.world({0.0f, 0.1f, -ht - 1.2f}), l.world({0.0f, 0.1f, -ht - 0.1f}), zone);
+                arrow(l.world({0.0f, l.height + 0.1f, -ht - 0.2f}), l.world({0.0f, l.height + 0.1f, ht + 0.8f}), zone);
+            }
+            continue;
+        }
         if (e.type == "water") { // turned box: the water volume
             const engine::WaterBody w = engine::waterBody(e);
             glm::vec3 q[8];
@@ -472,6 +495,8 @@ void Viewport::paintGL()
         particleLast_ = now;
         syncParticles(dt);
     }
+    for (engine::Entity& e : scene_->entities) // ladders: rails and rungs follow the size and style
+        engine::ensureLadderModel(e, assetRoot().toStdU16String());
     const std::vector<Pane> list = panes();
     for (const Pane& pane : list) {
         paneMode_ = pane.mode;

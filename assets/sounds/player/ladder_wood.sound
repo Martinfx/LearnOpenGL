@@ -1,0 +1,17 @@
+# Sound: variations (one is picked at random per play) and playback settings
+# Hands and boots on wooden rungs (the wood steps, lower and duller).
+file "step_wood_1.wav"
+file "step_wood_2.wav"
+file "step_wood_3.wav"
+file "step_wood_4.wav"
+file "step_wood_5.wav"
+file "step_wood_6.wav"
+volume 0.45
+pitch 0.85 0.97
+distance 1 25
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group sfx
+max_instances 4

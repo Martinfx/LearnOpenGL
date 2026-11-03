@@ -284,11 +284,14 @@ def tenement(length=36.0, floors=5, depth=14.0, seed=0, lod=0, skin='st_brick_re
             t = k / n
             m.box_c('iron_black', (x0 + (x1 - x0) * t, y + h / 2, z0 + (z1 - z0) * t), (0.014, h, 0.014), faces='xXzZ')
 
+    m.fire_escapes = []  # (x from, x to, first platform height, facade z, platform depth, platforms): ladders in the level
     for (i0, i1) in fe_runs:
         xa, xb = bays[i0] - bay / 2 + 0.15, bays[i1] + bay / 2 - 0.15
         D = 1.15                                                   # platform depth
         fl = [f for f in range(1, floors) if standing(f, (xa + xb) / 2, xb - xa + 0.4)]
         fl = [f for k, f in enumerate(fl) if f == fl[0] + k]      # only the unbroken run from the first floor up
+        if fl:
+            m.fire_escapes.append((xa, xb, floor_y(fl[0]) + 0.15, zf, D, len(fl)))
         run = min(2.9, xb - xa - 0.9)
         for k, f in enumerate(fl):
             y = floor_y(f) + 0.15

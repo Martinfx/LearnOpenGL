@@ -2,6 +2,7 @@
 #include <engine/Demo.h>
 #include <engine/Ambience.h>
 #include <engine/Audio.h>
+#include <engine/Ladder.h>
 #include <engine/Scene.h>
 #include <engine/Surfaces.h>
 
@@ -50,6 +51,8 @@ public:
     void water(glm::vec3 feet, glm::vec3 velocity, bool inWater, bool swimming, bool headUnder, float dt);
     // Leaves rustling while the player pushes through bushes (density 0..1 from Thickets).
     void brush(glm::vec3 feet, glm::vec3 velocity, float density, float dt);
+    // Hands and boots on the rungs while climbing (null = not on a ladder): a clank every second rung.
+    void ladder(const engine::Ladder* ladder, glm::vec3 feet, glm::vec3 velocity, float dt);
 
 private:
     std::shared_ptr<const engine::SoundDef> get(const std::filesystem::path& sound);
@@ -90,6 +93,8 @@ private:
     float strokeTimer_ = 0.0f;
     float brushTimer_ = 0.0f;
     float brushDensity_ = 0.0f;
+    float ladderTravel_ = 0.0f; // metres climbed since the last clank
+    bool wasOnLadder_ = false;
     float underMix_ = 0.0f;     // 0 above .. 1 head under water, eased
     float shelterMix_ = 0.0f;   // 0 open .. 1 sheltered, eased
     float stride_ = 0.0f;       // metres walked since the last footstep

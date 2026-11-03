@@ -62,6 +62,15 @@ void PlayerController::fixedUpdate(const InputState& input, const FpsCamera& cam
         return;
     }
 
+    if (climb(input, camera, dt)) {
+        launch_ = 0.0f;
+        drift_ = knock_ = glm::vec3(0.0f);
+        slow_ = 0.0f;
+        if (feet_.y < settings.killY)
+            respawn();
+        return;
+    }
+
     glm::vec3 wish(0.0f);
     if (input.isDown(Action::MoveForward)) wish += camera.flatForward();
     if (input.isDown(Action::MoveBack))    wish -= camera.flatForward();
@@ -124,6 +133,94 @@ void PlayerController::fixedUpdate(const InputState& input, const FpsCamera& cam
 
     if (feet_.y < settings.killY)
         respawn();
+}
+
+bool PlayerController::climb(const InputState& input, const FpsCamera& camera, float dt)
+{
+    const bool near = ladderNear_;
+    ladderNear_ = false;
+    ladderCooldown_ = std::max(0.0f, ladderCooldown_ - dt);
+    if (!near || ladderCooldown_ > 0.0f || freshPush_) { // a blast knocks the player off
+        climbing_ = false;
+        return false;
+    }
+    const Ladder& L = ladder_;
+    const glm::vec3 l = L.local(feet_);
+    const float front = -L.thickness * 0.5f; // the climbing side of the rungs (local z)
+
+    glm::vec3 wish(0.0f);
+    if (input.isDown(Action::MoveForward)) wish += camera.flatForward();
+    if (input.isDown(Action::MoveBack))    wish -= camera.flatForward();
+    if (input.isDown(Action::MoveRight))   wish += camera.right();
+    if (input.isDown(Action::MoveLeft))    wish -= camera.right();
+    if (glm::dot(wish, wish) > 0.0f)
+        wish = glm::normalize(wish);
+    const float into = glm::dot(wish, L.forward); // > 0 towards the ladder
+    const bool grounded = body_.grounded();
+
+    if (!climbing_) {
+        const bool inFront = l.z < front + 0.05f;
+        // On the floor the ladder leads up to (a roof, or a platform behind a railing up to 1.3 m high).
+        const bool atTop = l.y > L.height - 1.4f && l.z > front - 0.1f;
+        const bool grab = (inFront && (into > 0.5f || (!grounded && body_.velocity().y < 1.0f))) || (atTop && into < -0.5f);
+        if (!grab)
+            return false;
+        climbing_ = true;
+    }
+
+    const bool jumpDown = input.isDown(Action::Jump);
+    const bool jumpPressed = jumpDown && !jumpHeld_;
+    jumpHeld_ = jumpDown;
+    if (jumpPressed) { // let go: a push back off the ladder
+        climbing_ = false;
+        ladderCooldown_ = 0.5f;
+        push(-L.forward * 3.0f + glm::vec3(0.0f, 2.0f, 0.0f));
+        return false;
+    }
+
+    // Vertical: into the ladder climbs, away goes down; facing it and looking down, forward is down.
+    float v = into;
+    if (glm::dot(camera.flatForward(), L.forward) > 0.3f && camera.forward().y < -0.5f)
+        v = -v;
+    float vy = v * L.speed;
+    if (input.isDown(Action::Crouch))
+        vy = -L.speed * 2.2f; // slide down the rails
+    // Down at the bottom: back on the floor, walking again.
+    if (grounded && vy <= 0.0f && l.y < 0.3f) {
+        climbing_ = false;
+        return false;
+    }
+
+    glm::vec3 velocity(0.0f);
+    const float hang = front - settings.radius - 0.04f; // where the capsule hangs in front of the rungs
+    if (vy < 0.0f && l.z > hang + 0.15f) {
+        // Getting on from the top: up over the edge or the railing, then out in front of the rungs.
+        velocity.y = l.y < L.height + 0.05f ? L.speed : 0.0f;
+        velocity -= L.forward * 1.8f;
+    } else if (vy > 0.0f && l.y > L.height - 0.5f) {
+        // Stepping off at the top: up over the edge, then forward onto the floor behind.
+        if (l.z > -front + 0.05f || (grounded && l.y > L.height - 0.05f && l.z > hang + 0.1f)) {
+            climbing_ = false;
+            ladderCooldown_ = 0.3f;
+            return false;
+        }
+        velocity.y = l.y < L.height + 0.05f ? L.speed : 0.0f;
+        velocity += L.forward * 1.8f;
+    } else {
+        velocity.y = vy;
+        velocity += L.forward * std::clamp((hang - l.z) * 6.0f, -1.5f, 1.5f);
+        const float side = glm::dot(wish, L.right);
+        if (std::abs(side) > 0.3f)
+            velocity += L.right * side * 1.0f; // off the side: out of reach, the player lets go
+        else
+            velocity += L.right * std::clamp(-l.x * 3.0f, -0.8f, 0.8f); // keep to the middle
+    }
+    body_.moveFree(velocity, dt);
+    feet_ = body_.feet();
+    inWater_ = water_ && waterLevel_ > feet_.y;
+    swimming_ = false;
+    water_ = false;
+    return true;
 }
 
 glm::vec3 PlayerController::interpolatedEye(float alpha) const

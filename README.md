@@ -64,6 +64,15 @@ Výstupy jsou v `build/bin/`.
 **Hra** (`fps_game [soubor.level]`): WASD pohyb, myš rozhlížení, mezerník skok, Shift sprint,
 levé tlačítko střelba, pravé tlačítko míření přes mířidla (přiblížení, menší rozptyl; nastavení `aim_*` v panelu Weapons), R přebití, V prohlédnout zbraň (klip `anim_inspect`), 1–9 nebo kolečko výběr zbraně, E mluvit s postavou, M mapa a úkoly (PDA), Esc uvolní myš.
 
+**Žebříky**: dojdi k žebříku a jdi do něj (W), hráč se chytí a leze; směrem k žebříku nahoru, od něj dolů, při pohledu
+dolů jde W dolů, A/D do stran (z boku se pustí), Ctrl sjede dolů po madlech, mezerník se pustí dozadu. Nahoře vystoupí
+na střechu nebo přes zábradlí na plošinu; seshora se na žebřík nastoupí tak, že se jde přes okraj (i couváním).
+Při lezení je zbraň dole. V editoru *Edit > Add ladder* (nebo tlačítko Ladder): box entity je žebřík (Size X šířka,
+Y výška = kde se vystupuje, Z tloušťka), yaw je směr, kam se lezoucí dívá (ke zdi); v Details sekce **Ladder**:
+Style (`metal` rezavá ocel, `wood` dřevěný, `none` bez vlastního modelu, když je žebřík součástí modelu), Speed,
+Rung spacing, Material a Sound (prázdné = výchozí podle stylu). Vybraný žebřík ukazuje zeleně místo, kde se chytá,
+a šipky nástupu a výstupu. Kód `engine/Ladder.h`, `PlayerController::setLadder`.
+
 **Editor** (`fps_editor [soubor.level]`): pravé tlačítko + WASD/QE létání (kolečko mění rychlost),
 levé tlačítko výběr, F zaměří výběr, Ctrl+B přidá box, Ctrl+I importuje glTF model, Ctrl+D duplikuje, Del smaže,
 **F5 spustí úroveň ve hře**.

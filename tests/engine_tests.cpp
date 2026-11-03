@@ -54,6 +54,7 @@
 #include <cstdio>
 #include <engine/CVars.h>
 #include <engine/Water.h>
+#include <engine/Ladder.h>
 #include <engine/WorldStreaming.h>
 #include <engine/FrameArena.h>
 #include <engine/Memory.h>
@@ -3606,6 +3607,65 @@ void testWeatherCycle()
     check(t.environment.weather == s.environment.weather, "weather cycle round trip");
 }
 
+void testLadder()
+{
+    // A 4 m high block (front wall at z = -5), a steel ladder against it up to the roof.
+    auto s = flatFloor();
+    s.boxes.push_back({"Block", {0, 2, -7}, {10, 4, 4}, {1, 1, 1}});
+    engine::Entity e;
+    e.type = "ladder";
+    e.name = "Ladder";
+    e.position = {0.0f, 0.0f, -4.97f};
+    e.size = {0.5f, 4.0f, 0.06f};
+    e.yawDegrees = -90.0f; // the climber faces -Z, into the wall
+    s.entities.push_back(e);
+    const engine::Ladder l = engine::ladderOf(s.entities[0]);
+    check(std::abs(l.forward.z + 1.0f) < 1e-5f && std::abs(l.top() - 4.0f) < 1e-5f, "ladder: facing and top from yaw and size");
+    check(engine::ladderAt(s, {0.0f, 1.0f, -4.5f}, 0.75f) && !engine::ladderAt(s, {0.0f, 1.0f, -3.0f}, 0.75f) &&
+              !engine::ladderAt(s, {1.5f, 1.0f, -4.6f}, 0.75f) && !engine::ladderAt(s, {0.0f, 5.0f, -4.6f}, 0.75f),
+          "ladder: within reach only in front of it");
+    engine::Entity copy = s.entities[0];
+    check(engine::ensureLadderModel(copy, "assets") && copy.model && !copy.model->parts.empty() &&
+              std::abs(copy.model->localBounds.max.y - 4.0f) < 1e-4f && !engine::ensureLadderModel(copy, "assets"),
+          "ladder: mesh of its size, built once");
+    copy.properties["style"] = "none";
+    check(engine::ensureLadderModel(copy, "assets") && !copy.model, "ladder: style none has no mesh");
+
+    engine::PhysicsWorld world;
+    world.setLevel(s);
+    engine::PlayerController p;
+    p.spawn(world, {0.0f, 0.0f, -3.0f});
+    engine::FpsCamera cam; // faces -Z
+    auto run = [&](engine::Action a, float seconds, bool* climbed) {
+        engine::InputState in;
+        in.set(a, true);
+        for (int i = 0; i < static_cast<int>(seconds * 60.0f); ++i) {
+            if (engine::Ladder near; engine::ladderAt(s, p.feet(), p.ladderReach(), &near))
+                p.setLadder(near);
+            p.fixedUpdate(in, cam, 1.0f / 60.0f);
+            if (climbed && p.onLadder())
+                *climbed = true;
+        }
+    };
+    simulate(p, {}, 0.3f);
+    bool climbed = false;
+    run(engine::Action::MoveForward, 2.7f, &climbed);
+    check(climbed && !p.onLadder(), "ladder: walked into it, climbed and let go at the top");
+    check(std::abs(p.feet().y - 4.0f) < 0.05f && p.feet().z < -5.1f && p.grounded(), "ladder: stepped off onto the roof");
+    // Back down: walk backwards over the edge, the ladder is grabbed and climbed down.
+    climbed = false;
+    run(engine::Action::MoveBack, 5.0f, &climbed);
+    check(climbed && p.feet().y < 0.05f && p.feet().z > -5.0f && p.grounded(), "ladder: walked back over the edge and climbed down");
+    // Halfway up, Jump lets go and the player falls back down.
+    p.teleport({0.0f, 0.0f, -4.5f});
+    run(engine::Action::MoveForward, 0.8f, nullptr);
+    const float midway = p.feet().y;
+    check(p.onLadder() && midway > 1.0f && midway < 3.5f, "ladder: climbing at the ladder's speed");
+    run(engine::Action::Jump, 0.1f, nullptr);
+    simulate(p, {}, 1.5f);
+    check(!p.onLadder() && p.feet().y < 0.05f && p.feet().z > -4.6f, "ladder: Jump lets go backwards");
+}
+
 void testWater()
 {
     // A 10 x 4 m canal, 2 m deep, turned 90 degrees (runs along Z), flowing at 1 m/s.
@@ -5081,6 +5141,7 @@ int main(int argc, char** argv)
         {"testTimeOfDay", testTimeOfDay},
         {"testAssetPalette", testAssetPalette},
         {"testWater", testWater},
+        {"testLadder", testLadder},
         {"testWeatherCycle", testWeatherCycle},
         {"testMemoryBudgets", testMemoryBudgets},
         {"testAssetRegistry", testAssetRegistry},

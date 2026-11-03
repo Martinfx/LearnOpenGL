@@ -1616,8 +1616,8 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         const Entity& e = scene.entities[i];
         if (e.offline)
             continue; // simulated by the A-life far away
-        if ((!view.editorHelpers || shadowCascade_ >= 0) && e.helper())
-            continue; // map markers, sound sources, lights: editor only, never cast shadows
+        if ((!view.editorHelpers || shadowCascade_ >= 0) && e.helper() && !(e.type == "ladder" && e.model))
+            continue; // map markers, sound sources, lights: editor only, never cast shadows (a ladder's own mesh is real)
         if (!e.alive && e.type == "pickup")
             continue; // taken
         const float highlight = static_cast<int>(scene.boxes.size() + scene.models.size() + i) == view.selectedObject ? 1.0f : 0.0f;
@@ -1642,7 +1642,7 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
             continue;
         if (e.type == "sound" || e.type == "particle" || e.type == "anomaly" || e.type == "light" || e.type == "trigger" ||
             e.type == "relay" || e.type == "reverb" || e.type == "ambience" || e.type == "water" || e.type == "interior" ||
-            e.type == "reflection_probe" || e.type == "irradiance_volume" || e.type == "post_volume") { // marker cube; a sound zone itself is the entity size
+            e.type == "reflection_probe" || e.type == "irradiance_volume" || e.type == "post_volume" || e.type == "ladder") { // marker cube; a sound zone itself is the entity size
             const Aabb m = e.markerBounds();
             const bool glow = e.type == "light" && !depthOnly; // a bulb: unlit, in the light's color
             if (glow)

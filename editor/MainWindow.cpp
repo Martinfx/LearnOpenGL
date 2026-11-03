@@ -255,6 +255,7 @@ void MainWindow::buildMenus()
         });
     }
     edit->addAction(tr("Add &water (river, pond)"), this, [this] { addEntity("water"); });
+    edit->addAction(tr("Add &ladder (climbable)"), this, [this] { addEntity("ladder"); });
     edit->addAction(tr("Add re&verb zone"), this, [this] { addEntity("reverb"); });
     edit->addAction(tr("Add ambience &zone"), this, [this] { addEntity("ambience"); });
     edit->addAction(tr("Add &interior volume (dark building)"), this, [this] { addEntity("interior"); });
@@ -840,6 +841,7 @@ void MainWindow::buildDocks()
     ambienceForm_ = makeSection(tr("Ambience zone"), "Sound");
     pickupForm_ = makeSection(tr("Pickup"), "General");
     waterForm_ = makeSection(tr("Water"), "Rendering");
+    ladderForm_ = makeSection(tr("Ladder"), "General");
     prefabForm_ = makeSection(tr("Prefab"), "General");
     {
         // The selected object belongs to a prefab instance: the whole instance's place,
@@ -1876,6 +1878,59 @@ void MainWindow::buildDocks()
                 markDirty();
                 viewport_->update();
             });
+    }
+    {
+        // Ladder (type "ladder"): the box is the ladder (Size X width, Y height, Z thickness),
+        // the yaw is where the climber looks (towards the wall); engine/Ladder.h.
+        auto setProp = [this](const char* key, const std::string& value) {
+            engine::Entity* e = selectedEntity();
+            if (!e || e->type != "ladder" || e->properties[key] == value)
+                return;
+            if (value.empty())
+                e->properties.erase(key);
+            else
+                e->properties[key] = value;
+            markDirty();
+            viewport_->update();
+        };
+        ladderStyle_ = new QComboBox(boxPanel_);
+        ladderStyle_->addItems({"metal", "wood", "none"});
+        ladderStyle_->setToolTip(tr("metal: rusty steel rails and rungs, wood: timber ladder, none: no own mesh "
+                                    "(the ladder is part of a model, e.g. a fire escape; the box only makes it climbable)"));
+        auto spin = [this](double lo, double hi, double step, const QString& suffix, const QString& tip) {
+            auto* sb = new QDoubleSpinBox(boxPanel_);
+            sb->setRange(lo, hi);
+            sb->setSingleStep(step);
+            sb->setDecimals(2);
+            sb->setSuffix(suffix);
+            sb->setKeyboardTracking(false);
+            sb->setToolTip(tip);
+            return sb;
+        };
+        ladderSpeed_ = spin(0.2, 10.0, 0.1, tr(" m/s"), tr("Climbing speed (Crouch slides down about twice as fast)"));
+        ladderRung_ = spin(0.15, 1.0, 0.05, tr(" m"), tr("Rung spacing; a climbing sound plays every second rung"));
+        ladderMaterial_ = new QLineEdit(boxPanel_);
+        ladderMaterial_->setPlaceholderText(tr("default of the style"));
+        ladderMaterial_->setToolTip(tr("Engine .material relative to assets/, e.g. materials/pbr/rusty_metal_02.material"));
+        ladderSound_ = new QLineEdit(boxPanel_);
+        ladderSound_->setPlaceholderText(tr("default of the style"));
+        ladderSound_->setToolTip(tr(".sound relative to assets/, e.g. sounds/player/ladder_metal.sound"));
+        ladderForm_->addRow(tr("Style"), ladderStyle_);
+        ladderForm_->addRow(tr("Speed"), ladderSpeed_);
+        ladderForm_->addRow(tr("Rung spacing"), ladderRung_);
+        ladderForm_->addRow(tr("Material"), ladderMaterial_);
+        ladderForm_->addRow(tr("Sound"), ladderSound_);
+        auto* hint = new QLabel(tr("Size: X width, Y height (the top is where the player steps off), Z thickness. "
+                                   "Yaw: the way the climber faces (towards the wall); the green arrows show where to grab it and where to step off."),
+                                boxPanel_);
+        hint->setObjectName("dim");
+        hint->setWordWrap(true);
+        ladderForm_->addRow(hint);
+        connect(ladderStyle_, &QComboBox::currentTextChanged, this, [setProp](const QString& t) { setProp("style", t.toStdString()); });
+        connect(ladderSpeed_, &QDoubleSpinBox::valueChanged, this, [setProp](double v) { setProp("speed", QString::number(v, 'g', 4).toStdString()); });
+        connect(ladderRung_, &QDoubleSpinBox::valueChanged, this, [setProp](double v) { setProp("rung", QString::number(v, 'g', 4).toStdString()); });
+        connect(ladderMaterial_, &QLineEdit::editingFinished, this, [this, setProp] { setProp("material", ladderMaterial_->text().trimmed().toStdString()); });
+        connect(ladderSound_, &QLineEdit::editingFinished, this, [this, setProp] { setProp("sound", ladderSound_->text().trimmed().toStdString()); });
     }
     outputsPanel_ = new OutputsPanel(boxPanel_);
     outputsForm_->addRow(outputsPanel_);
@@ -3122,6 +3177,18 @@ void MainWindow::refreshProperties()
         waterFoam_->setValue(prop("foam", "0.5"));
         waterReflection_->setValue(prop("reflection", "1"));
     }
+    if (e && e->type == "ladder") {
+        const QSignalBlocker b1(ladderStyle_), b2(ladderSpeed_), b3(ladderRung_), b4(ladderMaterial_), b5(ladderSound_);
+        auto prop = [e](const char* key, const char* fallback) {
+            const auto it = e->properties.find(key);
+            return QString::fromStdString(it == e->properties.end() ? std::string(fallback) : it->second);
+        };
+        ladderStyle_->setCurrentText(prop("style", "metal"));
+        ladderSpeed_->setValue(prop("speed", "2").toDouble());
+        ladderRung_->setValue(prop("rung", "0.3").toDouble());
+        ladderMaterial_->setText(prop("material", ""));
+        ladderSound_->setText(prop("sound", ""));
+    }
     if (e && e->type == "pickup") {
         const QSignalBlocker b1(pickupItem_), b2(pickupAmmoType_), b3(pickupAmount_), b4(pickupWeapon_), b5(pickupName_);
         auto prop = [e](const char* key, const char* fallback) {
@@ -3996,7 +4063,7 @@ void MainWindow::addEntity(const QString& type)
     e.name = engine::uniqueNodeName(scene_, (type == "enemy" ? "Enemy " : type == "npc" ? "Stalker " : type == "alife_point" ? "Point " : type == "crow_flock" ? "Crows " : type == "sound" ? "Sound " : type == "particle" ? "Effect " : type == "light" ? "Light " :
                                              type == "trigger" ? "Trigger " : type == "relay" ? "Relay " : type == "reverb" ? "Reverb " : type == "ambience" ? "Ambience " : type == "interior" ? "Interior " : type == "post_volume" ? "Post-process volume " : type == "reflection_probe" ? "Reflection probe " :
                                              type == "irradiance_volume" ? "Irradiance volume " :
-                                             type == "water" ? "Water " : "Entity ") +
+                                             type == "water" ? "Water " : type == "ladder" ? "Ladder " : "Entity ") +
                                                 std::to_string(scene_.entities.size() + 1));
     if (type == "sound") {
         e.size = {1.0f, 1.0f, 1.0f};
@@ -4070,6 +4137,11 @@ void MainWindow::addEntity(const QString& type)
         e.size = {10.0f, 4.0f, 10.0f};
         e.color = {0.4f, 0.85f, 0.5f};
         e.properties["set"] = "sounds/ambience/interior.ambience";
+    } else if (type == "ladder") {
+        e.size = {0.5f, 3.0f, 0.06f}; // 1 unit = 1 m: a fixed steel ladder up one storey
+        e.color = {0.4f, 0.9f, 0.5f};
+        e.yawDegrees = std::round(glm::degrees(std::atan2(cam.flatForward().z, cam.flatForward().x)) / 90.0f) * 90.0f; // facing away from the camera
+        e.properties["style"] = "metal";
     } else if (type == "water") {
         e.size = {12.0f, 1.5f, 6.0f};
         e.color = {0.16f, 0.2f, 0.17f}; // murky green-brown
@@ -5941,6 +6013,8 @@ void MainWindow::updateDetailsVisibility()
             relevant = e != nullptr && e->type == "ambience";
         if (d.form == waterForm_)
             relevant = e != nullptr && e->type == "water";
+        if (d.form == ladderForm_)
+            relevant = e != nullptr && e->type == "ladder";
         if (d.form == prefabForm_)
             relevant = selectedPrefab() >= 0;
         if (d.form == pickupForm_)
@@ -6145,8 +6219,10 @@ void MainWindow::buildModePanel()
         connect(interior, &QPushButton::clicked, this, [this] { addEntity("interior"); });
         auto* postVolume = toolButton("cube", tr("Post-process volume (own image look inside: colours, contrast, lens)"), page);
         connect(postVolume, &QPushButton::clicked, this, [this] { addEntity("post_volume"); });
+        auto* ladder = toolButton("cube", tr("Ladder (the player climbs it; steel, wooden or invisible on a model's ladder)"), page);
+        connect(ladder, &QPushButton::clicked, this, [this] { addEntity("ladder"); });
         auto* model = toolButton("model", tr("glTF model..."), page);
-        for (QPushButton* b : {box, enemy, npc, alifePoint, dogPack, crows, entity, sound, particles, anomaly, light, campfire, trigger, relay, reverbZone, ambienceZone, interior, postVolume, model})
+        for (QPushButton* b : {box, enemy, npc, alifePoint, dogPack, crows, entity, sound, particles, anomaly, light, campfire, trigger, relay, reverbZone, ambienceZone, interior, postVolume, ladder, model})
             layout->addWidget(b);
         auto* hint = new QLabel(tr("Or drag a model from the Content Browser into the view: it lands where you drop it."), page);
         hint->setObjectName("dim");

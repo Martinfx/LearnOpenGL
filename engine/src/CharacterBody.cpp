@@ -86,6 +86,22 @@ void CharacterBody::step(glm::vec3 desiredVelocity, float jumpSpeed, float gravi
                       JPH::BodyFilter(), JPH::ShapeFilter(), *impl_->world->tempAllocator);
 }
 
+void CharacterBody::moveFree(glm::vec3 velocity, float dt)
+{
+    if (!valid())
+        return;
+    JPH::CharacterVirtual& ch = *impl_->character;
+    ch.SetLinearVelocity(toJolt(velocity));
+    JPH::CharacterVirtual::ExtendedUpdateSettings update;
+    update.mStickToFloorStepDown = JPH::Vec3::sZero();
+    update.mWalkStairsStepUp = JPH::Vec3::sZero();
+    JPH::PhysicsSystem& system = impl_->world->system;
+    ch.ExtendedUpdate(dt, JPH::Vec3::sZero(), update,
+                      system.GetDefaultBroadPhaseLayerFilter(Layers::Moving),
+                      system.GetDefaultLayerFilter(Layers::Moving),
+                      JPH::BodyFilter(), JPH::ShapeFilter(), *impl_->world->tempAllocator);
+}
+
 void CharacterBody::teleport(glm::vec3 feet)
 {
     if (!valid())

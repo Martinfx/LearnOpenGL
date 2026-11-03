@@ -2,6 +2,7 @@
 #include "engine/Camera.h"
 #include "engine/CharacterBody.h"
 #include "engine/Input.h"
+#include "engine/Ladder.h"
 #include "engine/Scene.h"
 #include <glm/vec3.hpp>
 #include <algorithm>
@@ -40,6 +41,16 @@ public:
     bool swimming() const { return swimming_; }
     float waterDepth() const { return inWater_ ? waterLevel_ - feet_.y : 0.0f; } // at the feet, 0 when dry
     bool headUnderwater() const { return inWater_ && eye().y < waterLevel_; }
+    // Ladder within reach for the next step (engine/Ladder.h ladderAt with ladderReach()),
+    // set before fixedUpdate like the water. The player grabs it walking into it, falling
+    // past it or walking off the top over it; climbs with the movement keys (into the ladder
+    // = up, away = down, looking down turns forward into down), sideways with strafe, steps
+    // off at the top, slides down with Crouch and lets go backwards with Jump.
+    void setLadder(const Ladder& ladder) { ladderNear_ = true; ladder_ = ladder; }
+    float ladderReach() const { return settings.radius + 0.45f; }
+    bool onLadder() const { return climbing_; }
+    const Ladder* ladder() const { return climbing_ ? &ladder_ : nullptr; }
+    void releaseLadder() { climbing_ = false; }
     // Moves the player (keeps the spawn point).
     void teleport(glm::vec3 feet);
 
@@ -47,6 +58,7 @@ public:
     glm::vec3 interpolatedEye(float alpha) const;
 
 private:
+    bool climb(const InputState& input, const FpsCamera& camera, float dt); // true = this step was on the ladder
     CharacterBody body_;
     glm::vec3 spawnPoint_{0.0f};
     glm::vec3 feet_{0.0f};
@@ -60,6 +72,9 @@ private:
     bool water_ = false, inWater_ = false, swimming_ = false;
     float waterLevel_ = 0.0f;
     glm::vec2 waterFlow_{0.0f};
+    bool ladderNear_ = false, climbing_ = false;
+    Ladder ladder_;
+    float ladderCooldown_ = 0.0f; // after letting go: no grabbing again right away
 };
 
 } // namespace engine

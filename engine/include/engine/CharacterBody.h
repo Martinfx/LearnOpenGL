@@ -29,6 +29,9 @@ public:
     // `impulse` is a one-off velocity change (explosions, anomalies), applied on the ground and in the air.
     void step(glm::vec3 desiredVelocity, float jumpSpeed, float gravity, float airControl, float dt,
               glm::vec3 impulse = glm::vec3(0.0f));
+    // One fixed step at exactly this velocity, no gravity (ladders): collides and slides
+    // along walls but neither sticks to the floor nor climbs stairs on its own.
+    void moveFree(glm::vec3 velocity, float dt);
     void teleport(glm::vec3 feet);
 
     glm::vec3 feet() const;

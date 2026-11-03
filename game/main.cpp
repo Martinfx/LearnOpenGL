@@ -40,6 +40,7 @@
 #include "GameWeather.h"
 #include "Inventory.h"
 #include <engine/Water.h>
+#include <engine/Ladder.h>
 #include <engine/Memory.h>
 #include <engine/FileWatcher.h>
 #include <engine/HotReload.h>
@@ -441,6 +442,32 @@ void readInput(GLFWwindow* window, engine::InputState& input)
     for (const Binding& b : kBindings)
         if (b.action >= 0)
             input.set(static_cast<engine::Action>(b.action), keyDown(window, boundKey(b.cvar)));
+    // Test hook FPS_ENGINE_HOLD="forward 30 400; back 500 900": a movement key held from frame to frame
+    // (screenshots of climbing, walking); actions forward, back, left, right, jump, crouch, sprint.
+    static const auto holds = [] {
+        struct Hold { engine::Action action; long from, to; };
+        std::vector<Hold> out;
+        if (const char* list = std::getenv("FPS_ENGINE_HOLD"))
+            for (std::istringstream in(list); in.good();) {
+                std::string name, entry;
+                std::getline(in, entry, ';');
+                std::istringstream e(entry);
+                long from = 0, to = 1L << 30;
+                e >> name >> from >> to;
+                static const std::map<std::string, engine::Action> names = {
+                    {"forward", engine::Action::MoveForward}, {"back", engine::Action::MoveBack}, {"left", engine::Action::MoveLeft},
+                    {"right", engine::Action::MoveRight}, {"jump", engine::Action::Jump}, {"crouch", engine::Action::Crouch},
+                    {"sprint", engine::Action::Sprint}};
+                if (const auto it = names.find(name); it != names.end())
+                    out.push_back({it->second, from, to});
+            }
+        return out;
+    }();
+    static long calls = 0;
+    for (const auto& h : holds)
+        if (calls >= h.from && calls < h.to)
+            input.set(h.action, true);
+    ++calls;
 }
 
 // Gamepad (any GLFW-mapped controller): left stick moves, right stick looks, RT fires,
@@ -924,6 +951,8 @@ int main(int argc, char** argv)
             if (!loaded)
                 scene = engine::makeDefaultScene();
             engine::expandFlocks(scene); // a crow flock entity becomes its birds
+            for (engine::Entity& e : scene.entities) // ladders get their rails and rungs
+                engine::ensureLadderModel(e, std::filesystem::path(argv[0]).parent_path() / "assets");
             progress.setStep("physics");
             const double physicsStart = glfwGetTime();
             ragdolls.clear(); // setLevel removes their bodies
@@ -2607,6 +2636,8 @@ int main(int argc, char** argv)
             engine::DebugDraw::global().tick(dt);
             if (engine::WaterBody water; engine::waterAt(scene, player.feet(), &water))
                 player.setWater(water.level, water.flow);
+            if (engine::Ladder ladder; !player.noclip && engine::ladderAt(scene, player.feet(), player.ladderReach(), &ladder))
+                player.setLadder(ladder);
             const float thicket = player.noclip ? 0.0f : thickets.densityAt(player.feet());
             if (thicket > 0.0f)
                 player.slow(scene.player.bushSlow * thicket); // pushing through bushes
@@ -2664,6 +2695,8 @@ int main(int argc, char** argv)
                     audio.play(weapons[current].settings.soundDraw, player.eye(), 1.0f);
                     wasReloading = weapons[current].reloading();
                 }
+            } else if (player.onLadder()) {
+                lowered = std::min(1.0f, lowered + dt / 0.2f); // both hands on the rungs
             } else {
                 lowered = std::max(0.0f, lowered - dt / 0.15f);
             }
@@ -2915,6 +2948,7 @@ int main(int argc, char** argv)
                 audio.walk(scene.player, player.feet(), player.velocity(), player.grounded(), dt, ground);
                 audio.water(player.feet(), player.velocity(), player.waterDepth() > 0.0f, player.swimming(), player.headUnderwater(), dt);
                 audio.brush(player.feet(), player.velocity(), player.noclip ? 0.0f : thickets.densityAt(player.feet()), dt);
+                audio.ladder(player.ladder(), player.feet(), player.velocity(), dt);
             }
             // Characters that died this step go limp: a ragdoll from their current pose.
             for (std::size_t i = 0; i < scene.entities.size(); ++i) {

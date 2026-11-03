@@ -11,6 +11,7 @@
 #include "engine/Terrain.h"
 #include "engine/TimeOfDay.h"
 #include "engine/VertexPaint.h"
+#include <cmath>
 #include <cstdint>
 #include <filesystem>
 #include <iosfwd>
@@ -299,7 +300,7 @@ struct Entity {
     bool helper() const { return type == "sound" || type == "map_marker" || type == "particle" || type == "anomaly" || type == "light" ||
                                  type == "sit_point" || type == "trigger" || type == "relay" || type == "reverb" || type == "ambience" ||
                                  type == "water" || type == "interior" || type == "reflection_probe" || type == "irradiance_volume" ||
-                                 type == "alife_point" || type == "crow_flock" || type == "post_volume"; }
+                                 type == "alife_point" || type == "crow_flock" || type == "post_volume" || type == "ladder"; }
     // What the editor draws and picks: a sound zone can span the whole level, so
     // it is shown as a small speaker cube at its position; the zone is its size.
     Aabb markerBounds() const
@@ -315,6 +316,12 @@ struct Entity {
             return {position + glm::vec3(-0.25f, size.y * 0.5f - 0.25f, -0.25f), position + glm::vec3(0.25f, size.y * 0.5f + 0.25f, 0.25f)};
         if (type == "light") // the light itself is at `position`
             return {position - glm::vec3(0.15f), position + glm::vec3(0.15f)};
+        if (type == "ladder") { // thin and turned: the box around the turned ladder
+            const float yaw = yawDegrees * 0.017453293f;
+            const float c = std::abs(std::cos(yaw)), s = std::abs(std::sin(yaw));
+            const glm::vec3 half(0.5f * (size.z * c + size.x * s), 0.0f, 0.5f * (size.z * s + size.x * c));
+            return {position - half, position + half + glm::vec3(0.0f, size.y, 0.0f)};
+        }
         if (type == "anomaly") // the field (size) is drawn as rings by the editor
             return {position - glm::vec3(0.3f, 0.0f, 0.3f), position + glm::vec3(0.3f, 0.6f, 0.3f)};
         return bounds();

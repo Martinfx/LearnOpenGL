@@ -1,0 +1,17 @@
+# Sound: variations (one is picked at random per play) and playback settings
+# Hands and boots on steel rungs (the metal steps, lower and duller).
+file "step_metal_1.wav"
+file "step_metal_2.wav"
+file "step_metal_3.wav"
+file "step_metal_4.wav"
+file "step_metal_5.wav"
+file "step_metal_6.wav"
+volume 0.45
+pitch 0.78 0.9
+distance 1 25
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group sfx
+max_instances 4

@@ -34,6 +34,7 @@ add_library(engine STATIC
     src/Ambience.cpp
     src/TimeOfDay.cpp
     src/Water.cpp
+    src/Ladder.cpp
     src/WorldStreaming.cpp
     src/FrameArena.cpp
     src/AssetCredits.cpp

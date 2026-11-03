@@ -115,6 +115,9 @@ void GameAudio::startLevel(const engine::Scene& scene)
                 std::filesystem::path p(std::u8string(value.begin(), value.end()));
                 preload((p.is_relative() ? assetDir_ / p : p).lexically_normal());
             }
+        if (e.type == "ladder")
+            if (const std::string sound = engine::ladderOf(e).sound; !sound.empty())
+                preload((assetDir_ / std::filesystem::path(std::u8string(sound.begin(), sound.end()))).lexically_normal());
         if (e.type != "sound")
             continue;
         auto prop = [&](const char* key, const char* fallback) {
@@ -221,6 +224,25 @@ void GameAudio::brush(glm::vec3 feet, glm::vec3 velocity, float density, float d
         brushTimer_ = std::clamp(0.9f - speed * 0.1f, 0.35f, 0.8f);
         const float volume = std::clamp(0.35f + 0.65f * density, 0.0f, 1.0f) * std::clamp(speed / 4.0f, 0.45f, 1.0f);
         play((assetDir_ / "sounds/player/bush.sound").lexically_normal(), feet + glm::vec3(0.0f, 0.6f, 0.0f), volume);
+    }
+}
+
+void GameAudio::ladder(const engine::Ladder* ladder, glm::vec3 feet, glm::vec3 velocity, float dt)
+{
+    if (!ladder) {
+        wasOnLadder_ = false;
+        return;
+    }
+    const glm::vec3 hands = feet + glm::vec3(0.0f, 1.2f, 0.0f);
+    if (!wasOnLadder_) { // grabbing it
+        playAsset(ladder->sound, &hands, 0.8f);
+        ladderTravel_ = 0.0f;
+    }
+    wasOnLadder_ = true;
+    ladderTravel_ += std::abs(velocity.y) * dt;
+    if (ladderTravel_ >= ladder->rung * 2.0f) { // a hand and a boot every second rung
+        ladderTravel_ = 0.0f;
+        playAsset(ladder->sound, &hands, std::clamp(0.5f + std::abs(velocity.y) * 0.15f, 0.5f, 1.0f));
     }
 }
 
