@@ -95,52 +95,52 @@ foliage_type "../models/zone/vegetation/dandelion_c.glb" 0.1 0.85 1.15 22 0 0 0 
 foliage_lod "../models/zone/vegetation/dandelion_c_lod1.glb" 6
 foliage_lod "../models/zone/vegetation/dandelion_c_far.glb" 11
 foliage_type "../models/zone/vegetation/bush_street_a.glb" 0.03 0.85 1.15 160 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/bush_street_a_lod1.glb" 18
-foliage_lod "../models/zone/vegetation/bush_street_a_lod2.glb" 40
+foliage_lod "../models/zone/vegetation/bush_street_a_lod1.glb" 12
+foliage_lod "../models/zone/vegetation/bush_street_a_lod2.glb" 30
 foliage_type "../models/zone/vegetation/bush_street_a.glb" 0.02 0.85 1.15 160 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/bush_street_a_lod1.glb" 18
-foliage_lod "../models/zone/vegetation/bush_street_a_lod2.glb" 40
+foliage_lod "../models/zone/vegetation/bush_street_a_lod1.glb" 12
+foliage_lod "../models/zone/vegetation/bush_street_a_lod2.glb" 30
 foliage_type "../models/zone/vegetation/bush_street_c.glb" 0.02 0.85 1.15 160 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/bush_street_c_lod1.glb" 18
-foliage_lod "../models/zone/vegetation/bush_street_c_lod2.glb" 40
+foliage_lod "../models/zone/vegetation/bush_street_c_lod1.glb" 12
+foliage_lod "../models/zone/vegetation/bush_street_c_lod2.glb" 30
 foliage_type "../models/zone/vegetation/bush_street_b.glb" 0.03 0.85 1.15 160 0 0 1 0.8 1 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/bush_street_b_lod1.glb" 18
-foliage_lod "../models/zone/vegetation/bush_street_b_lod2.glb" 40
+foliage_lod "../models/zone/vegetation/bush_street_b_lod1.glb" 12
+foliage_lod "../models/zone/vegetation/bush_street_b_lod2.glb" 30
 foliage_type "../models/zone/vegetation/sapling_c.glb" 0.03 0.85 1.15 200 0 0 1 1 1 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-foliage_lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+foliage_lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+foliage_lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
 foliage_type "../models/zone/vegetation/sapling_a.glb" 0.03 0.85 1.15 220 0 0 1 1 1 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-foliage_lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+foliage_lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+foliage_lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
 foliage_type "../models/zone/vegetation/sapling_b.glb" 0.03 0.85 1.15 220 0 0 1 1 1 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/sapling_b_lod1.glb" 18
-foliage_lod "../models/zone/vegetation/sapling_b_lod2.glb" 40
+foliage_lod "../models/zone/vegetation/sapling_b_lod1.glb" 12
+foliage_lod "../models/zone/vegetation/sapling_b_lod2.glb" 30
 foliage_type "../models/zone/vegetation/maple_b.glb" 0.03 0.85 1.15 400 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/maple_b_lod1.glb" 30
-foliage_lod "../models/zone/vegetation/maple_b_lod2.glb" 70
-foliage_impostor 120
+foliage_lod "../models/zone/vegetation/maple_b_lod1.glb" 18
+foliage_lod "../models/zone/vegetation/maple_b_lod2.glb" 45
+foliage_impostor 90
 foliage_type "../models/zone/vegetation/birch_young.glb" 0.03 0.85 1.15 220 0 0 1 1 1 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-foliage_lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+foliage_lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+foliage_lod "../models/zone/vegetation/birch_young_lod2.glb" 30
 foliage_type "../models/zone/vegetation/maple_a.glb" 0.03 0.85 1.15 400 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/maple_a_lod1.glb" 30
-foliage_lod "../models/zone/vegetation/maple_a_lod2.glb" 70
-foliage_impostor 120
+foliage_lod "../models/zone/vegetation/maple_a_lod1.glb" 18
+foliage_lod "../models/zone/vegetation/maple_a_lod2.glb" 45
+foliage_impostor 90
 foliage_type "../models/zone/vegetation/ash_b.glb" 0.03 0.85 1.15 400 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/ash_b_lod1.glb" 30
-foliage_lod "../models/zone/vegetation/ash_b_lod2.glb" 70
-foliage_impostor 120
+foliage_lod "../models/zone/vegetation/ash_b_lod1.glb" 18
+foliage_lod "../models/zone/vegetation/ash_b_lod2.glb" 45
+foliage_impostor 90
 foliage_type "../models/zone/vegetation/broadleaf_young.glb" 0.03 0.85 1.15 300 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/broadleaf_young_lod1.glb" 18
-foliage_lod "../models/zone/vegetation/broadleaf_young_lod2.glb" 40
+foliage_lod "../models/zone/vegetation/broadleaf_young_lod1.glb" 12
+foliage_lod "../models/zone/vegetation/broadleaf_young_lod2.glb" 30
 foliage_type "../models/zone/vegetation/ash_a.glb" 0.03 0.85 1.15 400 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/ash_a_lod1.glb" 30
-foliage_lod "../models/zone/vegetation/ash_a_lod2.glb" 70
-foliage_impostor 120
+foliage_lod "../models/zone/vegetation/ash_a_lod1.glb" 18
+foliage_lod "../models/zone/vegetation/ash_a_lod2.glb" 45
+foliage_impostor 90
 foliage_type "../models/zone/vegetation/birch_a.glb" 0.03 0.85 1.15 400 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/birch_a_lod1.glb" 30
-foliage_lod "../models/zone/vegetation/birch_a_lod2.glb" 70
-foliage_impostor 120
+foliage_lod "../models/zone/vegetation/birch_a_lod1.glb" 18
+foliage_lod "../models/zone/vegetation/birch_a_lod2.glb" 45
+foliage_impostor 90
 foliage_type "../models/zone/skrunda/debris_tin_cans.glb" 0.02 0.85 1.15 40 0 0 0 0.7 1 0.15 1 1 1 1 1 1 1 1
 foliage_type "../models/zone/skrunda/debris_brick_heap.glb" 0.02 0.85 1.15 110 0 0 1 0.7 1 0.15 1 1 1 1 1 1 1 1
 foliage_type "../models/zone/skrunda/debris_sheet.glb" 0.02 0.85 1.15 90 0 0 1 0.7 1 0.15 1 1 1 1 1 1 1 1
@@ -152,13 +152,13 @@ foliage_type "../models/zone/skrunda/debris_silicate_bricks.glb" 0.02 0.85 1.15 
 foliage_type "../models/zone/skrunda/debris_planks.glb" 0.02 0.85 1.15 90 0 0 1 0.7 1 0.15 1 1 1 1 1 1 1 1
 foliage_type "../models/zone/skrunda/debris_twigs.glb" 0.02 0.85 1.15 45 0 0 0 0.7 1 0.15 1 1 1 1 1 1 1 1
 foliage_type "../models/zone/vegetation/broadleaf_b.glb" 0.03 0.85 1.15 400 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/broadleaf_b_lod1.glb" 30
-foliage_lod "../models/zone/vegetation/broadleaf_b_lod2.glb" 70
-foliage_impostor 120
+foliage_lod "../models/zone/vegetation/broadleaf_b_lod1.glb" 18
+foliage_lod "../models/zone/vegetation/broadleaf_b_lod2.glb" 45
+foliage_impostor 90
 foliage_type "../models/zone/vegetation/broadleaf_a.glb" 0.03 0.85 1.15 400 1 0 1 1 0.3 0.15 1 1 1 1 1 1 1 1
-foliage_lod "../models/zone/vegetation/broadleaf_a_lod1.glb" 30
-foliage_lod "../models/zone/vegetation/broadleaf_a_lod2.glb" 70
-foliage_impostor 120
+foliage_lod "../models/zone/vegetation/broadleaf_a_lod1.glb" 18
+foliage_lod "../models/zone/vegetation/broadleaf_a_lod2.glb" 45
+foliage_impostor 90
 loading_title "Mulberry Street"
 loading_hint "Projdi ulicí na sever, k barikádě na jejím konci."
 group "Houses" ""
@@ -1369,8 +1369,8 @@ model "Roof plant" "../models/zone/vegetation/birch_young.glb" -7.11 7.5 170.75
   parent "Ivy"
   id f12ecd9164a757b7
   transform 0 257.7 0 0.351
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 60
   collision 0
   cast_shadows 0
@@ -1388,8 +1388,8 @@ model "Roof plant 3" "../models/zone/vegetation/birch_young.glb" -7.55 17.85 156
   parent "Ivy"
   id 98205cb00d9b510d
   transform 0 189.7 0 0.302
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1397,8 +1397,8 @@ model "Roof plant 4" "../models/zone/vegetation/birch_young.glb" -7.55 17.85 165
   parent "Ivy"
   id 2cd863d7f7a742bd
   transform 0 20.7 0 0.35
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1406,8 +1406,8 @@ model "Roof plant 5" "../models/zone/vegetation/birch_young.glb" -7.55 17.85 149
   parent "Ivy"
   id a4349b4167f4b25f
   transform 0 96.1 0 0.432
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1415,8 +1415,8 @@ model "Roof plant 6" "../models/zone/vegetation/birch_young.glb" -13.7 16.95 145
   parent "Ivy"
   id 8955fd7496fbe880
   transform 0 149 0 0.642
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1424,8 +1424,8 @@ model "Roof plant 7" "../models/zone/vegetation/sapling_a.glb" -9.93 16.95 149.7
   parent "Ivy"
   id 6db552112e3a123e
   transform 0 85.9 0 0.624
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1433,8 +1433,8 @@ model "Roof plant 8" "../models/zone/vegetation/sapling_c.glb" -17.04 16.95 149.
   parent "Ivy"
   id 9cb73d7af6d7c9ea
   transform 0 55.6 0 0.724
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1442,8 +1442,8 @@ model "Roof plant 9" "../models/zone/vegetation/sapling_c.glb" -9.98 16.95 172.0
   parent "Ivy"
   id c38118d26bebd3d1
   transform 0 278.8 0 0.769
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1451,8 +1451,8 @@ model "Roof plant 10" "../models/zone/vegetation/sapling_c.glb" -10.96 16.95 140
   parent "Ivy"
   id c8df64d0474d9449
   transform 0 299.2 0 0.721
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1460,8 +1460,8 @@ model "Roof plant 11" "../models/zone/vegetation/birch_young.glb" -7.31 17.1 135
   parent "Ivy"
   id 61d20f4bda3d1b40
   transform 0 348 0 0.512
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 60
   collision 0
   cast_shadows 0
@@ -1470,8 +1470,8 @@ model "Roof plant 12" "../models/zone/vegetation/birch_young.glb" -7.75 24.25 13
   parent "Ivy"
   id 7cf20631c18876cb
   transform 0 263.3 0 0.427
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1479,8 +1479,8 @@ model "Roof plant 13" "../models/zone/vegetation/birch_young.glb" -15.74 23.35 1
   parent "Ivy"
   id 8aa2094972cb8140
   transform 0 90.4 0 0.608
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1488,8 +1488,8 @@ model "Roof plant 14" "../models/zone/vegetation/sapling_c.glb" -10.04 23.35 133
   parent "Ivy"
   id 575562b439a81f72
   transform 0 263.2 0 0.794
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1497,8 +1497,8 @@ model "Roof plant 15" "../models/zone/vegetation/sapling_a.glb" -10.12 23.35 120
   parent "Ivy"
   id 6b2be5f6c87d05f8
   transform 0 311.3 0 0.707
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1506,8 +1506,8 @@ model "Roof plant 16" "../models/zone/vegetation/sapling_c.glb" -10.33 23.35 134
   parent "Ivy"
   id 336cc389738bc6da
   transform 0 312.7 0 0.849
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1515,8 +1515,8 @@ model "Roof plant 17" "../models/zone/vegetation/birch_young.glb" -7.71 17.1 102
   parent "Ivy"
   id e74ef235650b05a6
   transform 0 237.9 0 0.522
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 60
   collision 0
   cast_shadows 0
@@ -1525,8 +1525,8 @@ model "Roof plant 18" "../models/zone/vegetation/birch_young.glb" -13.8 20.15 96
   parent "Ivy"
   id 07617b68c29159bd
   transform 0 35.9 0 0.747
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1534,8 +1534,8 @@ model "Roof plant 19" "../models/zone/vegetation/birch_young.glb" -9.96 20.15 10
   parent "Ivy"
   id b300f9f295625574
   transform 0 160 0 0.568
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1543,8 +1543,8 @@ model "Roof plant 20" "../models/zone/vegetation/birch_young.glb" -9.97 20.15 97
   parent "Ivy"
   id 76b755c50ed172e8
   transform 0 355.4 0 0.878
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1552,8 +1552,8 @@ model "Roof plant 21" "../models/zone/vegetation/sapling_a.glb" -13.54 13.75 84.
   parent "Ivy"
   id 0aab9f446fef65ca
   transform 0 39.4 0 0.576
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1561,8 +1561,8 @@ model "Roof plant 22" "../models/zone/vegetation/birch_young.glb" -19.5 13.75 84
   parent "Ivy"
   id 8437def8b80a2826
   transform 0 166.7 0 0.736
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1570,8 +1570,8 @@ model "Roof plant 23" "../models/zone/vegetation/sapling_a.glb" -13.15 13.75 79.
   parent "Ivy"
   id bb65ac4c98038b21
   transform 0 107.2 0 0.749
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1579,8 +1579,8 @@ model "Roof plant 24" "../models/zone/vegetation/sapling_c.glb" -18.92 13.75 83.
   parent "Ivy"
   id 986b165cc2420842
   transform 0 276.7 0 0.847
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1588,8 +1588,8 @@ model "Roof plant 25" "../models/zone/vegetation/birch_young.glb" -19.09 13.75 8
   parent "Ivy"
   id 42c804dff434dfce
   transform 0 331.3 0 0.826
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1597,8 +1597,8 @@ model "Roof plant 26" "../models/zone/vegetation/birch_young.glb" -8 14.65 54.52
   parent "Ivy"
   id 033e533e2046dc1e
   transform 0 17.7 0 0.259
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1606,8 +1606,8 @@ model "Roof plant 27" "../models/zone/vegetation/birch_young.glb" -8 14.65 65.44
   parent "Ivy"
   id 32aeb7481b986b8b
   transform 0 121.2 0 0.268
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1615,8 +1615,8 @@ model "Roof plant 28" "../models/zone/vegetation/birch_young.glb" -13.77 13.75 6
   parent "Ivy"
   id ac470dead31c4e6a
   transform 0 282.8 0 0.813
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1624,8 +1624,8 @@ model "Roof plant 29" "../models/zone/vegetation/birch_young.glb" -17.83 13.75 5
   parent "Ivy"
   id 1371941e89be8a15
   transform 0 112.8 0 0.513
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1633,8 +1633,8 @@ model "Roof plant 30" "../models/zone/vegetation/sapling_c.glb" -10.21 13.75 48.
   parent "Ivy"
   id 25af0e8007b7698a
   transform 0 95.3 0 1.02
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1642,8 +1642,8 @@ model "Roof plant 31" "../models/zone/vegetation/sapling_c.glb" -7.71 10.7 23.88
   parent "Ivy"
   id 23d7fb21727147dd
   transform 0 102.7 0 0.818
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   cast_shadows 0
@@ -1652,8 +1652,8 @@ model "Roof plant 32" "../models/zone/vegetation/birch_young.glb" -8.15 27.45 18
   parent "Ivy"
   id 302b6310f3d6939c
   transform 0 302.7 0 0.342
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1661,8 +1661,8 @@ model "Roof plant 33" "../models/zone/vegetation/birch_young.glb" -20.76 26.55 1
   parent "Ivy"
   id 9650ecac1e02150a
   transform 0 285.2 0 0.55
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1670,8 +1670,8 @@ model "Roof plant 34" "../models/zone/vegetation/sapling_a.glb" -14.78 16.95 34.
   parent "Ivy"
   id affe04e087701fa3
   transform 0 330.3 0 0.513
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1679,8 +1679,8 @@ model "Roof plant 35" "../models/zone/vegetation/sapling_c.glb" -12.17 16.95 32.
   parent "Ivy"
   id 0597902108222c53
   transform 0 0.6 0 0.705
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1688,8 +1688,8 @@ model "Roof plant 36" "../models/zone/vegetation/birch_young.glb" -10.55 16.95 3
   parent "Ivy"
   id 1eab1695810c2e8d
   transform 0 109.8 0 0.502
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1697,8 +1697,8 @@ model "Roof plant 37" "../models/zone/vegetation/sapling_a.glb" -13.09 16.95 33.
   parent "Ivy"
   id 90b15a2ea55b92be
   transform 0 146.5 0 0.557
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1706,8 +1706,8 @@ model "Roof plant 38" "../models/zone/vegetation/birch_young.glb" -10.83 16.95 3
   parent "Ivy"
   id 809310d7cce6ffa9
   transform 0 170.3 0 0.828
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1724,8 +1724,8 @@ model "Roof plant 40" "../models/zone/vegetation/birch_young.glb" -7.31 17.1 7.3
   parent "Ivy"
   id af0e43d143e2d211
   transform 0 163.4 0 0.358
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 60
   collision 0
   cast_shadows 0
@@ -1734,8 +1734,8 @@ model "Roof plant 41" "../models/zone/vegetation/birch_young.glb" -19.39 20.15 -
   parent "Ivy"
   id 2a8d515246d9274e
   transform 0 71.5 0 0.53
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1743,8 +1743,8 @@ model "Roof plant 42" "../models/zone/vegetation/birch_young.glb" -13.03 20.15 -
   parent "Ivy"
   id b68f01c8e30ab8d0
   transform 0 103.2 0 0.814
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1752,8 +1752,8 @@ model "Roof plant 43" "../models/zone/vegetation/birch_young.glb" -10.17 20.15 -
   parent "Ivy"
   id 4f80bc202fda8308
   transform 0 25 0 0.739
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1761,8 +1761,8 @@ model "Roof plant 44" "../models/zone/vegetation/sapling_a.glb" -9.94 20.15 -12.
   parent "Ivy"
   id 66bb56a8f2d588e7
   transform 0 32.3 0 0.756
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1770,8 +1770,8 @@ model "Roof plant 45" "../models/zone/vegetation/sapling_c.glb" -7.56 4.3 -32.1
   parent "Ivy"
   id 67a58485ad028ecf
   transform 0 66.4 0 0.861
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   cast_shadows 0
@@ -1798,8 +1798,8 @@ model "Roof plant 48" "../models/zone/vegetation/birch_young.glb" -8 27.45 -54.1
   parent "Ivy"
   id 820b9490c325c983
   transform 0 183.5 0 0.284
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1807,8 +1807,8 @@ model "Roof plant 49" "../models/zone/vegetation/birch_young.glb" -8 27.45 -38.8
   parent "Ivy"
   id 3dcbaf296c5ba514
   transform 0 61 0 0.417
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1816,8 +1816,8 @@ model "Roof plant 50" "../models/zone/vegetation/sapling_c.glb" -9.61 26.55 -41.
   parent "Ivy"
   id e09872bf5bec6368
   transform 0 274 0 1.03
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1825,8 +1825,8 @@ model "Roof plant 51" "../models/zone/vegetation/birch_young.glb" -7.75 17.85 -8
   parent "Ivy"
   id ee5adbcc7536e8e7
   transform 0 181.9 0 0.373
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1834,8 +1834,8 @@ model "Roof plant 52" "../models/zone/vegetation/sapling_c.glb" -7.75 17.85 -87.
   parent "Ivy"
   id cac65b8ab9359a38
   transform 0 1.9 0 0.448
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1843,8 +1843,8 @@ model "Roof plant 53" "../models/zone/vegetation/sapling_c.glb" -9.55 16.95 -98.
   parent "Ivy"
   id 0c1e0ac59746e29a
   transform 0 335.3 0 0.865
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1852,8 +1852,8 @@ model "Roof plant 54" "../models/zone/vegetation/birch_young.glb" -19.8 16.95 -1
   parent "Ivy"
   id 4110efa7e03d0633
   transform 0 188.5 0 0.598
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1861,8 +1861,8 @@ model "Roof plant 55" "../models/zone/vegetation/birch_young.glb" -14.49 16.95 -
   parent "Ivy"
   id 23eac175a11228cb
   transform 0 15.6 0 0.658
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1870,8 +1870,8 @@ model "Roof plant 56" "../models/zone/vegetation/sapling_c.glb" -10.18 16.95 -71
   parent "Ivy"
   id a77421145fe0bde5
   transform 0 132.7 0 1.03
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1888,8 +1888,8 @@ model "Roof plant 58" "../models/zone/vegetation/birch_young.glb" -7.56 20.3 -11
   parent "Ivy"
   id 1e8e1311a9b111e4
   transform 0 272.4 0 0.428
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 60
   collision 0
   cast_shadows 0
@@ -1898,8 +1898,8 @@ model "Roof plant 59" "../models/zone/vegetation/sapling_a.glb" -10.29 23.35 -11
   parent "Ivy"
   id 7e67111a7d77c4f5
   transform 0 200 0 0.676
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1907,8 +1907,8 @@ model "Roof plant 60" "../models/zone/vegetation/sapling_a.glb" -10.37 23.35 -12
   parent "Ivy"
   id 6ac7e939f4a261c5
   transform 0 158 0 0.576
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1916,8 +1916,8 @@ model "Roof plant 61" "../models/zone/vegetation/sapling_c.glb" -7.31 17.1 -140.
   parent "Ivy"
   id 91c1abbcd006edda
   transform 0 215.2 0 0.715
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   cast_shadows 0
@@ -1926,8 +1926,8 @@ model "Roof plant 62" "../models/zone/vegetation/birch_young.glb" -7.75 21.05 -1
   parent "Ivy"
   id abb82da498e409d5
   transform 0 96.9 0 0.39
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1935,8 +1935,8 @@ model "Roof plant 63" "../models/zone/vegetation/birch_young.glb" -9.43 20.15 -1
   parent "Ivy"
   id 628e8665d364c6d3
   transform 0 271.4 0 0.806
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1944,8 +1944,8 @@ model "Roof plant 64" "../models/zone/vegetation/birch_young.glb" -13.4 20.15 -1
   parent "Ivy"
   id 61522370e91ff64f
   transform 0 299.4 0 0.75
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1953,8 +1953,8 @@ model "Roof plant 65" "../models/zone/vegetation/sapling_c.glb" -17.04 20.15 -15
   parent "Ivy"
   id e41932e1ed347183
   transform 0 164.7 0 0.987
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1962,8 +1962,8 @@ model "Roof plant 66" "../models/zone/vegetation/sapling_c.glb" -9.95 20.15 -150
   parent "Ivy"
   id 13467bcb03e0232c
   transform 0 229.2 0 1.01
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1971,8 +1971,8 @@ model "Roof plant 67" "../models/zone/vegetation/birch_young.glb" -19.1 13.75 -1
   parent "Ivy"
   id 3c3d7d050d4f9726
   transform 0 27.9 0 0.742
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1980,8 +1980,8 @@ model "Roof plant 68" "../models/zone/vegetation/birch_young.glb" -12.75 13.75 -
   parent "Ivy"
   id 32816757d9760b93
   transform 0 69.3 0 0.789
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1989,8 +1989,8 @@ model "Roof plant 69" "../models/zone/vegetation/sapling_c.glb" -10.03 13.75 -16
   parent "Ivy"
   id 23c633491dabab7a
   transform 0 68.4 0 0.73
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -1998,8 +1998,8 @@ model "Roof plant 70" "../models/zone/vegetation/birch_young.glb" -13.92 13.75 -
   parent "Ivy"
   id e6a77997d8ce2f59
   transform 0 40.9 0 0.517
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2007,8 +2007,8 @@ model "Roof plant 71" "../models/zone/vegetation/birch_young.glb" -9.93 13.75 -1
   parent "Ivy"
   id df8e4a47ed45e7d1
   transform 0 137.3 0 0.594
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2016,8 +2016,8 @@ model "Roof plant 72" "../models/zone/vegetation/birch_young.glb" -7.31 13.9 -22
   parent "Ivy"
   id 494dbb37f71d48bc
   transform 0 137.8 0 0.377
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 60
   collision 0
   cast_shadows 0
@@ -2026,8 +2026,8 @@ model "Roof plant 73" "../models/zone/vegetation/birch_young.glb" -14.97 26.55 -
   parent "Ivy"
   id 27f3a4728ad09e90
   transform 0 155.2 0 0.763
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2035,8 +2035,8 @@ model "Roof plant 74" "../models/zone/vegetation/sapling_c.glb" -9.89 26.55 -225
   parent "Ivy"
   id 4aba847a9816fcb0
   transform 0 263.5 0 0.976
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2044,8 +2044,8 @@ model "Roof plant 75" "../models/zone/vegetation/sapling_c.glb" -14.38 16.95 -20
   parent "Ivy"
   id 98b4d1296f0c3467
   transform 0 192.4 0 0.762
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2053,8 +2053,8 @@ model "Roof plant 76" "../models/zone/vegetation/birch_young.glb" -11.77 16.95 -
   parent "Ivy"
   id a46f13b373a94b3e
   transform 0 3.4 0 0.59
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2062,8 +2062,8 @@ model "Roof plant 77" "../models/zone/vegetation/sapling_c.glb" -12.09 16.95 -20
   parent "Ivy"
   id 1ab2c542fb67282a
   transform 0 31.1 0 0.74
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2071,8 +2071,8 @@ model "Roof plant 78" "../models/zone/vegetation/sapling_c.glb" -10.15 16.95 -21
   parent "Ivy"
   id 5ab7d97e36937216
   transform 0 240.1 0 0.992
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2080,8 +2080,8 @@ model "Roof plant 79" "../models/zone/vegetation/sapling_c.glb" -7.11 13.9 -239.
   parent "Ivy"
   id 36dec914f56c3157
   transform 0 225.6 0 0.769
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   cast_shadows 0
@@ -2090,8 +2090,8 @@ model "Roof plant 80" "../models/zone/vegetation/birch_young.glb" -7.11 17.1 -23
   parent "Ivy"
   id 17706bec37bba01c
   transform 0 316.1 0 0.531
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 60
   collision 0
   cast_shadows 0
@@ -2100,8 +2100,8 @@ model "Roof plant 81" "../models/zone/vegetation/birch_young.glb" -7.55 21.05 -2
   parent "Ivy"
   id 8b455e48f29a3cf1
   transform 0 306.7 0 0.434
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2118,8 +2118,8 @@ model "Roof plant 83" "../models/zone/vegetation/birch_young.glb" -7.55 17.85 -2
   parent "Ivy"
   id c0ecdd33da009376
   transform 0 63 0 0.413
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2127,8 +2127,8 @@ model "Roof plant 84" "../models/zone/vegetation/sapling_a.glb" -8.94 16.95 -274
   parent "Ivy"
   id 9815d03177dad57d
   transform 0 328.9 0 0.531
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2136,8 +2136,8 @@ model "Roof plant 85" "../models/zone/vegetation/sapling_c.glb" -9.9 16.95 -262.
   parent "Ivy"
   id db75cf6f29666410
   transform 0 80.9 0 1.05
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2145,8 +2145,8 @@ model "Roof plant 86" "../models/zone/vegetation/birch_young.glb" -7.75 21.05 -3
   parent "Ivy"
   id 84de68b9eb70d77c
   transform 0 52.2 0 0.356
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2154,8 +2154,8 @@ model "Roof plant 87" "../models/zone/vegetation/sapling_c.glb" -20.55 20.15 -31
   parent "Ivy"
   id 159a1d9ece153725
   transform 0 72.3 0 0.759
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2163,8 +2163,8 @@ model "Roof plant 88" "../models/zone/vegetation/sapling_a.glb" -20 20.15 -327.1
   parent "Ivy"
   id 75b28466144a0c53
   transform 0 114.2 0 0.538
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2172,8 +2172,8 @@ model "Roof plant 89" "../models/zone/vegetation/sapling_c.glb" -20.04 20.15 -31
   parent "Ivy"
   id 6be459c6b65b171f
   transform 0 281.1 0 0.973
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2181,8 +2181,8 @@ model "Roof plant 90" "../models/zone/vegetation/birch_young.glb" -8.83 20.15 -3
   parent "Ivy"
   id c6e8fa9ddbef169c
   transform 0 135.6 0 0.639
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2190,8 +2190,8 @@ model "Roof plant 91" "../models/zone/vegetation/birch_young.glb" -9.19 20.15 -3
   parent "Ivy"
   id a61513ac4f68ea80
   transform 0 184.3 0 0.679
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2199,8 +2199,8 @@ model "Roof plant 92" "../models/zone/vegetation/sapling_c.glb" 7.55 21.05 147.3
   parent "Ivy"
   id 9b071dae25a2628c
   transform 0 178.6 0 0.429
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2208,8 +2208,8 @@ model "Roof plant 93" "../models/zone/vegetation/sapling_c.glb" 17.53 20.15 158.
   parent "Ivy"
   id 0271f215943e8790
   transform 0 304.6 0 0.891
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2217,8 +2217,8 @@ model "Roof plant 94" "../models/zone/vegetation/birch_young.glb" 8.78 20.15 160
   parent "Ivy"
   id 8c33243d2cb4d91b
   transform 0 31.9 0 0.869
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2235,8 +2235,8 @@ model "Roof plant 96" "../models/zone/vegetation/sapling_c.glb" 7.75 17.85 128.0
   parent "Ivy"
   id 057e1721a5bbb6b7
   transform 0 280.8 0 0.409
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2244,8 +2244,8 @@ model "Roof plant 97" "../models/zone/vegetation/birch_young.glb" 7.75 17.85 135
   parent "Ivy"
   id 594fb7ace23d7ccc
   transform 0 333.7 0 0.34
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2253,8 +2253,8 @@ model "Roof plant 98" "../models/zone/vegetation/birch_young.glb" 7.75 17.85 131
   parent "Ivy"
   id bb0c528756b97371
   transform 0 3 0 0.314
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2262,8 +2262,8 @@ model "Roof plant 99" "../models/zone/vegetation/sapling_c.glb" 9.87 16.95 109.3
   parent "Ivy"
   id 9eaf9aa97c7ced3c
   transform 0 318.2 0 0.903
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2271,8 +2271,8 @@ model "Roof plant 100" "../models/zone/vegetation/birch_young.glb" 9.01 16.95 11
   parent "Ivy"
   id 572baa96b44ea068
   transform 0 179.9 0 0.851
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2280,8 +2280,8 @@ model "Roof plant 101" "../models/zone/vegetation/sapling_a.glb" 9.74 16.95 143.
   parent "Ivy"
   id 858ca606c34f5b48
   transform 0 126.6 0 0.656
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2289,8 +2289,8 @@ model "Roof plant 102" "../models/zone/vegetation/sapling_a.glb" 10.1 16.95 109.
   parent "Ivy"
   id 4ac4e1a3cffb4a68
   transform 0 139.5 0 0.56
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2298,8 +2298,8 @@ model "Roof plant 103" "../models/zone/vegetation/birch_young.glb" 9.52 16.95 13
   parent "Ivy"
   id 7d7e9c2657f2af2e
   transform 0 74.3 0 0.511
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2307,8 +2307,8 @@ model "Roof plant 104" "../models/zone/vegetation/birch_young.glb" 8.15 21.05 94
   parent "Ivy"
   id 12217985fba2cc5e
   transform 0 235.5 0 0.254
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2316,8 +2316,8 @@ model "Roof plant 105" "../models/zone/vegetation/birch_young.glb" 8.15 21.05 10
   parent "Ivy"
   id c0a9d909818e442a
   transform 0 94.4 0 0.311
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2325,8 +2325,8 @@ model "Roof plant 106" "../models/zone/vegetation/sapling_a.glb" 20.95 20.15 92.
   parent "Ivy"
   id e85b2832440552dc
   transform 0 93.6 0 0.738
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2334,8 +2334,8 @@ model "Roof plant 107" "../models/zone/vegetation/birch_young.glb" 20.44 20.15 9
   parent "Ivy"
   id d29e0b9dd3e40a34
   transform 0 24.7 0 0.505
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2343,8 +2343,8 @@ model "Roof plant 108" "../models/zone/vegetation/birch_young.glb" 9.59 20.15 99
   parent "Ivy"
   id d8c4520efbc6a9a7
   transform 0 244.9 0 0.618
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2361,8 +2361,8 @@ model "Roof plant 110" "../models/zone/vegetation/sapling_a.glb" 12.17 13.75 64.
   parent "Ivy"
   id b4942cd1f2b207c1
   transform 0 131.2 0 0.636
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2370,8 +2370,8 @@ model "Roof plant 111" "../models/zone/vegetation/sapling_a.glb" 20.08 13.75 68.
   parent "Ivy"
   id da8161845e44a55d
   transform 0 155.3 0 0.672
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2379,8 +2379,8 @@ model "Roof plant 112" "../models/zone/vegetation/sapling_a.glb" 19.9 13.75 65.5
   parent "Ivy"
   id dc67b598cc9f9ff5
   transform 0 186.9 0 0.756
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2397,8 +2397,8 @@ model "Roof plant 114" "../models/zone/vegetation/birch_young.glb" 7.71 13.9 14.
   parent "Ivy"
   id 95486417bdcff26d
   transform 0 51.8 0 0.466
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 60
   collision 0
   cast_shadows 0
@@ -2407,8 +2407,8 @@ model "Roof plant 115" "../models/zone/vegetation/sapling_c.glb" 8.15 27.45 28.9
   parent "Ivy"
   id abc1acc5b1abc5d5
   transform 0 211 0 0.697
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2416,8 +2416,8 @@ model "Roof plant 116" "../models/zone/vegetation/birch_young.glb" 21.47 26.55 3
   parent "Ivy"
   id 01e7000a9499fccc
   transform 0 29.9 0 0.651
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2425,8 +2425,8 @@ model "Roof plant 117" "../models/zone/vegetation/sapling_a.glb" 10.06 26.55 24.
   parent "Ivy"
   id b14253e4aca4dfa0
   transform 0 99.2 0 0.612
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2434,8 +2434,8 @@ model "Roof plant 118" "../models/zone/vegetation/sapling_c.glb" 9.76 26.55 12.9
   parent "Ivy"
   id a2bbdbb748e9868b
   transform 0 295.1 0 0.917
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2443,8 +2443,8 @@ model "Roof plant 119" "../models/zone/vegetation/sapling_a.glb" 10.5 26.55 15.8
   parent "Ivy"
   id 21b6129de67f4aaa
   transform 0 225.5 0 0.526
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2452,8 +2452,8 @@ model "Roof plant 120" "../models/zone/vegetation/sapling_c.glb" 11.78 26.55 37.
   parent "Ivy"
   id 7866f5440cd4ec85
   transform 0 118.7 0 1.1
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2461,8 +2461,8 @@ model "Roof plant 121" "../models/zone/vegetation/sapling_c.glb" 9.83 20.15 -58.
   parent "Ivy"
   id 9e24b377cf761158
   transform 0 48.4 0 0.944
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2470,8 +2470,8 @@ model "Roof plant 122" "../models/zone/vegetation/sapling_a.glb" 13.8 20.15 -53.
   parent "Ivy"
   id 11a6efd14fe221b2
   transform 0 161.6 0 0.575
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2479,8 +2479,8 @@ model "Roof plant 123" "../models/zone/vegetation/birch_young.glb" 9.97 20.15 -5
   parent "Ivy"
   id f1c3dc5783780add
   transform 0 139.2 0 0.83
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2488,8 +2488,8 @@ model "Roof plant 124" "../models/zone/vegetation/birch_young.glb" 13.54 13.75 -
   parent "Ivy"
   id dbe5ceae3c1499d2
   transform 0 291 0 0.643
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2497,8 +2497,8 @@ model "Roof plant 125" "../models/zone/vegetation/birch_young.glb" 19.5 13.75 -4
   parent "Ivy"
   id 07d36b67925c2f93
   transform 0 354 0 0.838
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2506,8 +2506,8 @@ model "Roof plant 126" "../models/zone/vegetation/birch_young.glb" 13.15 13.75 -
   parent "Ivy"
   id c62143bd4c925a1c
   transform 0 109.4 0 0.564
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2515,8 +2515,8 @@ model "Roof plant 127" "../models/zone/vegetation/sapling_c.glb" 19.09 13.75 -40
   parent "Ivy"
   id 2256ebb652e6900b
   transform 0 298.3 0 0.92
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2524,8 +2524,8 @@ model "Roof plant 128" "../models/zone/vegetation/birch_young.glb" 13.32 13.75 -
   parent "Ivy"
   id 87996c8aec58be7b
   transform 0 73.6 0 0.753
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2533,8 +2533,8 @@ model "Roof plant 129" "../models/zone/vegetation/sapling_a.glb" 13.47 13.75 -80
   parent "Ivy"
   id af55f9b20c2c024c
   transform 0 117.7 0 0.594
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2542,8 +2542,8 @@ model "Roof plant 130" "../models/zone/vegetation/sapling_c.glb" 17.38 13.75 -77
   parent "Ivy"
   id d9f597b9b13fd032
   transform 0 290.3 0 0.95
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2551,8 +2551,8 @@ model "Roof plant 131" "../models/zone/vegetation/birch_young.glb" 9.65 13.75 -8
   parent "Ivy"
   id 7d8f046a6d3d24d5
   transform 0 17.3 0 0.876
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2560,8 +2560,8 @@ model "Roof plant 132" "../models/zone/vegetation/sapling_c.glb" 7.31 13.9 -115.
   parent "Ivy"
   id fa74b594287990f1
   transform 0 45.3 0 0.62
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   cast_shadows 0
@@ -2570,8 +2570,8 @@ model "Roof plant 133" "../models/zone/vegetation/sapling_a.glb" 10.41 26.55 -95
   parent "Ivy"
   id d69fd0de79e1d20f
   transform 0 90.7 0 0.66
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2579,8 +2579,8 @@ model "Roof plant 134" "../models/zone/vegetation/sapling_a.glb" 14.38 16.95 -11
   parent "Ivy"
   id 8ad5c913844df634
   transform 0 182.1 0 0.608
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2588,8 +2588,8 @@ model "Roof plant 135" "../models/zone/vegetation/birch_young.glb" 11.77 16.95 -
   parent "Ivy"
   id 405fb4fa35963e8e
   transform 0 227.9 0 0.728
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2597,8 +2597,8 @@ model "Roof plant 136" "../models/zone/vegetation/sapling_c.glb" 10.15 16.95 -11
   parent "Ivy"
   id 58f118b7e2011768
   transform 0 81.3 0 0.849
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2606,8 +2606,8 @@ model "Roof plant 137" "../models/zone/vegetation/birch_young.glb" 10.43 16.95 -
   parent "Ivy"
   id 8c5ead48e8671dac
   transform 0 207.1 0 0.612
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2615,8 +2615,8 @@ model "Roof plant 138" "../models/zone/vegetation/birch_young.glb" 7.11 10.7 -14
   parent "Ivy"
   id 7b06224a1e672e91
   transform 0 223.9 0 0.402
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 60
   collision 0
   cast_shadows 0
@@ -2625,8 +2625,8 @@ model "Roof plant 139" "../models/zone/vegetation/birch_young.glb" 7.55 21.05 -1
   parent "Ivy"
   id 5aa88cbf51b37a1f
   transform 0 64.7 0 0.265
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2634,8 +2634,8 @@ model "Roof plant 140" "../models/zone/vegetation/birch_young.glb" 19.19 20.15 -
   parent "Ivy"
   id a446e48fb0c63820
   transform 0 238.8 0 0.864
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2643,8 +2643,8 @@ model "Roof plant 141" "../models/zone/vegetation/birch_young.glb" 9.3 20.15 -13
   parent "Ivy"
   id bea6cb15029acd95
   transform 0 84.1 0 0.566
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2652,8 +2652,8 @@ model "Roof plant 142" "../models/zone/vegetation/birch_young.glb" 8.78 20.15 -1
   parent "Ivy"
   id 8876d8a61d6a64d3
   transform 0 288.1 0 0.658
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2661,8 +2661,8 @@ model "Roof plant 143" "../models/zone/vegetation/birch_young.glb" 9.74 20.15 -1
   parent "Ivy"
   id 77973ca142461a99
   transform 0 243.8 0 0.771
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2679,8 +2679,8 @@ model "Roof plant 145" "../models/zone/vegetation/sapling_c.glb" 7.11 10.7 -162.
   parent "Ivy"
   id 4513b1b41003353e
   transform 0 225.9 0 0.833
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   cast_shadows 0
@@ -2689,8 +2689,8 @@ model "Roof plant 146" "../models/zone/vegetation/birch_young.glb" 7.55 17.85 -1
   parent "Ivy"
   id c7df13eaff3e2497
   transform 0 334.4 0 0.275
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2698,8 +2698,8 @@ model "Roof plant 147" "../models/zone/vegetation/birch_young.glb" 7.55 17.85 -1
   parent "Ivy"
   id 5dbf9a733901f396
   transform 0 299.8 0 0.374
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2707,8 +2707,8 @@ model "Roof plant 148" "../models/zone/vegetation/birch_young.glb" 9.16 16.95 -1
   parent "Ivy"
   id be9cc30f7779060a
   transform 0 272.8 0 0.504
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2716,8 +2716,8 @@ model "Roof plant 149" "../models/zone/vegetation/sapling_a.glb" 9.42 16.95 -181
   parent "Ivy"
   id 7e16b9e10a29c117
   transform 0 288.1 0 0.773
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2725,8 +2725,8 @@ model "Roof plant 150" "../models/zone/vegetation/birch_young.glb" 8.81 16.95 -1
   parent "Ivy"
   id 6ba40cd67e9ed4d8
   transform 0 288.1 0 0.695
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2734,8 +2734,8 @@ model "Roof plant 151" "../models/zone/vegetation/birch_young.glb" 9.54 16.95 -1
   parent "Ivy"
   id 88840eb50624657b
   transform 0 252.2 0 0.794
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2743,8 +2743,8 @@ model "Roof plant 152" "../models/zone/vegetation/sapling_a.glb" 9.9 16.95 -185.
   parent "Ivy"
   id 70ea92a5fb0356bb
   transform 0 176.1 0 0.646
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2752,8 +2752,8 @@ model "Roof plant 153" "../models/zone/vegetation/sapling_c.glb" 9.32 16.95 -157
   parent "Ivy"
   id 6344bdaf6951c690
   transform 0 219.7 0 0.711
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2761,8 +2761,8 @@ model "Roof plant 154" "../models/zone/vegetation/birch_young.glb" 9.3 16.95 -16
   parent "Ivy"
   id 90a969e04de3b05a
   transform 0 209.1 0 0.623
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2770,8 +2770,8 @@ model "Roof plant 155" "../models/zone/vegetation/birch_young.glb" 7.75 21.05 -1
   parent "Ivy"
   id b5fd5d2dbb9f3e35
   transform 0 221.6 0 0.343
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2779,8 +2779,8 @@ model "Roof plant 156" "../models/zone/vegetation/birch_young.glb" 7.75 21.05 -2
   parent "Ivy"
   id f3440336866f664d
   transform 0 182.6 0 0.287
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2788,8 +2788,8 @@ model "Roof plant 157" "../models/zone/vegetation/sapling_c.glb" 20.04 20.15 -19
   parent "Ivy"
   id 07f3a5e5369273c5
   transform 0 79.9 0 0.74
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2797,8 +2797,8 @@ model "Roof plant 158" "../models/zone/vegetation/sapling_c.glb" 9.19 20.15 -194
   parent "Ivy"
   id ea1d787f0c2ad290
   transform 0 316.8 0 0.906
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2806,8 +2806,8 @@ model "Roof plant 159" "../models/zone/vegetation/sapling_a.glb" 20.78 13.75 -22
   parent "Ivy"
   id 52b377ecd7e9270b
   transform 0 296.8 0 0.663
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2815,8 +2815,8 @@ model "Roof plant 160" "../models/zone/vegetation/sapling_c.glb" 20.08 13.75 -22
   parent "Ivy"
   id 447f911fc5908284
   transform 0 178.2 0 0.924
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2824,8 +2824,8 @@ model "Roof plant 161" "../models/zone/vegetation/sapling_c.glb" 11.76 13.75 -22
   parent "Ivy"
   id 37b6d7de0d1cba5f
   transform 0 112.2 0 0.844
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2833,8 +2833,8 @@ model "Roof plant 162" "../models/zone/vegetation/birch_young.glb" 19.9 13.75 -2
   parent "Ivy"
   id 623863ec3e3f5005
   transform 0 292.6 0 0.634
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2842,8 +2842,8 @@ model "Roof plant 163" "../models/zone/vegetation/sapling_c.glb" 20.18 13.75 -23
   parent "Ivy"
   id 8c0ed249dffc1061
   transform 0 197.7 0 0.772
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2860,8 +2860,8 @@ model "Roof plant 165" "../models/zone/vegetation/sapling_c.glb" 7.31 23.5 -292.
   parent "Ivy"
   id 3e9ae56836edf876
   transform 0 88.9 0 0.62
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   cast_shadows 0
@@ -2870,8 +2870,8 @@ model "Roof plant 166" "../models/zone/vegetation/sapling_c.glb" 7.31 4.3 -262.3
   parent "Ivy"
   id 7b50b06376a960b1
   transform 0 16.6 0 0.917
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   cast_shadows 0
@@ -2880,8 +2880,8 @@ model "Roof plant 167" "../models/zone/vegetation/birch_young.glb" 7.75 27.45 -2
   parent "Ivy"
   id eb0d195499987817
   transform 0 3.6 0 0.312
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2889,8 +2889,8 @@ model "Roof plant 168" "../models/zone/vegetation/birch_young.glb" 7.75 27.45 -2
   parent "Ivy"
   id 15fcd60249be76da
   transform 0 181.2 0 0.384
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2898,8 +2898,8 @@ model "Roof plant 169" "../models/zone/vegetation/birch_young.glb" 9.36 26.55 -2
   parent "Ivy"
   id b3980496fe334cc9
   transform 0 37 0 0.54
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2907,8 +2907,8 @@ model "Roof plant 170" "../models/zone/vegetation/sapling_c.glb" 10.13 26.55 -28
   parent "Ivy"
   id fe420ccf1d2ffe4b
   transform 0 305.7 0 0.779
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2916,8 +2916,8 @@ model "Roof plant 171" "../models/zone/vegetation/sapling_a.glb" 14.24 26.55 -26
   parent "Ivy"
   id 71f786c8557569cf
   transform 0 94.9 0 0.635
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2925,8 +2925,8 @@ model "Roof plant 172" "../models/zone/vegetation/birch_young.glb" 17.62 26.55 -
   parent "Ivy"
   id 1e5116b4c2c2ff65
   transform 0 218.8 0 0.539
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2934,8 +2934,8 @@ model "Roof plant 173" "../models/zone/vegetation/sapling_a.glb" 11.38 26.55 -25
   parent "Ivy"
   id b4538061807af573
   transform 0 145 0 0.677
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2943,8 +2943,8 @@ model "Roof plant 174" "../models/zone/vegetation/sapling_c.glb" 7.56 10.7 -309.
   parent "Ivy"
   id d00b15083e40594a
   transform 0 344.6 0 0.626
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   cast_shadows 0
@@ -2953,8 +2953,8 @@ model "Roof plant 175" "../models/zone/vegetation/sapling_c.glb" 8 17.85 -327.87
   parent "Ivy"
   id d47092bea1084dd3
   transform 0 288 0 0.462
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2962,8 +2962,8 @@ model "Roof plant 176" "../models/zone/vegetation/birch_young.glb" 8 17.85 -325.
   parent "Ivy"
   id 4329b8c28e397e75
   transform 0 76 0 0.37
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2971,8 +2971,8 @@ model "Roof plant 177" "../models/zone/vegetation/birch_young.glb" 8 17.85 -317.
   parent "Ivy"
   id b923aba0d88c0a39
   transform 0 17.3 0 0.334
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2980,8 +2980,8 @@ model "Roof plant 178" "../models/zone/vegetation/birch_young.glb" 10.38 16.95 -
   parent "Ivy"
   id ac3cfec32d473fbc
   transform 0 55.1 0 0.731
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2989,8 +2989,8 @@ model "Roof plant 179" "../models/zone/vegetation/sapling_a.glb" 20.05 16.95 -30
   parent "Ivy"
   id f78926f95e6153f0
   transform 0 281.2 0 0.634
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -2998,8 +2998,8 @@ model "Roof plant 180" "../models/zone/vegetation/birch_young.glb" 9.95 16.95 -3
   parent "Ivy"
   id fd887265e1039bd1
   transform 0 21.2 0 0.826
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -3007,8 +3007,8 @@ model "Roof plant 181" "../models/zone/vegetation/sapling_c.glb" 17.49 16.95 -30
   parent "Ivy"
   id 1b1475924f1482d8
   transform 0 148.1 0 1.06
-  lod "../models/zone/vegetation/sapling_c_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_c_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_c_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_c_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -3016,8 +3016,8 @@ model "Roof plant 182" "../models/zone/vegetation/birch_young.glb" 9.64 16.95 -3
   parent "Ivy"
   id 74f3e3669e5268e2
   transform 0 191.1 0 0.87
-  lod "../models/zone/vegetation/birch_young_lod1.glb" 18
-  lod "../models/zone/vegetation/birch_young_lod2.glb" 40
+  lod "../models/zone/vegetation/birch_young_lod1.glb" 12
+  lod "../models/zone/vegetation/birch_young_lod2.glb" 30
   cull_distance 120
   collision 0
   sway 0.7
@@ -4712,468 +4712,468 @@ model "Far tree" "../models/zone/vegetation/maple_a.glb" 5.07 -0.05 -273.47
   parent "Far"
   id 8445fdeef9e645fb
   transform 0 222 0 0.864
-  lod "../models/zone/vegetation/maple_a_lod1.glb" 30
-  lod "../models/zone/vegetation/maple_a_lod2.glb" 70
+  lod "../models/zone/vegetation/maple_a_lod1.glb" 18
+  lod "../models/zone/vegetation/maple_a_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 2" "../models/zone/vegetation/maple_a.glb" -3.15 -0.05 -259.89
   parent "Far"
   id 7b9688565152293d
   transform 0 292.9 0 0.797
-  lod "../models/zone/vegetation/maple_a_lod1.glb" 30
-  lod "../models/zone/vegetation/maple_a_lod2.glb" 70
+  lod "../models/zone/vegetation/maple_a_lod1.glb" 18
+  lod "../models/zone/vegetation/maple_a_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 3" "../models/zone/vegetation/maple_b.glb" 1.03 -0.05 -238.62
   parent "Far"
   id f2645bb0b43932e2
   transform 0 9.7 0 0.902
-  lod "../models/zone/vegetation/maple_b_lod1.glb" 30
-  lod "../models/zone/vegetation/maple_b_lod2.glb" 70
+  lod "../models/zone/vegetation/maple_b_lod1.glb" 18
+  lod "../models/zone/vegetation/maple_b_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 4" "../models/zone/vegetation/ash_b.glb" -4.48 -0.05 -313.52
   parent "Far"
   id 4deaf83b30963be2
   transform 0 310.9 0 0.921
-  lod "../models/zone/vegetation/ash_b_lod1.glb" 30
-  lod "../models/zone/vegetation/ash_b_lod2.glb" 70
+  lod "../models/zone/vegetation/ash_b_lod1.glb" 18
+  lod "../models/zone/vegetation/ash_b_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 5" "../models/zone/vegetation/maple_a.glb" 1.81 -0.05 -206.45
   parent "Far"
   id 6fc797d4c4be65bd
   transform 0 328.6 0 0.851
-  lod "../models/zone/vegetation/maple_a_lod1.glb" 30
-  lod "../models/zone/vegetation/maple_a_lod2.glb" 70
+  lod "../models/zone/vegetation/maple_a_lod1.glb" 18
+  lod "../models/zone/vegetation/maple_a_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 6" "../models/zone/vegetation/broadleaf_a.glb" -2.53 -0.05 -307.12
   parent "Far"
   id 06c8257949f869df
   transform 0 242 0 0.932
-  lod "../models/zone/vegetation/broadleaf_a_lod1.glb" 30
-  lod "../models/zone/vegetation/broadleaf_a_lod2.glb" 70
+  lod "../models/zone/vegetation/broadleaf_a_lod1.glb" 18
+  lod "../models/zone/vegetation/broadleaf_a_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 7" "../models/zone/vegetation/ash_a.glb" -1.35 -0.05 -229.6
   parent "Far"
   id 063900f2a077581b
   transform 0 124 0 0.918
-  lod "../models/zone/vegetation/ash_a_lod1.glb" 30
-  lod "../models/zone/vegetation/ash_a_lod2.glb" 70
+  lod "../models/zone/vegetation/ash_a_lod1.glb" 18
+  lod "../models/zone/vegetation/ash_a_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 8" "../models/zone/vegetation/maple_b.glb" -3.25 -0.05 -319.29
   parent "Far"
   id e55ecfa4fd152aea
   transform 0 92.4 0 1.04
-  lod "../models/zone/vegetation/maple_b_lod1.glb" 30
-  lod "../models/zone/vegetation/maple_b_lod2.glb" 70
+  lod "../models/zone/vegetation/maple_b_lod1.glb" 18
+  lod "../models/zone/vegetation/maple_b_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 9" "../models/zone/vegetation/birch_a.glb" -4.67 -0.05 -291.7
   parent "Far"
   id 5b405f06757db1c0
   transform 0 331 0 1.01
-  lod "../models/zone/vegetation/birch_a_lod1.glb" 30
-  lod "../models/zone/vegetation/birch_a_lod2.glb" 70
+  lod "../models/zone/vegetation/birch_a_lod1.glb" 18
+  lod "../models/zone/vegetation/birch_a_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 10" "../models/zone/vegetation/maple_b.glb" 3.18 -0.05 -217.54
   parent "Far"
   id 89682e95f38df421
   transform 0 169.9 0 0.898
-  lod "../models/zone/vegetation/maple_b_lod1.glb" 30
-  lod "../models/zone/vegetation/maple_b_lod2.glb" 70
+  lod "../models/zone/vegetation/maple_b_lod1.glb" 18
+  lod "../models/zone/vegetation/maple_b_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 11" "../models/zone/vegetation/broadleaf_b.glb" -5.54 -0.05 -269.22
   parent "Far"
   id 23f8e5265573021b
   transform 0 79.7 0 0.824
-  lod "../models/zone/vegetation/broadleaf_b_lod1.glb" 30
-  lod "../models/zone/vegetation/broadleaf_b_lod2.glb" 70
+  lod "../models/zone/vegetation/broadleaf_b_lod1.glb" 18
+  lod "../models/zone/vegetation/broadleaf_b_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 12" "../models/zone/vegetation/maple_b.glb" 3 -0.05 -258.09
   parent "Far"
   id e3fe6c5caf46beb5
   transform 0 327.5 0 1.02
-  lod "../models/zone/vegetation/maple_b_lod1.glb" 30
-  lod "../models/zone/vegetation/maple_b_lod2.glb" 70
+  lod "../models/zone/vegetation/maple_b_lod1.glb" 18
+  lod "../models/zone/vegetation/maple_b_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 13" "../models/zone/vegetation/broadleaf_b.glb" -6.15 -0.05 -300.6
   parent "Far"
   id 850a465bf8dc0f75
   transform 0 3.1 0 0.757
-  lod "../models/zone/vegetation/broadleaf_b_lod1.glb" 30
-  lod "../models/zone/vegetation/broadleaf_b_lod2.glb" 70
+  lod "../models/zone/vegetation/broadleaf_b_lod1.glb" 18
+  lod "../models/zone/vegetation/broadleaf_b_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 14" "../models/zone/vegetation/ash_b.glb" 0.77 -0.05 -248.81
   parent "Far"
   id b3fa0758694c21cf
   transform 0 285.6 0 0.826
-  lod "../models/zone/vegetation/ash_b_lod1.glb" 30
-  lod "../models/zone/vegetation/ash_b_lod2.glb" 70
+  lod "../models/zone/vegetation/ash_b_lod1.glb" 18
+  lod "../models/zone/vegetation/ash_b_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 15" "../models/zone/vegetation/ash_b.glb" 4.43 -0.05 -263.85
   parent "Far"
   id 1566c83afd314ddb
   transform 0 333.1 0 0.856
-  lod "../models/zone/vegetation/ash_b_lod1.glb" 30
-  lod "../models/zone/vegetation/ash_b_lod2.glb" 70
+  lod "../models/zone/vegetation/ash_b_lod1.glb" 18
+  lod "../models/zone/vegetation/ash_b_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 16" "../models/zone/vegetation/broadleaf_b.glb" -4.73 -0.05 -217.8
   parent "Far"
   id de3f8cc00589c0a7
   transform 0 289.1 0 1.05
-  lod "../models/zone/vegetation/broadleaf_b_lod1.glb" 30
-  lod "../models/zone/vegetation/broadleaf_b_lod2.glb" 70
+  lod "../models/zone/vegetation/broadleaf_b_lod1.glb" 18
+  lod "../models/zone/vegetation/broadleaf_b_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 17" "../models/zone/vegetation/maple_b.glb" 0.07 -0.05 -278.46
   parent "Far"
   id 4438a0eb126a8048
   transform 0 311.1 0 0.99
-  lod "../models/zone/vegetation/maple_b_lod1.glb" 30
-  lod "../models/zone/vegetation/maple_b_lod2.glb" 70
+  lod "../models/zone/vegetation/maple_b_lod1.glb" 18
+  lod "../models/zone/vegetation/maple_b_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 18" "../models/zone/vegetation/ash_a.glb" 2.22 -0.05 -315.06
   parent "Far"
   id b519b768c4b96d64
   transform 0 310.4 0 0.758
-  lod "../models/zone/vegetation/ash_a_lod1.glb" 30
-  lod "../models/zone/vegetation/ash_a_lod2.glb" 70
+  lod "../models/zone/vegetation/ash_a_lod1.glb" 18
+  lod "../models/zone/vegetation/ash_a_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 19" "../models/zone/vegetation/maple_a.glb" 5.75 -0.05 -213.52
   parent "Far"
   id 1156d5f31cd96ff2
   transform 0 185.6 0 0.789
-  lod "../models/zone/vegetation/maple_a_lod1.glb" 30
-  lod "../models/zone/vegetation/maple_a_lod2.glb" 70
+  lod "../models/zone/vegetation/maple_a_lod1.glb" 18
+  lod "../models/zone/vegetation/maple_a_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 20" "../models/zone/vegetation/maple_a.glb" -0.56 -0.05 -194.94
   parent "Far"
   id cc5cab880e3ff82c
   transform 0 325.1 0 1.05
-  lod "../models/zone/vegetation/maple_a_lod1.glb" 30
-  lod "../models/zone/vegetation/maple_a_lod2.glb" 70
+  lod "../models/zone/vegetation/maple_a_lod1.glb" 18
+  lod "../models/zone/vegetation/maple_a_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 21" "../models/zone/vegetation/maple_b.glb" -3.55 -0.05 -198.41
   parent "Far"
   id e90464a49d354d09
   transform 0 302.5 0 0.806
-  lod "../models/zone/vegetation/maple_b_lod1.glb" 30
-  lod "../models/zone/vegetation/maple_b_lod2.glb" 70
+  lod "../models/zone/vegetation/maple_b_lod1.glb" 18
+  lod "../models/zone/vegetation/maple_b_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 22" "../models/zone/vegetation/broadleaf_a.glb" 2.58 -0.05 -309.08
   parent "Far"
   id 367e7fac5c218a59
   transform 0 296.5 0 0.758
-  lod "../models/zone/vegetation/broadleaf_a_lod1.glb" 30
-  lod "../models/zone/vegetation/broadleaf_a_lod2.glb" 70
+  lod "../models/zone/vegetation/broadleaf_a_lod1.glb" 18
+  lod "../models/zone/vegetation/broadleaf_a_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 23" "../models/zone/vegetation/maple_b.glb" 4.96 -0.05 -304
   parent "Far"
   id 1d05601a196da899
   transform 0 145.1 0 1.01
-  lod "../models/zone/vegetation/maple_b_lod1.glb" 30
-  lod "../models/zone/vegetation/maple_b_lod2.glb" 70
+  lod "../models/zone/vegetation/maple_b_lod1.glb" 18
+  lod "../models/zone/vegetation/maple_b_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 24" "../models/zone/vegetation/broadleaf_b.glb" -3.63 -0.05 -210.29
   parent "Far"
   id 1a210cc3b03c2f85
   transform 0 253.4 0 0.768
-  lod "../models/zone/vegetation/broadleaf_b_lod1.glb" 30
-  lod "../models/zone/vegetation/broadleaf_b_lod2.glb" 70
+  lod "../models/zone/vegetation/broadleaf_b_lod1.glb" 18
+  lod "../models/zone/vegetation/broadleaf_b_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 25" "../models/zone/vegetation/birch_a.glb" 5.11 -0.05 -226.75
   parent "Far"
   id b7b74ddbdefd1eae
   transform 0 273.8 0 0.755
-  lod "../models/zone/vegetation/birch_a_lod1.glb" 30
-  lod "../models/zone/vegetation/birch_a_lod2.glb" 70
+  lod "../models/zone/vegetation/birch_a_lod1.glb" 18
+  lod "../models/zone/vegetation/birch_a_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 26" "../models/zone/vegetation/broadleaf_b.glb" 6.28 -0.05 -285.99
   parent "Far"
   id 44b2a8981127af6f
   transform 0 355.3 0 0.816
-  lod "../models/zone/vegetation/broadleaf_b_lod1.glb" 30
-  lod "../models/zone/vegetation/broadleaf_b_lod2.glb" 70
+  lod "../models/zone/vegetation/broadleaf_b_lod1.glb" 18
+  lod "../models/zone/vegetation/broadleaf_b_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 27" "../models/zone/vegetation/maple_b.glb" 3.06 -0.05 -232.68
   parent "Far"
   id 3486394056e19073
   transform 0 335.7 0 1.05
-  lod "../models/zone/vegetation/maple_b_lod1.glb" 30
-  lod "../models/zone/vegetation/maple_b_lod2.glb" 70
+  lod "../models/zone/vegetation/maple_b_lod1.glb" 18
+  lod "../models/zone/vegetation/maple_b_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 28" "../models/zone/vegetation/ash_a.glb" 2.14 -0.05 -296.67
   parent "Far"
   id 1a269895a0da78c8
   transform 0 222.1 0 0.752
-  lod "../models/zone/vegetation/ash_a_lod1.glb" 30
-  lod "../models/zone/vegetation/ash_a_lod2.glb" 70
+  lod "../models/zone/vegetation/ash_a_lod1.glb" 18
+  lod "../models/zone/vegetation/ash_a_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 29" "../models/zone/vegetation/ash_a.glb" 5.36 -0.05 -324.47
   parent "Far"
   id 8177f29b96f81e5b
   transform 0 165.4 0 0.842
-  lod "../models/zone/vegetation/ash_a_lod1.glb" 30
-  lod "../models/zone/vegetation/ash_a_lod2.glb" 70
+  lod "../models/zone/vegetation/ash_a_lod1.glb" 18
+  lod "../models/zone/vegetation/ash_a_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 30" "../models/zone/vegetation/maple_a.glb" -0.88 -0.05 -287.78
   parent "Far"
   id ea690f1d93490485
   transform 0 86 0 0.881
-  lod "../models/zone/vegetation/maple_a_lod1.glb" 30
-  lod "../models/zone/vegetation/maple_a_lod2.glb" 70
+  lod "../models/zone/vegetation/maple_a_lod1.glb" 18
+  lod "../models/zone/vegetation/maple_a_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 31" "../models/zone/vegetation/broadleaf_a.glb" 3.51 -0.05 -269.24
   parent "Far"
   id 7c1ce8128bc0be1c
   transform 0 5 0 0.825
-  lod "../models/zone/vegetation/broadleaf_a_lod1.glb" 30
-  lod "../models/zone/vegetation/broadleaf_a_lod2.glb" 70
+  lod "../models/zone/vegetation/broadleaf_a_lod1.glb" 18
+  lod "../models/zone/vegetation/broadleaf_a_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 32" "../models/zone/vegetation/maple_b.glb" -6.26 -0.05 -263.97
   parent "Far"
   id 0b8b9f6511639cf4
   transform 0 122.8 0 0.792
-  lod "../models/zone/vegetation/maple_b_lod1.glb" 30
-  lod "../models/zone/vegetation/maple_b_lod2.glb" 70
+  lod "../models/zone/vegetation/maple_b_lod1.glb" 18
+  lod "../models/zone/vegetation/maple_b_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 33" "../models/zone/vegetation/birch_a.glb" 5.49 -0.05 -317.89
   parent "Far"
   id 5567d85917e42797
   transform 0 203.7 0 0.841
-  lod "../models/zone/vegetation/birch_a_lod1.glb" 30
-  lod "../models/zone/vegetation/birch_a_lod2.glb" 70
+  lod "../models/zone/vegetation/birch_a_lod1.glb" 18
+  lod "../models/zone/vegetation/birch_a_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 34" "../models/zone/vegetation/birch_a.glb" -6.67 -0.05 -204.09
   parent "Far"
   id 8a3f51b60d1b5925
   transform 0 212.3 0 0.994
-  lod "../models/zone/vegetation/birch_a_lod1.glb" 30
-  lod "../models/zone/vegetation/birch_a_lod2.glb" 70
+  lod "../models/zone/vegetation/birch_a_lod1.glb" 18
+  lod "../models/zone/vegetation/birch_a_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 35" "../models/zone/vegetation/maple_b.glb" 0.42 -0.05 -242.95
   parent "Far"
   id d01a62f907710747
   transform 0 189.6 0 0.895
-  lod "../models/zone/vegetation/maple_b_lod1.glb" 30
-  lod "../models/zone/vegetation/maple_b_lod2.glb" 70
+  lod "../models/zone/vegetation/maple_b_lod1.glb" 18
+  lod "../models/zone/vegetation/maple_b_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 36" "../models/zone/vegetation/ash_b.glb" -4.32 -0.05 -232.8
   parent "Far"
   id ebbced265c3bd57e
   transform 0 131.5 0 1.04
-  lod "../models/zone/vegetation/ash_b_lod1.glb" 30
-  lod "../models/zone/vegetation/ash_b_lod2.glb" 70
+  lod "../models/zone/vegetation/ash_b_lod1.glb" 18
+  lod "../models/zone/vegetation/ash_b_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 37" "../models/zone/vegetation/broadleaf_a.glb" -6.86 -0.05 -282.86
   parent "Far"
   id 87b65a176dc054a4
   transform 0 198.1 0 0.993
-  lod "../models/zone/vegetation/broadleaf_a_lod1.glb" 30
-  lod "../models/zone/vegetation/broadleaf_a_lod2.glb" 70
+  lod "../models/zone/vegetation/broadleaf_a_lod1.glb" 18
+  lod "../models/zone/vegetation/broadleaf_a_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 38" "../models/zone/vegetation/broadleaf_a.glb" -0.55 -0.05 -283.28
   parent "Far"
   id 248f83d7d063c0f5
   transform 0 295.8 0 1.01
-  lod "../models/zone/vegetation/broadleaf_a_lod1.glb" 30
-  lod "../models/zone/vegetation/broadleaf_a_lod2.glb" 70
+  lod "../models/zone/vegetation/broadleaf_a_lod1.glb" 18
+  lod "../models/zone/vegetation/broadleaf_a_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 39" "../models/zone/vegetation/ash_a.glb" 5.15 -0.05 -194.69
   parent "Far"
   id 28feb3e2a33cf9cc
   transform 0 332.9 0 0.953
-  lod "../models/zone/vegetation/ash_a_lod1.glb" 30
-  lod "../models/zone/vegetation/ash_a_lod2.glb" 70
+  lod "../models/zone/vegetation/ash_a_lod1.glb" 18
+  lod "../models/zone/vegetation/ash_a_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 40" "../models/zone/vegetation/maple_b.glb" 4.32 -0.05 -281.52
   parent "Far"
   id 4059554489866339
   transform 0 319.7 0 0.86
-  lod "../models/zone/vegetation/maple_b_lod1.glb" 30
-  lod "../models/zone/vegetation/maple_b_lod2.glb" 70
+  lod "../models/zone/vegetation/maple_b_lod1.glb" 18
+  lod "../models/zone/vegetation/maple_b_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 41" "../models/zone/vegetation/broadleaf_b.glb" 1.42 -0.05 -292.51
   parent "Far"
   id 9c02f98e4f162c48
   transform 0 178 0 0.929
-  lod "../models/zone/vegetation/broadleaf_b_lod1.glb" 30
-  lod "../models/zone/vegetation/broadleaf_b_lod2.glb" 70
+  lod "../models/zone/vegetation/broadleaf_b_lod1.glb" 18
+  lod "../models/zone/vegetation/broadleaf_b_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 42" "../models/zone/vegetation/broadleaf_b.glb" -6.58 -0.05 -257.09
   parent "Far"
   id 1cb27fd30abfccc4
   transform 0 346.8 0 0.832
-  lod "../models/zone/vegetation/broadleaf_b_lod1.glb" 30
-  lod "../models/zone/vegetation/broadleaf_b_lod2.glb" 70
+  lod "../models/zone/vegetation/broadleaf_b_lod1.glb" 18
+  lod "../models/zone/vegetation/broadleaf_b_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 43" "../models/zone/vegetation/maple_a.glb" 2.35 -0.05 -329.46
   parent "Far"
   id 1cf39d4fcae8a8f3
   transform 0 179.8 0 0.816
-  lod "../models/zone/vegetation/maple_a_lod1.glb" 30
-  lod "../models/zone/vegetation/maple_a_lod2.glb" 70
+  lod "../models/zone/vegetation/maple_a_lod1.glb" 18
+  lod "../models/zone/vegetation/maple_a_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 44" "../models/zone/vegetation/broadleaf_a.glb" -4.71 -0.05 -274.14
   parent "Far"
   id 6fcfca4796c428da
   transform 0 249 0 0.773
-  lod "../models/zone/vegetation/broadleaf_a_lod1.glb" 30
-  lod "../models/zone/vegetation/broadleaf_a_lod2.glb" 70
+  lod "../models/zone/vegetation/broadleaf_a_lod1.glb" 18
+  lod "../models/zone/vegetation/broadleaf_a_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 45" "../models/zone/vegetation/maple_b.glb" 5.75 -0.05 -293.69
   parent "Far"
   id 804bc57dc59c5bee
   transform 0 13.2 0 0.804
-  lod "../models/zone/vegetation/maple_b_lod1.glb" 30
-  lod "../models/zone/vegetation/maple_b_lod2.glb" 70
+  lod "../models/zone/vegetation/maple_b_lod1.glb" 18
+  lod "../models/zone/vegetation/maple_b_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far tree 46" "../models/zone/vegetation/broadleaf_b.glb" -2.29 -0.05 -326.94
   parent "Far"
   id 7cd56a6bd6a04d99
   transform 0 351.4 0 0.971
-  lod "../models/zone/vegetation/broadleaf_b_lod1.glb" 30
-  lod "../models/zone/vegetation/broadleaf_b_lod2.glb" 70
+  lod "../models/zone/vegetation/broadleaf_b_lod1.glb" 18
+  lod "../models/zone/vegetation/broadleaf_b_lod2.glb" 45
   cull_distance 900
   collision 0
   sway 0.3
-  impostor 120
+  impostor 90
 model "Far bush" "../models/zone/vegetation/bush_street_c.glb" -4.39 -0.03 -205.38
   parent "Far"
   id 549138c040c88bce
   transform 0 29.9 0 0.881
-  lod "../models/zone/vegetation/bush_street_c_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_c_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_c_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_c_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5182,8 +5182,8 @@ model "Far bush 2" "../models/zone/vegetation/sapling_a.glb" -6.61 -0.03 -309
   parent "Far"
   id a3dac948e46ca769
   transform 0 333.1 0 0.906
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5192,8 +5192,8 @@ model "Far bush 3" "../models/zone/vegetation/bush_street_a.glb" -0.12 -0.03 -23
   parent "Far"
   id 4f6313a34b69e4c4
   transform 0 297.1 0 0.765
-  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5202,8 +5202,8 @@ model "Far bush 4" "../models/zone/vegetation/bush_street_a.glb" 0.81 -0.03 -249
   parent "Far"
   id 0a0b2589c4d86acb
   transform 0 356 0 0.948
-  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5212,8 +5212,8 @@ model "Far bush 5" "../models/zone/vegetation/bush_street_a.glb" 6.8 -0.03 -327.
   parent "Far"
   id 88b41007080b2cf2
   transform 0 305.1 0 0.885
-  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5222,8 +5222,8 @@ model "Far bush 6" "../models/zone/vegetation/bush_street_b.glb" -3.51 -0.03 -29
   parent "Far"
   id 9b81b8c27d16a1f1
   transform 0 101.4 0 0.734
-  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_b_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_b_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5232,8 +5232,8 @@ model "Far bush 7" "../models/zone/vegetation/bush_street_a.glb" -0.12 -0.03 -27
   parent "Far"
   id de75024b7c8b59d2
   transform 0 233.6 0 0.745
-  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5242,8 +5242,8 @@ model "Far bush 8" "../models/zone/vegetation/sapling_a.glb" 0.05 -0.03 -237.93
   parent "Far"
   id cc9a97764239d908
   transform 0 35.2 0 0.6
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5252,8 +5252,8 @@ model "Far bush 9" "../models/zone/vegetation/bush_street_b.glb" -6.82 -0.03 -31
   parent "Far"
   id 45a9baf87a6493ef
   transform 0 42 0 0.784
-  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_b_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_b_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5262,8 +5262,8 @@ model "Far bush 10" "../models/zone/vegetation/bush_street_a.glb" -3.97 -0.03 -2
   parent "Far"
   id bb0d1da8b92cefe2
   transform 0 157.6 0 0.998
-  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5272,8 +5272,8 @@ model "Far bush 11" "../models/zone/vegetation/bush_street_a.glb" 4.77 -0.03 -27
   parent "Far"
   id f11c9523e6661a51
   transform 0 1.6 0 0.88
-  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5282,8 +5282,8 @@ model "Far bush 12" "../models/zone/vegetation/bush_street_b.glb" -1.91 -0.03 -2
   parent "Far"
   id ff21fc7425d5717d
   transform 0 47.9 0 0.819
-  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_b_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_b_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5292,8 +5292,8 @@ model "Far bush 13" "../models/zone/vegetation/sapling_a.glb" -2.35 -0.03 -264.4
   parent "Far"
   id d3232de3865308e6
   transform 0 119.2 0 0.688
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5302,8 +5302,8 @@ model "Far bush 14" "../models/zone/vegetation/bush_street_a.glb" -6.86 -0.03 -2
   parent "Far"
   id fbe115cde5d19357
   transform 0 37.4 0 0.658
-  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5312,8 +5312,8 @@ model "Far bush 15" "../models/zone/vegetation/bush_street_c.glb" -3.64 -0.03 -2
   parent "Far"
   id c29751a6fcff619f
   transform 0 269.1 0 0.657
-  lod "../models/zone/vegetation/bush_street_c_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_c_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_c_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_c_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5322,8 +5322,8 @@ model "Far bush 16" "../models/zone/vegetation/bush_street_a.glb" -0.12 -0.03 -1
   parent "Far"
   id 8ef62bfdecb5865a
   transform 0 284.8 0 0.894
-  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5332,8 +5332,8 @@ model "Far bush 17" "../models/zone/vegetation/bush_street_c.glb" -2.92 -0.03 -2
   parent "Far"
   id 4803a22bd2c5cba8
   transform 0 256.6 0 0.748
-  lod "../models/zone/vegetation/bush_street_c_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_c_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_c_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_c_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5342,8 +5342,8 @@ model "Far bush 18" "../models/zone/vegetation/bush_street_a.glb" -4.75 -0.03 -2
   parent "Far"
   id db92e082b2bc94d2
   transform 0 235.9 0 0.708
-  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5352,8 +5352,8 @@ model "Far bush 19" "../models/zone/vegetation/sapling_a.glb" -0.61 -0.03 -222.6
   parent "Far"
   id 833a2f50601282da
   transform 0 156.9 0 0.608
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5362,8 +5362,8 @@ model "Far bush 20" "../models/zone/vegetation/sapling_a.glb" -5.92 -0.03 -266.0
   parent "Far"
   id 439c53681e252125
   transform 0 20.1 0 0.608
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5372,8 +5372,8 @@ model "Far bush 21" "../models/zone/vegetation/sapling_a.glb" 4.73 -0.03 -204.83
   parent "Far"
   id ef6e539168182346
   transform 0 24.6 0 0.828
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5382,8 +5382,8 @@ model "Far bush 22" "../models/zone/vegetation/bush_street_a.glb" -6.82 -0.03 -3
   parent "Far"
   id 4eec93661f260910
   transform 0 65.7 0 0.731
-  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5392,8 +5392,8 @@ model "Far bush 23" "../models/zone/vegetation/bush_street_b.glb" -4.21 -0.03 -2
   parent "Far"
   id e3aa89eaba773c97
   transform 0 114.7 0 0.763
-  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_b_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_b_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5402,8 +5402,8 @@ model "Far bush 24" "../models/zone/vegetation/sapling_a.glb" -0.79 -0.03 -205.3
   parent "Far"
   id a17280a92e6bc2af
   transform 0 39.1 0 0.716
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5412,8 +5412,8 @@ model "Far bush 25" "../models/zone/vegetation/bush_street_b.glb" -7.03 -0.03 -2
   parent "Far"
   id d9f8ce717ad9484a
   transform 0 191.9 0 0.829
-  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_b_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_b_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5422,8 +5422,8 @@ model "Far bush 26" "../models/zone/vegetation/bush_street_a.glb" 3.04 -0.03 -28
   parent "Far"
   id 924a5646c4e3d44f
   transform 0 179.2 0 0.876
-  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5432,8 +5432,8 @@ model "Far bush 27" "../models/zone/vegetation/bush_street_b.glb" -2.75 -0.03 -2
   parent "Far"
   id 8183b343a5ab586e
   transform 0 262.9 0 0.736
-  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_b_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_b_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5442,8 +5442,8 @@ model "Far bush 28" "../models/zone/vegetation/sapling_a.glb" 2.16 -0.03 -253.57
   parent "Far"
   id 9197516621bbd430
   transform 0 163.8 0 0.627
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5452,8 +5452,8 @@ model "Far bush 29" "../models/zone/vegetation/sapling_a.glb" 1.43 -0.03 -267.39
   parent "Far"
   id ededc86bca54dc7c
   transform 0 269.5 0 0.756
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5462,8 +5462,8 @@ model "Far bush 30" "../models/zone/vegetation/sapling_a.glb" 2.43 -0.03 -281.9
   parent "Far"
   id db9137bb9893cf15
   transform 0 98.4 0 0.936
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5472,8 +5472,8 @@ model "Far bush 31" "../models/zone/vegetation/sapling_a.glb" 4.91 -0.03 -245.92
   parent "Far"
   id b8b022a3477ef488
   transform 0 285.2 0 0.853
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5482,8 +5482,8 @@ model "Far bush 32" "../models/zone/vegetation/bush_street_a.glb" 5.18 -0.03 -32
   parent "Far"
   id c38c6bb77b48cecc
   transform 0 15.2 0 0.967
-  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5492,8 +5492,8 @@ model "Far bush 33" "../models/zone/vegetation/bush_street_a.glb" 2.09 -0.03 -23
   parent "Far"
   id df6f4d5a661a85f5
   transform 0 172 0 0.963
-  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5502,8 +5502,8 @@ model "Far bush 34" "../models/zone/vegetation/sapling_a.glb" -5.25 -0.03 -225.5
   parent "Far"
   id 1a53824d86699244
   transform 0 1.7 0 0.722
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5512,8 +5512,8 @@ model "Far bush 35" "../models/zone/vegetation/bush_street_b.glb" -0.22 -0.03 -1
   parent "Far"
   id 41d79a318b0349cb
   transform 0 7.4 0 0.957
-  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_b_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_b_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5522,8 +5522,8 @@ model "Far bush 36" "../models/zone/vegetation/bush_street_a.glb" 4.89 -0.03 -24
   parent "Far"
   id ce46fc138eeeb619
   transform 0 320.3 0 0.713
-  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5532,8 +5532,8 @@ model "Far bush 37" "../models/zone/vegetation/sapling_a.glb" 0.19 -0.03 -263.26
   parent "Far"
   id 31b9e0c3d64c695a
   transform 0 88.4 0 0.7
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5542,8 +5542,8 @@ model "Far bush 38" "../models/zone/vegetation/bush_street_b.glb" -1.95 -0.03 -2
   parent "Far"
   id f91f52d409215d97
   transform 0 224.6 0 0.79
-  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_b_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_b_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5552,8 +5552,8 @@ model "Far bush 39" "../models/zone/vegetation/bush_street_b.glb" 3.24 -0.03 -19
   parent "Far"
   id c4f878dafca4ef92
   transform 0 198.7 0 0.625
-  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_b_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_b_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5562,8 +5562,8 @@ model "Far bush 40" "../models/zone/vegetation/sapling_a.glb" -5.26 -0.03 -301.7
   parent "Far"
   id ab1b45b2b2779b70
   transform 0 71.5 0 0.801
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5572,8 +5572,8 @@ model "Far bush 41" "../models/zone/vegetation/sapling_a.glb" -6.16 -0.03 -285.6
   parent "Far"
   id 72e8dd8d88aa9a7c
   transform 0 103.2 0 0.834
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5582,8 +5582,8 @@ model "Far bush 42" "../models/zone/vegetation/bush_street_a.glb" 4.22 -0.03 -29
   parent "Far"
   id b697d5acf6e40e80
   transform 0 69.3 0 0.672
-  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5592,8 +5592,8 @@ model "Far bush 43" "../models/zone/vegetation/bush_street_c.glb" 3.92 -0.03 -26
   parent "Far"
   id 8b4b6f683ed25d4b
   transform 0 307.5 0 0.636
-  lod "../models/zone/vegetation/bush_street_c_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_c_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_c_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_c_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5602,8 +5602,8 @@ model "Far bush 44" "../models/zone/vegetation/bush_street_a.glb" -5.76 -0.03 -2
   parent "Far"
   id 87521046e1c696c5
   transform 0 66.4 0 0.763
-  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5612,8 +5612,8 @@ model "Far bush 45" "../models/zone/vegetation/bush_street_a.glb" -2.78 -0.03 -3
   parent "Far"
   id f2924f8024cc2a73
   transform 0 221.4 0 0.725
-  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5622,8 +5622,8 @@ model "Far bush 46" "../models/zone/vegetation/bush_street_b.glb" -7.13 -0.03 -1
   parent "Far"
   id 9c96abfaf39d5fd0
   transform 0 142.4 0 0.65
-  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_b_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_b_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5632,8 +5632,8 @@ model "Far bush 47" "../models/zone/vegetation/bush_street_a.glb" 7.37 -0.03 -32
   parent "Far"
   id 6911c8584b658b64
   transform 0 310.4 0 0.997
-  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5642,8 +5642,8 @@ model "Far bush 48" "../models/zone/vegetation/sapling_a.glb" -1.57 -0.03 -288.8
   parent "Far"
   id 2cde8f7eccb60899
   transform 0 273.2 0 0.748
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5652,8 +5652,8 @@ model "Far bush 49" "../models/zone/vegetation/bush_street_c.glb" 4.68 -0.03 -19
   parent "Far"
   id c4e7179445c1cdb0
   transform 0 238.5 0 0.976
-  lod "../models/zone/vegetation/bush_street_c_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_c_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_c_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_c_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5662,8 +5662,8 @@ model "Far bush 50" "../models/zone/vegetation/bush_street_c.glb" -3.25 -0.03 -2
   parent "Far"
   id eca1c64b8c10772b
   transform 0 127.7 0 0.916
-  lod "../models/zone/vegetation/bush_street_c_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_c_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_c_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_c_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5672,8 +5672,8 @@ model "Far bush 51" "../models/zone/vegetation/bush_street_a.glb" -4.3 -0.03 -23
   parent "Far"
   id 918aafb6d64fe8b4
   transform 0 274 0 0.817
-  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5682,8 +5682,8 @@ model "Far bush 52" "../models/zone/vegetation/sapling_a.glb" 5.74 -0.03 -267.69
   parent "Far"
   id af6446489d0ecd81
   transform 0 283.3 0 0.784
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5692,8 +5692,8 @@ model "Far bush 53" "../models/zone/vegetation/sapling_a.glb" 0.57 -0.03 -277.77
   parent "Far"
   id 82db0ac3885a1eb9
   transform 0 220.4 0 0.793
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5702,8 +5702,8 @@ model "Far bush 54" "../models/zone/vegetation/bush_street_a.glb" 1.88 -0.03 -23
   parent "Far"
   id afdc23d0d0655e58
   transform 0 222.8 0 0.943
-  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5712,8 +5712,8 @@ model "Far bush 55" "../models/zone/vegetation/bush_street_b.glb" 0.97 -0.03 -31
   parent "Far"
   id df934630c685a1b4
   transform 0 21.3 0 0.919
-  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_b_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_b_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5722,8 +5722,8 @@ model "Far bush 56" "../models/zone/vegetation/bush_street_a.glb" -5.09 -0.03 -3
   parent "Far"
   id 587d7186359dcc43
   transform 0 58.7 0 0.79
-  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5732,8 +5732,8 @@ model "Far bush 57" "../models/zone/vegetation/bush_street_b.glb" 0.69 -0.03 -24
   parent "Far"
   id 85d41566787981ab
   transform 0 201.3 0 0.765
-  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_b_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_b_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5742,8 +5742,8 @@ model "Far bush 58" "../models/zone/vegetation/bush_street_c.glb" 6.47 -0.03 -25
   parent "Far"
   id c1d5abf0eccd41ec
   transform 0 56.6 0 0.804
-  lod "../models/zone/vegetation/bush_street_c_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_c_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_c_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_c_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5752,8 +5752,8 @@ model "Far bush 59" "../models/zone/vegetation/sapling_a.glb" 4.12 -0.03 -309.59
   parent "Far"
   id 394cc7037a07f0e9
   transform 0 119.4 0 0.913
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5762,8 +5762,8 @@ model "Far bush 60" "../models/zone/vegetation/bush_street_b.glb" -5.1 -0.03 -19
   parent "Far"
   id 5d0674db2a5ee208
   transform 0 62.8 0 0.758
-  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_b_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_b_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5772,8 +5772,8 @@ model "Far bush 61" "../models/zone/vegetation/bush_street_c.glb" -6.85 -0.03 -2
   parent "Far"
   id 1bde71e7752df957
   transform 0 298 0 0.747
-  lod "../models/zone/vegetation/bush_street_c_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_c_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_c_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_c_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5782,8 +5782,8 @@ model "Far bush 62" "../models/zone/vegetation/bush_street_a.glb" 7.35 -0.03 -28
   parent "Far"
   id 934f06f3fdb499c1
   transform 0 97.8 0 0.713
-  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5792,8 +5792,8 @@ model "Far bush 63" "../models/zone/vegetation/bush_street_b.glb" -0.44 -0.03 -2
   parent "Far"
   id 14746a2aedf950b0
   transform 0 236.6 0 0.735
-  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_b_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_b_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_b_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5802,8 +5802,8 @@ model "Far bush 64" "../models/zone/vegetation/sapling_a.glb" 3.67 -0.03 -201.1
   parent "Far"
   id 9daba7dc9ad05d5c
   transform 0 33.7 0 0.84
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5812,8 +5812,8 @@ model "Far bush 65" "../models/zone/vegetation/bush_street_a.glb" -2.57 -0.03 -2
   parent "Far"
   id 4728f20d2afe2d93
   transform 0 201.9 0 0.875
-  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5822,8 +5822,8 @@ model "Far bush 66" "../models/zone/vegetation/sapling_a.glb" 1.69 -0.03 -277.92
   parent "Far"
   id 06f917f0f33ec8b2
   transform 0 318.1 0 0.642
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5832,8 +5832,8 @@ model "Far bush 67" "../models/zone/vegetation/sapling_a.glb" 5.72 -0.03 -250.14
   parent "Far"
   id 805812cbf5e41d4f
   transform 0 281.8 0 0.876
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5842,8 +5842,8 @@ model "Far bush 68" "../models/zone/vegetation/sapling_a.glb" 4.99 -0.03 -248.01
   parent "Far"
   id 8bae3a8deb0b489a
   transform 0 283.1 0 0.94
-  lod "../models/zone/vegetation/sapling_a_lod1.glb" 18
-  lod "../models/zone/vegetation/sapling_a_lod2.glb" 40
+  lod "../models/zone/vegetation/sapling_a_lod1.glb" 12
+  lod "../models/zone/vegetation/sapling_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5852,8 +5852,8 @@ model "Far bush 69" "../models/zone/vegetation/bush_street_c.glb" -5.7 -0.03 -30
   parent "Far"
   id 45e9bfae3a856db3
   transform 0 48.5 0 0.659
-  lod "../models/zone/vegetation/bush_street_c_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_c_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_c_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_c_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0
@@ -5862,8 +5862,8 @@ model "Far bush 70" "../models/zone/vegetation/bush_street_a.glb" -4.77 -0.03 -3
   parent "Far"
   id f42be388e71c6daa
   transform 0 96.9 0 0.884
-  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 18
-  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 40
+  lod "../models/zone/vegetation/bush_street_a_lod1.glb" 12
+  lod "../models/zone/vegetation/bush_street_a_lod2.glb" 30
   cull_distance 600
   collision 0
   cast_shadows 0

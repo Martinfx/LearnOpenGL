@@ -213,7 +213,7 @@ class Tree:
         sp = self.sp
         R = self.R
         size = sp['card'] * (1.4 if self.lod == 1 else 2.0 if self.lod == 2 else 1.0)
-        spacing = sp['spacing'] * size * (1.0 if self.lod == 0 else 1.25) * 0.6   # summer crowns: twigs close together
+        spacing = sp['spacing'] * size * (1.0 if self.lod == 0 else 1.25) * (0.85 if not self.sp.get('stems') else 1.0)   # summer crowns (0.6 cost ~11 ms on a GTX 1060)
         t0 = sp['leaf_t'] if b.level > 0 else max(sp['leaf_t'], 0.55)
         n = max(1, int(b.length * (1 - t0) / spacing))
         if self.lod == 2:
@@ -332,15 +332,15 @@ def bark_mesh(tree):
     P, N, UV, C, I = [], [], [], [], []
     for b in tree.branches:
         if tree.lod == 0:
-            sides = {0: 12, 1: 8, 2: 6, 3: 4}.get(b.level, 4)
+            sides = {0: 10, 1: 7, 2: 5, 3: 3}.get(b.level, 3)
         else:
             sides = {0: 8, 1: 6, 2: 4, 3: 3}.get(b.level, 3) if tree.lod == 1 else {0: 6, 1: 4}.get(b.level, 3)
         if tree.lod >= 1 and b.rad[0] < 0.006:
             continue
         if tree.lod >= 2 and b.level >= 2:
             continue
-        if b.rad[0] < 0.004 and b.level >= 3:
-            sides = 3
+        if b.rad[0] < 0.005 and b.level >= 3:
+            continue   # the thinnest shoots: the twig cards carry their own stems
         n = len(b.pts)
         d0 = nrm(b.pts[1] - b.pts[0])
         ax = perp(d0)

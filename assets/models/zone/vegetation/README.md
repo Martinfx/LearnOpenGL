@@ -27,10 +27,10 @@ flutters leaves with it; `pbr.frag` darkens the inner crown and lets light throu
 on the far side, a glow looking into the sun). Models without it render as before.
 
 LODs keep the LOD 0 silhouette (no size pop): `_lod1` about 45 to 60 % of the cards (bigger, the thinnest shoots gone),
-`_lod2` about 15 to 25 % (limbs only); the engine's impostor takes over at 120 m. Levels use 30 / 70 m for the big trees and
-18 / 40 m for young trees and shrubs.
+`_lod2` about 15 to 25 % (limbs only); the engine's impostor takes over at 90 m. Levels use 18 / 45 m for the big trees and
+12 / 30 m for young trees and shrubs (the first, denser version cost about 11 ms per frame on a GTX 1060 at 30 / 70 m).
 
-| File | Species (treegen2) | Height (m) | Tris / cards (LOD 0) |
+| File | Species (treegen2) | Height (m) | Tris / cards (LOD 0, first version; now about 30 to 45 % fewer tris) |
 |---|---|---|---|
 | `maple_a`, `maple_b` | Norway maple: short trunk forking into scaffold limbs, round dense crown | 11.3 / 9.3 | 11412 / 828, 7590 / 498 |
 | `ash_a`, `ash_b` | ash / tree of heaven: oval open crown, compound (pinnate) leaves | 13.1 / 9.3 | 8100 / 570, 4766 / 289 |
