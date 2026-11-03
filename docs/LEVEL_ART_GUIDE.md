@@ -187,15 +187,15 @@ martin: „spoj všechno do Mulberry Street, ať to vypadá realisticky… děle
 10. **Hustota detailu u očí hráče:** nejvíc detailu je do 10 m od cesty a ve výšce 0–3 m. Výš a dál stačí silueta.
 11. **Měřítko:** reálné rozměry se kvůli hratelnosti mírně stlačují (rozbor TLoU II), ale proporce (parcela, patro, okno, dveře) zůstávají skutečné.
 
-## 12. Plán: jedna Mulberry Street (2026-11-03)
+## 12. Plán: jedna Mulberry Street (2026-11-03, rozšířeno na mřížku 4 × 4)
 
-Plánek: `docs/images/mulberry_plan.png`. Souřadnice jsou v metrech, sever je −z.
-- **Ulice ze severu na jih:** Baxter (x = −74), Mulberry (x = 0, 16 m mezi fasádami), Mott (x = +74). **Ulice z východu na západ:** Canal na jihu (široká 30 m, otevřený start), Hester (z −24…−10) a Grand (asi z −110…−96).
-- **Bloky** mezi ulicemi jsou hluboké asi 58 m. Mají dvě řady domů po parcelách 7,6 m (občas 15,2 m), dům hluboký 18–20 m a za ním dvory s ploty. Asi pětina domů jde projít: otevřený vchod, chodba, schodiště do pater a zadní dveře do dvora. Některé parcely jsou proluky po zbouraném domě, kde je na štítu souseda vidět stopa schodů a pater. Na rozích stojí vyhořelé a zřícené domy a betonové skelety (podle martinových referencí, ve funkci vykuchaných „loftů“).
-- **Hranice:** na vnější straně Baxter, Mott a Canal jsou uzavřené fasády (přirozená zeď). Konce ulic zavírá zával, barikáda z autobusů a aut nebo zábor stavby s plotem. Clip je jen za nimi.
-- **Kritická cesta:** start na Canal Street → pohled na sever do Mulberry s věží kostela na konci (weenie) → Hester (uzel, tábor, úkol Eddie) → přímý průchod Mulberry na Grand zavírá zával → přes dům a dvory, nebo oklikou Mott Street → Grand → sever ke kostelu.
-- **Do levelu se slučuje:** skelety a vykuchané věže (Dead City), rekvizity z deadcity a zone/gen, žebříky a požární schodiště, Box.clip a úkoly, psi a nálezy (převezmu z Dead City vlákna).
-- **Výkon:** domy se skládají z knihovny asi 20 variant parcel, které se instancují. Interiéry má jen LOD 0. LOD 1 nastupuje na 70 m. Ulice se navzájem zakrývají, takže pomáhá occlusion culling. Cíl je 60 FPS na GTX 1060.
+Plánek: `docs/images/mulberry_plan.png`. Rozložení je v `assets/levels/source/mulberry_layout.py`, stavba levelu v `make_overgrown_street.py`, domy z `zonegen/walkup.py`. Souřadnice jsou v metrech, sever je −z.
+- **Ulice ze severu na jih:** Baxter (x = −74), Mulberry (x = 0), Mott (x = +74) a Elizabeth (x = +148), každá 16 m mezi fasádami. **Ulice z východu na západ:** Canal na jihu (široká 30 m, otevřený start), Hester (z = −17), Grand (z = −103) a Broome (z = −189), každá 14 m. Mulberry pokračuje za Broome ke kostelu.
+- **Bloky:** 9 vnitřních bloků. Do Mulberry, Mott a Elizabeth jsou obrácené hluboké řady (dům 18 m), do příčných ulic mělké (14 m). Domy stojí na parcelách 6,1 / 7,6 / 9,1 / 15,2 m (20, 25, 30 a 50 stop) a mají 4–6 pater, obchody v přízemí, římsy, kamenné schody, sklepní dvířka a požární schodiště s padacím žebříkem. Uprostřed bloku jsou dvory s ploty, šňůrami na prádlo a harampádím. Asi 20 domů jde projít: vchod, chodba, schodiště až na střechu a zadní dveře do dvora. Za každým takovým domem (a za proluku nebo vyhořelý dům) je plot uprostřed bloku vyvrácený, takže dvorem jde projít na druhou ulici. Na vybraných místech stojí vyhořelé domy, proluky se záborem, betonové skelety (vykuchané lofty) a zřícený dům.
+- **Hranice:** po obvodu je uzavřená řada domů (přirozená zeď). Konce ulic zavírá barikáda z autobusů a aut. Clip je jen za nimi.
+- **Kritická cesta:** start na Canal Street → pohled na sever do Mulberry s věží kostela na konci (weenie, 53 m) → Hester (uzel, tábor, úkol Eddie) → Mulberry u Grand zavírá zřícený dům s autobusem → přes dům a dvory, nebo oklikou po Mott Street → Grand → Broome → kostel. Vedlejší úkol „Balík“ vede na roh Grand a Mott ke stánku s novinami. Psí smečky jsou ve dvoře západního bloku a na Mott.
+- **Pouliční vybavení podle NYC:** cobra lampy na šedém ocelovém sloupu s litinovou patkou, semafory na rozích, hydranty, pytle s odpadky, kontejnery, zaparkované vraky a taxíky u obou obrubníků, výmoly a kaluže.
+- **Výkon:** domy se skládají z knihovny asi 30 variant parcel, které se instancují. Interiéry má jen LOD 0, LOD 1 nastupuje na 75 m. Ulice se navzájem zakrývají, takže pomáhá occlusion culling. Ve hře je to 4,4–8,2 milionu trojúhelníků a 300–480 draw callů na snímek. Cíl je 60 FPS na GTX 1060.
 
 ## Zdroje
 

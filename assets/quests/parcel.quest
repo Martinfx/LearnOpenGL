@@ -1,0 +1,10 @@
+# Quest (editor: Assets > Quests). Stages run in order; dialogs and scripts can jump.
+id "parcel"
+title "@quest.parcel.title"
+description "@quest.parcel.description"
+giver "Radio"
+stage "corner" "@quest.parcel.corner" "Grand and Mott"
+stage "stash" "@quest.parcel.stash" "Newsstand stash"
+reward ammo "5.45x39" 60
+reward medkits 1
+reward money 600

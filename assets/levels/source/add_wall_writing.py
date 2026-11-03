@@ -66,6 +66,14 @@ for _h in 'abcdefghij':
     RULES[f'house_{_h}'] = _STREET
 RULES['house_end'] = [(['leak'], (2, 4), (6.0, 24.0), (1.1, 1.5)), (['damp'], (1, 2), (0.1, 0.35), (0.9, 1.1))]
 SIDES = {k: ['+z', '+x', '-x'] for k in RULES if k.startswith('house_')}
+# the walk-ups on their lots (zonegen/walkup.py, since 2026-11-03): a narrow front each, so a slogan or a tag on
+# some, leaks from the cornice, damp at the foot; the yard side gets the same
+_LOT = [(SLOGANS + ['eddie', 'keep_out', 'arrow_clear'], (0, 1), (0.3, 1.1), (0.6, 0.9)), (['damp'], (0, 1), (0.1, 0.3), (0.6, 0.9)),
+        (['leak'], (0, 2), (6.0, 15.0), (0.8, 1.2))]
+_mk = os.path.join(HERE, 'make_overgrown_street.py')
+for _name in re.findall(r"_lot\('(lot_\w+)'", open(_mk).read()) if os.path.exists(_mk) else []:
+    RULES[_name] = _LOT
+    SIDES[_name] = ['+z', '-z']
 CAMP = (-101.0, 33.0)
 TOWN_EDGE_X = 75.0                 # stalker arrows on the west faces of the first town buildings
 
