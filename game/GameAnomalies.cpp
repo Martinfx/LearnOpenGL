@@ -758,7 +758,7 @@ void GameAnomalies::fillGround(engine::RenderView& view) const
             marks.instances.push_back(flat(s.center, s.radius * 1.15f, l.angle, glm::vec4(1.0f), 1.0f));
             // Two layers of highlights turning slowly against each other read as a moving, oily surface.
             const float pulse = 0.75f + 0.25f * std::sin(time_ * 0.9f + static_cast<float>(i));
-            const glm::vec4 tint(0.55f * pulse, 0.85f * pulse, 0.22f * pulse, 0.16f + 0.3f * l.flash);
+            const glm::vec4 tint(0.55f * pulse, 0.85f * pulse, 0.22f * pulse, 0.24f + 0.3f * l.flash);
             sheen.instances.push_back(flat(s.center, s.radius * 0.95f, l.angle + time_ * 0.07f, tint, 0.0f, 0.06f));
             sheen.instances.push_back(flat(s.center + glm::vec3(0.15f, 0.0f, -0.1f), s.radius * 0.8f, -l.angle - time_ * 0.11f, tint * 0.7f, 0.0f, 0.065f));
             glows.instances.push_back(flat(s.center, s.radius * 0.8f, 0.0f, {0.25f, 0.45f, 0.05f, 0.22f}, 0.0f, 0.05f));
