@@ -142,7 +142,7 @@ def build():
     nz = Noise(77)
     lv = Level()
     for g, p in (('Houses', ''), ('Street', ''), ('Kerbs', 'Street'), ('Lamps and cables', 'Street'), ('Wrecks', 'Street'),
-                 ('Rubble', 'Street'), ('Barricades', 'Street'), ('Plates', 'Houses'), ('Ivy', 'Houses'), ('Camp', 'Street'), ('Zone', 'Street'), ('Far', '')):
+                 ('Rubble', 'Street'), ('Barricades', 'Street'), ('Plates', 'Houses'), ('Ivy', 'Houses'), ('Camp', 'Street'), ('Zone', 'Street'), ('Story', ''), ('Far', '')):
         lv.group(g, p)
 
     # ------------------------------------------------------------------ houses along both sides
@@ -310,6 +310,30 @@ def build():
         ents_extra.append(f'entity "{name}" "crow_flock" {fx_:g} 0.2 {fz_:g} 0 0.35 0.3 0.35 0.12 0.12 0.14 "../scripts/crow.lua"\n'
                           f'  parent "Zone"\n  character "../models/characters/animals/crow.glb" 1 0 "Idle_Loop"\n'
                           f'  prop "count" "{n}"')
+
+    # ------------------------------------------------------------------ the story: Lyokha (quest "ljocha")
+    # his tag is on every other wall (add_wall_writing.py); the fire is his friends', the note on the crate sends the
+    # player north, where he lies by the bus of the barricade he never got over. A dog pack lives in the cross street.
+    # (size 0.01: the game draws objectives and empties without a model as coloured boxes)
+    ents_extra.append('entity "Quest start" "empty" 1.5 0.2 104 0 0.01 0.01 0.01 0.3 0.85 0.9 "../scripts/quest_start.lua"\n'
+                      '  parent "Story"\n  prop "message" "@quest.ljocha.start"\n  prop "quest" "ljocha"')
+    ents_extra.append(f'entity "Tábor" "objective" {cx:.2f} 0.2 {cz:.2f} 0 0.01 0.01 0.01 0.95 0.75 0.2 "../scripts/objective.lua"\n'
+                      '  parent "Story"\n  prop "message" "@quest.ljocha.camp_done"\n  prop "quest" "ljocha"\n'
+                      '  prop "radius" "3"\n  prop "stage" "camp"')
+    ents_extra.append('entity "Ljocha" "objective" -2.6 0.1 -120.6 200 0.01 0.01 0.01 0.95 0.75 0.2 "../scripts/objective.lua"\n'
+                      '  parent "Story"\n  prop "message" "@quest.ljocha.found"\n  prop "quest" "ljocha"\n'
+                      '  prop "radius" "2.5"\n  prop "stage" "north"')
+    ents_extra.append('entity "Ljocha body" "empty" -2.6 0.05 -120.6 200 0.5 1.8 0.5 0.4 0.4 0.4 "../scripts/corpse.lua"\n'
+                      '  parent "Story"\n  character "../models/characters/humans/stalker.glb" 1 0 "Death01"')
+    ents_extra.append('entity "Ljocha PDA rounds" "pickup" -1.9 0.05 -119.8 40 0.285 0.105 0.197 0.9 0.8 0.3 ""\n'
+                      '  parent "Story"\n  character "../models/props/pickups/ammo_can_rifle.glb" 1 0 ""\n'
+                      '  prop "ammo_type" "5.45x39"\n  prop "amount" "30"\n  prop "item" "ammo"')
+    ents_extra.append('entity "Dog lair" "alife_point" -46 0.15 -17 0 1 2.5 1 0.3 0.85 0.9 ""\n  parent "Story"\n'
+                      '  prop "factions" "mutant"\n  prop "roles" "lair"')
+    for k, (dx, dz, yaw) in enumerate(((-2.5, 0.0, 0), (0.0, 2.5, 90), (2.5, 0.0, 180))):
+        ents_extra.append(f'entity "Feral dog {k + 1}" "mutant" {-46 + dx:g} 0.15 {-17 + dz:g} {yaw} 0.5 1.04 0.5 0.35 0.28 0.22 '
+                          '"../scripts/dog.lua"\n  parent "Story"\n'
+                          '  character "../models/characters/animals/wolf.glb" 1 0 "Idle_Loop"\n  prop "group" "dog pack"')
 
     # smoke of fires somewhere in the town, rising over the roofs: there are others out there
     for k, (sx_, sy_, sz_) in enumerate(((46.0, 4.0, -70.0), (-60.0, 4.0, 30.0), (30.0, 4.0, -200.0))):
@@ -488,7 +512,7 @@ def build():
            'grain': '0.03', 'auto_exposure': '0.5', 'exposure_min_ev': '-0.5', 'exposure_max_ev': '2', 'rain': '0.45', 'storm': '0.25', 'tonemap': '2',
            'puddles': '0.6', 'wind': '0.55'}
     head += [f'env {k} {v}' for k, v in env.items()]
-    head += ['loading_title "Почтовая улица"', 'loading_hint "Projdi ulicí na sever, k domu na jejím konci."',
+    head += ['loading_title "Почтовая улица"', 'loading_hint "Projdi ulicí na sever, k barikádě na jejím konci."',
              'weapon "../weapons/ak74.weapon"', 'weapon "../weapons/pistol.weapon"', 'weapon "../weapons/knife.weapon"']
     head.append('ambience "../sounds/ambience/street_storm.ambience"')
     head.append(f'terrain "{NAME}.terrain"')
