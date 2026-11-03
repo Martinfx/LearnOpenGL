@@ -55,7 +55,7 @@ const std::vector<std::string>& propRoles()
 {
     static const std::vector<std::string> roles{"kerb",  "lamp",  "lamp_leaning", "cable", "car",    "tree",  "sapling",
                                                 "snag",  "bush",  "grass",        "weed",  "nettle", "rubble", "slab",  "meadow",
-                                                "monument", "fountain", "bench", "kiosk"};
+                                                "monument", "fountain", "bench", "kiosk", "ivy", "roof_tree"};
     return roles;
 }
 
@@ -2331,6 +2331,58 @@ private:
         b_.polyLines(fp, kColHouse, 0.5f);
         b_.ground(Ground::Built, fp, s_.kerbHeight);
         b_.wallFoot(fp);
+        overgrow(L, fp, roles, h, st.pitched, ruin, seed);
+    }
+
+    // Nature takes the houses back: ivy and wild vine up the fronts from the pavement and
+    // the yard (mostly low patches, the tall ones only where the wall is high enough), and
+    // self-seeded birches on flat roofs. Own random numbers: the rest of the town stays.
+    void overgrow(const Lot& L, const Poly& fp, const std::vector<EdgeRole>& roles, float height, bool pitched, bool ruin,
+                  std::uint32_t seed)
+    {
+        const float g = s_.overgrowth;
+        if (g <= 0.0f || fp.size() < 3)
+            return;
+        Rng rng(mix(seed, 0x1A7B00ull));
+        const auto ivy = b_.kit_.propsWithRole("ivy");
+        const float sign = signedArea(fp) >= 0.0f ? 1.0f : -1.0f;
+        const float kh = s_.kerbHeight;
+        if (!ivy.empty())
+            for (std::size_t i = 0; i < fp.size(); ++i) {
+                if (i < roles.size() && roles[i] == EdgeRole::Party)
+                    continue;
+                const glm::vec2 a = fp[i], b = fp[(i + 1) % fp.size()];
+                const float len = glm::length(b - a);
+                if (len < 4.0f)
+                    continue;
+                const glm::vec2 t = (b - a) / len, n = glm::vec2(t.y, -t.x) * sign; // outward
+                const int count = static_cast<int>(len / 14.0f * g * rng.range(0.3f, 1.4f) + rng.uniform() * g);
+                for (int k = 0; k < count; ++k) {
+                    // Low patches are the most common; a tall one needs the wall for it.
+                    const float r = rng.uniform();
+                    const float want = r < 0.45f ? 3.0f : r < 0.75f ? 6.5f : r < 0.92f ? 10.0f : 16.5f;
+                    const KitProp* best = nullptr;
+                    for (const KitProp* v : ivy)
+                        if ((v->size <= 0.0f || v->size <= std::min(want, height * 0.9f)) && (!best || v->size > best->size))
+                            best = v;
+                    if (!best)
+                        continue;
+                    const glm::vec2 at = a + t * rng.range(1.5f, len - 1.5f) + n * 0.06f;
+                    b_.prop(*best, "Ivy", L.group, at, kh, b_.yawZ(n), rng);
+                    ++b_.plan.stats.plants;
+                }
+            }
+        // Birches on flat roofs (in the roof gravel and the gutters), now and then.
+        if (!pitched && !ruin && rng.chance(0.3f * g))
+            for (int k = 0, n = 1 + rng.below(3); k < n; ++k) {
+                glm::vec2 p;
+                if (!randomIn(fp, rng, p) || distanceToPolygonEdge(fp, p) < 1.2f)
+                    continue;
+                if (const KitProp* t = b_.anyProp("roof_tree", rng)) {
+                    b_.prop(*t, "Roof birch", L.group, p, kh + height - 0.05f, rng.range(0.0f, 360.0f), rng);
+                    ++b_.plan.stats.plants;
+                }
+            }
     }
 
     // ------------------------------------------------------------ perimeter blocks of any shape

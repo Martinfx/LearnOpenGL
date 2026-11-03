@@ -113,3 +113,9 @@ prop fountain "../models/zone/gen/square_fountain.glb" cull 300 collision 1 shad
 prop bench "../models/zone/gen/square_bench_a.glb" cull 120 collision 1 shadows 1
 prop bench "../models/zone/gen/square_bench_b.glb" cull 120 collision 1 shadows 1
 prop kiosk "../models/zone/gen/square_kiosk.glb" cull 250 collision 1 shadows 1 lod "../models/zone/gen/square_kiosk_lod1.glb" 50
+prop ivy "../models/zone/vegetation/ivy_low.glb" size 2.9 lod "../models/zone/vegetation/ivy_low_lod1.glb" 25 cull 60 sway 0.03 collision 0 shadows 0
+prop ivy "../models/zone/vegetation/ivy_a.glb" size 6.4 lod "../models/zone/vegetation/ivy_a_lod1.glb" 30 cull 110 sway 0.03 collision 0 shadows 1
+prop ivy "../models/zone/vegetation/ivy_b.glb" size 9.8 lod "../models/zone/vegetation/ivy_b_lod1.glb" 35 cull 130 sway 0.03 collision 0 shadows 1
+prop ivy "../models/zone/vegetation/ivy_tall.glb" size 16.1 lod "../models/zone/vegetation/ivy_tall_lod1.glb" 40 cull 150 sway 0.03 collision 0 shadows 1
+prop roof_tree "../models/zone/vegetation/birch_young.glb" lod "../models/zone/vegetation/birch_young_lod1.glb" 40 cull 300 sway 0.3 collision 0 shadows 1 scale_min 0.6 scale_max 1.0
+prop roof_tree "../models/zone/vegetation/sapling_a.glb" cull 200 sway 0.3 collision 0 shadows 1
