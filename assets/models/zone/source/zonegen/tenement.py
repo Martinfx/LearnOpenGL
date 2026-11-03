@@ -1,8 +1,10 @@
 """Pre-war brick and plaster tenements for the overgrown street (original, CC0).
 
-Four to eight storeys of a provincial Soviet town street: shops on a tall ground floor, rows of tall windows
-above, a cornice, balconies with rusty railings on some bays, a pitched tin roof or a flat one with a parapet,
+Four to eight storeys of a city street: shops on a tall ground floor, rows of tall windows above, a cornice,
 rain-water pipes and decades of leaks under every sill and along the roof edge (docs/LEVEL_ART_GUIDE.md).
+style='nyc' (the overgrown street since 2026-11-03): a New York walk-up, with black iron fire escapes zigzagging
+down the front, stone sills and lintels, a pressed-metal cornice on brackets, a flat tar roof with a parapet and
+a wooden water tank on steel legs. style='soviet': concrete balconies with rusty railings, pitched tin roofs.
 
 Frame: the street facade faces +Z at z = depth / 2, the length runs along X centred on 0, y = 0 is the ground
 floor (the pavement level). The shell is closed: floors, a spine wall along the middle (so a window shows a dark
@@ -22,7 +24,7 @@ STOREY = 3.2        # pre-war storey
 T = 0.5             # outer wall
 SKINS = ('st_brick_red', 'st_brick_patch', 'st_plaster_brick', 'st_plaster_crack', 'st_paint_peel', 'st_brick_dark',
          'st_brick_slumped', 'st_brick_worn', 'st_plaster_beige')
-BRICK = {'st_brick_red', 'st_brick_patch', 'st_brick_dark', 'st_brick_slumped', 'st_brick_worn'}
+BRICK = {'st_brick_red', 'st_brick_patch', 'st_brick_dark', 'st_brick_slumped', 'st_brick_worn', 'st_brick_buff'}
 
 
 def _kind(rng, upper):
@@ -38,7 +40,7 @@ def _kind(rng, upper):
 
 
 def tenement(length=36.0, floors=5, depth=14.0, seed=0, lod=0, skin='st_brick_red', roof='pitched', gateway=None,
-             balconies=0.35, shops=True, ruin=None):
+             balconies=0.35, shops=True, ruin=None, style='soviet'):
     """ruin=(a, b, keep): the upper floors collapsed between x = a and x = b (fractions of the length, 0..1), only
     floors below `keep` stand there; the break widens by about a bay per floor upwards, so the walls end in steps,
     the floors hang open and the roof is gone over the gap (the second reference: houses gutted by shelling)."""
@@ -57,6 +59,18 @@ def tenement(length=36.0, floors=5, depth=14.0, seed=0, lod=0, skin='st_brick_re
     bal_bays = {i for i in range(nb) if rng.random() < balconies and i != gate_bay}
     if bal_bays and rng.random() < 0.6:          # symmetric pairs read as designed, not random
         bal_bays |= {nb - 1 - i for i in bal_bays}
+    nyc = style == 'nyc'
+    fe_runs = []
+    if nyc:
+        bal_bays = set()
+        roof = 'flat'
+        frng = np.random.default_rng(seed + 3000)   # own stream: the rest of the house stays as it was
+        # fire escapes: two bays wide, one per 4 to 6 bays, never over the gateway
+        i = int(frng.integers(0, 2))
+        while i + 1 < nb:
+            if gate_bay not in (i, i + 1):
+                fe_runs.append((i, i + 1))
+            i += int(frng.integers(4, 7))
 
     def floor_y(f):
         return 0.0 if f == 0 else GROUND + (f - 1) * STOREY
@@ -173,6 +187,13 @@ def tenement(length=36.0, floors=5, depth=14.0, seed=0, lod=0, skin='st_brick_re
         if side != '+z' or f == 0 or lod:
             continue
         m.box(trim, (c - w / 2 - 0.12, yb, zf), (c + w / 2 + 0.12, yb + 0.22, zf + 0.08), faces='xXyYZ')   # lintel
+        if nyc and not door:
+            m.box(trim, (c - w / 2 - 0.08, ya - 0.1, zf), (c + w / 2 + 0.08, ya, zf + 0.1), faces='xXyYZ')     # stone sill
+    if nyc and lod == 0:                                 # pressed-metal cornice on brackets
+        for a, b in segs(floors, -hx - 0.1, hx + 0.1):
+            for x in np.arange(a + 0.3, b - 0.2, 0.75):
+                m.box('iron_black', (x - 0.07, top + 0.05, zf), (x + 0.07, top + 0.55, zf + 0.42), faces='xXyZ')
+            m.box('iron_black', (a, top + 0.9, zf + 0.2), (b, top + 1.05, zf + 0.62), faces='xXyYZ')
     # balconies: a thin concrete slab on two brackets, rusty railing, some half fallen
     for i in sorted(bal_bays):
         cx = bays[i]
@@ -252,6 +273,81 @@ def tenement(length=36.0, floors=5, depth=14.0, seed=0, lod=0, skin='st_brick_re
             else:
                 sign(name, flat=lod > 0, m=m)
             m.pop()
+
+    # ---------------------------------------------------------------- fire escapes (nyc)
+    def iron_rail(x0, x1, z0, z1, y, h=0.95, step=0.2):
+        """Railing from (x0, z0) to (x1, z1) at floor height y: top rail, mid rail and balusters."""
+        m.cylinder('iron_black', (x0, y + h, z0), (x1, y + h, z1), 0.022, 5, caps=False)
+        m.cylinder('iron_black', (x0, y + 0.1, z0), (x1, y + 0.1, z1), 0.015, 4, caps=False)
+        n = max(1, int(max(abs(x1 - x0), abs(z1 - z0)) / step))
+        for k in range(n + 1):
+            t = k / n
+            m.box_c('iron_black', (x0 + (x1 - x0) * t, y + h / 2, z0 + (z1 - z0) * t), (0.014, h, 0.014), faces='xXzZ')
+
+    for (i0, i1) in fe_runs:
+        xa, xb = bays[i0] - bay / 2 + 0.15, bays[i1] + bay / 2 - 0.15
+        D = 1.15                                                   # platform depth
+        fl = [f for f in range(1, floors) if standing(f, (xa + xb) / 2, xb - xa + 0.4)]
+        fl = [f for k, f in enumerate(fl) if f == fl[0] + k]      # only the unbroken run from the first floor up
+        run = min(2.9, xb - xa - 0.9)
+        for k, f in enumerate(fl):
+            y = floor_y(f) + 0.15
+            m.box('iron_black', (xa, y - 0.06, zf), (xb, y, zf + D))                       # grating
+            if rrng.random() < 0.35:
+                m.spots.append((rrng.uniform(xa + 0.3, xb - 0.3), y, zf + D * 0.6, 'balcony'))
+            if lod:
+                m.box('iron_black', (xa, y + 0.9, zf + D - 0.03), (xb, y + 0.95, zf + D), faces='xXyYZ')
+                continue
+            iron_rail(xa, xb, zf + D, zf + D, y)
+            iron_rail(xa, xa, zf + 0.05, zf + D, y)
+            iron_rail(xb, xb, zf + 0.05, zf + D, y)
+            for x in (xa + 0.25, (xa + xb) / 2, xb - 0.25):                                 # brackets into the wall
+                m.cylinder('iron_black', (x, y - 0.75, zf), (x, y - 0.06, zf + D - 0.1), 0.025, 4, caps=False)
+            if k + 1 < len(fl):                                     # stair up to the next platform, alternating
+                y2 = floor_y(fl[k + 1]) + 0.15
+                if k % 2 == 0:
+                    sx0, sx1 = xb - 0.35, xb - 0.35 - run
+                else:
+                    sx0, sx1 = xa + 0.35, xa + 0.35 + run
+                for zz in (zf + 0.25, zf + 0.85):
+                    m.cylinder('iron_black', (sx0, y, zz), (sx1, y2, zz), 0.03, 4, caps=False)       # stringers
+                m.cylinder('iron_black', (sx0, y + 0.9, zf + 0.88), (sx1, y2 + 0.9, zf + 0.88), 0.02, 4, caps=False)
+                nst = int((y2 - y) / 0.24)
+                for j in range(1, nst):
+                    t = j / nst
+                    x, yy = sx0 + (sx1 - sx0) * t, y + (y2 - y) * t
+                    m.box('iron_black', (x - 0.1, yy - 0.025, zf + 0.25), (x + 0.1, yy, zf + 0.85), faces='xXyYzZ')
+        if fl and lod == 0:                                         # the drop ladder, pulled up over the pavement
+            y = floor_y(fl[0]) + 0.15
+            lx = xa + 0.5
+            for dx in (0.0, 0.45):
+                m.cylinder('iron_black', (lx + dx, y - 2.1, zf + D - 0.12), (lx + dx, y + 0.9, zf + D - 0.12), 0.02, 4, caps=False)
+            for yy in np.arange(y - 2.0, y + 0.85, 0.3):
+                m.cylinder('iron_black', (lx, yy, zf + D - 0.12), (lx + 0.45, yy, zf + D - 0.12), 0.012, 4, caps=False)
+
+    # ---------------------------------------------------------------- water tank on the roof (nyc)
+    if nyc:
+        trng = np.random.default_rng(seed + 4000)
+        for k in range(1 if length < 40 else 2):
+            x = trng.uniform(-hx + 3.0, hx - 3.0)
+            if trng.random() > 0.7 or not standing(floors, x, 4.0):
+                continue
+            z = trng.uniform(-hz + 3.0, -0.5)
+            b = top
+            for sx in (-1, 1):
+                for sz in (-1, 1):
+                    m.cylinder('iron_black', (x + sx * 1.15, b, z + sz * 1.15), (x + sx * 1.15, b + 3.0, z + sz * 1.15), 0.09, 6)
+            if lod == 0:
+                for sx, sz, ex, ez in ((-1, -1, 1, -1), (-1, 1, 1, 1), (-1, -1, -1, 1), (1, -1, 1, 1)):
+                    m.cylinder('iron_black', (x + sx * 1.15, b + 0.3, z + sz * 1.15), (x + ex * 1.15, b + 2.8, z + ez * 1.15), 0.03, 4, caps=False)
+                    m.cylinder('iron_black', (x + ex * 1.15, b + 0.3, z + ez * 1.15), (x + sx * 1.15, b + 2.8, z + sz * 1.15), 0.03, 4, caps=False)
+            m.box('iron_black', (x - 1.6, b + 3.0, z - 1.6), (x + 1.6, b + 3.15, z + 1.6))
+            hgt = trng.uniform(3.0, 3.8)
+            m.cylinder('wood_dark', (x, b + 3.15, z), (x, b + 3.15 + hgt, z), 1.45, 16 if lod == 0 else 10, caps=True)
+            if lod == 0:
+                for yy in np.linspace(b + 3.4, b + 3.0 + hgt, 5):
+                    m.cylinder('iron_black', (x, yy, z), (x, yy + 0.05, z), 1.47, 16, caps=False)
+            m.cylinder('wood_dark', (x, b + 3.15 + hgt, z), (x, b + 4.2 + hgt, z), 1.6, 16 if lod == 0 else 10, caps=False, r2=0.06)
 
     # ---------------------------------------------------------------- roof
     if roof == 'pitched':

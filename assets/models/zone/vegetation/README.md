@@ -6,6 +6,8 @@ dandelion_a/c, celandine_b, grass_short_a) also has a `_far.glb` of about 10 %: 
 and leaves and widens them about their base, so a clump keeps its coverage instead of collapsing into slivers. `grass_fresh_street*` is the Skrunda `grass_fresh` thinned the same way for the overgrown street (1416 / 583 / 303 tris instead of 6405 / 2561 / 536: it covers the whole street, so it is drawn thousands of times). Foliage materials are **alpha-tested** (`alphaMode MASK`,
 cutoff 0.5, double-sided); render them without back-face culling. Leaf materials have roughness 1 and low specular so cards do not catch sky reflections at grazing angles. Tree foliage cards carry normals that point out
 of the crown, so they light like a volume rather than flat planes.
+The most numerous ones (grass_clump_a, grass_fresh_street, dandelion_a, celandine_b) have a `_far2.glb` of 100 to 250 triangles
+(vegthin.py with a lower ratio) for 16 to 22 m and beyond: ground cover was about 70 % of the street's triangles.
 
 ## Trees (procedural, `source/treegen.py`, foliage cards baked from Poly Haven scans)
 

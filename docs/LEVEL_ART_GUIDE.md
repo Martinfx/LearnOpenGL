@@ -109,7 +109,7 @@ Kevin Lynch (The Image of the City, 1960) popsal, z čeho si lidé skládají ma
 
 | Pravidlo | Zóna | Ulice u nemocnice | Skrunda-1 |
 |---|---|---|---|
-| Příběh, důvody | ano (hlavička levelu, NPC) | ano (úkol: lékárna v nemocnici) | ano (Ljocha, poslední branci) |
+| Příběh, důvody | ano (hlavička levelu, NPC) | ano (úkol: lékárna v nemocnici) | ano (Eddie, poslední branci) |
 | Orientační bod ze startu | chladicí věže | nemocnice | vodárna |
 | Prošlapané pěšiny | **chybí** (jen silnice a koleje) | **chybí** k vchodům | ano (OSM chodníky, cesta k HQ) |
 | Stromy ve skupinách | **rovnoměrně rozházené** | málo stromů | les na okraji, ve městě jednotlivě |
@@ -144,6 +144,15 @@ Seřazeno podle dopadu, z pohledu hráče:
    táborů a cílů.
 4. **Střední vrstva detailu budov** (okapy, svody, kabely, cedule, otlučené hrany): další krok.
 5. **Světlo a varianty stromů**: sépie opravena; zbývá víc variant stromů a kontaktní stín.
+
+## 9. Zarostlá ulice je New York (2026-11-03)
+
+martin: „nedávej tam ruský názvy, ale normálně jako v Americe, třeba v New Yorku“ a na kartě zvolil celou ulici jako New York.
+Pravidla pro ulici (Mulberry Street, příčná Hester Street):
+- Názvy postav, úkolů, ulic, obchodů a nápisy jsou americké, anglicky, bez azbuky (úkol „Eddie“, graffiti EDDIE WAS HERE).
+- Domy jsou cihlové činžáky (walk-up) s plochou dehtovou střechou a atikou. Mají černá železná požární schodiště přes dvě okenní osy, s plošinami, schodišti a vytaženým spouštěcím žebříkem. Dále plechovou římsu na konzolách, kamenné parapety a překlady a dřevěnou vodní nádrž na ocelových nohách (`tenement(style='nyc')`).
+- Vozovka je asfalt rozpraskaný na bloky asi 3 m, s prasklinami podél pruhů, tmavými záplatami po výkopech a výtluky s blátem. Tráva v prasklinách roste jen tam, kde je ulice nejzelenější, protože zelená čára na čistém asfaltu vypadá jako namalovaná.
+- Cedule ulic jsou zelené s bílým písmem, nápisy obchodů anglicky (DELICATESSEN, BAKERY, PHARMACY…).
 
 ## Zdroje
 

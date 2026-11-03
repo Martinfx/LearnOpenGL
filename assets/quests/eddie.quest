@@ -1,0 +1,10 @@
+# Quest (editor: Assets > Quests). Stages run in order; dialogs and scripts can jump.
+id "eddie"
+title "@quest.eddie.title"
+description "@quest.eddie.description"
+giver "Note by the fire"
+stage "camp" "@quest.eddie.camp" "Camp"
+stage "north" "@quest.eddie.north" "Eddie"
+reward ammo "5.45x39" 90
+reward medkits 1
+reward money 400

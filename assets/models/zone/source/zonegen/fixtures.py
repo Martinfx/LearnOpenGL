@@ -42,14 +42,15 @@ def downpipe(h):
 
 # name: (text, colours (background, text), width m, height m)
 BLUE, WHITE, INK = (0.12, 0.25, 0.52), (0.92, 0.93, 0.9), (0.1, 0.12, 0.2)
+NYC_GREEN = (0.08, 0.36, 0.22)       # New York street name signs: white letters on green
 PLATES = {f'house_{n}': (str(n), (BLUE, WHITE), 0.36 if n < 10 else 0.42, 0.3) for n in range(1, 25)}
 PLATES.update({
-    'street_zavod':  ('УЛ. ЗАВОДСКАЯ', (WHITE, INK), 1.0, 0.24),
-    'street_mira':   ('ПР. МИРА', (WHITE, INK), 0.8, 0.24),
-    'street_lenin':  ('УЛ. ЛЕНИНА', (BLUE, WHITE), 0.9, 0.24),
-    'street_novaya': ('УЛ. НОВАЯ', (BLUE, WHITE), 0.9, 0.24),
-    'street_pochta': ('УЛ. ПОЧТОВАЯ', (WHITE, INK), 1.0, 0.24),
-    'shelter':       ('УБЕЖИЩЕ', ((0.82, 0.2, 0.12), (0.95, 0.94, 0.9)), 0.7, 0.3),
+    'street_zavod':  ('HESTER ST', (NYC_GREEN, WHITE), 1.0, 0.24),
+    'street_mira':   ('GRAND ST', (NYC_GREEN, WHITE), 0.8, 0.24),
+    'street_lenin':  ('ORCHARD ST', (NYC_GREEN, WHITE), 0.9, 0.24),
+    'street_novaya': ('ELDRIDGE ST', (NYC_GREEN, WHITE), 0.9, 0.24),
+    'street_pochta': ('MULBERRY ST', (NYC_GREEN, WHITE), 1.0, 0.24),
+    'shelter':       ('FALLOUT SHELTER', ((0.82, 0.2, 0.12), (0.95, 0.94, 0.9)), 0.7, 0.3),
 })
 STREETS = [k for k in PLATES if k.startswith('street_')]
 PCOLS, PROWS, PCELL_W, PCELL_H = 4, 8, 512, 160
@@ -166,22 +167,22 @@ def kerb(length=6.0, seed=0):
 # name: (text, background, letters, width m)
 RED, GREEN, CREAM, DARK = (0.55, 0.12, 0.08), (0.16, 0.3, 0.2), (0.86, 0.82, 0.7), (0.14, 0.15, 0.17)
 SIGNS = {
-    'gastronom':  ('ГАСТРОНОМ', RED, CREAM, 5.4),
-    'khleb':      ('ХЛЕБ', CREAM, RED, 2.8),
-    'moloko':     ('МОЛОКО', BLUE, WHITE, 3.6),
-    'ovoshchi':   ('ОВОЩИ  ФРУКТЫ', GREEN, CREAM, 5.6),
-    'apteka':     ('АПТЕКА', CREAM, GREEN, 3.6),
-    'parikmakh':  ('ПАРИКМАХЕРСКАЯ', BLUE, WHITE, 5.8),
-    'knigi':      ('КНИГИ', RED, CREAM, 3.2),
-    'obuv':       ('ОБУВЬ', DARK, CREAM, 3.2),
-    'pochta':     ('ПОЧТА  ТЕЛЕГРАФ', BLUE, WHITE, 5.8),
-    'produkty':   ('ПРОДУКТЫ', RED, WHITE, 4.6),
-    'galantereya': ('ГАЛАНТЕРЕЯ', GREEN, WHITE, 5.0),
-    'remont':     ('РЕМОНТ ЧАСОВ', DARK, (0.8, 0.62, 0.25), 5.0),
-    'stolovaya':  ('СТОЛОВАЯ', CREAM, RED, 4.4),
-    'univermag':  ('УНИВЕРМАГ', RED, CREAM, 5.4),
-    'tkani':      ('ТКАНИ', BLUE, CREAM, 3.2),
-    'khoztovary': ('ХОЗТОВАРЫ', GREEN, CREAM, 5.0),
+    'gastronom':  ('DELICATESSEN', RED, CREAM, 5.4),
+    'khleb':      ('BAKERY', CREAM, RED, 2.8),
+    'moloko':     ('DAIRY', BLUE, WHITE, 3.6),
+    'ovoshchi':   ('FRUIT  PRODUCE', GREEN, CREAM, 5.6),
+    'apteka':     ('PHARMACY', CREAM, GREEN, 3.6),
+    'parikmakh':  ('BARBER SHOP', BLUE, WHITE, 5.8),
+    'knigi':      ('BOOKS', RED, CREAM, 3.2),
+    'obuv':       ('SHOES', DARK, CREAM, 3.2),
+    'pochta':     ('POST OFFICE', BLUE, WHITE, 5.8),
+    'produkty':   ('GROCERY', RED, WHITE, 4.6),
+    'galantereya': ('DRY GOODS', GREEN, WHITE, 5.0),
+    'remont':     ('WATCH REPAIR', DARK, (0.8, 0.62, 0.25), 5.0),
+    'stolovaya':  ('DINER', CREAM, RED, 4.4),
+    'univermag':  ('DEPARTMENT STORE', RED, CREAM, 5.4),
+    'tkani':      ('FABRICS', BLUE, CREAM, 3.2),
+    'khoztovary': ('HARDWARE', GREEN, CREAM, 5.0),
 }
 SIGN_H = 0.55
 SCOLS, SROWS, SCELL_W, SCELL_H = 2, 8, 1024, 128

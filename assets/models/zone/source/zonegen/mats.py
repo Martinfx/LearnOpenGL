@@ -240,6 +240,7 @@ PALETTE = {
     'paint_cream': M('paint_cream', 1.6),
     'paint_red': M('paint_red', 1.6),
     'burnt': M('rust_dark', 1.2, color=(0.35, 0.3, 0.28)),
+    'iron_black': M('rust_dark', 1.5, color=(0.3, 0.29, 0.29)),     # black paint gone to rust: NYC fire escapes
     'concrete': M('concrete', 3.0),
     'concrete_dark': M('concrete_dark', 3.0),
     'concrete_floor': M('concrete_floor', 3.0),
@@ -302,6 +303,7 @@ PALETTE = {
     'st_brick_dark': M('st_brick_dark', 1.05),
     'st_brick_slumped': M('st_brick_slumped', 1.77),
     'st_brick_worn': M('st_brick_worn', 2.0),
+    'st_brick_buff': M('st_brick_worn', 2.0, color=(1.18, 1.02, 0.78)),     # the yellow brick of NYC tenements
     'st_plaster_beige': M('st_plaster_beige', 3.0),
     'st_shutter': M('st_shutter', 1.8),
     'st_metal_paint': M('st_metal_paint', 2.2),

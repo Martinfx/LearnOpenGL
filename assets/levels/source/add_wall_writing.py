@@ -12,7 +12,7 @@ reason in the zone's story:
   - stalker marks: arrows along the way from the rail-yard camp to the town, crosses on the wagons next to the
     anomaly field;
   - the bandits' "keep out" around the hospital they hold, radiation signs and warnings at the power plant;
-  - on the overgrown street (Почтовая): slogans and chalk low on the house fronts, leaks from the roof edges and
+  - on the overgrown street (Mulberry Street): slogans and chalk low on the house fronts, leaks from the roof edges and
     the balconies, damp at the plinths, and stalkers' arrows along the way north.
 
 Placement is checked against the real geometry, not the bounding box: rays from outside hit the model's triangles,
@@ -36,7 +36,7 @@ from add_terrain import LEVELS, _mat, parse          # noqa: E402
 DECALS = '../models/zone/skrunda/graffiti_'
 GROUP = 'Wall writing'
 OFF = 0.02
-SLOGANS = ['tsoi', 'dmb', 'no_exit', 'tsoi']
+SLOGANS = ['stay_alive', 'les_91', 'no_exit', 'stay_alive']
 
 # model file -> what its walls carry: list of (designs, count range, height range of the bottom edge, scale range)
 RULES = {
@@ -49,18 +49,18 @@ RULES = {
     'hospital': [(['keep_out'], (2, 3), (0.6, 1.2), (1.0, 1.2)), (['no_exit'], (0, 1), (0.4, 0.8), (1.0, 1.2)),
                  (['damp'], (1, 2), (0.15, 0.4), (0.8, 1.0)), (['leak'], (1, 2), (3.0, 8.0), (0.9, 1.2))],
     'garage_block': [(SLOGANS, (1, 2), (0.3, 0.8), (0.9, 1.1)), (['soot'], (1, 2), (0.0, 0.2), (0.8, 1.0))],
-    'garages_pack': [(SLOGANS + ['tsoi'], (2, 3), (0.3, 0.8), (0.9, 1.1))],
+    'garages_pack': [(SLOGANS + ['stay_alive'], (2, 3), (0.3, 0.8), (0.9, 1.1))],
     'gas_station': [(SLOGANS, (1, 2), (0.3, 0.8), (0.9, 1.1))],
     'industrial_building': [(['radiation'], (1, 2), (1.2, 1.8), (1.0, 1.2)), (['keep_out'], (0, 1), (0.8, 1.2), (1.0, 1.1)),
                             (['damp', 'leak'], (1, 2), (0.2, 3.0), (0.9, 1.2))],
     'factory_hall': [(['radiation'], (1, 2), (1.2, 1.8), (1.0, 1.2)), (['damp', 'leak'], (1, 3), (0.2, 4.0), (0.9, 1.3))],
     'machine_hall': [(['radiation'], (1, 1), (1.2, 1.8), (1.0, 1.2)), (['damp', 'leak'], (1, 2), (0.2, 4.0), (0.9, 1.3))],
-    'shipping_container': [(['keep_out', 'dmb', 'tsoi'], (0, 1), (0.5, 1.0), (0.8, 1.0))],
-    'rail_carriage_rust': [(['dmb', 'tsoi'], (0, 1), (0.9, 1.4), (0.8, 1.0))],     # red paint is lost on the rust
-    'rail_carriage_green': [(['dmb', 'tsoi', 'no_exit'], (0, 1), (0.9, 1.4), (0.8, 1.0))],
+    'shipping_container': [(['keep_out', 'les_91', 'stay_alive'], (0, 1), (0.5, 1.0), (0.8, 1.0))],
+    'rail_carriage_rust': [(['les_91', 'stay_alive'], (0, 1), (0.9, 1.4), (0.8, 1.0))],     # red paint is lost on the rust
+    'rail_carriage_green': [(['les_91', 'stay_alive', 'no_exit'], (0, 1), (0.9, 1.4), (0.8, 1.0))],
 }
 # the tenements of the overgrown street (zonegen/tenement.py): only the street front and the gable ends are seen
-_STREET = [(SLOGANS + ['lyokha', 'keep_out'], (1, 2), (0.3, 1.2), (0.7, 1.0)), (['damp'], (1, 2), (0.1, 0.35), (0.8, 1.1)),
+_STREET = [(SLOGANS + ['eddie', 'keep_out'], (1, 2), (0.3, 1.2), (0.7, 1.0)), (['damp'], (1, 2), (0.1, 0.35), (0.8, 1.1)),
            (['leak'], (1, 3), (6.0, 18.0), (1.0, 1.4)), (['arrow_clear'], (0, 1), (1.0, 1.5), (0.8, 1.0))]
 for _h in 'abcdefghij':
     RULES[f'house_{_h}'] = _STREET

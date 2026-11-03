@@ -11,12 +11,12 @@ shrubs and young trees growing on the carriageway, rusty wrecks sunk in the gree
 a bright day with a blue sky and a long view down the street.
 
 Design (docs/LEVEL_ART_GUIDE.md):
-  - One path with a strong vanishing point: Почтовая street runs 250 m from south (start, z = +105) to north. The
+  - One path with a strong vanishing point: Mulberry Street runs 250 m from south (start, z = +105) to north. The
     view is closed far away by a tall house straddling the axis, so the eye always has a goal.
   - Edges: continuous house fronts 16 m apart (4.5 m of carriageway each way of the axis, 3.5 m pavements), houses
     4 to 8 floors, so the skyline steps. Both ends are blocked by what really blocks streets here: a barricade of
     wrecks and concrete blocks behind the start, the rubble of a collapsed corner house at the north end.
-  - A node in the middle: the crossing with Заводская street (14 m wide), the place to look sideways.
+  - A node in the middle: the crossing with Hester Street (14 m wide), the place to look sideways.
   - Nature takes the street back from the edges: the strip along each kerb, the foot of the walls, the cracks
     between the slabs; the middle keeps a trodden line of bare slabs, where people still walk.
 """
@@ -47,25 +47,43 @@ KERB = 4.5               # kerb line (road side) at x = +-4.5
 WALK = 0.15              # pavement above the road
 CROSS = (-24.0, -10.0)   # cross street between these z (house fronts)
 CROSS_C = sum(CROSS) / 2
+
+
+def _potholes():
+    """Potholes in the asphalt (x, z, radius, depth): frost and water, decades without repair (martin: the roads
+    must be cracked too)."""
+    r = np.random.default_rng(77)
+    out = []
+    while len(out) < 38:
+        x, z = r.uniform(-KERB + 0.5, KERB - 0.5), r.uniform(NORTH_END + 3, SOUTH_END - 3)
+        if abs(x + 1.6) < 4 and abs(z - 69.0) < 4:          # not under the camp
+            continue
+        out.append((x, z, r.uniform(0.4, 1.3), r.uniform(0.06, 0.16)))
+    for _ in range(10):                                   # the cross street
+        out.append((r.uniform(-60, 60), CROSS_C + r.uniform(-KERB + 0.5, KERB - 0.5), r.uniform(0.4, 1.2), r.uniform(0.06, 0.14)))
+    return out
 NORTH_END, SOUTH_END = -138.0, 120.0     # barricades
 X0, Z0, SIZE, RES = -165.0, -195.0, 330.0, 0.5     # engine terrain
 SPLAT_N = 1536
+POTHOLES = _potholes()
 
 # layers: (material, tiling = 1 / real size)
-LAYERS = [(PB + 'cracked_concrete.material', 0.5), (PB + 'asphalt_02.material', 0.3333),
+# (layer 0 "SLAB" is the darker asphalt of old utility-cut patches since the street became New York)
+LAYERS = [(PB + 'asphalt_01.material', 0.4808), (PB + 'asphalt_02.material', 0.3333),
           (PB + 'concrete_pavement.material', 0.5556), (PB + 'concrete_moss.material', 0.3333),
           ('../materials/skrunda/terrain_dirt.material', 0.5), ('../materials/skrunda/terrain_lush.material', 0.5),
-          ('../materials/skrunda/terrain_leaves.material', 0.33), (PB + 'rubble.material', 0.5)]
-SLAB, ASPH, PAVE, MOSS, SOIL, GRASS, LEAVES, RUBBLE = range(8)
+          ('../materials/skrunda/terrain_crack.material', 0.5), (PB + 'rubble.material', 0.5)]
+SLAB, ASPH, PAVE, MOSS, SOIL, GRASS, CRACK, RUBBLE = range(8)     # (CRACK was the leaves layer before NYC)
 
 
 # ----------------------------------------------------------------------------------------------------------- houses
 # (name, length, floors, skin, roof, seed): a small set reused along the street, never twice side by side
-HOUSES = [('house_a', 36.0, 5, 'st_brick_red', 'pitched', 1), ('house_b', 30.0, 7, 'st_plaster_brick', 'flat', 2),
-          ('house_c', 42.0, 6, 'st_brick_patch', 'pitched', 3), ('house_d', 24.0, 4, 'st_paint_peel', 'pitched', 4),
-          ('house_e', 33.0, 8, 'st_brick_dark', 'flat', 5), ('house_f', 27.0, 6, 'st_plaster_crack', 'pitched', 6),
-          ('house_g', 39.0, 5, 'st_brick_slumped', 'flat', 7), ('house_h', 30.0, 6, 'st_brick_worn', 'pitched', 8),
-          ('house_i', 36.0, 7, 'st_plaster_beige', 'flat', 9), ('house_j', 45.0, 8, 'st_brick_red', 'flat', 10),
+# New York walk-ups (martin 2026-11-03: "like in America, New York"): all brick, flat roofs, fire escapes
+HOUSES = [('house_a', 36.0, 5, 'st_brick_red', 'flat', 1), ('house_b', 30.0, 7, 'st_brick_buff', 'flat', 2),
+          ('house_c', 42.0, 6, 'st_brick_patch', 'flat', 3), ('house_d', 24.0, 4, 'st_brick_dark', 'flat', 4),
+          ('house_e', 33.0, 8, 'st_brick_dark', 'flat', 5), ('house_f', 27.0, 6, 'st_brick_buff', 'flat', 6),
+          ('house_g', 39.0, 5, 'st_brick_slumped', 'flat', 7), ('house_h', 30.0, 6, 'st_brick_worn', 'flat', 8),
+          ('house_i', 36.0, 7, 'st_brick_red', 'flat', 9), ('house_j', 45.0, 8, 'st_brick_worn', 'flat', 10),
           ('house_end', 48.0, 9, 'st_brick_patch', 'flat', 11)]
 DEPTH = 14.0
 # shelled houses (second reference): (from, to) of the break as fractions of the length, first storey gone
@@ -85,7 +103,7 @@ def build_models():
     for name, L, fl, skin, roof, seed in HOUSES:
         for lod in (0, 1):
             m = tenement.tenement(L, fl, DEPTH, seed=seed, lod=lod, skin=skin, roof=roof,
-                                  ruin=RUINS.get(name))
+                                  ruin=RUINS.get(name), style='nyc')
             if lod == 0:
                 spots[name] = [[round(float(v), 2) for v in p[:3]] + [p[3]] for p in m.spots]
             fn = f'{name}.glb' if lod == 0 else f'{name}_lod1.glb'
@@ -311,21 +329,21 @@ def build():
                           f'  parent "Zone"\n  character "../models/characters/animals/crow.glb" 1 0 "Idle_Loop"\n'
                           f'  prop "count" "{n}"')
 
-    # ------------------------------------------------------------------ the story: Lyokha (quest "ljocha")
+    # ------------------------------------------------------------------ the story: Eddie (quest "eddie")
     # his tag is on every other wall (add_wall_writing.py); the fire is his friends', the note on the crate sends the
     # player north, where he lies by the bus of the barricade he never got over. A dog pack lives in the cross street.
     # (size 0.01: the game draws objectives and empties without a model as coloured boxes)
     ents_extra.append('entity "Quest start" "empty" 1.5 0.2 104 0 0.01 0.01 0.01 0.3 0.85 0.9 "../scripts/quest_start.lua"\n'
-                      '  parent "Story"\n  prop "message" "@quest.ljocha.start"\n  prop "quest" "ljocha"')
-    ents_extra.append(f'entity "Tábor" "objective" {cx:.2f} 0.2 {cz:.2f} 0 0.01 0.01 0.01 0.95 0.75 0.2 "../scripts/objective.lua"\n'
-                      '  parent "Story"\n  prop "message" "@quest.ljocha.camp_done"\n  prop "quest" "ljocha"\n'
+                      '  parent "Story"\n  prop "message" "@quest.eddie.start"\n  prop "quest" "eddie"')
+    ents_extra.append(f'entity "Camp" "objective" {cx:.2f} 0.2 {cz:.2f} 0 0.01 0.01 0.01 0.95 0.75 0.2 "../scripts/objective.lua"\n'
+                      '  parent "Story"\n  prop "message" "@quest.eddie.camp_done"\n  prop "quest" "eddie"\n'
                       '  prop "radius" "3"\n  prop "stage" "camp"')
-    ents_extra.append('entity "Ljocha" "objective" -2.6 0.1 -120.6 200 0.01 0.01 0.01 0.95 0.75 0.2 "../scripts/objective.lua"\n'
-                      '  parent "Story"\n  prop "message" "@quest.ljocha.found"\n  prop "quest" "ljocha"\n'
+    ents_extra.append('entity "Eddie" "objective" -2.6 0.1 -120.6 200 0.01 0.01 0.01 0.95 0.75 0.2 "../scripts/objective.lua"\n'
+                      '  parent "Story"\n  prop "message" "@quest.eddie.found"\n  prop "quest" "eddie"\n'
                       '  prop "radius" "2.5"\n  prop "stage" "north"')
-    ents_extra.append('entity "Ljocha body" "empty" -2.6 0.05 -120.6 200 0.5 1.8 0.5 0.4 0.4 0.4 "../scripts/corpse.lua"\n'
+    ents_extra.append('entity "Eddie body" "empty" -2.6 0.05 -120.6 200 0.5 1.8 0.5 0.4 0.4 0.4 "../scripts/corpse.lua"\n'
                       '  parent "Story"\n  character "../models/characters/humans/stalker.glb" 1 0 "Death01"')
-    ents_extra.append('entity "Ljocha PDA rounds" "pickup" -1.9 0.05 -119.8 40 0.285 0.105 0.197 0.9 0.8 0.3 ""\n'
+    ents_extra.append('entity "Eddie PDA rounds" "pickup" -1.9 0.05 -119.8 40 0.285 0.105 0.197 0.9 0.8 0.3 ""\n'
                       '  parent "Story"\n  character "../models/props/pickups/ammo_can_rifle.glb" 1 0 ""\n'
                       '  prop "ammo_type" "5.45x39"\n  prop "amount" "30"\n  prop "item" "ammo"')
     ents_extra.append('entity "Dog lair" "alife_point" -46 0.15 -17 0 1 2.5 1 0.3 0.85 0.9 ""\n  parent "Story"\n'
@@ -470,6 +488,8 @@ def build():
     for (x, z, r) in reclaim_pts:
         d = np.hypot(X - x, Z - z)
         H = H + 0.12 * smoothstep(r, 0.0, d)                                               # earth blown against
+    for (x, z, r, dp) in POTHOLES:
+        H = H - dp * smoothstep(r, r * 0.45, np.hypot(X - x, Z - z)) * (road_d < 0)
     S = splat(nz, reclaim_pts)
 
     # ------------------------------------------------------------------ vegetation (terrain foliage)
@@ -498,21 +518,21 @@ def build():
                  sway=1.0)
 
     # ------------------------------------------------------------------ header and entities
-    head = ['# FPS engine level', '# Overgrown street (Почтовая): made by assets/levels/source/make_overgrown_street.py;',
+    head = ['# FPS engine level', '# Overgrown street (Mulberry Street): made by assets/levels/source/make_overgrown_street.py;',
             '# edit in the editor afterwards (re-running the script rebuilds it).', '# Original CC0 content.',
             'version 5', 'player_start 1.5 0 104',
             'sun -0.5 -0.62 -0.6']
     # a storm coming (martin's second reference): heavy dark clouds with a pale band low over the horizon, grey
     # diffuse light with weak shadows, mist that swallows the far blocks, the road wet from the last shower
     env = {'sun_color': '0.82 0.86 0.92', 'sun_intensity': '1.5', 'sky_zenith': '0.085 0.095 0.11', 'sky_horizon': '0.46 0.48 0.48',
-           'ground_color': '0.2 0.2 0.18', 'cloud_cover': '0.88', 'volumetric_clouds': '1', 'cloud_base': '600', 'cloud_thickness': '3000', 'cloud_density': '3', 'atmosphere': '0.6', 'atmosphere_haze': '3', 'sky_occlusion': '0.8', 'ground_haze': '0.025', 'ground_haze_height': '0.15', 'ground_haze_thickness': '1.6', 'ambient_intensity': '0.95', 'fog_color': '0.36 0.39 0.4',
-           'fog_density': '0.011', 'fog_height': '6', 'fog_height_falloff': '0.012', 'fog_sun_scatter': '0.25',
+           'ground_color': '0.2 0.2 0.18', 'cloud_cover': '0.88', 'volumetric_clouds': '1', 'cloud_base': '600', 'cloud_thickness': '3000', 'cloud_density': '3', 'atmosphere': '0.6', 'atmosphere_haze': '2', 'sky_occlusion': '0.8', 'ground_haze': '0.01', 'ground_haze_height': '0.15', 'ground_haze_thickness': '1.6', 'ambient_intensity': '0.95', 'fog_color': '0.25 0.27 0.28',
+           'fog_density': '0.007', 'fog_height': '6', 'fog_height_falloff': '0.012', 'fog_sun_scatter': '0.25',
            'exposure': '1.05', 'bloom_intensity': '0.05', 'bloom_threshold': '1.2', 'ssao_radius': '0.8', 'ssao_intensity': '1.4',
-           'shadow_distance': '110', 'saturation': '0.72', 'contrast': '1.12', 'tint': '0.96 1 1.02', 'vignette': '0.32',
+           'shadow_distance': '110', 'saturation': '0.8', 'contrast': '1.2', 'tint': '0.96 1 1.02', 'vignette': '0.32',
            'grain': '0.03', 'auto_exposure': '0.5', 'exposure_min_ev': '-0.5', 'exposure_max_ev': '2', 'rain': '0.45', 'storm': '0.25', 'tonemap': '2',
            'puddles': '0.6', 'wind': '0.55'}
     head += [f'env {k} {v}' for k, v in env.items()]
-    head += ['loading_title "Почтовая улица"', 'loading_hint "Projdi ulicí na sever, k barikádě na jejím konci."',
+    head += ['loading_title "Mulberry Street"', 'loading_hint "Projdi ulicí na sever, k barikádě na jejím konci."',
              'weapon "../weapons/ak74.weapon"', 'weapon "../weapons/pistol.weapon"', 'weapon "../weapons/knife.weapon"']
     head.append('ambience "../sounds/ambience/street_storm.ambience"')
     head.append(f'terrain "{NAME}.terrain"')
@@ -524,8 +544,8 @@ def build():
             head.append(f'foliage_lod "{lf}" {ld:g}')
         if imp:
             head.append(f'foliage_impostor {imp:g}')
-    ents = ['entity "Почтовая" "map_marker" 0 0 60 0 1 1 1 0.85 0.3 0.2 ""',
-            'entity "Перекрёсток" "map_marker" 0 0 -17 0 1 1 1 0.85 0.3 0.2 ""']
+    ents = ['entity "Mulberry Street" "map_marker" 0 0 60 0 1 1 1 0.85 0.3 0.2 ""',
+            'entity "Hester Street crossing" "map_marker" 0 0 -17 0 1 1 1 0.85 0.3 0.2 ""']
     text = '\n'.join(head + lv.groups + lv.lines + ents + ents_extra) + '\n'
     open(os.path.join(LEVELS, NAME + '.level'), 'w', encoding='utf-8').write(text)
     with open(os.path.join(LEVELS, NAME + '.terrain'), 'wb') as f:
@@ -600,29 +620,43 @@ def splat(nz, reclaim_pts):
     rd = road_dist(X, Z)
     fd = facade_dist(X, Z)
     R = reclaim(nz, X, Z, reclaim_pts)
-    ce, cid = cracks(X, Z)
     W = np.zeros(X.shape + (8,), np.float32)
     road = rd < 0
-    # carriageway: concrete slabs with patches of old asphalt
-    asph = smoothstep(0.6, 0.615, nz.fbm(X + 11, Z - 90, 9.0, 2))     # a few old patches, the rest slabs
-    W[..., SLAB] = np.where(road, 1.0 - asph, 0.0)
-    W[..., ASPH] = np.where(road, asph, 0.0)
+    # carriageway (New York): asphalt; darker rectangles where it was dug up and patched, one long utility trench
+    prng = np.random.default_rng(31)
+    patch = np.zeros(X.shape, bool)
+    for _ in range(45):
+        cx, cz = prng.uniform(-KERB, KERB), prng.uniform(NORTH_END, SOUTH_END)
+        patch |= (np.abs(X - cx) < prng.uniform(0.5, 1.4)) & (np.abs(Z - cz) < prng.uniform(0.8, 2.6))
+    patch |= (np.abs(X - 2.6) < 0.45) & (Z > 18) & (Z < 92)
+    W[..., SLAB] = np.where(road, patch, 0.0)
+    W[..., ASPH] = np.where(road, ~patch, 0.0)
     W[..., PAVE] = np.where(road, 0.0, 1.0)
+    # block cracking of old asphalt (a network of 3 m blocks) and long cracks along the lane joints
+    ce, cid = cracks(X, Z, cell=3.4, seed=9)
+    for x0 in (0.0, -2.3, 2.3):
+        lc = np.abs(X - x0 - 0.7 * (nz(X * 0 + x0 * 7 + 5, Z, 9.0) - 0.5)) + 0.25 * (np.abs(X) > KERB + 0.1)
+        ce = np.minimum(ce, np.where(np.abs(X) < KERB, lc, 9.0))
 
     def put(layer, cover):
         cover = np.clip(cover, 0.0, 1.0).astype(np.float32)
         W[...] *= (1.0 - cover)[..., None]
         W[..., layer] += cover
-    # moss creeping out of the joints, soil and grass in them; whole slabs gone under the grass where R is high
-    # (the slab joints stop at the old asphalt patches: poured in one piece, they crack in their own texture, and a
-    # grass-filled joint running straight through them read as a painted yellow line)
-    cw = 0.05 + 0.5 * R ** 1.4
-    joint = road * (1.0 - asph)
-    put(MOSS, smoothstep(cw + 0.35, cw, ce) * (0.1 + 0.12 * R) * joint)
-    put(SOIL, smoothstep(cw * 0.5 + 0.05, cw * 0.5 - 0.03, ce) * joint * 0.8)
+    # moss creeping out of the cracks, soil in them, grass only where the street is greenest (a grass-filled crack
+    # on clean asphalt reads as a painted yellow line); whole blocks heaved and gone under the grass where R is high
+    cw = 0.03 + 0.25 * R ** 1.4
+    joint = road * 1.0
+    put(MOSS, smoothstep(cw + 0.3, cw, ce) * 0.25 * smoothstep(0.35, 0.8, R) * joint)    # a moss halo only where green
+    put(CRACK, smoothstep(cw * 0.5 + 0.07, cw * 0.5 - 0.02, ce) * joint)                    # the dark crack itself
     heaved = (R + 0.3 * cid > 0.85) & road
     put(SOIL, heaved * 0.35)
-    put(GRASS, (smoothstep(cw * 0.7 + 0.04, cw * 0.7 - 0.04, ce) * smoothstep(0.05, 0.4, R) * joint + heaved * 0.85 * road))
+    put(GRASS, (smoothstep(cw * 0.7 + 0.04, cw * 0.7 - 0.04, ce) * smoothstep(0.55, 0.85, R) * joint + heaved * 0.85 * road))
+    # potholes: broken edge, mud and stones at the bottom, grass where the street is greenest
+    for (x, z, r, dp) in POTHOLES:
+        d = np.hypot(X - x, Z - z) + 0.25 * (nz(X * 3 + x, Z * 3 + z, 1.0) - 0.5)
+        put(RUBBLE, smoothstep(r * 1.15, r * 0.8, d) * road * 0.7)
+        put(CRACK, smoothstep(r * 0.85, r * 0.4, d) * road)
+        put(GRASS, smoothstep(r * 0.7, r * 0.3, d) * road * smoothstep(0.3, 0.7, R) * 0.8)
     # pavement: moss along its joints near the walls, a band of soil, leaves and plaster rubble at the foot of the walls
     walk = ~road & (fd > 0)
     put(MOSS, smoothstep(0.35, 0.8, R + 0.3 * (nz(X + 7, Z, 1.3) - 0.5)) * 0.7 * walk)
@@ -630,7 +664,7 @@ def splat(nz, reclaim_pts):
     put(SOIL, foot * walk)
     put(RUBBLE, foot * smoothstep(0.55, 0.7, nz(X - 9, Z + 1, 4.0)) * walk * 0.8)
     put(GRASS, smoothstep(0.45, 0.75, R) * walk * 0.9)
-    put(LEAVES, smoothstep(0.62, 0.8, nz.fbm(X + 500, Z, 6.0, 2)) * smoothstep(0.3, 0.6, R) * 0.7 * (fd > 0))
+    put(SOIL, smoothstep(0.62, 0.8, nz.fbm(X + 500, Z, 6.0, 2)) * smoothstep(0.3, 0.6, R) * 0.5 * (fd > 0))
     # behind the houses (only seen through gaps): yards gone wild
     put(GRASS, (fd <= 0) * 0.9)
     put(SOIL, (fd <= 0) * smoothstep(0.55, 0.7, nz(X, Z, 7.0)) * 0.6)
@@ -647,18 +681,18 @@ def _f(path, dens=0.1, lo=0.85, hi=1.15, cull=50, coll=0, shadows=0, far=0.6, lo
 
 
 FOLIAGE = {
-    'grass_patch': _f(V + 'grass_fresh_street.glb', 0.25, cull=70, far=0.5, lods=[(V + 'grass_fresh_street_lod1.glb', 6), (V + 'grass_fresh_street_far.glb', 13)]),
-    'grass_tall_a': _f(V + 'grass_tall_a.glb', lods=[(V + 'grass_tall_a_lod1.glb', 10)], cull=55),
-    'grass_tall_b': _f(V + 'grass_tall_b.glb', lods=[(V + 'grass_tall_b_lod1.glb', 10)], cull=55),
-    'grass_clump': _f(V + 'grass_clump_a.glb', lods=[(V + 'grass_clump_a_lod1.glb', 6), (V + 'grass_clump_a_far.glb', 13)], cull=45),
-    'grass_short': _f(V + 'grass_short_a.glb', lods=[(V + 'grass_short_a_lod1.glb', 8), (V + 'grass_short_a_far.glb', 14)], cull=40),
-    'weed_a': _f(V + 'weed_a.glb', lods=[(V + 'weed_a_lod1.glb', 6), (V + 'weed_a_far.glb', 13)], cull=45),
-    'weed_b': _f(V + 'weed_b.glb', lods=[(V + 'weed_b_lod1.glb', 6), (V + 'weed_b_far.glb', 13)], cull=45),
-    'nettle': _f(V + 'nettle_tall_a.glb', lods=[(V + 'nettle_tall_a_lod1.glb', 10), (V + 'nettle_tall_a_far.glb', 22)], cull=50),
-    'dandelion_a': _f(V + 'dandelion_a.glb', lods=[(V + 'dandelion_a_lod1.glb', 8), (V + 'dandelion_a_far.glb', 14)], cull=22),
-    'dandelion_c': _f(V + 'dandelion_c.glb', lods=[(V + 'dandelion_c_lod1.glb', 8), (V + 'dandelion_c_far.glb', 14)], cull=22),
+    'grass_patch': _f(V + 'grass_fresh_street.glb', 0.25, cull=70, far=0.5, lods=[(V + 'grass_fresh_street_lod1.glb', 5), (V + 'grass_fresh_street_far.glb', 10), (V + 'grass_fresh_street_far2.glb', 22)]),
+    'grass_tall_a': _f(V + 'grass_tall_a.glb', lods=[(V + 'grass_tall_a_lod1.glb', 8)], cull=48),
+    'grass_tall_b': _f(V + 'grass_tall_b.glb', lods=[(V + 'grass_tall_b_lod1.glb', 8)], cull=48),
+    'grass_clump': _f(V + 'grass_clump_a.glb', lods=[(V + 'grass_clump_a_lod1.glb', 5), (V + 'grass_clump_a_far.glb', 10), (V + 'grass_clump_a_far2.glb', 20)], cull=40),
+    'grass_short': _f(V + 'grass_short_a.glb', lods=[(V + 'grass_short_a_lod1.glb', 6), (V + 'grass_short_a_far.glb', 11)], cull=32),
+    'weed_a': _f(V + 'weed_a.glb', lods=[(V + 'weed_a_lod1.glb', 5), (V + 'weed_a_far.glb', 10)], cull=38),
+    'weed_b': _f(V + 'weed_b.glb', lods=[(V + 'weed_b_lod1.glb', 5), (V + 'weed_b_far.glb', 10)], cull=38),
+    'nettle': _f(V + 'nettle_tall_a.glb', lods=[(V + 'nettle_tall_a_lod1.glb', 7), (V + 'nettle_tall_a_far.glb', 14)], cull=38),
+    'dandelion_a': _f(V + 'dandelion_a.glb', lods=[(V + 'dandelion_a_lod1.glb', 6), (V + 'dandelion_a_far2.glb', 11)], cull=22),
+    'dandelion_c': _f(V + 'dandelion_c.glb', lods=[(V + 'dandelion_c_lod1.glb', 6), (V + 'dandelion_c_far.glb', 11)], cull=22),
     'celandine_a': _f(V + 'celandine_a.glb', lods=[(V + 'celandine_a_lod1.glb', 8)], cull=22),
-    'celandine_b': _f(V + 'celandine_b.glb', lods=[(V + 'celandine_b_lod1.glb', 8), (V + 'celandine_b_far.glb', 14)], cull=22),
+    'celandine_b': _f(V + 'celandine_b.glb', lods=[(V + 'celandine_b_lod1.glb', 6), (V + 'celandine_b_far.glb', 11), (V + 'celandine_b_far2.glb', 16)], cull=22),
     'shrub_a': _f(V + 'bush_street_b.glb', 0.03, cull=160, shadows=1, far=0.8, lods=[(V + 'bush_street_b_lod1.glb', 25)]),
     'shrub_b': _f(V + 'bush_street_a.glb', 0.03, cull=160, shadows=1, far=0.8, lods=[(V + 'bush_street_a_lod1.glb', 25)]),
     'bush_dense': _f(V + 'bush_street_c.glb', 0.02, cull=160, shadows=1, far=0.8, lods=[(V + 'bush_street_c_lod1.glb', 25)]),

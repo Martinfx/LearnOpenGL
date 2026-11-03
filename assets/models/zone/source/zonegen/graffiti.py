@@ -21,18 +21,18 @@ FONT_CHALK = '/usr/share/fonts/truetype/freefont/FreeSansOblique.ttf'
 
 # name: (column, row, width m, height m, kind, text, colour)
 DESIGNS = {
-    'no_exit':     (0, 0, 2.4, 0.9, 'spray', 'ВЫХОДА НЕТ', (0.45, 0.07, 0.05)),
-    'tsoi':        (1, 0, 1.8, 0.8, 'spray', 'ЦОЙ ЖИВ', (0.05, 0.05, 0.06)),
-    'dmb':         (2, 0, 1.5, 0.7, 'spray', 'ДМБ-91', (0.1, 0.16, 0.36)),
-    'lyokha':      (3, 0, 1.3, 0.6, 'chalk', 'ЛЁХА\nБЫЛ ЗДЕСЬ', (0.85, 0.84, 0.8)),
-    'radiation':   (0, 1, 1.2, 1.2, 'stencil', 'РАДИАЦИЯ', (0.72, 0.58, 0.12)),
-    'arrow_clear': (1, 1, 1.4, 0.7, 'arrow', 'ЧИСТО', (0.88, 0.88, 0.84)),
+    'no_exit':     (0, 0, 2.4, 0.9, 'spray', 'NO WAY OUT', (0.45, 0.07, 0.05)),
+    'stay_alive':  (1, 0, 1.8, 0.8, 'spray', 'STAY ALIVE', (0.05, 0.05, 0.06)),
+    'les_91':      (2, 0, 1.5, 0.7, 'spray', 'LES 91', (0.1, 0.16, 0.36)),
+    'eddie':       (3, 0, 1.3, 0.6, 'chalk', 'EDDIE\nWAS HERE', (0.85, 0.84, 0.8)),
+    'radiation':   (0, 1, 1.2, 1.2, 'stencil', 'RADIATION', (0.72, 0.58, 0.12)),
+    'arrow_clear': (1, 1, 1.4, 0.7, 'arrow', 'CLEAR', (0.88, 0.88, 0.84)),
     'entrance':    (2, 1, 0.9, 0.6, 'stencil_num', '2\n11-20', (0.92, 0.9, 0.84)),
     'cross':       (3, 1, 0.8, 0.8, 'cross', '', (0.5, 0.06, 0.05)),
     'soot':        (0, 2, 2.2, 3.0, 'soot', '', (0.03, 0.025, 0.02)),
     'damp':        (1, 2, 2.6, 2.0, 'damp', '', (0.16, 0.13, 0.08)),
     'leak':        (2, 2, 1.4, 2.6, 'leak', '', (0.12, 0.1, 0.06)),
-    'keep_out':    (3, 2, 2.0, 0.8, 'spray', 'НЕ ВХОДИТЬ', (0.38, 0.05, 0.04)),
+    'keep_out':    (3, 2, 2.0, 0.8, 'spray', 'KEEP OUT', (0.38, 0.05, 0.04)),
 }
 PALETTE['graffiti'] = dict(tex='graffiti', decal=True, tile=1.0, color=(1, 1, 1), rough=1.0, metal=0.0)
 
