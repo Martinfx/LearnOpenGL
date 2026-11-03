@@ -308,13 +308,14 @@ float rainExposure(vec3 worldPos) {
 // the surroundings in the top-down height map, in 6 directions out to ~40 m. For each direction
 // the sky above the horizon angle t lights a surface by cos^2 t (Lambert over the arc), weighted
 // toward the directions the surface faces. 1 without the map.
-float skyVisibility(vec3 worldPos, vec3 n) {
+float skyVisibility(vec3 worldPos, vec3 n, int dirs) {
     if (uAtmosphere.z <= 0.0 || uWeather.z < 0.5)
         return 1.0;
-    float rot = fract(sin(dot(floor(gl_FragCoord.xy), vec2(12.9898, 78.233))) * 43758.5453) * 1.047;
+    float arc = 6.2831853 / float(dirs);
+    float rot = fract(sin(dot(floor(gl_FragCoord.xy), vec2(12.9898, 78.233))) * 43758.5453) * arc;
     float vis = 0.0, wsum = 0.0;
-    for (int i = 0; i < 6; ++i) {
-        float a = rot + float(i) * 1.0472;
+    for (int i = 0; i < dirs; ++i) {
+        float a = rot + float(i) * arc;
         vec2 dir = vec2(cos(a), sin(a));
         float facing = n.y > 0.7 ? 1.0 : max(0.15, 0.5 + 0.5 * dot(dir, normalize(n.xz + 1e-5)) * (1.0 - max(n.y, 0.0)));
         float horizon = 0.0; // tan of the highest occluder's elevation

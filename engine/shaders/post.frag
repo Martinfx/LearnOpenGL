@@ -141,7 +141,7 @@ vec2 lensRainOffset(vec2 uv, out float wet) {
         vec2 cell = floor(p);
         vec2 f = fract(p) - 0.5;
         float h = hash(cell + float(layer) * 13.1);
-        if (h > amount * 0.75)
+        if (h > amount * 0.45)
             continue;
         vec2 center = (vec2(hash(cell + 1.7), hash(cell + 5.3)) - 0.5) * 0.55;
         float life = fract(uTime * (0.08 + 0.06 * h) + h * 7.0);
@@ -151,7 +151,7 @@ vec2 lensRainOffset(vec2 uv, out float wet) {
         vec2 dv = (f - center) * vec2(1.0, 1.25);
         float d = length(dv) / radius;
         float drop = (1.0 - smoothstep(0.75, 1.0, d)) * smoothstep(0.0, 0.04, life) * (1.0 - smoothstep(0.7, 1.0, life));
-        offset -= dv / (scale * vec2(aspect(), 1.0)) * drop * 1.6;
+        offset -= dv / (scale * vec2(aspect(), 1.0)) * drop * 0.45;
         wet = max(wet, drop);
     }
     return offset;
@@ -278,7 +278,7 @@ void main() {
     if (any(isnan(bloom)) || any(isinf(bloom))) bloom = vec3(0.0);
     float dirt = uLensDirt > 0.0 ? lensDirtMask(vUV) * uLensDirt * 8.0 : 0.0;
     color += bloom * uBloomIntensity * (1.0 + dirt);
-    color *= 1.0 - wet * 0.12; // a drop's rim darkens a little
+    color *= 1.0 + wet * 0.06; // a drop gathers a little light
     float autoExposure = uAutoExposure > 0.0 ? texelFetch(uAdapted, ivec2(0), 0).r : 1.0;
     color *= uExposure * mix(1.0, autoExposure, uAutoExposure);
     color = tonemap(color);

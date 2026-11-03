@@ -2916,7 +2916,7 @@ int main(int argc, char** argv)
                 const float rain = engine::environmentAt(scene.environment, scene.sunDirection).rain;
                 const float outdoors = 1.0f - engine::interiorWeight(engine::interiorVolumes(scene), camera.position);
                 const float up = std::clamp((camera.pitchDegrees + 10.0f) / 50.0f, 0.0f, 1.0f);
-                const float wetTarget = rain * outdoors * (0.35f + 0.65f * up);
+                const float wetTarget = rain * outdoors * (0.2f + 0.5f * up);
                 lensWet += (wetTarget - lensWet) * std::min(1.0f, fxDt * (wetTarget > lensWet ? 0.5f : 0.25f));
                 view.lensRain = lensWet;
                 // Depth of field while aiming: focus on what the crosshair is on.

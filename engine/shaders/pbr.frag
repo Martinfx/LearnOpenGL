@@ -172,7 +172,8 @@ const vec2 kPoisson16[16] = vec2[](
 // its distance to them, and the filter widens with it by the sun's angular radius
 // (uShadowSoft.y, widened under clouds): sharp at the contact, soft far from the caster.
 // Otherwise 3x3 PCF (cascade 0) or 4 bilinear taps.
-float sunShadow(vec3 worldPos, vec3 n, float nl) {
+// cheap: plain PCF (leaves and blades: the soft penumbra is lost in their own detail).
+float sunShadow(vec3 worldPos, vec3 n, float nl, bool cheap) {
     if (uSunColor.w < 0.5)
         return 1.0;
     float viewDepth = -(uView * vec4(worldPos, 1.0)).z;
@@ -191,7 +192,7 @@ float sunShadow(vec3 worldPos, vec3 n, float nl) {
     float ref = c.z - uShadowParams.x * (1.0 + float(cascade));
     vec2 size = vec2(textureSize(uShadowMap, 0).xy);
     float shadow = 0.0;
-    if (uShadowSoft.x > 0.5 && cascade < 2 && uShadowSoft.y > 0.0) {
+    if (uShadowSoft.x > 0.5 && cascade < 2 && uShadowSoft.y > 0.0 && !cheap) {
         mat4 m = uShadowMatrices[cascade];
         float uvPerM = 0.5 * length(vec3(m[0][0], m[1][0], m[2][0]));
         float depthPerM = 0.5 * length(vec3(m[0][2], m[1][2], m[2][2]));
@@ -220,7 +221,7 @@ float sunShadow(vec3 worldPos, vec3 n, float nl) {
             }
             shadow /= 16.0;
         }
-    } else if (cascade == 0) {
+    } else if (cascade == 0 && !cheap) {
         for (int y = -1; y <= 1; ++y)
             for (int x = -1; x <= 1; ++x)
                 shadow += shadowTap(c.xy + vec2(x, y) / size, layer, ref, size);
@@ -605,10 +606,14 @@ void main() {
     vec3 specular = distributionGGX(nh, rough * rough) * geometrySmith(nv, nl, rough) * F / (4.0 * nv * max(nl, 1e-4));
     vec3 diffuse = (1.0 - F) * (1.0 - metal) * albedo / PI;
     // Facing away from the sun: nothing to shadow (the sun term is zero anyway).
-    float shadow = uOverlay || nl <= 0.0 ? 1.0 : sunShadow(vWorldPos, normalize(vNormal), nl);
+    // Swaying alpha-tested foliage covers most of the screen in many tiny triangles (each shaded
+    // as at least a 2x2 quad): it gets the cheaper sun shadow, no contact shadows and a coarser sky
+    // occlusion, which its own detail hides.
+    bool foliage = !uOverlay && uAlphaMode == 1 && vSway > 0.0;
+    float shadow = uOverlay || nl <= 0.0 ? 1.0 : sunShadow(vWorldPos, normalize(vNormal), nl, foliage);
     if (!uOverlay && nl > 0.0)
         shadow *= cloudShadow(vWorldPos);
-    if (!uOverlay && shadow > 0.01)
+    if (!uOverlay && shadow > 0.01 && !foliage)
         shadow *= contactShadow(vWorldPos, normalize(vNormal));
     // Inside an interior volume the sky light is dimmed (the first-person layer: where the camera is,
     // and the sun too, as the overlay has no shadows).
@@ -619,7 +624,7 @@ void main() {
     // Leaves and blades are thin: sunlight comes through them and scatters inside a crown, so the far,
     // shadowed side of a tree is a deep green, not black, and a leaf against the sun glows.
     if (!uOverlay && uAlphaMode == 1 && vSway > 0.0) {
-        float sh = nl > 0.0 ? shadow : sunShadow(vWorldPos, -normalize(vNormal), 0.5) * cloudShadow(vWorldPos);
+        float sh = nl > 0.0 ? shadow : sunShadow(vWorldPos, -normalize(vNormal), 0.5, true) * cloudShadow(vWorldPos);
         float through = 0.07 + 0.25 * pow(max(dot(-v, l), 0.0), 3.0);
         color += albedo * uSunColor.rgb * uSunDir.w * through * mix(0.4, 1.0, sh);
     }
@@ -635,7 +640,7 @@ void main() {
     float maxMip = uShadowParams.w;
     // Sky light (dimmed inside interiors), replaced by baked probes where there are any.
     // Buildings and roofs hide part of the sky (large scale; baked probes already know it).
-    float skyVis = uOverlay ? 1.0 : skyVisibility(vWorldPos + normalize(vNormal) * 0.05, nWorld);
+    float skyVis = uOverlay ? 1.0 : skyVisibility(vWorldPos + normalize(vNormal) * 0.05, nWorld, foliage ? 3 : 6);
     vec3 irradiance = textureLod(uEnvMap, nWorld, maxMip).rgb * uGroundColor.w * interiorSky * skyVis;
     vec3 prefiltered = textureLod(uEnvMap, rWorld, rough * maxMip).rgb * uGroundColor.w * interiorSky * mix(sqrt(skyVis), skyVis, rough);
     {
