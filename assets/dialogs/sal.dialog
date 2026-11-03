@@ -1,0 +1,28 @@
+# Dialog (editor: Assets > Dialogs). The talk starts at the first node whose conditions hold.
+# Sal Moretti keeps the fire on Hester Street and trades from his crate.
+speaker "@dialog.sal.speaker"
+
+node "first"
+  if not flag "met_sal"
+  text "@dialog.sal.first"
+  do set_flag "met_sal"
+  choice "@dialog.sal.first.1" "eddie"
+  choice "@dialog.sal.first.2" ""
+    do trade
+  choice "@dialog.sal.first.3" ""
+
+node "start"
+  text "@dialog.sal.start"
+  choice "@dialog.sal.start.1" ""
+    do trade
+  choice "@dialog.sal.start.2" "eddie"
+  choice "@dialog.sal.start.3" "news"
+  choice "@dialog.sal.start.4" ""
+
+node "eddie"
+  text "@dialog.sal.eddie"
+  choice "@dialog.sal.eddie.1" "start"
+
+node "news"
+  text "@dialog.sal.news"
+  choice "@dialog.sal.news.1" "start"

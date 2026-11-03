@@ -141,6 +141,13 @@ def build_models():
     from zonegen import yard
     for name, fn in yard.MODELS.items():
         glb.write_glb(os.path.join(out, name + '.glb'), fn(), tex_rel_dir='../textures', name=name)
+    from zonegen import works
+    for name, fn in works.MODELS.items():
+        for lod in ((0, 1) if name in works.LODS else (0,)):
+            m = fn(lod)
+            glb.write_glb(os.path.join(out, name + ('_lod1' if lod else '') + '.glb'), m, tex_rel_dir='../textures', name=name)
+            if lod == 0 and (getattr(m, 'ladders', None) or getattr(m, 'stash', None)):
+                spots[name] = {'spots': [], 'ladders': [list(l[:4]) + [list(l[4])] for l in m.ladders], 'stash': m.stash}
     with open(SPOTS, 'w') as f:
         json.dump(spots, f, separators=(',', ':'))
     for s in fixtures.CABLE_SPANS:
@@ -204,6 +211,8 @@ SPECIAL = [
     # (x, z on the house fronts, what stands there)
     # the way round the collapse: a house on Mulberry, the yard, a house out to Mott (Mulberry-Mott block, Hester-Grand)
     (8.0, -44.0, 'enter'), (66.0, -44.0, 'enter'),
+    # the building site on Mulberry in sight of the start: its frame to climb, the crane over the roofs
+    (8.0, 42.0, 'site'),
     # Baxter-Mulberry block: a vacant lot from Mulberry into the yard, a house out to Baxter
     (-8.0, -47.0, 'vacant'), (-66.0, -58.0, 'enter'),
     # the collapse that closes Mulberry between Hester and Grand, a burnt house beside it
@@ -243,7 +252,7 @@ def fill_face(f, rng):
         if not f.contains(px, pz) or (kind == 'enter' and f.kind != 'inner'):
             continue
         s = face_s(f, px, pz)
-        w = 9.1 if kind == 'burnt' and rng.random() < 0.5 else 7.6
+        w = 15.2 if kind == 'site' else 9.1 if kind == 'burnt' and rng.random() < 0.5 else 7.6
         s0 = min(max(s - w / 2, 0.0), f.L - w)
         if any(a - 0.01 < s0 + w and s0 < b - 0.01 for a, b, _k in fixed):
             continue
@@ -408,7 +417,8 @@ def build():
     lv = Level()
     for g, p in (('Houses', ''), ('Street', ''), ('Kerbs', 'Street'), ('Lamps and cables', 'Street'), ('Wrecks', 'Street'),
                  ('Street furniture', 'Street'), ('Barricades', 'Street'), ('Yards', ''), ('Ivy', 'Houses'),
-                 ('Camp', 'Street'), ('Zone', 'Street'), ('Story', ''), ('Far', ''), ('Map edge', ''), ('Ladders', 'Houses')):
+                 ('Camp', 'Street'), ('Zone', 'Street'), ('Story', ''), ('Far', ''), ('Map edge', ''), ('Ladders', 'Houses'),
+                 ('Road works', 'Street'), ('Stalkers', 'Story'), ('Bandits', 'Story'), ('A-life', 'Story')):
         lv.group(g, p)
     spots = json.load(open(SPOTS)) if os.path.exists(SPOTS) else {}
 
@@ -420,7 +430,7 @@ def build():
         for s, w, kind in fill_face(f, frng):
             cx, cz = f.point(s + w / 2, f.depth / 2)
             lot = dict(face=f, s=s, w=w, kind=kind, cx=cx, cz=cz, yaw=f.yaw, model=None)
-            if kind in ('vacant', 'collapse'):
+            if kind in ('vacant', 'collapse', 'site'):
                 pass
             elif kind.startswith('loft:'):
                 lot['model'] = kind[5:]
@@ -462,6 +472,8 @@ def build():
                      f.point(lot['s'] + lot['w'] / 2, 6.0)[1], rng.uniform(0, 360), 1.2, group='Yards', cull=200)
             lv.model('Fence', ST + 'fence_lot_hoarding.glb', fx, WALK, fz, f.yaw, group='Yards', cull=150)
             reclaim_pts.append((*f.point(lot['s'] + lot['w'] / 2, 8.0), 6.0))
+        elif lot['kind'] == 'site':
+            site_lot(lv, rng, lot, spots, reclaim_pts)
         elif lot['kind'] == 'collapse':
             hx_, hz_ = f.point(lot['s'] + lot['w'] / 2, f.depth / 2)
             lv.model('Collapsed house', ST + 'collapse_heap.glb', hx_, 0.0, hz_, f.yaw, group='Barricades',
@@ -515,6 +527,11 @@ def build():
         H = H + 0.12 * smoothstep(r, 0.0, np.hypot(X - x, Z - z))                     # earth blown against
     for (x, z, r, dp) in furn['potholes']:
         H = H - dp * smoothstep(r, r * 0.45, np.hypot(X - x, Z - z)) * (rd < 0)
+    for (x, z, name, yaw, L, W, D) in TRENCHES:                                  # the utility cuts: the terrain drops
+        a = math.radians(yaw)
+        lx = (X - x) * math.cos(a) - (Z - z) * math.sin(a)
+        lz = (X - x) * math.sin(a) + (Z - z) * math.cos(a)
+        H = np.where((np.abs(lx) < L / 2 - 0.05) & (np.abs(lz) < W / 2 - 0.05), -D - 0.08, H)
     S = splat(nz, reclaim_pts, furn['potholes'], footprints)
     inst, types = vegetation(nz, rng, S, H, reclaim_pts, furn, footprints, lots)
 
@@ -552,6 +569,7 @@ def build():
 
     yards(lv, rng, lots, furn)
     story(lv, furn)
+    people(lv, lots)
 
     # ------------------------------------------------------------------ header and entities
     head = ['# FPS engine level', '# Mulberry Street: made by assets/levels/source/make_overgrown_street.py (plan: mulberry_layout.py);',
@@ -608,11 +626,99 @@ PLAN_NOTES = [(START[0], START[1], 'start', (60, 170, 60)), (CAMP[0], CAMP[1], '
               (DOGS[0], DOGS[1], 'dogs', (120, 80, 60))]
 
 
+# utility cuts: (x, z, model, yaw, length, width, depth); yaw 0 runs along X, 90 along -Z (the spoil slope to -Z)
+TRENCHES = [
+    (1.8, 36.0, 'works_trench_12m', 90.0, 12.0, 1.8, 1.2),       # Mulberry by the start: the street narrowed to one lane
+    (55.0, -17.0, 'works_trench_8m', 90.0, 8.0, 1.6, 1.1),       # across Hester by Mott: planks and a plate to cross on
+    (30.0, -101.5, 'works_trench_12m', 0.0, 12.0, 1.8, 1.2),     # along Grand
+    (146.5, -58.0, 'works_trench_8m', 90.0, 8.0, 1.6, 1.1),      # along Elizabeth
+    (-72.5, -140.0, 'works_trench_8m', 90.0, 8.0, 1.6, 1.1),     # along Baxter, north block
+]
+LOOSE_PLATES = [(-1.5, -30.0, 5.0), (75.5, -140.0, 92.0), (-74.0, 40.0, 0.0), (110.0, -15.5, 88.0), (2.0, -150.0, 3.0),
+                (148.0, 20.0, 178.0)]
+
+
+def road_works(lv, rng, out, occupied):
+    """The utility cuts with their plates, planks, spoil, drums, cones and signs; loose plates over holes elsewhere.
+    Each cut narrows its street (cover beside it, a lane left free), the Hester one has to be crossed on the planks."""
+    out['trenches'] = TRENCHES
+    for (x, z, name, yaw, L, W, D) in TRENCHES:
+        lv.model('Utility cut', ST + name + '.glb', x, 0.0, z, yaw, group='Road works', lod=(ST + name + '_lod1.glb', 60), cull=220)
+        out['clear'].append((x, z, L / 2 + 1.5))
+        occupied.append((x, z, L / 2 + 1.0))
+        ax, az = rot(yaw, 1.0, 0.0)                    # along the trench (toward the spoil slope)
+        cx_, cz_ = rot(yaw, 0.0, 1.0)                  # across it
+        # steel plates over the first stretch, planks across the middle, the spoil heap beside it
+        for k, t in enumerate((-L / 2 + 0.9, -L / 2 + 2.7)):
+            if k == 1 and L < 10:
+                continue
+            lv.model('Road plate', ST + ('works_plate_b.glb' if W > 1.7 else 'works_plate.glb'), x + ax * t, 0.04, z + az * t,
+                     yaw + rng.uniform(-3, 3), group='Road works', cull=120, shadows=False)
+        t = rng.uniform(-0.5, 1.0)
+        lv.model('Planks', ST + 'works_planks.glb', x + ax * t, 0.04, z + az * t, yaw + rng.uniform(-6, 6),
+                 group='Road works', cull=90)
+        side = 1 if rng.random() < 0.5 else -1
+        sx, sz = x + cx_ * side * (W / 2 + 1.6) + ax * 1.5, z + cz_ * side * (W / 2 + 1.6) + az * 1.5
+        lv.model('Spoil', ST + 'works_spoil.glb', sx, 0.0, sz, yaw + rng.uniform(-10, 10), group='Road works',
+                 lod=(ST + 'works_spoil_lod1.glb', 50), cull=150)
+        # drums at the corners, cones along the open side, the sign at the end you come from
+        for (u, v) in ((-L / 2 - 0.8, -W / 2 - 0.7), (-L / 2 - 0.8, W / 2 + 0.7), (L / 2 + 0.8, -W / 2 - 0.7), (L / 2 + 0.8, W / 2 + 0.7)):
+            px, pz = rot(yaw, u, v)
+            if rng.random() < 0.75:
+                dc(lv, 'traffic_drum' if rng.random() < 0.7 else 'traffic_drum_fallen', x + px, z + pz, rng.uniform(0, 360),
+                   'Road works', y=0.0, cull=150)
+        for u in np.arange(-L / 2 + 1.5, L / 2, 2.5):
+            px, pz = rot(yaw, u, -side * (W / 2 + 0.9))
+            if rng.random() < 0.6:
+                dc(lv, 'traffic_cone' if rng.random() < 0.6 else rng.choice(('traffic_cone_fallen', 'traffic_cone_crushed')),
+                   x + px, z + pz, rng.uniform(0, 360), 'Road works', y=0.0, cull=80)
+        px, pz = rot(yaw, -L / 2 - 2.2, 0.0)
+        dc(lv, 'sign_roadwork' if rng.random() < 0.6 else 'sign_roadwork_fallen', x + px, z + pz, yaw - 90.0 + rng.uniform(-10, 10),
+           'Road works', y=0.0, cull=150)
+    for (x, z, yaw) in LOOSE_PLATES:
+        lv.model('Road plate', ST + 'works_plate_b.glb', x, 0.0, z, yaw, group='Road works', cull=120, shadows=False)
+        occupied.append((x, z, 1.8))
+
+
+def site_lot(lv, rng, lot, spots, reclaim_pts):
+    """The building site: the frame and the sheds, the site office on the sidewalk shed, the crane in the yard behind
+    with its ladder and the stash in the cab."""
+    f = lot['face']
+    cx, cz, yaw = lot['cx'], lot['cz'], lot['yaw']
+    lv.model('Building site', ST + 'works_site.glb', cx, WALK, cz, yaw, group='Houses', lod=(ST + 'works_site_lod1.glb', 80), cull=700)
+    dx, dz = rot(yaw, -3.0, 10.65)
+    dc(lv, 'container_blue', cx + dx, cz + dz, yaw + 180.0, 'Houses', y=WALK + 3.25, cull=400)
+    dx, dz = rot(yaw, -4.0, -12.0)
+    kx, kz = cx + dx, cz + dz
+    kyaw = yaw + 65.0
+    lv.model('Tower crane', ST + 'works_crane.glb', kx, WALK, kz, kyaw, group='Houses', lod=(ST + 'works_crane_lod1.glb', 120),
+             cull=1500)
+    info = spots.get('works_crane', {})
+    for (lx, ly, lzz, h, out) in info.get('ladders', []):
+        ox, oz = rot(kyaw, lx, lzz)
+        ix, iz = rot(kyaw, out[0], out[1])
+        lv.ents.append(f'entity "Crane ladder" "ladder" {kx + ox:.3f} {WALK + ly:.3f} {kz + oz:.3f} '
+                       f'{math.degrees(math.atan2(iz, ix)):.1f} 0.5 {h:.2f} 0.06 0.4 0.9 0.5 ""\n  parent "Ladders"\n'
+                       '  prop "style" "none"')
+    if info.get('stash'):
+        sx_, sy_, sz_ = info['stash']
+        ox, oz = rot(kyaw, sx_, sz_)
+        lv.ents.append(f'entity "Crane cab stash" "pickup" {kx + ox:.2f} {WALK + sy_ + 0.05:.2f} {kz + oz:.2f} 75 0.285 0.105 0.197 '
+                       '0.9 0.8 0.3 ""\n  parent "Story"\n  character "../models/props/pickups/ammo_can_rifle.glb" 1 0 ""\n'
+                       '  prop "ammo_type" "5.45x39"\n  prop "amount" "90"\n  prop "item" "ammo"')
+        ox, oz = rot(kyaw, sx_ - 0.6, sz_ + 0.3)
+        lv.ents.append(f'entity "Crane cab medkit" "pickup" {kx + ox:.2f} {WALK + sy_ + 0.05:.2f} {kz + oz:.2f} 30 0.245 0.1 0.165 '
+                       '0.9 0.8 0.3 ""\n  parent "Story"\n  character "../models/props/pickups/medkit_pouch.glb" 1 0 ""\n'
+                       '  prop "amount" "1"\n  prop "item" "medkit"')
+    reclaim_pts.append((*f.point(lot['s'] + lot['w'] / 2, 6.0), 4.0))
+
+
 def street_furniture(lv, rng, lots, reclaim_pts):
     """Kerbs, lamps, cables, parked wrecks, hydrants, rubbish, signals and signs: what a Lower Manhattan street has."""
     out = {'lamps': [], 'wrecks': [], 'potholes': [], 'clear': [(CAMP[0], CAMP[1], 4.0), (0.0, LY.CHURCH_Z + 6.0, 6.5)]}
     cw = carriageways()
     occupied = [(CAMP[0], CAMP[1], 4.0), (START[0], START[1], 4.0)]
+    road_works(lv, rng, out, occupied)
 
     def free(x, z, r):
         return all(math.hypot(x - a, z - b) > r + c for a, b, c in occupied)
@@ -1050,7 +1156,7 @@ def yards(lv, rng, lots, furn):
         xm = (x0 + x1) / 2
         za, zb = z0 + LY.SHALLOW, z1 - LY.SHALLOW
         # the way through: behind every house one can walk through (and every burnt or empty lot) the middle fence is down
-        ways = [lot['cz'] for lot in lots if lot['kind'] in ('enter', 'burnt', 'vacant') and lot['face'].kind == 'inner'
+        ways = [lot['cz'] for lot in lots if lot['kind'] in ('enter', 'burnt', 'vacant', 'site') and lot['face'].kind == 'inner'
                 and x0 - 0.5 <= lot['cx'] <= x1 + 0.5 and z0 - 0.5 <= lot['cz'] <= z1 + 0.5]
         z = za
         while z < zb - 1.0:
@@ -1089,6 +1195,73 @@ def yards(lv, rng, lots, furn):
             dc(lv, rng.choice(('drum_rust', 'drum_cluster', 'tyre_pile', 'tyre_stack', 'wheelie_bin_tipped', 'brick_pile_large',
                                'drum_rust_open', 'concrete_rubble_pile')), x, z, rng.uniform(0, 360), 'Yards', cull=90)
             furn['occupied'].append((x, z, 1.2))
+
+
+def _human(name, kind, x, y, z, yaw, model, anim, props):
+    lines = [f'entity "{name}" "{kind}" {x:.2f} {y:.2f} {z:.2f} {yaw:.0f} 0.6 1.8 0.6 0.55 0.5 0.5 "../scripts/enemy.lua"',
+             '  parent "' + ('Stalkers' if kind == 'npc' else 'Bandits') + '"',
+             f'  character "../models/characters/humans/{model}.glb" 1 0 "{anim}"', '  animgraph "../animgraphs/human.animgraph"']
+    lines += [f'  prop "{k}" "{v}"' for k, v in props.items()]
+    return '\n'.join(lines)
+
+
+def people(lv, lots):
+    """Who is still on the street. Sal Moretti trades at the fire on Hester (with Mike on watch); bandits hold the
+    building site by the start (one at the gate, one on the sidewalk shed, a rifle on the top of the frame, one inside:
+    the trench, the plates and the wrecks are the player's cover on the way up Mulberry) and the corner of Grand and Mott
+    (the parcel); a pair roams between the A-life points while the player is elsewhere."""
+    E = lv.ents
+    cx, cz = CAMP
+    E.append(_human('Sal Moretti', 'npc', cx - 3.1, 0.0, cz - 1.6, 27, 'worker', 'Idle_Talking_Loop', {
+        'anim_idle': 'Idle_Talking_Loop', 'dialog': 'dialogs/sal.dialog', 'trade': '1', 'markup': '1.3', 'buy_rate': '0.45',
+        'repair': '1', 'faction': 'stalker', 'group': 'camp', 'health': '150', 'patrol_radius': '0', 'rest_chance': '0',
+        'stock': 'medkit 8; ammo 5.45x39 360; ammo 9x18 200; ammo 9x19 120; weapon weapons/molotov.weapon 2; ammo molotov 6; '
+                 'weapon weapons/smg.weapon 1; weapon weapons/ak74_old.weapon 1; armor jacket 1'}))
+    E.append(_human('Mike Doyle', 'npc', cx + 3.5, 0.0, cz - 2.5, 270, 'stalker', 'Idle_Loop', {
+        'anim_idle': 'Idle_Loop', 'faction': 'stalker', 'group': 'camp', 'health': '140', 'patrol_radius': '1.5', 'rest_chance': '0.3',
+        'view_range': '40', 'shoot_range': '28'}))
+    # the building site (lot frame -> world)
+    site = next((l for l in lots if l['kind'] == 'site'), None)
+    if site:
+        def w(lx, lz):
+            dx, dz = rot(site['yaw'], lx, lz)
+            return site['cx'] + dx, site['cz'] + dz
+        face = (site['yaw'] - 90.0) % 360            # entity yaw (0 = +X, 90 = +Z) of the lot's street direction
+        a = math.radians(site['yaw'])
+        face = math.degrees(math.atan2(math.cos(a), math.sin(a)))
+        for name, (lx, ly, lz), extra in (
+                ('Bandit at the site gate', (2.9, 0.0, 7.4), {'patrol_radius': '2'}),
+                ('Bandit on the shed', (3.5, 3.25, 11.0), {'patrol_radius': '0.5', 'view_range': '45', 'shoot_range': '30'}),
+                ('Bandit rifle on the frame', (-2.0, 10.32, 5.0), {'patrol_radius': '0.8', 'view_range': '60', 'shoot_range': '50',
+                                                                  'accuracy': '0.4', 'shot_damage': '14', 'shot_interval': '2.2',
+                                                                  'sound_shot': 'sounds/weapons/rifle_shot.sound'}),
+                ('Bandit in the site', (-4.0, 0.12, -2.0), {'patrol_radius': '4'})):
+            x, z = w(lx, lz)
+            props = {'faction': 'bandit', 'group': 'site', 'health': '100'}
+            props.update(extra)
+            E.append(_human(name, 'enemy', x, WALK + ly, z, face, 'bandit', 'Idle_Loop', props))
+        x, z = w(0.0, 4.0)
+        E.append(f'entity "A-life: Building site" "alife_point" {x:.2f} {WALK:g} {z:.2f} 0 1 2.5 1 0.3 0.85 0.9 ""\n'
+                 '  parent "A-life"\n  prop "capacity" "2"\n  prop "factions" "bandit"\n  prop "roles" "camp"')
+    # Grand and Mott: three round the newsstand, behind the barriers they dragged there
+    for name, (x, z, yaw) in (('Bandit by the newsstand', (64.5, -95.0, 200)), ('Bandit on Grand', (80.5, -108.0, 160)),
+                              ('Bandit on Mott', (71.0, -114.0, 260))):
+        E.append(_human(name, 'enemy', x, WALK if abs(x - 74) > 4 and abs(z + 103) > 3.5 else 0.0, z, yaw, 'bandit', 'Idle_Loop',
+                        {'faction': 'bandit', 'group': 'newsstand', 'patrol_radius': '3', 'health': '100'}))
+    for (x, z, yaw) in ((66.5, -93.5, 0.0), (79.5, -110.5, 90.0), (69.0, -112.5, 15.0)):
+        lv.model('Barrier', P + 'concrete_road_barrier/concrete_road_barrier.gltf', x, 0.0, z, yaw, group='Bandits', cull=150)
+    E.append('entity "A-life: Grand and Mott" "alife_point" 74 0.15 -103 0 1 2.5 1 0.3 0.85 0.9 ""\n  parent "A-life"\n'
+             '  prop "capacity" "2"\n  prop "factions" "bandit"\n  prop "roles" "camp"')
+    # the roaming pair and the points they walk between
+    for name, (x, z) in (('A-life: Elizabeth and Hester', (148.0, -17.0)), ('A-life: Broome and Mott', (74.0, -189.0)),
+                         ('A-life: Baxter and Grand', (-74.0, -103.0)), ('A-life: Canal and Mott', (74.0, 75.0))):
+        E.append(f'entity "{name}" "alife_point" {x:g} 0.15 {z:g} 0 1 2.5 1 0.3 0.85 0.9 ""\n  parent "A-life"\n'
+                 '  prop "capacity" "1"\n  prop "roles" "patrol"')
+    for k, (dx, dz) in enumerate(((0.0, 0.0), (1.6, 1.2))):
+        E.append(_human(f'Bandit roamer {k + 1}', 'enemy', 148.0 + dx, 0.0, -17.0 + dz, 180, 'bandit', 'Idle_Loop',
+                        {'faction': 'bandit', 'group': 'roamers', 'alife': 'roam', 'patrol_radius': '2', 'health': '100'}))
+    E.append(f'entity "A-life: Stalker camp" "alife_point" {cx:g} 0.15 {cz:g} 0 1 2.5 1 0.3 0.85 0.9 ""\n  parent "A-life"\n'
+             '  prop "factions" "stalker"\n  prop "roles" "camp"')
 
 
 def story(lv, furn):
