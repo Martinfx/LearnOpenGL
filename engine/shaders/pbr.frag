@@ -331,12 +331,19 @@ vec2 parallaxUv(vec2 uv, vec3 n, vec3 toEye) {
 // 64 normal maps, 128 interior volumes.
 uniform int uDebugSkip;
 
+flat in float vDissolve; // LOD crossfade (mesh.vert)
+
 void main() {
     if (uFade.y > 0.0) {
         float k = smoothstep(uFade.x, uFade.y, length(vWorldPos - uCameraPos.xyz));
         // Interleaved gradient noise: a fine, stable screen pattern (TAA-free dither).
         float noise = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
         if (k > noise)
+            discard;
+    }
+    if (vDissolve != 0.0) { // LOD crossfade: complementary dither with the other level
+        float n = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
+        if (vDissolve > 0.0 ? n < vDissolve : n >= -vDissolve)
             discard;
     }
     if (uEmissive) {

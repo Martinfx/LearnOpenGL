@@ -12,7 +12,14 @@ uniform float uAlphaCutoff;
 uniform float uOpacity;
 uniform vec2 uTiling;
 uniform vec2 uFade;
+flat in float vDissolve;
 void main() {
+    if (vDissolve != 0.0) { // LOD crossfade: complementary dither with the other level
+        float n = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
+        if (vDissolve > 0.0 ? n < vDissolve : n >= -vDissolve)
+            discard;
+    }
+
     if (uFade.y > 0.0) {
         float k = smoothstep(uFade.x, uFade.y, length(vWorldPos - uCameraPos.xyz));
         float noise = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));

@@ -538,6 +538,11 @@ private:
     };
     std::vector<TransparentDraw> transparent_;
     // Instancing: visible copies of the same model (same shared mesh and materials).
+    struct LodPick {
+        int level = 0, next = -1; // next >= 0: crossfading from level to next
+        float progress = 0.0f;    // 0..1 through the band
+    };
+    static LodPick pickLod(const float* from, int count, float distance);
     struct InstanceBatch {
         const Model* model = nullptr;
         std::vector<glm::mat4> transforms;

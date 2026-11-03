@@ -1542,19 +1542,52 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
             continue;
         }
         // Batch with other copies: same shared mesh list, material overrides and sway.
-        std::uint64_t key = reinterpret_cast<std::uintptr_t>(&draw->parts[0]);
-        for (const auto& [slot, material] : draw->overrideMaterials)
-            key = key * 1099511628211ull ^ reinterpret_cast<std::uintptr_t>(material.get());
-        if (model.sway > 0.0f)
-            key = key * 1099511628211ull ^ static_cast<std::uint64_t>(model.sway * 1000.0f + 1.0f);
-        if (fade.y > 0.0f)
-            key = key * 1099511628211ull ^ static_cast<std::uint64_t>(fade.y * 16.0f + 7.0f);
-        auto [it, added] = batchIndex_.emplace(key, batches_.size());
-        if (added)
-            batches_.push_back({draw, {}, drawDistance_, model.sway, fade});
-        InstanceBatch& batch = batches_[it->second];
-        batch.transforms.push_back(grid.transforms[i]);
-        batch.distance = std::min(batch.distance, drawDistance_);
+        auto emit = [&](const Model* m, float dissolve) {
+            std::uint64_t key = reinterpret_cast<std::uintptr_t>(&m->parts[0]);
+            for (const auto& [slot, material] : m->overrideMaterials)
+                key = key * 1099511628211ull ^ reinterpret_cast<std::uintptr_t>(material.get());
+            if (model.sway > 0.0f)
+                key = key * 1099511628211ull ^ static_cast<std::uint64_t>(model.sway * 1000.0f + 1.0f);
+            if (fade.y > 0.0f)
+                key = key * 1099511628211ull ^ static_cast<std::uint64_t>(fade.y * 16.0f + 7.0f);
+            auto [it, added] = batchIndex_.emplace(key, batches_.size());
+            if (added)
+                batches_.push_back({m, {}, drawDistance_, model.sway, fade});
+            InstanceBatch& batch = batches_[it->second];
+            batch.transforms.push_back(grid.transforms[i]);
+            batch.transforms.back()[0][3] = dissolve; // mesh.vert vDissolve
+            batch.distance = std::min(batch.distance, drawDistance_);
+        };
+        // LOD crossfade (depth pre-pass and main pass alike): near a switch distance both levels.
+        if (shadowCascade_ < 0 && !model.paint && (model.lod || !model.farLods.empty() || model.impostorDistance > 0.0f)) {
+            const Model* levels[8] = {&model};
+            float from[8] = {0.0f};
+            int count = 1;
+            auto add = [&](const Model* m, float start) {
+                levels[count] = m;
+                from[count] = std::max(start, from[count - 1]);
+                ++count;
+            };
+            if (model.lod)
+                add(model.lod.get(), model.lodDistance * quality_.lodScale);
+            for (const Model::FarLod& far : model.farLods)
+                if (far.model && count < 7 && far.distance * quality_.lodScale > from[count - 1])
+                    add(far.model.get(), far.distance * quality_.lodScale);
+            if (quality_.impostors && model.impostorDistance > 0.0f && !model.skeleton && !model.parts.empty() && count < 8)
+                if (const Model* impostor = impostorFor(model))
+                    add(impostor, model.impostorDistance * quality_.lodScale);
+            const float d = glm::distance(lodEye(view), (modelBounds.min + modelBounds.max) * 0.5f);
+            const LodPick pick = pickLod(from, count, d);
+            if (pick.next >= 0 && !levels[pick.level]->parts.empty() && !levels[pick.next]->parts.empty() &&
+                !levels[pick.level]->skeleton && !levels[pick.next]->skeleton) {
+                if (mainPass)
+                    keepAliveLods(model, levels[pick.next]);
+                emit(levels[pick.level], pick.progress);
+                emit(levels[pick.next], -pick.progress);
+                continue;
+            }
+        }
+        emit(draw, 0.0f);
         }
     }
     if (scene.terrain && !scene.terrain->foliage.empty())
@@ -3120,26 +3153,54 @@ void Renderer::addFoliage(const Terrain& t, const RenderView& view)
                     if (static_cast<float>(r & 0xffffff) / 16777216.0f > keep)
                         continue;
                 }
-                int level = 0;
-                while (level + 1 < levelCount && d > from[level + 1])
-                    ++level;
-                if (shadowCascade_ >= 0 && level == 0 && levelCount > 1)
-                    level = 1; // shadows: the simpler copy
-                const Model* draw = levels[level];
-                std::uint64_t key = reinterpret_cast<std::uintptr_t>(&draw->parts[0]);
-                if (type.sway > 0.0f)
-                    key = key * 1099511628211ull ^ static_cast<std::uint64_t>(type.sway * 1000.0f + 1.0f);
-                if (fade.y > 0.0f)
-                    key = key * 1099511628211ull ^ static_cast<std::uint64_t>(fade.x * 16.0f + 3.0f) * 31u ^ static_cast<std::uint64_t>(fade.y * 16.0f);
-                auto [it, added] = batchIndex_.emplace(key, batches_.size());
-                if (added)
-                    batches_.push_back({draw, {}, cellDistance, type.sway, fade});
-                InstanceBatch& batch = batches_[it->second];
-                batch.distance = std::min(batch.distance, cellDistance);
-                batch.transforms.push_back(c.transforms[i]);
+                auto emit = [&](int level, float dissolve) {
+                    const Model* draw = levels[level];
+                    std::uint64_t key = reinterpret_cast<std::uintptr_t>(&draw->parts[0]);
+                    if (type.sway > 0.0f)
+                        key = key * 1099511628211ull ^ static_cast<std::uint64_t>(type.sway * 1000.0f + 1.0f);
+                    if (fade.y > 0.0f)
+                        key = key * 1099511628211ull ^ static_cast<std::uint64_t>(fade.x * 16.0f + 3.0f) * 31u ^ static_cast<std::uint64_t>(fade.y * 16.0f);
+                    auto [it, added] = batchIndex_.emplace(key, batches_.size());
+                    if (added)
+                        batches_.push_back({draw, {}, cellDistance, type.sway, fade});
+                    InstanceBatch& batch = batches_[it->second];
+                    batch.distance = std::min(batch.distance, cellDistance);
+                    batch.transforms.push_back(c.transforms[i]);
+                    batch.transforms.back()[0][3] = dissolve; // mesh.vert vDissolve
+                };
+                if (shadowCascade_ >= 0) { // shadows: one level, the simpler copy up close
+                    int level = 0;
+                    while (level + 1 < levelCount && d > from[level + 1])
+                        ++level;
+                    emit(level == 0 && levelCount > 1 ? 1 : level, 0.0f);
+                    continue;
+                }
+                const LodPick pick = pickLod(from, levelCount, d);
+                emit(pick.level, pick.next >= 0 ? pick.progress : 0.0f);
+                if (pick.next >= 0)
+                    emit(pick.next, -pick.progress);
             }
         }
     }
+}
+
+Renderer::LodPick Renderer::pickLod(const float* from, int count, float distance)
+{
+    // from[k]: where level k starts (from[0] = 0). Within a band around each switch distance both
+    // levels are drawn with complementary dither (mesh.vert vDissolve), so nothing pops.
+    LodPick pick;
+    while (pick.level + 1 < count && distance > from[pick.level + 1])
+        ++pick.level;
+    for (int k = 1; k < count; ++k) {
+        const float band = std::max(1.0f, from[k] * 0.1f);
+        if (std::abs(distance - from[k]) < band) {
+            pick.level = k - 1;
+            pick.next = k;
+            pick.progress = std::clamp((distance - (from[k] - band)) / (2.0f * band), 0.002f, 0.998f);
+            break;
+        }
+    }
+    return pick;
 }
 
 namespace {
