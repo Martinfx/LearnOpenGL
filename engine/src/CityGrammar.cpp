@@ -47,6 +47,7 @@ const MatDef kMats[] = {
     {"concrete_moss", "concrete_moss", 4.0f},
     {"st_concrete_crack", "st_concrete_crack", 2.0f},
     {"interior_dark", "concrete_dark", 3.0f, 0.25f, 0.25f, 0.25f},
+    {"frame_concrete", "concrete_dark", 2.5f, 0.82f, 0.82f, 0.82f}, // weathered grey frame of a skeleton
     {"roof_tar", "roof_tar", 4.0f},
     {"rust_sheet", "rust_sheet", 2.0f},
     {"rust", "rust", 1.5f},
@@ -700,6 +701,276 @@ private:
     int ruinLoss_ = 0;
 };
 
+
+// ---------------------------------------------------------------- concrete skeletons
+// A frame building gutted down to its structure (role "skeleton"):
+//   Frame   -> grid(bay) over the footprint's oriented rectangle, cells inside the footprint
+//   Storey  -> Slab per cell (some fallen through) + Column per grid node + edge Beams
+//   Edge    -> Spandrel (a parapet panel, share `balconies`) | Infill with an empty window
+//              (share `loggias`) | open
+//   Collapse-> one side came down: storeys lost toward it, slabs hang from the last
+//              columns or lie tilted on the heap, rebar out of every broken edge
+// Everything but the frame and the slabs is LOD0 only.
+class SkeletonBuilder {
+public:
+    SkeletonBuilder(const BuildingSpec& b, int lod) : b_(b), st_(b.style), lod_(lod), rng_(b.seed ^ 0x5CE1E70Bull) {}
+    Mesh mesh;
+
+    void run()
+    {
+        const Poly& fp = b_.footprint;
+        if (fp.size() < 3)
+            return;
+        glm::vec2 half;
+        minAreaRect(fp, c_, ax_, half);
+        ay_ = {-ax_.y, ax_.x};
+        const float bay = std::clamp(st_.bay, 3.0f, 12.0f);
+        nu_ = std::max(1, static_cast<int>(std::round(2.0f * half.x / bay)));
+        nv_ = std::max(1, static_cast<int>(std::round(2.0f * half.y / bay)));
+        du_ = 2.0f * half.x / static_cast<float>(nu_);
+        dv_ = 2.0f * half.y / static_cast<float>(nv_);
+        o_ = c_ - ax_ * half.x - ay_ * half.y;
+        F_ = std::max(1, b_.floors);
+        // Which cells exist: inside the footprint.
+        inside_.assign(static_cast<std::size_t>(nu_ * nv_), false);
+        for (int i = 0; i < nu_; ++i)
+            for (int j = 0; j < nv_; ++j)
+                inside_[idx(i, j)] = pointInPolygon(fp, cell(i + 0.5f, j + 0.5f));
+        // The collapse: storeys left per cell fall off toward one side.
+        const float a = rng_.range(0.0f, 6.2831853f);
+        const glm::vec2 dir{std::cos(a), std::sin(a)};
+        const float R = std::max(4.0f, glm::length(half));
+        const int loss = std::max(1, static_cast<int>(static_cast<float>(F_) * rng_.range(0.45f, 0.85f)));
+        floors_.assign(inside_.size(), 0);
+        for (int i = 0; i < nu_; ++i)
+            for (int j = 0; j < nv_; ++j) {
+                if (!inside_[idx(i, j)])
+                    continue;
+                const float k = std::clamp(glm::dot(cell(i + 0.5f, j + 0.5f) - c_, dir) / R + 0.35f, 0.0f, 1.0f);
+                const int jag = rng_.below(2);
+                floors_[idx(i, j)] = std::max(1, F_ - static_cast<int>(std::lround(static_cast<float>(loss) * k * 1.2f)) - (k > 0.3f ? jag : 0));
+            }
+        // Slabs (holes where a slab fell through), beams, columns.
+        holes_.assign(inside_.size() * static_cast<std::size_t>(F_ + 1), false);
+        for (int f = 1; f <= F_; ++f)
+            for (int i = 0; i < nu_; ++i)
+                for (int j = 0; j < nv_; ++j)
+                    holes_[hidx(i, j, f)] = f < F_ && rng_.chance(0.06f + 0.12f * static_cast<float>(f) / static_cast<float>(F_));
+        for (int f = 1; f <= F_; ++f)
+            for (int i = 0; i < nu_; ++i)
+                for (int j = 0; j < nv_; ++j)
+                    if (slab(i, j, f))
+                        slabCell(i, j, f);
+        for (int i = 0; i <= nu_; ++i)
+            for (int j = 0; j <= nv_; ++j)
+                column(i, j);
+        for (int f = 1; f <= F_; ++f)
+            edges(f);
+        if (lod_ == 0)
+            heap(dir, R);
+        // Ground floor slab (on the ground, cracked).
+        for (int i = 0; i < nu_; ++i)
+            for (int j = 0; j < nv_; ++j)
+                if (inside_[idx(i, j)])
+                    quadH("concrete_moss", cell(i, j), cell(i + 1, j), cell(i + 1, j + 1), cell(i, j + 1), 0.04f, true);
+    }
+
+private:
+    std::size_t idx(int i, int j) const { return static_cast<std::size_t>(i * nv_ + j); }
+    std::size_t hidx(int i, int j, int f) const { return idx(i, j) * static_cast<std::size_t>(F_ + 1) + static_cast<std::size_t>(f); }
+    glm::vec2 cell(float i, float j) const { return o_ + ax_ * (i * du_) + ay_ * (j * dv_); }
+    float y(int f) const { return f <= 0 ? 0.0f : st_.groundStorey + static_cast<float>(f - 1) * st_.storey; }
+    bool in(int i, int j) const { return i >= 0 && j >= 0 && i < nu_ && j < nv_ && inside_[idx(i, j)]; }
+    // A slab over storey f-1 at the height y(f) (f = 1 .. F, F = the roof).
+    bool slab(int i, int j, int f) const { return in(i, j) && f <= floors_[idx(i, j)] && !holes_[hidx(i, j, f)]; }
+
+    void quadH(const std::string& m, glm::vec2 a, glm::vec2 b, glm::vec2 c, glm::vec2 d, float yy, bool up)
+    {
+        const float t = mat(m).tile;
+        mesh.quad(m, {a.x, yy, a.y}, {b.x, yy, b.y}, {c.x, yy, c.y}, {d.x, yy, d.y}, {0, up ? 1.0f : -1.0f, 0}, a / t, b / t, c / t, d / t);
+    }
+    // Vertical quad from a to b (plan), y0..y1, facing n.
+    void quadV(const std::string& m, glm::vec2 a, glm::vec2 b, float y0, float y1, glm::vec2 n)
+    {
+        const float t = mat(m).tile, L = glm::length(b - a);
+        mesh.quad(m, {a.x, y0, a.y}, {b.x, y0, b.y}, {b.x, y1, b.y}, {a.x, y1, a.y}, {n.x, 0, n.y}, {0, y0 / t}, {L / t, y0 / t}, {L / t, y1 / t},
+                  {0, y1 / t});
+    }
+    // An oriented box: centre, three unit axes, half sizes.
+    void obox(const std::string& m, glm::vec3 c, glm::vec3 u, glm::vec3 v, glm::vec3 w, glm::vec3 h)
+    {
+        const float t = mat(m).tile;
+        const glm::vec3 axes[3] = {u * h.x, v * h.y, w * h.z};
+        for (int k = 0; k < 3; ++k)
+            for (int sgn = -1; sgn <= 1; sgn += 2) {
+                const glm::vec3 n = glm::normalize(axes[k]) * static_cast<float>(sgn);
+                const glm::vec3 a = axes[(k + 1) % 3], b = axes[(k + 2) % 3], f = c + axes[k] * static_cast<float>(sgn);
+                const float la = 2.0f * glm::length(a) / t, lb = 2.0f * glm::length(b) / t;
+                mesh.quad(m, f - a - b, f + a - b, f + a + b, f - a + b, n, {0, 0}, {la, 0}, {la, lb}, {0, lb});
+            }
+    }
+    glm::vec3 v3(glm::vec2 p, float yy) const { return {p.x, yy, p.y}; }
+
+    void slabCell(int i, int j, int f)
+    {
+        const float top = y(f), th = 0.22f;
+        const glm::vec2 a = cell(i, j), b = cell(i + 1, j), c = cell(i + 1, j + 1), d = cell(i, j + 1);
+        quadH(f == floors_[idx(i, j)] ? "concrete_moss" : "frame_concrete", a, b, c, d, top, true);
+        quadH("frame_concrete", a, b, c, d, top - th, false);
+        // Edges where no slab continues: the broken face (and rebar out of it).
+        const glm::vec2 side[4][2] = {{a, b}, {b, c}, {c, d}, {d, a}};
+        const int ni[4] = {i, i + 1, i, i - 1}, nj[4] = {j - 1, j, j + 1, j};
+        for (int e = 0; e < 4; ++e) {
+            if (slab(ni[e], nj[e], f) || lod_)
+                continue;
+            const glm::vec2 p = side[e][0], q = side[e][1];
+            const glm::vec2 t = glm::normalize(q - p), n{t.y, -t.x};
+            quadV("st_concrete_crack", p, q, top - th, top, glm::dot(n, (p + q) * 0.5f - (a + c) * 0.5f) > 0.0f ? n : -n);
+            const bool broken = in(ni[e], nj[e]); // a neighbour that fell, not the facade
+            if (broken && lod_ == 0)
+                rebar(p, q, n * (glm::dot(n, (p + q) * 0.5f - (a + c) * 0.5f) > 0.0f ? 1.0f : -1.0f), top - th * 0.5f);
+        }
+    }
+
+    void rebar(glm::vec2 p, glm::vec2 q, glm::vec2 out, float yy)
+    {
+        const float L = glm::length(q - p);
+        const int n = static_cast<int>(L / 0.6f);
+        const glm::vec2 t = (q - p) / L;
+        for (int k = 1; k < n; ++k) {
+            if (!rng_.chance(0.55f))
+                continue;
+            const float len = rng_.range(0.3f, 1.3f), droop = rng_.range(0.1f, 0.9f);
+            const glm::vec2 s = p + t * (static_cast<float>(k) * L / static_cast<float>(n));
+            const glm::vec3 a = v3(s, yy), b = v3(s + out * len, yy - droop * len);
+            const glm::vec3 dir = glm::normalize(b - a);
+            const glm::vec3 side = glm::normalize(glm::cross(dir, glm::vec3(0, 1, 0)));
+            const glm::vec3 up = glm::cross(side, dir);
+            obox("rust", (a + b) * 0.5f, dir, side, up, {glm::length(b - a) * 0.5f, 0.012f, 0.012f});
+        }
+    }
+
+    void column(int i, int j)
+    {
+        // Height: up to the highest slab among the cells around the node.
+        int top = 0;
+        for (int di = -1; di <= 0; ++di)
+            for (int dj = -1; dj <= 0; ++dj)
+                if (in(i + di, j + dj))
+                    top = std::max(top, floors_[idx(i + di, j + dj)]);
+        if (top <= 0)
+            return;
+        const glm::vec2 p = cell(static_cast<float>(i), static_cast<float>(j));
+        const float w = 0.24f;
+        float y1 = y(top);
+        // A broken stub above the last slab now and then, rebar out of its top.
+        const bool stub = top < F_ && rng_.chance(0.5f);
+        if (stub)
+            y1 += st_.storey * rng_.range(0.25f, 0.8f);
+        obox("frame_concrete", v3(p, y1 * 0.5f), glm::vec3(ax_.x, 0, ax_.y), glm::vec3(0, 1, 0), glm::vec3(ay_.x, 0, ay_.y), {w, y1 * 0.5f, w});
+        if (stub && lod_ == 0)
+            for (int k = 0; k < 4; ++k) {
+                const glm::vec2 c = p + (ax_ * ((k & 1) ? 0.14f : -0.14f)) + (ay_ * ((k & 2) ? 0.14f : -0.14f));
+                const float h = rng_.range(0.3f, 0.9f);
+                obox("rust", v3(c, y1 + h * 0.5f), {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0.012f, h * 0.5f, 0.012f});
+            }
+    }
+
+    // Facade edges of storey f: beams under the slab, spandrels, infill walls with an empty window.
+    void edges(int f)
+    {
+        const float top = y(f), bottom = y(f - 1);
+        for (int i = 0; i < nu_; ++i)
+            for (int j = 0; j < nv_; ++j) {
+                if (!in(i, j) || f > floors_[idx(i, j)])
+                    continue;
+                const glm::vec2 a = cell(i, j), b = cell(i + 1, j), c = cell(i + 1, j + 1), d = cell(i, j + 1);
+                const glm::vec2 side[4][2] = {{a, b}, {b, c}, {c, d}, {d, a}};
+                const int ni[4] = {i, i + 1, i, i - 1}, nj[4] = {j - 1, j, j + 1, j};
+                const glm::vec2 mid = (a + c) * 0.5f;
+                for (int e = 0; e < 4; ++e) {
+                    if (in(ni[e], nj[e]))
+                        continue; // inside the building: open plan
+                    const glm::vec2 p = side[e][0], q = side[e][1];
+                    const glm::vec2 t = glm::normalize(q - p);
+                    glm::vec2 n{t.y, -t.x};
+                    if (glm::dot(n, (p + q) * 0.5f - mid) < 0.0f)
+                        n = -n;
+                    // Edge beam under the slab.
+                    if (slab(i, j, f) && lod_ == 0)
+                        obox("frame_concrete", v3((p + q) * 0.5f - n * 0.15f, top - 0.45f), glm::vec3(t.x, 0, t.y), {0, 1, 0}, glm::vec3(n.x, 0, n.y),
+                             {glm::length(q - p) * 0.5f, 0.23f, 0.15f});
+                    if (f == 1)
+                        continue; // the ground floor stands open (shops, entrances long gone)
+                    const float r = rng_.uniform();
+                    const glm::vec2 p2 = p + t * 0.24f, q2 = q - t * 0.24f;
+                    if (r < st_.loggias) { // infill wall with an empty window
+                        const float L = glm::length(q2 - p2), ww = std::min(L * 0.55f, st_.windowWidth * 1.4f);
+                        const float s0 = (L - ww) * 0.5f, sill = bottom + st_.sill, head = std::min(top - 0.5f, sill + st_.windowHeight);
+                        const glm::vec2 w0 = p2 + t * s0, w1 = p2 + t * (s0 + ww);
+                        for (int sd = 0; sd < (lod_ ? 1 : 2); ++sd) { // outside and inside
+                            const glm::vec2 nn = sd ? -n : n;
+                            const glm::vec2 off = n * (sd ? -0.1f : 0.1f);
+                            quadV(st_.wall, p2 + off, w0 + off, bottom, top - 0.68f, nn);
+                            quadV(st_.wall, w1 + off, q2 + off, bottom, top - 0.68f, nn);
+                            quadV(st_.wall, w0 + off, w1 + off, bottom, sill, nn);
+                            quadV(st_.wall, w0 + off, w1 + off, head, top - 0.68f, nn);
+                        }
+                    } else if (r < st_.loggias + st_.balconies) { // spandrel panel (a parapet at the slab edge)
+                        for (int sd = 0; sd < (lod_ ? 1 : 2); ++sd) {
+                            const glm::vec2 off = n * (sd ? -0.1f : 0.1f);
+                            quadV(st_.wall, p2 + off, q2 + off, bottom, bottom + 0.95f, sd ? -n : n);
+                        }
+                        quadH("frame_concrete", p2 + n * 0.1f, q2 + n * 0.1f, q2 - n * 0.1f, p2 - n * 0.1f, bottom + 0.95f, true);
+                    }
+                }
+            }
+    }
+
+    // What came down lies in a heap on that side: tilted slabs, a beam leaning on the frame,
+    // chunks of concrete and a few twisted rods.
+    void heap(glm::vec2 dir, float R)
+    {
+        const glm::vec2 side{-dir.y, dir.x};
+        const glm::vec2 base = c_ + dir * R * 0.55f;
+        const int slabs = 6 + F_ + rng_.below(6);
+        for (int k = 0; k < slabs; ++k) {
+            const glm::vec2 p = base + side * rng_.range(-R * 0.5f, R * 0.5f) + dir * rng_.range(-R * 0.3f, R * 0.25f);
+            const float yaw = rng_.range(0.0f, 6.2831853f), tilt = rng_.range(0.1f, 0.9f);
+            const glm::vec3 u{std::cos(yaw), 0, std::sin(yaw)};
+            const glm::vec3 w = glm::vec3(-u.z, 0, u.x);
+            const glm::vec3 uu = glm::normalize(u * std::cos(tilt) + glm::vec3(0, std::sin(tilt), 0));
+            const glm::vec3 vv = glm::normalize(glm::cross(w, uu));
+            const glm::vec3 hs{rng_.range(1.2f, 2.8f), 0.11f, rng_.range(0.8f, 1.6f)};
+            obox("frame_concrete", v3(p, hs.x * std::sin(tilt) * 0.8f + 0.1f), uu, vv, w, hs);
+        }
+        // A beam leaning from the ground onto the first slab still standing.
+        if (F_ >= 2) {
+            const glm::vec2 foot = c_ + dir * R * 0.9f + side * rng_.range(-R * 0.3f, R * 0.3f);
+            const glm::vec2 head = c_ + dir * R * 0.2f + side * rng_.range(-R * 0.2f, R * 0.2f);
+            const glm::vec3 a = v3(foot, 0.0f), b = v3(head, y(1) + rng_.range(0.0f, st_.storey));
+            const glm::vec3 d = glm::normalize(b - a), s = glm::normalize(glm::cross(d, glm::vec3(0, 1, 0))), u = glm::cross(s, d);
+            obox("frame_concrete", (a + b) * 0.5f, d, s, u, {glm::length(b - a) * 0.5f, 0.2f, 0.28f});
+        }
+        for (int k = 0; k < 18 + 3 * F_; ++k) {
+            const glm::vec2 p = base + side * rng_.range(-R * 0.6f, R * 0.6f) + dir * rng_.range(-R * 0.35f, R * 0.4f);
+            const float sz = rng_.range(0.2f, 0.9f), yaw = rng_.range(0.0f, 6.2831853f);
+            const glm::vec3 u{std::cos(yaw), 0, std::sin(yaw)};
+            obox(k % 3 ? "frame_concrete" : "st_concrete_crack", v3(p, sz * 0.35f), u, {0, 1, 0}, {-u.z, 0, u.x}, {sz, sz * 0.45f, sz * 0.7f});
+        }
+    }
+
+    const BuildingSpec& b_;
+    const FacadeStyle& st_;
+    int lod_;
+    Rng rng_;
+    glm::vec2 c_{0.0f}, ax_{1.0f, 0.0f}, ay_{0.0f, 1.0f}, o_{0.0f};
+    int nu_ = 1, nv_ = 1, F_ = 1;
+    float du_ = 6.0f, dv_ = 6.0f;
+    std::vector<bool> inside_, holes_;
+    std::vector<int> floors_;
+};
+
 // ---------------------------------------------------------------- glb
 std::string jsonEscape(const std::string& s)
 {
@@ -876,7 +1147,7 @@ std::string buildingKey(const BuildingSpec& b)
     std::ostringstream o;
     o.imbue(std::locale::classic());
     const FacadeStyle& s = b.style;
-    o << "v3|" << s.role << '|' << s.groundStorey << '|' << s.storey << '|' << s.bay << '|' << s.windowWidth << '|' << s.windowHeight << '|'
+    o << (isSkeleton(s) ? "sk3|" : "v3|") << s.role << '|' << s.groundStorey << '|' << s.storey << '|' << s.bay << '|' << s.windowWidth << '|' << s.windowHeight << '|'
       << s.sill << '|' << s.wall << '|' << s.plinth << '|' << s.trim << '|' << s.roof << '|' << s.firewall << '|' << s.cornice << '|'
       << s.bands << '|' << s.loggias << '|' << s.balconies << '|' << s.shops << '|' << s.pitched << '|' << b.floors << '|' << b.seed << '|'
       << b.ruin;
@@ -907,17 +1178,27 @@ bool writeBuildingGlb(const BuildingSpec& b, const fs::path& file, int lod, cons
             e[i] = spec.edges[(2 * n - 2 - i) % n];
         spec.edges = e;
     }
-    Builder bld(spec, lod);
-    bld.run();
+    Mesh mesh;
+    int windows = 0;
+    if (isSkeleton(spec.style)) {
+        SkeletonBuilder sk(spec, lod);
+        sk.run();
+        mesh = std::move(sk.mesh);
+    } else {
+        Builder bld(spec, lod);
+        bld.run();
+        mesh = std::move(bld.mesh);
+        windows = bld.windows;
+    }
     std::error_code ec;
     std::string rel = fs::relative(textureDir, file.parent_path(), ec).generic_string();
     if (ec || rel.empty())
         rel = textureDir.generic_string();
     if (stats) {
-        stats->triangles = bld.mesh.triangles();
-        stats->windows = bld.windows;
+        stats->triangles = mesh.triangles();
+        stats->windows = windows;
     }
-    return writeGlb(bld.mesh, file, rel, b.style.name, error);
+    return writeGlb(mesh, file, rel, b.style.name, error);
 }
 
 } // namespace engine::city

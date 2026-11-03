@@ -146,6 +146,7 @@ void Settings::normalize()
     centreZone = std::clamp(centreZone, 0.0f, 1.0f);
     innerZone = std::clamp(innerZone, centreZone, 1.5f);
     ruinShare = std::clamp(ruinShare, 0.0f, 1.0f);
+    skeletonShare = std::clamp(skeletonShare, 0.0f, 1.0f);
     parkShare = std::clamp(parkShare, 0.0f, 1.0f);
     houseShare = std::clamp(houseShare, 0.0f, 1.0f);
     if (group.empty())
@@ -467,6 +468,7 @@ const ScalarField kScalars[] = {
     {"centre_zone", &Settings::centreZone},
     {"inner_zone", &Settings::innerZone},
     {"ruin_share", &Settings::ruinShare},
+    {"skeleton_share", &Settings::skeletonShare},
     {"park_share", &Settings::parkShare},
     {"house_share", &Settings::houseShare},
     {"square", nullptr, nullptr, &Settings::square},
@@ -2297,9 +2299,24 @@ private:
     }
 
     // A house by the grammar on a footprint (local plan coordinates).
-    void house(const Lot& L, const FacadeStyle& st, const Poly& fp, const std::vector<EdgeRole>& roles, int floors, std::uint32_t seed, bool ruin,
+    void house(const Lot& L, const FacadeStyle& style0, const Poly& fp, const std::vector<EdgeRole>& roles, int floors, std::uint32_t seed, bool ruin,
                const char* what)
     {
+        // Some big houses were never finished or burnt out to the bare frame: a concrete skeleton
+        // on the same footprint. Decided per house (by its place), so the rest of the town stays.
+        const FacadeStyle* sk = nullptr;
+        const glm::vec2 c0 = centroid(fp);
+        if (style0.role == "panel" || style0.role == "khrushchyovka" || (style0.role == "tenement" && !style0.pitched)) {
+            Rng pick(mix(mix(s_.seed, 0x5CE1u), static_cast<std::uint64_t>(std::lround(c0.x * 10.0f) * 100003 + std::lround(c0.y * 10.0f))));
+            if (pick.chance(s_.skeletonShare * (ruin ? 2.0f : 1.0f)))
+                sk = style("skeleton", pick);
+        }
+        if (sk) {
+            what = "Concrete skeleton";
+            ruin = false; // the skeleton collapses by itself
+        }
+        const FacadeStyle& st = sk ? *sk : style0;
+        const bool frame = isSkeleton(st);
         GeneratedBuilding g;
         const glm::vec2 c = centroid(fp);
         g.spec.style = st;
@@ -2329,9 +2346,40 @@ private:
         ++b_.plan.stats.generated;
         b_.addSolidPoly(fp);
         b_.polyLines(fp, kColHouse, 0.5f);
-        b_.ground(Ground::Built, fp, s_.kerbHeight);
+        // Grass and saplings grow up through a skeleton's ground slab.
+        b_.ground(frame ? Ground::Lot : Ground::Built, fp, s_.kerbHeight);
         b_.wallFoot(fp);
-        overgrow(L, fp, roles, h, st.pitched, ruin, seed);
+        overgrow(L, fp, roles, h, st.pitched, ruin || frame, seed);
+        if (frame)
+            frameDebris(L, fp, seed);
+    }
+
+    // Round a concrete skeleton: heaps of what fell off the frame, saplings and bushes in them,
+    // weeds in the open ground storey (the ground there is Lot, so the terrain grass grows too).
+    void frameDebris(const Lot& L, const Poly& fp, std::uint32_t seed)
+    {
+        Rng rng(mix(mix(s_.seed, 0xDEB815u), static_cast<std::uint64_t>(seed) * 7919u + fp.size()));
+        const float kh = s_.kerbHeight;
+        const glm::vec2 c = centroid(fp);
+        for (std::size_t e = 0; e < fp.size(); ++e) {
+            const glm::vec2 a = fp[e], b = fp[(e + 1) % fp.size()];
+            const float len = glm::length(b - a);
+            if (len < 1.0f)
+                continue;
+            const glm::vec2 t = (b - a) / len;
+            glm::vec2 n{t.y, -t.x};
+            if (glm::dot(n, (a + b) * 0.5f - c) < 0.0f)
+                n = -n;
+            for (float sp = rng.range(2.0f, 6.0f); sp < len - 2.0f; sp += rng.range(7.0f, 14.0f)) {
+                const glm::vec2 p = a + t * sp + n * rng.range(-1.0f, 3.0f);
+                if (const KitProp* k = b_.anyProp(rng.chance(0.3f) ? "slab" : "rubble", rng))
+                    b_.prop(*k, "Rubble heap", L.group, p, kh - 0.2f, rng.range(0.0f, 360.0f), rng,
+                            {rng.range(-6.0f, 6.0f), rng.range(-6.0f, 6.0f)}, rng.range(1.0f, 2.2f));
+                if (rng.chance(0.5f * s_.overgrowth))
+                    if (const KitProp* k = b_.anyProp(rng.chance(0.5f) ? "sapling" : "bush", rng))
+                        b_.prop(*k, "Young tree", L.group, p + t * rng.range(-2.0f, 2.0f) + n * 1.5f, kh, rng.range(0.0f, 360.0f), rng);
+            }
+        }
     }
 
     // Nature takes the houses back: ivy and wild vine up the fronts from the pavement and
@@ -2669,6 +2717,15 @@ private:
         for (const auto& sl : slots) {
             const KitBuilding& tw = *kit[static_cast<std::size_t>((i++ + rng.below(2)) % static_cast<int>(kit.size()))];
             const glm::vec2 face = -v;
+            // A tower left as a tall bare frame: the ruins seen over the roofs from afar.
+            if (const FacadeStyle* sk = rng.chance(s_.skeletonShare * 1.5f) ? style("skeleton_tower", rng) : nullptr) {
+                const Poly fp = rectPoly(sl.c, u, v, tw.length, tw.depth);
+                const std::vector<EdgeRole> roles{EdgeRole::Street, EdgeRole::Yard, EdgeRole::Yard, EdgeRole::Yard};
+                house(L, *sk, fp, roles, sk->floorsMin + rng.below(sk->floorsMax - sk->floorsMin + 1), static_cast<std::uint32_t>(rng.below(1000)), false,
+                      "Skeleton tower");
+                L.entrances.push_back(sl.c + face * (tw.depth * 0.5f));
+                continue;
+            }
             b_.building(tw, L.group, sl.c - face * (tw.front - tw.depth * 0.5f), b_.yawZ(face));
             const Poly fp = rectPoly(sl.c, u, v, tw.length, tw.depth);
             b_.addSolidPoly(fp);

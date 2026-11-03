@@ -96,6 +96,24 @@ Druhý režim vedle mřížky, podle přehledu algoritmů, který poslal martin.
 Město 640 × 640 m: ~200 úseků silnic, 80 bloků, 330 parcel, 370 domů; plán za 0,1 s, domy se zapíšou za ~3 s
 (paralelně), level se načte za ~10 s.
 
+### Betonové skelety (styl role `skeleton` / `skeleton_tower`)
+
+Část panelových domů, chruščovek a tenementů s plochou střechou (Town plan → Zoning →
+**Concrete skeletons**, klíč `skeleton_share`, v ruinových blocích dvojnásobně) zůstane jen jako
+holá železobetonová kostra na stejném půdorysu. Vlastní gramatika (`SkeletonBuilder` v CityGrammar.cpp):
+
+- **Rám:** mřížka sloupů po `bay` metrech přes orientovaný obdélník půdorysu, buňky uvnitř půdorysu.
+- **Patra:** stropní deska na buňku (náhodně propadlé, nahoře víc), sloupy v uzlech, obvodové průvlaky.
+- **Obvod:** parapetní panely (podíl `balconies`), výplňové stěny s prázdným oknem (podíl `loggias`)
+  nebo nic; přízemí otevřené.
+- **Zřícení:** jedna strana spadla – patra ubývají směrem k ní, z ulomených sloupů a hran desek trčí
+  rezavá výztuž, na hromadě leží šikmé desky, opřený nosník a kusy betonu (jen LOD0).
+- **LOD1:** sloupy, desky a jednostranné stěny (~450 trojúhelníků místo ~2,5 tisíce).
+- Kolem stavby generátor nasype suť z kitu (rubble/slab) a semenáčky; půda pod skeletem je `Lot`,
+  takže skrz přízemí roste tráva. Popínavky po obvodu jako u ostatních domů, bez stromků na střeše.
+- Styly v kitu: „Concrete skeleton“, „Burnt frame“ (role skeleton), „Skeleton tower“ (role
+  skeleton_tower, 14–22 pater – část věžáků v blocích Towers). Materiál `frame_concrete` je šedý beton.
+
 ## 3. Editor
 
 - **Layout:** seed, střed (tlačítko *Camera*), otočení, kořenová skupina, šířky sloupců a řad, třídy ulic na

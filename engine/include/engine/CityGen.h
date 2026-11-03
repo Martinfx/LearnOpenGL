@@ -232,6 +232,7 @@ struct Settings {
     float centreZone = 0.3f;         // inside: tenement perimeter blocks
     float innerZone = 0.65f;         // to here: tenements, panel micro-districts and towers; beyond: outskirts
     float ruinShare = 0.15f;         // blocks left in ruins
+    float skeletonShare = 0.12f;     // panel blocks / tenements / towers gutted to a bare concrete frame (style role "skeleton")
     float parkShare = 0.08f;         // blocks left green
     float houseShare = 0.3f;         // outer blocks of private houses (cut into parcels by recursive subdivision)
     bool square = true;              // the block nearest the centre is the town square (the goal of the map)

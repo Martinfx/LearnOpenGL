@@ -4693,6 +4693,26 @@ void testCityGrammarHouse()
         check(m.localBounds.max.y > height - 0.5f && m.localBounds.max.y < height + 6.0f, "model as tall as the house");
         check(m.localBounds.min.x > -11.5f && m.localBounds.max.x < 11.5f, "model within its footprint (plus cornice)");
     }
+    // A bare concrete frame on the same footprint: columns, slabs, a collapsed side.
+    BuildingSpec sk = b;
+    sk.style.role = "skeleton";
+    sk.style.bay = 6.0f;
+    sk.floors = 8;
+    check(buildingKey(sk) != buildingKey(b), "skeleton key differs");
+    std::size_t lod0 = 0;
+    for (int lod = 0; lod < 2; ++lod) {
+        const auto file = dir / (lod ? "s_lod1.glb" : "s.glb");
+        std::string err;
+        GrammarStats stats;
+        check(writeBuildingGlb(sk, file, lod, ENGINE_TEST_ASSETS "/models/zone/textures", &err, &stats), "write skeleton: " + err);
+        check(stats.triangles > 200, "skeleton triangles: " + std::to_string(stats.triangles));
+        if (lod)
+            check(stats.triangles < lod0, "skeleton LOD1 lighter");
+        lod0 = stats.triangles;
+        engine::Model m;
+        check(engine::loadModelFile(m, file, &err), "load skeleton: " + err);
+        check(m.localBounds.max.y > buildingHeight(sk) - 4.0f && m.localBounds.max.y < buildingHeight(sk) + 2.0f, "skeleton keeps its full height somewhere");
+    }
     std::filesystem::remove_all(dir);
 }
 

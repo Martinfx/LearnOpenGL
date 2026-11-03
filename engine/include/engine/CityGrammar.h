@@ -65,6 +65,8 @@ struct BuildingSpec {
 };
 
 float buildingHeight(const BuildingSpec& b); // to the top of the wall (m)
+// A bare concrete frame (style role "skeleton" or "skeleton_tower"), built by its own grammar.
+inline bool isSkeleton(const FacadeStyle& st) { return st.role.rfind("skeleton", 0) == 0; }
 std::string buildingKey(const BuildingSpec& b); // stable hash (file name)
 
 struct GrammarStats {

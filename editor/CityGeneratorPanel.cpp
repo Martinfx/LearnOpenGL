@@ -471,6 +471,8 @@ QWidget* CityGeneratorPanel::townTab()
     addNumber(zone, tr("Inner town"), &settings_.innerZone, 0, 1, 0.05, tr("To here: tenements, panel micro-districts and towers; beyond: houses, garages, waste ground"), none);
     addNumber(zone, tr("Private houses"), &settings_.houseShare, 0, 1, 0.05, tr("Outer blocks cut into house plots by recursive subdivision"), none);
     addNumber(zone, tr("Ruins"), &settings_.ruinShare, 0, 1, 0.05, tr("Blocks whose houses are ruins (storeys gone, open to the sky)"), none);
+    addNumber(zone, tr("Concrete skeletons"), &settings_.skeletonShare, 0, 1, 0.02,
+              tr("Share of panel blocks, flat-roofed tenements and towers left as a bare concrete frame (needs kit styles with role skeleton / skeleton_tower)"), none);
     addNumber(zone, tr("Parks"), &settings_.parkShare, 0, 1, 0.05, tr("Blocks left green"), none);
     addFlag(zone, tr("Town square in the centre"), &settings_.square,
             tr("The roomy block nearest the centre becomes the square: slabs with grass in the joints, a war memorial, "
@@ -791,7 +793,7 @@ const std::vector<StyleColumn>& styleColumns()
             c.push_back({h, tip, p.first, p.second, mat});
         };
         add("Name", "", text(&FacadeStyle::name));
-        add("Role", "tenement (perimeter blocks), panel, khrushchyovka (micro-districts), house (private plots)", text(&FacadeStyle::role));
+        add("Role", "tenement (perimeter blocks), panel, khrushchyovka (micro-districts), house (private plots), skeleton / skeleton_tower (bare concrete frames: bay = column spacing, loggias = infill walls, balconies = parapets)", text(&FacadeStyle::role));
         add("Floors min", "", integer(&FacadeStyle::floorsMin));
         add("Floors max", "", integer(&FacadeStyle::floorsMax));
         add("Ground storey", "Height of the ground floor (m)", num(&FacadeStyle::groundStorey));
