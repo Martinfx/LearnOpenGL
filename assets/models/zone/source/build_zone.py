@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from zonegen import mats, glb                         # noqa: E402
 from zonegen import vehicles, structures, buildings, vegetation   # noqa: E402
-from zonegen import panel_tower, square   # noqa: E402
+from zonegen import panel_tower, square, road_decals   # noqa: E402
 
 OUT = os.path.join(mats.ZONE, 'gen')
 
@@ -79,6 +79,14 @@ MODELS = {
     'square_bench_a': (square.bench, dict(seed=3), False),
     'square_bench_b': (square.bench, dict(seed=8), False),
     'square_kiosk': (square.kiosk, dict(seed=5), True),
+    'road_crack_long_a': (lambda lod=0, n='crack_long_a': road_decals.decal(n, lod), dict(), False),
+    'road_crack_long_b': (lambda lod=0, n='crack_long_b': road_decals.decal(n, lod), dict(), False),
+    'road_crack_cross': (lambda lod=0, n='crack_cross': road_decals.decal(n, lod), dict(), False),
+    'road_crack_branch': (lambda lod=0, n='crack_branch': road_decals.decal(n, lod), dict(), False),
+    'road_crack_net_a': (lambda lod=0, n='crack_net_a': road_decals.decal(n, lod), dict(), False),
+    'road_crack_net_b': (lambda lod=0, n='crack_net_b': road_decals.decal(n, lod), dict(), False),
+    'road_pothole_rim': (lambda lod=0, n='pothole_rim': road_decals.decal(n, lod), dict(), False),
+    'road_tar_patch': (lambda lod=0, n='tar_patch': road_decals.decal(n, lod), dict(), False),
 }
 
 

@@ -122,3 +122,12 @@ prop ivy "../models/zone/vegetation/ivy_b.glb" size 9.8 lod "../models/zone/vege
 prop ivy "../models/zone/vegetation/ivy_tall.glb" size 16.1 lod "../models/zone/vegetation/ivy_tall_lod1.glb" 40 cull 150 sway 0.03 collision 0 shadows 1
 prop roof_tree "../models/zone/vegetation/birch_young.glb" lod "../models/zone/vegetation/birch_young_lod1.glb" 40 cull 300 sway 0.3 collision 0 shadows 1 scale_min 0.6 scale_max 1.0
 prop roof_tree "../models/zone/vegetation/sapling_a.glb" cull 200 sway 0.3 collision 0 shadows 1
+# road wear decals (zonegen/road_decals.py): flat alpha-blended quads 1 cm above the road, long side along X
+prop road_crack "../models/zone/gen/road_crack_long_a.glb" cull 70 scale_min 0.8 scale_max 1.3 collision 0 shadows 0
+prop road_crack "../models/zone/gen/road_crack_long_b.glb" cull 70 scale_min 0.8 scale_max 1.3 collision 0 shadows 0
+prop road_crack "../models/zone/gen/road_crack_branch.glb" cull 70 scale_min 0.8 scale_max 1.3 collision 0 shadows 0
+prop road_crack_cross "../models/zone/gen/road_crack_cross.glb" cull 70 scale_min 0.8 scale_max 1.4 collision 0 shadows 0
+prop road_net "../models/zone/gen/road_crack_net_a.glb" cull 70 scale_min 0.8 scale_max 1.5 collision 0 shadows 0
+prop road_net "../models/zone/gen/road_crack_net_b.glb" cull 70 scale_min 0.8 scale_max 1.5 collision 0 shadows 0
+prop road_net "../models/zone/gen/road_tar_patch.glb" cull 70 scale_min 0.8 scale_max 1.5 collision 0 shadows 0
+prop pothole "../models/zone/gen/road_pothole_rim.glb" cull 80 scale_min 0.7 scale_max 1.4 collision 0 shadows 0

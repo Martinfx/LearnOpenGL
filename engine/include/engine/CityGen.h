@@ -208,6 +208,7 @@ struct Settings {
 
     // Nature taking the town back: 0 = kept, 1 = decades of nobody.
     float overgrowth = 0.7f;
+    float roadDecay = 0.6f;          // 0 = sound roads, 1 = broken up: cracks with grass, potholes, sunken pavement slabs
     // Wild ground around the town (m, 0 = none): the roads run on into it, young wood grows over it.
     float outskirts = 60.0f;
 

@@ -122,6 +122,15 @@ příčné jsou číslované (W 14th St … od jihu k severu, počátek podle se
 název, každý název má na mapě PDA jednu značku (na nejdelším úseku). Název náměstí: **Square name**
 (`square_name`, výchozí „Union Square“). Všechny názvy v generátoru jsou anglické/americké.
 
+### Rozpraskané silnice (Nature and decay → Road decay)
+
+`road_decay` 0..1 (editor: Nature and decay → **Road decay**). Na každé ulici: podélné praskliny ve
+stopách kol a uprostřed, příčné mrazové praskliny, síťové praskliny a staré asfaltové záplaty
+(plošné decaly z kitu, role `road_crack`, `road_crack_cross`, `road_net`; modely z
+zonegen/road_decals.py, instancované, bez stínů a kolizí), výtluky (decal `pothole` + prohlubeň v
+terénu, kde se při dešti drží voda, tráva na okraji), u obrubníku rozevřená spára s trávou a na
+chodnících spáry mezi deskami s trávou, propadlé a nadzvednuté desky.
+
 ## 3. Editor
 
 - **Layout:** seed, střed (tlačítko *Camera*), otočení, kořenová skupina, šířky sloupců a řad, třídy ulic na

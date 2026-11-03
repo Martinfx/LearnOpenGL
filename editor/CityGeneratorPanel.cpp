@@ -579,6 +579,9 @@ QWidget* CityGeneratorPanel::rulesTab()
     QFormLayout* nat = section(tr("Nature and decay"));
     number(nat, tr("Overgrowth"), &settings_.overgrowth, 0, 1, 0.05,
            tr("0 = kept, 1 = decades of nobody: grass in the kerb joints, nettles at the walls, seedlings around trees, groves in yards"), QString());
+    number(nat, tr("Road decay"), &settings_.roadDecay, 0, 1, 0.05,
+           tr("0 = sound roads, 1 = broken up: cracks with grass along the wheel tracks and across, potholes (rain collects in them), "
+              "sunken and heaved pavement slabs with grass in the joints"), QString());
     number(nat, tr("Outskirts"), &settings_.outskirts, 0, 2000, 10, tr("Waste ground with young wood around the town; the roads run on into it (0 = none)"));
     v->addStretch(1);
     return w;

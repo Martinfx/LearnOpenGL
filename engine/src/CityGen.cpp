@@ -55,7 +55,7 @@ const std::vector<std::string>& propRoles()
 {
     static const std::vector<std::string> roles{"kerb",  "lamp",  "lamp_leaning", "cable", "car",    "tree",  "sapling",
                                                 "snag",  "bush",  "grass",        "weed",  "nettle", "rubble", "slab",  "meadow",
-                                                "monument", "fountain", "bench", "kiosk", "ivy", "roof_tree"};
+                                                "monument", "fountain", "bench", "kiosk", "ivy", "roof_tree", "road_crack", "road_crack_cross", "road_net", "pothole"};
     return roles;
 }
 
@@ -127,6 +127,7 @@ void Settings::normalize()
     rowGapFactor = std::max(rowGapFactor, 0.0f);
     slabGap = std::max(slabGap, 0.0f);
     overgrowth = std::clamp(overgrowth, 0.0f, 1.0f);
+    roadDecay = std::clamp(roadDecay, 0.0f, 1.0f);
     outskirts = std::clamp(outskirts, 0.0f, 2000.0f);
     treeSurvival = std::clamp(treeSurvival, 0.0f, 1.0f);
     cableChance = std::clamp(cableChance, 0.0f, 1.0f);
@@ -451,6 +452,7 @@ const ScalarField kScalars[] = {
     {"wrecks_per_100m", &Settings::wrecksPer100m},
     {"rubble_per_100m", &Settings::rubblePer100m},
     {"overgrowth", &Settings::overgrowth},
+    {"road_decay", &Settings::roadDecay},
     {"outskirts", &Settings::outskirts},
     {"terrain_ground", nullptr, nullptr, &Settings::terrainGround},
     {"ground_spacing", &Settings::groundSpacing},
@@ -2844,6 +2846,109 @@ private:
     }
 
     // ------------------------------------------------------------ the streets
+    // Decades without repair: the carriageway breaks up. Painted into the terrain, no extra draws:
+    //   cracks  -> zig-zag verge strokes (grass grows in them): along the wheel tracks, across
+    //              every few metres, crazed patches; most where the road meets the kerb
+    //   potholes-> dirt hollows sunk into the height map (rain collects in them as puddles)
+    //   pavement-> slab joints with grass, sunken and lifted slabs (dirt, a few cm down)
+    template <class At>
+    void crackRoad(const Road& r, const StreetProfile& P, float L, const At& at)
+    {
+        const float d = s_.roadDecay;
+        if (d <= 0.01f || !b_.plan.ground.enabled)
+            return;
+        Rng rng(mix(mix(s_.seed, 0xC4AC5u), static_cast<std::uint64_t>(std::lround(r.points.front().x * 10.0f) * 92821 + std::lround(r.points.back().y * 10.0f))));
+        const float cw = P.carriageway * 0.5f, kh = s_.kerbHeight;
+        auto point = [&](float s, float off) {
+            glm::vec2 p, t;
+            at(std::clamp(s, 0.0f, L), p, t);
+            return p + glm::vec2(-t.y, t.x) * std::clamp(off, -cw + 0.1f, cw - 0.1f);
+        };
+        auto crack = [&](float s0, float o0, float s1, float o1, float w) { // a jagged line from (s0, o0) to (s1, o1)
+            std::vector<glm::vec2> pts;
+            const int n = std::max(2, static_cast<int>(std::hypot(s1 - s0, o1 - o0) / 0.9f));
+            for (int k = 0; k <= n; ++k) {
+                const float f = static_cast<float>(k) / static_cast<float>(n);
+                const float j = (k == 0 || k == n) ? 0.0f : rng.range(-0.35f, 0.35f);
+                pts.push_back(point(s0 + (s1 - s0) * f + j * 0.5f, o0 + (o1 - o0) * f + j));
+            }
+            b_.ground(Ground::Verge, pts, 0.0f, w, false);
+        };
+        auto decal = [&](const char* role, float s, float off, float yawOff) {
+            const KitProp* k = b_.anyProp(role, rng);
+            if (!k)
+                return false;
+            glm::vec2 p, t;
+            at(std::clamp(s, 0.0f, L), p, t);
+            const glm::vec2 q = p + glm::vec2(-t.y, t.x) * std::clamp(off, -cw + 0.6f, cw - 0.6f);
+            b_.prop(*k, "Road crack", streetPlants_, q, 0.0f, b_.yawX(t) + yawOff + rng.range(-12.0f, 12.0f), rng);
+            return true;
+        };
+        // Long cracks in the wheel tracks and down the middle (decals); along the kerb the joint
+        // opened up and grass took it (verge strokes).
+        for (const float off : {-cw * 0.55f, cw * 0.55f, 0.0f})
+            for (float s = rng.range(0.0f, 8.0f); s < L - 2.0f; s += rng.range(4.0f, 12.0f) * (1.5f - d))
+                if (rng.chance(0.4f + 0.5f * d))
+                    decal("road_crack", s, off + rng.range(-0.5f, 0.5f), rng.chance(0.5f) ? 0.0f : 180.0f);
+        for (const float off : {-cw + 0.45f, cw - 0.45f})
+            for (float s = rng.range(0.0f, 8.0f); s < L - 2.0f;) {
+                const float len = rng.range(4.0f, 16.0f) * (0.5f + d);
+                if (rng.chance(0.3f + 0.5f * d))
+                    crack(s, off + rng.range(-0.2f, 0.2f), std::min(L, s + len), off + rng.range(-0.3f, 0.3f), 0.12f);
+                s += len + rng.range(4.0f, 16.0f) * (1.4f - d);
+            }
+        // Transverse frost cracks every few metres.
+        for (float s = rng.range(2.0f, 6.0f); s < L - 1.0f; s += rng.range(5.0f, 14.0f) * (1.4f - d))
+            decal("road_crack_cross", s, rng.range(-cw * 0.4f, cw * 0.4f), 90.0f);
+        // Crazed patches and old tar repairs.
+        for (float s = rng.range(5.0f, 25.0f); s < L - 3.0f; s += rng.range(12.0f, 35.0f) * (1.3f - d))
+            decal("road_net", s, rng.range(-cw * 0.6f, cw * 0.6f), rng.range(0.0f, 360.0f));
+        // Potholes: a broken rim (decal) round a hollow sunk into the height map (rain collects in
+        // it as a puddle), grass at the edge.
+        const int holes = static_cast<int>(L / 100.0f * (1.5f + 7.0f * d) * rng.range(0.5f, 1.5f));
+        for (int k = 0; k < holes; ++k) {
+            const float s = rng.range(2.0f, L - 2.0f), o = rng.range(-cw * 0.7f, cw * 0.7f);
+            const KitProp* rim = b_.anyProp("pothole", rng);
+            const glm::vec2 c = point(s, o);
+            const float sc = rim ? rng.range(rim->scaleMin, rim->scaleMax) : 1.0f;
+            if (rim)
+                b_.prop(*rim, "Pothole", streetPlants_, c, 0.0f, rng.range(0.0f, 360.0f), rng, {0.0f, 0.0f}, sc);
+            const float rx = 0.62f * sc;
+            Poly hole;
+            for (int i = 0; i < 10; ++i) {
+                const float t = 6.2831853f * static_cast<float>(i) / 10.0f;
+                hole.push_back(c + glm::vec2(std::cos(t), std::sin(t)) * rx * rng.range(0.85f, 1.1f));
+            }
+            b_.ground(Ground::Lot, hole, -rng.range(0.05f, 0.1f));
+            if (rng.chance(0.5f * s_.overgrowth))
+                b_.plant({"grass", "weed"}, "Pothole grass", streetPlants_, c + glm::vec2(rx * 0.9f, 0.0f), rng, 0.0f, 0.1f);
+        }
+        // Pavements: slab joints with grass, sunken and heaved slabs.
+        if (P.pavement >= 1.0f) {
+            for (const float side : {1.0f, -1.0f}) {
+                const float o0 = side * (cw + 0.3f), o1 = side * (cw + P.pavement - 0.2f);
+                auto pave = [&](float s, float off) {
+                    glm::vec2 p, t;
+                    at(std::clamp(s, 0.0f, L), p, t);
+                    return p + glm::vec2(-t.y, t.x) * off;
+                };
+                for (float s = rng.range(0.0f, 2.0f); s < L; s += rng.range(1.5f, 3.0f))
+                    if (rng.chance(0.25f + 0.5f * d))
+                        b_.ground(Ground::Verge, {pave(s, o0), pave(s + rng.range(-0.1f, 0.1f), o1)}, kh, 0.08f, false);
+                for (float s = rng.range(3.0f, 12.0f); s < L - 1.0f; s += rng.range(6.0f, 20.0f) * (1.3f - d)) {
+                    const float a0 = rng.range(0.0f, 1.0f) * (P.pavement - 1.6f), w = rng.range(0.8f, 1.6f), l = rng.range(0.9f, 2.0f);
+                    const float in0 = side * (cw + 0.3f + a0), in1 = side * (cw + 0.3f + std::min(a0 + w, P.pavement - 0.3f));
+                    const Poly slab{pave(s, in0), pave(s + l, in0), pave(s + l, in1), pave(s, in1)};
+                    const bool sunk = rng.chance(0.7f);
+                    b_.ground(sunk ? Ground::Lot : Ground::Pavement, slab, kh + (sunk ? -rng.range(0.04f, 0.1f) : rng.range(0.03f, 0.07f)));
+                    Poly ring = slab;
+                    ring.push_back(slab.front());
+                    b_.ground(Ground::Verge, ring, kh, 0.1f, false);
+                }
+            }
+        }
+    }
+
     void dressRoad(const Road& r)
     {
         const StreetProfile& P = profile(cls(r.cls));
@@ -2867,6 +2972,7 @@ private:
         if (L < 2.0f * jc)
             return;
         const float cw = P.carriageway * 0.5f;
+        crackRoad(r, P, L, at);
         // Kerbs in whole modules on both sides.
         if (const auto kerbs = b_.kit_.propsWithRole("kerb"); !kerbs.empty() && P.pavement > 0.0f) {
             const float m = kerbs.front()->size > 0.0f ? kerbs.front()->size : 6.0f;
