@@ -41,6 +41,9 @@ struct WeaponSettings {
     std::string animReloadEmpty;  // reload from an empty magazine (with chambering), optional
     float reloadEmptyTime = 0.0f; // s, 0 = reload_time
     std::string animWalk;         // loops while the player moves, optional
+    std::string animFireLast;     // shot that empties the magazine (slide locks back); its last frame is held
+                                  // until the reload, which should then use anim_reload_empty. Optional
+    std::string animInspect;      // looking the weapon over (key in_inspect), optional
     // Aiming down the sights (right mouse). aim_fov 0 = the weapon cannot aim.
     glm::vec3 aimOffset{0.0f};    // view offset while aiming: puts the sights on the screen center
     glm::vec3 aimRotation{0.0f};  // extra pitch, yaw, roll (degrees) while aiming, to line up the sights
@@ -138,6 +141,9 @@ public:
     // (fire, reload, draw) and advances them. Call once per frame or step.
     void animate(float dt, float moveSpeed = 0.0f);
     void drawn();
+    // Inspect key: plays anim_inspect when idle (not while firing, reloading or with the slide locked back).
+    void inspect();
+    bool slideLocked() const; // anim_fire_last has run: the view model holds the empty pose until a reload
     bool animated() const;               // the view model has clips (arms): no procedural swing/reload motion                        // weapon was just switched to: play the draw clip
     Animator animator;                   // pose of viewModel
     bool reloading() const { return reloadTimer_ > 0.0f; }
@@ -166,6 +172,7 @@ private:
     bool firedEvent_ = false;
     bool reloadEvent_ = false;
     bool drawEvent_ = true;
+    bool inspectEvent_ = false;
     unsigned rng_ = 0x9e3779b9u;
 };
 

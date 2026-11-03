@@ -212,6 +212,7 @@ constexpr Binding kBindings[] = {
     {"in_fire", "MOUSE1", "Střelba", static_cast<int>(engine::Action::Fire)},
     {"in_aim", "MOUSE2", "Míření", static_cast<int>(engine::Action::Aim)},
     {"in_reload", "R", "Přebití", static_cast<int>(engine::Action::Reload)},
+    {"in_inspect", "V", "Prohlédnout zbraň", -1},
     {"in_bolt", "G", "Hodit šroub", -1},
     {"in_map", "M", "Mapa", -1},
     {"in_flashlight", "F", "Baterka", -1},
@@ -1286,6 +1287,7 @@ int main(int argc, char** argv)
     bool flashlightHeld = false;
     bool healHeld = false;
     bool boltHeld = false;
+    bool inspectHeld = false;
     bool wasReloading = false;
     if (const int errors = scripts.start())
         LOG_ERROR("script", "%d script error(s), see above", errors);
@@ -1793,8 +1795,10 @@ int main(int argc, char** argv)
     mouse.first = true;
     mouse.delta = glm::vec2(0.0f);
 
-    // Test helpers: FPS_ENGINE_AUTOFIRE=1 holds the trigger, FPS_ENGINE_SCREENSHOT=file.ppm saves the last frame.
+    // Test helpers: FPS_ENGINE_AUTOFIRE=1 holds the trigger, FPS_ENGINE_AIM=1 aims down the sights,
+    // FPS_ENGINE_SCREENSHOT=file.ppm saves the last frame.
     const bool autoFire = std::getenv("FPS_ENGINE_AUTOFIRE") != nullptr;
+    const bool autoAim = std::getenv("FPS_ENGINE_AIM") != nullptr;
     const char* screenshotFile = std::getenv("FPS_ENGINE_SCREENSHOT");
     // Saved game: the player, weapons and every scripted entity as they were.
     auto makeSave = [&] {
@@ -2614,6 +2618,12 @@ int main(int argc, char** argv)
             unjamTimer = std::max(0.0f, unjamTimer - dt);
             const bool fireHeld = ready && (autoFire || input.isDown(engine::Action::Fire));
             bool reloadHeld = ready && input.isDown(engine::Action::Reload);
+            { // V: look the weapon over (its anim_inspect clip)
+                const bool v = ready && captured && !console.open() && keyDown(window, boundKey("in_inspect"));
+                if (v && !inspectHeld)
+                    weapon.inspect();
+                inspectHeld = v;
+            }
             if (jammed[current]) {
                 static bool jamFireHeld = false;
                 if (fireHeld && !jamFireHeld) {
@@ -2639,7 +2649,7 @@ int main(int argc, char** argv)
             }
             if (next != current)
                 weapon.aim(1.0f, false); // switching drops the aim
-            weapon.aim(dt, ready && input.isDown(engine::Action::Aim));
+            weapon.aim(dt, ready && (autoAim || input.isDown(engine::Action::Aim)));
             if (shots > 0) {
                 audio.play(weapon.settings.soundFire, player.eye() + camera.forward() * 0.5f);
                 if (!weapon.settings.melee())

@@ -86,7 +86,7 @@ private:
     Vec3Editor* viewRotation_ = nullptr;
     Vec3Editor* muzzle_ = nullptr;
     std::array<SoundPicker*, 7> sounds_{}; // fire, reload, draw, impact, hit, reload empty, dry fire
-    std::array<QComboBox*, 6> clips_{};  // idle, fire, reload, draw, reload empty, walk
+    std::array<QComboBox*, 8> clips_{};  // idle, fire, reload, draw, reload empty, walk, last shot, inspect
     QLabel* clipInfo_ = nullptr;
     std::array<QWidget*, 14> firearmRows_{}; // rows hidden for melee weapons
     QFormLayout* formLayout_ = nullptr;

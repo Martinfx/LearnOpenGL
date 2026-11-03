@@ -145,6 +145,8 @@ std::string weaponLines(const WeaponSettings& w, const std::filesystem::path& fi
         << "anim_reload_empty " << std::quoted(w.animReloadEmpty) << '\n'
         << "reload_empty_time " << w.reloadEmptyTime << '\n'
         << "anim_walk " << std::quoted(w.animWalk) << '\n'
+        << "anim_fire_last " << std::quoted(w.animFireLast) << '\n'
+        << "anim_inspect " << std::quoted(w.animInspect) << '\n'
         << "aim_offset " << w.aimOffset.x << ' ' << w.aimOffset.y << ' ' << w.aimOffset.z << '\n'
         << "aim_rotation " << w.aimRotation.x << ' ' << w.aimRotation.y << ' ' << w.aimRotation.z << '\n'
         << "aim_fov " << w.aimFov << '\n'
@@ -323,6 +325,8 @@ bool loadWeaponFile(WeaponSettings& weapon, const std::filesystem::path& file, s
         else if (key == "anim_reload_empty") ok = static_cast<bool>(ls >> std::quoted(w.animReloadEmpty));
         else if (key == "reload_empty_time") ok = static_cast<bool>(ls >> w.reloadEmptyTime);
         else if (key == "anim_walk") ok = static_cast<bool>(ls >> std::quoted(w.animWalk));
+        else if (key == "anim_fire_last") ok = static_cast<bool>(ls >> std::quoted(w.animFireLast));
+        else if (key == "anim_inspect") ok = static_cast<bool>(ls >> std::quoted(w.animInspect));
         else if (key == "aim_offset") ok = static_cast<bool>(ls >> w.aimOffset.x >> w.aimOffset.y >> w.aimOffset.z);
         else if (key == "aim_rotation") ok = static_cast<bool>(ls >> w.aimRotation.x >> w.aimRotation.y >> w.aimRotation.z);
         else if (key == "aim_fov") ok = static_cast<bool>(ls >> w.aimFov);
@@ -441,11 +445,24 @@ void Weapon::drawn()
     drawEvent_ = true;
 }
 
+void Weapon::inspect()
+{
+    if (!settings.animInspect.empty() && !reloading() && !slideLocked())
+        inspectEvent_ = true;
+}
+
+bool Weapon::slideLocked() const
+{
+    const Skeleton* skel = viewModel ? viewModel->skeleton.get() : nullptr;
+    return skel && !settings.melee() && ammo_ == 0 && !reloading() && !settings.animFireLast.empty() &&
+           skel->findClip(settings.animFireLast) >= 0;
+}
+
 void Weapon::animate(float dt, float moveSpeed)
 {
     const Skeleton* skel = viewModel ? viewModel->skeleton.get() : nullptr;
     if (!skel || skel->clips.empty()) {
-        firedEvent_ = reloadEvent_ = drawEvent_ = false;
+        firedEvent_ = reloadEvent_ = drawEvent_ = inspectEvent_ = false;
         return;
     }
     auto play = [&](const std::string& name, bool loop, float stretchTo, float fade) {
@@ -458,19 +475,31 @@ void Weapon::animate(float dt, float moveSpeed)
         const float speed = stretchTo > 0.0f && duration > 0.0f ? duration / stretchTo : 1.0f;
         return animator.play(*skel, name, loop, speed, fade, !loop); // loops keep running
     };
+    const bool locked = slideLocked();
+    const bool looping = animator.current.clip >= 0 && animator.current.loop;
     if (reloadEvent_)
         play(reloadEmpty_ ? settings.animReloadEmpty : settings.animReload, false, reloadDuration_, 0.1f);
     else if (firedEvent_)
-        play(settings.animFire, false, settings.melee() ? settings.fireInterval : 0.0f, 0.03f);
+        play(locked ? settings.animFireLast : settings.animFire, false, settings.melee() ? settings.fireInterval : 0.0f, 0.03f);
     else if (drawEvent_)
         play(settings.animDraw, false, 0.0f, 0.0f);
-    firedEvent_ = reloadEvent_ = drawEvent_ = false;
-    // Idle and walk loop; a one-shot clip (fire, reload, draw) plays to its end first.
-    const bool looping = animator.current.clip >= 0 && animator.current.loop;
-    if (animator.current.clip < 0 || animator.finished(*skel) || looping) {
-        const bool walking = moveSpeed > 0.5f && !settings.animWalk.empty() && skel->findClip(settings.animWalk) >= 0;
-        if (!play(walking ? settings.animWalk : settings.animIdle, true, 0.0f, 0.25f) && animator.current.clip < 0)
-            animator.play(*skel, skel->clips.front().name, true);
+    else if (inspectEvent_ && looping && !locked)
+        play(settings.animInspect, false, 0.0f, 0.15f);
+    firedEvent_ = reloadEvent_ = drawEvent_ = inspectEvent_ = false;
+    // Idle and walk loop; a one-shot clip (fire, reload, draw, inspect) plays to its end first.
+    const bool nowLooping = animator.current.clip >= 0 && animator.current.loop;
+    if (animator.current.clip < 0 || animator.finished(*skel) || nowLooping) {
+        const int last = locked ? skel->findClip(settings.animFireLast) : -1;
+        if (last >= 0) { // empty: hold the end of the last shot (slide back) until the reload
+            if (animator.current.clip != last) {
+                play(settings.animFireLast, false, 0.0f, 0.2f);
+                animator.current.time = skel->clips[static_cast<std::size_t>(last)].duration;
+            }
+        } else {
+            const bool walking = moveSpeed > 0.5f && !settings.animWalk.empty() && skel->findClip(settings.animWalk) >= 0;
+            if (!play(walking ? settings.animWalk : settings.animIdle, true, 0.0f, 0.25f) && animator.current.clip < 0)
+                animator.play(*skel, skel->clips.front().name, true);
+        }
     }
     animator.update(*skel, dt);
 }

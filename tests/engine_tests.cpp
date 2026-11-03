@@ -980,6 +980,60 @@ void testWeaponFilesAndLoadout()
     check(std::filesystem::equivalent(copy.modelPath, sidearm.modelPath), "model path rewritten relative to the new file");
 }
 
+// Classic 9 mm service pistol: its own ammo, the slide stays back after the last round until the
+// reload, and the inspect clip only plays when idle.
+void testServicePistol()
+{
+    std::string err;
+    engine::WeaponSettings s;
+    check(engine::loadWeaponFile(s, ENGINE_TEST_ASSETS "/weapons/service9.weapon", &err), "load service9.weapon: " + err);
+    check(s.ammoType == "9x19" && s.magazineSize == 8 && !s.automatic && s.animFireLast == "fire_last" && s.animInspect == "inspect",
+          "9 mm service pistol: 8 rounds of 9x19, semi-automatic, last-shot and inspect clips");
+    check(engine::saveWeaponFile(s, "service9_copy.weapon", &err), "save service9: " + err);
+    engine::WeaponSettings copy;
+    check(engine::loadWeaponFile(copy, "service9_copy.weapon", &err) && copy.animFireLast == s.animFireLast &&
+              copy.animInspect == s.animInspect, "last-shot and inspect clips survive a save");
+    auto model = engine::loadCharacterModel(s.modelPath, &err);
+    check(model && model->skeleton, "load fp_service9.glb: " + err);
+    if (!model || !model->skeleton)
+        return;
+    const engine::Skeleton& sk = *model->skeleton;
+    for (const char* clip : {"idle", "fire", "fire_last", "reload", "reload_empty", "draw", "inspect"})
+        check(sk.findClip(clip) >= 0, std::string("fp_service9 has the clip ") + clip);
+    check(model->localBounds.max.z - model->localBounds.min.z < 1.0f, "view model is in metres");
+
+    engine::Weapon w(s);
+    w.viewModel = model;
+    int stock = 16;
+    w.setReserve(&stock);
+    w.update(1.0f / 60.0f, false, true); // reload the empty start magazine
+    for (int i = 0; i < 200 && w.reloading(); ++i)
+        w.update(1.0f / 60.0f, false, false);
+    for (int i = 0; i < 200; ++i) // draw, then the reload clip, back to idle
+        w.animate(1.0f / 60.0f);
+    w.inspect();
+    w.animate(1.0f / 60.0f);
+    check(w.animator.clipName(sk) == "inspect", "V plays the inspect clip when idle (" + w.animator.clipName(sk) + ")");
+    for (int i = 0; i < 120; ++i)
+        w.animate(1.0f / 60.0f);
+    int shots = 0;
+    for (int i = 0; i < 600 && w.ammo() > 0; ++i) {
+        shots += w.update(1.0f / 60.0f, i % 2 == 0, false); // semi-automatic: pull, release
+        w.animate(1.0f / 60.0f);
+    }
+    check(shots == 8 && w.slideLocked(), "eight shots empty the magazine and lock the slide back");
+    for (int i = 0; i < 120; ++i)
+        w.animate(1.0f / 60.0f);
+    check(w.animator.clipName(sk) == "fire_last" && w.animator.finished(sk), "the empty pistol holds the end of fire_last");
+    w.inspect();
+    w.animate(1.0f / 60.0f);
+    check(w.animator.clipName(sk) == "fire_last", "no inspecting with the slide locked back");
+    w.update(1.0f / 60.0f, false, true);
+    w.animate(1.0f / 60.0f);
+    check(w.reloading() && w.reloadingFromEmpty() && w.animator.clipName(sk) == "reload_empty" && !w.slideLocked(),
+          "the reload from the locked slide plays reload_empty");
+}
+
 void testKnifeAndGuns()
 {
     std::string err;
@@ -4873,6 +4927,7 @@ int main(int argc, char** argv)
         {"testWeaponFilesAndLoadout", testWeaponFilesAndLoadout},
         {"testSemiAutomatic", testSemiAutomatic},
         {"testKnifeAndGuns", testKnifeAndGuns},
+        {"testServicePistol", testServicePistol},
         {"testHierarchyAndDependencies", testHierarchyAndDependencies},
         {"testJobSystem", testJobSystem},
         {"testRotateGizmo", testRotateGizmo},

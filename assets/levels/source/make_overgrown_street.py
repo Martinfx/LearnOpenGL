@@ -314,6 +314,9 @@ def build():
     ents_extra.append(f'entity "Camp ammo" "pickup" {cx - 2.1:.2f} 0.4 {cz - 1.2:.2f} 75 0.285 0.105 0.197 0.9 0.8 0.3 ""\n'
                       '  parent "Camp"\n  character "../models/props/pickups/ammo_can_rifle.glb" 1 0 ""\n'
                       '  prop "ammo_type" "5.45x39"\n  prop "amount" "60"\n  prop "item" "ammo"')
+    ents_extra.append(f'entity "Camp pistol rounds" "pickup" {cx - 2.8:.2f} 0.4 {cz - 1.1:.2f} 20 0.1 0.042 0.06 0.9 0.8 0.3 ""\n'
+                      '  parent "Camp"\n  character "../models/props/pickups/ammo_box_pistol.glb" 1 0 ""\n'
+                      '  prop "ammo_type" "9x19"\n  prop "amount" "16"\n  prop "item" "ammo"')
     # ------------------------------------------------------------------ the Zone in the street
     # an electric field across the road past the camp (the way on bends round it), a fire vent by the burnt car it
     # burnt, an acid pool in the cross street, radiation in the rubble of the shelled house_e; crows on two heaps
@@ -533,7 +536,7 @@ def build():
            'puddles': '0.6', 'wind': '0.55'}
     head += [f'env {k} {v}' for k, v in env.items()]
     head += ['loading_title "Mulberry Street"', 'loading_hint "Projdi ulicí na sever, k barikádě na jejím konci."',
-             'weapon "../weapons/ak74.weapon"', 'weapon "../weapons/pistol.weapon"', 'weapon "../weapons/knife.weapon"']
+             'weapon "../weapons/ak74.weapon"', 'weapon "../weapons/service9.weapon"', 'weapon "../weapons/knife.weapon"']
     head.append('ambience "../sounds/ambience/street_storm.ambience"')
     head.append(f'terrain "{NAME}.terrain"')
     head += [f'terrain_layer {i} "{m}" {t:g}' for i, (m, t) in enumerate(LAYERS)]

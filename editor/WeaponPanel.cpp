@@ -100,7 +100,8 @@ WeaponPanel::WeaponPanel(engine::Scene* scene, QWidget* parent) : QWidget(parent
     muzzle_->setToolTip(tr("Muzzle flash position in model units"));
     clipInfo_ = new QLabel(form_);
     clipInfo_->setWordWrap(true);
-    const char* clipLabels[6] = {"Idle clip", "Fire / swing clip", "Reload clip", "Draw clip", "Empty reload clip", "Walk clip"};
+    const char* clipLabels[8] = {"Idle clip", "Fire / swing clip", "Reload clip", "Draw clip", "Empty reload clip", "Walk clip",
+                                 "Last shot clip", "Inspect clip"};
     damageLabel_ = new QLabel(tr("Damage"), form_);
     intervalLabel_ = new QLabel(tr("Fire interval"), form_);
     spreadLabel_ = new QLabel(tr("Spread"), form_);
@@ -176,7 +177,7 @@ WeaponPanel::WeaponPanel(engine::Scene* scene, QWidget* parent) : QWidget(parent
     form->addRow(tr("Aimed spread"), aimSpread_);
     form->addRow(new QLabel(tr("<b>Arms / weapon animation</b>"), form_));
     form->addRow(QString(), clipInfo_);
-    for (int i = 0; i < 6; ++i) {
+    for (int i = 0; i < 8; ++i) {
         clips_[static_cast<std::size_t>(i)] = new QComboBox(form_);
         clips_[static_cast<std::size_t>(i)]->setEditable(true);
         form->addRow(tr(clipLabels[i]), clips_[static_cast<std::size_t>(i)]);
@@ -213,7 +214,8 @@ WeaponPanel::WeaponPanel(engine::Scene* scene, QWidget* parent) : QWidget(parent
                   {viewOffset_, {"view_offset"}}, {viewRotation_, {"view_rotation"}}, {viewScale_, {"view_scale"}},
                   {muzzle_, {"muzzle"}}, {aimFov_, {"aim_fov"}}, {aimOffset_, {"aim_offset"}},
                   {aimRotation_, {"aim_rotation"}}, {aimTime_, {"aim_time"}}, {aimSpread_, {"aim_spread"}}};
-    const char* clipKeys[6] = {"anim_idle", "anim_fire", "anim_reload", "anim_draw", "anim_reload_empty", "anim_walk"};
+    const char* clipKeys[8] = {"anim_idle", "anim_fire", "anim_reload", "anim_draw", "anim_reload_empty", "anim_walk",
+                               "anim_fire_last", "anim_inspect"};
     for (std::size_t i = 0; i < clips_.size(); ++i)
         fieldKeys_.push_back({clips_[i], {clipKeys[i]}});
     const char* soundKeys[7] = {"sound_fire", "sound_reload", "sound_draw", "sound_impact", "sound_hit",
@@ -457,8 +459,9 @@ void WeaponPanel::fillClipNames()
                                 "reloading and drawing; otherwise the weapon is moved procedurally.")
                            : tr("%n clip(s) in the model. Reload and swing clips are stretched to their times.", nullptr,
                                 static_cast<int>(names.size())));
-    const std::string* values[6] = {&w->animIdle, &w->animFire, &w->animReload, &w->animDraw, &w->animReloadEmpty, &w->animWalk};
-    for (std::size_t i = 0; i < 6; ++i) {
+    const std::string* values[8] = {&w->animIdle, &w->animFire, &w->animReload, &w->animDraw, &w->animReloadEmpty, &w->animWalk,
+                                    &w->animFireLast, &w->animInspect};
+    for (std::size_t i = 0; i < 8; ++i) {
         QComboBox* c = clips_[i];
         c->clear();
         c->addItem(QString());
@@ -524,6 +527,8 @@ void WeaponPanel::edited()
     w->animDraw = clips_[3]->currentText().toStdString();
     w->animReloadEmpty = clips_[4]->currentText().toStdString();
     w->animWalk = clips_[5]->currentText().toStdString();
+    w->animFireLast = clips_[6]->currentText().toStdString();
+    w->animInspect = clips_[7]->currentText().toStdString();
     modified_[scene_->loadout[static_cast<std::size_t>(list_->currentRow())]] = true;
     list_->currentItem()->setText(QString("%1  %2").arg(list_->currentRow() + 1).arg(name_->text()));
     markOverrides();

@@ -1,0 +1,11 @@
+# Sound: variations (one is picked at random per play) and playback settings
+file "reload_service9.wav"
+volume 0.85
+pitch 0.97 1.03
+distance 1 25
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group sfx
+max_instances 2

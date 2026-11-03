@@ -306,7 +306,7 @@ private:
     QSpinBox* pickupAmount_ = nullptr;
     QLineEdit* pickupWeapon_ = nullptr;
     QLineEdit* pickupName_ = nullptr;
-    void addPickup(const QString& item, const QString& model);
+    void addPickup(const QString& item, const QString& model, const QString& weaponFile = {}, const QString& weaponName = {});
     QFormLayout* ambienceForm_ = nullptr;         // entity type "ambience"
     SoundPicker* ambienceSet_ = nullptr;
     QDoubleSpinBox* ambienceFade_ = nullptr;

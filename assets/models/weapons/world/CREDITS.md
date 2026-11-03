@@ -3,6 +3,7 @@
 | File / folder | Source | Author | License |
 |---|---|---|---|
 | `service_pistol/` (2K, two grip variants, magazines, bullet) | https://polyhaven.com/a/service_pistol | Mateusz Sadek | CC0 1.0 |
+| `service9.gltf` + `.bin` (the wooden-grip pistol of `service_pistol/` alone, magazine in, lying on its side; uses its textures) | https://polyhaven.com/a/service_pistol, cut by `../fps/source/build_service9.py` | Mateusz Sadek | CC0 1.0 |
 | `machete/` (2K) | https://polyhaven.com/a/machete | Ulan Cabanilla | CC0 1.0 |
 | `ornate_medieval_dagger/` (2K) | https://polyhaven.com/a/ornate_medieval_dagger | Sofia Pahaoja | CC0 1.0 |
 | `fish_knife/` (2K) | https://polyhaven.com/a/fish_knife | Mateusz Sadek | CC0 1.0 |

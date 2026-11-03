@@ -247,8 +247,12 @@ void MainWindow::buildMenus()
         QMenu* pickup = edit->addMenu(tr("Add pic&kup"));
         pickup->addAction(tr("Rifle ammo (5.45x39)"), this, [this] { addPickup("ammo:5.45x39:30", "models/props/pickups/ammo_can_rifle.glb"); });
         pickup->addAction(tr("Pistol ammo (9x18)"), this, [this] { addPickup("ammo:9x18:16", "models/props/pickups/ammo_box_pistol.glb"); });
+        pickup->addAction(tr("Pistol ammo (9x19)"), this, [this] { addPickup("ammo:9x19:16", "models/props/pickups/ammo_box_pistol.glb"); });
         pickup->addAction(tr("Medkit"), this, [this] { addPickup("medkit", "models/props/pickups/medkit_pouch.glb"); });
         pickup->addAction(tr("Weapon (AK-74)"), this, [this] { addPickup("weapon", "models/weapons/world/ak47.glb"); });
+        pickup->addAction(tr("Weapon (9mm service pistol)"), this, [this] {
+            addPickup("weapon", "models/weapons/world/service9.gltf", "weapons/service9.weapon", "@weapon.service9");
+        });
     }
     edit->addAction(tr("Add &water (river, pond)"), this, [this] { addEntity("water"); });
     edit->addAction(tr("Add re&verb zone"), this, [this] { addEntity("reverb"); });
@@ -4073,7 +4077,7 @@ void MainWindow::addEntity(const QString& type)
     markDirty();
 }
 
-void MainWindow::addPickup(const QString& item, const QString& model)
+void MainWindow::addPickup(const QString& item, const QString& model, const QString& weaponFile, const QString& weaponName)
 {
     const auto& cam = viewport_->camera();
     const glm::vec3 p = cam.position + cam.flatForward() * 4.0f;
@@ -4086,8 +4090,8 @@ void MainWindow::addPickup(const QString& item, const QString& model)
         e.properties["amount"] = parts.at(2).toStdString();
     }
     if (parts.at(0) == "weapon") {
-        e.properties["weapon"] = "weapons/ak74.weapon";
-        e.properties["name"] = "AK-74";
+        e.properties["weapon"] = weaponFile.isEmpty() ? std::string("weapons/ak74.weapon") : weaponFile.toStdString();
+        e.properties["name"] = weaponName.isEmpty() ? std::string("AK-74") : weaponName.toStdString();
     }
     e.name = engine::uniqueNodeName(scene_, (parts.at(0) == "medkit" ? "Medkit " : parts.at(0) == "weapon" ? "Weapon pickup " : "Ammo ") +
                                                 std::to_string(scene_.entities.size() + 1));

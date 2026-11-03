@@ -8,6 +8,7 @@ Each file is one skinned glTF (GLB): realistic arms (dirty bare hands, dark gree
 | `fp_pistol.glb` | Makarov PM (plain, suppressor and red dot removed), Cransh (CC-BY 4.0), black gloves | `idle` 1.96 s loop, `fire` 0.29 s, `reload` 2.21 s, `reload_empty` 2.96 s, `walk` 0.96 s loop (no `draw`) |
 | `fp_smg.glb` | Compact SMG (olive), Cransh (CC-BY 4.0), leather gloves | `idle` 1.63 s loop, `fire` 0.29 s, `reload` 3.92 s, `reload_empty` 4.38 s, `draw` 0.63 s, `inspect` 7.25 s, `walk` 0.71 s loop, `run` 0.46 s loop |
 | `fp_knife.glb` | Combat knife, DJMaesen (CC-BY 4.0), gloves | `idle` 1.33 s loop, `slash` 0.67 s, `slash2` 0.67 s, `stab` 0.75 s, `slash3` 0.75 s, `draw` 0.33 s |
+| `fp_service9.glb` | Classic 9 mm service pistol (Poly Haven, CC0) in the DJMaesen heavy pistol arms (CC-BY 4.0), gloves, two-hand grip | `idle` 0.83 s loop, `fire` 0.42 s, `fire_last` 0.42 s (slide locks back, held by the engine until the reload), `reload` 2.33 s (racks the slide at the end), `reload_empty` 1.75 s (from the locked slide, slide release), `draw` 1.04 s, `inspect` 0.92 s |
 | `fp_heavy_pistol.glb` | Heavy .50 pistol, DJMaesen (CC-BY 4.0), bare hands, two-hand grip | `idle` 0.83 s loop, `fire` 0.42 s, `fire_last` 0.42 s (slide locks back), `reload` 2.42 s, `reload_empty` 1.75 s (from locked slide), `draw` 1.08 s, `inspect` 0.92 s |
 
 `fp_ak74.glb`, `fp_pistol.glb` and `fp_smg.glb` are professional Cransh rigs. `fp_knife.glb` and `fp_heavy_pistol.glb` (DJMaesen) have their weapon parts (knife, slide, magazine, ...) baked onto extra `W_*` bones and rigidly skinned, so only skinning is needed. The knife viewmodel shows only the right arm (left arm removed) and sits 4 cm right, 5 cm lower and 6 cm further than the source camera. Heavy pistol muzzle about `0.04 -0.03 -0.50`; both use eye (6, 50, 12) in the source and scale 0.00657.
@@ -21,6 +22,14 @@ Both use the same bone names as the AK (`Head_Cam_014`, `PBody_058`, `Pmag_*`, `
 scaled so the rifle is 0.943 m). The weapon is held almost centred (muzzle about `0.03 -0.06 -0.68`).
 Bones: `PBody_058` (weapon body), `Pmag_062` (magazine), `Pmag2_063` (spare magazine used in reloads),
 `Trigger_060`, `Hand_R_037` / `Hand_L_016`, `Head_Cam_014` (the animator's camera; its motion can drive camera shake).
+
+`fp_service9.glb` notes: built from `fp_heavy_pistol.glb` and `../world/service_pistol/` by
+`python3 source/build_service9.py fp_heavy_pistol.glb ../world/service_pistol/service_pistol.gltf fp_service9.glb ../world/service9.gltf`
+(no Blender needed). Every Talon part is swapped for the matching service pistol part on the same `W_*` bone (`W_base`, `W_slide`,
+`W_hammer`, `W_trigger`, `W_clip`, `W_bullet*`; the slide catch is dropped), placed so trigger and back strap sit where the Talon's were.
+Muzzle about `0.04 -0.024 -0.49`, sights lined up by `aim_offset -0.0397 0.0377 0` + `aim_rotation -3.47 0 0`.
+The same script writes the world model `../world/service9.gltf` (gun alone with the magazine in, lying on its right side, shares
+the Poly Haven textures).
 
 ## Conventions
 

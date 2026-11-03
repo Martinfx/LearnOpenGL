@@ -80,7 +80,7 @@ std::vector<PickupResult> collectPickups(engine::Scene& scene, glm::vec3 feet, I
                 r.sound = property(e, "sound", "sounds/items/pickup_ammo.sound");
             } else {
                 r.weapon = path;
-                r.message = engine::trf("pickup.item", property(e, "name", path.stem().string()));
+                r.message = engine::trf("pickup.item", engine::localize(property(e, "name", path.stem().string())));
                 r.sound = property(e, "sound", "sounds/items/pickup_weapon.sound");
             }
         } else { // ammo; without a type the rounds of the weapon in hand

@@ -23,6 +23,7 @@ ItemCatalog defaultItems()
     c.items.push_back({ItemDef::Kind::Medkit, "medkit", "Lékárnička", 250, 0.4f});
     c.items.push_back({ItemDef::Kind::Ammo, "5.45x39", "Náboje 5,45×39", 3, 0.012f});
     c.items.push_back({ItemDef::Kind::Ammo, "9x18", "Náboje 9×18", 2, 0.011f});
+    c.items.push_back({ItemDef::Kind::Ammo, "9x19", "Náboje 9×19", 2, 0.012f});
     c.items.push_back({ItemDef::Kind::Armor, "jacket", "Kožená bunda", 1200, 2.5f, 0.2f, 0.004f});
     return c;
 }

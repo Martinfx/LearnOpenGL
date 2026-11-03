@@ -2762,3 +2762,11 @@ ce818c86a58d6742 weapons/pistol.weapon
 9303eb33943b340d models/zone/skrunda/joint_verge_soil.glb
 3555e1c25333721b models/zone/skrunda/joint_wall_grime.glb
 899e0d15a7dce1e5 models/zone/textures/joints_albedo.png
+52403c38b429c9ee models/weapons/fps/fp_service9.glb
+ee78ed6e87f38291 models/weapons/world/service9.bin
+35f7fae40859e7f6 models/weapons/world/service9.gltf
+e4d5176aa1769b90 sounds/weapons/reload_service9.sound
+543392088cae4600 sounds/weapons/reload_service9.wav
+2640bf52cdf31e2c sounds/weapons/reload_service9_empty.sound
+dd1fbd9b65180bfe sounds/weapons/reload_service9_empty.wav
+1f86c9ab2c712d6e weapons/service9.weapon
