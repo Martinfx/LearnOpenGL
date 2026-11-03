@@ -294,6 +294,8 @@ public:
         float renderScale = 1.0f; // scene resolution used (renderScale x dynamic resolution)
     };
     const FrameStats& frameStats() const { return stats_; }
+    // Cost breakdown of the main shader (pbr.frag uDebugSkip bits; the feature profile): 0 = all.
+    void setShaderDebugSkip(int bits) { shaderDebugSkip_ = bits; }
 
     // Texture size / streaming changes apply to loaded textures too (streamed from the cook cache).
     void setQuality(const RenderQuality& quality);
@@ -728,6 +730,7 @@ private:
         float damage = 0.0f, lowHealth = 0.0f, radiation = 0.0f, lensRain = 0.0f, focus = 0.0f, dofBlur = 0.0f;
     } screenFx_;
     // Dynamic resolution (RenderQuality::dynamicTargetFps): current factor, smoothed GPU time.
+    int shaderDebugSkip_ = 0;
     float dynScale_ = 1.0f;
     double dynGpuMs_ = 0.0;
     double dynLastChange_ = 0.0;

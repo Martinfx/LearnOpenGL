@@ -276,27 +276,30 @@ struct FeatureProfile {
     struct Change {
         const char* name;
         std::function<void(engine::RenderQuality&, engine::Environment&)> apply;
+        int shaderSkip = 0; // pbr.frag parts left out
     };
     static const std::vector<Change>& changes()
     {
         static const std::vector<Change> list = {
-            {"soft shadows (PCSS) off", [](engine::RenderQuality& q, engine::Environment&) { q.softShadows = false; }},
             {"contact shadows off", [](engine::RenderQuality& q, engine::Environment&) { q.contactShadows = false; }},
             {"SSR off", [](engine::RenderQuality& q, engine::Environment&) { q.ssr = false; }},
-            {"SSR 28 steps (Ultra)", [](engine::RenderQuality& q, engine::Environment&) { q.ssrSteps = 28; }},
-            {"PCSS 16 taps (Ultra)", [](engine::RenderQuality& q, engine::Environment&) { q.softShadowTaps = 16; }},
-            {"SSGI off", [](engine::RenderQuality& q, engine::Environment&) { q.ssgi = false; }},
             {"SSAO + SSGI off", [](engine::RenderQuality& q, engine::Environment&) { q.ssao = false; q.ssgi = false; }},
             {"sky occlusion off", [](engine::RenderQuality&, engine::Environment& e) { e.skyOcclusion = 0.0f; }},
-            {"sky occlusion 3 rays", [](engine::RenderQuality& q, engine::Environment&) { q.skyOcclusionDirs = 3; }},
-            {"volumetric fog medium", [](engine::RenderQuality& q, engine::Environment&) { q.volumetricFog = 1; }},
             {"volumetric fog off", [](engine::RenderQuality& q, engine::Environment&) { q.volumetricFog = 0; }},
             {"parallax off", [](engine::RenderQuality& q, engine::Environment&) { q.parallax = false; }},
             {"shadow maps 1024", [](engine::RenderQuality& q, engine::Environment&) { q.shadowResolution = 1024; }},
-            {"grass density far 0.05", [](engine::RenderQuality& q, engine::Environment&) { q.detailDensityFar = 0.05f; }},
             {"LOD distances x0.5", [](engine::RenderQuality& q, engine::Environment&) { q.lodScale = 0.5f; }},
-            {"render scale 0.7", [](engine::RenderQuality& q, engine::Environment&) { q.renderScale = 0.7f; }},
             {"TAA -> FXAA", [](engine::RenderQuality& q, engine::Environment&) { q.taa = false; q.fxaa = true; }},
+            // Parts of the main shader (pbr.frag uDebugSkip): where the cost per pixel goes.
+            {"shader: terrain noise", nullptr, 1},
+            {"shader: local lights", nullptr, 2},
+            {"shader: probes", nullptr, 4},
+            {"shader: fog", nullptr, 8},
+            {"shader: rain", nullptr, 16},
+            {"shader: sun shadow", nullptr, 32},
+            {"shader: normal maps", nullptr, 64},
+            {"shader: interiors", nullptr, 128},
+            {"render scale 0.7", [](engine::RenderQuality& q, engine::Environment&) { q.renderScale = 0.7f; }},
             {"Medium preset", [](engine::RenderQuality& q, engine::Environment&) {
                  const engine::RenderQuality keep = q;
                  q = engine::RenderQuality::preset(1);
@@ -354,6 +357,7 @@ struct FeatureProfile {
             return;
         }
         renderer.setQuality(base);
+        renderer.setShaderDebugSkip(0);
         env.skyOcclusion = baseSkyOcclusion;
         LOG_INFO("profile", "Done, the game goes on with the normal settings.");
         LOG_INFO("profile", "%-28s %8s %8s %8s %14s", "feature", "all on", "off", "saved", "opaque saved");
@@ -365,9 +369,15 @@ struct FeatureProfile {
     {
         engine::RenderQuality q = base;
         env.skyOcclusion = baseSkyOcclusion;
-        if (phase % 2 == 1)
-            changes()[static_cast<std::size_t>(phase / 2)].apply(q, env);
+        int skip = 0;
+        if (phase % 2 == 1) {
+            const Change& c = changes()[static_cast<std::size_t>(phase / 2)];
+            if (c.apply)
+                c.apply(q, env);
+            skip = c.shaderSkip;
+        }
         renderer.setQuality(q);
+        renderer.setShaderDebugSkip(skip);
     }
 };
 

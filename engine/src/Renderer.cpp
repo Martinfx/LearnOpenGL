@@ -635,6 +635,8 @@ void Renderer::useMeshProgram(const Program& p)
     loc_.overlay = p.loc("uOverlay");
     loc_.envRotation = p.loc("uEnvRotation");
     loc_.overlaySun = p.loc("uOverlaySunDir");
+    if (const int skip = p.loc("uDebugSkip"); skip >= 0)
+        glUniform1i(skip, shaderDebugSkip_);
     loc_.alphaMode = p.loc("uAlphaMode");
     loc_.instanced = p.loc("uInstanced");
     loc_.sway = p.loc("uSway");

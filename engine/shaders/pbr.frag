@@ -326,6 +326,11 @@ vec2 parallaxUv(vec2 uv, vec3 n, vec3 toEye) {
     return uv + shift * mix(prevDepth, depth, t);
 }
 
+// Cost breakdown (FPS_ENGINE_PROFILE): parts of the shading left out, 0 in normal rendering.
+// 1 terrain noise and second samples, 2 local lights, 4 probes, 8 fog, 16 rain, 32 sun shadow,
+// 64 normal maps, 128 interior volumes.
+uniform int uDebugSkip;
+
 void main() {
     if (uFade.y > 0.0) {
         float k = smoothstep(uFade.x, uFade.y, length(vWorldPos - uCameraPos.xyz));
@@ -371,8 +376,11 @@ void main() {
         terrainDx = dFdx(p);
         terrainDy = dFdy(p);
         terrainFar = smoothstep(12.0, 70.0, distance(vWorldPos, uCameraPos.xyz));
-        vec2 warp = vec2(fbm(p * 0.19), fbm(p * 0.19 + vec2(31.7, 11.3))) - 0.5;
-        warp += (vec2(valueNoise(p * 1.7), valueNoise(p * 1.7 + vec2(7.3, 3.1))) - 0.5) * 0.3;
+        vec2 warp = vec2(0.0);
+        if ((uDebugSkip & 1) == 0) {
+            warp = vec2(fbm(p * 0.19), fbm(p * 0.19 + vec2(31.7, 11.3))) - 0.5;
+            warp += (vec2(valueNoise(p * 1.7), valueNoise(p * 1.7 + vec2(7.3, 3.1))) - 0.5) * 0.3;
+        }
         vec2 st = (p + warp * 3.2 - uTerrainOrigin) / uTerrainSize;
         vec4 a = texture(uTerrainSplat, vec3(st, 0.0)), b = texture(uTerrainSplat, vec3(st, 1.0));
         float sum = max(dot(a, vec4(1.0)) + dot(b, vec4(1.0)), 1e-4);
@@ -403,7 +411,9 @@ void main() {
                 vec2 uvA, uvB;
                 float k = terrainBomb(p, uLayerTiling[i], float(i), terrainFar, uvA, uvB);
                 vec3 tA = textureGrad(uLayerAlbedo, vec3(uvA, float(i)), terrainDx * uLayerTiling[i], terrainDy * uLayerTiling[i]).rgb;
-                vec3 tB = textureGrad(uLayerAlbedo, vec3(uvB, float(i)), kTerrainRot * terrainDx * uLayerTiling[i] * kTerrainScale,
+                if ((uDebugSkip & 1) != 0)
+                    k = 0.0;
+                vec3 tB = k <= 0.0 ? tA : textureGrad(uLayerAlbedo, vec3(uvB, float(i)), kTerrainRot * terrainDx * uLayerTiling[i] * kTerrainScale,
                                       kTerrainRot * terrainDy * uLayerTiling[i] * kTerrainScale).rgb;
                 vec3 t = mix(tA, tB, k);
                 c *= t;
@@ -426,7 +436,11 @@ void main() {
         }
         // Large-scale variation: patches of lighter and darker, greener and more yellow ground
         // (tens of metres), so a meadow is not one flat colour to the horizon.
-        float m1 = fbm(p * 0.017 + vec2(3.7, 1.9)), m2 = fbm(p * 0.043 + vec2(11.0, 5.0));
+        float m1 = 0.5, m2 = 0.5;
+        if ((uDebugSkip & 1) == 0) {
+            m1 = fbm(p * 0.017 + vec2(3.7, 1.9));
+            m2 = fbm(p * 0.043 + vec2(11.0, 5.0));
+        }
         // Kept gentle: stronger swings read as stains, not as a meadow drying out unevenly.
         albedo *= mix(0.9, 1.08, m1);
         albedo *= mix(vec3(1.035, 1.0, 0.93), vec3(0.97, 1.01, 1.03), m2);
@@ -482,7 +496,7 @@ void main() {
     }
     if (uShading == 2)
         albedo = vec3(0.5); // lighting only
-    if (uHasNormalMap) {
+    if (uHasNormalMap && (uDebugSkip & 64) == 0) {
         // X and Y only, Z rebuilt: works for RGB maps and two-channel BC5 maps alike.
         vec3 m;
         m.xy = texture(uNormalMap, uv).xy * 2.0 - 1.0;
@@ -525,10 +539,17 @@ void main() {
             }
             vec2 uvA, uvB;
             float k = terrainBomb(p, uLayerTiling[i], float(i), terrainFar, uvA, uvB);
+            if ((uDebugSkip & 64) != 0) {
+                m.z += terrainW[i];
+                continue;
+            }
             vec2 xyA = textureGrad(uLayerNormal, vec3(uvA, float(i)), terrainDx * uLayerTiling[i], terrainDy * uLayerTiling[i]).xy * 2.0 - 1.0;
-            vec2 xyB = textureGrad(uLayerNormal, vec3(uvB, float(i)), kTerrainRot * terrainDx * uLayerTiling[i] * kTerrainScale,
-                                   kTerrainRot * terrainDy * uLayerTiling[i] * kTerrainScale).xy * 2.0 - 1.0;
-            vec2 xy = mix(xyA, transpose(kTerrainRot) * xyB, k); // back from the rotated copy's frame
+            vec2 xy = xyA;
+            if ((uDebugSkip & 1) == 0) {
+                vec2 xyB = textureGrad(uLayerNormal, vec3(uvB, float(i)), kTerrainRot * terrainDx * uLayerTiling[i] * kTerrainScale,
+                                       kTerrainRot * terrainDy * uLayerTiling[i] * kTerrainScale).xy * 2.0 - 1.0;
+                xy = mix(xyA, transpose(kTerrainRot) * xyB, k);
+            } // back from the rotated copy's frame
             m += terrainW[i] * vec3(xy * uLayerNormalStrength[i], sqrt(max(1.0 - dot(xy, xy), 0.0)));
         }
         m.z = max(m.z, 1e-3);
@@ -564,7 +585,7 @@ void main() {
     // Rain: surfaces open to the sky darken and turn glossy, flat ground collects puddles
     // with ripples while it rains; lightning lights everything under the open sky.
     float skyOpen = 1.0;
-    if (!uOverlay && (uWeather.x > 0.0 || uWeather.y > 0.0)) {
+    if (!uOverlay && (uWeather.x > 0.0 || uWeather.y > 0.0) && (uDebugSkip & 16) == 0) {
         vec3 geo = normalize(vNormal) * (gl_FrontFacing ? 1.0 : -1.0);
         skyOpen = rainExposure(vWorldPos + geo * 0.05);
         float wet = uWeather.x * skyOpen * mix(0.4, 1.0, smoothstep(-0.2, 0.6, geo.y));
@@ -611,14 +632,14 @@ void main() {
     // as at least a 2x2 quad): it gets the cheaper sun shadow, no contact shadows and a coarser sky
     // occlusion, which its own detail hides.
     bool foliage = !uOverlay && uAlphaMode == 1 && vSway > 0.0;
-    float shadow = uOverlay || nl <= 0.0 ? 1.0 : sunShadow(vWorldPos, normalize(vNormal), nl, foliage);
-    if (!uOverlay && nl > 0.0)
+    float shadow = uOverlay || nl <= 0.0 || (uDebugSkip & 32) != 0 ? 1.0 : sunShadow(vWorldPos, normalize(vNormal), nl, foliage);
+    if (!uOverlay && nl > 0.0 && (uDebugSkip & 32) == 0)
         shadow *= cloudShadow(vWorldPos);
     if (!uOverlay && shadow > 0.01 && !foliage)
         shadow *= contactShadow(vWorldPos, normalize(vNormal));
     // Inside an interior volume the sky light is dimmed (the first-person layer: where the camera is,
     // and the sun too, as the overlay has no shadows).
-    float interiorSky = interiorFactors(uOverlay ? uCameraPos.xyz : vWorldPos).x;
+    float interiorSky = (uDebugSkip & 128) != 0 ? 1.0 : interiorFactors(uOverlay ? uCameraPos.xyz : vWorldPos).x;
     if (uOverlay)
         shadow *= interiorSky;
     vec3 color = (diffuse + specular) * uSunColor.rgb * uSunDir.w * nl * shadow;
@@ -632,7 +653,7 @@ void main() {
     if (uOverlay) // view space -> world
         color += localLights(uEnvRotation * vWorldPos + uCameraPos.xyz, uEnvRotation * n, uEnvRotation * normalize(vNormal), uEnvRotation * v,
                              albedo, rough, metal, f0, true);
-    else
+    else if ((uDebugSkip & 2) == 0)
         color += localLights(vWorldPos, n, normalize(vNormal) * (gl_FrontFacing ? 1.0 : -1.0), v, albedo, rough, metal, f0, false);
 
     // Sky light: prefiltered environment for reflections, its blurriest level for diffuse.
@@ -644,7 +665,7 @@ void main() {
     float skyVis = uOverlay ? 1.0 : skyVisibility(vWorldPos + normalize(vNormal) * 0.05, nWorld, foliage ? 3 : int(max(uContact.w, 3.0)));
     vec3 irradiance = textureLod(uEnvMap, nWorld, maxMip).rgb * uGroundColor.w * interiorSky * skyVis;
     vec3 prefiltered = textureLod(uEnvMap, rWorld, rough * maxMip).rgb * uGroundColor.w * interiorSky * mix(sqrt(skyVis), skyVis, rough);
-    {
+    if ((uDebugSkip & 4) == 0) {
         vec3 probePos = uOverlay ? uCameraPos.xyz : vWorldPos;
         float w;
         vec3 probeDiffuse = probeIrradiance(probePos, nWorld, w);
@@ -689,7 +710,7 @@ void main() {
 
     color = mix(color, vec3(1.0, 0.75, 0.2), uHighlight * 0.35);
     color = mix(color, vec3(2.0), uFlash); // hit feedback
-    if (!uOverlay)
+    if (!uOverlay && (uDebugSkip & 8) == 0)
         color = applyFog(color, vWorldPos);
     // A single NaN/Inf pixel would spread over the whole screen through bloom: drop it here.
     color = any(isnan(color)) || any(isinf(color)) ? vec3(0.0) : min(color, vec3(60000.0));
