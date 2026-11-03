@@ -215,15 +215,21 @@ std::string q(const std::string& s)
 }
 
 // "key value key value ..." tail of a kit line.
-std::map<std::string, std::string> pairs(const std::vector<std::string>& t, std::size_t from, std::string* lodPath, float* lodDist)
+std::map<std::string, std::string> pairs(const std::vector<std::string>& t, std::size_t from, std::string* lodPath, float* lodDist,
+                                         std::string* farPath = nullptr, float* farDist = nullptr)
 {
     std::map<std::string, std::string> kv;
+    int lods = 0;
     for (std::size_t i = from; i < t.size(); ++i) {
         if (t[i] == "lod" && i + 1 < t.size()) {
-            if (lodPath)
-                *lodPath = t[i + 1];
-            if (lodDist && i + 2 < t.size())
-                *lodDist = toFloat(t[i + 2], *lodDist);
+            // The first `lod` is the near level, a second one the far level (when wanted).
+            std::string* path = lods == 0 ? lodPath : farPath;
+            float* dist = lods == 0 ? lodDist : farDist;
+            ++lods;
+            if (path)
+                *path = t[i + 1];
+            if (dist && i + 2 < t.size())
+                *dist = toFloat(t[i + 2], *dist);
             i += 2;
             continue;
         }
@@ -337,9 +343,10 @@ bool loadKit(Kit& kit, const fs::path& file, std::string* error)
             KitProp p;
             p.role = t[1];
             p.path = resolve(dir, t[2]);
-            std::string lod;
-            const auto kv = pairs(t, 3, &lod, &p.lodDistance);
+            std::string lod, far;
+            const auto kv = pairs(t, 3, &lod, &p.lodDistance, &far, &p.farDistance);
             p.lodPath = resolve(dir, lod);
+            p.farPath = resolve(dir, far);
             auto get = [&](const char* k, float d) { const auto it = kv.find(k); return it == kv.end() ? d : toFloat(it->second, d); };
             p.size = get("size", p.size);
             p.cull = get("cull", p.cull);
@@ -367,7 +374,7 @@ bool saveKit(const Kit& kit, const fs::path& file, std::string* error)
     const fs::path dir = file.parent_path();
     out << "# City kit for the city generator (engine/CityGen.h, docs/CITY_GENERATOR.md). Paths are relative to this file.\n";
     out << "# building \"name\" \"model\" role <tenement|panel|tower|garage> length depth front floors height weight [lod \"model\" m] cull\n";
-    out << "# prop <role> \"model\" [size m] [lod \"model\" m] cull sway impostor scale_min scale_max yaw collision shadows\n\n";
+    out << "# prop <role> \"model\" [size m] [lod \"model\" m [lod \"far model\" m]] cull sway impostor scale_min scale_max yaw collision shadows\n\n";
     const std::pair<const char*, const fs::path*> mats[] = {{"road", &kit.road}, {"pavement", &kit.pavement}, {"yard", &kit.yard},
                                                             {"lot", &kit.lot},   {"gate", &kit.gate},         {"pillar", &kit.pillar}};
     for (const auto& [k, p] : mats)
@@ -389,6 +396,8 @@ bool saveKit(const Kit& kit, const fs::path& file, std::string* error)
             out << " size " << p.size;
         if (!p.lodPath.empty())
             out << " lod " << q(relPath(p.lodPath, dir)) << ' ' << p.lodDistance;
+        if (!p.lodPath.empty() && !p.farPath.empty())
+            out << " lod " << q(relPath(p.farPath, dir)) << ' ' << p.farDistance;
         out << " cull " << p.cull;
         if (p.sway != 0.0f)
             out << " sway " << p.sway;
@@ -786,6 +795,8 @@ public:
         p.path = k.path;
         p.lodPath = k.lodPath;
         p.lodDistance = k.lodDistance;
+        p.farPath = k.farPath;
+        p.farDistance = k.farDistance;
         p.position = world(at, y);
         p.rotation = {tilt.x, yaw + k.yaw, tilt.y};
         p.scale = scale > 0.0f ? scale : rng.range(k.scaleMin, k.scaleMax);
@@ -3827,7 +3838,7 @@ CityObjects buildObjects(const Plan& plan, const std::function<void(float)>& pro
     std::map<fs::path, std::size_t> index;
     for (const auto& p : plan.placements)
         if (p.kind == Placement::Kind::Model)
-            for (const fs::path* f : {&p.path, &p.lodPath})
+            for (const fs::path* f : {&p.path, &p.lodPath, &p.farPath})
                 if (!f->empty() && !index.count(*f)) {
                     index[*f] = files.size();
                     files.push_back(*f);
@@ -3901,6 +3912,9 @@ CityObjects buildObjects(const Plan& plan, const std::function<void(float)>& pro
                 m.lod = lod;
                 m.lodPath = p.lodPath;
                 m.lodDistance = p.lodDistance;
+                if (!p.farPath.empty() && p.farDistance > p.lodDistance)
+                    if (const auto& far = loaded[index[p.farPath]])
+                        m.farLods.push_back({p.farPath, far, p.farDistance});
             }
         out.models.push_back(std::move(m));
     }

@@ -93,6 +93,8 @@ struct KitProp {
     std::filesystem::path path;      // absolute
     std::filesystem::path lodPath;   // absolute, empty = none
     float lodDistance = 60.0f;
+    std::filesystem::path farPath;   // a second `lod` in the kit line: the farther level, empty = none
+    float farDistance = 150.0f;
     float size = 0.0f;               // module length (kerb, cable span), 0 = not a module
     float cull = 0.0f;               // 0 = always drawn
     float sway = 0.0f;
@@ -264,6 +266,8 @@ struct Placement {
     std::filesystem::path path;      // model file or box material (absolute)
     std::filesystem::path lodPath;
     float lodDistance = 70.0f;
+    std::filesystem::path farPath;   // second LOD level, empty = none
+    float farDistance = 150.0f;
     glm::vec3 position{0.0f};        // model origin / box centre (world)
     glm::vec3 rotation{0.0f};        // degrees (model: tilt x, yaw y, tilt z)
     glm::vec3 size{1.0f};            // box size

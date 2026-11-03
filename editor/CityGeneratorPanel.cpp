@@ -717,9 +717,9 @@ QWidget* CityGeneratorPanel::kitTab()
     });
 
     v->addWidget(new QLabel(tr("Props and plants by role:")));
-    props_ = new QTableWidget(0, 10);
+    props_ = new QTableWidget(0, 13);
     props_->setHorizontalHeaderLabels({tr("Role"), tr("Model"), tr("Size"), tr("Cull"), tr("Sway"), tr("Scale min"), tr("Scale max"), tr("Yaw"),
-                                       tr("Collision"), tr("Shadows")});
+                                       tr("Collision"), tr("Shadows"), tr("LOD1 m"), tr("LOD2 m"), tr("Impostor m")});
     props_->setToolTip(tr("Roles: %1. Size = module length (kerbs, cable spans). Sway: 0.3 trees (trunk collides), 1 grass and bushes (walk through).")
                            .arg(QString::fromStdString([] {
                                std::string s;
@@ -744,6 +744,9 @@ QWidget* CityGeneratorPanel::kitTab()
         case 7: p.yaw = t.toFloat(); break;
         case 8: p.collision = t.toInt() != 0; break;
         case 9: p.shadows = t.toInt() != 0; break;
+        case 10: p.lodDistance = t.toFloat(); break;  // where the _lod1 file takes over
+        case 11: p.farDistance = t.toFloat(); break;  // where the _lod2 file takes over
+        case 12: p.impostor = t.toFloat(); break;     // baked crossed quads beyond this, 0 = none
         default: break;
         }
         changed();
@@ -768,6 +771,16 @@ QWidget* CityGeneratorPanel::kitTab()
         p.path = toPath(f);
         const fs::path lod = engine::findLodFile(p.path);
         p.lodPath = lod;
+        if (!lod.empty()) { // a _lod2 next to the _lod1: the far level
+            std::string far = lod.filename().string();
+            if (const auto at = far.rfind("_lod1"); at != std::string::npos) {
+                far.replace(at, 5, "_lod2");
+                if (fs::exists(lod.parent_path() / far)) {
+                    p.farPath = lod.parent_path() / far;
+                    p.farDistance = std::max(p.lodDistance * 2.0f, p.farDistance);
+                }
+            }
+        }
         const bool plant = p.role == "grass" || p.role == "weed" || p.role == "nettle" || p.role == "bush" || p.role == "meadow" || p.role == "sapling";
         p.sway = p.role == "tree" || p.role == "snag" ? 0.3f : plant ? 1.0f : 0.0f;
         p.collision = !plant && p.role != "cable" && p.role != "kerb";
@@ -1017,11 +1030,13 @@ void CityGeneratorPanel::refreshKitTables()
     props_->setRowCount(static_cast<int>(kit_.props.size()));
     for (int r = 0; r < static_cast<int>(kit_.props.size()); ++r) {
         const KitProp& p = kit_.props[static_cast<std::size_t>(r)];
-        const QString cells[10] = {QString::fromStdString(p.role), dir.relativeFilePath(fromPath(p.path)), QString::number(p.size),
+        const QString cells[13] = {QString::fromStdString(p.role), dir.relativeFilePath(fromPath(p.path)), QString::number(p.size),
                                    QString::number(p.cull),        QString::number(p.sway),               QString::number(p.scaleMin),
                                    QString::number(p.scaleMax),    QString::number(p.yaw),                QString::number(p.collision ? 1 : 0),
-                                   QString::number(p.shadows ? 1 : 0)};
-        for (int c = 0; c < 10; ++c) {
+                                   QString::number(p.shadows ? 1 : 0),
+                                   p.lodPath.empty() ? QString() : QString::number(p.lodDistance),
+                                   p.farPath.empty() ? QString() : QString::number(p.farDistance), QString::number(p.impostor)};
+        for (int c = 0; c < 13; ++c) {
             auto* item = new QTableWidgetItem(cells[c]);
             if (c == 1)
                 item->setFlags(item->flags() & ~Qt::ItemIsEditable);

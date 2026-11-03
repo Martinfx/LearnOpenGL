@@ -4658,6 +4658,14 @@ engine::city::Kit cityKit()
     engine::city::Kit kit;
     std::string err;
     check(engine::city::loadKit(kit, ENGINE_TEST_ASSETS "/city/postsoviet.citykit", &err), "load city kit: " + err);
+    static bool farChecked = false;
+    if (!farChecked) { // a second `lod` on a prop line is the far level (trees: _lod2)
+        farChecked = true;
+        bool far = false;
+        for (const auto& p : kit.props)
+            far = far || (!p.farPath.empty() && p.farDistance > p.lodDistance && p.farPath.filename().string().find("_lod2") != std::string::npos);
+        check(far, "city kit props have far LODs");
+    }
     return kit;
 }
 
