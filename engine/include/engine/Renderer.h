@@ -168,6 +168,7 @@ struct RenderQuality {
     bool depthOfField = true; // RenderView::focusDistance (the game blurs the far world while aiming)
     bool lensEffects = true;  // Environment::chromaticAberration and lensDirt, rain drops on the lens
     bool filmGrain = true;    // Environment::grain
+    bool vignette = true;     // Environment::vignette (dark screen edges; off in the game's anti-nausea mode)
     float motionBlur = 0.0f; // camera motion blur in continuous views, shutter fraction 0..1 (0 = off)
     int textureUploadsPerFrame = 6; // new textures sent to the GPU per frame, 0 = all at once
     // Memory. Textures larger than textureMaxSize drop their top mip levels (0 = full size).

@@ -3953,7 +3953,7 @@ void Renderer::present()
     glUniform1f(post.loc("uSaturation"), e.saturation);
     glUniform1f(post.loc("uContrast"), e.contrast);
     glUniform3fv(post.loc("uTint"), 1, glm::value_ptr(e.tint));
-    glUniform1f(post.loc("uVignette"), e.vignette);
+    glUniform1f(post.loc("uVignette"), quality_.vignette ? e.vignette : 0.0f);
     glUniform1f(post.loc("uGrain"), quality_.filmGrain ? e.grain : 0.0f);
     glUniform1f(post.loc("uChromatic"), quality_.lensEffects && !wireframe_ ? std::clamp(e.chromaticAberration, 0.0f, 1.0f) : 0.0f);
     glUniform1f(post.loc("uLensDirt"), quality_.lensEffects && quality_.bloom ? std::clamp(e.lensDirt, 0.0f, 1.0f) : 0.0f);

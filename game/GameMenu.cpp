@@ -40,6 +40,7 @@ const std::vector<SettingInfo>& settingInfos()
 {
     static const std::vector<SettingInfo> infos = {
         {"r_quality", "setting.r_quality", 0, {"setting.r_quality.0", "setting.r_quality.1", "setting.r_quality.2", "setting.r_quality.3"}},
+        {"cl_comfort", "setting.cl_comfort", 4, {}}, // first on the Comfort page
         {"fov", "setting.fov", 4, {}},
         {"vsync", "setting.vsync", 0, {}},
         {"fps_max", "setting.fps_max", 0, {}},

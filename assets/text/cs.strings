@@ -47,6 +47,7 @@ save.slot = Pozice {0}
 setting.cl_showfps = Zobrazit FPS
 setting.cl_subtitles = Titulky
 setting.ui_scale = Velikost textu
+setting.cl_comfort = Režim proti nevolnosti
 setting.cl_viewbob = Houpání zbraně při chůzi
 setting.fov = Zorné pole (FOV)
 setting.fps_max = Omezení snímků (0 = bez)

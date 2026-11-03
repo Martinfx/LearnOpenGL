@@ -569,8 +569,19 @@ float smoothAim(const engine::Weapon& weapon)
     return a * a * (3.0f - 2.0f * a);
 }
 
+// Settings > Comfort > anti-nausea mode (cl_comfort, on by default): everything that moves or
+// smears the picture on its own is off, whatever the single switches say. The camera then only
+// moves with the mouse and the feet.
+bool comfortMode()
+{
+    const engine::CVar* v = engine::CVarRegistry::global().find("cl_comfort");
+    return v && v->boolean();
+}
+
 float viewBobScale()
 {
+    if (comfortMode())
+        return 0.0f;
     const engine::CVar* v = engine::CVarRegistry::global().find("cl_viewbob");
     return v ? std::clamp(static_cast<float>(v->number()), 0.0f, 1.0f) : 1.0f;
 }
@@ -1370,8 +1381,14 @@ int main(int argc, char** argv)
         // Horizontal at 16:9 (90 = vertical 59). It used to be vertical: 90 then meant 121 degrees
         // across, a fish-eye stretch at the screen edges that makes players dizzy.
         cvars.add("fov", CVarType::Float, "90", "Horizontal field of view on a 16:9 screen (degrees, hip fire)", engine::CVarConfig, 60.0, 120.0);
+        // In the anti-nausea mode "off" still waits for the refresh while the frame is on time
+        // (adaptive sync, tears only a late frame): even frame spacing, no judder from frames
+        // finished at random moments between refreshes.
         cvars.add("vsync", CVarType::Bool, "0", "Wait for the monitor refresh (no tearing, adds latency)", engine::CVarConfig)
-            .onChange = [](const engine::CVar& v) { glfwSwapInterval(v.boolean() ? 1 : 0); };
+            .onChange = [](const engine::CVar& v) {
+                static const bool tear = glfwExtensionSupported("WGL_EXT_swap_control_tear") || glfwExtensionSupported("GLX_EXT_swap_control_tear");
+                glfwSwapInterval(v.boolean() ? 1 : comfortMode() && tear ? -1 : 0);
+            };
         cvars.add("fps_max", CVarType::Int, "0", "Frame rate limit, 0 = none", engine::CVarConfig, 0.0, 1000.0);
         cvars.add("dev_hot_reload", CVarType::Bool, "1",
                   "Reload changed assets while playing (textures, materials, models, sounds, effects, .weapon, Lua)", engine::CVarConfig);
@@ -1401,6 +1418,13 @@ int main(int argc, char** argv)
                 if (const engine::CVar* aa = cvars.find("r_aa")) {
                     q.fxaa = aa->integer() == 1;
                     q.taa = aa->integer() == 2;
+                }
+                if (comfortMode()) {
+                    q.depthOfField = false;
+                    q.lensEffects = false;
+                    q.filmGrain = false;
+                    q.vignette = false;
+                    q.motionBlur = 0.0f;
                 }
                 renderer.setQuality(q);
             };
@@ -1437,19 +1461,19 @@ int main(int argc, char** argv)
         cvars.add("r_dof", CVarType::Bool, "1", "Depth of field while aiming (the far world blurs)", engine::CVarConfig)
             .onChange = [&renderer](const engine::CVar& v) {
                 engine::RenderQuality q = renderer.quality();
-                q.depthOfField = v.boolean();
+                q.depthOfField = v.boolean() && !comfortMode();
                 renderer.setQuality(q);
             };
         cvars.add("r_lens", CVarType::Bool, "1", "Lens effects: colour fringes, dirt lit by bright light, rain drops", engine::CVarConfig)
             .onChange = [&renderer](const engine::CVar& v) {
                 engine::RenderQuality q = renderer.quality();
-                q.lensEffects = v.boolean();
+                q.lensEffects = v.boolean() && !comfortMode();
                 renderer.setQuality(q);
             };
         cvars.add("r_grain", CVarType::Bool, "1", "Film grain", engine::CVarConfig)
             .onChange = [&renderer](const engine::CVar& v) {
                 engine::RenderQuality q = renderer.quality();
-                q.filmGrain = v.boolean();
+                q.filmGrain = v.boolean() && !comfortMode();
                 renderer.setQuality(q);
             };
         cvars.add("cl_screenfx", CVarType::Float, "1", "Strength of hit, low health and radiation screen effects (0 = off)",
@@ -1457,7 +1481,7 @@ int main(int argc, char** argv)
         cvars.add("r_motionblur", CVarType::Float, "0", "Camera motion blur: share of a frame's motion (0 = off)", engine::CVarConfig, 0.0, 1.0)
             .onChange = [&renderer](const engine::CVar& v) {
                 engine::RenderQuality q = renderer.quality();
-                q.motionBlur = v.number();
+                q.motionBlur = comfortMode() ? 0.0f : v.number();
                 renderer.setQuality(q);
             };
         auto windowChanged = [&](const engine::CVar&) {
@@ -1484,6 +1508,14 @@ int main(int argc, char** argv)
         cvars.add("snd_duck", CVarType::Float, "1", "How much gunfire ducks the ambience and music (0 = not at all)", engine::CVarConfig, 0.0, 1.0);
         cvars.add("snd_occlusion", CVarType::Bool, "1", "Walls muffle the sounds behind them", engine::CVarConfig);
         cvars.add("cl_showfps", CVarType::Bool, "0", "Frame rate in the corner", engine::CVarConfig);
+        cvars.add("cl_comfort", CVarType::Bool, "1",
+                  "Anti-nausea mode: no weapon bob, depth of field, motion blur, lens effects, vignette or grain, weaker screen effects, adaptive vsync",
+                  engine::CVarConfig)
+            .onChange = [&cvars](const engine::CVar&) {
+                for (const char* name : {"r_quality", "vsync"})
+                    if (const engine::CVar* c = cvars.find(name); c && c->onChange)
+                        c->onChange(*c);
+            };
         cvars.add("cl_viewbob", CVarType::Float, "0.15", "Weapon bob while walking (0 = off, against motion sickness; from 0.5 the arms' walk animation)", engine::CVarConfig, 0.0, 1.0);
         cvars.add("cl_subtitles", CVarType::Bool, "0", "Captions for sounds and speech at the bottom of the screen", engine::CVarConfig);
         cvars.add("ui_scale", CVarType::Float, "1", "Size of texts and HUD (1 = normal)", engine::CVarConfig, 0.75, 1.75)
@@ -2052,7 +2084,9 @@ int main(int argc, char** argv)
             menu.setStarted(name != "main");
             if (name == "controls")
                 menu.setSettingsPage(1);
-            menu.open(name == "main" ? GameMenu::Screen::Main : name == "settings" || name == "controls" ? GameMenu::Screen::Settings
+            else if (name == "comfort")
+                menu.setSettingsPage(4);
+            menu.open(name == "main" ? GameMenu::Screen::Main : name == "settings" || name == "controls" || name == "comfort" ? GameMenu::Screen::Settings
                       : name == "credits" ? GameMenu::Screen::Credits : name == "death" ? GameMenu::Screen::Death : name == "levels" ? GameMenu::Screen::Levels
                       : GameMenu::Screen::Pause);
         }
@@ -3103,7 +3137,8 @@ int main(int argc, char** argv)
             {
                 // Screen effects (Settings > Comfort scales them, 0 = off).
                 const float fxDt = static_cast<float>(std::min(frameTime, 0.1));
-                const float fx = static_cast<float>(cvScreenFx.number());
+                // The anti-nausea mode keeps them as a hint (the radiation flicker and heart beat are the worst).
+                const float fx = static_cast<float>(cvScreenFx.number()) * (comfortMode() ? 0.35f : 1.0f);
                 hurtFx = std::max(0.0f, hurtFx - fxDt * 1.6f);
                 const float dose = anomalies.dose();
                 const float rate = lastDose >= 0.0f && fxDt > 0.0f ? std::max(0.0f, dose - lastDose) / fxDt : 0.0f; // rad/s

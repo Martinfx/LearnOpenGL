@@ -454,10 +454,11 @@ void MainWindow::buildMenus()
     quality.depthOfField = settings.value("render/dof", quality.depthOfField).toBool();
     quality.lensEffects = settings.value("render/lens", quality.lensEffects).toBool();
     quality.filmGrain = settings.value("render/grain", quality.filmGrain).toBool();
+    quality.vignette = settings.value("render/vignette", quality.vignette).toBool();
     render->addAction(tr("&Bake lighting probes"), this, &MainWindow::bakeProbes);
     render->addSeparator();
     QMenu* qualityMenu = render->addMenu(tr("&Quality"));
-    auto toggles = std::make_shared<std::array<QAction*, 11>>(); // SSAO, bloom, FXAA, SSR, parallax, soft shadows, SSGI, contact shadows, DOF, lens, grain
+    auto toggles = std::make_shared<std::array<QAction*, 12>>(); // SSAO, bloom, FXAA, SSR, parallax, soft shadows, SSGI, contact shadows, DOF, lens, grain, vignette
     auto cloudsToggle = std::make_shared<QAction*>(nullptr);
     for (int i = 0; i < 4; ++i) {
         QAction* a = qualityMenu->addAction(tr(qualityNames[i]));
@@ -480,6 +481,7 @@ void MainWindow::buildMenus()
             (*toggles)[8]->setChecked(q.depthOfField);
             (*toggles)[9]->setChecked(q.lensEffects);
             (*toggles)[10]->setChecked(q.filmGrain);
+            (*toggles)[11]->setChecked(q.vignette);
             for (QAction* t : *toggles)
                 t->blockSignals(false);
             if (*cloudsToggle) {
@@ -490,18 +492,18 @@ void MainWindow::buildMenus()
             setRenderQuality(q);
         });
     }
-    const char* toggleNames[11] = {"Ambient occlusion (GTAO)", "Bloom", "Anti-aliasing (FXAA)", "Screen-space reflections (SSR)",
+    const char* toggleNames[12] = {"Ambient occlusion (GTAO)", "Bloom", "Anti-aliasing (FXAA)", "Screen-space reflections (SSR)",
                                    "Parallax (height maps)", "Soft shadows (PCSS)", "Bounce light (SSGI)", "Contact shadows",
-                                   "Depth of field (aiming)", "Lens effects (fringes, dirt, rain drops)", "Film grain"};
-    const char* toggleKeys[11] = {"render/ssao", "render/bloom", "render/fxaa", "render/ssr", "render/parallax", "render/soft_shadows",
-                                  "render/ssgi", "render/contact_shadows", "render/dof", "render/lens", "render/grain"};
-    bool engine::RenderQuality::*toggleMembers[11] = {&engine::RenderQuality::ssao, &engine::RenderQuality::bloom,
+                                   "Depth of field (aiming)", "Lens effects (fringes, dirt, rain drops)", "Film grain", "Vignette"};
+    const char* toggleKeys[12] = {"render/ssao", "render/bloom", "render/fxaa", "render/ssr", "render/parallax", "render/soft_shadows",
+                                  "render/ssgi", "render/contact_shadows", "render/dof", "render/lens", "render/grain", "render/vignette"};
+    bool engine::RenderQuality::*toggleMembers[12] = {&engine::RenderQuality::ssao, &engine::RenderQuality::bloom,
                                                       &engine::RenderQuality::fxaa, &engine::RenderQuality::ssr,
                                                       &engine::RenderQuality::parallax, &engine::RenderQuality::softShadows,
                                                       &engine::RenderQuality::ssgi, &engine::RenderQuality::contactShadows,
                                                       &engine::RenderQuality::depthOfField, &engine::RenderQuality::lensEffects,
-                                                      &engine::RenderQuality::filmGrain};
-    for (int i = 0; i < 11; ++i) {
+                                                      &engine::RenderQuality::filmGrain, &engine::RenderQuality::vignette};
+    for (int i = 0; i < 12; ++i) {
         (*toggles)[static_cast<std::size_t>(i)] = render->addAction(tr(toggleNames[i]));
         (*toggles)[static_cast<std::size_t>(i)]->setCheckable(true);
         (*toggles)[static_cast<std::size_t>(i)]->setChecked(quality.*toggleMembers[i]);
