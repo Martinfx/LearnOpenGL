@@ -149,6 +149,7 @@ void Settings::normalize()
     noiseScale = std::clamp(noiseScale, 20.0f, 5000.0f);
     mainSpacing = std::clamp(mainSpacing, 40.0f, 1000.0f);
     sideSpacing = std::clamp(sideSpacing, 25.0f, mainSpacing);
+    alleySpacing = alleySpacing <= 0.0f ? 0.0f : std::clamp(alleySpacing, 12.0f, sideSpacing);
     centreZone = std::clamp(centreZone, 0.0f, 1.0f);
     innerZone = std::clamp(innerZone, centreZone, 1.5f);
     ruinShare = std::clamp(ruinShare, 0.0f, 1.0f);
@@ -496,6 +497,7 @@ const ScalarField kScalars[] = {
     {"noise_scale", &Settings::noiseScale},
     {"main_spacing", &Settings::mainSpacing},
     {"side_spacing", &Settings::sideSpacing},
+    {"alley_spacing", &Settings::alleySpacing},
     {"centre_zone", &Settings::centreZone},
     {"inner_zone", &Settings::innerZone},
     {"ruin_share", &Settings::ruinShare},
@@ -2094,6 +2096,8 @@ public:
         ns.noiseScale = s_.noiseScale;
         ns.majorSpacing = s_.mainSpacing;
         ns.minorSpacing = s_.sideSpacing;
+        ns.alleySpacing = s_.alleySpacing;
+        ns.alleyClass = static_cast<int>(StreetClass::Alley);
         ns.majorClass = static_cast<int>(StreetClass::Main);
         ns.minorClass = static_cast<int>(StreetClass::Side);
         ns.boundaryClass = static_cast<int>(s_.edgeRoad);
@@ -2388,7 +2392,7 @@ private:
         // on the same footprint. Decided per house (by its place), so the rest of the town stays.
         const FacadeStyle* sk = nullptr;
         const glm::vec2 c0 = centroid(fp);
-        if (style0.role == "panel" || style0.role == "khrushchyovka" || (style0.role == "tenement" && !style0.pitched)) {
+        if (style0.role == "panel" || style0.role == "khrushchyovka" || style0.role == "tenement") {
             Rng pick(mix(mix(s_.seed, 0x5CE1u), static_cast<std::uint64_t>(std::lround(c0.x * 10.0f) * 100003 + std::lround(c0.y * 10.0f))));
             if (pick.chance(s_.skeletonShare * (ruin ? 2.0f : 1.0f)))
                 sk = style("skeleton", pick);
@@ -2501,7 +2505,12 @@ private:
                 n = -n;
             for (float sp = rng.range(2.0f, 6.0f); sp < len - 2.0f; sp += rng.range(7.0f, 14.0f)) {
                 const glm::vec2 p = a + t * sp + n * rng.range(-1.0f, 3.0f);
-                if (const KitProp* k = b_.anyProp(rng.chance(0.3f) ? "slab" : "rubble", rng))
+                const float r = rng.uniform();
+                const KitProp* k = r < 0.4f && !b_.kit_.propsWithRole("edge_ruin").empty() ? b_.anyProp("edge_ruin", rng)
+                                                                                          : b_.anyProp(r < 0.6f ? "slab" : "rubble", rng);
+                if (k && k->role == "edge_ruin") // a bit of wall still standing, flat on its feet
+                    b_.prop(*k, "Ruined wall", L.group, p, kh, rng.range(0.0f, 360.0f), rng, {0.0f, 0.0f}, 1.0f);
+                else if (k)
                     b_.prop(*k, "Rubble heap", L.group, p, kh - 0.2f, rng.range(0.0f, 360.0f), rng,
                             {rng.range(-6.0f, 6.0f), rng.range(-6.0f, 6.0f)}, rng.range(1.0f, 2.2f));
                 if (rng.chance(0.5f * s_.overgrowth))

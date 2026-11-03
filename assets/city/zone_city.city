@@ -5,5 +5,8 @@ layout organic
 cache "../models/city/zone_city"
 town_size 900
 outskirts 80
-skeleton_share 0.25
 industry_share 0.2
+main_spacing 130
+side_spacing 60
+skeleton_share 0.4
+ruin_share 0.25

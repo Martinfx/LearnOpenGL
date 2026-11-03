@@ -160,6 +160,13 @@ Každý dům s obchodním parterem (i pod podloubím) má nad výlohami vybledl�
 z `zonegen/shop_signs.py` (materiál `shop_signs`, alfa blend, olupující se barva, rez, chybějící písmena).
 Výběr štítků má vlastní RNG, takže ostatní domy se nemění.
 
+### Uličky (Town plan → Lane spacing)
+
+`alley_spacing` (výchozí 0 = žádné): třetí rodina proudnic tenzorového pole, třída `alley`, mezi
+vedlejšími ulicemi. Pozor: při malém rozestupu vzniknou bloky, do kterých se obvodová zástavba
+nevejde (parcely se nevytvoří) – používat jen s rozestupem blízkým `side_spacing`. Dead City má
+hustší síť jen přes `main_spacing 130` / `side_spacing 60`.
+
 ### Procházitelné domy (Zoning → Enterable houses)
 
 `interiors` (výchozí 0,6) = podíl celých domů (ne ruin, skeletů a hal), do kterých se dá vejít

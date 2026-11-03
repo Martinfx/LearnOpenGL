@@ -36,10 +36,12 @@ struct NetworkSettings {
     float noiseScale = 260.0f;    // m per noise wave
     float majorSpacing = 150.0f;  // between main roads
     float minorSpacing = 75.0f;   // between side streets
+    float alleySpacing = 0.0f;    // between back lanes through the blocks (0 = none)
     float step = 3.0f;            // tracing step (m)
     float join = 0.8f;            // short ends carried on up to join * spacing to the next street
     int majorClass = 3;           // StreetClass of major streamlines (main)
     int minorClass = 2;           // ... minor ones (side)
+    int alleyClass = 1;           // ... lanes (alley)
     int boundaryClass = 2;        // the road around the town (0 = none: an open edge)
     std::uint32_t seed = 1;
 };

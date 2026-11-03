@@ -148,7 +148,7 @@ struct Line {
     std::vector<glm::vec2> pts;
     int cls = 2;
     bool minorDir = false;  // along the minor eigenvector
-    bool side = false;      // side street (else main road)
+    int level = 0;          // 0 main road, 1 side street, 2 lane
     bool endAtEdge[2] = {false, false}; // front, back stopped on the town edge
 };
 
@@ -191,18 +191,24 @@ public:
     // Main roads along both eigenvectors first, then the side streets between them.
     void run()
     {
-        family(false, false);
-        family(false, true);
-        family(true, false);
-        family(true, true);
+        family(0, false);
+        family(0, true);
+        family(1, false);
+        family(1, true);
+        if (s_.alleySpacing > 0.0f) {
+            family(2, false);
+            family(2, true);
+        }
     }
+
+    float spacing(int level) const { return level == 0 ? s_.majorSpacing : level == 1 ? s_.minorSpacing : s_.alleySpacing; }
 
 private:
     PointGrid& grid(bool minorDir) { return grid_[minorDir ? 1 : 0]; }
 
-    bool trace(glm::vec2 seed, bool minorDir, bool side, Line& out)
+    bool trace(glm::vec2 seed, bool minorDir, int level, Line& out)
     {
-        const float dsep = side ? s_.minorSpacing : s_.majorSpacing;
+        const float dsep = spacing(level);
         const float dtest = dsep * 0.5f;
         const float h = std::max(0.5f, s_.step);
         const int maxSteps = static_cast<int>(s_.size * 3.0f / h);
@@ -255,8 +261,8 @@ private:
         for (const auto& q : half[0])
             out.pts.push_back(q);
         out.minorDir = minorDir;
-        out.side = side;
-        out.cls = side ? s_.minorClass : s_.majorClass;
+        out.level = level;
+        out.cls = level == 0 ? s_.majorClass : level == 1 ? s_.minorClass : s_.alleyClass;
         out.endAtEdge[0] = edge[1];
         out.endAtEdge[1] = edge[0];
         float L = 0.0f;
@@ -284,9 +290,9 @@ private:
         lines.push_back(std::move(l));
     }
 
-    void family(bool side, bool minorDir)
+    void family(int level, bool minorDir)
     {
-        const float dsep = side ? s_.minorSpacing : s_.majorSpacing;
+        const float dsep = spacing(level);
         std::vector<glm::vec2> queue;
         if (lines.empty())
             queue.push_back({0.0f, 0.0f});
@@ -322,7 +328,7 @@ private:
             if (!inside(seed, half_ - 2.0f) || grid(minorDir).near(seed, dsep * 0.75f))
                 continue;
             Line l;
-            if (trace(seed, minorDir, side, l))
+            if (trace(seed, minorDir, level, l))
                 accept(std::move(l), queue, dsep);
         }
     }
@@ -382,7 +388,7 @@ void extendEnds(std::vector<Line>& lines, const NetworkSettings& s)
         const Line& l = lines[static_cast<std::size_t>(li)];
         if (l.pts.size() < 2)
             continue;
-        const float reach = s.join * (l.side ? s.minorSpacing : s.majorSpacing);
+        const float reach = s.join * (l.level == 0 ? s.majorSpacing : l.level == 1 ? s.minorSpacing : s.alleySpacing);
         for (int end = 0; end < 2; ++end) {
             if (l.endAtEdge[end])
                 continue;
@@ -476,6 +482,8 @@ RoadNetwork buildRoadNetwork(const NetworkSettings& sIn)
     s.size = std::max(60.0f, s.size);
     s.majorSpacing = std::max(20.0f, s.majorSpacing);
     s.minorSpacing = std::clamp(s.minorSpacing, 15.0f, s.majorSpacing);
+    if (s.alleySpacing > 0.0f)
+        s.alleySpacing = std::clamp(s.alleySpacing, 12.0f, s.minorSpacing);
     s.step = std::clamp(s.step, 0.5f, 10.0f);
     const float half = s.size * 0.5f;
 

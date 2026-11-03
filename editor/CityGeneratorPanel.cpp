@@ -454,6 +454,7 @@ QWidget* CityGeneratorPanel::townTab()
     addNumber(net, tr("Bend scale"), &settings_.noiseScale, 20, 2000, 10, tr("Size of the bends"));
     addNumber(net, tr("Main road spacing"), &settings_.mainSpacing, 20, 1000, 5, tr("Distance between main roads"));
     addNumber(net, tr("Side street spacing"), &settings_.sideSpacing, 10, 500, 5, tr("Distance between side streets (about the block size)"));
+    addNumber(net, tr("Lane spacing"), &settings_.alleySpacing, 0, 500, 5, tr("Back lanes (alley class) cutting the blocks between the side streets, 0 = none"));
     auto* edge = streetCombo(settings_.edgeRoad);
     edge->setToolTip(tr("Road around the town (none = the blocks end in the outskirts)"));
     net->addRow(tr("Road round the town"), edge);

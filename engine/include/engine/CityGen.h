@@ -235,6 +235,7 @@ struct Settings {
     float noiseScale = 260.0f;
     float mainSpacing = 150.0f;
     float sideSpacing = 75.0f;
+    float alleySpacing = 0.0f;       // organic: back lanes through the blocks (alley class), 0 = none
     StreetClass edgeRoad = StreetClass::Side; // road round the town
     // Zoning (organic): distance from the centre as a share of the town radius.
     float centreZone = 0.3f;         // inside: tenement perimeter blocks
