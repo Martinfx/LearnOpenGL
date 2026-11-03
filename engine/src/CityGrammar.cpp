@@ -155,7 +155,7 @@ void bar(Mesh& mesh, const std::string& m, glm::vec3 a, glm::vec3 b, float w, fl
 
 class Builder {
 public:
-    Builder(const BuildingSpec& b, int lod) : b_(b), st_(b.style), lod_(lod), rng_(b.seed) {}
+    Builder(const BuildingSpec& b, int lod) : b_(b), st_(b.style), lod_(lod), rng_(b.seed), open_(b.ruin || (b.interior && lod == 0)) {}
 
     Mesh mesh;
     int windows = 0;
@@ -187,6 +187,8 @@ public:
         roof();
         if (b_.ruin && lod_ == 0)
             ruinSlabs();
+        else if (open_)
+            interior();
     }
 
 private:
@@ -211,7 +213,7 @@ private:
         const float u0 = s0 / tile, u1 = s1 / tile, v0 = y0 / tile, v1 = y1 / tile;
         mesh.quad(m, F.at(s0, y0, d), F.at(s1, y0, d), F.at(s1, y1, d), F.at(s0, y1, d), inward ? -F.n : F.n, {u0, -v0}, {u1, -v0}, {u1, -v1},
                   {u0, -v1});
-        if (b_.ruin && !inward && d == 0.0f && m != "grime") // ruins are open: the walls have an inside
+        if (open_ && !inward && d == 0.0f && m != "grime") // ruins and enterable houses are open: the walls have an inside
             mesh.quad("plaster", F.at(s0, y0, kWall), F.at(s1, y0, kWall), F.at(s1, y1, kWall), F.at(s0, y1, kWall), -F.n, {u0, -v0}, {u1, -v0},
                       {u1, -v1}, {u0, -v1});
     }
@@ -274,7 +276,7 @@ private:
     // The state of a window pane, by the rules of decades of nobody.
     void filling(const Face& F, const Opening& o)
     {
-        const float D = b_.ruin ? kWall : kReveal;
+        const float D = open_ ? kWall : kReveal;
         const std::string frame = st_.role == "panel" ? "st_metal_paint" : "wood";
         if (lod_ > 0) {
             mesh.quad("interior_dark", F.at(o.s0, o.y0, -0.02f), F.at(o.s1, o.y0, -0.02f), F.at(o.s1, o.y1, -0.02f), F.at(o.s0, o.y1, -0.02f), F.n,
@@ -282,10 +284,12 @@ private:
             return;
         }
         reveal(st_.wall, F, o.s0, o.s1, o.y0, o.y1, D, o.kind != Opening::Door);
-        if (!b_.ruin) // the dark room behind
+        if (!open_) // the dark room behind
             mesh.quad("interior_dark", F.at(o.s0, o.y0, D), F.at(o.s1, o.y0, D), F.at(o.s1, o.y1, D), F.at(o.s0, o.y1, D), F.n, {0, 0}, {1, 0},
                       {1, 1}, {0, 1});
         if (o.kind == Opening::Door) {
+            if (b_.interior) // the door was taken long ago: the way in
+                return;
             mesh.quad("st_metal_paint", F.at(o.s0, o.y0, 0.16f), F.at(o.s1, o.y0, 0.16f), F.at(o.s1, o.y1, 0.16f), F.at(o.s0, o.y1, 0.16f), F.n,
                       {0, 0}, {1, 0}, {1, -1.2f}, {0, -1.2f});
             return;
@@ -347,6 +351,16 @@ private:
             return;
         }
         reveal(st_.wall, F, o.s0, o.s1, o.y0, o.y1, D);
+        if (open_) { // seen from the room behind: the loggia is a box jutting in
+            const float tl = 2.5f;
+            mesh.quad("plaster", F.at(o.s0, o.y0, D + 0.01f), F.at(o.s1, o.y0, D + 0.01f), F.at(o.s1, o.y1, D + 0.01f), F.at(o.s0, o.y1, D + 0.01f), -F.n,
+                      {o.s0 / tl, 0}, {o.s1 / tl, 0}, {o.s1 / tl, -1}, {o.s0 / tl, -1});
+            for (const float s : {o.s0, o.s1})
+                mesh.quad("plaster", F.at(s, o.y0, kWall), F.at(s, o.y0, D), F.at(s, o.y1, D), F.at(s, o.y1, kWall), s == o.s0 ? F.t : -F.t,
+                          {0, 0}, {D / tl, 0}, {D / tl, -1}, {0, -1});
+            mesh.quad("plaster", F.at(o.s0, o.y1, kWall), F.at(o.s1, o.y1, kWall), F.at(o.s1, o.y1, D), F.at(o.s0, o.y1, D), {0, 1, 0}, {0, 0},
+                      {1, 0}, {1, 0.5f}, {0, 0.5f});
+        }
         mesh.quad("plaster", F.at(o.s0, o.y0, D), F.at(o.s1, o.y0, D), F.at(o.s1, o.y1, D), F.at(o.s0, o.y1, D), F.n, {o.s0 / 2.5f, 0},
                   {o.s1 / 2.5f, 0}, {o.s1 / 2.5f, -1}, {o.s0 / 2.5f, -1});
         const float w = o.s1 - o.s0;
@@ -817,6 +831,179 @@ private:
         q(3, 2, 6, 7, {0, 1, 0}, s.x, s.z);
     }
 
+    // ---- enterable houses
+    // How far a ray from p (local x, z) along dir runs inside the footprint.
+    float depthInside(glm::vec2 p, glm::vec2 dir) const
+    {
+        const Poly& fp = b_.footprint;
+        float best = 1e9f;
+        for (std::size_t i = 0; i < fp.size(); ++i) {
+            const glm::vec2 a = fp[i], b = fp[(i + 1) % fp.size()], e = b - a;
+            const float den = dir.x * e.y - dir.y * e.x;
+            if (std::abs(den) < 1e-6f)
+                continue;
+            const glm::vec2 w = a - p;
+            const float t = (w.x * e.y - w.y * e.x) / den, u = (w.x * dir.y - w.y * dir.x) / den;
+            if (t > 0.05f && u >= 0.0f && u <= 1.0f)
+                best = std::min(best, t);
+        }
+        return best;
+    }
+
+    // Gutted inside of an enterable house:
+    //   Floors    -> slab per storey (concrete, underside), the stairwell cut out of it
+    //   Stairwell -> behind the main street door: entrance landing, two flights a storey
+    //                round a spine wall, half landings at the back, a landing per floor
+    //                with doorways into the flats either side
+    //   Flats     -> plaster partitions off the facades between window pairs, doorways at
+    //                their inner end; everything else long carried off
+    // Own random numbers (the facades stay as they are).
+    void interior()
+    {
+        const Poly& fp = b_.footprint;
+        const std::size_t n = fp.size();
+        Poly in;
+        std::vector<int> src;
+        if (!insetPolygon(fp, std::vector<float>(n, kWall), in, &src) || in.size() < 3)
+            return;
+        Rng ir(b_.seed ^ 0x1E7E51ull);
+        const int FL = std::max(1, b_.floors);
+        const float pier = 0.7f;
+        auto faceOf = [&](std::size_t i) {
+            const glm::vec2 a = fp[i], b = fp[(i + 1) % n];
+            const float len = glm::length(b - a);
+            const glm::vec2 t2 = (b - a) / std::max(len, 1e-4f);
+            Face F;
+            F.o = {a.x, 0.0f, a.y};
+            F.t = {t2.x, 0.0f, t2.y};
+            F.n = {t2.y, 0.0f, -t2.x};
+            F.len = len;
+            return F;
+        };
+        auto at2 = [](const Face& F, float s, float d) { const glm::vec3 p = F.at(s, 0.0f, d); return glm::vec2(p.x, p.z); };
+        auto inward = [](const Face& F) { return glm::vec2(-F.n.x, -F.n.z); };
+        // The stairwell: behind the entrance of the longest street front deep enough for it.
+        const float halfW = 1.3f, dLand = 1.6f, dRun = 4.1f, dBack = 5.4f, wallT = 0.15f;
+        int stairEdge = -1;
+        float stairC = 0.0f, bestLen = 0.0f;
+        for (int pass = 0; pass < 2 && stairEdge < 0; ++pass)
+            for (std::size_t i = 0; i < n; ++i) {
+                const EdgeRole role = i < b_.edges.size() ? b_.edges[i] : EdgeRole::Street;
+                if (role != (pass == 0 ? EdgeRole::Street : EdgeRole::Yard))
+                    continue;
+                const Face F = faceOf(i);
+                if (F.len < std::max(st_.bay * 0.8f, 2.0f * halfW + 2.0f * pier + 0.6f))
+                    continue;
+                const int nb = std::max(1, static_cast<int>(std::lround((F.len - 2.0f * pier) / st_.bay)));
+                const float bay = (F.len - 2.0f * pier) / static_cast<float>(nb);
+                const float c = pier + bay * (static_cast<float>(nb / 2) + 0.5f);
+                if (c - halfW - wallT < 0.4f || c + halfW + wallT > F.len - 0.4f)
+                    continue;
+                bool deep = true;
+                for (const float s : {c - halfW - wallT, c, c + halfW + wallT})
+                    deep = deep && depthInside(at2(F, s, 0.01f), inward(F)) > dBack + 1.2f;
+                if (deep && F.len > bestLen) {
+                    bestLen = F.len;
+                    stairEdge = static_cast<int>(i);
+                    stairC = c;
+                }
+            }
+        const bool stairs = stairEdge >= 0 && FL >= 2;
+        const Face SF = stairs ? faceOf(static_cast<std::size_t>(stairEdge)) : Face{};
+        auto inStair = [&](glm::vec2 p, float pad) {
+            if (!stairs)
+                return false;
+            const glm::vec2 o{SF.o.x, SF.o.z}, t{SF.t.x, SF.t.z};
+            const float s = glm::dot(p - o, t), d = glm::dot(p - o, inward(SF));
+            return s > stairC - halfW - wallT - pad && s < stairC + halfW + wallT + pad && d > -pad && d < dBack + wallT + pad;
+        };
+        // Floors: the ground slab whole, the upper ones with the stairwell notched out of the edge.
+        Poly notched = in;
+        if (stairs) {
+            int k = -1;
+            for (std::size_t j = 0; j < in.size(); ++j)
+                if (j < src.size() && src[j] == stairEdge)
+                    k = static_cast<int>(j);
+            if (k >= 0) {
+                const glm::vec2 a = in[static_cast<std::size_t>(k)], b = in[(static_cast<std::size_t>(k) + 1) % in.size()];
+                const glm::vec2 t = glm::normalize(b - a);
+                const glm::vec2 p0 = at2(SF, stairC - halfW, kWall), p1 = at2(SF, stairC + halfW, kWall);
+                const float s0 = glm::dot(p0 - a, t), s1 = glm::dot(p1 - a, t), L = glm::length(b - a);
+                if (s0 > 0.05f && s1 < L - 0.05f) {
+                    const Poly notch{a + t * s0, at2(SF, stairC - halfW, dBack), at2(SF, stairC + halfW, dBack), a + t * s1};
+                    notched.insert(notched.begin() + k + 1, notch.begin(), notch.end());
+                    if (!isSimple(notched))
+                        notched = in;
+                }
+            }
+        }
+        mesh.flat("concrete", in, 0.02f, true);
+        for (int f = 1; f < FL; ++f) {
+            const float y = floorY(f);
+            mesh.flat("concrete", notched, y, true);
+            mesh.flat("plaster", notched, y - 0.22f, false);
+        }
+        mesh.flat("plaster", in, top_ - 0.02f, false);
+        // Partitions off every front between window pairs (and none through the stairwell).
+        for (std::size_t i = 0; i < n; ++i) {
+            const EdgeRole role = i < b_.edges.size() ? b_.edges[i] : EdgeRole::Street;
+            const Face F = faceOf(i);
+            if (role == EdgeRole::Party || F.len < st_.bay * 2.5f)
+                continue;
+            const int nb = std::max(1, static_cast<int>(std::lround((F.len - 2.0f * pier) / st_.bay)));
+            const float bay = (F.len - 2.0f * pier) / static_cast<float>(nb);
+            for (int j = 2; j < nb - 1; j += 2) {
+                const float s = pier + bay * static_cast<float>(j);
+                const float depth = depthInside(at2(F, s, 0.01f), inward(F));
+                const float L = std::min(ir.range(3.4f, 5.0f), depth - 1.6f);
+                if (L < 2.4f || inStair(at2(F, s, kWall), 0.6f) || inStair(at2(F, s, L), 0.6f) || inStair(at2(F, s, L * 0.5f), 0.6f))
+                    continue;
+                const float g0 = L - ir.range(1.0f, 1.3f), g1 = g0 + 0.9f; // doorway at the inner end
+                for (int f = 0; f < FL; ++f) {
+                    const float y0 = f == 0 ? 0.02f : floorY(f), y1 = floorY(f + 1) - (f + 1 < FL ? 0.22f : 0.02f);
+                    fbox("plaster", F, s - 0.06f, s + 0.06f, y0, y1, kWall, g0);
+                    fbox("plaster", F, s - 0.06f, s + 0.06f, std::min(y1, y0 + 2.1f), y1, g0, g1);
+                    if (g1 < L)
+                        fbox("plaster", F, s - 0.06f, s + 0.06f, y0, y1, g1, L);
+                }
+            }
+        }
+        if (!stairs)
+            return;
+        // Stairwell walls per storey: sides with doorways off the landing, the back, the spine.
+        const float c = stairC;
+        for (int f = 0; f < FL; ++f) {
+            const float y0 = f == 0 ? 0.02f : floorY(f), y1 = floorY(f + 1) - (f + 1 < FL ? 0.22f : 0.02f);
+            for (const float side : {-1.0f, 1.0f}) {
+                const float sa = c + side * halfW, sb = c + side * (halfW + wallT);
+                const float s0 = std::min(sa, sb), s1 = std::max(sa, sb);
+                fbox("plaster", SF, s0, s1, y0, y1, kWall, 0.5f);
+                fbox("plaster", SF, s0, s1, std::min(y1, y0 + 2.1f), y1, 0.5f, 1.45f);
+                fbox("plaster", SF, s0, s1, y0, y1, 1.45f, dBack + wallT);
+            }
+            fbox("plaster", SF, c - halfW, c + halfW, y0, y1, dBack, dBack + wallT);
+            fbox("plaster", SF, c - 0.07f, c + 0.07f, y0, y1, dLand, dRun);
+        }
+        // Flights: up the left half to the half landing, back up the right half to the next floor.
+        for (int f = 0; f + 1 < FL; ++f) {
+            const float y0 = f == 0 ? 0.02f : floorY(f), y1 = floorY(f + 1), h = y1 - y0, mid = y0 + h * 0.5f;
+            const int steps = std::max(6, static_cast<int>(std::ceil(h * 0.5f / 0.18f)));
+            const float tread = (dRun - dLand) / static_cast<float>(steps), rise = h * 0.5f / static_cast<float>(steps);
+            for (int k = 1; k <= steps; ++k) {
+                const float ya = y0 + rise * static_cast<float>(k), yb = mid + rise * static_cast<float>(k);
+                fbox("concrete", SF, c - halfW, c - 0.07f, ya - rise - 0.16f, ya, dLand + tread * static_cast<float>(k - 1), dLand + tread * static_cast<float>(k));
+                fbox("concrete", SF, c + 0.07f, c + halfW, yb - rise - 0.16f, yb, dRun - tread * static_cast<float>(k), dRun - tread * static_cast<float>(k - 1));
+            }
+            fbox("concrete", SF, c - halfW, c + halfW, mid - 0.2f, mid, dRun, dBack);                 // half landing
+            fbox("concrete", SF, c - halfW, c + halfW, y1 - 0.22f, y1, kWall, dLand);                 // floor landing
+        }
+        // The top floor: a rail over the last flight's well.
+        const float yt = floorY(FL - 1);
+        fbox("rust", SF, c - halfW, c - 0.07f, yt + 0.95f, yt + 1.0f, dLand, dLand + 0.05f);
+        fbox("rust", SF, c - halfW, c - 0.07f, yt, yt + 0.95f, dLand + 0.01f, dLand + 0.04f);
+        (void)ir.next();
+    }
+
     // Floor slabs of a ruin, seen through the empty windows and the broken top.
     void ruinSlabs()
     {
@@ -844,6 +1031,7 @@ private:
     glm::vec2 ruinDir_{1.0f, 0.0f};
     float ruinR_ = 10.0f;
     int ruinLoss_ = 0;
+    bool open_ = false; // the walls have an inside (ruins, enterable houses at LOD0)
 };
 
 
@@ -1706,6 +1894,8 @@ std::string buildingKey(const BuildingSpec& b)
         o << "|fe" << s.fireEscapes << "|dl2"; // dl2: drop ladder at the free end, some let down (2026-11-03)
     if (s.shops > 0.0f || s.arcade > 0.0f)
         o << "|sg2"; // shop signs over the shop windows
+    if (b.interior && !b.ruin)
+        o << "|in1"; // enterable
     for (const auto& p : b.footprint)
         o << '|' << std::lround(p.x * 100.0f) << ',' << std::lround(p.y * 100.0f);
     for (const auto e : b.edges)

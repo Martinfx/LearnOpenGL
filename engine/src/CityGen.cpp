@@ -55,7 +55,7 @@ const std::vector<std::string>& propRoles()
 {
     static const std::vector<std::string> roles{"kerb",  "lamp",  "lamp_leaning", "cable", "car",    "tree",  "sapling",
                                                 "snag",  "bush",  "grass",        "weed",  "nettle", "rubble", "slab",  "meadow",
-                                                "monument", "fountain", "bench", "kiosk", "ivy", "roof_tree", "road_crack", "road_crack_cross", "road_net", "pothole", "fern", "hanging"};
+                                                "monument", "fountain", "bench", "kiosk", "ivy", "roof_tree", "road_crack", "road_crack_cross", "road_net", "pothole", "fern", "hanging", "water_tower", "hydrant"};
     return roles;
 }
 
@@ -133,6 +133,8 @@ void Settings::normalize()
     cableChance = std::clamp(cableChance, 0.0f, 1.0f);
     wrecksPer100m = std::clamp(wrecksPer100m, 0.0f, 20.0f);
     rubblePer100m = std::clamp(rubblePer100m, 0.0f, 50.0f);
+    hydrantSpacing = std::clamp(hydrantSpacing, 0.0f, 1000.0f);
+    waterTowers = std::clamp(waterTowers, 0.0f, 1.0f);
     groundSpacing = std::clamp(groundSpacing, 0.25f, 4.0f);
     hills = std::clamp(hills, 0.0f, 100.0f);
     foliageDensity = std::clamp(foliageDensity, 0.0f, 4.0f);
@@ -148,6 +150,7 @@ void Settings::normalize()
     innerZone = std::clamp(innerZone, centreZone, 1.5f);
     ruinShare = std::clamp(ruinShare, 0.0f, 1.0f);
     skeletonShare = std::clamp(skeletonShare, 0.0f, 1.0f);
+    interiors = std::clamp(interiors, 0.0f, 1.0f);
     landmarkFloors = std::clamp(landmarkFloors, 5.0f, 60.0f);
     parkShare = std::clamp(parkShare, 0.0f, 1.0f);
     houseShare = std::clamp(houseShare, 0.0f, 1.0f);
@@ -469,6 +472,8 @@ const ScalarField kScalars[] = {
     {"tree_survival", &Settings::treeSurvival},
     {"wrecks_per_100m", &Settings::wrecksPer100m},
     {"rubble_per_100m", &Settings::rubblePer100m},
+    {"hydrant_spacing", &Settings::hydrantSpacing},
+    {"water_towers", &Settings::waterTowers},
     {"overgrowth", &Settings::overgrowth},
     {"road_decay", &Settings::roadDecay},
     {"outskirts", &Settings::outskirts},
@@ -489,11 +494,13 @@ const ScalarField kScalars[] = {
     {"inner_zone", &Settings::innerZone},
     {"ruin_share", &Settings::ruinShare},
     {"skeleton_share", &Settings::skeletonShare},
+    {"interiors", &Settings::interiors},
     {"park_share", &Settings::parkShare},
     {"house_share", &Settings::houseShare},
     {"industry_share", &Settings::industryShare},
     {"square", nullptr, nullptr, &Settings::square},
     {"street_names", nullptr, nullptr, &Settings::streetNames},
+    {"boundary", nullptr, nullptr, &Settings::boundary},
     {"landmark", nullptr, nullptr, &Settings::landmark},
     {"landmark_floors", &Settings::landmarkFloors},
 };
@@ -969,6 +976,13 @@ public:
                 for (const auto& c : clear_)
                     if (c.contains({u, v}))
                         return true;
+        return false;
+    }
+    bool cleared(glm::vec2 p) const
+    {
+        for (const auto& c : clear_)
+            if (c.contains(p))
+                return true;
         return false;
     }
     void addClear(glm::vec2 a, glm::vec2 b, float r)
@@ -2146,6 +2160,8 @@ public:
         for (auto& L : lots_)
             green(L);
         outskirts();
+        if (s_.boundary)
+            boundary(o);
 
         auto& p = b_.plan;
         p.boundsMin = glm::vec3(1e9f);
@@ -2386,6 +2402,8 @@ private:
         g.spec.floors = std::clamp(floors, 1, 40);
         g.spec.seed = seed;
         g.spec.ruin = ruin;
+        if (!ruin && !frame && st.role != "hall" && s_.interiors > 0.0f)
+            g.spec.interior = Rng(mix(seed, 0x1E7E5ull)).chance(s_.interiors);
         const std::string key = buildingKey(g.spec);
         const fs::path dir = s_.cache.empty() ? fs::temp_directory_path() / "fps_city" : s_.cache;
         g.file = dir / ("house_" + key + ".glb");
@@ -2525,6 +2543,18 @@ private:
                     ++b_.plan.stats.plants;
                 }
             }
+        // New York roofs: a wooden water tank on a steel stand. Own random numbers.
+        if (!pitched && !ruin && height >= 14.0f && s_.waterTowers > 0.0f) {
+            Rng wr(mix(seed, 0x3A7E2ull));
+            glm::vec2 p;
+            if (wr.chance(s_.waterTowers) && signedArea(fp) * sign > 120.0f)
+                for (int k = 0; k < 8; ++k)
+                    if (randomIn(fp, wr, p) && distanceToPolygonEdge(fp, p) > 3.2f) {
+                        if (const KitProp* t = b_.anyProp("water_tower", wr))
+                            b_.prop(*t, "Water tower", L.group, p, kh + height - 0.05f, wr.range(0.0f, 360.0f), wr, {0.0f, 0.0f}, 1.0f);
+                        break;
+                    }
+        }
         // Birches on flat roofs (in the roof gravel and the gutters), now and then.
         if (!pitched && !ruin && rng.chance(0.3f * g))
             for (int k = 0, n = 1 + rng.below(3); k < n; ++k) {
@@ -3191,6 +3221,26 @@ private:
                     if (rng.chance(s_.cableChance))
                         b_.cable(tops[i - 1], tops[i], lamps_);
             }
+        // Fire hydrants at the kerb (own random numbers: the rest of the street stays).
+        if (s_.hydrantSpacing > 0.0f && P.pavement >= 1.5f && !b_.kit_.propsWithRole("hydrant").empty()) {
+            Rng hr(mix(s_.seed ^ 0x4D2A7ull, static_cast<std::uint64_t>(std::lround(r.points.front().x * 10.0f) * 73856093 ^
+                                                                         std::lround(r.points.front().y * 10.0f) * 19349663)));
+            for (const float side : {1.0f, -1.0f})
+                for (float s = jc * 0.6f + hr.range(0.0f, s_.hydrantSpacing * 0.5f); s < L - jc * 0.6f; s += s_.hydrantSpacing * hr.range(0.7f, 1.3f)) {
+                    if (std::any_of(lampS.begin(), lampS.end(), [&](float l) { return std::abs(l - s) < 2.0f; }))
+                        continue;
+                    glm::vec2 p, t;
+                    at(s, p, t);
+                    const glm::vec2 n{-t.y, t.x};
+                    const glm::vec2 q = p + n * side * (cw + 0.55f);
+                    if (!b_.free(q, 0.4f))
+                        continue;
+                    if (const KitProp* k = b_.anyProp("hydrant", hr)) {
+                        b_.prop(*k, "Fire hydrant", lamps_, q, kh - 0.01f, b_.yawX(-n * side) + hr.range(-20.0f, 20.0f), hr, {0.0f, 0.0f}, 1.0f);
+                        b_.addSolid({q.x - 0.25f, q.y - 0.25f, q.x + 0.25f, q.y + 0.25f});
+                    }
+                }
+        }
         // Planted rows: one species per street, some lost, seedlings in the gaps.
         if (P.trees && P.pavement >= 2.5f) {
             const KitProp* sp = b_.anyProp("tree", rng);
@@ -3534,6 +3584,41 @@ private:
             }
         scatterIn(L, area, young * (0.3f + g), rng, {"sapling", "bush"}, "Young tree");
         scatterIn(L, area, weeds * g, rng, {"weed", "nettle", "grass"}, "Weeds");
+    }
+
+    // The edge of the map: a belt of thickets, young trees, rubble heaps and fallen slabs,
+    // barricades of wrecks and slabs where the roads run out, and player clips (invisible
+    // walls) behind all of it so nobody walks off the world. Own random numbers.
+    void boundary(float o)
+    {
+        const std::string grp = s_.group + " boundary";
+        b_.group(grp, s_.group);
+        Rng rng(mix(s_.seed, 0xB0DA7ull));
+        const float E = half_ + o, belt = E - 5.0f, kh = s_.kerbHeight;
+        const glm::vec2 corners[4] = {{-belt, -belt}, {belt, -belt}, {belt, belt}, {-belt, belt}};
+        for (int side = 0; side < 4; ++side) {
+            const glm::vec2 a = corners[side], b = corners[(side + 1) % 4];
+            const glm::vec2 t = glm::normalize(b - a), n{t.y, -t.x}; // n: out of the map
+            for (float s = 0.0f; s < 2.0f * belt; s += rng.range(1.6f, 3.2f)) {
+                const glm::vec2 q = a + t * s + n * rng.range(-2.5f, 2.5f);
+                const bool road = !b_.free(q, 0.5f) || b_.cleared(q);
+                const float r = rng.uniform();
+                const char* role = road ? (r < 0.4f ? "car" : r < 0.75f ? "slab" : "rubble")
+                                        : (r < 0.45f ? "bush" : r < 0.65f ? "sapling" : r < 0.8f ? "rubble" : r < 0.88f ? "slab" : r < 0.94f ? "snag" : "car");
+                if (const KitProp* k = b_.anyProp(role, rng)) {
+                    const float scale = std::string(role) == "bush" ? rng.range(1.2f, 1.8f) : -1.0f;
+                    b_.prop(*k, road ? "Barricade" : "Map edge", grp, q, kh, b_.yawX(t) + rng.range(-35.0f, 35.0f), rng, {0.0f, 0.0f}, scale);
+                }
+            }
+        }
+        // The invisible walls just outside the belt, tall enough for any roof near the edge.
+        const float w = E - 1.0f, H = 90.0f;
+        for (int side = 0; side < 4; ++side) {
+            const bool alongX = side % 2 == 0;
+            const glm::vec2 c = side == 0 ? glm::vec2{0.0f, -w} : side == 1 ? glm::vec2{w, 0.0f} : side == 2 ? glm::vec2{0.0f, w} : glm::vec2{-w, 0.0f};
+            b_.box("Map edge clip", grp, {}, c, H * 0.5f - 5.0f, alongX ? glm::vec3{2.0f * w + 2.0f, H, 1.0f} : glm::vec3{1.0f, H, 2.0f * w + 2.0f});
+            b_.plan.placements.back().clip = true;
+        }
     }
 
     void outskirts()
@@ -3892,6 +3977,7 @@ CityObjects buildObjects(const Plan& plan, const std::function<void(float)>& pro
             b.position = p.position;
             b.size = p.size;
             b.rotation = p.rotation;
+            b.clip = p.clip;
             if (!p.path.empty()) {
                 auto it = materials.find(p.path);
                 if (it == materials.end()) {

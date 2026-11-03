@@ -207,6 +207,8 @@ struct Settings {
     float treeSurvival = 0.6f;       // share of the planted trees still standing
     float wrecksPer100m = 1.2f;
     float rubblePer100m = 2.5f;
+    float hydrantSpacing = 60.0f;    // fire hydrants at the kerb, about this far apart (0 = none)
+    float waterTowers = 0.35f;       // share of flat-roofed houses of 5+ storeys with a wooden water tank on the roof
 
     // Nature taking the town back: 0 = kept, 1 = decades of nobody.
     float overgrowth = 0.7f;
@@ -235,6 +237,7 @@ struct Settings {
     float centreZone = 0.3f;         // inside: tenement perimeter blocks
     float innerZone = 0.65f;         // to here: tenements, panel micro-districts and towers; beyond: outskirts
     float ruinShare = 0.15f;         // blocks left in ruins
+    float interiors = 0.6f;          // share of whole houses (not ruins or frames) you can walk into: stairwell to every floor, gutted flats
     float skeletonShare = 0.12f;     // panel blocks / tenements / towers gutted to a bare concrete frame (style role "skeleton")
     float parkShare = 0.08f;         // blocks left green
     float industryShare = 0.12f;     // outer blocks of abandoned factory halls (style role "hall")
@@ -244,6 +247,7 @@ struct Settings {
     bool landmark = true;            // one very tall ruined tower north of the centre, seen from all over the town
     float landmarkFloors = 34.0f;    // its storeys (style role skeleton_tower)
     std::string landmarkName = "Liberty Tower"; // its name on the map
+    bool boundary = true;            // organic: the map ends in a barrier (thickets, rubble, wrecks, barricades across the roads) and invisible walls behind it
     bool streetNames = true;         // name the streets (New York style: avenues one way, numbered streets across) on the map
     std::filesystem::path cache;     // generated houses (.glb), absolute; empty = next to the .city
 
@@ -277,6 +281,7 @@ struct Placement {
     float impostor = 0.0f;
     bool collision = true;
     bool shadows = true;
+    bool clip = false;               // box: player clip (invisible wall)
 };
 
 struct PlanGroup {

@@ -17,8 +17,8 @@ def _wheel(m, x, y, z, r, w, seg, flat=False, rim_only=False):
     m.cylinder('rust_dark', (x + side * w / 2, y, z), (x + side * (w / 2 + 0.01), y, z), r * 0.6, seg, caps=True)
 
 
-def car(kind='sedan', paint='paint_green', seed=0, lod=0, burnt=False):
-    """kind: sedan | estate | van. ~4.1 x 1.6 x 1.45 m."""
+def car(kind='sedan', paint='paint_green', seed=0, lod=0, burnt=False, taxi=False):
+    """kind: sedan | estate | van. ~4.1 x 1.6 x 1.45 m. taxi: a roof sign and a black-and-white check band."""
     rng = np.random.default_rng(seed)
     m = Mesh(PALETTE)
     body = 'burnt' if burnt else paint
@@ -72,6 +72,15 @@ def car(kind='sedan', paint='paint_green', seed=0, lod=0, burnt=False):
                 m.oriented_box(body, (x, ybase, z), (x, roof - 0.03, z + 0.18), 0.08, 0.08)
             else:
                 m.box_c(body, (x, (ybase + roof) / 2, z), (0.08, roof - ybase, 0.08))
+    if taxi:
+        # Roof sign (its plastic long gone grey) and a check band along the doors.
+        m.box_c('rust_dark', (0, roof + 0.02, (cab0 + cab1) / 2 + 0.1), (0.5, 0.04, 0.2))
+        m.box_c('paint_cream', (0, roof + 0.13, (cab0 + cab1) / 2 + 0.1), (0.62, 0.2, 0.16))
+        if lod == 0:
+            for k in range(12):
+                z = -1.3 + k * 0.22
+                for s in (-1, 1):
+                    m.box_c('iron_black' if k % 2 else 'paint_cream', (s * (W / 2 + 0.004), 0.74, z), (0.01, 0.08, 0.22), faces='xX')
     if lod == 0:
         # interior: floor, seats, dashboard
         m.box('rust_dark', (-W / 2 + 0.05, y0 + 0.05, cab0), (W / 2 - 0.05, y0 + 0.1, cab1), faces='Y')

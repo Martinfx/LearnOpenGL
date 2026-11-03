@@ -941,6 +941,15 @@ void MainWindow::buildDocks()
         }
     });
     renderingForm->addRow(tr("Color"), colorButton_);
+    clipCheck_ = new QCheckBox(tr("Player clip (invisible in the game)"), boxPanel_);
+    clipCheck_->setToolTip(tr("The box only collides: an invisible wall that keeps the player in the level (the editor still draws it)"));
+    renderingForm->addRow(QString(), clipCheck_);
+    connect(clipCheck_, &QCheckBox::toggled, this, [this](bool on) {
+        if (auto* b = selectedBox(); b && b->clip != on) {
+            b->clip = on;
+            markDirty();
+        }
+    });
 
     // Box material (.material), and per-slot overrides of glTF materials for models.
     materialRow_ = new QWidget(boxPanel_);
@@ -3035,6 +3044,10 @@ void MainWindow::refreshProperties()
     materialEdit_->setToolTip(b ? QString::fromStdU16String(b->materialPath.u16string()) : QString());
     refreshMaterialSlots();
     colorButton_->setEnabled(b || e);
+    clipCheck_->setEnabled(b != nullptr);
+    clipCheck_->blockSignals(true);
+    clipCheck_->setChecked(b && b->clip);
+    clipCheck_->blockSignals(false);
     typeEdit_->setEnabled(e != nullptr);
     yawSpin_->setEnabled(e != nullptr);
     scriptRow_->setEnabled(e != nullptr);

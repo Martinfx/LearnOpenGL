@@ -178,6 +178,7 @@ void testSceneRoundTrip()
 {
     engine::Scene s = engine::makeDefaultScene();
     s.boxes[0].name = "Name with \"quotes\" and spaces";
+    s.boxes[0].clip = true;
     s.environment.autoExposure = 0.75f;
     s.environment.exposureMaxEv = 1.5f;
     s.environment.temperature = -0.3f;
@@ -192,6 +193,7 @@ void testSceneRoundTrip()
     check(engine::loadScene(t, "roundtrip.level", &err), "load: " + err);
     check(t.boxes.size() == s.boxes.size(), "same number of boxes");
     check(!t.boxes.empty() && t.boxes[0].name == s.boxes[0].name, "names survive quoting");
+    check(!t.boxes.empty() && t.boxes[0].clip && (t.boxes.size() < 2 || !t.boxes[1].clip), "player clip flag survives save/load");
     const engine::Environment& e = t.environment;
     check(e.autoExposure == 0.75f && e.exposureMaxEv == 1.5f && e.temperature == -0.3f && e.lift == s.environment.lift &&
               e.lutStrength == 0.6f && e.lut.filename() == "look.png",
@@ -4949,6 +4951,19 @@ void testCityGrammarHouse()
             }
         }
         check(spots > 0 && good == spots, "fire escapes: let-down drop ladders are climbable (" + std::to_string(good) + "/" + std::to_string(spots) + ")");
+    }
+    // Enterable: the same house with a stairwell and floors inside (LOD0), a closed shell at LOD1.
+    {
+        BuildingSpec in = b;
+        in.interior = true;
+        check(buildingKey(in) != buildingKey(b), "enterable key differs");
+        GrammarStats shell, open, far;
+        std::string err;
+        check(writeBuildingGlb(b, dir / "c.glb", 0, ENGINE_TEST_ASSETS "/models/zone/textures", &err, &shell), "write shell: " + err);
+        check(writeBuildingGlb(in, dir / "i.glb", 0, ENGINE_TEST_ASSETS "/models/zone/textures", &err, &open), "write enterable: " + err);
+        check(writeBuildingGlb(in, dir / "i_lod1.glb", 1, ENGINE_TEST_ASSETS "/models/zone/textures", &err, &far), "write enterable LOD1: " + err);
+        check(open.triangles > shell.triangles + 300, "enterable house has an inside: " + std::to_string(open.triangles) + " vs " + std::to_string(shell.triangles));
+        check(far.triangles < shell.triangles, "enterable LOD1 stays a shell");
     }
     // A bare concrete frame on the same footprint: columns, slabs, a collapsed side.
     BuildingSpec sk = b;

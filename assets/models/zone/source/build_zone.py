@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from zonegen import mats, glb                         # noqa: E402
 from zonegen import vehicles, structures, buildings, vegetation   # noqa: E402
-from zonegen import panel_tower, square, road_decals   # noqa: E402
+from zonegen import panel_tower, square, road_decals, nyc   # noqa: E402
 
 OUT = os.path.join(mats.ZONE, 'gen')
 
@@ -26,6 +26,13 @@ MODELS = {
     'car_estate_red': (vehicles.car, dict(kind='estate', paint='paint_red', seed=4), True),
     'car_estate_rust': (vehicles.car, dict(kind='estate', paint='rust', seed=5), True),
     'car_van_green': (vehicles.car, dict(kind='van', paint='paint_green', seed=6), True),
+    'car_taxi': (vehicles.car, dict(kind='sedan', paint='paint_yellow', seed=8, taxi=True), True),
+    'car_taxi_rust': (vehicles.car, dict(kind='sedan', paint='paint_yellow', seed=9, taxi=True), True),
+    'water_tower_a': (nyc.water_tower, dict(seed=1), True),
+    'water_tower_b': (nyc.water_tower, dict(seed=2), True),
+    'water_tower_broken': (nyc.water_tower, dict(seed=3, broken=True), True),
+    'hydrant_a': (nyc.hydrant, dict(seed=1), True),
+    'hydrant_b': (nyc.hydrant, dict(seed=4), True),
     'car_burnt': (vehicles.car, dict(kind='sedan', paint='burnt', seed=7, burnt=True), True),
     'bus_small_cream': (vehicles.bus, dict(length=7.0, paint='paint_cream', seed=1), True),
     'bus_small_blue': (vehicles.bus, dict(length=7.0, paint='paint_blue', seed=2), True),

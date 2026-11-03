@@ -64,6 +64,7 @@ struct BuildingSpec {
     int floors = 5;
     std::uint32_t seed = 0;
     bool ruin = false;               // upper storeys gone, open to the sky
+    bool interior = false;           // enterable: open entrances, a stairwell to every floor, gutted flats behind the windows (LOD0)
 };
 
 float buildingHeight(const BuildingSpec& b); // to the top of the wall (m)

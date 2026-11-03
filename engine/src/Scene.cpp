@@ -100,6 +100,8 @@ void writeBox(std::ostream& out, const Box& b, const std::filesystem::path& leve
     if (b.uvModified())
         out << "  uv " << b.uvScale.x << ' ' << b.uvScale.y << ' ' << b.uvOffset.x << ' ' << b.uvOffset.y << ' '
             << b.uvRotation << '\n';
+    if (b.clip)
+        out << "  clip\n";
 }
 
 void writeModel(std::ostream& out, const Model& m, const std::filesystem::path& levelDir, bool withBounds)
@@ -1034,6 +1036,11 @@ bool loadScene(Scene& scene, const std::filesystem::path& file, std::string* err
                 glm::vec3& r = result.boxes.back().rotation;
                 ok = static_cast<bool>(ls >> r.x >> r.y >> r.z);
             }
+        } else if (key == "clip") {
+            // The box on the line above is a player clip (invisible wall).
+            ok = lastObject == LastObject::Box;
+            if (ok)
+                result.boxes.back().clip = true;
         } else if (key == "uv") {
             // Texture placement of the box on the line above.
             ok = lastObject == LastObject::Box;

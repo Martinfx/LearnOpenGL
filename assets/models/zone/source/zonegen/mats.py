@@ -21,6 +21,8 @@ SETS = {
                                            overlay_mask=tex.noise_mask(5, 80, 0.55, 0.12))),
     'paint_red': ('blue_metal_plate', dict(metal=0.2, tint=(1.4, 0.68, 0.58), saturation=0.0, overlay='rust_coarse_01',
                                            overlay_mask=tex.noise_mask(7, 96, 0.48, 0.15))),
+    'paint_yellow': ('blue_metal_plate', dict(metal=0.2, tint=(1.45, 1.12, 0.38), saturation=0.0, overlay='rust_coarse_01',
+                                              overlay_mask=tex.noise_mask(9, 96, 0.5, 0.15))),   # NYC cabs
     'concrete': ('concrete_wall_008', dict()),
     'concrete_dark': ('concrete_layers_02', dict()),
     'concrete_floor': ('concrete_floor_02', dict()),
@@ -239,6 +241,7 @@ PALETTE = {
     'paint_blue': M('paint_blue', 1.6),
     'paint_cream': M('paint_cream', 1.6),
     'paint_red': M('paint_red', 1.6),
+    'paint_yellow': M('paint_yellow', 1.6),
     'burnt': M('rust_dark', 1.2, color=(0.35, 0.3, 0.28)),
     'iron_black': M('rust_dark', 1.5, color=(0.3, 0.29, 0.29)),     # black paint gone to rust: NYC fire escapes
     'concrete': M('concrete', 3.0),

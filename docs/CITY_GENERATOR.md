@@ -160,6 +160,31 @@ Každý dům s obchodním parterem (i pod podloubím) má nad výlohami vybledl�
 z `zonegen/shop_signs.py` (materiál `shop_signs`, alfa blend, olupující se barva, rez, chybějící písmena).
 Výběr štítků má vlastní RNG, takže ostatní domy se nemění.
 
+### Procházitelné domy (Zoning → Enterable houses)
+
+`interiors` (výchozí 0,6) = podíl celých domů (ne ruin, skeletů a hal), do kterých se dá vejít
+(`BuildingSpec.interior`, klíč souboru `|in1`). Gramatika jim v LOD0 udělá vnitřek: zdi mají vnitřní
+líc, okna jsou proražená skrz (bez tmavé desky), vchodové dveře chybí. Za hlavním vchodem nejdelší
+uliční fasády (dost hluboké, ≥ 6,6 m) je schodiště: vstupní podesta, dvě ramena na patro kolem
+střední zdi (stupně ≤ 18 cm, Jolt je vyjde), mezipodesta vzadu, podesta v každém patře s průchody
+do bytů po stranách. Stropní desky v každém patře (s výřezem pro schodiště), podhledy, příčky
+od fasád mezi dvojicemi oken s průchodem na konci. LOD1 zůstává zavřená skořápka. Vlastní RNG,
+fasády se nemění. Zhruba +50 % trojúhelníků u LOD0 domu.
+
+### Konec mapy (Zoning → Walls round the map)
+
+`boundary` (organický režim): u okraje okolí (town_size/2 + outskirts − 5 m) pás houštin, mladých
+stromů, sutin, padlých panelů a souší, na silnicích, které z mapy vedou, barikády z vraků a panelů.
+Za pásem čtyři neviditelné stěny 90 m vysoké – box s příznakem **Player clip** (řádek levelu `clip`,
+v editoru zaškrtávátko v Details; hra ho nekreslí, jen koliduje, editor ho kreslí).
+
+### New York: vodní věže, hydranty, taxíky
+
+Kit role `water_tower` (zonegen/nyc.py: dřevěná nádrž na ocelovém stojanu, rezavé obruče, žebřík,
+jedna s propadlou střechou) – `water_towers` = podíl plochých střech domů s 5+ patry
+(Street furniture → Roof water towers). Role `hydrant` (litinové hydranty, `hydrant_spacing` m
+podél obrubníku, 0 = žádné). Vraky `car_taxi`, `car_taxi_rust` (žlutý lak, střešní cedule, šachovnice).
+
 ### Dominanta (Landmark tower)
 
 Town plan → Zoning → **Landmark tower** (`landmark`, `landmark_floors`, `landmark_name`): v bloku

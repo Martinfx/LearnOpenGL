@@ -475,6 +475,9 @@ QWidget* CityGeneratorPanel::townTab()
     addNumber(zone, tr("Ruins"), &settings_.ruinShare, 0, 1, 0.05, tr("Blocks whose houses are ruins (storeys gone, open to the sky)"), none);
     addNumber(zone, tr("Concrete skeletons"), &settings_.skeletonShare, 0, 1, 0.02,
               tr("Share of panel blocks, flat-roofed tenements and towers left as a bare concrete frame (needs kit styles with role skeleton / skeleton_tower)"), none);
+    addNumber(zone, tr("Enterable houses"), &settings_.interiors, 0, 1, 0.05,
+              tr("Share of whole houses you can walk into: open entrance, a stairwell with landings to every floor, gutted flats with "
+                 "partitions behind the windows (more triangles near the player; LOD1 stays a closed shell)"), none);
     addNumber(zone, tr("Parks"), &settings_.parkShare, 0, 1, 0.05, tr("Blocks left green"), none);
     addFlag(zone, tr("Town square in the centre"), &settings_.square,
             tr("The roomy block nearest the centre becomes the square: slabs with grass in the joints, a war memorial, "
@@ -498,6 +501,9 @@ QWidget* CityGeneratorPanel::townTab()
         changed();
     });
     refreshers_.push_back([this, landmarkName] { landmarkName->setText(QString::fromStdString(settings_.landmarkName)); });
+    addFlag(zone, tr("Walls round the map"), &settings_.boundary,
+            tr("Organic layout: the map ends in a belt of thickets, young trees, rubble and fallen slabs, barricades of wrecks where the "
+               "roads run out, and player clips (invisible walls) behind it so nobody walks off the world"));
     addFlag(zone, tr("Street names on the map"), &settings_.streetNames,
             tr("New York style: avenues along the town's main direction (12th Ave ... 1st Ave, west to east), numbered streets across "
                "(W 14th St ..., south to north); one label per street on the map"));
@@ -563,6 +569,9 @@ QWidget* CityGeneratorPanel::rulesTab()
     number(streets, tr("Trees left"), &settings_.treeSurvival, 0, 1, 0.05, tr("Share of the planted trees still standing (the rest: stumps, dead trees, seedlings)"), QString());
     number(streets, tr("Wrecks per 100 m"), &settings_.wrecksPer100m, 0, 20, 0.1, tr("Parked at the kerb; side streets 70 %, alleys 30 %"), QString());
     number(streets, tr("Rubble per 100 m"), &settings_.rubblePer100m, 0, 50, 0.5, tr("Fallen bits of cornices and balconies under the facades"), QString());
+    number(streets, tr("Hydrant spacing"), &settings_.hydrantSpacing, 0, 1000, 5, tr("Fire hydrants at the kerb, about this far apart (0 = none; kit role hydrant)"));
+    number(streets, tr("Roof water towers"), &settings_.waterTowers, 0, 1, 0.05,
+           tr("Share of flat-roofed houses of 5+ storeys with a wooden water tank on a steel stand (kit role water_tower)"), QString());
 
     QFormLayout* per = section(tr("Perimeter blocks (tenements)"));
     number(per, tr("Gateway min"), &settings_.gatewayMin, 1, 40, 0.5, tr("Courtyard gateway between two houses"));

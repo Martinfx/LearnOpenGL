@@ -432,6 +432,7 @@ private:
     Vec3Editor* rotationEdit_ = nullptr;   // glTF models
     QDoubleSpinBox* scaleSpin_ = nullptr;  // glTF models
     QPushButton* colorButton_ = nullptr;
+    QCheckBox* clipCheck_ = nullptr; // box: player clip (invisible wall in the game)
     Vec3Editor* playerStartEdit_ = nullptr;
     Vec3Editor* sunEdit_ = nullptr;
 };

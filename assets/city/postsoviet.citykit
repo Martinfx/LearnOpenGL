@@ -40,6 +40,13 @@ prop cable "../models/zone/street/cable_14m.glb" size 14 cull 160 collision 0 sh
 prop cable "../models/zone/street/cable_18m.glb" size 18 cull 160 collision 0 shadows 1
 prop cable "../models/zone/street/cable_24m.glb" size 24 cull 160 collision 0 shadows 1
 prop cable "../models/zone/street/cable_32m.glb" size 32 cull 160 collision 0 shadows 1
+prop car "../models/zone/gen/car_taxi.glb" lod "../models/zone/gen/car_taxi_lod1.glb" 50 cull 260 collision 1 shadows 1
+prop car "../models/zone/gen/car_taxi_rust.glb" lod "../models/zone/gen/car_taxi_rust_lod1.glb" 50 cull 260 collision 1 shadows 1
+prop water_tower "../models/zone/gen/water_tower_a.glb" lod "../models/zone/gen/water_tower_a_lod1.glb" 60 cull 700 collision 1 shadows 1
+prop water_tower "../models/zone/gen/water_tower_b.glb" lod "../models/zone/gen/water_tower_b_lod1.glb" 60 cull 700 collision 1 shadows 1
+prop water_tower "../models/zone/gen/water_tower_broken.glb" lod "../models/zone/gen/water_tower_broken_lod1.glb" 60 cull 700 collision 1 shadows 1
+prop hydrant "../models/zone/gen/hydrant_a.glb" lod "../models/zone/gen/hydrant_a_lod1.glb" 20 cull 90 collision 1 shadows 0
+prop hydrant "../models/zone/gen/hydrant_b.glb" lod "../models/zone/gen/hydrant_b_lod1.glb" 20 cull 90 collision 1 shadows 0
 prop car "../models/zone/gen/car_burnt.glb" lod "../models/zone/gen/car_burnt_lod1.glb" 50 cull 260 collision 1 shadows 1
 prop car "../models/zone/gen/car_estate_rust.glb" lod "../models/zone/gen/car_estate_rust_lod1.glb" 50 cull 260 collision 1 shadows 1
 prop car "../models/zone/gen/car_sedan_green.glb" lod "../models/zone/gen/car_sedan_green_lod1.glb" 50 cull 260 collision 1 shadows 1

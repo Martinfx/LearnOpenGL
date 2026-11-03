@@ -59,6 +59,7 @@ struct Box {
     glm::vec2 uvScale{1.0f};
     glm::vec2 uvOffset{0.0f};
     float uvRotation = 0.0f;        // degrees
+    bool clip = false;              // player clip (level sub-line `clip`): collides, not drawn in the game (the editor shows it)
 
     bool rotated() const { return rotation != glm::vec3(0.0f); }
     bool uvModified() const { return uvScale != glm::vec2(1.0f) || uvOffset != glm::vec2(0.0f) || uvRotation != 0.0f; }

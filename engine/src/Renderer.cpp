@@ -1449,6 +1449,8 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         drawTerrain(*scene.terrain, view);
     for (std::size_t i = 0; i < scene.boxes.size(); ++i) {
         const Box& b = scene.boxes[i];
+        if (b.clip && (!view.editorHelpers || depthOnly)) // invisible walls: only the editor draws them
+            continue;
         if (!visible(b.bounds())) {
             if (b.material) { // keep its maps on the GPU while out of view
                 drawDistance_ = distanceTo(lodEye(view), b.bounds());

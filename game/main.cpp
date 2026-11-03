@@ -2641,6 +2641,16 @@ int main(int argc, char** argv)
             const float thicket = player.noclip ? 0.0f : thickets.densityAt(player.feet());
             if (thicket > 0.0f)
                 player.slow(scene.player.bushSlow * thicket); // pushing through bushes
+            { // test hook: FPS_ENGINE_WALK="from to" holds W from frame `from` to frame `to` (stairs, doorways)
+                static const char* walk = std::getenv("FPS_ENGINE_WALK");
+                static long walkFrom = 0, walkTo = -1;
+                if (walk && walkTo < 0 && std::sscanf(walk, "%ld %ld", &walkFrom, &walkTo) != 2)
+                    walkTo = 1L << 40;
+                if (walk && static_cast<long>(frame) >= walkFrom && static_cast<long>(frame) < walkTo)
+                    input.set(engine::Action::MoveForward, true);
+                if (walk && static_cast<long>(frame) == walkTo)
+                    std::printf("walk: feet %.2f %.2f %.2f\n", player.feet().x, player.feet().y, player.feet().z);
+            }
             player.fixedUpdate(input, camera, dt);
             // Pickups the player touches (ammo, medkits, weapons).
             for (const PickupResult& r : collectPickups(scene, player.feet(), inventory, weapons, current, assetRoot)) {
