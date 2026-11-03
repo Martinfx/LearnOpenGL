@@ -720,7 +720,12 @@ bool Renderer::init(GlLoader loader, std::string* error)
     glNamedBufferStorage(vbo_, static_cast<GLsizeiptr>(cube.size() * sizeof(Vertex)), cube.data(), 0);
     glCreateVertexArrays(1, &vao_);
     setupVertexArray(vao_, vbo_);
-    glVertexAttrib4f(6, 1.0f, 0.0f, 0.0f, 0.0f); // foliage data where a vertex array has none: open, rigid
+    {
+        const std::uint32_t zero[4] = {};
+        glCreateBuffers(1, &zeroInstanceBuffer_);
+        glNamedBufferStorage(zeroInstanceBuffer_, sizeof zero, zero, 0);
+    }
+    bindZeroInstance(vao_);
     glCreateVertexArrays(1, &emptyVao_);
 
     // 1x1 stand-ins so samplers are always valid.
@@ -883,7 +888,7 @@ void Renderer::shutdown()
     debugBuffer_ = 0;
     debugCapacity_ = 0;
     spriteCapacity_ = 0;
-    for (unsigned* b : {&vbo_, &jointBuffer_, &envBuffer_, &lightBuffer_, &lightGridBuffer_, &lightIndexBuffer_, &lightShadowBuffer_, &interiorBuffer_, &probeBuffer_, &probeVolumeBuffer_})
+    for (unsigned* b : {&vbo_, &zeroInstanceBuffer_, &jointBuffer_, &envBuffer_, &lightBuffer_, &lightGridBuffer_, &lightIndexBuffer_, &lightShadowBuffer_, &interiorBuffer_, &probeBuffer_, &probeVolumeBuffer_})
         if (*b) {
             glDeleteBuffers(1, b);
             *b = 0;
@@ -2845,6 +2850,7 @@ void Renderer::drawTerrain(const Terrain& t, const RenderView& view)
                 }
             glNamedBufferData(terrain_.ibo, static_cast<GLsizeiptr>(indices.size() * sizeof(std::uint32_t)), indices.data(), GL_STATIC_DRAW);
             setupVertexArray(terrain_.vao, terrain_.vbo);
+            bindZeroInstance(terrain_.vao);
             glVertexArrayElementBuffer(terrain_.vao, terrain_.ibo);
         }
         // Chunk bounds from the heights.
@@ -4499,6 +4505,16 @@ void Renderer::growMeshPool(std::size_t vertices, std::size_t indices)
     glVertexArrayElementBuffer(poolVao_, poolIbo_);
     for (auto& [id, mesh] : meshes_)
         mesh.vao = poolVao_;
+}
+
+void Renderer::bindZeroInstance(unsigned vao) const
+{
+    // aInstance (location 5) from a buffer as in the mesh pool, always 0 (uInstanced is off there).
+    glEnableVertexArrayAttrib(vao, 5);
+    glVertexArrayAttribIFormat(vao, 5, 1, GL_UNSIGNED_INT, 0);
+    glVertexArrayAttribBinding(vao, 5, 1);
+    glVertexArrayBindingDivisor(vao, 1, 1);
+    glVertexArrayVertexBuffer(vao, 1, zeroInstanceBuffer_, 0, sizeof(std::uint32_t));
 }
 
 void Renderer::ensureIota(std::size_t count)

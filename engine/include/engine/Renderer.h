@@ -327,6 +327,11 @@ private:
         bool used = false;
     };
     unsigned poolVao_ = 0, poolVbo_ = 0, poolIbo_ = 0, iotaBuffer_ = 0, indirectBuffer_ = 0;
+    // One zero instance index for the vertex arrays outside the pool (cube, terrain): every array
+    // drawn with mesh.vert enables the same attributes, else the driver recompiles the shader
+    // for each combination ("Vertex shader ... recompiled based on GL state") and hitches.
+    unsigned zeroInstanceBuffer_ = 0;
+    void bindZeroInstance(unsigned vao) const;
     RangeAllocator poolVertices_, poolIndices_;
     std::size_t iotaCount_ = 0, indirectCapacity_ = 0;
     void growMeshPool(std::size_t vertices, std::size_t indices); // room for at least this many more
