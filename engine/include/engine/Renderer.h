@@ -743,6 +743,9 @@ private:
     // and without their own alpha test, so both passes can never disagree on a leaf's pixels
     // (a pixel with pre-pass depth but no shading stayed black: dark dots in bushes and trees).
     bool maskByDepth_ = false;
+    // Cached far shadow cascades are re-rendered only every 2nd / 4th frame: plants drawn there
+    // without wind, else their swaying shadows jump in steps (flickering shadows of trees).
+    bool shadowStill() const { return shadowCascade_ > 0 && quality_.shadowCache; }
     float dynScale_ = 1.0f;
     double dynGpuMs_ = 0.0;
     double dynLastChange_ = 0.0;

@@ -1530,7 +1530,9 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
             if (mainPass)
                 keepAliveLods(model, draw);
         }
-        if (quality_.impostors && model.impostorDistance > 0.0f && !model.skeleton && !model.parts.empty() &&
+        // Shadows keep the geometry: an impostor's crossed quads cast a different shape, and the
+        // switch showed as shadows flickering at the impostor distance.
+        if (quality_.impostors && model.impostorDistance > 0.0f && !model.skeleton && !model.parts.empty() && shadowCascade_ < 0 &&
             glm::distance(lodEye(view), (modelBounds.min + modelBounds.max) * 0.5f) > model.impostorDistance * quality_.lodScale)
             if (const Model* impostor = impostorFor(model))
                 draw = impostor;
@@ -1538,7 +1540,7 @@ void Renderer::drawGeometry(const Scene& scene, const RenderView& view, bool dep
         const glm::vec2 fade = model.cullDistance > 0.0f && !shadowPass ? glm::vec2(model.cullDistance * 0.85f, model.cullDistance) : glm::vec2(0.0f);
         const VertexPaint* paint = draw == &model && model.paint && !depthOnly ? model.paint.get() : nullptr;
         if (!quality_.instancing || selected || draw->skeleton || draw->parts.empty() || paint) {
-            glUniform1f(loc_.sway, model.sway);
+            glUniform1f(loc_.sway, shadowStill() ? 0.0f : model.sway);
             glUniform2f(loc_.fade, fade.x, fade.y);
             drawModel(*draw, grid.transforms[i], selected ? 1.0f : 0.0f, nullptr, paint);
             glUniform1f(loc_.sway, 0.0f);
@@ -3129,6 +3131,7 @@ void Renderer::addFoliage(const Terrain& t, const RenderView& view)
                 levels[levelCount] = lod.model.get();
                 from[levelCount++] = lod.distance * quality_.lodScale;
             }
+        const int geometryLevels = levelCount; // shadows stop here (no impostor shapes)
         // Farthest: the baked impostor (two crossed quads), once it exists.
         if (quality_.impostors && type.impostorDistance > 0.0f && type.model && !type.model->parts.empty() && levelCount < 8)
             if (const Model* impostor = impostorFor(*type.model)) {
@@ -3178,9 +3181,9 @@ void Renderer::addFoliage(const Terrain& t, const RenderView& view)
                 };
                 if (shadowCascade_ >= 0) { // shadows: one level, the simpler copy up close
                     int level = 0;
-                    while (level + 1 < levelCount && d > from[level + 1])
+                    while (level + 1 < geometryLevels && d > from[level + 1])
                         ++level;
-                    emit(level == 0 && levelCount > 1 ? 1 : level, 0.0f);
+                    emit(level == 0 && geometryLevels > 1 ? 1 : level, 0.0f);
                     continue;
                 }
                 const LodPick pick = pickLod(from, levelCount, d);
@@ -3355,7 +3358,7 @@ void Renderer::flushInstances()
             ++last;
         }
         drawDistance_ = distance; // texture streaming: the nearest copy
-        glUniform1f(loc_.sway, f.sway);
+        glUniform1f(loc_.sway, shadowStill() ? 0.0f : f.sway);
         glUniform2f(loc_.fade, f.fade.x, f.fade.y);
         applySurface(f.material, f.part, f.part->color, false);
         if (f.twoSided)
