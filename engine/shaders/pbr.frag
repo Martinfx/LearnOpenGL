@@ -640,7 +640,7 @@ void main() {
     float maxMip = uShadowParams.w;
     // Sky light (dimmed inside interiors), replaced by baked probes where there are any.
     // Buildings and roofs hide part of the sky (large scale; baked probes already know it).
-    float skyVis = uOverlay ? 1.0 : skyVisibility(vWorldPos + normalize(vNormal) * 0.05, nWorld, foliage ? 3 : 6);
+    float skyVis = uOverlay ? 1.0 : skyVisibility(vWorldPos + normalize(vNormal) * 0.05, nWorld, foliage ? 3 : int(max(uContact.w, 3.0)));
     vec3 irradiance = textureLod(uEnvMap, nWorld, maxMip).rgb * uGroundColor.w * interiorSky * skyVis;
     vec3 prefiltered = textureLod(uEnvMap, rWorld, rough * maxMip).rgb * uGroundColor.w * interiorSky * mix(sqrt(skyVis), skyVis, rough);
     {

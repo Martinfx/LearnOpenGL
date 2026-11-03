@@ -3714,6 +3714,9 @@ void testVolumetricFogSettings()
         text.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
     }
     check(text.find("fog_light_shafts") == std::string::npos, "default volumetric settings are not written");
+    check(!engine::RenderQuality::preset(2).ssgi && engine::RenderQuality::preset(3).ssgi &&
+              engine::RenderQuality::preset(2).skyOcclusionDirs < engine::RenderQuality::preset(3).skyOcclusionDirs,
+          "High leaves the dearest features to Ultra");
     check(engine::RenderQuality::preset(0).volumetricFog == 0 && engine::RenderQuality::preset(2).volumetricFog > 0,
           "volumetric fog follows the quality preset");
     fs::remove(file);

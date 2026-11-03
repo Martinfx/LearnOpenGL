@@ -2779,6 +2779,12 @@ void MainWindow::buildDocks()
     volumetricCheck->setToolTip(tr("Light shafts, lamps and the flashlight in the fog near the camera (compute shaders)"));
     volumetricCheck->setChecked(viewport_->quality().volumetricFog > 0);
     frameOptions->addWidget(volumetricCheck);
+    auto* skyDirsSpin = new QSpinBox(framePanel);
+    skyDirsSpin->setRange(3, 8);
+    skyDirsSpin->setPrefix(tr("Sky occlusion rays: "));
+    skyDirsSpin->setToolTip(tr("Directions of the sky occlusion search per pixel (Ultra 6, High 4, Medium 3; foliage always 3)"));
+    skyDirsSpin->setValue(viewport_->quality().skyOcclusionDirs);
+    frameOptions->addWidget(skyDirsSpin);
     frameOptions->addStretch();
     frameLayout->addLayout(frameOptions);
     auto* frameLabel = new QLabel(framePanel);
@@ -2786,8 +2792,9 @@ void MainWindow::buildDocks()
     frameLabel->setAlignment(Qt::AlignTop | Qt::AlignLeft);
     frameLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
     frameLayout->addWidget(frameLabel, 1);
-    auto applyFrameOption = [this, instancingCheck, shadowCacheCheck, occlusionCheck, volumetricCheck, asyncCullCheck] {
+    auto applyFrameOption = [this, instancingCheck, shadowCacheCheck, occlusionCheck, volumetricCheck, asyncCullCheck, skyDirsSpin] {
         engine::RenderQuality q = viewport_->quality();
+        q.skyOcclusionDirs = skyDirsSpin->value();
         if (volumetricCheck->isChecked() != (q.volumetricFog > 0))
             q.volumetricFog = volumetricCheck->isChecked() ? 2 : 0;
         q.occlusionCulling = occlusionCheck->isChecked();
@@ -2801,6 +2808,7 @@ void MainWindow::buildDocks()
     connect(asyncCullCheck, &QCheckBox::toggled, this, applyFrameOption);
     connect(shadowCacheCheck, &QCheckBox::toggled, this, applyFrameOption);
     connect(occlusionCheck, &QCheckBox::toggled, this, applyFrameOption);
+    connect(skyDirsSpin, qOverload<int>(&QSpinBox::valueChanged), this, applyFrameOption);
     auto* frameScroll = new QScrollArea(this);
     frameScroll->setWidget(framePanel);
     frameScroll->setWidgetResizable(true);
@@ -2810,7 +2818,7 @@ void MainWindow::buildDocks()
     addDockWidget(Qt::BottomDockWidgetArea, frameDock);
     tabifyDockWidget(logDock_, frameDock);
     auto* frameTimer = new QTimer(this);
-    connect(frameTimer, &QTimer::timeout, this, [this, frameLabel, frameDock, instancingCheck, shadowCacheCheck, volumetricCheck, asyncCullCheck] {
+    connect(frameTimer, &QTimer::timeout, this, [this, frameLabel, frameDock, instancingCheck, shadowCacheCheck, volumetricCheck, asyncCullCheck, skyDirsSpin] {
         if (!frameDock->isVisible() || frameDock->visibleRegion().isEmpty())
             return;
         instancingCheck->blockSignals(true); // quality presets change these too
@@ -2825,6 +2833,11 @@ void MainWindow::buildDocks()
         asyncCullCheck->blockSignals(true);
         asyncCullCheck->setChecked(viewport_->quality().asyncCull);
         asyncCullCheck->blockSignals(false);
+        if (!skyDirsSpin->hasFocus()) {
+            skyDirsSpin->blockSignals(true);
+            skyDirsSpin->setValue(viewport_->quality().skyOcclusionDirs);
+            skyDirsSpin->blockSignals(false);
+        }
         const engine::Renderer::FrameStats& f = viewport_->frameStats();
         const auto ms = [](double v) { return QString::number(v, 'f', 2); };
         QString html = "<table cellspacing='2'><tr><td><b>" + tr("Pass") + "</b></td><td align='right'>&nbsp;&nbsp;<b>CPU ms</b></td>"

@@ -259,15 +259,18 @@ DemoState& demoState()
     return state;
 }
 // Feature cost profile (FPS_ENGINE_PROFILE=1): the full-resolution GPU frame time with each
-// renderer feature off in turn, against all on, printed as a table at the end.
+// renderer feature off in turn. Every feature is measured right after an "all on" run, and the
+// saving is against that one, so drift in the scene (weather, characters walking by, clocks)
+// does not land on whichever feature happens to be measured then.
 struct FeatureProfile {
     bool active = false;
-    int phase = -1, frame = 0;
+    int phase = -1, frame = 0; // even: all on, odd: change phase / 2
     double sum = 0.0, opaque = 0.0;
     int samples = 0;
+    double baseGpu = 0.0, baseOpaque = 0.0;
     engine::RenderQuality base;
     float baseSkyOcclusion = 0.0f;
-    std::vector<std::tuple<std::string, double, double>> results; // name, GPU ms, opaque ms
+    std::vector<std::tuple<std::string, double, double, double>> results; // name, all on, off, opaque saved
     struct Change {
         const char* name;
         std::function<void(engine::RenderQuality&, engine::Environment&)> apply;
@@ -275,13 +278,14 @@ struct FeatureProfile {
     static const std::vector<Change>& changes()
     {
         static const std::vector<Change> list = {
-            {"all on (High, full resolution)", [](engine::RenderQuality&, engine::Environment&) {}},
             {"soft shadows (PCSS) off", [](engine::RenderQuality& q, engine::Environment&) { q.softShadows = false; }},
             {"contact shadows off", [](engine::RenderQuality& q, engine::Environment&) { q.contactShadows = false; }},
             {"SSR off", [](engine::RenderQuality& q, engine::Environment&) { q.ssr = false; }},
             {"SSGI off", [](engine::RenderQuality& q, engine::Environment&) { q.ssgi = false; }},
             {"SSAO + SSGI off", [](engine::RenderQuality& q, engine::Environment&) { q.ssao = false; q.ssgi = false; }},
             {"sky occlusion off", [](engine::RenderQuality&, engine::Environment& e) { e.skyOcclusion = 0.0f; }},
+            {"sky occlusion 3 rays", [](engine::RenderQuality& q, engine::Environment&) { q.skyOcclusionDirs = 3; }},
+            {"volumetric fog medium", [](engine::RenderQuality& q, engine::Environment&) { q.volumetricFog = 1; }},
             {"volumetric fog off", [](engine::RenderQuality& q, engine::Environment&) { q.volumetricFog = 0; }},
             {"parallax off", [](engine::RenderQuality& q, engine::Environment&) { q.parallax = false; }},
             {"shadow maps 1024", [](engine::RenderQuality& q, engine::Environment&) { q.shadowResolution = 1024; }},
@@ -289,7 +293,12 @@ struct FeatureProfile {
             {"LOD distances x0.5", [](engine::RenderQuality& q, engine::Environment&) { q.lodScale = 0.5f; }},
             {"render scale 0.7", [](engine::RenderQuality& q, engine::Environment&) { q.renderScale = 0.7f; }},
             {"TAA -> FXAA", [](engine::RenderQuality& q, engine::Environment&) { q.taa = false; q.fxaa = true; }},
-            {"all on again (noise check)", [](engine::RenderQuality&, engine::Environment&) {}},
+            {"Medium preset", [](engine::RenderQuality& q, engine::Environment&) {
+                 const engine::RenderQuality keep = q;
+                 q = engine::RenderQuality::preset(1);
+                 q.renderScale = keep.renderScale;
+                 q.dynamicTargetFps = 0.0f;
+             }},
         };
         return list;
     }
@@ -297,9 +306,10 @@ struct FeatureProfile {
     {
         if (!active)
             return;
-        // FPS_ENGINE_PROFILE=<frames> measures each step that long (default 60, a third more to settle).
-        static const int kMeasure = std::max(4, std::atoi(std::getenv("FPS_ENGINE_PROFILE")) > 1 ? std::atoi(std::getenv("FPS_ENGINE_PROFILE")) : 60);
+        // FPS_ENGINE_PROFILE=<frames> measures each step that long (default 50, a third more to settle).
+        static const int kMeasure = std::max(4, std::atoi(std::getenv("FPS_ENGINE_PROFILE")) > 1 ? std::atoi(std::getenv("FPS_ENGINE_PROFILE")) : 50);
         static const int kSettle = std::max(3, kMeasure / 3);
+        const int steps = static_cast<int>(changes().size()) * 2;
         if (phase < 0) {
             base = renderer.quality();
             base.dynamicTargetFps = 0.0f;
@@ -308,7 +318,8 @@ struct FeatureProfile {
             phase = 0;
             frame = 0;
             apply(renderer, env);
-            LOG_INFO("profile", "Feature profile: stand still, %zu steps of %d frames", changes().size(), kSettle + kMeasure);
+            LOG_INFO("profile", "Feature profile: stand still for about %d s (%d steps of %d frames)",
+                     steps * (kSettle + kMeasure) / 50 + 1, steps, kSettle + kMeasure);
             return;
         }
         const engine::Renderer::FrameStats& st = renderer.frameStats();
@@ -320,32 +331,38 @@ struct FeatureProfile {
         }
         if (frame < settle + kMeasure)
             return;
-        results.emplace_back(changes()[static_cast<std::size_t>(phase)].name, samples ? sum / samples : 0.0, samples ? opaque / samples : 0.0);
-        // Each step as soon as it is measured (the run can be cut short).
-        LOG_INFO("profile", "step %d/%zu: %-34s GPU %7.2f ms (%+.2f vs all on), depth+opaque %.2f ms", phase + 1, changes().size(),
-                 std::get<0>(results.back()).c_str(), std::get<1>(results.back()), std::get<1>(results.back()) - std::get<1>(results[0]),
-                 std::get<2>(results.back()));
+        const double gpu = samples ? sum / samples : 0.0, opq = samples ? opaque / samples : 0.0;
+        if (phase % 2 == 0) {
+            baseGpu = gpu;
+            baseOpaque = opq;
+        } else {
+            const char* name = changes()[static_cast<std::size_t>(phase / 2)].name;
+            results.emplace_back(name, baseGpu, gpu, baseOpaque - opq);
+            // Each feature as soon as it is measured (the run can be cut short).
+            LOG_INFO("profile", "%2d/%zu %-28s all on %6.2f ms, off %6.2f ms, saved %6.2f ms", phase / 2 + 1, changes().size(), name,
+                     baseGpu, gpu, baseGpu - gpu);
+        }
         sum = opaque = 0.0;
         samples = 0;
         frame = 0;
-        if (++phase < static_cast<int>(changes().size())) {
+        if (++phase < steps) {
             apply(renderer, env);
             return;
         }
         renderer.setQuality(base);
         env.skyOcclusion = baseSkyOcclusion;
-        const double all = std::get<1>(results[0]);
         LOG_INFO("profile", "Done, the game goes on with the normal settings.");
-        LOG_INFO("profile", "%-34s %9s %9s %9s", "feature", "GPU ms", "saved", "depth+opaque");
-        for (const auto& [name, gpu, opq] : results)
-            LOG_INFO("profile", "%-34s %9.2f %9.2f %9.2f", name.c_str(), gpu, all - gpu, opq);
+        LOG_INFO("profile", "%-28s %8s %8s %8s %14s", "feature", "all on", "off", "saved", "opaque saved");
+        for (const auto& [name, on, off, opq] : results)
+            LOG_INFO("profile", "%-28s %8.2f %8.2f %8.2f %14.2f", name.c_str(), on, off, on - off, opq);
         active = false;
     }
     void apply(engine::Renderer& renderer, engine::Environment& env)
     {
         engine::RenderQuality q = base;
         env.skyOcclusion = baseSkyOcclusion;
-        changes()[static_cast<std::size_t>(phase)].apply(q, env);
+        if (phase % 2 == 1)
+            changes()[static_cast<std::size_t>(phase / 2)].apply(q, env);
         renderer.setQuality(q);
     }
 };

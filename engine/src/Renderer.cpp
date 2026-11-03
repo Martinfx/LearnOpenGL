@@ -467,6 +467,7 @@ RenderQuality RenderQuality::preset(int level)
         q.softShadows = false;
         q.ssgi = false;
         q.contactShadows = false;
+        q.skyOcclusionDirs = 3;
         q.volumetricClouds = 0;
         q.depthOfField = false;
         break;
@@ -480,6 +481,14 @@ RenderQuality RenderQuality::preset(int level)
         q.ssgi = false;
         q.volumetricFog = 1;
         q.volumetricClouds = 1;
+        q.skyOcclusionDirs = 3;
+        break;
+    case 2:
+        // Tuned on a GTX 1060 at 1080p (FPS_ENGINE_PROFILE on the overgrown street): SSGI, the
+        // fine fog grid and the 6-direction sky search were the dearest; Ultra keeps them.
+        q.ssgi = false;
+        q.volumetricFog = 1;
+        q.skyOcclusionDirs = 4;
         break;
     case 3:
         q.shadowResolution = 4096; q.shadowCascades = 3; q.textureStreamDistance = 80.0f;
@@ -487,7 +496,7 @@ RenderQuality RenderQuality::preset(int level)
         q.localShadowLayers = 18;
         q.ssaoFullRes = true;
         break;
-    default: break; // high
+    default: break;
     }
     return q;
 }
@@ -1087,6 +1096,7 @@ void Renderer::updateEnvironment(const Scene& scene, const RenderView& view)
     contactActive_ = quality_.contactShadows && historyView && e.contactShadowLength > 0.0f && quality_.shadowResolution > 0;
     if (contactActive_)
         b.contact = glm::vec4(std::min(e.contactShadowLength, 2.0f), 0.25f + e.contactShadowLength, 40.0f, 0.0f);
+    b.contact.w = static_cast<float>(std::clamp(quality_.skyOcclusionDirs, 3, 8));
     // Volumetric clouds: once their noise is built (renderClouds() starts it), in views with a sky.
     cloudActive_ = quality_.volumetricClouds > 0 && e.volumetricClouds > 0.5f && view.fog && view.shading != Shading::Wireframe &&
                    view.projection[3][3] == 0.0f && programs_.clouds.id && (cloudNoise_ || !view.capture);

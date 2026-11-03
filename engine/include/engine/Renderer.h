@@ -191,6 +191,8 @@ struct RenderQuality {
     // Volumetric fog (light shafts, lamps and the flashlight in the fog) near the camera:
     // 0 off (analytic height fog only), 1 medium froxel grid, 2 fine grid.
     int volumetricFog = 2;
+    // Directions of the large-scale sky occlusion search per pixel (3..8; foliage always 3).
+    int skyOcclusionDirs = 6;
 
     static RenderQuality preset(int level); // 0 low, 1 medium, 2 high, 3 ultra
 };

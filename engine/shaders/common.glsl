@@ -28,7 +28,7 @@ layout(std140, binding = 1) uniform Environment {
     vec4 uAtmosphere;      // x: physical sky 0..1, y: radiance scale (sun illuminance), z: sky occlusion, w: top-down map top height
     vec4 uShadowSoft;      // x: 1 = soft sun shadows (PCSS), y: tan of the sun's angular radius, z: max caster distance (m), w: max filter radius (m)
     vec4 uGroundHaze;      // ground haze layer: x density (1/m), y ground height (m), z thickness (m)
-    vec4 uContact;         // contact shadows: x ray length (m, 0 = off), y surface thickness (m), z fade-out view distance (m)
+    vec4 uContact;         // contact shadows: x ray length (m, 0 = off), y surface thickness (m), z fade-out view distance (m), w sky occlusion directions
     vec4 uClouds;          // volumetric clouds: x 1 = on, y base height (m), z thickness (m), w density
 };
 // Physical sky table (engine/Atmosphere.h): azimuth from the sun by elevation, linear radiance.
