@@ -56,6 +56,7 @@ const MatDef kMats[] = {
     {"st_metal_paint", "st_metal_paint", 2.2f},
     {"glass", nullptr, 1.0f, 0.05f, 0.06f, 0.06f, 0.08f, 0.0f, 0.35f},
     {"grime", "grime", 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, true},
+    {"shop_signs", "shop_signs", 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, true}, // zonegen/shop_signs.py: 2 x 8 painted boards
 };
 
 const MatDef& mat(const std::string& name)
@@ -149,6 +150,8 @@ struct Face {
     float len = 0.0f;
     glm::vec3 at(float s, float y, float d) const { return o + t * s + glm::vec3(0.0f, y, 0.0f) - n * d; }
 };
+
+void bar(Mesh& mesh, const std::string& m, glm::vec3 a, glm::vec3 b, float w, float h);
 
 class Builder {
 public:
@@ -536,8 +539,12 @@ private:
             if (o.kind == Opening::BalconyDoor)
                 balcony(F, o.s0, o.s1, o.y0 - 0.03f);
         }
+        if (shop && lod_ == 0)
+            shopSigns(F, ops, i);
         if (arcade)
             colonnade(F, len, pier, bay, nb);
+        else if (st_.fireEscapes > 0.0f && !b_.ruin && FL >= 4 && nb >= 4 && rng_.chance(st_.fireEscapes))
+            fireEscape(F, pier, bay, nb, FL, entrance);
         // Entrance canopy.
         if (entrance >= 0 && lod_ == 0 && !arcade) {
             const float c = pier + bay * (static_cast<float>(entrance) + 0.5f);
@@ -558,6 +565,97 @@ private:
         mesh.quad(m, F.at(s1, y0, d0), F.at(s1, y0, d1), F.at(s1, y1, d1), F.at(s1, y1, d0), F.t, uv(d0, y0), uv(d1, y0), uv(d1, y1), uv(d0, y1));
         mesh.quad(m, F.at(s0, y1, d0), F.at(s1, y1, d0), F.at(s1, y1, d1), F.at(s0, y1, d1), {0, 1, 0}, uv(s0, d0), uv(s1, d0), uv(s1, d1), uv(s0, d1));
         mesh.quad(m, F.at(s0, y0, d0), F.at(s1, y0, d0), F.at(s1, y0, d1), F.at(s0, y0, d1), {0, -1, 0}, uv(s0, d0), uv(s1, d0), uv(s1, d1), uv(s0, d1));
+    }
+
+    // Painted fascia boards over a run of shop windows: one board per shop, a few gone.
+    void shopSigns(const Face& F, const std::vector<Opening>& ops, int edge)
+    {
+        float s0 = 1e9f, s1 = -1e9f, top = 0.0f;
+        for (const auto& o : ops)
+            if (o.kind == Opening::Shop) {
+                s0 = std::min(s0, o.s0);
+                s1 = std::max(s1, o.s1);
+                top = std::max(top, o.y1);
+            }
+        if (s1 <= s0)
+            return;
+        const float y0 = top + 0.12f, y1 = std::min(y0 + 0.65f, st_.groundStorey - 0.1f);
+        if (y1 - y0 < 0.3f)
+            return;
+        Rng sr((static_cast<std::uint64_t>(b_.seed) << 20) ^ (0x5160u + static_cast<std::uint64_t>(edge) * 7919u));
+        const float Lb = std::clamp((y1 - y0) * 4.2f, 2.2f, 5.5f);
+        const int n = std::max(1, static_cast<int>((s1 - s0 + 0.4f) / (Lb + 0.6f)));
+        const float step = (s1 - s0) / static_cast<float>(n);
+        for (int k = 0; k < n; ++k) {
+            if (sr.chance(0.2f))
+                continue; // fell off long ago
+            const float c = s0 + step * (static_cast<float>(k) + 0.5f), a = c - Lb * 0.5f, b = c + Lb * 0.5f;
+            fbox("rust_dark", F, a - 0.04f, b + 0.04f, y0 - 0.04f, y1 + 0.04f, -0.05f, 0.0f);
+            const int sign = sr.below(16), col = sign % 2, row = sign / 2;
+            const float u0 = static_cast<float>(col) * 0.5f, u1 = u0 + 0.5f, v0 = static_cast<float>(row) / 8.0f, v1 = v0 + 1.0f / 8.0f;
+            // tilted a little: one fixing gave way
+            const float sag = sr.chance(0.25f) ? sr.range(-0.12f, 0.12f) : 0.0f;
+            mesh.quad("shop_signs", F.at(a, y0 + std::max(0.0f, sag), -0.06f), F.at(b, y0 + std::max(0.0f, -sag), -0.06f), F.at(b, y1 + std::max(0.0f, -sag), -0.06f),
+                      F.at(a, y1 + std::max(0.0f, sag), -0.06f), F.n, {u1, v1}, {u0, v1}, {u0, v0}, {u1, v0});
+        }
+    }
+
+    // A New York fire escape over two window columns: a grated platform at every storey above
+    // the ground floor, railings, a stair zig-zagging between them, the drop ladder at the bottom
+    // pulled up. Rust everywhere; now and then a platform has torn off one end and hangs.
+    void fireEscape(const Face& F, float pier, float bay, int nb, int FL, int entrance)
+    {
+        int j0 = 1 + rng_.below(std::max(1, nb - 3));
+        if (j0 == entrance || j0 + 1 == entrance)
+            j0 = entrance + 1 < nb - 1 ? entrance + 1 : std::max(0, entrance - 2);
+        const float s0 = pier + bay * static_cast<float>(j0) + 0.15f, s1 = pier + bay * static_cast<float>(j0 + 2) - 0.15f;
+        const float D = 1.2f, m = 0.04f;
+        const std::string iron = "rust_dark";
+        for (int f = 1; f < FL; ++f) {
+            const float y = floorY(f) - 0.05f;
+            if (lod_ > 0) {
+                fbox(iron, F, s0, s1, y - 0.06f, y, -D, 0.0f);
+                continue;
+            }
+            const bool torn = f > 1 && rng_.chance(0.06f);
+            if (torn) { // hangs from one end
+                bar(mesh, iron, F.at(s0, y, -D * 0.5f), F.at(s1, y - 1.8f, -D * 0.5f - 0.3f), D, 0.05f);
+                continue;
+            }
+            fbox(iron, F, s0, s1, y - 0.05f, y, -D, 0.0f);                // the grating
+            bar(mesh, iron, F.at(s0, y + 1.0f, -D), F.at(s1, y + 1.0f, -D), m, m); // top rail
+            bar(mesh, iron, F.at(s0, y + 0.5f, -D), F.at(s1, y + 0.5f, -D), m * 0.7f, m * 0.7f);
+            for (const float s : {s0, s1}) {
+                bar(mesh, iron, F.at(s, y + 1.0f, -D), F.at(s, y + 1.0f, 0.0f), m, m);
+                bar(mesh, iron, F.at(s, y, 0.0f - 0.02f), F.at(s, y + 1.0f, -0.02f), m, m);
+            }
+            for (float s = s0; s <= s1 + 0.01f; s += (s1 - s0) / 5.0f)
+                bar(mesh, iron, F.at(s, y, -D + 0.02f), F.at(s, y + 1.0f, -D + 0.02f), m * 0.6f, m * 0.6f);
+            bar(mesh, iron, F.at(s0, y - 0.1f, -D + 0.1f), F.at(s0, y - 0.9f, -0.02f), m, m); // brackets into the wall
+            bar(mesh, iron, F.at(s1, y - 0.1f, -D + 0.1f), F.at(s1, y - 0.9f, -0.02f), m, m);
+            // The stair up to the next platform, alternating ends; stringers and treads.
+            if (f + 1 < FL) {
+                const bool right = (f % 2) == 0;
+                const float sa = right ? s0 + 0.3f : s1 - 0.3f, sb = right ? s1 - 1.0f : s0 + 1.0f;
+                const float ya = y, yb = floorY(f + 1) - 0.05f;
+                for (const float d : {-D + 0.15f, -D + 0.75f})
+                    bar(mesh, iron, F.at(sa, ya, d), F.at(sb, yb, d), 0.05f, 0.12f);
+                const int steps = std::max(4, static_cast<int>((yb - ya) / 0.24f));
+                for (int k = 1; k < steps; ++k) {
+                    const float t = static_cast<float>(k) / static_cast<float>(steps);
+                    const float s = sa + (sb - sa) * t, yy = ya + (yb - ya) * t;
+                    bar(mesh, iron, F.at(s, yy, -D + 0.15f), F.at(s, yy, -D + 0.75f), 0.18f, 0.03f);
+                }
+            }
+        }
+        // The drop ladder at the first platform, pulled up (bottom 2.6 m above the pavement).
+        if (lod_ == 0) {
+            const float y = floorY(1) - 0.05f, s = (s0 + s1) * 0.5f;
+            for (const float o : {-0.22f, 0.22f})
+                bar(mesh, iron, F.at(s + o, y + 0.9f, -D + 0.08f), F.at(s + o, std::max(2.6f, y - 1.8f), -D + 0.08f), 0.04f, 0.04f);
+            for (float yy = std::max(2.6f, y - 1.8f) + 0.1f; yy < y + 0.9f; yy += 0.3f)
+                bar(mesh, iron, F.at(s - 0.22f, yy, -D + 0.08f), F.at(s + 0.22f, yy, -D + 0.08f), 0.03f, 0.03f);
+        }
     }
 
     // Podloubi: square columns on the bay lines 2.2 m out (over the pavement), a slab over the walk at the ground
@@ -1553,7 +1651,7 @@ const std::vector<std::string>& grammarMaterials()
     static const std::vector<std::string> names = [] {
         std::vector<std::string> v;
         for (const auto& m : kMats)
-            if (std::strcmp(m.name, "glass") != 0 && std::strcmp(m.name, "grime") != 0)
+            if (std::strcmp(m.name, "glass") != 0 && std::strcmp(m.name, "grime") != 0 && std::strcmp(m.name, "shop_signs") != 0)
                 v.push_back(m.name);
         return v;
     }();
@@ -1577,6 +1675,10 @@ std::string buildingKey(const BuildingSpec& b)
       << b.ruin;
     if (s.arcade > 0.0f)
         o << "|arc" << s.arcade;
+    if (s.fireEscapes > 0.0f)
+        o << "|fe" << s.fireEscapes;
+    if (s.shops > 0.0f || s.arcade > 0.0f)
+        o << "|sg2"; // shop signs over the shop windows
     for (const auto& p : b.footprint)
         o << '|' << std::lround(p.x * 100.0f) << ',' << std::lround(p.y * 100.0f);
     for (const auto e : b.edges)

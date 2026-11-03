@@ -46,6 +46,7 @@ struct FacadeStyle {
     float balconies = 0.15f;         // chance of a balcony column
     float shops = 0.3f;              // chance of shop windows on the street ground floor
     float arcade = 0.0f;             // chance of a colonnade (arcade) in front of the street ground floor
+    float fireEscapes = 0.0f;        // chance of a steel fire escape (platforms, stairs, drop ladder) on a facade
     bool pitched = true;             // hipped sheet roof (else flat with a parapet)
     float weight = 1.0f;
     bool operator==(const FacadeStyle&) const = default;

@@ -305,6 +305,7 @@ bool loadKit(Kit& kit, const fs::path& file, std::string* error)
             st.roof = str("roof", st.roof);
             st.firewall = str("firewall", st.firewall);
             st.arcade = std::clamp(get("arcade", st.arcade), 0.0f, 1.0f);
+            st.fireEscapes = std::clamp(get("fire_escape", st.fireEscapes), 0.0f, 1.0f);
             st.cornice = get("cornice", st.cornice);
             st.bands = get("bands", st.bands);
             st.loggias = get("loggias", st.loggias);
@@ -403,7 +404,7 @@ bool saveKit(const Kit& kit, const fs::path& file, std::string* error)
         out << "\ntextures " << q(relPath(kit.textures, dir)) << '\n';
     if (!kit.styles.empty())
         out << "\n# style \"name\" role <tenement|panel|khrushchyovka|house> floors_min floors_max ground storey bay window_w window_h sill\n"
-               "#   depth_min depth_max width_min width_max wall plinth trim roof firewall (grammar materials) cornice bands loggias balconies shops pitched weight [arcade]\n";
+               "#   depth_min depth_max width_min width_max wall plinth trim roof firewall (grammar materials) cornice bands loggias balconies shops pitched weight [arcade] [fire_escape]\n";
     for (const auto& st : kit.styles) {
         out << "style " << q(st.name) << " role " << st.role << " floors_min " << st.floorsMin << " floors_max " << st.floorsMax << " ground "
             << st.groundStorey << " storey " << st.storey << " bay " << st.bay << " window_w " << st.windowWidth << " window_h " << st.windowHeight
@@ -413,6 +414,8 @@ bool saveKit(const Kit& kit, const fs::path& file, std::string* error)
             << " shops " << st.shops << " pitched " << (st.pitched ? 1 : 0) << " weight " << st.weight;
         if (st.arcade > 0.0f)
             out << " arcade " << st.arcade;
+        if (st.fireEscapes > 0.0f)
+            out << " fire_escape " << st.fireEscapes;
         out << '\n';
     }
     if (!kit.foliage.empty())

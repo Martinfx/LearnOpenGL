@@ -150,6 +150,16 @@ občas sloup chybí. Generátor pod podloubím nesází stromy ani lampy a na de
 Balkony (z gramatiky, `balconySpots()`): v truhlících malé keře/plevel, přes zábradlí visí popínavky
 (kit `hanging`). V kitu: Housing project 9/16, Five-storey walk-up, Beige/Dark brick/Brick tenement.
 
+### Požární schodiště a štíty obchodů (New York)
+
+Styl má parametr **Fire esc.** (`fire_escape`, šance): uliční fasáda domu se 4+ patry a 4+ osami bez
+podloubí dostane ocelové požární schodiště – plošiny s zábradlím v každém patře od 2. NP, střídavá
+ramena, spouštěcí žebřík nad chodníkem (LOD1 jen plošiny). V kitu: Brick/Stucco/Beige/Dark brick tenement.
+Každý dům s obchodním parterem (i pod podloubím) má nad výlohami vybledlé štíty – 16 návrhů
+(DELI, PHARMACY, LAUNDROMAT, PIZZA, PAWN SHOP, DINER, …) v atlasu `zone/textures/shop_signs_albedo.png`
+z `zonegen/shop_signs.py` (materiál `shop_signs`, alfa blend, olupující se barva, rez, chybějící písmena).
+Výběr štítků má vlastní RNG, takže ostatní domy se nemění.
+
 ### Dominanta (Landmark tower)
 
 Town plan → Zoning → **Landmark tower** (`landmark`, `landmark_floors`, `landmark_name`): v bloku
