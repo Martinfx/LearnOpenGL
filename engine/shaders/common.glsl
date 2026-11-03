@@ -24,9 +24,9 @@ layout(std140, binding = 1) uniform Environment {
     vec4 uVolumetric;      // volumetric fog: x 1 = on, y: near (m), z: 1 / log(far / near), w: far (m)
     vec4 uProbeParams;     // x: 1 = baked probes on (0 while baking them), y: reflection cube max mip, z: screen-space bounce light strength (SSGI)
     mat4 uPrevViewProj;    // previous frame (no TAA jitter): screen-space reflections reproject into it
-    vec4 uSsr;             // x: 1 = SSR on, y: max distance (m), z: intensity, w: max roughness
+    vec4 uSsr;             // x: ray steps (0 = SSR off), y: max distance (m), z: intensity, w: max roughness
     vec4 uAtmosphere;      // x: physical sky 0..1, y: radiance scale (sun illuminance), z: sky occlusion, w: top-down map top height
-    vec4 uShadowSoft;      // x: 1 = soft sun shadows (PCSS), y: tan of the sun's angular radius, z: max caster distance (m), w: max filter radius (m)
+    vec4 uShadowSoft;      // x: soft sun shadow (PCSS) filter taps 8 / 16 (0 = off), y: tan of the sun's angular radius, z: max caster distance (m), w: max filter radius (m)
     vec4 uGroundHaze;      // ground haze layer: x density (1/m), y ground height (m), z thickness (m)
     vec4 uContact;         // contact shadows: x ray length (m, 0 = off), y surface thickness (m), z fade-out view distance (m), w sky occlusion directions
     vec4 uClouds;          // volumetric clouds: x 1 = on, y base height (m), z thickness (m), w density

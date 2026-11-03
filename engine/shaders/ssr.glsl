@@ -25,8 +25,10 @@ vec4 screenReflection(vec3 worldPos, vec3 rWorld, float rough, float nv) {
     float t = stepLen * (0.5 + hash12(gl_FragCoord.xy + uSkyHorizon.w * 61.0)); // fewer bands
     float lastT = 0.0;
     bool hit = false;
-    const int kSteps = 28;
-    for (int i = 0; i < kSteps && t < maxDist; ++i) {
+    // Fewer steps grow faster: about the reach of 28 steps growing by 1.18.
+    int steps = int(uSsr.x);
+    float grow = pow(1.18, 28.0 / float(steps));
+    for (int i = 0; i < steps && t < maxDist; ++i) {
         vec3 p = origin + dir * t;
         if (p.z > -0.05)
             break; // behind the camera
@@ -55,7 +57,7 @@ vec4 screenReflection(vec3 worldPos, vec3 rWorld, float rough, float nv) {
         }
         lastT = t;
         t += stepLen;
-        stepLen *= 1.18;
+        stepLen *= grow;
     }
     if (!hit)
         return vec4(0.0);

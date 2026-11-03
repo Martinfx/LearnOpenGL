@@ -283,6 +283,8 @@ struct FeatureProfile {
             {"soft shadows (PCSS) off", [](engine::RenderQuality& q, engine::Environment&) { q.softShadows = false; }},
             {"contact shadows off", [](engine::RenderQuality& q, engine::Environment&) { q.contactShadows = false; }},
             {"SSR off", [](engine::RenderQuality& q, engine::Environment&) { q.ssr = false; }},
+            {"SSR 28 steps (Ultra)", [](engine::RenderQuality& q, engine::Environment&) { q.ssrSteps = 28; }},
+            {"PCSS 16 taps (Ultra)", [](engine::RenderQuality& q, engine::Environment&) { q.softShadowTaps = 16; }},
             {"SSGI off", [](engine::RenderQuality& q, engine::Environment&) { q.ssgi = false; }},
             {"SSAO + SSGI off", [](engine::RenderQuality& q, engine::Environment&) { q.ssao = false; q.ssgi = false; }},
             {"sky occlusion off", [](engine::RenderQuality&, engine::Environment& e) { e.skyOcclusion = 0.0f; }},

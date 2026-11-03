@@ -215,11 +215,12 @@ float sunShadow(vec3 worldPos, vec3 n, float nl, bool cheap) {
         } else {
             float distM = max(ref - blockerSum / blockers, 0.0) / depthPerM;
             float r = clamp(distM * tanA * uvPerM, 1.0 / size.x, min(uShadowSoft.w * uvPerM, 48.0 / size.x));
-            for (int i = 0; i < 16; ++i) {
+            int taps = uShadowSoft.x > 12.0 ? 16 : 8, stride = 16 / taps; // 8: every other point
+            for (int i = 0; i < 16; i += stride) {
                 vec2 o = rot * kPoisson16[i] * r;
                 shadow += shadowTap(c.xy + o, layer, ref - slope * length(o), size);
             }
-            shadow /= 16.0;
+            shadow /= float(taps);
         }
     } else if (cascade == 0 && !cheap) {
         for (int y = -1; y <= 1; ++y)

@@ -487,6 +487,7 @@ RenderQuality RenderQuality::preset(int level)
         q.volumetricFog = 1;
         q.volumetricClouds = 1;
         q.skyOcclusionDirs = 3;
+        q.softShadowTaps = 8;
         break;
     case 2:
         // Tuned on a GTX 1060 at 1080p (FPS_ENGINE_PROFILE on the overgrown street): SSGI, the
@@ -494,6 +495,8 @@ RenderQuality RenderQuality::preset(int level)
         q.ssgi = false;
         q.volumetricFog = 1;
         q.skyOcclusionDirs = 4;
+        q.ssrSteps = 16;
+        q.softShadowTaps = 8;
         break;
     case 3:
         q.shadowResolution = 4096; q.shadowCascades = 3; q.textureStreamDistance = 80.0f;
@@ -1121,7 +1124,7 @@ void Renderer::updateEnvironment(const Scene& scene, const RenderView& view)
     b.prevViewProj = ssrViewProj_;                     // the frame now in ssrColor_
     ssrPrevViewProj_ = view.projection * view.view;    // becomes ssrViewProj_ once this frame is recorded
     if (ssrView && ssrValid_)
-        b.ssr = glm::vec4(1.0f, 60.0f, std::clamp(e.ssrIntensity, 0.0f, 1.0f), 0.6f);
+        b.ssr = glm::vec4(static_cast<float>(std::clamp(quality_.ssrSteps, 8, 32)), 60.0f, std::clamp(e.ssrIntensity, 0.0f, 1.0f), 0.6f);
     if (volumetricActive(view)) {
         const float nearDepth = 0.5f, farDepth = std::clamp(e.fogVolumetricRange, 8.0f, 256.0f);
         b.volumetric = glm::vec4(1.0f, nearDepth, 1.0f / std::log(farDepth / nearDepth), farDepth);
@@ -1210,7 +1213,7 @@ void Renderer::updateEnvironment(const Scene& scene, const RenderView& view)
         // larger bright patch of sky), so the penumbra grows with the distance to the caster.
         const float cover = std::clamp(e.cloudCover, 0.0f, 1.0f);
         const float radius = glm::radians(std::clamp(e.sunSize, 0.0f, 20.0f) * 0.5f) * (1.0f + 3.0f * cover * cover);
-        b.shadowSoft = glm::vec4(quality_.softShadows && e.sunSize > 0.0f ? 1.0f : 0.0f, std::tan(std::min(radius, 0.6f)), 30.0f, 0.6f);
+        b.shadowSoft = glm::vec4(quality_.softShadows && e.sunSize > 0.0f ? (quality_.softShadowTaps > 8 ? 16.0f : 8.0f) : 0.0f, std::tan(std::min(radius, 0.6f)), 30.0f, 0.6f);
     }
     b.viewport = glm::vec4(width_, height_, 1.0f / static_cast<float>(width_), 1.0f / static_cast<float>(height_)); // render targets
     glNamedBufferSubData(envBuffer_, 0, sizeof(b), &b);

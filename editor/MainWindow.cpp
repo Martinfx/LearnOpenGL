@@ -2808,6 +2808,19 @@ void MainWindow::buildDocks()
     skyDirsSpin->setToolTip(tr("Directions of the sky occlusion search per pixel (Ultra 6, High 4, Medium 3; foliage always 3)"));
     skyDirsSpin->setValue(viewport_->quality().skyOcclusionDirs);
     frameOptions->addWidget(skyDirsSpin);
+    auto* ssrStepsSpin = new QSpinBox(framePanel);
+    ssrStepsSpin->setRange(8, 32);
+    ssrStepsSpin->setPrefix(tr("SSR steps: "));
+    ssrStepsSpin->setToolTip(tr("Ray steps of the screen-space reflections (Ultra 28, High 16); fewer steps reach as far, coarser"));
+    ssrStepsSpin->setValue(viewport_->quality().ssrSteps);
+    frameOptions->addWidget(ssrStepsSpin);
+    auto* pcssTapsSpin = new QSpinBox(framePanel);
+    pcssTapsSpin->setRange(8, 16);
+    pcssTapsSpin->setSingleStep(8);
+    pcssTapsSpin->setPrefix(tr("Soft shadow taps: "));
+    pcssTapsSpin->setToolTip(tr("Filter taps of the soft sun shadows (Ultra 16, High and Medium 8)"));
+    pcssTapsSpin->setValue(viewport_->quality().softShadowTaps);
+    frameOptions->addWidget(pcssTapsSpin);
     frameOptions->addStretch();
     frameLayout->addLayout(frameOptions);
     auto* frameLabel = new QLabel(framePanel);
@@ -2815,9 +2828,11 @@ void MainWindow::buildDocks()
     frameLabel->setAlignment(Qt::AlignTop | Qt::AlignLeft);
     frameLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
     frameLayout->addWidget(frameLabel, 1);
-    auto applyFrameOption = [this, instancingCheck, shadowCacheCheck, occlusionCheck, volumetricCheck, asyncCullCheck, skyDirsSpin] {
+    auto applyFrameOption = [this, instancingCheck, shadowCacheCheck, occlusionCheck, volumetricCheck, asyncCullCheck, skyDirsSpin, ssrStepsSpin, pcssTapsSpin] {
         engine::RenderQuality q = viewport_->quality();
         q.skyOcclusionDirs = skyDirsSpin->value();
+        q.ssrSteps = ssrStepsSpin->value();
+        q.softShadowTaps = pcssTapsSpin->value();
         if (volumetricCheck->isChecked() != (q.volumetricFog > 0))
             q.volumetricFog = volumetricCheck->isChecked() ? 2 : 0;
         q.occlusionCulling = occlusionCheck->isChecked();
@@ -2831,7 +2846,8 @@ void MainWindow::buildDocks()
     connect(asyncCullCheck, &QCheckBox::toggled, this, applyFrameOption);
     connect(shadowCacheCheck, &QCheckBox::toggled, this, applyFrameOption);
     connect(occlusionCheck, &QCheckBox::toggled, this, applyFrameOption);
-    connect(skyDirsSpin, qOverload<int>(&QSpinBox::valueChanged), this, applyFrameOption);
+    for (QSpinBox* spin : {skyDirsSpin, ssrStepsSpin, pcssTapsSpin})
+        connect(spin, qOverload<int>(&QSpinBox::valueChanged), this, applyFrameOption);
     auto* frameScroll = new QScrollArea(this);
     frameScroll->setWidget(framePanel);
     frameScroll->setWidgetResizable(true);
@@ -2841,7 +2857,7 @@ void MainWindow::buildDocks()
     addDockWidget(Qt::BottomDockWidgetArea, frameDock);
     tabifyDockWidget(logDock_, frameDock);
     auto* frameTimer = new QTimer(this);
-    connect(frameTimer, &QTimer::timeout, this, [this, frameLabel, frameDock, instancingCheck, shadowCacheCheck, volumetricCheck, asyncCullCheck, skyDirsSpin] {
+    connect(frameTimer, &QTimer::timeout, this, [this, frameLabel, frameDock, instancingCheck, shadowCacheCheck, volumetricCheck, asyncCullCheck, skyDirsSpin, ssrStepsSpin, pcssTapsSpin] {
         if (!frameDock->isVisible() || frameDock->visibleRegion().isEmpty())
             return;
         instancingCheck->blockSignals(true); // quality presets change these too
@@ -2856,11 +2872,15 @@ void MainWindow::buildDocks()
         asyncCullCheck->blockSignals(true);
         asyncCullCheck->setChecked(viewport_->quality().asyncCull);
         asyncCullCheck->blockSignals(false);
-        if (!skyDirsSpin->hasFocus()) {
-            skyDirsSpin->blockSignals(true);
-            skyDirsSpin->setValue(viewport_->quality().skyOcclusionDirs);
-            skyDirsSpin->blockSignals(false);
-        }
+        const std::pair<QSpinBox*, int> spins[] = {{skyDirsSpin, viewport_->quality().skyOcclusionDirs},
+                                                   {ssrStepsSpin, viewport_->quality().ssrSteps},
+                                                   {pcssTapsSpin, viewport_->quality().softShadowTaps}};
+        for (const auto& [spin, value] : spins)
+            if (!spin->hasFocus()) {
+                spin->blockSignals(true);
+                spin->setValue(value);
+                spin->blockSignals(false);
+            }
         const engine::Renderer::FrameStats& f = viewport_->frameStats();
         const auto ms = [](double v) { return QString::number(v, 'f', 2); };
         QString html = "<table cellspacing='2'><tr><td><b>" + tr("Pass") + "</b></td><td align='right'>&nbsp;&nbsp;<b>CPU ms</b></td>"

@@ -212,6 +212,10 @@ struct RenderQuality {
     int volumetricFog = 2;
     // Directions of the large-scale sky occlusion search per pixel (3..8; foliage always 3).
     int skyOcclusionDirs = 6;
+    // Ray steps of the screen-space reflections (8..32; fewer steps grow faster, same reach).
+    int ssrSteps = 28;
+    // Filter taps of the soft sun shadows (PCSS): 8 or 16.
+    int softShadowTaps = 16;
 
     static RenderQuality preset(int level); // 0 low, 1 medium, 2 high, 3 ultra
 };
