@@ -1,8 +1,8 @@
-# Electric field idle: mains hum and faint crackle
+# Electric field idle: wavering transformer hum, whine and bursts of crackle
 file "discharge_loop.ogg"
-volume 0.45
+volume 0.5
 pitch 1 1
-distance 2 22
+distance 2 24
 rolloff 1
 loop 1
 stream 1

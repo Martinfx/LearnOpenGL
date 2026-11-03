@@ -1,12 +1,12 @@
-# Heat vent eruption: fire column roar
-file "vent_burst.wav"
+# Heat vent eruption: ignition whomp and the roar of the fire column
+file "vent_burst_1.wav"
+file "vent_burst_2.wav"
 volume 1
 pitch 0.95 1.05
-distance 4 90
+distance 4 100
 rolloff 1
 loop 0
 stream 0
 spatial 1
 group sfx
 max_instances 4
-caption "@caption.anomaly_vent"

@@ -34,7 +34,7 @@ const std::array<AnomalyKindInfo, static_cast<std::size_t>(AnomalyKind::Count)> 
      "sounds/anomalies/rift_loop.sound", "sounds/anomalies/rift_burst.sound"},
     {AnomalyKind::Radiation, "radiation", "Radiation",
      "Invisible contamination. A hotspot is strongest in its middle; an area is even inside its box. Heard on the Geiger counter.",
-     {0.9f, 0.85f, 0.2f}, {8.0f, 4.0f, 8.0f}, "", "", "", ""},
+     {0.9f, 0.85f, 0.2f}, {8.0f, 4.0f, 8.0f}, "particles/anomaly_radiation_idle.particle", "", "", ""},
 }};
 
 using P = AnomalyParam;
@@ -50,6 +50,7 @@ const std::vector<AnomalyParam>& paramsFor(AnomalyKind kind)
             P{"throw", 10.0f, 0.0f, 40.0f, 0.5f, " m/s", "Fling speed", "How hard the crush throws things out"},
             P{"cooldown", 3.0f, 0.0f, 60.0f, 0.5f, " s", "Cooldown", "Seconds before it can crush again"},
             P{"detect", 6.0f, 0.0f, 50.0f, 0.5f, " m", "Detector range", "Distance from the field edge where the detector starts beeping"},
+            P{"bend", 1.0f, 0.0f, 3.0f, 0.1f, "", "Grass bend", "How strongly grass and bushes around it lean (0 = not at all)"},
             P{"artifacts", 1.0f, 0.0f, 5.0f, 1.0f, "", "Artifacts", "At most this many artifacts grow in the field (kinds in assets/items.cfg); after every anomaly storm it may grow new ones"},
             P{"artifact_chance", 0.6f, 0.0f, 1.0f, 0.05f, "", "Artifact chance", "Chance per free place at the level start and after each storm"},
         },
@@ -59,6 +60,9 @@ const std::vector<AnomalyParam>& paramsFor(AnomalyKind kind)
             P{"cooldown", 2.5f, 0.0f, 60.0f, 0.5f, " s", "Recharge", "Seconds before the next strike"},
             P{"idle", 4.0f, 0.0f, 60.0f, 0.5f, " s", "Idle crackle", "Average seconds between small idle sparks (0 = none)"},
             P{"detect", 5.0f, 0.0f, 50.0f, 0.5f, " m", "Detector range", "Distance from the field edge where the detector starts beeping"},
+            P{"arcs", 3.0f, 0.0f, 30.0f, 0.5f, " /s", "Idle arcs", "Small lightning arcs crawling over the field per second (look only)"},
+            P{"light", 1.0f, 0.0f, 4.0f, 0.1f, "", "Light", "Brightness of the light it casts on its surroundings (0 = none)"},
+            P{"bend", 0.6f, 0.0f, 3.0f, 0.1f, "", "Grass bend", "How strongly grass and bushes around it lean (0 = not at all)"},
             P{"artifacts", 1.0f, 0.0f, 5.0f, 1.0f, "", "Artifacts", "At most this many artifacts grow in the field (kinds in assets/items.cfg); after every anomaly storm it may grow new ones"},
             P{"artifact_chance", 0.6f, 0.0f, 1.0f, 0.05f, "", "Artifact chance", "Chance per free place at the level start and after each storm"},
         },
@@ -70,6 +74,8 @@ const std::vector<AnomalyParam>& paramsFor(AnomalyKind kind)
             P{"lift", 3.0f, 0.0f, 20.0f, 0.5f, " m/s", "Updraft", "Pushes things up while it burns"},
             P{"on_step", 1.0f, 0.0f, 1.0f, 1.0f, "", "Erupts when entered", "Something in the field sets it off", true},
             P{"detect", 5.0f, 0.0f, 50.0f, 0.5f, " m", "Detector range", "Distance from the field edge where the detector starts beeping"},
+            P{"light", 1.0f, 0.0f, 4.0f, 0.1f, "", "Light", "Brightness of the light it casts on its surroundings (0 = none)"},
+            P{"bend", 1.0f, 0.0f, 3.0f, 0.1f, "", "Grass bend", "How strongly grass and bushes around it lean (0 = not at all)"},
             P{"artifacts", 1.0f, 0.0f, 5.0f, 1.0f, "", "Artifacts", "At most this many artifacts grow in the field (kinds in assets/items.cfg); after every anomaly storm it may grow new ones"},
             P{"artifact_chance", 0.6f, 0.0f, 1.0f, 0.05f, "", "Artifact chance", "Chance per free place at the level start and after each storm"},
         },
@@ -78,6 +84,7 @@ const std::vector<AnomalyParam>& paramsFor(AnomalyKind kind)
             P{"slow", 0.45f, 0.0f, 0.95f, 0.05f, "", "Slow down", "Part of the walking speed the sludge takes away"},
             P{"depth", 0.6f, 0.05f, 5.0f, 0.05f, " m", "Depth", "Feet below this height above the entity are in the pool"},
             P{"detect", 4.0f, 0.0f, 50.0f, 0.5f, " m", "Detector range", "Distance from the field edge where the detector starts beeping"},
+            P{"light", 1.0f, 0.0f, 4.0f, 0.1f, "", "Light", "Brightness of the light it casts on its surroundings (0 = none)"},
             P{"artifacts", 1.0f, 0.0f, 5.0f, 1.0f, "", "Artifacts", "At most this many artifacts grow in the field (kinds in assets/items.cfg); after every anomaly storm it may grow new ones"},
             P{"artifact_chance", 0.6f, 0.0f, 1.0f, 0.05f, "", "Artifact chance", "Chance per free place at the level start and after each storm"},
         },
@@ -86,6 +93,8 @@ const std::vector<AnomalyParam>& paramsFor(AnomalyKind kind)
             P{"damage", 5.0f, 0.0f, 1000.0f, 1.0f, "", "Damage", "Hit points per throw"},
             P{"cooldown", 4.0f, 0.0f, 60.0f, 0.5f, " s", "Cooldown", "Seconds before it throws again"},
             P{"detect", 4.0f, 0.0f, 50.0f, 0.5f, " m", "Detector range", "Distance from the field edge where the detector starts beeping"},
+            P{"light", 1.0f, 0.0f, 4.0f, 0.1f, "", "Light", "Brightness of the light it casts on its surroundings (0 = none)"},
+            P{"bend", 1.0f, 0.0f, 3.0f, 0.1f, "", "Grass bend", "How strongly grass and bushes around it lean (0 = not at all)"},
             P{"artifacts", 1.0f, 0.0f, 5.0f, 1.0f, "", "Artifacts", "At most this many artifacts grow in the field (kinds in assets/items.cfg); after every anomaly storm it may grow new ones"},
             P{"artifact_chance", 0.6f, 0.0f, 1.0f, 0.05f, "", "Artifact chance", "Chance per free place at the level start and after each storm"},
         },
@@ -93,6 +102,8 @@ const std::vector<AnomalyParam>& paramsFor(AnomalyKind kind)
             P{"intensity", 25.0f, 0.0f, 1000.0f, 1.0f, " rad/s", "Intensity", "Dose rate in the middle of a hotspot, or anywhere in an area"},
             P{"area", 0.0f, 0.0f, 1.0f, 1.0f, "", "Even area (box)", "Off: hotspot fading out to its radius. On: the whole box, soft edges", true},
             P{"fade", 2.0f, 0.0f, 50.0f, 0.5f, " m", "Edge fade", "Areas: metres over which the dose fades out around the box"},
+            P{"dust", 1.0f, 0.0f, 3.0f, 0.1f, "", "Dust", "Faint motes hanging in the air over it (0 = invisible)"},
+            P{"dry", 1.0f, 0.0f, 1.0f, 1.0f, "", "Dead ground", "A patch of dried, bleached ground marks the hotspot", true},
         },
     }};
     return table[static_cast<std::size_t>(kind)];

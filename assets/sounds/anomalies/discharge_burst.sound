@@ -1,13 +1,13 @@
-# Lightning strike of the electric field
+# Lightning strike of the electric field: snap, tear and rolling thunder
 file "discharge_burst_1.wav"
 file "discharge_burst_2.wav"
+file "discharge_burst_3.wav"
 volume 1
 pitch 0.9 1.1
-distance 4 120
+distance 4 140
 rolloff 1
 loop 0
 stream 0
 spatial 1
 group sfx
 max_instances 4
-caption "@caption.anomaly_discharge"

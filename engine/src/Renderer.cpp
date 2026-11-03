@@ -157,6 +157,8 @@ struct EnvironmentBlock {
     glm::vec4 groundHaze;   // x: density, y: ground height, z: thickness
     glm::vec4 contact;      // contact shadows: x ray length (0 = off), y thickness, z fade-out distance
     glm::vec4 clouds;       // volumetric clouds: x on, y base height, z thickness, w density
+    glm::vec4 benderInfo;   // x: grass bender count
+    glm::vec4 benders[2 * kMaxGrassBenders]; // per bender: xyz centre, w radius; x strength, y mode
 };
 
 constexpr int kEnvSize = 128;  // environment cubemap face size
@@ -1024,6 +1026,16 @@ void Renderer::updateEnvironment(const Scene& scene, const RenderView& view)
     b.rainMatrix = rainMatrix_;
     const float windAngle = glm::radians(e.windDirection);
     b.wind = glm::vec4(std::cos(windAngle), std::clamp(e.wind, 0.0f, 1.0f), std::sin(windAngle), std::clamp(e.windGusts, 0.0f, 1.0f));
+    for (const GrassBender& g : view.benders) {
+        const int i = static_cast<int>(b.benderInfo.x);
+        if (i >= kMaxGrassBenders)
+            break;
+        if (g.radius <= 0.0f || g.strength <= 0.0f)
+            continue;
+        b.benders[2 * i] = glm::vec4(g.position, g.radius);
+        b.benders[2 * i + 1] = glm::vec4(g.strength, static_cast<float>(g.mode), 0.0f, 0.0f);
+        b.benderInfo.x += 1.0f;
+    }
     b.weather = glm::vec4(wetness_, lightning_, rainActive_ && rainTex_ ? 1.0f : 0.0f, std::clamp(e.puddles, 0.0f, 1.0f));
     b.sunColor = glm::vec4(linear(e.sunColor), quality_.shadowResolution > 0 ? 1.0f : 0.0f);
     b.skyZenith = glm::vec4(linear(e.skyZenith), e.cloudCover);

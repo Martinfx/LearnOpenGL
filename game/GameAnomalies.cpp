@@ -3,6 +3,7 @@
 #include "GameAudio.h"
 
 #include <engine/Log.h>
+#include <engine/Material.h>
 #include <engine/Physics.h>
 #include <engine/PlayerController.h>
 #include <engine/Scripting.h>
@@ -30,7 +31,7 @@ void GameAnomalies::init(const std::filesystem::path& assetDir, GameAudio& audio
     assetDir_ = assetDir;
     audio_ = &audio;
     for (const char* s : {"sounds/anomalies/geiger_click.sound", "sounds/anomalies/detector_beep.sound", "sounds/anomalies/bolt_throw.sound",
-                          "sounds/anomalies/bolt_hit.sound"})
+                          "sounds/anomalies/bolt_hit.sound", "sounds/anomalies/discharge_arc.sound"})
         audio.preload(asset(s));
 }
 
@@ -64,18 +65,28 @@ void GameAnomalies::startLevel(const engine::Scene& scene)
     particles_.clear();
     live_.clear();
     bolts_.clear();
+    arcs_.clear();
     pendingDamage_.clear();
+    if (!arcTexture_) {
+        arcTexture_ = engine::loadTextureAsset(asset("textures/particles/arc.png"), nullptr, true);
+        sheenTexture_ = engine::loadTextureAsset(asset("textures/particles/acid_sheen.png"), nullptr, true);
+        marksTexture_ = engine::loadTextureAsset(asset("textures/particles/anomaly_marks_2x2.png"), nullptr, true);
+    }
     dose_ = doseRate_ = signal_ = 0.0f;
     field_.build(scene);
     for (const engine::AnomalyField::State& s : field_.anomalies()) {
         Live l;
         const engine::AnomalySettings& cfg = s.settings;
-        if (auto fx = effect(cfg.idleEffect)) {
+        l.angle = std::uniform_real_distribution<float>(0.0f, 6.2831853f)(rng_);
+        l.arcTimer = std::uniform_real_distribution<float>(0.0f, 0.5f)(rng_);
+        // Radiation dust is a look option: "dust" scales it, 0 = invisible.
+        const float density = cfg.kind == engine::AnomalyKind::Radiation ? cfg.get("dust") : 1.0f;
+        if (auto fx = density > 0.0f ? effect(cfg.idleEffect) : nullptr) {
             // Idle effects are authored for a field of 1 m radius: wider fields stretch the
             // emitter across (x, z) and emit more, so the density stays the same.
             const glm::mat3 spread(glm::vec3(s.radius, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, s.radius));
             l.idle = particles_.spawn(fx, s.center, spread);
-            particles_.setRateScale(l.idle, std::clamp(s.radius * s.radius, 0.5f, 12.0f));
+            particles_.setRateScale(l.idle, std::clamp(s.radius * s.radius, 0.5f, 12.0f) * density);
         }
         effect(cfg.burstEffect); // load now, not in the middle of a fight
         audio_->preload(asset(cfg.burstSound));
@@ -148,11 +159,17 @@ void GameAnomalies::handleEvent(const engine::AnomalyEvent& ev)
         if (cfg.kind == AnomalyKind::Discharge) {
             if (auto fx = effect("particles/anomaly_discharge_crackle.particle"))
                 particles_.spawn(fx, ev.position);
+            // Build-up: a few arcs crawl from the spot over the ground.
+            for (int k = 0; k < 3; ++k)
+                spawnArc(ev.anomaly, ev.position + glm::vec3(0.0f, 0.1f, 0.0f), randomFieldPoint(s, 0.05f, 1.2f), 0.18f, 0.9f, 0.025f, 0.22f, 0.3f,
+                         0.06f);
+            l.flash = std::max(l.flash, 0.35f);
             audio_->play(asset("sounds/anomalies/discharge_crackle.sound"), ev.position, 0.8f);
         } else if (cfg.kind == AnomalyKind::Crusher) {
             audio_->play(asset("sounds/anomalies/crusher_charge.sound"), ev.position);
         } else if (cfg.kind == AnomalyKind::Vent) {
             audio_->play(asset("sounds/anomalies/vent_charge.sound"), ev.position);
+            l.flash = std::max(l.flash, 0.3f);
         }
         break;
     case engine::AnomalyEvent::Burst: {
@@ -168,6 +185,25 @@ void GameAnomalies::handleEvent(const engine::AnomalyEvent& ev)
         } else if (fx) {
             const float r = std::clamp(s.radius, 0.5f, 6.0f);
             particles_.spawn(fx, ev.position, glm::mat3(glm::vec3(r, 0, 0), glm::vec3(0, 1, 0), glm::vec3(0, 0, r)));
+        }
+        if (cfg.kind == AnomalyKind::Discharge) {
+            // The strike: a thick bolt from the top of the field into the target, re-shaping
+            // while it lasts (flicker), and arcs splashing from the target into the ground.
+            const glm::vec3 top = s.center + glm::vec3(std::uniform_real_distribution<float>(-0.4f, 0.4f)(rng_) * s.radius,
+                                                       std::max(1.5f, s.height), std::uniform_real_distribution<float>(-0.4f, 0.4f)(rng_) * s.radius);
+            spawnArc(ev.anomaly, top, ev.position, 0.4f, 3.0f, 0.06f, 0.16f, 0.45f, 0.05f);
+            spawnArc(ev.anomaly, top + glm::vec3(0.3f, 0.2f, -0.2f), ev.position, 0.3f, 1.6f, 0.035f, 0.22f, 0.35f, 0.04f);
+            for (int k = 0; k < 5; ++k) {
+                glm::vec3 g = randomFieldPoint(s, 0.0f, 0.05f);
+                g = ev.position + (g - ev.position) * 0.7f;
+                g.y = s.center.y + 0.05f;
+                spawnArc(ev.anomaly, ev.position, g, 0.25f, 1.3f, 0.025f, 0.25f, 0.3f, 0.05f);
+            }
+            l.flash = 1.0f;
+        } else if (cfg.kind == AnomalyKind::Vent || cfg.kind == AnomalyKind::Crusher || cfg.kind == AnomalyKind::Rift) {
+            l.flash = 1.0f;
+        } else if (cfg.kind == AnomalyKind::Acid) {
+            l.flash = std::max(l.flash, 0.5f);
         }
         audio_->play(asset(cfg.burstSound), ev.position);
         break;
@@ -290,10 +326,39 @@ void GameAnomalies::update(float dt, const engine::PhysicsWorld& physics, glm::v
     if (field_.anomalies().empty() && bolts_.empty())
         return;
     particles_.update(dt);
+    time_ += dt;
     const auto& states = field_.anomalies();
+    // Lightning: age, re-shape the flickering ones, drop the finished ones.
+    for (Arc& a : arcs_) {
+        a.age += dt;
+        a.flicker = std::uniform_real_distribution<float>(0.55f, 1.0f)(rng_);
+        if (a.rebuild > 0.0f && std::fmod(a.age, a.rebuild) < dt)
+            shapeArc(a);
+    }
+    std::erase_if(arcs_, [](const Arc& a) { return a.age >= a.life; });
     for (std::size_t i = 0; i < states.size() && i < live_.size(); ++i) {
         const auto& s = states[i];
         Live& l = live_[i];
+        l.flash = std::max(0.0f, l.flash - dt * (s.settings.kind == engine::AnomalyKind::Vent ? 1.5f : 7.0f));
+        // Idle arcs crawl over a discharge field, more often while it charges.
+        if (s.settings.kind == engine::AnomalyKind::Discharge && glm::distance(s.center, eye) < 80.0f) {
+            if (const float rate = s.settings.get("arcs") * (1.0f + 3.0f * s.activity); rate > 0.0f) {
+                l.arcTimer -= dt;
+                if (l.arcTimer <= 0.0f) {
+                    l.arcTimer = std::exponential_distribution<float>(rate)(rng_);
+                    const glm::vec3 from = randomFieldPoint(s, 0.02f, 0.3f);
+                    glm::vec3 to = randomFieldPoint(s, 0.1f, std::min(2.0f, s.height * 0.7f));
+                    const float len = glm::distance(from, to);
+                    if (len > 1.6f)
+                        to = from + (to - from) * (1.6f / len);
+                    spawnArc(static_cast<int>(i), from, to, std::uniform_real_distribution<float>(0.06f, 0.16f)(rng_), 0.8f, 0.018f, 0.25f, 0.2f,
+                             0.0f);
+                    l.flash = std::max(l.flash, 0.18f);
+                    if (std::uniform_real_distribution<float>(0.0f, 1.0f)(rng_) < 0.4f)
+                        audio_->play(asset("sounds/anomalies/discharge_arc.sound"), from, 0.6f);
+                }
+            }
+        }
         // Loops swell while the anomaly works.
         if (l.loop)
             audio_->system().setVolume(l.loop, 0.55f + 0.45f * s.activity, 0.1f);
@@ -339,6 +404,82 @@ void GameAnomalies::update(float dt, const engine::PhysicsWorld& physics, glm::v
     }
 }
 
+glm::vec3 GameAnomalies::randomFieldPoint(const engine::AnomalyField::State& s, float minHeight, float maxHeight)
+{
+    std::uniform_real_distribution<float> u(0.0f, 1.0f);
+    const float a = u(rng_) * 6.2831853f, r = std::sqrt(u(rng_)) * s.radius * 0.85f;
+    return s.center + glm::vec3(std::cos(a) * r, minHeight + (maxHeight - minHeight) * u(rng_), std::sin(a) * r);
+}
+
+void GameAnomalies::spawnArc(int anomaly, glm::vec3 from, glm::vec3 to, float life, float intensity, float width, float jag, float branch,
+                             float rebuild)
+{
+    if (arcs_.size() >= 96)
+        return;
+    Arc a;
+    a.anomaly = anomaly;
+    a.from = from;
+    a.to = to;
+    a.life = life;
+    a.intensity = intensity;
+    a.width = width;
+    a.jag = jag;
+    a.branch = branch;
+    a.rebuild = rebuild;
+    shapeArc(a);
+    arcs_.push_back(std::move(a));
+}
+
+void GameAnomalies::shapeArc(Arc& arc)
+{
+    // Midpoint displacement: each pass splits every piece and pushes the new point
+    // sideways by a share of the piece's length; side branches fork from some points.
+    std::uniform_real_distribution<float> u(-1.0f, 1.0f), p(0.0f, 1.0f);
+    auto bolt = [&](glm::vec3 from, glm::vec3 to, float width, float jag, int passes, std::vector<glm::vec3>& points) {
+        points.assign({from, to});
+        float amount = jag;
+        for (int pass = 0; pass < passes; ++pass) {
+            std::vector<glm::vec3> next;
+            next.reserve(points.size() * 2);
+            for (std::size_t k = 0; k + 1 < points.size(); ++k) {
+                const glm::vec3 a = points[k], b = points[k + 1];
+                const glm::vec3 d = b - a;
+                const float len = glm::length(d);
+                glm::vec3 side = glm::cross(d, glm::vec3(0.0f, 1.0f, 0.0f));
+                if (glm::dot(side, side) < 1e-6f)
+                    side = glm::cross(d, glm::vec3(1.0f, 0.0f, 0.0f));
+                side = glm::normalize(side);
+                const glm::vec3 up = glm::normalize(glm::cross(side, d));
+                next.push_back(a);
+                next.push_back((a + b) * 0.5f + (side * u(rng_) + up * u(rng_) * 0.6f) * len * amount);
+            }
+            next.push_back(points.back());
+            points.swap(next);
+            amount *= 0.62f;
+        }
+        (void)width;
+    };
+    arc.segments.clear();
+    std::vector<glm::vec3> main, side;
+    const float length = glm::distance(arc.from, arc.to);
+    const int passes = std::clamp(static_cast<int>(std::log2(std::max(length, 0.1f) / 0.08f)), 2, 6);
+    bolt(arc.from, arc.to, arc.width, arc.jag, passes, main);
+    for (std::size_t k = 0; k + 1 < main.size(); ++k) {
+        // Thinner toward the end of a strike that comes down from the top.
+        const float t = static_cast<float>(k) / static_cast<float>(main.size());
+        arc.segments.push_back({main[k], main[k + 1], arc.width * (1.0f - 0.35f * t)});
+        if (k > 0 && p(rng_) < arc.branch * 0.35f) {
+            const glm::vec3 dir = main[k + 1] - main[k];
+            const float remain = length * (1.0f - t);
+            glm::vec3 kick(u(rng_), u(rng_) * 0.5f, u(rng_));
+            const glm::vec3 end = main[k] + glm::normalize(glm::normalize(dir) + kick) * remain * (0.25f + 0.3f * p(rng_));
+            bolt(main[k], end, arc.width * 0.5f, arc.jag * 1.2f, std::max(2, passes - 2), side);
+            for (std::size_t m = 0; m + 1 < side.size(); ++m)
+                arc.segments.push_back({side[m], side[m + 1], arc.width * 0.45f});
+        }
+    }
+}
+
 void GameAnomalies::fill(engine::RenderView& view, const glm::mat4& viewMatrix) const
 {
     const glm::mat3 camera(glm::inverse(viewMatrix));
@@ -347,84 +488,293 @@ void GameAnomalies::fill(engine::RenderView& view, const glm::mat4& viewMatrix) 
     const auto& states = field_.anomalies();
     for (std::size_t i = 0; i < states.size() && i < live_.size(); ++i) {
         const auto& s = states[i];
+        using engine::AnomalyKind;
+        // Lens bends (crusher, rift); heat haze comes from fillHeat.
+        if (s.settings.kind != AnomalyKind::Crusher && s.settings.kind != AnomalyKind::Rift)
+            continue;
         const float strength = s.activity * live_[i].visible;
         if (strength < 0.01f)
             continue;
-        using engine::AnomalyKind;
         engine::ScreenDistortion d;
         d.position = s.center + glm::vec3(0.0f, std::min(1.0f, s.height * 0.5f), 0.0f);
         d.radius = s.radius;
         d.strength = strength;
-        switch (s.settings.kind) {
-        case AnomalyKind::Crusher:
-        case AnomalyKind::Rift:
-            d.lens = true;
-            break;
-        case AnomalyKind::Vent: // haze over the crack, taller while it burns
-            d.radius = std::max(s.radius, 1.2f) * (1.0f + s.activity);
-            d.position = s.center + glm::vec3(0.0f, d.radius * 0.8f, 0.0f);
-            break;
-        case AnomalyKind::Acid:
-            d.position = s.center + glm::vec3(0.0f, 0.4f, 0.0f);
-            break;
-        default:
-            break;
-        }
+        d.lens = true;
         view.distortions.push_back(d);
     }
-    // Ground marks under the fields (soft round sprites lying on the ground): pressed
-    // soil under a crusher, scorch around discharges and vents, the sludge of an acid pool.
-    engine::SpriteBatch marks, glows;
-    marks.decal = glows.decal = false; // plain flat sprites, 3 cm above the ground
-    marks.distance = 1e6f; // under every other effect: drawn first
-    glows.distance = 1e6f - 1.0f;
-    glows.blend = engine::SpriteBlend::Additive;
-    glows.lit = false;
-    auto flat = [](glm::vec3 at, float radius, glm::vec4 color) {
-        engine::SpriteInstance q;
-        q.position = at + glm::vec3(0.0f, 0.03f, 0.0f);
-        q.axisX = glm::vec3(0.0f, 0.0f, radius); // normal (axisX x axisY) points up: lit from above
-        q.axisY = glm::vec3(radius, 0.0f, 0.0f);
-        q.color = color;
-        return q;
-    };
+    fillHeat(view, viewMatrix);
+    fillGround(view);
+    fillArcs(view);
+    fillLights(view);
+
+    // Grass leans around the nearest anomalies: blown away by a vent, pulled into a crusher.
+    std::vector<std::pair<float, engine::GrassBender>> benders;
     for (std::size_t i = 0; i < states.size(); ++i) {
         const auto& s = states[i];
-        if (glm::distance(s.center, view.cameraPosition) > 120.0f)
+        const float dist = glm::distance(s.center, view.cameraPosition);
+        const float bend = s.settings.get("bend");
+        if (dist > 70.0f || bend <= 0.0f)
             continue;
+        engine::GrassBender g;
+        g.position = s.center;
         using engine::AnomalyKind;
-        // The soft round sprite is mostly edge: a few stacked layers make a solid middle with a soft rim.
-        auto patch = [&](float radius, glm::vec4 color, int layers) {
-            for (int k = 0; k < layers; ++k)
-                marks.instances.push_back(flat(s.center, radius * (1.0f - 0.18f * static_cast<float>(k)), color));
-        };
         switch (s.settings.kind) {
         case AnomalyKind::Crusher:
-            patch(s.radius * 0.9f, {0.08f, 0.07f, 0.06f, 0.35f}, 3);
-            patch(s.settings.get("core") * 1.8f, {0.03f, 0.03f, 0.03f, 0.5f}, 2);
-            break;
-        case AnomalyKind::Discharge:
-            patch(s.radius * 0.7f, {0.03f, 0.03f, 0.035f, 0.4f}, 2);
-            glows.instances.push_back(flat(s.center, s.radius * 0.5f, glm::vec4(0.15f, 0.25f, 0.6f, 0.25f + 0.6f * s.activity)));
+            g.mode = engine::GrassBender::Pull;
+            g.radius = s.radius * 1.3f;
+            g.strength = bend * (0.5f + 0.8f * s.activity);
             break;
         case AnomalyKind::Vent:
-            patch(s.radius * 1.4f, {0.02f, 0.018f, 0.015f, 0.55f}, 3);
-            glows.instances.push_back(flat(s.center, s.radius * 0.6f, glm::vec4(1.2f, 0.35f, 0.08f, 0.5f + 0.5f * s.activity)));
+            g.radius = s.radius * 2.2f;
+            g.strength = bend * (0.15f + 1.3f * s.activity * s.activity + 0.4f * live_[i].flash);
             break;
+        case AnomalyKind::Discharge:
+            g.radius = s.radius * 1.1f;
+            g.strength = bend * (0.1f + 1.2f * s.activity + 0.6f * live_[i].flash);
+            break;
+        case AnomalyKind::Rift:
+            g.mode = engine::GrassBender::Swirl;
+            g.radius = s.radius * 1.4f;
+            g.strength = bend * (0.4f + 0.4f * s.activity);
+            break;
+        default:
+            continue;
+        }
+        benders.push_back({dist, g});
+    }
+    std::sort(benders.begin(), benders.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+    for (std::size_t k = 0; k < benders.size() && k < static_cast<std::size_t>(engine::kMaxGrassBenders); ++k)
+        view.benders.push_back(benders[k].second);
+
+    for (const Bolt& b : bolts_)
+        view.worldBoxes.push_back({b.position, glm::vec3(0.035f, 0.035f, 0.035f), glm::vec3(0.42f, 0.4f, 0.38f), false});
+}
+
+void GameAnomalies::fillArcs(engine::RenderView& view) const
+{
+    if (arcs_.empty())
+        return;
+    // Two strips per piece: a hot white core (kept at least ~1.5 px wide so far arcs do
+    // not break up) and a wide blue glow. Additive and HDR, so the bloom adds the halo.
+    engine::SpriteBatch batch;
+    batch.texture = arcTexture_;
+    batch.blend = engine::SpriteBlend::Additive;
+    batch.lit = false;
+    float nearest = 1e9f;
+    const float pixel = 2.0f * std::tan(glm::radians(35.0f)) / static_cast<float>(std::max(view.viewportWidth, 1));
+    for (const Arc& a : arcs_) {
+        const float fade = std::sqrt(std::max(0.0f, 1.0f - a.age / a.life)) * a.flicker * a.intensity;
+        if (fade <= 0.01f)
+            continue;
+        for (const ArcSegment& seg : a.segments) {
+            const glm::vec3 mid = (seg.a + seg.b) * 0.5f;
+            const glm::vec3 along = seg.b - seg.a;
+            const glm::vec3 toEye = view.cameraPosition - mid;
+            const float dist = glm::length(toEye);
+            nearest = std::min(nearest, dist);
+            glm::vec3 across = glm::cross(along, toEye);
+            const float len = glm::length(across);
+            if (len < 1e-6f)
+                continue;
+            across /= len;
+            const float core = std::max(seg.width, dist * pixel * 4.0f);
+            engine::SpriteInstance q;
+            q.position = mid;
+            q.axisY = along * 0.5f * 1.12f;
+            q.axisX = across * core;
+            q.color = glm::vec4(glm::vec3(2.2f, 2.8f, 4.5f) * fade, 1.0f);
+            batch.instances.push_back(q);
+            q.axisX = across * core * 4.0f;
+            q.color = glm::vec4(glm::vec3(0.18f, 0.32f, 1.1f) * fade * 0.6f, 1.0f);
+            batch.instances.push_back(q);
+        }
+    }
+    if (batch.instances.empty())
+        return;
+    batch.distance = nearest;
+    view.sprites.push_back(std::move(batch));
+}
+
+void GameAnomalies::fillLights(engine::RenderView& view) const
+{
+    // Light from the anomalies themselves: the blue flicker of a discharge, the glow and
+    // roar of a vent, the green shine of acid. Only the nearest few (no shadows).
+    struct Candidate {
+        float distance;
+        engine::LocalLight light;
+    };
+    std::vector<Candidate> lights;
+    const auto& states = field_.anomalies();
+    using engine::AnomalyKind;
+    for (std::size_t i = 0; i < states.size() && i < live_.size(); ++i) {
+        const auto& s = states[i];
+        const Live& l = live_[i];
+        const float amount = s.settings.get("light");
+        const float dist = glm::distance(s.center, view.cameraPosition);
+        if (amount <= 0.0f || dist > 90.0f)
+            continue;
+        engine::LocalLight light;
+        light.key = 0xA40A11ull * 1000 + i;
+        const float wobble = 0.85f + 0.15f * std::sin(time_ * 13.0f + static_cast<float>(i)) * std::sin(time_ * 7.3f);
+        float intensity = 0.0f;
+        glm::vec3 color(1.0f);
+        switch (s.settings.kind) {
+        case AnomalyKind::Discharge:
+            color = {0.45f, 0.62f, 1.0f};
+            intensity = 0.4f + 70.0f * l.flash * l.flash + 8.0f * s.activity;
+            light.position = s.center + glm::vec3(0.0f, 1.0f, 0.0f);
+            light.range = s.radius * 2.0f + 4.0f + 8.0f * l.flash;
+            break;
+        case AnomalyKind::Vent: {
+            color = {1.0f, 0.42f, 0.12f};
+            const float column = s.settings.get("column");
+            const bool burning = s.phase == engine::AnomalyField::State::Active;
+            intensity = (burning ? 30.0f : 2.5f + 6.0f * s.activity) * wobble + 20.0f * l.flash;
+            light.position = s.center + glm::vec3(0.0f, burning ? std::min(column * 0.3f, 2.5f) : 0.4f, 0.0f);
+            light.range = burning ? 9.0f + column : s.radius * 2.0f + 3.0f;
+            break;
+        }
         case AnomalyKind::Acid:
-            patch(s.radius * 1.1f, {0.09f, 0.12f, 0.04f, 0.6f}, 4);
-            glows.instances.push_back(flat(s.center, s.radius * 0.8f, {0.25f, 0.45f, 0.05f, 0.3f}));
+            color = {0.35f, 0.95f, 0.15f};
+            intensity = (1.6f + 0.5f * std::sin(time_ * 1.7f + static_cast<float>(i))) * (1.0f + 2.0f * l.flash);
+            light.position = s.center + glm::vec3(0.0f, 0.5f, 0.0f);
+            light.range = s.radius * 1.6f + 1.5f;
+            break;
+        case AnomalyKind::Rift:
+            color = {0.65f, 0.4f, 1.0f};
+            intensity = 1.2f * s.activity + 25.0f * l.flash;
+            light.position = s.center + glm::vec3(0.0f, std::min(1.0f, s.height * 0.5f), 0.0f);
+            light.range = s.radius * 2.0f + 2.0f;
+            break;
+        default:
+            continue;
+        }
+        light.color = color * intensity * amount;
+        lights.push_back({dist, light});
+    }
+    std::sort(lights.begin(), lights.end(), [](const Candidate& a, const Candidate& b) { return a.distance < b.distance; });
+    for (std::size_t k = 0; k < lights.size() && k < 4; ++k)
+        view.lights.push_back(lights[k].light);
+}
+
+void GameAnomalies::fillHeat(engine::RenderView& view, const glm::mat4& viewMatrix) const
+{
+    // Heat haze as a rising column of shimmering quads (depth tested, so things in
+    // front stay sharp): faint over a resting vent, tall and strong while it burns;
+    // a low shimmer of fumes over acid.
+    const glm::vec3 right(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
+    const glm::vec3 up(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
+    engine::SpriteBatch heat;
+    heat.blend = engine::SpriteBlend::Distort;
+    heat.lit = false;
+    const auto& states = field_.anomalies();
+    using engine::AnomalyKind;
+    for (std::size_t i = 0; i < states.size() && i < live_.size(); ++i) {
+        const auto& s = states[i];
+        if (glm::distance(s.center, view.cameraPosition) > 70.0f)
+            continue;
+        int count = 0;
+        float height = 0.0f, size = 0.0f, strength = 0.0f, speed = 1.0f;
+        if (s.settings.kind == AnomalyKind::Vent) {
+            const bool burning = s.phase == engine::AnomalyField::State::Active;
+            height = burning ? s.settings.get("column") * 1.2f : 1.6f + 1.5f * s.activity;
+            size = std::max(0.6f, s.radius) * (burning ? 1.3f : 0.8f);
+            strength = burning ? 1.0f : 0.25f + 0.5f * s.activity;
+            count = burning ? 10 : 4;
+            speed = burning ? 4.0f : 0.8f;
+        } else if (s.settings.kind == AnomalyKind::Acid) {
+            height = 0.9f;
+            size = std::max(0.8f, s.radius * 0.45f);
+            strength = 0.18f;
+            count = 3;
+            speed = 0.25f;
+        } else {
+            continue;
+        }
+        for (int k = 0; k < count; ++k) {
+            // Each quad rises through the column and starts over (staggered).
+            const float phase = std::fmod(time_ * speed / height + static_cast<float>(k) / static_cast<float>(count), 1.0f);
+            const float swing = std::sin(time_ * 1.3f + static_cast<float>(k) * 2.1f);
+            engine::SpriteInstance q;
+            q.position = s.center + glm::vec3(swing * s.radius * 0.25f, 0.3f + phase * height, std::cos(time_ + k) * s.radius * 0.2f);
+            const float r = size * (0.7f + 0.6f * phase);
+            q.axisX = right * r;
+            q.axisY = up * r * 1.3f;
+            const float edge = std::sin(phase * 3.14159f); // fades in at the bottom, out at the top
+            q.color = glm::vec4(0.0f, strength * edge, 0.0f, 1.0f);
+            heat.instances.push_back(q);
+        }
+    }
+    if (!heat.instances.empty())
+        view.sprites.push_back(std::move(heat));
+}
+
+void GameAnomalies::fillGround(engine::RenderView& view) const
+{
+    // Marks on the ground under the fields (lying sprites from a 2x2 sheet): scorch under
+    // discharges and vents, sludge of an acid pool, dead grass of a hotspot, pressed soil
+    // under a crusher. Acid also gets moving glossy highlights; vents an ember glow.
+    engine::SpriteBatch marks, glows, sheen;
+    marks.texture = marksTexture_;
+    marks.columns = marks.rows = 2;
+    marks.distance = 1e6f; // under every other effect: drawn first
+    glows.distance = 1e6f - 1.0f;
+    sheen.distance = 1e6f - 2.0f;
+    glows.blend = sheen.blend = engine::SpriteBlend::Additive;
+    glows.lit = sheen.lit = false;
+    sheen.texture = sheenTexture_;
+    auto flat = [](glm::vec3 at, float radius, float angle, glm::vec4 color, float frame, float lift = 0.03f) {
+        engine::SpriteInstance q;
+        q.position = at + glm::vec3(0.0f, lift, 0.0f);
+        const float c = std::cos(angle) * radius, s = std::sin(angle) * radius;
+        q.axisX = glm::vec3(-s, 0.0f, c); // normal (axisX x axisY) points up: lit from above
+        q.axisY = glm::vec3(c, 0.0f, s);
+        q.color = color;
+        q.frame = frame;
+        return q;
+    };
+    const auto& states = field_.anomalies();
+    using engine::AnomalyKind;
+    for (std::size_t i = 0; i < states.size() && i < live_.size(); ++i) {
+        const auto& s = states[i];
+        const Live& l = live_[i];
+        if (glm::distance(s.center, view.cameraPosition) > 120.0f)
+            continue;
+        switch (s.settings.kind) {
+        case AnomalyKind::Crusher:
+            marks.instances.push_back(flat(s.center, s.radius * 1.05f, l.angle + time_ * 0.05f, glm::vec4(1.0f, 1.0f, 1.0f, 0.85f), 3.0f));
+            break;
+        case AnomalyKind::Discharge:
+            marks.instances.push_back(flat(s.center, s.radius * 0.85f, l.angle, glm::vec4(1.0f, 1.0f, 1.0f, 0.8f), 0.0f));
+            glows.instances.push_back(flat(s.center, s.radius * 0.6f, 0.0f, glm::vec4(0.15f, 0.25f, 0.8f, 0.15f + 0.8f * l.flash), 0.0f, 0.05f));
+            break;
+        case AnomalyKind::Vent:
+            marks.instances.push_back(flat(s.center, s.radius * 1.7f, l.angle, glm::vec4(1.0f), 0.0f));
+            glows.instances.push_back(flat(s.center, s.radius * 0.55f, 0.0f,
+                                           glm::vec4(1.4f, 0.4f, 0.08f, (0.45f + 0.5f * s.activity) * (0.85f + 0.15f * std::sin(time_ * 9.0f))), 0.0f,
+                                           0.05f));
+            break;
+        case AnomalyKind::Acid: {
+            marks.instances.push_back(flat(s.center, s.radius * 1.15f, l.angle, glm::vec4(1.0f), 1.0f));
+            // Two layers of highlights turning slowly against each other read as a moving, oily surface.
+            const float pulse = 0.75f + 0.25f * std::sin(time_ * 0.9f + static_cast<float>(i));
+            const glm::vec4 tint(0.55f * pulse, 0.85f * pulse, 0.22f * pulse, 0.16f + 0.3f * l.flash);
+            sheen.instances.push_back(flat(s.center, s.radius * 0.95f, l.angle + time_ * 0.07f, tint, 0.0f, 0.06f));
+            sheen.instances.push_back(flat(s.center + glm::vec3(0.15f, 0.0f, -0.1f), s.radius * 0.8f, -l.angle - time_ * 0.11f, tint * 0.7f, 0.0f, 0.065f));
+            glows.instances.push_back(flat(s.center, s.radius * 0.8f, 0.0f, {0.25f, 0.45f, 0.05f, 0.22f}, 0.0f, 0.05f));
+            break;
+        }
+        case AnomalyKind::Radiation:
+            if (s.settings.get("dry") >= 0.5f)
+                marks.instances.push_back(flat(s.center, s.radius * 0.9f, l.angle, glm::vec4(1.0f, 1.0f, 1.0f, 0.9f), 2.0f));
             break;
         default:
             break;
         }
     }
-    if (!marks.instances.empty())
-        view.sprites.push_back(std::move(marks));
-    if (!glows.instances.empty())
-        view.sprites.push_back(std::move(glows));
-    for (const Bolt& b : bolts_)
-        view.worldBoxes.push_back({b.position, glm::vec3(0.035f, 0.035f, 0.035f), glm::vec3(0.42f, 0.4f, 0.38f), false});
+    for (engine::SpriteBatch* b : {&marks, &glows, &sheen})
+        if (!b->instances.empty())
+            view.sprites.push_back(std::move(*b));
 }
 
 void GameAnomalies::drawHud(engine::Ui2D& ui, int width, int height) const

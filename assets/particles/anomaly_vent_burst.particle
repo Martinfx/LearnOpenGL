@@ -17,12 +17,34 @@ size 1 1.6
 size_key 0 0.7
 size_key 0.5 1.5
 size_key 1 0.6
-color 1 0.6 0.25
-intensity 9
+color 1 0.5 0.18
+intensity 4
 color_key 0 1 1 1 0
 color_key 0.1 1 1 1 1
 color_key 1 1 0.4 0.15 0
 rotation -20 20
+emitter "Core"
+texture "../textures/particles/fire_8x8.png"
+flipbook 8 8 40 1
+blend additive
+lit 0
+rate 45
+max 120
+life 0.25 0.45
+shape disc 0.2 0 0
+direction 0 1 0
+spread 3
+speed 9 13
+size 0.5 0.8
+size_key 0 0.6
+size_key 0.4 1.2
+size_key 1 0.4
+color 1 0.7 0.35
+intensity 4.5
+color_key 0 1 1 1 0
+color_key 0.08 1 1 1 1
+color_key 1 1 0.5 0.2 0
+rotation -10 10
 emitter "Embers"
 texture "../textures/particles/spark.png"
 blend additive
@@ -76,7 +98,7 @@ spread 10
 speed 0.5 1.5
 size 1.6 2.2
 color 1 0.5 0.15
-intensity 5
+intensity 3
 color_key 0 1 1 1 0
 color_key 0.3 1 1 1 0.8
 color_key 1 1 1 1 0

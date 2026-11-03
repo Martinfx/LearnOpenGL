@@ -2509,9 +2509,11 @@ int main(int argc, char** argv)
         }
         // G: throw a bolt (finds anomalies and sets them off). FPS_ENGINE_BOLT=1 throws one at the start (test hook).
         {
+            // FPS_ENGINE_BOLT=N > 2 throws it at frame N instead (screenshots of a strike).
             static bool testBolt = std::getenv("FPS_ENGINE_BOLT") != nullptr;
+            static const long testBoltFrame = testBolt ? std::max(2L, std::strtol(std::getenv("FPS_ENGINE_BOLT"), nullptr, 10)) : 2L;
             const bool g = captured && keyDown(window, boundKey("in_bolt"));
-            if ((g && !boltHeld) || (testBolt && frame == 2)) {
+            if ((g && !boltHeld) || (testBolt && static_cast<long>(frame) == testBoltFrame)) {
                 anomalies.throwBolt(player.eye(), camera.forward(), player.velocity());
                 testBolt = false;
             }

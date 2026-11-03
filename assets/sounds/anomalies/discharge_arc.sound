@@ -1,0 +1,14 @@
+# Small idle arc crawling over the electric field
+file "discharge_arc_1.wav"
+file "discharge_arc_2.wav"
+file "discharge_arc_3.wav"
+file "discharge_arc_4.wav"
+volume 0.35
+pitch 0.85 1.2
+distance 1.5 18
+rolloff 1
+loop 0
+stream 0
+spatial 1
+group sfx
+max_instances 3

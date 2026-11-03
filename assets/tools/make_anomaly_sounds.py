@@ -83,53 +83,109 @@ def make_crusher():
 
 # ------------------------------------------------------------ discharge (electric)
 
+def zap(seconds, f0, f1):
+    """Electric arc: a buzzy, wavering tone (clipped saw) inside sizzling noise."""
+    t = t_axis(seconds)
+    freq = np.linspace(f0, f1, len(t)) * (1.0 + 0.15 * rng.standard_normal(len(t)).cumsum() / np.sqrt(len(t)))
+    saw = 2.0 * ((np.cumsum(freq) / RATE) % 1.0) - 1.0
+    tone = np.tanh(saw * 3.0) * 0.5
+    sizzle = highpass(noise(seconds), 3000) * (0.4 + 0.6 * (rng.random(len(t)) < 0.02).astype(float))
+    return tone + sizzle * 0.6
+
+
+def thunder_crack(seconds):
+    """Close lightning: a sharp N-wave snap, a ripping tear and a rolling low tail."""
+    t = t_axis(seconds)
+    n = len(t)
+    snap = np.zeros(n)
+    w = int(0.004 * RATE)
+    snap[:w] = np.linspace(1.0, -1.0, w)
+    snap = lowpass(snap, 9000, 1) * 2.5
+    tear = np.zeros(n)
+    time = 0.0
+    while time < 0.25:  # a burst of sub-strikes ripping along the channel
+        time += rng.exponential(0.012)
+        at(tear, highpass(noise(0.01), 1500) * env(0.01, 0.0002, 0.003), time, rng.uniform(0.4, 1.0) * np.exp(-time / 0.12))
+    tear = lowpass(tear, 8000, 1)
+    roll = lowpass(noise(seconds), 220) * (np.minimum(t / 0.05, 1.0) * np.exp(-t / 0.7)) * 3.0
+    roll *= 0.7 + 0.3 * np.abs(np.sin(2 * np.pi * t * 3.1) * np.sin(2 * np.pi * t * 1.7))
+    hum = zap(seconds, 140, 90) * env(seconds, 0.001, 0.25) * 0.35
+    return snap + tear * 1.4 + roll + hum
+
+
 def make_discharge():
     n = 8.0
     t = t_axis(n + 1.0)
-    buzz = sum(np.sin(2 * np.pi * 50 * k * t) / k for k in (1, 2, 3, 5, 7)) * 0.25
-    buzz *= 0.7 + 0.3 * np.sin(2 * np.pi * t * 0.37) ** 2
-    write_ogg(DIR + "/discharge_loop.ogg", seamless(buzz + crackle(n + 1.0, 6) * 0.35, 1.0))
-    sound_file("discharge_loop", ["discharge_loop.ogg"], 0.45, distance=(2, 22), loop=True, group="ambient", max_instances=8,
-               comment="Electric field idle: mains hum and faint crackle")
+    # Transformer-like hum that swells and wavers, a high whine, and crackle in bursts.
+    swell = 0.65 + 0.35 * np.sin(2 * np.pi * t * 0.37) ** 2
+    buzz = sum(np.sin(2 * np.pi * 50 * k * t + 0.3 * np.sin(2 * np.pi * t * 0.2 * k)) / k for k in (1, 2, 3, 4, 5, 7, 9)) * 0.22 * swell
+    whine = np.sin(2 * np.pi * (2300 + 40 * np.sin(2 * np.pi * t * 0.13)) * t) * 0.012
+    bursts = np.clip(np.sin(2 * np.pi * t * 0.23) * np.sin(2 * np.pi * t * 0.61), 0.0, 1.0)
+    crk = crackle(n + 1.0, 8) * 0.25 + crackle(n + 1.0, 70) * 0.35 * bursts
+    write_ogg(DIR + "/discharge_loop.ogg", seamless(buzz + whine + crk, 1.0))
+    sound_file("discharge_loop", ["discharge_loop.ogg"], 0.5, distance=(2, 24), loop=True, group="ambient", max_instances=8,
+               comment="Electric field idle: wavering transformer hum, whine and bursts of crackle")
 
     for i in range(3):
-        write_wav(DIR + "/discharge_crackle_%d.wav" % (i + 1), crackle(0.35, 120) * env(0.35, 0.01, 0.12))
+        c = 0.4
+        x = crackle(c, 160) * env(c, 0.01, 0.12) + zap(c, rng.uniform(300, 600), rng.uniform(120, 220)) * env(c, 0.005, 0.08) * 0.5
+        write_wav(DIR + "/discharge_crackle_%d.wav" % (i + 1), x)
     sound_file("discharge_crackle", ["discharge_crackle_%d.wav" % (i + 1) for i in range(3)], 0.6, (0.9, 1.15), (2, 30),
-               comment="Electric field idle spark / arming")
+               comment="Electric field arming: crackle and a short buzzing arc")
 
-    for i in range(2):
-        b = 1.4
-        snap = highpass(noise(b), 800) * env(b, 0.0002, 0.03) * 1.5
-        zap = np.sign(np.sin(2 * np.pi * np.cumsum(np.linspace(900, 120, int(b * RATE))) / RATE)) * env(b, 0.001, 0.08) * 0.4
-        rumble = lowpass(noise(b), 400) * env(b, 0.01, 0.4) * 1.2
-        write_wav(DIR + "/discharge_burst_%d.wav" % (i + 1), snap + zap + rumble + crackle(b, 300) * env(b, 0.0, 0.2))
-    sound_file("discharge_burst", ["discharge_burst_1.wav", "discharge_burst_2.wav"], 1.0, (0.9, 1.1), (4, 120),
-               comment="Lightning strike of the electric field")
+    for i in range(4):
+        a = 0.18
+        x = zap(a, rng.uniform(500, 1200), rng.uniform(200, 400)) * env(a, 0.002, 0.04)
+        write_wav(DIR + "/discharge_arc_%d.wav" % (i + 1), x)
+    sound_file("discharge_arc", ["discharge_arc_%d.wav" % (i + 1) for i in range(4)], 0.35, (0.85, 1.2), (1.5, 18), max_instances=3,
+               comment="Small idle arc crawling over the electric field")
+
+    for i in range(3):
+        b = 2.2
+        write_wav(DIR + "/discharge_burst_%d.wav" % (i + 1), thunder_crack(b) + crackle(b, 300) * env(b, 0.0, 0.25) * 0.6)
+    sound_file("discharge_burst", ["discharge_burst_%d.wav" % (i + 1) for i in range(3)], 1.0, (0.9, 1.1), (4, 140),
+               comment="Lightning strike of the electric field: snap, tear and rolling thunder")
 
 
 # ------------------------------------------------------------ vent (heat / fire)
+
+def jet(seconds, strength=1.0):
+    """Burning gas jet: turbulent broadband roar with a fluttering low body."""
+    t = t_axis(seconds)
+    flutter = 0.75 + 0.25 * lowpass(noise(seconds), 9, 2) * 6.0
+    body = lowpass(noise(seconds), 350) * 2.2 * flutter
+    roar = bandpass(noise(seconds), 700 + 300 * flutter, 0.8) * 0.9
+    hiss = highpass(noise(seconds), 2500) * 0.18
+    pops = crackle(seconds, 25, 1800) * 0.6
+    return (body + roar + hiss + pops) * strength
+
 
 def make_vent():
     n = 10.0
     t = t_axis(n + 2.0)
     flicker = 0.6 + 0.4 * np.abs(np.sin(2 * np.pi * t * 0.7) * np.sin(2 * np.pi * t * 1.3))
-    hiss = bandpass(noise(n + 2.0), 900 + 400 * flicker, 1.2) * 0.25
-    rumble = lowpass(noise(n + 2.0), 140) * 1.6 * flicker
-    write_ogg(DIR + "/vent_loop.ogg", seamless(hiss + rumble + crackle(n + 2.0, 4, 2500) * 0.3, 2.0))
-    sound_file("vent_loop", ["vent_loop.ogg"], 0.55, distance=(2, 25), loop=True, group="ambient", max_instances=8,
-               comment="Heat vent idle: hot air hiss and low rumble")
+    hiss = bandpass(noise(n + 2.0), 900 + 400 * flicker, 1.2) * 0.22
+    rumble = lowpass(noise(n + 2.0), 120) * 1.8 * flicker
+    breath = lowpass(noise(n + 2.0), 60, 2) * 3.0 * (0.5 + 0.5 * np.sin(2 * np.pi * t * 0.25) ** 2)
+    embers = crackle(n + 2.0, 6, 2500) * 0.35
+    write_ogg(DIR + "/vent_loop.ogg", seamless(hiss + rumble + breath + embers, 2.0))
+    sound_file("vent_loop", ["vent_loop.ogg"], 0.6, distance=(2, 26), loop=True, group="ambient", max_instances=8,
+               comment="Heat vent idle: breathing rumble, hot air hiss and crackling embers")
 
     c = 0.6
-    write_wav(DIR + "/vent_charge.wav", lowpass(noise(c), np.linspace(80, 600, int(c * RATE))) * env(c, 0.45, 0.2))
-    sound_file("vent_charge", ["vent_charge.wav"], 0.9, distance=(3, 50), comment="Heat vent about to erupt")
+    t = t_axis(c)
+    suck = lowpass(noise(c), np.linspace(80, 900, len(t))) * env(c, 0.45, 0.2) + bandpass(noise(c), np.linspace(300, 1500, len(t)), 3) * (t / c) ** 2 * 0.5
+    write_wav(DIR + "/vent_charge.wav", suck)
+    sound_file("vent_charge", ["vent_charge.wav"], 0.9, distance=(3, 50), comment="Heat vent drawing breath before it erupts")
 
-    b = 2.4
-    t = t_axis(b)
-    roar = lowpass(noise(b), 900) * 1.4 + bandpass(noise(b), 1800, 1.0) * 0.5
-    roar *= np.minimum(t / 0.08, 1.0) * np.clip((b - t) / 0.6, 0.0, 1.0) * (0.8 + 0.2 * np.sin(2 * np.pi * t * 11))
-    whump = sweep(b, 90, 40, 6) * env(b, 0.005, 0.25)
-    write_wav(DIR + "/vent_burst.wav", roar + whump + crackle(b, 60, 2500) * 0.5)
-    sound_file("vent_burst", ["vent_burst.wav"], 1.0, (0.95, 1.05), (4, 90), comment="Heat vent eruption: fire column roar")
+    for i in range(2):
+        b = 2.6
+        t = t_axis(b)
+        shape = np.minimum(t / 0.06, 1.0) * np.clip((b - t) / 0.7, 0.0, 1.0)
+        whomp = sweep(b, 110, 38, 7) * env(b, 0.004, 0.3) * 1.6 + lowpass(noise(b), 500) * env(b, 0.002, 0.12) * 2.0
+        write_wav(DIR + "/vent_burst_%d.wav" % (i + 1), jet(b) * shape + whomp)
+    sound_file("vent_burst", ["vent_burst_1.wav", "vent_burst_2.wav"], 1.0, (0.95, 1.05), (4, 100),
+               comment="Heat vent eruption: ignition whomp and the roar of the fire column")
 
 
 # ------------------------------------------------------------ acid (chemical)
@@ -141,11 +197,19 @@ def bubble(seconds=0.06):
 
 def make_acid():
     n = 9.0
+    t = t_axis(n + 1.0)
     x = lowpass(noise(n + 1.0), 300) * 0.4 + bandpass(noise(n + 1.0), 3500, 1.5) * 0.08
+    fizz = highpass(noise(n + 1.0), 5000) * 0.05 * (0.6 + 0.4 * np.sin(2 * np.pi * t * 0.3) ** 2)
+    x += fizz
     time = 0.0
-    while time < n + 1.0:
-        time += rng.exponential(1.0 / 9.0)
-        at(x, bubble(rng.uniform(0.03, 0.09)), time, rng.uniform(0.15, 0.6))
+    while time < n + 1.0:  # bubbles come in clusters
+        time += rng.exponential(1.0 / 4.0)
+        for _ in range(int(rng.integers(1, 5))):
+            at(x, bubble(rng.uniform(0.03, 0.09)), time + rng.uniform(0.0, 0.25), rng.uniform(0.15, 0.6))
+        if rng.random() < 0.15:  # a big slow glop
+            g = 0.25
+            glop = np.sin(2 * np.pi * np.cumsum(np.linspace(90, 210, int(g * RATE))) / RATE) * env(g, 0.01, 0.06)
+            at(x, glop, time, 0.8)
     write_ogg(DIR + "/acid_loop.ogg", seamless(x, 1.0))
     sound_file("acid_loop", ["acid_loop.ogg"], 0.5, distance=(2, 20), loop=True, group="ambient", max_instances=8,
                comment="Acid pool idle: bubbling sludge")

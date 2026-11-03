@@ -1,8 +1,8 @@
-# Heat vent idle: hot air hiss and low rumble
+# Heat vent idle: breathing rumble, hot air hiss and crackling embers
 file "vent_loop.ogg"
-volume 0.55
+volume 0.6
 pitch 1 1
-distance 2 25
+distance 2 26
 rolloff 1
 loop 1
 stream 1

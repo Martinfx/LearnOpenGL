@@ -30,6 +30,8 @@ layout(std140, binding = 1) uniform Environment {
     vec4 uGroundHaze;      // ground haze layer: x density (1/m), y ground height (m), z thickness (m)
     vec4 uContact;         // contact shadows: x ray length (m, 0 = off), y surface thickness (m), z fade-out view distance (m), w sky occlusion directions
     vec4 uClouds;          // volumetric clouds: x 1 = on, y base height (m), z thickness (m), w density
+    vec4 uBenderInfo;      // x: grass bender count (RenderView::benders)
+    vec4 uBenders[8];      // per bender: xyz centre, w radius; x strength, y mode (0 push, 1 pull, 2 swirl)
 };
 // Physical sky table (engine/Atmosphere.h): azimuth from the sun by elevation, linear radiance.
 layout(binding = 31) uniform sampler2D uSkyLut;

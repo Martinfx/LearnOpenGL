@@ -59,6 +59,17 @@ struct ScreenDistortion {
     bool lens = false;        // false = heat shimmer, true = lens / gravity bend
 };
 
+// Something that bends grass and bushes around it (anomalies: a vent blows them away,
+// a crusher pulls them in). Only the first kMaxGrassBenders of a view are used.
+struct GrassBender {
+    enum Mode : std::uint8_t { Push, Pull, Swirl };
+    glm::vec3 position{0.0f}; // centre on the ground
+    float radius = 2.0f;      // m, no bending beyond
+    float strength = 1.0f;    // 0..~2, how far the tips lean (1 = about 35 cm on a 1 m plant)
+    Mode mode = Push;
+};
+constexpr int kMaxGrassBenders = 4;
+
 struct RenderView {
     glm::mat4 view{1.0f};
     glm::mat4 projection{1.0f};
@@ -99,6 +110,7 @@ struct RenderView {
     std::vector<const DebugGeometry*> debug; // editor helpers (navmesh), not owned
     std::vector<OverlayBox> gizmoBoxes; // editor handles, drawn on top of everything (world space)
     std::vector<ScreenDistortion> distortions; // anomalies: heat haze, lens bends
+    std::vector<GrassBender> benders;          // grass pushed or pulled by anomalies (plants with sway)
     // Local lights besides the level's "light" entities (flashlight, muzzle flashes, fires).
     std::vector<LocalLight> lights;
     // Probe bake (captureCube): HDR only (no post-processing), no volumetric fog, no probes,

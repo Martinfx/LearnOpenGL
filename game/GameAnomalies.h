@@ -68,7 +68,39 @@ private:
         engine::ParticleSystem::Handle burst = 0; // vent column (stopped at End)
         std::uint32_t loop = 0;                   // audio handle
         float visible = 1.0f;                     // 0 when a wall is between the camera and it (distortion)
+        float arcTimer = 0.0f;                    // discharge: next idle arc
+        float flash = 0.0f;                       // 0..1 light flash of a strike or an ignition, fades out
+        float angle = 0.0f;                       // turn of its ground mark (radians)
     };
+    // Lightning: a jagged line with side branches, drawn as glowing strips.
+    struct ArcSegment {
+        glm::vec3 a{0.0f}, b{0.0f};
+        float width = 0.03f; // core half width (m)
+    };
+    struct Arc {
+        int anomaly = 0;
+        glm::vec3 from{0.0f}, to{0.0f};
+        std::vector<ArcSegment> segments;
+        float age = 0.0f, life = 0.15f;
+        float intensity = 1.0f;
+        float width = 0.03f;
+        float jag = 0.18f;     // sideways displacement relative to the length
+        float branch = 0.25f;  // chance of a side branch per point
+        float rebuild = 0.0f;  // seconds to the next re-shape (big strikes flicker), 0 = never
+        float flicker = 1.0f;
+    };
+    void spawnArc(int anomaly, glm::vec3 from, glm::vec3 to, float life, float intensity, float width, float jag, float branch,
+                  float rebuild);
+    void shapeArc(Arc& arc);
+    glm::vec3 randomFieldPoint(const engine::AnomalyField::State& s, float minHeight, float maxHeight);
+    void fillArcs(engine::RenderView& view) const;
+    void fillLights(engine::RenderView& view) const;
+    void fillHeat(engine::RenderView& view, const glm::mat4& viewMatrix) const;
+    void fillGround(engine::RenderView& view) const;
+    std::vector<Arc> arcs_;
+    std::shared_ptr<engine::TextureAsset> arcTexture_, sheenTexture_, marksTexture_;
+    float time_ = 0.0f;
+    mutable std::mt19937 noiseRng_{4242}; // HUD radiation noise
     std::vector<Live> live_;
     std::vector<Bolt> bolts_;
     std::vector<engine::AnomalyBody> bodies_;

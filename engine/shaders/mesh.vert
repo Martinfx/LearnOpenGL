@@ -50,6 +50,37 @@ void main() {
         world.xz += dir * bend + vec2(-dir.y, dir.x) * flutter;
         world.y -= bend * bend * 0.5 / max(h, 0.5); // keep the length roughly
     }
+    if (uSway > 0.0 && uBenderInfo.x > 0.0) {
+        // Benders (anomalies): plants lean away from, toward or around a centre, the
+        // tips most, fading out to the bender's radius. Whole plants lean by their origin.
+        vec3 base = model[3].xyz;
+        float h = max(world.y - base.y, 0.0);
+        float t = uSkyHorizon.w;
+        vec2 shift = vec2(0.0);
+        for (int i = 0; i < int(uBenderInfo.x); ++i) {
+            vec4 a = uBenders[2 * i], b = uBenders[2 * i + 1];
+            vec2 d = base.xz - a.xz;
+            float dist = length(d);
+            if (dist >= a.w || abs(base.y - a.y) > a.w + 2.0)
+                continue;
+            vec2 away = dist > 1e-3 ? d / dist : vec2(1.0, 0.0);
+            float fall = 1.0 - smoothstep(a.w * 0.35, a.w, dist);
+            float shake = 0.85 + 0.15 * sin(t * 11.0 + dist * 5.0 + base.x);
+            float lean = b.x * fall * shake * 0.35;
+            if (b.y < 0.5)
+                shift += away * lean;
+            else if (b.y < 1.5)
+                shift -= away * lean * min(1.0, dist / max(a.w * 0.25, 0.1)); // no flip at the centre
+            else
+                shift += (vec2(-away.y, away.x) * 0.8 - away * 0.3) * lean;
+        }
+        float len = length(shift);
+        if (len > 0.6)
+            shift *= 0.6 / len;
+        float tip = min(h, 1.2) * min(1.0, uSway * 1.5);
+        world.xz += shift * tip;
+        world.y -= dot(shift, shift) * tip * 0.5 / max(h, 0.5);
+    }
     vWorldPos = world.xyz;
     vNormal = mat3(model) * mat3(skin) * aNormal; // renormalized in the fragment shader
     vUV = aUV;

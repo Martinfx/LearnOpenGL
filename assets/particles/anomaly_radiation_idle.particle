@@ -1,0 +1,41 @@
+# Radiation hotspot, idle: barely visible dust hanging in still air and a rare
+# glint, so a sharp eye can tell the spot before the Geiger counter does.
+# Authored for a field of 1 m radius (the game stretches it to the field).
+emitter "Motes"
+texture "../textures/particles/dust.png"
+lit 1
+rate 2.5
+max 60
+life 7 12
+shape disc 0.9 0 0
+direction 0 1 0
+spread 80
+speed 0.02 0.08
+drag 0.6
+gravity -0.01
+size 0.05 0.11
+size_key 0 0.6
+size_key 1 1
+color 0.85 0.82 0.7
+color_key 0 1 1 1 0
+color_key 0.2 1 1 1 0.55
+color_key 0.8 1 1 1 0.55
+color_key 1 1 1 1 0
+rotation 0 360
+spin -20 20
+emitter "Glints"
+blend additive
+lit 0
+rate 0.35
+max 6
+life 0.15 0.35
+shape disc 0.8 0 0
+direction 0 1 0
+spread 90
+speed 0 0.05
+size 0.02 0.04
+color 0.9 1 0.55
+intensity 2.5
+color_key 0 1 1 1 0
+color_key 0.3 1 1 1 1
+color_key 1 1 1 1 0
