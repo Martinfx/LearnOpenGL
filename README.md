@@ -154,8 +154,8 @@ Editor: Assets > Dialog / Quest otevře strom dialogu nebo úkol (dvojklik v Con
 New quest založí nový; dole se hlásí chyby (odpověď vede na neexistující uzel, neznámý úkol). Lua: `game.quest`,
 `start_quest`, `set_quest_stage`, `advance_quest`, `complete_quest`, `fail_quest`, `flag`, `set_flag`. Konzole
 `quest`, `quest start|next|done|fail <id>`, `talk <jméno>`. Postup se ukládá s hrou a přenáší mezi levely.
-V zóně: Hřiša v táboře dává úkol „Zásoby z nemocnice“ (skrýš v horním patře nemocnice). Tolik vypráví o bouřích
-a když se ho zeptáš na slabé rádio, dá úkol „Tolikovo rádio“ (zesilovač z vysílačky v kabině lokomotivy u tábora).
+V zóně: Sal v táboře dává úkol „Zásoby z nemocnice“ (skrýš v horním patře nemocnice). Tony vypráví o bouřích
+a když se ho zeptáš na slabé rádio, dá úkol „Tonyho rádio“ (zesilovač z vysílačky v kabině lokomotivy u tábora).
 
 ### Obchod, peníze, opotřebení
 
@@ -311,7 +311,7 @@ Explicitní `self:play(klip)` graf dočasně přebije, `self:use_graph()` vrát�
   nemá, ukáže se česky.
 - Jazyk se vybírá v Nastavení > Ostatní > Jazyk (cvar `language`, např. `+language en`). Přeložené je
   menu, nastavení, ukládání, HUD, hlášky, obchod, mapa PDA a názvy kláves. Data (dialogy, úkoly, předměty, zbraně,
-  titulky a tipy levelů) místo textu píšou `@klíč`, hra ho přeloží až při zobrazení; dialogy Hřiši a Tolika, úkol
+  titulky a tipy levelů) místo textu píšou `@klíč`, hra ho přeloží až při zobrazení; dialogy Sala a Tonyho, úkol
   a předměty už jsou tak přeložené. Test hlídá, že každý `@klíč` v datech je v `cs.strings`.
 - Titulek a tip levelu bez `@klíče` (generované levely) přeloží klíč `level.<název souboru>.title` / `.hint`
   v tabulce jazyka, jinak zůstane text z levelu. Level bez `loading_title` vezme titulek z `cs.strings`.
@@ -404,7 +404,7 @@ Všechno, co hra používá, se mění v editoru a ukládá do souborů úrovně
 
 Každá zbraň je soubor `.weapon` (typ střelná / chladná, model, poškození, kadence, automatická/poloautomatická,
 broky, zásobník, přebíjení, rozptyl, dostřel, poloha, natočení a měřítko v ruce, poloha záblesku). Výzbroj
-testovací úrovně: 1 AK-74M, 2 pistole, 3 nůž, 4 samopal.
+testovací úrovně: 1 puška Hudson R5, 2 pistole, 3 nůž, 4 samopal.
 
 - **Dědění** (`base "ak74.weapon"`): varianta převezme všechny hodnoty jiné zbraně a její soubor obsahuje
   jen to, čím se liší (např. `ak74_old.weapon`: horší rozptyl, rychlejší opotřebení, nižší cena). Změna

@@ -29,7 +29,7 @@ public:
     int hit(glm::vec2 mouse) const;
     void draw(engine::Ui2D& ui, int width, int height, int hover) const;
     void reloadFiles() { cache_.clear(); } // hot reload of edited dialogs
-    // The dialog's speaker in the current language (for "E  Talk: Tolik"), else `fallback`.
+    // The dialog's speaker in the current language (for "E  Talk: Tony"), else `fallback`.
     std::string speakerOf(const std::filesystem::path& file, const std::string& fallback);
 
 private:

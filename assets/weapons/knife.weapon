@@ -1,7 +1,7 @@
 # FPS engine weapon
 version 2
 type melee
-name "Knife"
+name "@weapon.knife"
 model "../models/weapons/fps/fp_knife.glb"
 damage 55
 fire_interval 0.6

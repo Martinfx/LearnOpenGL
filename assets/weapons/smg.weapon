@@ -1,7 +1,7 @@
 # FPS engine weapon
 version 2
 type firearm
-name "SMG"
+name "@weapon.smg"
 model "../models/weapons/fps/fp_smg.glb"
 damage 11
 fire_interval 0.07

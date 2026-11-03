@@ -1,7 +1,7 @@
 # FPS engine weapon
 version 2
 type firearm
-name "AK-74M"
+name "@weapon.hudson_r5"
 model "../models/weapons/fps/fp_ak74.glb"
 damage 26
 fire_interval 0.092

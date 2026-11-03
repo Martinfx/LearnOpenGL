@@ -119,7 +119,7 @@ void GameHud::draw(engine::Ui2D& ui, int width, int height, const HudState& s) c
         const float small = std::round(text * 0.7f);
         ui.text(kits, {x + innerW - ui.textWidth(kits, small, true), pos.y - small * 1.5f}, small, dim, true);
     }
-    // Weapon and ammo: "AK-74   23 / 90" (magazine / rounds of its type left), reload progress under it.
+    // Weapon and ammo: "Hudson R5 rifle   23 / 90" (magazine / rounds of its type left), reload progress under it.
     {
         const float y = pos.y + text * 2.2f;
         // The name gets the room left of the rounds: long names ("9mm Service Pistol") get smaller, then cut.

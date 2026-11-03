@@ -1036,14 +1036,14 @@ void testWeaponFilesAndLoadout()
     engine::Scene level;
     std::string err;
     check(engine::loadScene(level, ENGINE_TEST_DATA "/scene.level", &err), "load level: " + err);
-    check(level.loadout.size() == 4, "test level gives the player AK-74M, pistol, knife and SMG");
+    check(level.loadout.size() == 4, "test level gives the player the Hudson R5 rifle, pistol, knife and SMG");
     engine::WeaponSettings ak;
     check(engine::loadWeaponFile(ak, level.loadout.at(0), &err), "load ak74.weapon: " + err);
-    check(ak.name == "AK-74M" && ak.animReloadEmpty == "reload_empty" && ak.reloadEmptyTime > ak.reloadTime && ak.animWalk == "walk",
-          "AK-74M is the main weapon, with an empty-magazine reload and a walk clip");
+    check(ak.name == "@weapon.hudson_r5" && ak.animReloadEmpty == "reload_empty" && ak.reloadEmptyTime > ak.reloadTime && ak.animWalk == "walk",
+          "the Hudson R5 rifle is the main weapon, with an empty-magazine reload and a walk clip");
     engine::WeaponSettings sidearm;
     check(engine::loadWeaponFile(sidearm, level.loadout.at(1), &err), "load pistol.weapon: " + err);
-    check(sidearm.magazineSize == 8 && !sidearm.automatic, "Makarov PM is semi-automatic with 8 rounds");
+    check(sidearm.magazineSize == 8 && !sidearm.automatic, "the Bronx .380 pistol is semi-automatic with 8 rounds");
     check(std::filesystem::exists(sidearm.modelPath), "weapon model path resolves next to the .weapon file");
 
     sidearm.damage = 11.5f;

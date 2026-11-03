@@ -249,7 +249,7 @@ void MainWindow::buildMenus()
         pickup->addAction(tr("Pistol ammo (9x18)"), this, [this] { addPickup("ammo:9x18:16", "models/props/pickups/ammo_box_pistol.glb"); });
         pickup->addAction(tr("Pistol ammo (9x19)"), this, [this] { addPickup("ammo:9x19:16", "models/props/pickups/ammo_box_pistol.glb"); });
         pickup->addAction(tr("Medkit"), this, [this] { addPickup("medkit", "models/props/pickups/medkit_pouch.glb"); });
-        pickup->addAction(tr("Weapon (AK-74)"), this, [this] { addPickup("weapon", "models/weapons/world/ak47.glb"); });
+        pickup->addAction(tr("Weapon (Hudson R5 rifle)"), this, [this] { addPickup("weapon", "models/weapons/world/ak47.glb"); });
         pickup->addAction(tr("Weapon (9mm service pistol)"), this, [this] {
             addPickup("weapon", "models/weapons/world/service9.gltf", "weapons/service9.weapon", "@weapon.service9");
         });
@@ -4212,7 +4212,7 @@ void MainWindow::addPickup(const QString& item, const QString& model, const QStr
     }
     if (parts.at(0) == "weapon") {
         e.properties["weapon"] = weaponFile.isEmpty() ? std::string("weapons/ak74.weapon") : weaponFile.toStdString();
-        e.properties["name"] = weaponName.isEmpty() ? std::string("AK-74") : weaponName.toStdString();
+        e.properties["name"] = weaponName.isEmpty() ? std::string("Hudson R5 rifle") : weaponName.toStdString();
     }
     e.name = engine::uniqueNodeName(scene_, (parts.at(0) == "medkit" ? "Medkit " : parts.at(0) == "weapon" ? "Weapon pickup " : "Ammo ") +
                                                 std::to_string(scene_.entities.size() + 1));

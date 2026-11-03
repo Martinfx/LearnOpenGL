@@ -1,7 +1,7 @@
 # FPS engine weapon
 version 2
 type firearm
-name "Makarov PM"
+name "@weapon.bronx380"
 model "../models/weapons/fps/fp_pistol.glb"
 damage 22
 fire_interval 0.14
