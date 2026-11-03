@@ -487,6 +487,17 @@ QWidget* CityGeneratorPanel::townTab()
         changed();
     });
     refreshers_.push_back([this, squareName] { squareName->setText(QString::fromStdString(settings_.squareName)); });
+    addFlag(zone, tr("Landmark tower"), &settings_.landmark,
+            tr("One very tall ruined frame tower north of the centre, seen over the roofs from all over the town (kit style role skeleton_tower)"));
+    addNumber(zone, tr("Landmark storeys"), &settings_.landmarkFloors, 5, 60, 1, tr("Storeys of the landmark tower (one side collapses)"), QString());
+    auto* landmarkName = new QLineEdit;
+    landmarkName->setToolTip(tr("The landmark's name on the map"));
+    zone->addRow(tr("Landmark name"), landmarkName);
+    connect(landmarkName, &QLineEdit::editingFinished, this, [this, landmarkName] {
+        settings_.landmarkName = landmarkName->text().trimmed().toStdString();
+        changed();
+    });
+    refreshers_.push_back([this, landmarkName] { landmarkName->setText(QString::fromStdString(settings_.landmarkName)); });
     addFlag(zone, tr("Street names on the map"), &settings_.streetNames,
             tr("New York style: avenues along the town's main direction (12th Ave ... 1st Ave, west to east), numbered streets across "
                "(W 14th St ..., south to north); one label per street on the map"));

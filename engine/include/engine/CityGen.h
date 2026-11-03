@@ -239,6 +239,9 @@ struct Settings {
     float houseShare = 0.3f;         // outer blocks of private houses (cut into parcels by recursive subdivision)
     bool square = true;              // the block nearest the centre is the town square (the goal of the map)
     std::string squareName = "Union Square"; // its name on the map
+    bool landmark = true;            // one very tall ruined tower north of the centre, seen from all over the town
+    float landmarkFloors = 34.0f;    // its storeys (style role skeleton_tower)
+    std::string landmarkName = "Liberty Tower"; // its name on the map
     bool streetNames = true;         // name the streets (New York style: avenues one way, numbered streets across) on the map
     std::filesystem::path cache;     // generated houses (.glb), absolute; empty = next to the .city
 

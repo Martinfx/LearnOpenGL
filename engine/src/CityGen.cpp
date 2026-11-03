@@ -148,6 +148,7 @@ void Settings::normalize()
     innerZone = std::clamp(innerZone, centreZone, 1.5f);
     ruinShare = std::clamp(ruinShare, 0.0f, 1.0f);
     skeletonShare = std::clamp(skeletonShare, 0.0f, 1.0f);
+    landmarkFloors = std::clamp(landmarkFloors, 5.0f, 60.0f);
     parkShare = std::clamp(parkShare, 0.0f, 1.0f);
     houseShare = std::clamp(houseShare, 0.0f, 1.0f);
     if (group.empty())
@@ -481,6 +482,8 @@ const ScalarField kScalars[] = {
     {"industry_share", &Settings::industryShare},
     {"square", nullptr, nullptr, &Settings::square},
     {"street_names", nullptr, nullptr, &Settings::streetNames},
+    {"landmark", nullptr, nullptr, &Settings::landmark},
+    {"landmark_floors", &Settings::landmarkFloors},
 };
 } // namespace
 
@@ -516,6 +519,7 @@ bool loadSettings(Settings& s, const fs::path& file, std::string* error)
         else if (k == "edge_road" && t.size() > 1) s.edgeRoad = streetClassFromName(t[1]);
         else if (k == "cache" && t.size() > 1) s.cache = resolve(dir, t[1]);
         else if (k == "square_name" && t.size() > 1) s.squareName = t[1];
+        else if (k == "landmark_name" && t.size() > 1) s.landmarkName = t[1];
         else if (k == "columns" || k == "rows") {
             auto& v = k == "columns" ? s.columns : s.rows;
             v.clear();
@@ -582,6 +586,7 @@ bool saveSettings(const Settings& settings, const fs::path& file, std::string* e
     if (!s.cache.empty())
         out << "cache " << q(relPath(s.cache, dir)) << '\n';
     out << "square_name " << q(s.squareName) << '\n';
+    out << "landmark_name " << q(s.landmarkName) << '\n';
     out << "columns";
     for (float c : s.columns)
         out << ' ' << c;
@@ -2099,6 +2104,23 @@ public:
                 }
             }
         }
+        landmarkBlock_ = -1;
+        if (s_.landmark) { // a roomy block north of the centre, on the line of sight from the south
+            float best = 1e9f;
+            const glm::vec2 want{0.0f, -half_ * 0.45f};
+            for (int i = 0; i < static_cast<int>(net_.blocks.size()); ++i) {
+                if (i == squareBlock_)
+                    continue;
+                const Poly& o = net_.blocks[static_cast<std::size_t>(i)].outline;
+                glm::vec2 c, ax, hs;
+                minAreaRect(o, c, ax, hs);
+                const float d = glm::length(centroid(o) - want);
+                if (std::min(hs.x, hs.y) > 22.0f && d < best) {
+                    best = d;
+                    landmarkBlock_ = i;
+                }
+            }
+        }
         for (int i = 0; i < static_cast<int>(net_.blocks.size()); ++i)
             layBlock(i);
         for (const auto& r : net_.roads)
@@ -2199,6 +2221,11 @@ private:
             L.kind = BlockKind::Square;
             L.ruined = false;
         }
+        const bool landmarkHere = index == landmarkBlock_ && !b_.kit_.stylesWithRole("skeleton_tower").empty();
+        if (landmarkHere) {
+            L.kind = BlockKind::Wasteland; // cleared round the tower, gone to birch and weeds
+            L.ruined = false;
+        }
         const bool bare = L.kind == BlockKind::Ruin || L.kind == BlockKind::Garages || L.kind == BlockKind::Wasteland || L.kind == BlockKind::Industrial;
         b_.ground(bare ? Ground::Lot : Ground::Yard, L.poly, s_.kerbHeight);
         L.yard = L.poly;
@@ -2213,6 +2240,8 @@ private:
         case BlockKind::Industrial: industrial(L, rng); break;
         default: break;
         }
+        if (landmarkHere)
+            landmarkTower(L, rng);
         lots_.push_back(std::move(L));
     }
 
@@ -2788,6 +2817,23 @@ private:
             L.entrances.push_back(sl.c + face * (tw.depth * 0.5f));
         }
         L.yard = region;
+    }
+
+    // The landmark: one very tall bare frame in the middle of its block, half of it come down
+    // onto the waste ground round it; on the map by name.
+    void landmarkTower(Lot& L, Rng& rng)
+    {
+        const FacadeStyle* st = style("skeleton_tower", rng);
+        if (!st)
+            return;
+        glm::vec2 c, ax, hs;
+        minAreaRect(L.poly, c, ax, hs);
+        const glm::vec2 v{-ax.y, ax.x};
+        const float w = std::clamp(st->widthMax, 18.0f, std::min(hs.x, hs.y) * 2.0f - 12.0f), d = std::clamp(st->depthMax, 14.0f, w);
+        const Poly fp = rectPoly(c, ax, v, w, d);
+        const std::vector<EdgeRole> roles{EdgeRole::Street, EdgeRole::Yard, EdgeRole::Yard, EdgeRole::Yard};
+        house(L, *st, fp, roles, static_cast<int>(s_.landmarkFloors), 7u + s_.seed % 97u, false, "Landmark tower");
+        b_.plan.markers.push_back({s_.landmarkName.empty() ? std::string("Tower") : s_.landmarkName, L.group, b_.world(c, s_.kerbHeight)});
     }
 
     // Factory halls in rows across the block, the yard between them gone to weeds and birch.
@@ -3502,7 +3548,7 @@ private:
     Builder b_;
     RoadNetwork net_;
     float half_ = 300.0f;
-    int squareBlock_ = -1;
+    int squareBlock_ = -1, landmarkBlock_ = -1;
     std::vector<Lot> lots_;
     std::string streetGroup_, kerbs_, lamps_, streetTrees_, wrecks_, streetPlants_;
 };

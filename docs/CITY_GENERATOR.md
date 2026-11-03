@@ -150,6 +150,13 @@ občas sloup chybí. Generátor pod podloubím nesází stromy ani lampy a na de
 Balkony (z gramatiky, `balconySpots()`): v truhlících malé keře/plevel, přes zábradlí visí popínavky
 (kit `hanging`). V kitu: Housing project 9/16, Five-storey walk-up, Beige/Dark brick/Brick tenement.
 
+### Dominanta (Landmark tower)
+
+Town plan → Zoning → **Landmark tower** (`landmark`, `landmark_floors`, `landmark_name`): v bloku
+severně od centra (směrem od jižního vjezdu přes náměstí) stojí jediná velmi vysoká holá kostra
+(styl role `skeleton_tower`, výchozí 34 pater, ~100 m) se zřícenou stranou; blok kolem ní je pustý
+(bříza, plevel). Na mapě má štítek (výchozí „Liberty Tower“).
+
 ## 3. Editor
 
 - **Layout:** seed, střed (tlačítko *Camera*), otočení, kořenová skupina, šířky sloupců a řad, třídy ulic na
