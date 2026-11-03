@@ -297,8 +297,8 @@ struct FeatureProfile {
     {
         if (!active)
             return;
-        // FPS_ENGINE_PROFILE=<frames> measures each step that long (default 90, a third more to settle).
-        static const int kMeasure = std::max(4, std::atoi(std::getenv("FPS_ENGINE_PROFILE")) > 1 ? std::atoi(std::getenv("FPS_ENGINE_PROFILE")) : 90);
+        // FPS_ENGINE_PROFILE=<frames> measures each step that long (default 60, a third more to settle).
+        static const int kMeasure = std::max(4, std::atoi(std::getenv("FPS_ENGINE_PROFILE")) > 1 ? std::atoi(std::getenv("FPS_ENGINE_PROFILE")) : 60);
         static const int kSettle = std::max(3, kMeasure / 3);
         if (phase < 0) {
             base = renderer.quality();
@@ -321,6 +321,10 @@ struct FeatureProfile {
         if (frame < settle + kMeasure)
             return;
         results.emplace_back(changes()[static_cast<std::size_t>(phase)].name, samples ? sum / samples : 0.0, samples ? opaque / samples : 0.0);
+        // Each step as soon as it is measured (the run can be cut short).
+        LOG_INFO("profile", "step %d/%zu: %-34s GPU %7.2f ms (%+.2f vs all on), depth+opaque %.2f ms", phase + 1, changes().size(),
+                 std::get<0>(results.back()).c_str(), std::get<1>(results.back()), std::get<1>(results.back()) - std::get<1>(results[0]),
+                 std::get<2>(results.back()));
         sum = opaque = 0.0;
         samples = 0;
         frame = 0;
@@ -331,6 +335,7 @@ struct FeatureProfile {
         renderer.setQuality(base);
         env.skyOcclusion = baseSkyOcclusion;
         const double all = std::get<1>(results[0]);
+        LOG_INFO("profile", "Done, the game goes on with the normal settings.");
         LOG_INFO("profile", "%-34s %9s %9s %9s", "feature", "GPU ms", "saved", "depth+opaque");
         for (const auto& [name, gpu, opq] : results)
             LOG_INFO("profile", "%-34s %9.2f %9.2f %9.2f", name.c_str(), gpu, all - gpu, opq);
