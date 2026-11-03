@@ -157,7 +157,7 @@ std::optional<engine::Weapon> loadWeapon(const std::filesystem::path& file)
     return weapon;
 }
 
-// Player's weapons from the level loadout (falls back to the AK-74M); `files` gets the
+// Player's weapons from the level loadout (falls back to the Hudson R5 rifle, ak74.weapon); `files` gets the
 // file of each weapon loaded (same order).
 std::vector<engine::Weapon> loadLoadout(const engine::Scene& scene, const std::filesystem::path& exeDir,
                                         std::vector<std::filesystem::path>& files)
@@ -288,7 +288,7 @@ struct FeatureProfile {
             {"sky occlusion off", [](engine::RenderQuality&, engine::Environment& e) { e.skyOcclusion = 0.0f; }},
             {"volumetric fog off", [](engine::RenderQuality& q, engine::Environment&) { q.volumetricFog = 0; }},
             {"parallax off", [](engine::RenderQuality& q, engine::Environment&) { q.parallax = false; }},
-            {"shadow maps 1024", [](engine::RenderQuality& q, engine::Environment&) { q.shadowResolution = 1024; }},
+            {"shadow maps half size", [](engine::RenderQuality& q, engine::Environment&) { q.shadowResolution = std::max(512, q.shadowResolution / 2); }},
             {"LOD distances x0.5", [](engine::RenderQuality& q, engine::Environment&) { q.lodScale = 0.5f; }},
             {"TAA -> FXAA", [](engine::RenderQuality& q, engine::Environment&) { q.taa = false; q.fxaa = true; }},
             // Parts of the main shader (pbr.frag uDebugSkip): where the cost per pixel goes.
@@ -3455,7 +3455,7 @@ int main(int argc, char** argv)
                 std::snprintf(ammo, sizeof ammo, "%d/%d%s", weapons[current].ammo(), weapons[current].settings.magazineSize,
                               weapons[current].reloading() ? " (reloading)" : "");
             std::snprintf(title, sizeof title, "FPS Engine | HP %.0f | RAD %.0f | [%zu] %s %s | Kills %d | %.0f FPS | %.2f ms | pos %.1f %.1f %.1f%s",
-                          scripts.playerHealth(), anomalies.dose(), current + 1, weapons[current].settings.name.c_str(), ammo, kills,
+                          scripts.playerHealth(), anomalies.dose(), current + 1, engine::localize(weapons[current].settings.name).c_str(), ammo, kills,
                           fpsFrames / fpsTimer, 1000.0 * fpsTimer / fpsFrames,
                           player.feet().x, player.feet().y, player.feet().z, player.grounded() ? "" : " (air)");
             // FPS_ENGINE_STATS=1 prints frame statistics (profiling, comparing optimizations).

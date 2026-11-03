@@ -498,8 +498,14 @@ RenderQuality RenderQuality::preset(int level)
         q.volumetricFog = 1;
         q.skyOcclusionDirs = 4;
         q.ssrSteps = 16;
-        q.ssrMaxRoughness = 0.4f; // SSR was still the dearest part (3.7 ms) on the GTX 1060
+        // Rain made it dearer still: wet surfaces turn glossy (roughness ~0.3) and every one of them
+        // traced screen reflections (the rain shader part cost 6.5 ms). From 0.25 only puddles,
+        // glass and polished metal trace; wet walls and asphalt reflect the probes and the sky.
+        q.ssrMaxRoughness = 0.25f;
         q.softShadowTaps = 8;
+        // 1024 per cascade saved 5.5 ms on the GTX 1060 in the big Mulberry Street (the shadow
+        // pass was ~7 ms). The nearest cascade covers ~16 m: 1.6 cm per texel, softened by PCSS.
+        q.shadowResolution = 1024;
         break;
     case 3:
         q.shadowResolution = 4096; q.shadowCascades = 3; q.textureStreamDistance = 80.0f;
