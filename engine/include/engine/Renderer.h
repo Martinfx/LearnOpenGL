@@ -731,6 +731,12 @@ private:
     float dynScale_ = 1.0f;
     double dynGpuMs_ = 0.0;
     double dynLastChange_ = 0.0;
+    // GPU time measured at each 5 % render scale (EMA, time of the last sample): a line through
+    // them (ms = fixed + perPixel * scale^2) says whether a smaller image would help at all.
+    struct DynSample {
+        double ms = 0.0, time = -1.0;
+    };
+    DynSample dynSamples_[21];
     void updateDynamicResolution();
     std::vector<SpriteInstance> distortionSprites_; // this frame: anomaly warps as camera-facing quads
     unsigned distortTex_ = 0, distortFbo_ = 0;      // screen offsets in pixels (rg), scene depth for the test

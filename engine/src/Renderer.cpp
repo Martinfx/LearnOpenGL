@@ -4151,15 +4151,44 @@ void Renderer::updateDynamicResolution()
         return;
     const double now = std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
     dynGpuMs_ = dynGpuMs_ > 0.0 ? dynGpuMs_ + (stats_.gpuTotalMs - dynGpuMs_) * 0.15 : stats_.gpuTotalMs;
+    const int bucket = std::clamp(static_cast<int>(std::lround(dynScale_ * 20.0f)), 0, 20);
+    if (now - dynLastChange_ > 0.25) { // the queries show the current size by now
+        DynSample& d = dynSamples_[bucket];
+        d.ms = d.time >= 0.0 && now - d.time < 2.0 ? d.ms + (stats_.gpuTotalMs - d.ms) * 0.1 : stats_.gpuTotalMs;
+        d.time = now;
+    }
     if (now - dynLastChange_ < 0.4)
         return;
     const double budget = 1000.0 / std::max(quality_.dynamicTargetFps, 10.0f);
     const float lo = std::clamp(quality_.dynamicMinScale, 0.25f, 1.0f);
+    // Fit ms = fixed + perPixel * s^2 over the sizes seen in the last 60 s (the view changes).
+    double n = 0.0, sx = 0.0, sy = 0.0, sxx = 0.0, sxy = 0.0, xMin = 2.0, xMax = -1.0;
+    for (int i = 0; i <= 20; ++i)
+        if (dynSamples_[i].time >= 0.0 && now - dynSamples_[i].time < 60.0) {
+            const double x = (i / 20.0) * (i / 20.0), y = dynSamples_[i].ms;
+            n += 1.0; sx += x; sy += y; sxx += x * x; sxy += x * y;
+            xMin = std::min(xMin, x);
+            xMax = std::max(xMax, x);
+        }
+    const bool fit = n >= 2.0 && xMax - xMin > 0.15 && n * sxx - sx * sx > 1e-9;
+    const double perPixel = fit ? std::max((n * sxy - sx * sy) / (n * sxx - sx * sx), 0.0) : 0.0;
     float next = dynScale_;
-    if (dynGpuMs_ > budget)
+    if (dynGpuMs_ > budget) {
         next = static_cast<float>(dynScale_ * std::sqrt(budget * 0.9 / dynGpuMs_));
-    else if (dynGpuMs_ < budget * 0.72)
+        // A smaller image only helps by its pixel share: when going down to the minimum would
+        // save under a tenth of the frame, the cost is elsewhere (geometry, shadows) and a
+        // blurrier image buys nothing; stay sharp.
+        if (fit && perPixel * (static_cast<double>(dynScale_) * dynScale_ - static_cast<double>(lo) * lo) < 0.1 * dynGpuMs_)
+            next = dynScale_ + 0.05f;
+    } else if (dynGpuMs_ < budget * 0.72) {
         next = dynScale_ + 0.05f;
+    } else if (fit && dynScale_ < 1.0f) {
+        // Within the budget: grow while the fit says the larger image still fits.
+        const double fixed = (sy - perPixel * sx) / n;
+        const double up = static_cast<double>(dynScale_) + 0.05;
+        if (fixed + perPixel * up * up < budget * 0.9)
+            next = dynScale_ + 0.05f;
+    }
     next = std::clamp(std::floor(next * 20.0f + 0.001f) / 20.0f, lo, 1.0f);
     if (next == dynScale_)
         return;

@@ -1445,7 +1445,7 @@ int main(int argc, char** argv)
         cvars.add("snd_duck", CVarType::Float, "1", "How much gunfire ducks the ambience and music (0 = not at all)", engine::CVarConfig, 0.0, 1.0);
         cvars.add("snd_occlusion", CVarType::Bool, "1", "Walls muffle the sounds behind them", engine::CVarConfig);
         cvars.add("cl_showfps", CVarType::Bool, "0", "Frame rate in the corner", engine::CVarConfig);
-        cvars.add("cl_viewbob", CVarType::Float, "0.3", "Weapon bob while walking (0 = off, against motion sickness)", engine::CVarConfig, 0.0, 1.0);
+        cvars.add("cl_viewbob", CVarType::Float, "0.15", "Weapon bob while walking (0 = off, against motion sickness; from 0.5 the arms' walk animation)", engine::CVarConfig, 0.0, 1.0);
         cvars.add("cl_subtitles", CVarType::Bool, "0", "Captions for sounds and speech at the bottom of the screen", engine::CVarConfig);
         cvars.add("ui_scale", CVarType::Float, "1", "Size of texts and HUD (1 = normal)", engine::CVarConfig, 0.75, 1.75)
             .onChange = [](const engine::CVar& v) { uiScale() = std::clamp(static_cast<float>(v.number()), 0.75f, 1.75f); };
@@ -2186,6 +2186,8 @@ int main(int argc, char** argv)
         // machine, so a demo starts only with it (the window keeps answering meanwhile).
         while (!navDone && !glfwWindowShouldClose(window)) {
             glfwPollEvents();
+        if (engine::quitRequested())
+            glfwSetWindowShouldClose(window, GLFW_TRUE);
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
         lastTime = fixedDt > 0.0 ? 0.0 : glfwGetTime();
@@ -2235,6 +2237,8 @@ int main(int argc, char** argv)
         lastTime = now;
 
         glfwPollEvents();
+        if (engine::quitRequested())
+            glfwSetWindowShouldClose(window, GLFW_TRUE);
         if (DemoState& demo = demoState(); demo.mode == DemoState::Play) {
             demo.current = demo.demo.frames[demo.next];
             frameTime = demo.current.dt; // the simulation runs the recorded frames
@@ -2744,7 +2748,10 @@ int main(int argc, char** argv)
             }
             wasReloading = weapon.reloading();
             const glm::vec3 moveVel = player.velocity();
-            weapon.animate(dt, player.grounded() ? std::sqrt(moveVel.x * moveVel.x + moveVel.z * moveVel.z) : 0.0f);
+            // The arms' walk clip (made for walking, played at any speed) swings the weapon far more
+            // than the procedural bob: only from cl_viewbob 0.5, below it the arms hold still (idle).
+            const bool walkClip = viewBobScale() >= 0.5f;
+            weapon.animate(dt, player.grounded() && walkClip ? std::sqrt(moveVel.x * moveVel.x + moveVel.z * moveVel.z) : 0.0f);
             const int rays = weapon.settings.throwable() ? 0 : weapon.settings.melee() ? shots : shots * weapon.settings.pellets;
             for (int s = 0; s < rays; ++s) {
                 glm::vec3 origin = player.eye();
@@ -2939,6 +2946,23 @@ int main(int argc, char** argv)
         }
 
         camera.position = freecamActive ? freecamPosition : player.interpolatedEye(static_cast<float>(clock.alpha()));
+        {
+            // Steps, kerbs and rubble lift the capsule in one physics step: the eye follows within
+            // ~0.1 s instead of jumping (a jolting view while running is a strong motion sickness cue).
+            // Only the jumps are smoothed (slopes are followed exactly): a rise or drop in one frame
+            // larger than running up a steep slope becomes an offset that fades out.
+            static float lastY = camera.position.y, stepOffset = 0.0f;
+            const float dy = camera.position.y - lastY;
+            lastY = camera.position.y;
+            const float slopeMove = 0.02f + 3.0f * static_cast<float>(frameTime); // up to ~3 m/s vertical is continuous
+            if (!freecamActive && !player.noclip && player.grounded() && std::abs(dy) > slopeMove && std::abs(dy) < scene.player.stepHeight + 0.05f)
+                stepOffset -= dy;
+            if (freecamActive || player.noclip)
+                stepOffset = 0.0f;
+            stepOffset *= std::exp(-static_cast<float>(frameTime) / 0.06f);
+            stepOffset = std::clamp(stepOffset, -0.5f, 0.5f);
+            camera.position.y += stepOffset;
+        }
         // The rest of the frame's update as a task graph: character animation (itself
         // parallel per entity) runs on the workers while the main thread updates sound,
         // particles, weather, anomalies and the flashlight (they share the audio system).

@@ -180,6 +180,15 @@ void onSignal(int sig)
 }
 #endif
 
+std::atomic<bool> g_quit{false};
+#ifndef _WIN32
+void onQuitSignal(int sig)
+{
+    g_quit.store(true);
+    std::signal(sig, SIG_DFL); // a second one ends the program at once
+}
+#endif
+
 void onTerminate()
 {
     std::string reason = "uncaught exception";
@@ -236,6 +245,11 @@ void installCrashHandler(const std::string& app)
     sigemptyset(&sa.sa_mask);
     for (int sig : {SIGSEGV, SIGILL, SIGFPE, SIGBUS, SIGABRT})
         sigaction(sig, &sa, nullptr);
+    struct sigaction quit {};
+    quit.sa_handler = onQuitSignal;
+    sigemptyset(&quit.sa_mask);
+    for (int sig : {SIGINT, SIGTERM})
+        sigaction(sig, &quit, nullptr);
     // Warm up backtrace(): its first call loads libgcc, which must not happen in a handler.
     void* warm[2];
     backtrace(warm, 2);
@@ -249,6 +263,8 @@ bool previousRunCrashed(const std::string& app)
     std::error_code ec;
     return std::filesystem::exists(markerPath(app), ec);
 }
+
+bool quitRequested() { return g_quit.load(); }
 
 void markCleanExit()
 {

@@ -21,6 +21,9 @@ const char* engineVersion();
 // The marker is created by installCrashHandler and removed by markCleanExit.
 bool previousRunCrashed(const std::string& app);
 void markCleanExit();
+// Ctrl+C / SIGTERM asked the program to quit (handled like closing the window, so the run ends
+// cleanly; a second Ctrl+C ends it at once).
+bool quitRequested();
 // Newest report in the crashes folder, empty if none.
 std::filesystem::path latestCrashReport();
 
