@@ -971,6 +971,374 @@ private:
     std::vector<int> floors_;
 };
 
+// ---------------------------------------------------------------- factory halls
+// An abandoned steel-framed production hall (role "hall"), open inside:
+//   Hall    -> Floor + LongWall x2 + Gable x2 + Frames(bay) + Roof + [Gallery] + Pipes + Debris
+//   LongWall-> brick plinth + brick piers at the frames + steel window grid (glass share `loggias`) + top band
+//   Gable   -> brick, one with the big gate (no doors left), the other with a high window grid
+//   Frame   -> I-section columns + a truss (chords, posts, diagonals); purlins between frames
+//   Roof    -> pitched, per bay: sheet panels (some fallen in) and a glazed strip either side of the ridge
+//   Gallery -> a walkway along one side at 4.5 m (chance `balconies`), brackets, railing, stair, one bay down
+// LOD1: walls, piers, roof sheets, columns and chords only. Eave height = ground storey.
+void orientedBox(Mesh& mesh, const std::string& m, glm::vec3 c, glm::vec3 u, glm::vec3 v, glm::vec3 w, glm::vec3 h)
+{
+    const float t = mat(m).tile;
+    const glm::vec3 axes[3] = {u * h.x, v * h.y, w * h.z};
+    for (int k = 0; k < 3; ++k)
+        for (int sgn = -1; sgn <= 1; sgn += 2) {
+            const glm::vec3 n = glm::normalize(axes[k]) * static_cast<float>(sgn);
+            const glm::vec3 a = axes[(k + 1) % 3], b = axes[(k + 2) % 3], f = c + axes[k] * static_cast<float>(sgn);
+            const float la = 2.0f * glm::length(a) / t, lb = 2.0f * glm::length(b) / t;
+            mesh.quad(m, f - a - b, f + a - b, f + a + b, f - a + b, n, {0, 0}, {la, 0}, {la, lb}, {0, lb});
+        }
+}
+
+// A bar from a to b with a square-ish section (w across, h "up").
+void bar(Mesh& mesh, const std::string& m, glm::vec3 a, glm::vec3 b, float w, float h)
+{
+    const glm::vec3 d = b - a;
+    const float L = glm::length(d);
+    if (L < 1e-3f)
+        return;
+    const glm::vec3 t = d / L;
+    glm::vec3 s = glm::cross(t, glm::vec3(0, 1, 0));
+    if (glm::length(s) < 1e-3f)
+        s = glm::vec3(1, 0, 0);
+    s = glm::normalize(s);
+    const glm::vec3 up = glm::cross(s, t);
+    orientedBox(mesh, m, (a + b) * 0.5f, t, s, up, {L * 0.5f, w * 0.5f, h * 0.5f});
+}
+
+class HallBuilder {
+public:
+    HallBuilder(const BuildingSpec& b, int lod) : b_(b), st_(b.style), lod_(lod), rng_(b.seed ^ 0x4A11B00Bull) {}
+    Mesh mesh;
+
+    void run()
+    {
+        glm::vec2 half;
+        minAreaRect(b_.footprint, c_, ax_, half);
+        if (half.y > half.x) { // the long side along u
+            std::swap(half.x, half.y);
+            ax_ = {-ax_.y, ax_.x};
+        }
+        ay_ = {-ax_.y, ax_.x};
+        L_ = half.x * 2.0f;
+        W_ = half.y * 2.0f;
+        He_ = std::max(5.0f, st_.groundStorey);
+        rise_ = W_ * 0.17f;
+        const int n = std::max(2, static_cast<int>(std::round(L_ / std::clamp(st_.bay, 4.0f, 12.0f))));
+        for (int k = 0; k <= n; ++k)
+            frames_.push_back(-L_ * 0.5f + L_ * static_cast<float>(k) / static_cast<float>(n));
+        gallery_ = W_ > 14.0f && rng_.chance(st_.balconies);
+        gate_ = rng_.chance(0.5f) ? 1 : -1;
+        floor();
+        for (const float side : {-1.0f, 1.0f})
+            longWall(side);
+        for (const float side : {-1.0f, 1.0f})
+            gable(side);
+        for (std::size_t k = 0; k < frames_.size(); ++k)
+            frame(frames_[k], k == 0 || k + 1 == frames_.size());
+        roof();
+        if (gallery_)
+            gallery();
+        if (lod_ == 0) {
+            pipes();
+            debris();
+        }
+    }
+
+private:
+    glm::vec3 P(float u, float v, float y) const
+    {
+        const glm::vec2 p = c_ + ax_ * u + ay_ * v;
+        return {p.x, y, p.y};
+    }
+    glm::vec3 U() const { return {ax_.x, 0, ax_.y}; }
+    glm::vec3 V() const { return {ay_.x, 0, ay_.y}; }
+    float roofY(float v) const { return He_ + rise_ * (1.0f - std::abs(v) / (W_ * 0.5f)); }
+    // A wall slab between (u0, v0) and (u1, v1), y0..y1, thickness t, centred on that line.
+    void slab(const std::string& m, float u0, float v0, float u1, float v1, float y0, float y1, float t)
+    {
+        const glm::vec3 a = P(u0, v0, 0), b = P(u1, v1, 0);
+        const glm::vec3 d = b - a;
+        const float L = glm::length(d);
+        if (L < 0.02f || y1 - y0 < 0.02f)
+            return;
+        const glm::vec3 x = d / L, z = glm::normalize(glm::cross(x, glm::vec3(0, 1, 0)));
+        orientedBox(mesh, m, (a + b) * 0.5f + glm::vec3(0, (y0 + y1) * 0.5f, 0), x, {0, 1, 0}, z, {L * 0.5f, (y1 - y0) * 0.5f, t * 0.5f});
+    }
+
+    void floor()
+    {
+        const float t = mat("concrete_moss").tile;
+        const glm::vec3 a = P(-L_ / 2, -W_ / 2, 0.03f), b = P(L_ / 2, -W_ / 2, 0.03f), c = P(L_ / 2, W_ / 2, 0.03f), d = P(-L_ / 2, W_ / 2, 0.03f);
+        mesh.quad("concrete_moss", a, b, c, d, {0, 1, 0}, {0, 0}, {L_ / t, 0}, {L_ / t, W_ / t}, {0, W_ / t});
+    }
+
+    // Long wall at v = side * W/2.
+    void longWall(float side)
+    {
+        const float v = side * (W_ * 0.5f - 0.15f), plinth = 1.4f, band = 0.9f;
+        slab(st_.plinth, -L_ / 2, v, L_ / 2, v, 0.0f, plinth, 0.38f);
+        slab(st_.wall, -L_ / 2, v, L_ / 2, v, He_ - band, He_ + 0.3f, 0.38f);
+        for (std::size_t k = 0; k < frames_.size(); ++k) {
+            const float u = std::clamp(frames_[k], -L_ / 2 + 0.35f, L_ / 2 - 0.35f);
+            slab(st_.wall, u - 0.35f, v, u + 0.35f, v, plinth, He_ - band, 0.5f);
+            if (k + 1 == frames_.size())
+                break;
+            const float u0 = frames_[k] + 0.35f, u1 = frames_[k + 1] - 0.35f;
+            windowGrid(u0, u1, v, plinth, He_ - band, side);
+        }
+    }
+
+    // Steel window between piers: mullions every ~1 m, transoms every ~1.2 m, some panes left.
+    void windowGrid(float u0, float u1, float v, float y0, float y1, float side)
+    {
+        const int nx = std::max(2, static_cast<int>(std::round((u1 - u0) / 1.0f)));
+        const int ny = std::max(2, static_cast<int>(std::round((y1 - y0) / std::max(0.8f, st_.windowHeight))));
+        const glm::vec3 n = V() * side;
+        if (lod_ == 0) {
+            for (int i = 0; i <= nx; ++i) {
+                const float u = u0 + (u1 - u0) * static_cast<float>(i) / static_cast<float>(nx);
+                bar(mesh, "rust_dark", P(u, v, y0), P(u, v, y1), 0.06f, 0.1f);
+            }
+            for (int j = 0; j <= ny; ++j) {
+                const float y = y0 + (y1 - y0) * static_cast<float>(j) / static_cast<float>(ny);
+                bar(mesh, "rust_dark", P(u0, v, y), P(u1, v, y), 0.1f, 0.06f);
+            }
+        }
+        for (int i = 0; i < nx; ++i)
+            for (int j = 0; j < ny; ++j) {
+                if (!rng_.chance(st_.loggias))
+                    continue;
+                const float ua = u0 + (u1 - u0) * static_cast<float>(i) / static_cast<float>(nx) + 0.04f;
+                const float ub = u0 + (u1 - u0) * static_cast<float>(i + 1) / static_cast<float>(nx) - 0.04f;
+                const float ya = y0 + (y1 - y0) * static_cast<float>(j) / static_cast<float>(ny) + 0.04f;
+                const float yb = y0 + (y1 - y0) * static_cast<float>(j + 1) / static_cast<float>(ny) - 0.04f;
+                mesh.quad("glass", P(ua, v, ya), P(ub, v, ya), P(ub, v, yb), P(ua, v, yb), n, {0, 0}, {1, 0}, {1, 1}, {0, 1});
+            }
+    }
+
+    void gable(float side)
+    {
+        const float u = side * (L_ * 0.5f - 0.15f), hw = W_ * 0.5f;
+        const float t = 0.38f;
+        if (side == static_cast<float>(gate_)) { // the gate: an opening 5-6 m wide, 5 m high
+            const float gw = std::min(W_ * 0.4f, 6.0f) * 0.5f, gh = std::min(He_ - 1.5f, 5.2f);
+            slab(st_.wall, u, -hw, u, -gw, 0.0f, He_, t);
+            slab(st_.wall, u, gw, u, hw, 0.0f, He_, t);
+            slab(st_.wall, u, -gw, u, gw, gh, He_, t);
+            bar(mesh, "rust_dark", P(u, -gw, gh), P(u, gw, gh), 0.3f, 0.3f); // the gate's steel lintel
+            if (lod_ == 0 && rng_.chance(0.6f)) {                             // one door leaf fallen in
+                const glm::vec3 a = P(u - side * 0.2f, gw * 0.2f, 0.15f), b = P(u - side * (gh * 0.9f), gw * 0.1f, 0.6f);
+                bar(mesh, "rust_sheet", a, b, gw * 0.9f, 0.06f);
+            }
+        } else { // a high window grid over a brick base
+            slab(st_.wall, u, -hw, u, hw, 0.0f, He_ * 0.45f, t);
+            slab(st_.wall, u, -hw, u, -hw * 0.6f, He_ * 0.45f, He_, t);
+            slab(st_.wall, u, hw * 0.6f, u, hw, He_ * 0.45f, He_, t);
+            slab(st_.wall, u, -hw * 0.6f, u, hw * 0.6f, He_ - 0.6f, He_, t);
+            // window grid in the gable plane (reuse the long-wall routine by swapping axes)
+            const int nx = std::max(2, static_cast<int>(std::round(hw * 1.2f / 1.0f)));
+            const float y0 = He_ * 0.45f, y1 = He_ - 0.6f;
+            if (lod_ == 0) {
+                for (int i = 0; i <= nx; ++i) {
+                    const float v = -hw * 0.6f + hw * 1.2f * static_cast<float>(i) / static_cast<float>(nx);
+                    bar(mesh, "rust_dark", P(u, v, y0), P(u, v, y1), 0.06f, 0.1f);
+                }
+                for (int j = 0; j <= 3; ++j) {
+                    const float y = y0 + (y1 - y0) * static_cast<float>(j) / 3.0f;
+                    bar(mesh, "rust_dark", P(u, -hw * 0.6f, y), P(u, hw * 0.6f, y), 0.1f, 0.06f);
+                }
+            }
+        }
+        // The triangle up to the ridge: two faces.
+        const float tt = mat(st_.wall).tile;
+        for (const float face : {-1.0f, 1.0f}) {
+            const float uu = u + face * t * 0.5f;
+            const glm::vec3 a = P(uu, -hw, He_ + 0.3f), b = P(uu, hw, He_ + 0.3f), c = P(uu, 0.0f, He_ + rise_ + 0.3f);
+            mesh.quad(st_.wall, a, b, c, c, U() * face, {0, 0}, {W_ / tt, 0}, {hw / tt, rise_ / tt}, {hw / tt, rise_ / tt});
+        }
+    }
+
+    void frame(float u, bool end)
+    {
+        const float hw = W_ * 0.5f - 0.6f;
+        for (const float side : {-1.0f, 1.0f}) {
+            const float v = side * hw;
+            if (lod_ == 0) { // I-section: two flanges and a web
+                for (const float f : {-0.14f, 0.14f})
+                    orientedBox(mesh, "st_metal_paint", P(u + f, v, He_ * 0.5f), U(), {0, 1, 0}, V(), {0.015f, He_ * 0.5f, 0.15f});
+                orientedBox(mesh, "st_metal_paint", P(u, v, He_ * 0.5f), U(), {0, 1, 0}, V(), {0.14f, He_ * 0.5f, 0.01f});
+            } else {
+                orientedBox(mesh, "st_metal_paint", P(u, v, He_ * 0.5f), U(), {0, 1, 0}, V(), {0.15f, He_ * 0.5f, 0.15f});
+            }
+        }
+        if (end && lod_ == 1)
+            return;
+        // Truss: bottom chord, two top chords, posts and diagonals.
+        const float yb = He_ - 0.2f;
+        bar(mesh, "rust", P(u, -hw, yb), P(u, hw, yb), 0.14f, 0.16f);
+        const float rY = He_ + rise_ - 0.1f;
+        bar(mesh, "rust", P(u, -hw, yb), P(u, 0.0f, rY), 0.14f, 0.16f);
+        bar(mesh, "rust", P(u, hw, yb), P(u, 0.0f, rY), 0.14f, 0.16f);
+        if (lod_ == 1)
+            return;
+        const int panels = 6;
+        for (int i = 1; i < panels; ++i) {
+            const float v = -hw + 2.0f * hw * static_cast<float>(i) / static_cast<float>(panels);
+            const float top = yb + (rY - yb) * (1.0f - std::abs(v) / hw);
+            bar(mesh, "rust", P(u, v, yb), P(u, v, top), 0.08f, 0.08f);
+            const float vn = -hw + 2.0f * hw * static_cast<float>(i + (v < 0.0f ? 1 : -1)) / static_cast<float>(panels);
+            const float topn = yb + (rY - yb) * (1.0f - std::abs(vn) / hw);
+            bar(mesh, "rust", P(u, v, yb), P(u, vn, topn), 0.07f, 0.07f);
+        }
+    }
+
+    void roof()
+    {
+        const float hw = W_ * 0.5f + 0.3f;
+        const float tt = mat(st_.roof).tile;
+        for (std::size_t k = 0; k + 1 < frames_.size(); ++k) {
+            const float u0 = frames_[k], u1 = frames_[k + 1];
+            for (const float side : {-1.0f, 1.0f}) {
+                // Four strips from the eave to the ridge; strip 2 is glazed.
+                for (int s = 0; s < 4; ++s) {
+                    const float v0 = side * hw * (1.0f - static_cast<float>(s) / 4.0f), v1 = side * hw * (1.0f - static_cast<float>(s + 1) / 4.0f);
+                    const float y0 = roofY(std::min(std::abs(v0), W_ * 0.5f)) + 0.3f, y1 = roofY(std::abs(v1)) + 0.3f;
+                    const glm::vec3 a = P(u0, v0, y0), b = P(u1, v0, y0), c = P(u1, v1, y1), d = P(u0, v1, y1);
+                    const glm::vec3 nrm = glm::normalize(glm::cross(b - a, d - a)) * (glm::cross(b - a, d - a).y > 0.0f ? 1.0f : -1.0f);
+                    if (s == 2) { // skylight: mullions and a few panes left
+                        if (lod_ == 0) {
+                            for (int i = 0; i <= 4; ++i) {
+                                const float f = static_cast<float>(i) / 4.0f;
+                                bar(mesh, "rust_dark", a + (b - a) * f, d + (c - d) * f, 0.06f, 0.08f);
+                            }
+                            for (int i = 0; i < 4; ++i)
+                                if (rng_.chance(st_.loggias * 0.8f)) {
+                                    const float f0 = static_cast<float>(i) / 4.0f + 0.01f, f1 = static_cast<float>(i + 1) / 4.0f - 0.01f;
+                                    mesh.quad("glass", a + (b - a) * f0, a + (b - a) * f1, d + (c - d) * f1, d + (c - d) * f0, nrm, {0, 0}, {1, 0}, {1, 1}, {0, 1});
+                                }
+                        }
+                        continue;
+                    }
+                    if (rng_.chance(0.16f)) { // fallen in: the sky shows, light comes down
+                        holes_.push_back({(u0 + u1) * 0.5f, (v0 + v1) * 0.5f});
+                        continue;
+                    }
+                    const float lu = (u1 - u0) / tt, lv = glm::length(d - a) / tt;
+                    mesh.quad(st_.roof, a, b, c, d, nrm, {0, 0}, {lu, 0}, {lu, lv}, {0, lv});
+                    mesh.quad(st_.roof, a - nrm * 0.03f, b - nrm * 0.03f, c - nrm * 0.03f, d - nrm * 0.03f, -nrm, {0, 0}, {lu, 0}, {lu, lv}, {0, lv});
+                }
+            }
+        }
+        // Purlins along the hall.
+        if (lod_ == 0)
+            for (const float f : {-0.75f, -0.5f, -0.25f, 0.0f, 0.25f, 0.5f, 0.75f}) {
+                const float v = f * (W_ * 0.5f - 0.6f);
+                const float y = roofY(std::abs(v)) + 0.15f;
+                bar(mesh, "rust", P(-L_ / 2 + 0.3f, v, y), P(L_ / 2 - 0.3f, v, y), 0.1f, 0.14f);
+            }
+    }
+
+    void gallery()
+    {
+        const float side = rng_.chance(0.5f) ? 1.0f : -1.0f;
+        const float y = 4.5f, wv = 1.8f;
+        const float vOut = side * (W_ * 0.5f - 0.6f), vIn = vOut - side * wv;
+        const float u0 = -L_ / 2 + 1.0f, u1 = L_ / 2 - 1.0f;
+        const int fallen = 1 + rng_.below(std::max(1, static_cast<int>(frames_.size()) - 2));
+        for (std::size_t k = 0; k + 1 < frames_.size(); ++k) {
+            const float a = std::max(u0, frames_[k]), b = std::min(u1, frames_[k + 1]);
+            if (static_cast<int>(k) == fallen) { // this bay came down: the deck hangs from one end to the floor
+                if (lod_ == 0)
+                    bar(mesh, "st_metal_paint", P(a, (vOut + vIn) * 0.5f, y), P(b - 0.5f, (vOut + vIn) * 0.5f + side * 0.3f, 0.2f), wv * 0.9f, 0.06f);
+                continue;
+            }
+            orientedBox(mesh, "st_metal_paint", P((a + b) * 0.5f, (vOut + vIn) * 0.5f, y), U(), {0, 1, 0}, V(), {(b - a) * 0.5f, 0.04f, wv * 0.5f});
+            if (lod_ == 1)
+                continue;
+            // Railing on the open side and a bracket under the deck at the column.
+            for (float u = a; u <= b + 0.01f; u += (b - a) / 4.0f)
+                bar(mesh, "rust", P(u, vIn, y), P(u, vIn, y + 1.05f), 0.04f, 0.04f);
+            bar(mesh, "rust", P(a, vIn, y + 1.05f), P(b, vIn, y + 1.05f), 0.05f, 0.05f);
+            bar(mesh, "rust", P(a, vIn, y + 0.55f), P(b, vIn, y + 0.55f), 0.04f, 0.04f);
+            bar(mesh, "rust", P(a, vOut, y - 1.2f), P(a, vIn, y - 0.05f), 0.08f, 0.08f);
+        }
+        // A straight stair up at the end away from the gate.
+        if (lod_ == 0) {
+            const float uS = -static_cast<float>(gate_) * (L_ / 2 - 1.5f), dir = static_cast<float>(gate_);
+            const int steps = 15;
+            for (int i = 0; i < steps; ++i) {
+                const float uu = uS + dir * (static_cast<float>(i) * 0.3f), yy = y * static_cast<float>(i + 1) / static_cast<float>(steps);
+                orientedBox(mesh, "st_metal_paint", P(uu, vIn + side * 0.0f - side * 0.5f, yy - 0.02f), U(), {0, 1, 0}, V(), {0.15f, 0.02f, 0.5f});
+            }
+            bar(mesh, "rust", P(uS, vIn - side, 0.0f), P(uS + dir * 4.5f, vIn - side, y), 0.06f, 0.2f);
+        }
+    }
+
+    void pipes()
+    {
+        const float side = gallery_ ? -1.0f : (rng_.chance(0.5f) ? 1.0f : -1.0f);
+        const float v = side * (W_ * 0.5f - 0.65f);
+        const int broken = rng_.below(static_cast<int>(frames_.size()) - 1);
+        for (const float y : {3.2f, 3.65f}) {
+            for (std::size_t k = 0; k + 1 < frames_.size(); ++k) {
+                const float a = frames_[k], b = frames_[k + 1];
+                if (static_cast<int>(k) == broken && y > 3.5f) { // snapped, one end on the floor
+                    bar(mesh, "rust_dark", P(a, v, y), P(b - 1.0f, v - side * 0.8f, 0.2f), 0.24f, 0.24f);
+                    continue;
+                }
+                bar(mesh, "rust_dark", P(a, v, y), P(b, v, y), 0.22f, 0.22f);
+            }
+        }
+        for (const float u : frames_)
+            bar(mesh, "rust", P(u, v - side * 0.1f, 3.0f), P(u, v - side * 0.1f, 3.9f), 0.06f, 0.06f);
+    }
+
+    void debris()
+    {
+        // Planks and sheets fallen from the roof, bricks under the walls.
+        for (int i = 0; i < 14; ++i) {
+            const float u = rng_.range(-L_ * 0.45f, L_ * 0.45f), v = rng_.range(-W_ * 0.4f, W_ * 0.4f);
+            const float yaw = rng_.range(0.0f, 6.2831853f), tilt = rng_.range(0.0f, 0.35f);
+            const glm::vec3 d{std::cos(yaw), std::sin(tilt), std::sin(yaw)};
+            const float len = rng_.range(1.5f, 4.0f);
+            const glm::vec3 c = P(u, v, 0.08f + std::sin(tilt) * len * 0.5f);
+            if (i < 9)
+                bar(mesh, "wood", c - d * (len * 0.5f), c + d * (len * 0.5f), 0.22f, 0.04f);
+            else
+                bar(mesh, st_.roof, c - d * (len * 0.5f), c + d * (len * 0.5f), rng_.range(0.8f, 1.4f), 0.02f);
+        }
+        for (const auto& h : holes_) // what fell through the holes in the roof
+            if (rng_.chance(0.6f)) {
+                const glm::vec3 c = P(h.x + rng_.range(-1.0f, 1.0f), h.y * 0.8f, 0.1f);
+                const float yaw = rng_.range(0.0f, 6.2831853f);
+                const glm::vec3 d{std::cos(yaw), 0.08f, std::sin(yaw)};
+                bar(mesh, st_.roof, c - d, c + d, 1.0f, 0.02f);
+            }
+        for (int i = 0; i < 20; ++i) {
+            const float side = rng_.chance(0.5f) ? 1.0f : -1.0f;
+            const float u = rng_.range(-L_ * 0.48f, L_ * 0.48f), v = side * (W_ * 0.5f - rng_.range(0.4f, 1.6f));
+            const float sz = rng_.range(0.12f, 0.3f), yaw = rng_.range(0.0f, 6.2831853f);
+            orientedBox(mesh, st_.wall, P(u, v, sz * 0.4f), {std::cos(yaw), 0, std::sin(yaw)}, {0, 1, 0}, {-std::sin(yaw), 0, std::cos(yaw)},
+                        {sz, sz * 0.45f, sz * 0.6f});
+        }
+    }
+
+    const BuildingSpec& b_;
+    const FacadeStyle& st_;
+    int lod_;
+    Rng rng_;
+    glm::vec2 c_{0.0f}, ax_{1, 0}, ay_{0, 1};
+    float L_ = 30.0f, W_ = 18.0f, He_ = 8.0f, rise_ = 3.0f;
+    std::vector<float> frames_;
+    std::vector<glm::vec2> holes_;
+    bool gallery_ = false;
+    int gate_ = 1;
+};
+
 // ---------------------------------------------------------------- glb
 std::string jsonEscape(const std::string& s)
 {
@@ -1147,7 +1515,7 @@ std::string buildingKey(const BuildingSpec& b)
     std::ostringstream o;
     o.imbue(std::locale::classic());
     const FacadeStyle& s = b.style;
-    o << (isSkeleton(s) ? "sk3|" : "v3|") << s.role << '|' << s.groundStorey << '|' << s.storey << '|' << s.bay << '|' << s.windowWidth << '|' << s.windowHeight << '|'
+    o << (s.role == "hall" ? "hall1|" : isSkeleton(s) ? "sk3|" : "v3|") << s.role << '|' << s.groundStorey << '|' << s.storey << '|' << s.bay << '|' << s.windowWidth << '|' << s.windowHeight << '|'
       << s.sill << '|' << s.wall << '|' << s.plinth << '|' << s.trim << '|' << s.roof << '|' << s.firewall << '|' << s.cornice << '|'
       << s.bands << '|' << s.loggias << '|' << s.balconies << '|' << s.shops << '|' << s.pitched << '|' << b.floors << '|' << b.seed << '|'
       << b.ruin;
@@ -1180,7 +1548,11 @@ bool writeBuildingGlb(const BuildingSpec& b, const fs::path& file, int lod, cons
     }
     Mesh mesh;
     int windows = 0;
-    if (isSkeleton(spec.style)) {
+    if (spec.style.role == "hall") {
+        HallBuilder hb(spec, lod);
+        hb.run();
+        mesh = std::move(hb.mesh);
+    } else if (isSkeleton(spec.style)) {
         SkeletonBuilder sk(spec, lod);
         sk.run();
         mesh = std::move(sk.mesh);

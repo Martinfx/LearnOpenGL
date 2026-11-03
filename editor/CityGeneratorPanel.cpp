@@ -469,6 +469,8 @@ QWidget* CityGeneratorPanel::townTab()
     zone->addRow(new QLabel(tr("Blocks are zoned by their distance from the centre (share of the half town size), then cut into parcels.")));
     addNumber(zone, tr("Centre"), &settings_.centreZone, 0, 1, 0.05, tr("Inside: tenement perimeter blocks along every street"), none);
     addNumber(zone, tr("Inner town"), &settings_.innerZone, 0, 1, 0.05, tr("To here: tenements, panel micro-districts and towers; beyond: houses, garages, waste ground"), none);
+    addNumber(zone, tr("Factory halls"), &settings_.industryShare, 0, 1, 0.05,
+              tr("Outer blocks of abandoned steel-framed halls (kit styles with role hall): glazed roofs, galleries, pipes, ferns and hanging vines inside"), none);
     addNumber(zone, tr("Private houses"), &settings_.houseShare, 0, 1, 0.05, tr("Outer blocks cut into house plots by recursive subdivision"), none);
     addNumber(zone, tr("Ruins"), &settings_.ruinShare, 0, 1, 0.05, tr("Blocks whose houses are ruins (storeys gone, open to the sky)"), none);
     addNumber(zone, tr("Concrete skeletons"), &settings_.skeletonShare, 0, 1, 0.02,

@@ -49,8 +49,8 @@ constexpr int kStreetClassCount = 4;
 const char* streetClassName(StreetClass c);          // "none", "alley", "side", "main"
 StreetClass streetClassFromName(const std::string& name);
 
-enum class BlockKind { Perimeter, Microdistrict, Towers, Garages, Park, Ruin, Wasteland, Empty, Houses, Square };
-constexpr int kBlockKindCount = 10;
+enum class BlockKind { Perimeter, Microdistrict, Towers, Garages, Park, Ruin, Wasteland, Empty, Houses, Square, Industrial };
+constexpr int kBlockKindCount = 11;
 const char* blockKindName(BlockKind k);              // "perimeter", ... (file keys)
 const char* blockKindLabel(BlockKind k);             // "Perimeter block (tenements)", ... (editor)
 BlockKind blockKindFromName(const std::string& name);
@@ -235,6 +235,7 @@ struct Settings {
     float ruinShare = 0.15f;         // blocks left in ruins
     float skeletonShare = 0.12f;     // panel blocks / tenements / towers gutted to a bare concrete frame (style role "skeleton")
     float parkShare = 0.08f;         // blocks left green
+    float industryShare = 0.12f;     // outer blocks of abandoned factory halls (style role "hall")
     float houseShare = 0.3f;         // outer blocks of private houses (cut into parcels by recursive subdivision)
     bool square = true;              // the block nearest the centre is the town square (the goal of the map)
     std::string squareName = "Union Square"; // its name on the map

@@ -131,6 +131,17 @@ zonegen/road_decals.py, instancované, bez stínů a kolizí), výtluky (decal `
 terénu, kde se při dešti drží voda, tráva na okraji), u obrubníku rozevřená spára s trávou a na
 chodnících spáry mezi deskami s trávou, propadlé a nadzvednuté desky.
 
+### Tovární haly (blok Industrial, styl role `hall`)
+
+Town plan → Zoning → **Factory halls** (`industry_share`): vnější bloky s 1–3 opuštěnými halami.
+Gramatika `HallBuilder`: ocelové rámy po `bay` m (I-sloupy, příhradové vazníky, vaznice), cihlové pilíře
+a sokl, ocelová okenní mříž mezi pilíři (zbylé tabule = podíl `loggias`), sedlová střecha z plechů
+(část propadlá – dovnitř padá světlo) se světlíkem u hřebene, štít s vraty bez křídel a štít s vysokým
+oknem, ochoz na konzolách se zábradlím a schodištěm (šance `balconies`, jedno pole spadlé), rezavé
+potrubí podél stěny (jedno prasklé), prkna, plechy a cihly na podlaze. Výška okapu = `ground`.
+Uvnitř generátor zasadí kapradiny (kit `fern`), plevel, semenáčky a z vazníků visící popínavky
+(kit `hanging`: břečťan otočený vzhůru nohama). LOD1 ~1,2 tisíce trojúhelníků (LOD0 ~8 tisíc).
+
 ## 3. Editor
 
 - **Layout:** seed, střed (tlačítko *Camera*), otočení, kořenová skupina, šířky sloupců a řad, třídy ulic na

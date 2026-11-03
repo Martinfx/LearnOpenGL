@@ -25,9 +25,9 @@ namespace fs = std::filesystem;
 // ============================================================================ names
 namespace {
 constexpr const char* kStreetNames[] = {"none", "alley", "side", "main"};
-constexpr const char* kBlockNames[] = {"perimeter", "microdistrict", "towers", "garages", "park", "ruin", "wasteland", "empty", "houses", "square"};
+constexpr const char* kBlockNames[] = {"perimeter", "microdistrict", "towers", "garages", "park", "ruin", "wasteland", "empty", "houses", "square", "industrial"};
 constexpr const char* kBlockLabels[] = {"Perimeter block (tenements)", "Micro-district (panel slabs)", "Towers",
-                                        "Garages", "Park", "Ruin", "Waste lot", "Empty lot", "Private houses", "Town square"};
+                                        "Garages", "Park", "Ruin", "Waste lot", "Empty lot", "Private houses", "Town square", "Industrial (factory halls)"};
 constexpr const char* kGroundNames[] = {"yard", "lot", "road", "pavement", "meadow", "path", "built", "verge"};
 } // namespace
 
@@ -55,7 +55,7 @@ const std::vector<std::string>& propRoles()
 {
     static const std::vector<std::string> roles{"kerb",  "lamp",  "lamp_leaning", "cable", "car",    "tree",  "sapling",
                                                 "snag",  "bush",  "grass",        "weed",  "nettle", "rubble", "slab",  "meadow",
-                                                "monument", "fountain", "bench", "kiosk", "ivy", "roof_tree", "road_crack", "road_crack_cross", "road_net", "pothole"};
+                                                "monument", "fountain", "bench", "kiosk", "ivy", "roof_tree", "road_crack", "road_crack_cross", "road_net", "pothole", "fern", "hanging"};
     return roles;
 }
 
@@ -473,6 +473,7 @@ const ScalarField kScalars[] = {
     {"skeleton_share", &Settings::skeletonShare},
     {"park_share", &Settings::parkShare},
     {"house_share", &Settings::houseShare},
+    {"industry_share", &Settings::industryShare},
     {"square", nullptr, nullptr, &Settings::square},
     {"street_names", nullptr, nullptr, &Settings::streetNames},
 };
@@ -2193,7 +2194,7 @@ private:
             L.kind = BlockKind::Square;
             L.ruined = false;
         }
-        const bool bare = L.kind == BlockKind::Ruin || L.kind == BlockKind::Garages || L.kind == BlockKind::Wasteland;
+        const bool bare = L.kind == BlockKind::Ruin || L.kind == BlockKind::Garages || L.kind == BlockKind::Wasteland || L.kind == BlockKind::Industrial;
         b_.ground(bare ? Ground::Lot : Ground::Yard, L.poly, s_.kerbHeight);
         L.yard = L.poly;
         Rng rng(L.seed);
@@ -2204,6 +2205,7 @@ private:
         case BlockKind::Garages: garages(L, rng); break;
         case BlockKind::Houses: houses(L, rng); break;
         case BlockKind::Square: square(L, rng); break;
+        case BlockKind::Industrial: industrial(L, rng); break;
         default: break;
         }
         lots_.push_back(std::move(L));
@@ -2277,7 +2279,8 @@ private:
             L.kind = pick({{BlockKind::Perimeter, 0.45f}, {BlockKind::Microdistrict, roomy ? 0.35f : 0.05f}, {BlockKind::Towers, roomy ? 0.2f : 0.0f}});
         else
             L.kind = pick({{BlockKind::Houses, s_.houseShare}, {BlockKind::Microdistrict, roomy ? 0.3f : 0.0f}, {BlockKind::Garages, 0.12f},
-                           {BlockKind::Wasteland, 0.1f}, {BlockKind::Park, 0.06f}, {BlockKind::Perimeter, 0.08f}});
+                           {BlockKind::Wasteland, 0.1f}, {BlockKind::Park, 0.06f}, {BlockKind::Perimeter, 0.08f},
+                           {BlockKind::Industrial, b_.kit_.stylesWithRole("hall").empty() ? 0.0f : s_.industryShare}});
         if (z.chance(s_.parkShare))
             L.kind = BlockKind::Park;
         else if (L.kind != BlockKind::Park && L.kind != BlockKind::Wasteland && z.chance(s_.ruinShare))
@@ -2742,6 +2745,69 @@ private:
             L.entrances.push_back(sl.c + face * (tw.depth * 0.5f));
         }
         L.yard = region;
+    }
+
+    // Factory halls in rows across the block, the yard between them gone to weeds and birch.
+    void industrial(Lot& L, Rng& rng)
+    {
+        const FacadeStyle* st = style("hall", rng);
+        Poly region;
+        if (!st || !insetPolygon(L.poly, std::vector<float>(L.poly.size(), std::max(6.0f, s_.setback)), region)) {
+            L.kind = BlockKind::Wasteland;
+            return;
+        }
+        const glm::vec2 u = axisOf(L), v{-u.y, u.x};
+        const float D = std::round(rng.range(st->depthMin, st->depthMax));
+        const auto slots = rows(region, u, v, D, 14.0f, 10.0f, std::max(st->widthMin, 24.0f), st->widthMax, std::max(st->bay, 3.0f));
+        int n = 0;
+        for (const auto& sl : slots) {
+            if (n >= 3)
+                break;
+            const Poly fp = rectPoly(sl.c, u, v, sl.length, D);
+            const std::vector<EdgeRole> roles{EdgeRole::Street, EdgeRole::Yard, EdgeRole::Yard, EdgeRole::Yard};
+            const std::uint32_t seed = static_cast<std::uint32_t>(rng.below(1000));
+            house(L, *st, fp, roles, 1, seed, false, "Factory hall");
+            hallInside(L, *st, sl.c, u, v, sl.length, D, seed);
+            L.entrances.push_back(sl.c - v * (D * 0.5f));
+            ++n;
+        }
+        if (!n)
+            L.kind = BlockKind::Wasteland;
+        L.yard = region;
+    }
+
+    // Nature inside a hall: ferns and weeds on the floor, saplings where the roof fell in, vines
+    // hanging from the trusses (wall ivy turned upside down under the bottom chord).
+    void hallInside(const Lot& L, const FacadeStyle& st, glm::vec2 c, glm::vec2 u, glm::vec2 v, float length, float depth, std::uint32_t seed)
+    {
+        Rng rng(mix(mix(s_.seed, 0x4A11u), static_cast<std::uint64_t>(seed) * 131u + static_cast<std::uint64_t>(std::lround(c.x * 7.0f + c.y * 13.0f))));
+        const float g = s_.overgrowth, kh = s_.kerbHeight;
+        const float He = std::max(5.0f, st.groundStorey);
+        const float A = length * depth;
+        auto inside = [&](float margin) {
+            return c + u * rng.range(-length * 0.5f + margin, length * 0.5f - margin) + v * rng.range(-depth * 0.5f + margin, depth * 0.5f - margin);
+        };
+        for (int i = 0; i < static_cast<int>(A / 16.0f * g); ++i)
+            if (const KitProp* k = b_.anyProp(rng.chance(0.6f) ? "fern" : "weed", rng))
+                b_.prop(*k, "Fern", L.group, inside(1.0f), kh + 0.03f, rng.range(0.0f, 360.0f), rng);
+        for (int i = 0; i < static_cast<int>(A / 220.0f * g); ++i)
+            b_.plant({"sapling", "bush"}, "Young tree", L.group, inside(2.0f), rng, kh + 0.03f, 1.0f);
+        const float bay = std::clamp(st.bay, 4.0f, 12.0f);
+        const int frames = std::max(2, static_cast<int>(std::round(length / bay)));
+        for (int k = 1; k < frames; ++k) {
+            const float uu = -length * 0.5f + length * static_cast<float>(k) / static_cast<float>(frames);
+            for (int j = 0; j < 3; ++j) {
+                if (!rng.chance(0.8f * g))
+                    continue;
+                const KitProp* h = b_.anyProp("hanging", rng);
+                if (!h)
+                    break;
+                const glm::vec2 p = c + u * uu + v * rng.range(-depth * 0.4f, depth * 0.4f);
+                const float top = He - 0.3f;
+                const float sc = std::min(rng.range(h->scaleMin, h->scaleMax), (top - 1.0f) / std::max(h->size, 1.0f));
+                b_.prop(*h, "Hanging vine", L.group, p, kh + top, b_.yawZ(u) + rng.range(-15.0f, 15.0f), rng, {180.0f, 0.0f}, sc);
+            }
+        }
     }
 
     void garages(Lot& L, Rng& rng)
@@ -3328,6 +3394,7 @@ private:
         case BlockKind::Wasteland: grovesPer = 1.0f / 1500.0f; young = 0.25f; weeds = 0.6f; break;
         case BlockKind::Houses: grovesPer = 1.0f / 2500.0f; young = 0.1f; weeds = 0.1f; break;
         case BlockKind::Garages: young = 0.1f; weeds = 0.5f; break;
+        case BlockKind::Industrial: grovesPer = 1.0f / 2000.0f; young = 0.3f; weeds = 0.7f; break;
         default: break;
         }
         const float A = signedArea(area);

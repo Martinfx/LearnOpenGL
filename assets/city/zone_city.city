@@ -6,3 +6,4 @@ cache "../models/city/zone_city"
 town_size 640
 outskirts 80
 skeleton_share 0.25
+industry_share 0.2
