@@ -1307,7 +1307,8 @@ private:
         b_.rectLines(bl.lot, kColLot);
 
         const float kh = s_.kerbHeight;
-        const bool bare = bl.kind == BlockKind::Ruin || bl.kind == BlockKind::Garages || bl.kind == BlockKind::Wasteland;
+        const bool bare = bl.kind == BlockKind::Ruin || bl.kind == BlockKind::Garages || bl.kind == BlockKind::Wasteland ||
+                          bl.kind == BlockKind::Industrial; // factory halls only in the organic layout: a waste lot here
         const fs::path& ground = bare && !b_.kit_.lot.empty() ? b_.kit_.lot : b_.kit_.yard;
         if (b_.terrain()) {
             b_.groundRect(Ground::Pavement, bl.pave, kh);
@@ -2002,6 +2003,7 @@ private:
             scatter(bl, in, 1.5f * g, rng, {"meadow", "grass"}, "Grass");
             break;
         }
+        case BlockKind::Industrial: // a grid block set to Industrial gets no halls (organic layout only): a waste lot
         case BlockKind::Wasteland: {
             scatter(bl, in, 0.25f * (0.3f + g), rng, {"sapling", "bush"}, "Young tree");
             scatter(bl, in, 0.04f, rng, {"rubble"}, "Rubble");

@@ -20,11 +20,23 @@ const ItemDef* ItemCatalog::find(ItemDef::Kind kind, std::string_view id) const
 ItemCatalog defaultItems()
 {
     ItemCatalog c;
-    c.items.push_back({ItemDef::Kind::Medkit, "medkit", "Lékárnička", 250, 0.4f});
-    c.items.push_back({ItemDef::Kind::Ammo, "5.45x39", "Náboje 5,45×39", 3, 0.012f});
-    c.items.push_back({ItemDef::Kind::Ammo, "9x18", "Náboje 9×18", 2, 0.011f});
-    c.items.push_back({ItemDef::Kind::Ammo, "9x19", "Náboje 9×19", 2, 0.012f});
-    c.items.push_back({ItemDef::Kind::Armor, "jacket", "Kožená bunda", 1200, 2.5f, 0.2f, 0.004f});
+    const auto add = [&c](ItemDef::Kind kind, const char* id, const char* name, int price, float weight, float protection = 0.0f,
+                          float wear = 0.0f) {
+        ItemDef d;
+        d.kind = kind;
+        d.id = id;
+        d.name = name;
+        d.price = price;
+        d.weight = weight;
+        d.protection = protection;
+        d.wear = wear;
+        c.items.push_back(std::move(d));
+    };
+    add(ItemDef::Kind::Medkit, "medkit", "Lékárnička", 250, 0.4f);
+    add(ItemDef::Kind::Ammo, "5.45x39", "Náboje 5,45×39", 3, 0.012f);
+    add(ItemDef::Kind::Ammo, "9x18", "Náboje 9×18", 2, 0.011f);
+    add(ItemDef::Kind::Ammo, "9x19", "Náboje 9×19", 2, 0.012f);
+    add(ItemDef::Kind::Armor, "jacket", "Kožená bunda", 1200, 2.5f, 0.2f, 0.004f);
     return c;
 }
 
