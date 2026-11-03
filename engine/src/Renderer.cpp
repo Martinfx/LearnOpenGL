@@ -1181,11 +1181,13 @@ void Renderer::updateEnvironment(const Scene& scene, const RenderView& view)
         for (const glm::vec3& c : corners)
             radius = std::max(radius, glm::length(c - center));
         radius = std::ceil(radius * 16.0f) / 16.0f;
-        // Far cascades are cached: drawn with a margin and re-rendered every 2nd (cascade 1)
-        // or 4th (cascade 2) frame, or as soon as the slice leaves the covered sphere.
+        // Far cascades are cached: drawn with a margin and re-rendered every 2nd frame, cascade 1
+        // on odd and cascade 2 on even frames, or as soon as the slice leaves the covered sphere.
+        // Taking turns keeps every frame's shadow work alike: with cascade 2 every 4th frame the
+        // frames cycled light / medium / heavy / medium, an uneven pace players feel as judder.
         ShadowCascade& cache = cascades_[i];
         const bool cached = quality_.shadowCache && i > 0;
-        const bool scheduled = !cached || (i == 1 ? (frameNumber_ % 2) == 1 : (frameNumber_ % 4) == 2);
+        const bool scheduled = !cached || (frameNumber_ % 2) == static_cast<std::uint64_t>(i == 1 ? 1 : 0);
         const bool inside = cache.valid && glm::distance(center, cache.center) + radius <= cache.radius;
         if (!sameSetup || scheduled || !inside) {
             cascadeUpdate_ |= 1u << i;
