@@ -142,6 +142,14 @@ potrubí podél stěny (jedno prasklé), prkna, plechy a cihly na podlaze. Výš
 Uvnitř generátor zasadí kapradiny (kit `fern`), plevel, semenáčky a z vazníků visící popínavky
 (kit `hanging`: břečťan otočený vzhůru nohama). LOD1 ~1,2 tisíce trojúhelníků (LOD0 ~8 tisíc).
 
+### Podloubí a zarostlé balkony
+
+Styl má parametr **Arcade** (`arcade`, šance): uliční fasáda domu se 3+ patry dostane podloubí –
+sloupy v osách 2,2 m před fasádou (nad chodníkem), deska s průvlakem ve výšce přízemí, za ním výlohy;
+občas sloup chybí. Generátor pod podloubím nesází stromy ani lampy a na desku dá plevel, keře a semenáčky.
+Balkony (z gramatiky, `balconySpots()`): v truhlících malé keře/plevel, přes zábradlí visí popínavky
+(kit `hanging`). V kitu: Housing project 9/16, Five-storey walk-up, Beige/Dark brick/Brick tenement.
+
 ## 3. Editor
 
 - **Layout:** seed, střed (tlačítko *Camera*), otočení, kořenová skupina, šířky sloupců a řad, třídy ulic na

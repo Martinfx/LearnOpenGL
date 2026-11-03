@@ -303,6 +303,7 @@ bool loadKit(Kit& kit, const fs::path& file, std::string* error)
             st.trim = str("trim", st.trim);
             st.roof = str("roof", st.roof);
             st.firewall = str("firewall", st.firewall);
+            st.arcade = std::clamp(get("arcade", st.arcade), 0.0f, 1.0f);
             st.cornice = get("cornice", st.cornice);
             st.bands = get("bands", st.bands);
             st.loggias = get("loggias", st.loggias);
@@ -401,14 +402,18 @@ bool saveKit(const Kit& kit, const fs::path& file, std::string* error)
         out << "\ntextures " << q(relPath(kit.textures, dir)) << '\n';
     if (!kit.styles.empty())
         out << "\n# style \"name\" role <tenement|panel|khrushchyovka|house> floors_min floors_max ground storey bay window_w window_h sill\n"
-               "#   depth_min depth_max width_min width_max wall plinth trim roof firewall (grammar materials) cornice bands loggias balconies shops pitched weight\n";
-    for (const auto& st : kit.styles)
+               "#   depth_min depth_max width_min width_max wall plinth trim roof firewall (grammar materials) cornice bands loggias balconies shops pitched weight [arcade]\n";
+    for (const auto& st : kit.styles) {
         out << "style " << q(st.name) << " role " << st.role << " floors_min " << st.floorsMin << " floors_max " << st.floorsMax << " ground "
             << st.groundStorey << " storey " << st.storey << " bay " << st.bay << " window_w " << st.windowWidth << " window_h " << st.windowHeight
             << " sill " << st.sill << " depth_min " << st.depthMin << " depth_max " << st.depthMax << " width_min " << st.widthMin << " width_max "
             << st.widthMax << " wall " << st.wall << " plinth " << st.plinth << " trim " << st.trim << " roof " << st.roof << " firewall "
             << st.firewall << " cornice " << st.cornice << " bands " << st.bands << " loggias " << st.loggias << " balconies " << st.balconies
-            << " shops " << st.shops << " pitched " << (st.pitched ? 1 : 0) << " weight " << st.weight << '\n';
+            << " shops " << st.shops << " pitched " << (st.pitched ? 1 : 0) << " weight " << st.weight;
+        if (st.arcade > 0.0f)
+            out << " arcade " << st.arcade;
+        out << '\n';
+    }
     if (!kit.foliage.empty())
         out << "\n# foliage \"name\" \"model\" density per_m2 <ground> share ... cull far sway scale_min scale_max collision shadows [lod \"model\" m]\n";
     for (const auto& f : kit.foliage) {
@@ -2346,6 +2351,8 @@ private:
         p.path = g.file;
         p.lodPath = g.lodFile;
         const float h = buildingHeight(g.spec);
+        if (!frame && s_.overgrowth > 0.01f && (st.balconies > 0.0f || st.arcade > 0.0f))
+            greenBalconies(L, c, balconySpots(g.spec), seed);
         p.lodDistance = std::clamp(40.0f + h * 2.0f, 70.0f, 160.0f);
         p.cull = std::clamp(400.0f + h * 18.0f, 600.0f, 1600.0f);
         p.position = b_.world(c, s_.kerbHeight);
@@ -2362,6 +2369,42 @@ private:
         overgrow(L, fp, roles, h, st.pitched, ruin || frame, seed);
         if (frame)
             frameDebris(L, fp, seed);
+    }
+
+    // Balconies gone green: a bush or a young tree in the old flower boxes, vines hanging over
+    // the railing (wall ivy turned upside down), long planters of weeds on an arcade's slab.
+    void greenBalconies(const Lot& L, glm::vec2 c, const std::vector<BalconySpot>& spots, std::uint32_t seed)
+    {
+        const float g = s_.overgrowth, kh = s_.kerbHeight;
+        Rng rng(mix(mix(s_.seed, 0xBA1C0u), static_cast<std::uint64_t>(seed) * 977u + static_cast<std::uint64_t>(std::lround(c.x * 3.0f + c.y * 5.0f))));
+        for (const auto& sp : spots) {
+            const glm::vec2 p = c + glm::vec2(sp.position.x, sp.position.z);
+            const glm::vec2 n{sp.normal.x, sp.normal.z};
+            if (sp.width > 6.0f) { // an arcade's slab: keep street trees and lamps out from under it; weeds on top
+                const glm::vec2 t{-n.y, n.x};
+                b_.addSolidPoly(rectPoly(p, t, n, sp.width, 2.6f));
+                for (float x = -sp.width * 0.5f + 1.0f; x < sp.width * 0.5f - 1.0f; x += rng.range(2.0f, 5.0f))
+                    if (rng.chance(0.5f * g)) {
+                        const glm::vec2 t{-n.y, n.x};
+                        if (const KitProp* k = b_.anyProp(rng.chance(0.15f) ? "sapling" : rng.chance(0.5f) ? "bush" : "weed", rng))
+                            b_.prop(*k, "Arcade bush", L.group, p + t * x + n * rng.range(-0.7f, 0.7f), kh + sp.position.y, rng.range(0.0f, 360.0f),
+                                    rng, {0.0f, 0.0f}, k->role == "weed" ? rng.range(0.9f, 1.3f) : rng.range(0.4f, 0.7f));
+                    }
+                continue;
+            }
+            const float r = rng.uniform();
+            if (r < 0.3f * g) { // small: it grows in a flower box
+                if (const KitProp* k = b_.anyProp(rng.chance(0.3f) ? "sapling" : rng.chance(0.5f) ? "bush" : "weed", rng))
+                    b_.prop(*k, "Balcony bush", L.group, p, kh + sp.position.y, rng.range(0.0f, 360.0f), rng, {0.0f, 0.0f},
+                            k->role == "weed" ? rng.range(0.8f, 1.2f) : rng.range(0.35f, 0.55f));
+            } else if (r < 0.5f * g) {
+                if (const KitProp* h = b_.anyProp("hanging", rng)) {
+                    const float sc = std::min(rng.range(h->scaleMin, h->scaleMax), (sp.position.y - 1.0f) / std::max(h->size, 1.0f) * 0.6f);
+                    if (sc > 0.3f)
+                        b_.prop(*h, "Balcony vine", L.group, p + n * 0.55f, kh + sp.position.y + 0.9f, b_.yawZ(n), rng, {180.0f, 0.0f}, sc);
+                }
+            }
+        }
     }
 
     // Round a concrete skeleton: heaps of what fell off the frame, saplings and bushes in them,

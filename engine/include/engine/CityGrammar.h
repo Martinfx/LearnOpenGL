@@ -45,6 +45,7 @@ struct FacadeStyle {
     float loggias = 0.0f;            // share of window columns that are loggia stacks
     float balconies = 0.15f;         // chance of a balcony column
     float shops = 0.3f;              // chance of shop windows on the street ground floor
+    float arcade = 0.0f;             // chance of a colonnade (arcade) in front of the street ground floor
     bool pitched = true;             // hipped sheet roof (else flat with a parapet)
     float weight = 1.0f;
     bool operator==(const FacadeStyle&) const = default;
@@ -68,6 +69,12 @@ float buildingHeight(const BuildingSpec& b); // to the top of the wall (m)
 // A bare concrete frame (style role "skeleton" or "skeleton_tower"), built by its own grammar.
 inline bool isSkeleton(const FacadeStyle& st) { return st.role.rfind("skeleton", 0) == 0; }
 std::string buildingKey(const BuildingSpec& b); // stable hash (file name)
+// Where the grammar put balconies on this house: slab top centre (local, like the footprint) and the outward normal.
+struct BalconySpot {
+    glm::vec3 position{0.0f}, normal{0.0f};
+    float width = 1.0f;
+};
+std::vector<BalconySpot> balconySpots(const BuildingSpec& b);
 
 struct GrammarStats {
     int triangles = 0;

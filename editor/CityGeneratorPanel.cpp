@@ -832,6 +832,7 @@ const std::vector<StyleColumn>& styleColumns()
         add("Loggias", "Share of window columns that are loggia stacks", num(&FacadeStyle::loggias));
         add("Balconies", "Chance of a balcony column", num(&FacadeStyle::balconies));
         add("Shops", "Chance of shop windows on the street ground floor", num(&FacadeStyle::shops));
+        add("Arcade", "Chance of a colonnade in front of the street ground floor (columns, a covered walk, shop windows behind)", num(&FacadeStyle::arcade));
         add("Pitched", "1 = hipped sheet roof, 0 = flat with a parapet",
             std::make_pair([](const FacadeStyle& s) { return QString::number(s.pitched ? 1 : 0); },
                            [](FacadeStyle& s, const QString& t) { s.pitched = t.toInt() != 0; }));

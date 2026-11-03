@@ -156,6 +156,7 @@ public:
 
     Mesh mesh;
     int windows = 0;
+    std::vector<BalconySpot> balconies_;
 
     void run()
     {
@@ -371,6 +372,7 @@ private:
         const float out = 1.0f, th = 0.18f;
         const std::string m = "concrete";
         const float a = s0 - 0.3f, b = s1 + 0.3f;
+        balconies_.push_back({F.at((a + b) * 0.5f, y, -out * 0.5f), F.n, b - a});
         mesh.quad(m, F.at(a, y, 0), F.at(b, y, 0), F.at(b, y, -out), F.at(a, y, -out), {0, 1, 0}, {a / 3, 0}, {b / 3, 0}, {b / 3, out / 3},
                   {a / 3, out / 3});
         mesh.quad(m, F.at(a, y - th, 0), F.at(b, y - th, 0), F.at(b, y - th, -out), F.at(a, y - th, -out), {0, -1, 0}, {a / 3, 0}, {b / 3, 0},
@@ -450,7 +452,8 @@ private:
                 if (!loggiaCol[static_cast<std::size_t>(j)] && rng_.chance(st_.balconies))
                     balconyCol[static_cast<std::size_t>(j)] = 1;
         const int entrance = role == EdgeRole::Street ? nb / 2 : (role == EdgeRole::Yard && st_.role != "tenement" ? -1 : nb / 2);
-        const bool shop = role == EdgeRole::Street && rng_.chance(st_.shops);
+        const bool arcade = st_.arcade > 0.0f && role == EdgeRole::Street && !b_.ruin && FL >= 3 && nb >= 3 && rng_.chance(st_.arcade);
+        const bool shop = (role == EdgeRole::Street && rng_.chance(st_.shops)) || arcade;
 
         std::vector<Opening> ops;
         for (int f = 0; f < FL; ++f) {
@@ -533,13 +536,48 @@ private:
             if (o.kind == Opening::BalconyDoor)
                 balcony(F, o.s0, o.s1, o.y0 - 0.03f);
         }
+        if (arcade)
+            colonnade(F, len, pier, bay, nb);
         // Entrance canopy.
-        if (entrance >= 0 && lod_ == 0) {
+        if (entrance >= 0 && lod_ == 0 && !arcade) {
             const float c = pier + bay * (static_cast<float>(entrance) + 0.5f);
             band("concrete", F, c - 1.4f, c + 1.4f, 2.6f, 2.8f, 1.4f);
         }
         if (!b_.ruin)
             facadeTrim(F, len, ops);
+    }
+
+    // A box in facade coordinates: s0..s1 along, y0..y1 up, d0..d1 into the wall (negative = out).
+    void fbox(const std::string& m, const Face& F, float s0, float s1, float y0, float y1, float d0, float d1)
+    {
+        const float tl = mat(m).tile;
+        auto uv = [&](float x, float y) { return glm::vec2(x / tl, -y / tl); };
+        mesh.quad(m, F.at(s0, y0, d0), F.at(s1, y0, d0), F.at(s1, y1, d0), F.at(s0, y1, d0), F.n, uv(s0, y0), uv(s1, y0), uv(s1, y1), uv(s0, y1));
+        mesh.quad(m, F.at(s0, y0, d1), F.at(s1, y0, d1), F.at(s1, y1, d1), F.at(s0, y1, d1), -F.n, uv(s0, y0), uv(s1, y0), uv(s1, y1), uv(s0, y1));
+        mesh.quad(m, F.at(s0, y0, d0), F.at(s0, y0, d1), F.at(s0, y1, d1), F.at(s0, y1, d0), -F.t, uv(d0, y0), uv(d1, y0), uv(d1, y1), uv(d0, y1));
+        mesh.quad(m, F.at(s1, y0, d0), F.at(s1, y0, d1), F.at(s1, y1, d1), F.at(s1, y1, d0), F.t, uv(d0, y0), uv(d1, y0), uv(d1, y1), uv(d0, y1));
+        mesh.quad(m, F.at(s0, y1, d0), F.at(s1, y1, d0), F.at(s1, y1, d1), F.at(s0, y1, d1), {0, 1, 0}, uv(s0, d0), uv(s1, d0), uv(s1, d1), uv(s0, d1));
+        mesh.quad(m, F.at(s0, y0, d0), F.at(s1, y0, d0), F.at(s1, y0, d1), F.at(s0, y0, d1), {0, -1, 0}, uv(s0, d0), uv(s1, d0), uv(s1, d1), uv(s0, d1));
+    }
+
+    // Podloubi: square columns on the bay lines 2.2 m out (over the pavement), a slab over the walk at the ground
+    // storey with a deep fascia; moss on top, a column or two gone.
+    void colonnade(const Face& F, float len, float pier, float bay, int nb)
+    {
+        const float A = 2.2f, y = st_.groundStorey, w = 0.22f;
+        const int step = bay < 3.0f ? 2 : 1;
+        for (int j = 0; j <= nb; j += step) {
+            const float s = j == 0 ? pier * 0.5f + w : j == nb ? len - pier * 0.5f - w : pier + bay * static_cast<float>(j);
+            if (j != 0 && j != nb && lod_ == 0 && rng_.chance(0.08f))
+                continue; // knocked out (the slab spans on)
+            fbox("concrete", F, s - w, s + w, -0.6f, y - 0.35f, -A, -A + 2.0f * w);
+        }
+        fbox("concrete", F, 0.0f, len, y - 0.35f, y - 0.05f, -A - 0.05f, 0.0f);
+        fbox("concrete", F, 0.0f, len, y - 0.75f, y - 0.35f, -A - 0.05f, -A + 0.25f); // the beam over the columns
+        if (lod_ == 0)
+            mesh.quad("concrete_moss", F.at(0.0f, y - 0.04f, -A - 0.05f), F.at(len, y - 0.04f, -A - 0.05f), F.at(len, y - 0.04f, 0.0f),
+                      F.at(0.0f, y - 0.04f, 0.0f), {0, 1, 0}, {0, 0}, {len / 4.0f, 0}, {len / 4.0f, A / 4.0f}, {0, A / 4.0f});
+        balconies_.push_back({F.at(len * 0.5f, y - 0.05f, -A * 0.5f), F.n, len}); // its top is a long planter
     }
 
     // Plinth, string course, cornice and the roof drips.
@@ -1492,6 +1530,24 @@ bool writeGlb(const Mesh& mesh, const fs::path& file, const std::string& texRel,
 
 } // namespace
 
+std::vector<BalconySpot> balconySpots(const BuildingSpec& spec)
+{
+    if (spec.style.role == "hall" || isSkeleton(spec.style) || spec.footprint.size() < 3)
+        return {};
+    BuildingSpec b = spec;
+    if (signedArea(b.footprint) < 0.0f) { // as writeBuildingGlb does
+        std::reverse(b.footprint.begin(), b.footprint.end());
+        std::vector<EdgeRole> e(b.edges.size());
+        const std::size_t n = b.footprint.size();
+        for (std::size_t i = 0; i < n && n == b.edges.size(); ++i)
+            e[i] = b.edges[(2 * n - 2 - i) % n];
+        b.edges = e;
+    }
+    Builder bld(b, 0);
+    bld.run();
+    return std::move(bld.balconies_);
+}
+
 const std::vector<std::string>& grammarMaterials()
 {
     static const std::vector<std::string> names = [] {
@@ -1519,6 +1575,8 @@ std::string buildingKey(const BuildingSpec& b)
       << s.sill << '|' << s.wall << '|' << s.plinth << '|' << s.trim << '|' << s.roof << '|' << s.firewall << '|' << s.cornice << '|'
       << s.bands << '|' << s.loggias << '|' << s.balconies << '|' << s.shops << '|' << s.pitched << '|' << b.floors << '|' << b.seed << '|'
       << b.ruin;
+    if (s.arcade > 0.0f)
+        o << "|arc" << s.arcade;
     for (const auto& p : b.footprint)
         o << '|' << std::lround(p.x * 100.0f) << ',' << std::lround(p.y * 100.0f);
     for (const auto e : b.edges)
