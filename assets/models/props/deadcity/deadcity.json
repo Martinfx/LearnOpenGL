@@ -1,0 +1,849 @@
+{
+ "brick_pile_large": {
+  "size_m": [
+   2.865,
+   0.927,
+   2.173
+  ],
+  "tris": 1666,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "mesh"
+ },
+ "brick_wall_ruin_a": {
+  "size_m": [
+   4.08,
+   2.891,
+   1.819
+  ],
+  "tris": 912,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "mesh"
+ },
+ "brick_wall_ruin_corner": {
+  "size_m": [
+   4.069,
+   2.196,
+   2.953
+  ],
+  "tris": 972,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "mesh"
+ },
+ "brick_wall_ruin_low": {
+  "size_m": [
+   3.0,
+   0.894,
+   1.961
+  ],
+  "tris": 396,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "mesh"
+ },
+ "brick_wall_ruin_window": {
+  "size_m": [
+   4.08,
+   3.124,
+   2.017
+  ],
+  "tris": 660,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "mesh"
+ },
+ "concrete_chunks": {
+  "size_m": [
+   2.289,
+   0.627,
+   1.705
+  ],
+  "tris": 84,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "mesh"
+ },
+ "concrete_rubble_pile": {
+  "size_m": [
+   2.292,
+   0.757,
+   1.866
+  ],
+  "tris": 965,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "mesh"
+ },
+ "concrete_slab_rebar": {
+  "size_m": [
+   3.097,
+   0.869,
+   2.528
+  ],
+  "tris": 1262,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "mesh"
+ },
+ "concrete_slab_rebar_flat": {
+  "size_m": [
+   2.0,
+   0.373,
+   1.923
+  ],
+  "tris": 412,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "mesh"
+ },
+ "container_blue": {
+  "size_m": [
+   6.178,
+   2.591,
+   2.458
+  ],
+  "tris": 808,
+  "physics": "static",
+  "mass_kg": 2200,
+  "collider": "box"
+ },
+ "container_red": {
+  "size_m": [
+   6.178,
+   2.591,
+   2.458
+  ],
+  "tris": 808,
+  "physics": "static",
+  "mass_kg": 2200,
+  "collider": "box"
+ },
+ "container_rust_open": {
+  "size_m": [
+   7.109,
+   2.591,
+   2.52
+  ],
+  "tris": 808,
+  "physics": "static",
+  "mass_kg": 2200,
+  "collider": "mesh"
+ },
+ "curb_1m": {
+  "size_m": [
+   1.0,
+   0.31,
+   0.15
+  ],
+  "tris": 16,
+  "physics": "static",
+  "mass_kg": 95,
+  "collider": "box"
+ },
+ "curb_2m": {
+  "size_m": [
+   2.011,
+   0.321,
+   0.161
+  ],
+  "tris": 196,
+  "physics": "static",
+  "mass_kg": 190,
+  "collider": "box"
+ },
+ "curb_broken": {
+  "size_m": [
+   1.821,
+   0.473,
+   0.551
+  ],
+  "tris": 292,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "mesh"
+ },
+ "curb_corner": {
+  "size_m": [
+   1.075,
+   0.31,
+   1.075
+  ],
+  "tris": 86,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "mesh"
+ },
+ "drum_blue": {
+  "size_m": [
+   0.588,
+   0.88,
+   0.588
+  ],
+  "tris": 340,
+  "physics": "dynamic",
+  "mass_kg": 18,
+  "collider": "cylinder"
+ },
+ "drum_blue_dented": {
+  "size_m": [
+   0.588,
+   0.9,
+   0.588
+  ],
+  "tris": 340,
+  "physics": "dynamic",
+  "mass_kg": 18,
+  "collider": "cylinder"
+ },
+ "drum_cluster": {
+  "size_m": [
+   1.471,
+   0.889,
+   2.138
+  ],
+  "tris": 1360,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "mesh"
+ },
+ "drum_green": {
+  "size_m": [
+   0.588,
+   0.88,
+   0.588
+  ],
+  "tris": 340,
+  "physics": "dynamic",
+  "mass_kg": 18,
+  "collider": "cylinder"
+ },
+ "drum_red": {
+  "size_m": [
+   0.588,
+   0.88,
+   0.588
+  ],
+  "tris": 340,
+  "physics": "dynamic",
+  "mass_kg": 18,
+  "collider": "cylinder"
+ },
+ "drum_red_lying": {
+  "size_m": [
+   0.728,
+   0.588,
+   0.968
+  ],
+  "tris": 340,
+  "physics": "dynamic",
+  "mass_kg": 18,
+  "collider": "cylinder"
+ },
+ "drum_rust": {
+  "size_m": [
+   0.588,
+   0.88,
+   0.588
+  ],
+  "tris": 340,
+  "physics": "dynamic",
+  "mass_kg": 18,
+  "collider": "cylinder"
+ },
+ "drum_rust_open": {
+  "size_m": [
+   0.588,
+   0.88,
+   0.588
+  ],
+  "tris": 262,
+  "physics": "dynamic",
+  "mass_kg": 16,
+  "collider": "cylinder"
+ },
+ "drum_yellow": {
+  "size_m": [
+   0.588,
+   0.88,
+   0.588
+  ],
+  "tris": 340,
+  "physics": "dynamic",
+  "mass_kg": 18,
+  "collider": "cylinder"
+ },
+ "dumpster_blue_open": {
+  "size_m": [
+   1.91,
+   2.027,
+   1.461
+  ],
+  "tris": 280,
+  "physics": "static",
+  "mass_kg": 300,
+  "collider": "box"
+ },
+ "dumpster_green": {
+  "size_m": [
+   1.91,
+   1.247,
+   1.2
+  ],
+  "tris": 280,
+  "physics": "static",
+  "mass_kg": 300,
+  "collider": "box"
+ },
+ "dumpster_green_tipped": {
+  "size_m": [
+   1.94,
+   1.954,
+   1.583
+  ],
+  "tris": 280,
+  "physics": "static",
+  "mass_kg": 300,
+  "collider": "box"
+ },
+ "guardrail_wbeam": {
+  "size_m": [
+   3.81,
+   1.0,
+   0.31
+  ],
+  "tris": 388,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "box"
+ },
+ "guardrail_wbeam_crashed": {
+  "size_m": [
+   3.813,
+   1.029,
+   0.7
+  ],
+  "tris": 388,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "mesh"
+ },
+ "guardrail_wbeam_end": {
+  "size_m": [
+   3.81,
+   1.0,
+   0.31
+  ],
+  "tris": 364,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "mesh"
+ },
+ "jersey_barrier": {
+  "size_m": [
+   3.064,
+   0.82,
+   0.625
+  ],
+  "tris": 212,
+  "physics": "static",
+  "mass_kg": 1800,
+  "collider": "mesh"
+ },
+ "jersey_barrier_broken": {
+  "size_m": [
+   3.547,
+   0.88,
+   0.854
+  ],
+  "tris": 444,
+  "physics": "static",
+  "mass_kg": 1600,
+  "collider": "mesh"
+ },
+ "jersey_barrier_row": {
+  "size_m": [
+   9.193,
+   0.829,
+   1.243
+  ],
+  "tris": 636,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "mesh"
+ },
+ "jersey_barrier_short": {
+  "size_m": [
+   1.52,
+   0.826,
+   0.628
+  ],
+  "tris": 212,
+  "physics": "static",
+  "mass_kg": 900,
+  "collider": "mesh"
+ },
+ "jersey_barrier_tipped": {
+  "size_m": [
+   3.138,
+   0.622,
+   1.184
+  ],
+  "tris": 212,
+  "physics": "static",
+  "mass_kg": 1800,
+  "collider": "mesh"
+ },
+ "railing_bars_2m": {
+  "size_m": [
+   2.04,
+   1.004,
+   0.05
+  ],
+  "tris": 228,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "box"
+ },
+ "railing_bars_bent": {
+  "size_m": [
+   2.04,
+   1.004,
+   0.327
+  ],
+  "tris": 228,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "mesh"
+ },
+ "railing_pipe_2m": {
+  "size_m": [
+   2.12,
+   1.091,
+   0.12
+  ],
+  "tris": 232,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "box"
+ },
+ "railing_pipe_bent": {
+  "size_m": [
+   3.12,
+   1.093,
+   0.198
+  ],
+  "tris": 832,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "mesh"
+ },
+ "railing_pipe_broken": {
+  "size_m": [
+   3.12,
+   1.091,
+   0.33
+  ],
+  "tris": 328,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "mesh"
+ },
+ "rubble_mound_large": {
+  "size_m": [
+   4.622,
+   1.268,
+   3.24
+  ],
+  "tris": 1202,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "mesh"
+ },
+ "sidewalk_slab_fragments": {
+  "size_m": [
+   1.071,
+   0.169,
+   1.234
+  ],
+  "tris": 72,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "mesh"
+ },
+ "sidewalk_slabs_broken": {
+  "size_m": [
+   2.0,
+   0.141,
+   2.0
+  ],
+  "tris": 252,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "mesh"
+ },
+ "sidewalk_slabs_heaved": {
+  "size_m": [
+   2.0,
+   0.224,
+   2.0
+  ],
+  "tris": 228,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "mesh"
+ },
+ "sign_curve": {
+  "size_m": [
+   1.07,
+   2.635,
+   0.044
+  ],
+  "tris": 22,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "box"
+ },
+ "sign_donotenter": {
+  "size_m": [
+   0.76,
+   2.48,
+   0.044
+  ],
+  "tris": 22,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "box"
+ },
+ "sign_noparking": {
+  "size_m": [
+   0.3,
+   2.45,
+   0.044
+  ],
+  "tris": 22,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "box"
+ },
+ "sign_oneway": {
+  "size_m": [
+   0.9,
+   2.75,
+   0.044
+  ],
+  "tris": 22,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "box"
+ },
+ "sign_oneway_leaning": {
+  "size_m": [
+   1.127,
+   2.665,
+   0.044
+  ],
+  "tris": 22,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "box"
+ },
+ "sign_pedxing": {
+  "size_m": [
+   0.91,
+   2.555,
+   0.044
+  ],
+  "tris": 22,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "box"
+ },
+ "sign_roadwork": {
+  "size_m": [
+   1.07,
+   2.635,
+   0.044
+  ],
+  "tris": 22,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "box"
+ },
+ "sign_roadwork_fallen": {
+  "size_m": [
+   1.07,
+   0.23,
+   3.165
+  ],
+  "tris": 22,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "box"
+ },
+ "sign_speed35": {
+  "size_m": [
+   0.6,
+   2.484,
+   0.044
+  ],
+  "tris": 22,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "box"
+ },
+ "sign_speed35_leaning": {
+  "size_m": [
+   0.68,
+   2.38,
+   0.791
+  ],
+  "tris": 22,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "box"
+ },
+ "sign_stop": {
+  "size_m": [
+   0.76,
+   2.48,
+   0.044
+  ],
+  "tris": 38,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "box"
+ },
+ "sign_stop_bent": {
+  "size_m": [
+   0.778,
+   2.145,
+   1.074
+  ],
+  "tris": 50,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "mesh"
+ },
+ "sign_stop_panel_loose": {
+  "size_m": [
+   0.816,
+   0.016,
+   0.816
+  ],
+  "tris": 28,
+  "physics": "dynamic",
+  "mass_kg": 3,
+  "collider": "box"
+ },
+ "sign_street_name": {
+  "size_m": [
+   0.9,
+   3.013,
+   0.9
+  ],
+  "tris": 34,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "box"
+ },
+ "sign_yield": {
+  "size_m": [
+   0.9,
+   2.51,
+   0.044
+  ],
+  "tris": 18,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "box"
+ },
+ "sign_yield_bent": {
+  "size_m": [
+   0.892,
+   1.894,
+   1.43
+  ],
+  "tris": 30,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "mesh"
+ },
+ "traffic_cone": {
+  "size_m": [
+   0.38,
+   0.71,
+   0.38
+  ],
+  "tris": 136,
+  "physics": "dynamic",
+  "mass_kg": 3,
+  "collider": "box"
+ },
+ "traffic_cone_crushed": {
+  "size_m": [
+   0.432,
+   0.337,
+   0.416
+  ],
+  "tris": 492,
+  "physics": "dynamic",
+  "mass_kg": 3,
+  "collider": "box"
+ },
+ "traffic_cone_fallen": {
+  "size_m": [
+   0.453,
+   0.402,
+   0.766
+  ],
+  "tris": 136,
+  "physics": "dynamic",
+  "mass_kg": 3,
+  "collider": "box"
+ },
+ "traffic_drum": {
+  "size_m": [
+   0.788,
+   1.0,
+   0.8
+  ],
+  "tris": 280,
+  "physics": "dynamic",
+  "mass_kg": 8,
+  "collider": "cylinder"
+ },
+ "traffic_drum_fallen": {
+  "size_m": [
+   0.788,
+   0.58,
+   1.268
+  ],
+  "tris": 280,
+  "physics": "dynamic",
+  "mass_kg": 8,
+  "collider": "cylinder"
+ },
+ "traffic_signal_fallen": {
+  "size_m": [
+   8.404,
+   0.861,
+   6.757
+  ],
+  "tris": 936,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "mesh"
+ },
+ "traffic_signal_head_loose": {
+  "size_m": [
+   0.954,
+   0.55,
+   1.366
+  ],
+  "tris": 208,
+  "physics": "dynamic",
+  "mass_kg": 25,
+  "collider": "box"
+ },
+ "traffic_signal_mast": {
+  "size_m": [
+   0.655,
+   6.375,
+   6.757
+  ],
+  "tris": 624,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "mesh"
+ },
+ "traffic_signal_mast_sagging": {
+  "size_m": [
+   0.883,
+   7.101,
+   6.649
+  ],
+  "tris": 624,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "mesh"
+ },
+ "traffic_signal_post_leaning": {
+  "size_m": [
+   0.73,
+   3.629,
+   1.285
+  ],
+  "tris": 256,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "mesh"
+ },
+ "tyre_leaning": {
+  "size_m": [
+   0.605,
+   0.596,
+   0.264
+  ],
+  "tris": 1008,
+  "physics": "dynamic",
+  "mass_kg": 10,
+  "collider": "cylinder"
+ },
+ "tyre_pile": {
+  "size_m": [
+   1.7,
+   0.617,
+   1.104
+  ],
+  "tris": 6048,
+  "physics": "static",
+  "mass_kg": null,
+  "collider": "mesh"
+ },
+ "tyre_stack": {
+  "size_m": [
+   0.623,
+   0.661,
+   0.639
+  ],
+  "tris": 4032,
+  "physics": "static",
+  "mass_kg": 40,
+  "collider": "cylinder"
+ },
+ "wheelie_bin_green": {
+  "size_m": [
+   0.63,
+   1.065,
+   0.82
+  ],
+  "tris": 176,
+  "physics": "dynamic",
+  "mass_kg": 12,
+  "collider": "box"
+ },
+ "wheelie_bin_grey_open": {
+  "size_m": [
+   0.63,
+   1.498,
+   0.82
+  ],
+  "tris": 176,
+  "physics": "dynamic",
+  "mass_kg": 12,
+  "collider": "box"
+ },
+ "wheelie_bin_tipped": {
+  "size_m": [
+   1.023,
+   0.82,
+   1.859
+  ],
+  "tris": 176,
+  "physics": "dynamic",
+  "mass_kg": 12,
+  "collider": "box"
+ }
+}
