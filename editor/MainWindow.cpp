@@ -442,16 +442,18 @@ void MainWindow::buildMenus()
     quality.softShadows = settings.value("render/soft_shadows", quality.softShadows).toBool();
     quality.ssgi = settings.value("render/ssgi", quality.ssgi).toBool();
     quality.contactShadows = settings.value("render/contact_shadows", quality.contactShadows).toBool();
+    quality.volumetricClouds = settings.value("render/volumetric_clouds", quality.volumetricClouds).toInt();
     render->addAction(tr("&Bake lighting probes"), this, &MainWindow::bakeProbes);
     render->addSeparator();
     QMenu* qualityMenu = render->addMenu(tr("&Quality"));
     auto toggles = std::make_shared<std::array<QAction*, 8>>(); // SSAO, bloom, FXAA, SSR, parallax, soft shadows, SSGI, contact shadows
+    auto cloudsToggle = std::make_shared<QAction*>(nullptr);
     for (int i = 0; i < 4; ++i) {
         QAction* a = qualityMenu->addAction(tr(qualityNames[i]));
         a->setCheckable(true);
         a->setChecked(i == qualityLevel);
         qualityGroup->addAction(a);
-        connect(a, &QAction::triggered, this, [this, i, toggles] {
+        connect(a, &QAction::triggered, this, [this, i, toggles, cloudsToggle] {
             QSettings().setValue("render/quality", i);
             const engine::RenderQuality q = engine::RenderQuality::preset(i);
             for (QAction* t : *toggles)
@@ -466,6 +468,11 @@ void MainWindow::buildMenus()
             (*toggles)[7]->setChecked(q.contactShadows);
             for (QAction* t : *toggles)
                 t->blockSignals(false);
+            if (*cloudsToggle) {
+                QSignalBlocker block(*cloudsToggle);
+                (*cloudsToggle)->setChecked(q.volumetricClouds > 0);
+                QSettings().remove("render/volumetric_clouds");
+            }
             setRenderQuality(q);
         });
     }
@@ -488,6 +495,17 @@ void MainWindow::buildMenus()
             setRenderQuality(q);
         });
     }
+    // Volumetric clouds: the preset's map size, or the flat painted layer.
+    *cloudsToggle = render->addAction(tr("Volumetric clouds"));
+    (*cloudsToggle)->setCheckable(true);
+    (*cloudsToggle)->setChecked(quality.volumetricClouds > 0);
+    connect(*cloudsToggle, &QAction::toggled, this, [this](bool on) {
+        engine::RenderQuality q = viewport_->quality();
+        const int level = QSettings().value("render/quality", 2).toInt();
+        q.volumetricClouds = on ? std::max(1, engine::RenderQuality::preset(level).volumetricClouds) : 0;
+        QSettings().setValue("render/volumetric_clouds", q.volumetricClouds);
+        setRenderQuality(q);
+    });
     // Texture memory: size limit on top of the preset (drops top mip levels, no re-cook).
     QMenu* texMenu = render->addMenu(tr("&Texture size"));
     auto* texGroup = new QActionGroup(this);

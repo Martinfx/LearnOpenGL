@@ -131,6 +131,9 @@ struct RenderQuality {
     // Contact shadows: a short screen-space ray toward the sun adds the small shadows the
     // shadow map misses (grass, kerbs, rubble). Environment::contactShadowLength.
     bool contactShadows = true;
+    // Volumetric clouds (Environment::volumetricClouds): 0 the flat painted layer, 1 a 256x128 sky
+    // map of raymarched clouds, 2 512x256 (a quarter of its texels is traced per frame).
+    int volumetricClouds = 2;
     bool ssaoFullRes = false; // ambient occlusion + bounce light at full resolution (Ultra), else half
     float motionBlur = 0.0f; // camera motion blur in continuous views, shutter fraction 0..1 (0 = off)
     int textureUploadsPerFrame = 6; // new textures sent to the GPU per frame, 0 = all at once
@@ -232,7 +235,7 @@ public:
 
     // Frame profile: CPU time to record each pass and GPU time to execute it
     // (timer queries, a couple of frames behind), plus what was drawn.
-    enum Pass { PassShadows, PassVolumetric, PassDepth, PassSsao, PassOpaque, PassTransparent, PassPost, PassOverlay, PassCount };
+    enum Pass { PassShadows, PassVolumetric, PassDepth, PassSsao, PassOpaque, PassTransparent, PassPost, PassOverlay, PassClouds, PassCount };
     static const char* passName(int pass);
     struct FrameStats {
         double cpuMs[PassCount] = {};
@@ -322,7 +325,7 @@ private:
     };
     struct Programs {
         Program mesh, depth, sky, envCapture, prefilter, brdf, ssao, blur, bloomDown, bloomUp, post, fxaa, taa, ssrHistory, copy, grid, hiz, sprite, debug,
-            luminance, exposure, water, underwater, distort, volumeInject, volumeIntegrate;
+            luminance, exposure, water, underwater, distort, volumeInject, volumeIntegrate, clouds;
     };
     // Uniform locations of the program that draws geometry right now.
     struct MeshLocations {
@@ -611,6 +614,14 @@ private:
     float rainTop_ = 0.0f;
     bool skipPlants_ = false; // drawGeometry leaves out swaying models and foliage (top-down map) // world height of the top-down map's camera
     unsigned int skyLut_ = 0;
+    // Volumetric clouds: tileable noise (3D), the sky map they are traced into (rgb light, a
+    // transmittance; azimuth by sqrt elevation), the 2x2 texel phase traced this frame.
+    unsigned int cloudNoise_ = 0, cloudTex_ = 0, cloudFbo_ = 0;
+    int cloudSize_ = 0, cloudPhase_ = 0;
+    bool cloudActive_ = false, cloudFull_ = true;
+    std::size_t cloudHash_ = 0;
+    std::shared_ptr<std::future<std::vector<std::uint8_t>>> cloudNoiseJob_; // built on a worker at the first use
+    void renderClouds();
     std::size_t skyLutHash_ = 0;
     glm::vec3 skyLutZenith_{0.0f}, skyLutHorizon_{0.0f}, skyLutSunTint_{1.0f};
     unsigned whiteTex_ = 0;             // stand-in when SSAO is off

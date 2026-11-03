@@ -156,6 +156,7 @@ struct EnvironmentBlock {
     glm::vec4 shadowSoft;   // x: PCSS on, y: tan of the sun's angular radius, z: max caster distance, w: max filter radius
     glm::vec4 groundHaze;   // x: density, y: ground height, z: thickness
     glm::vec4 contact;      // contact shadows: x ray length (0 = off), y thickness, z fade-out distance
+    glm::vec4 clouds;       // volumetric clouds: x on, y base height, z thickness, w density
 };
 
 constexpr int kEnvSize = 128;  // environment cubemap face size
@@ -466,6 +467,7 @@ RenderQuality RenderQuality::preset(int level)
         q.softShadows = false;
         q.ssgi = false;
         q.contactShadows = false;
+        q.volumetricClouds = 0;
         break;
     case 1:
         q.shadowResolution = 1024; q.shadowCascades = 3; q.ssao = true; q.bloom = true;
@@ -476,6 +478,7 @@ RenderQuality RenderQuality::preset(int level)
         q.ssr = false;
         q.ssgi = false;
         q.volumetricFog = 1;
+        q.volumetricClouds = 1;
         break;
     case 3:
         q.shadowResolution = 4096; q.shadowCascades = 3; q.textureStreamDistance = 80.0f;
@@ -528,7 +531,8 @@ bool Renderer::buildPrograms(const std::map<std::string, std::string>& src, Prog
                              {&p.exposure, "fullscreen.vert", "exposure.frag"},
                              {&p.water, "water.vert", "water.frag"},
                              {&p.underwater, "fullscreen.vert", "underwater.frag"},
-                             {&p.distort, "sprite.vert", "distort.frag"}};
+                             {&p.distort, "sprite.vert", "distort.frag"},
+                             {&p.clouds, "fullscreen.vert", "clouds.frag"}};
     const auto start = std::chrono::steady_clock::now();
     int cached = 0;
     for (const Entry& e : entries) {
@@ -558,7 +562,7 @@ void Renderer::destroyPrograms(Programs& p)
 {
     for (Program* program : {&p.mesh, &p.depth, &p.sky, &p.envCapture, &p.prefilter, &p.brdf, &p.ssao, &p.blur, &p.bloomDown,
                              &p.bloomUp, &p.post, &p.fxaa, &p.taa, &p.ssrHistory, &p.copy, &p.grid, &p.hiz, &p.sprite, &p.debug, &p.luminance, &p.exposure, &p.water, &p.underwater, &p.distort,
-                             &p.volumeInject, &p.volumeIntegrate}) {
+                             &p.volumeInject, &p.volumeIntegrate, &p.clouds}) {
         if (program->id)
             glDeleteProgram(program->id);
         program->id = 0;
@@ -778,6 +782,16 @@ void Renderer::shutdown()
     if (rainFbo_)
         glDeleteFramebuffers(1, &rainFbo_);
     rainTex_ = rainFbo_ = 0;
+    if (cloudNoiseJob_ && cloudNoiseJob_->valid())
+        cloudNoiseJob_->wait();
+    cloudNoiseJob_.reset();
+    for (unsigned* t : {&cloudNoise_, &cloudTex_})
+        if (*t)
+            glDeleteTextures(1, t);
+    if (cloudFbo_)
+        glDeleteFramebuffers(1, &cloudFbo_);
+    cloudNoise_ = cloudTex_ = cloudFbo_ = 0;
+    cloudSize_ = 0;
     meshes_.clear();
     if (poolVao_)
         glDeleteVertexArrays(1, &poolVao_);
@@ -1072,6 +1086,12 @@ void Renderer::updateEnvironment(const Scene& scene, const RenderView& view)
     contactActive_ = quality_.contactShadows && historyView && e.contactShadowLength > 0.0f && quality_.shadowResolution > 0;
     if (contactActive_)
         b.contact = glm::vec4(std::min(e.contactShadowLength, 2.0f), 0.25f + e.contactShadowLength, 40.0f, 0.0f);
+    // Volumetric clouds: once their noise is built (renderClouds() starts it), in views with a sky.
+    cloudActive_ = quality_.volumetricClouds > 0 && e.volumetricClouds > 0.5f && view.fog && view.shading != Shading::Wireframe &&
+                   view.projection[3][3] == 0.0f && programs_.clouds.id && (cloudNoise_ || !view.capture);
+    if (cloudActive_)
+        b.clouds = glm::vec4(cloudNoise_ ? 1.0f : 0.0f, std::clamp(e.cloudBase, 100.0f, 8000.0f), std::clamp(e.cloudThickness, 50.0f, 8000.0f),
+                             std::clamp(e.cloudDensity, 0.0f, 10.0f));
     b.prevViewProj = ssrViewProj_;                     // the frame now in ssrColor_
     ssrPrevViewProj_ = view.projection * view.view;    // becomes ssrViewProj_ once this frame is recorded
     if (ssrView && ssrValid_)
@@ -2429,6 +2449,11 @@ void Renderer::render(const Scene& scene, const RenderView& view)
         syncProbes(scene, captureProbes_);
     else if (!view.capture)
         syncProbes(scene, scene.probes);
+    if (cloudActive_) {
+        beginPass(PassClouds);
+        renderClouds();
+        endPass();
+    }
     beginPass(PassShadows);
     renderShadows(scene, view);
     renderLocalShadows(scene, view);
@@ -2523,6 +2548,8 @@ void Renderer::render(const Scene& scene, const RenderView& view)
     if (!wireframe) {
         glUseProgram(programs_.sky.id);
         glBindVertexArray(emptyVao_);
+        if (cloudActive_ && cloudTex_)
+            glBindTextureUnit(16, cloudTex_); // uCloudMap
         glDrawArrays(GL_TRIANGLES, 0, 3);
     }
     glDepthMask(GL_TRUE);
@@ -3854,7 +3881,7 @@ void Renderer::resolveTaa()
 const char* Renderer::passName(int pass)
 {
     static const char* names[PassCount] = {"Shadows", "Volumetric fog", "Depth pre-pass", "SSAO", "Opaque + sky", "Transparent", "Post (TAA, bloom, tone, FXAA)",
-                                           "First person"};
+                                           "First person", "Clouds"};
     return pass >= 0 && pass < PassCount ? names[pass] : "?";
 }
 
@@ -3964,6 +3991,75 @@ void Renderer::collectQueries()
     }
     building_ = FrameStats{};
     queryFrame_ = (queryFrame_ + 1) % kQueryFrames;
+}
+
+void Renderer::renderClouds()
+{
+    if (!cloudNoise_) {
+        if (!cloudNoiseJob_)
+            cloudNoiseJob_ = std::make_shared<std::future<std::vector<std::uint8_t>>>(JobSystem::global().submit([] { return buildCloudNoise(64); }));
+        if (!deterministic_ && cloudNoiseJob_->wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+            return; // the flat layer until the noise is ready (a fraction of a second)
+        const std::vector<std::uint8_t> noise = cloudNoiseJob_->get();
+        cloudNoiseJob_.reset();
+        glCreateTextures(GL_TEXTURE_3D, 1, &cloudNoise_);
+        glTextureStorage3D(cloudNoise_, 1, GL_RGBA8, 64, 64, 64);
+        glTextureSubImage3D(cloudNoise_, 0, 0, 0, 0, 64, 64, 64, GL_RGBA, GL_UNSIGNED_BYTE, noise.data());
+        glTextureParameteri(cloudNoise_, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTextureParameteri(cloudNoise_, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        for (GLenum wrap : {GL_TEXTURE_WRAP_S, GL_TEXTURE_WRAP_T, GL_TEXTURE_WRAP_R})
+            glTextureParameteri(cloudNoise_, wrap, GL_REPEAT);
+        label(GL_TEXTURE, cloudNoise_, "Cloud noise");
+        // The environment block was filled before the noise existed: switch the clouds on.
+        if (envBlockCopy_.size() == sizeof(EnvironmentBlock)) {
+            EnvironmentBlock b;
+            std::memcpy(&b, envBlockCopy_.data(), sizeof(b));
+            b.clouds.x = 1.0f;
+            std::memcpy(envBlockCopy_.data(), &b, sizeof(b));
+            glNamedBufferSubData(envBuffer_, 0, sizeof(b), &b);
+        }
+    }
+    const int size = quality_.volumetricClouds >= 2 ? 512 : 256;
+    if (size != cloudSize_) {
+        if (cloudTex_)
+            glDeleteTextures(1, &cloudTex_);
+        if (cloudFbo_)
+            glDeleteFramebuffers(1, &cloudFbo_);
+        cloudSize_ = size;
+        cloudTex_ = makeTexture2D(GL_RGBA16F, size, size / 2, GL_LINEAR);
+        glTextureParameteri(cloudTex_, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTextureParameteri(cloudTex_, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        cloudFbo_ = makeFbo(cloudTex_);
+        label(GL_TEXTURE, cloudTex_, "Cloud sky map");
+        cloudFull_ = true;
+    }
+    // Anything but the drift changed (sun, cover, layer): trace every texel, else a quarter.
+    std::size_t h = 0;
+    if (envBlockCopy_.size() == sizeof(EnvironmentBlock)) {
+        EnvironmentBlock b;
+        std::memcpy(&b, envBlockCopy_.data(), sizeof(b));
+        auto q = [](float v) { return static_cast<std::size_t>(std::lround(v * 200.0f)); };
+        for (float v : {b.sunDir.x, b.sunDir.y, b.sunDir.z, b.sunDir.w, b.sunColor.x, b.sunColor.y, b.sunColor.z, b.skyZenith.w,
+                        b.clouds.y * 0.01f, b.clouds.z * 0.01f, b.clouds.w, b.atmosphere.x, b.weather.y})
+            h = h * 1000003u ^ q(v);
+    }
+    if (h != cloudHash_ || deterministic_)
+        cloudFull_ = true;
+    cloudHash_ = h;
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
+    glBindVertexArray(emptyVao_);
+    glBindFramebuffer(GL_FRAMEBUFFER, cloudFbo_);
+    glViewport(0, 0, cloudSize_, cloudSize_ / 2);
+    const Program& p = programs_.clouds;
+    glUseProgram(p.id);
+    glUniform1i(p.loc("uPhase"), cloudFull_ ? -1 : cloudPhase_);
+    glUniform1i(p.loc("uSteps"), quality_.volumetricClouds >= 2 ? 40 : 28);
+    glBindTextureUnit(0, cloudNoise_);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    cloudPhase_ = (cloudPhase_ + 1) & 3;
+    cloudFull_ = false;
+    glBindTextureUnit(16, cloudTex_); // 2D target of unit 16 (the probes' 3D irradiance uses the 3D one): sky.frag uCloudMap
 }
 
 void Renderer::updateDynamicResolution()

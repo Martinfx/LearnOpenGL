@@ -398,6 +398,12 @@ struct Environment {
     // Light bounced between surfaces on screen (quality option ssgi): sunlit walls and ground
     // light the shade around them in their colour. 0 off, 1 physical, more = stronger.
     float bounceLight = 1.0f;
+    // Volumetric clouds (quality option volumetricClouds): a raymarched layer of clouds lit by
+    // the sun and the sky, with the cover above (cloudCover). 0 = the flat painted layer (default).
+    float volumetricClouds = 0.0f;
+    float cloudBase = 1200.0f;                  // m above the ground: low storm clouds ~600, fair weather ~1500
+    float cloudThickness = 1600.0f;             // m: thin layers 400, towering storm clouds 3000+
+    float cloudDensity = 1.0f;                  // light extinction multiplier: 0.3 wispy, 1 normal, 3 dark storm
     float exposure = 1.0f;
     // Tone mapping: 0 ACES filmic, 1 AgX (bright colours fade to white), 2 neutral (Khronos PBR Neutral).
     int tonemap = 0;

@@ -170,6 +170,11 @@ EnvironmentPanel::EnvironmentPanel(engine::Scene* scene, QWidget* parent)
     addColor(form, tr("Horizon"), &E::skyHorizon);
     addColor(form, tr("Ground"), &E::groundColor);
     addFloat(form, tr("Clouds"), &E::cloudCover, 0, 1, 0.05, 2, tr("0 clear, 1 overcast"));
+    addFloat(form, tr("Volumetric clouds"), &E::volumetricClouds, 0, 1, 1, 0,
+             tr("1 = raymarched clouds lit by the sun and the sky (quality option), 0 = the flat painted layer"));
+    addFloat(form, tr("Cloud base"), &E::cloudBase, 100, 8000, 50, 0, tr("Height of the cloud bottoms above the ground (m): storm ~600, fair weather ~1500"));
+    addFloat(form, tr("Cloud thickness"), &E::cloudThickness, 50, 8000, 50, 0, tr("Height of the layer (m): thin 400, towering storm clouds 3000+"));
+    addFloat(form, tr("Cloud density"), &E::cloudDensity, 0, 10, 0.05, 2, tr("0.3 wispy and bright, 1 normal, 3 dark storm clouds"));
     addFloat(form, tr("Sky light"), &E::ambientIntensity, 0, 5, 0.05, 2, tr("Ambient light and reflections from the sky"));
     addFloat(form, tr("Physical atmosphere"), &E::atmosphere, 0, 1, 0.05, 2,
              tr("0 = the colours above, 1 = sky, horizon, fog and sunlight colour from a physical model of the air (Rayleigh, Mie, ozone)"));

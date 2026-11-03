@@ -1,4 +1,5 @@
 #version 450 core
+#define CLOUD_MAP
 #include "common.glsl"
 // Background: procedural sky drawn where nothing else was (depth = 1).
 in vec2 vUV;

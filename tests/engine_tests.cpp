@@ -3824,13 +3824,41 @@ void testAtmosphere()
     s.environment.tonemap = 1;
     s.environment.contactShadowLength = 0.5f;
     s.environment.groundHazeThickness = 2.5f;
+    s.environment.volumetricClouds = 1.0f;
+    s.environment.cloudBase = 700.0f;
+    s.environment.cloudThickness = 2500.0f;
+    s.environment.cloudDensity = 2.0f;
     std::string err;
     engine::Scene r;
     check(engine::saveScene(s, "atmosphere.level", &err) && engine::loadScene(r, "atmosphere.level", &err), "atmosphere level: " + err);
     check(r.environment.atmosphere == 0.8f && r.environment.atmosphereHaze == 2.5f && r.environment.atmosphereBrightness == 1.3f &&
               r.environment.skyOcclusion == 0.7f && r.environment.sunSize == 1.5f && r.environment.bounceLight == 0.6f && r.environment.groundHaze == 0.05f &&
-              r.environment.groundHazeThickness == 2.5f && r.environment.tonemap == 1 && r.environment.contactShadowLength == 0.5f,
+              r.environment.groundHazeThickness == 2.5f && r.environment.tonemap == 1 && r.environment.contactShadowLength == 0.5f &&
+              r.environment.cloudBase == 700.0f && r.environment.cloudThickness == 2500.0f && r.environment.cloudDensity == 2.0f &&
+              r.environment.volumetricClouds == 1.0f,
           "atmosphere settings survive save + load");
+    {
+        // Cloud noise: bytes in range, every channel varies, and it tiles (opposite faces close).
+        const int n = 16;
+        const std::vector<std::uint8_t> noise = engine::buildCloudNoise(n);
+        check(noise.size() == static_cast<std::size_t>(n * n * n * 4), "cloud noise size");
+        int lo[4] = {255, 255, 255, 255}, hi[4] = {0, 0, 0, 0};
+        double seam = 0.0, inner = 0.0;
+        for (int z = 0; z < n; ++z)
+            for (int y = 0; y < n; ++y)
+                for (int x = 0; x < n; ++x)
+                    for (int c = 0; c < 4; ++c) {
+                        const int v = noise[((static_cast<std::size_t>(z) * n + y) * n + x) * 4 + c];
+                        lo[c] = std::min(lo[c], v);
+                        hi[c] = std::max(hi[c], v);
+                        if (x == n - 1)
+                            seam += std::abs(v - noise[((static_cast<std::size_t>(z) * n + y) * n) * 4 + c]);
+                        if (x == n / 2)
+                            inner += std::abs(v - noise[((static_cast<std::size_t>(z) * n + y) * n + x + 1) * 4 + c]);
+                    }
+        check(hi[0] - lo[0] > 60 && hi[1] - lo[1] > 60 && hi[2] - lo[2] > 60 && hi[3] - lo[3] > 40, "cloud noise channels vary");
+        check(seam < inner * 1.6 + 1.0, "cloud noise tiles across the edge (" + std::to_string(seam) + " vs " + std::to_string(inner) + ")");
+    }
     check(engine::RenderQuality::preset(2).softShadows && !engine::RenderQuality::preset(0).softShadows,
           "soft shadows are on from the medium preset up");
     std::filesystem::remove("atmosphere.level");

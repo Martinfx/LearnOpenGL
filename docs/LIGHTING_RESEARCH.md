@@ -119,6 +119,14 @@ Vegetace: translucenci listů a trávy (průsvit proti slunci) přidává vlákn
 | 6. Přízemní opar, barva oparu podle směru | b054eb9 | `ground_haze`, `ground_haze_height`, `ground_haze_thickness` (Environment > Fog) |
 | 7. Tónové mapování ACES / AgX / neutral | viz git log | `tonemap` 0/1/2 (Environment > Camera and image: „Tone mapping“) |
 
+| 8a. Objemové mraky | viz git log | `volumetric_clouds` 0/1, `cloud_base`, `cloud_thickness`, `cloud_density` (Environment > Sky), kvalita „Volumetric clouds“ (Low vypnuto, Medium mapa 256x128, High/Ultra 512x256) |
+
+Objemové mraky: vrstva nad kulatou Zemí raymarchovaná do mapy oblohy (azimut × odmocnina
+elevace, za snímek se trasuje čtvrtina texelů), dlaždicový 3D šum Perlin-Worley + Worley fBm
+(`buildCloudNoise`), světlo slunce s oktávami vícenásobného rozptylu, světlo oblohy tlumené
+tloušťkou mraku nad bodem, blesky. Stíny mraků na zemi ze stejného pokrytí (`cloudCoverageAt`).
+Výchozí vypnuto (levely si je zapnou), dynamické sondy zatím ne.
+
 Kontaktní stíny: krátký paprsek ke slunci v hloubce předprůchodu (kopie, kterou čte SSR),
 `contact_shadow_length` (Environment > Sun „Contact shadows“), kvalita „Contact shadows“.
 

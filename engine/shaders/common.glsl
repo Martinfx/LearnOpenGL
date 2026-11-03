@@ -29,6 +29,7 @@ layout(std140, binding = 1) uniform Environment {
     vec4 uShadowSoft;      // x: 1 = soft sun shadows (PCSS), y: tan of the sun's angular radius, z: max caster distance (m), w: max filter radius (m)
     vec4 uGroundHaze;      // ground haze layer: x density (1/m), y ground height (m), z thickness (m)
     vec4 uContact;         // contact shadows: x ray length (m, 0 = off), y surface thickness (m), z fade-out view distance (m)
+    vec4 uClouds;          // volumetric clouds: x 1 = on, y base height (m), z thickness (m), w density
 };
 // Physical sky table (engine/Atmosphere.h): azimuth from the sun by elevation, linear radiance.
 layout(binding = 31) uniform sampler2D uSkyLut;
@@ -152,6 +153,33 @@ vec3 moonDisk(vec3 dir) {
     return surface * (0.03 + 0.9 * lit) * smoothstep(1.0, 0.92, r2) + glow;
 }
 
+// Volumetric clouds. The layer drifts with the wind; its large-scale cover at a world position
+// (m) is shared by the tracer (clouds.frag) and the shadows the clouds cast (cloudShadow).
+vec2 cloudWind() {
+    vec2 w = length(uWind.xz) > 0.01 ? normalize(uWind.xz) : vec2(0.8, 0.6);
+    return w * uSkyHorizon.w * (6.0 + 14.0 * uWind.y);
+}
+float cloudCoverageAt(vec2 xz) {
+    vec2 p = (xz - cloudWind()) / 7000.0;
+    float n = valueNoise(p) * 0.6 + valueNoise(p * 2.7 + 5.3) * 0.3 + valueNoise(p * 7.1 + 1.7) * 0.1;
+    float cover = clamp(uSkyZenith.w, 0.0, 1.0);
+    // Broken cover with gaps even at 0.8; only full overcast closes the sky.
+    return clamp(cover * 0.8 + (n - 0.5) * mix(0.9, 0.4, cover * cover), 0.0, 1.0);
+}
+// Sky map of the traced clouds: azimuth (u) by the square root of the elevation (v), more rows
+// near the horizon. Upper hemisphere only.
+vec2 cloudMapUv(vec3 dir) {
+    return vec2(atan(dir.z, dir.x) * 0.15915494 + 0.5, sqrt(clamp(dir.y, 0.0, 1.0)));
+}
+vec3 cloudMapDir(vec2 uv) {
+    float a = (uv.x - 0.5) * 6.2831853, y = uv.y * uv.y;
+    float r = sqrt(max(1.0 - y * y, 0.0));
+    return vec3(cos(a) * r, y, sin(a) * r);
+}
+#ifdef CLOUD_MAP
+layout(binding = 16) uniform sampler2D uCloudMap; // rgb light scattered by the clouds, a: transmittance
+#endif
+
 // Procedural sky: zenith/horizon gradient, ground below the horizon, sun disk
 // and glow, sunrise/sunset glow, stars and moon at night, and a layer of clouds
 // whose cover darkens the whole sky (overcast).
@@ -186,6 +214,16 @@ vec3 skyColor(vec3 dir, bool withSun) {
         color += starField(dir) * uSkyParams.x * clear;
         color += moonDisk(dir) * clamp(uMoonDir.w + 0.15, 0.0, 1.0) * mix(0.25, 1.0, uSkyParams.x) * clear;
     }
+#ifdef CLOUD_MAP
+    if (uClouds.x > 0.5) {
+        if (up > 0.0) {
+            vec4 c = textureLod(uCloudMap, cloudMapUv(dir), 0.0);
+            color = color * c.a + c.rgb;
+        }
+        color += vec3(0.55, 0.6, 0.75) * uWeather.y * 0.25 * smoothstep(-0.05, 0.3, up);
+        return color;
+    }
+#endif
     if (up > 0.0 && cover > 0.0) {
         vec2 uv = dir.xz / (up + 0.12) * 0.6 + vec2(uSkyHorizon.w * 0.004, uSkyHorizon.w * 0.002);
         // Cumulus: a broad shape with finer billows eroding its edge, so clouds have crisp bright rims.
@@ -222,6 +260,16 @@ float cloudShadow(vec3 worldPos) {
     vec3 l = -normalize(uSunDir.xyz);
     if (strength <= 0.0 || cover <= 0.0 || l.y < 0.02)
         return 1.0;
+    if (uClouds.x > 0.5) {
+        // Where the sun's ray crosses the lower part of the volumetric layer: its cover, broken up
+        // by finer noise like the clouds' billows.
+        vec3 c = worldPos + l * ((uClouds.y + uClouds.z * 0.3 - worldPos.y) / l.y);
+        float coverage = cloudCoverageAt(c.xz);
+        vec2 d = (c.xz - cloudWind()) / 1800.0;
+        float billow = valueNoise(d) * 0.65 + valueNoise(d * 2.3 + 4.1) * 0.35;
+        float clouds = smoothstep(0.35, 0.75, coverage * (0.55 + 0.6 * billow));
+        return 1.0 - strength * clouds * 0.85 * clamp(uClouds.w, 0.3, 1.2);
+    }
     vec3 q = worldPos + l * ((800.0 - worldPos.y) / l.y);
     vec2 uv = q.xz / 800.0 * 0.6 + vec2(uSkyHorizon.w * 0.004, uSkyHorizon.w * 0.002);
     vec2 p = uv * 2.0;

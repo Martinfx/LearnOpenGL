@@ -1,6 +1,7 @@
 #pragma once
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
+#include <cstdint>
 #include <vector>
 
 namespace engine {
@@ -35,5 +36,10 @@ SkyLut buildSkyLut(glm::vec3 toSun, const AtmosphereParams& p);
 glm::vec2 skyLutUv(glm::vec3 view, glm::vec3 toSun);
 glm::vec3 skyLutDirection(glm::vec2 uv, glm::vec3 toSun);
 glm::vec3 sampleSkyLut(const SkyLut& lut, glm::vec3 view, glm::vec3 toSun); // bilinear, for CPU uses
+
+// Tileable 3D noise for the volumetric clouds (Schneider, "The real-time volumetric cloudscapes of
+// Horizon Zero Dawn"): size^3 RGBA8 texels, x fastest. R: Perlin-Worley (billowy base shape),
+// G, B, A: Worley fBm at 4, 8 and 16 cells per tile (erosion of the shape's edge).
+std::vector<std::uint8_t> buildCloudNoise(int size);
 
 } // namespace engine
