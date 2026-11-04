@@ -1,5 +1,6 @@
 // Game runtime: GLFW window, fixed 60 Hz simulation, first-person player.
 // Usage: fps_game [level-file]
+#include <engine/TextureCook.h>
 #include <engine/ALife.h>
 #include <engine/Vfs.h>
 #include <engine/EntityIO.h>
@@ -1390,6 +1391,9 @@ int main(int argc, char** argv)
                 glfwSwapInterval(v.boolean() ? 1 : comfortMode() && tear ? -1 : 0);
             };
         cvars.add("fps_max", CVarType::Int, "0", "Frame rate limit, 0 = none", engine::CVarConfig, 0.0, 1000.0);
+        cvars.add("fs_cache_mb", CVarType::Int, "4096", "Size limit of the cooked texture and mesh cache in MB (0 = none); "
+                  "the longest unused files go at start", engine::CVarConfig, 0.0, 1048576.0)
+            .onChange = [](const engine::CVar& v) { engine::textureCookConfig().cacheLimitMb = static_cast<std::uint64_t>(v.integer()); };
         cvars.add("dev_hot_reload", CVarType::Bool, "1",
                   "Reload changed assets while playing (textures, materials, models, sounds, effects, .weapon, Lua)", engine::CVarConfig);
         cvars.add("r_quality", CVarType::Int, "2", "Graphics preset: 0 low, 1 medium, 2 high, 3 ultra", engine::CVarConfig, 0.0, 3.0)
@@ -1709,9 +1713,11 @@ int main(int argc, char** argv)
             cvars.find("language")->onChange(*cvars.find("language"));
         if (firstLevel && cvars.find("r_fullscreen")->integer() == 0) // the remembered window size
             glfwSetWindowSize(window, cvars.find("r_width")->integer(), cvars.find("r_height")->integer());
-        for (const char* name : {"vsync", "r_quality", "r_fullscreen", "snd_volume", "snd_sfx", "snd_ambient", "snd_music"})
+        for (const char* name : {"vsync", "r_quality", "r_fullscreen", "snd_volume", "snd_sfx", "snd_ambient", "snd_music", "fs_cache_mb"})
             if (const engine::CVar* v = cvars.find(name); v && v->onChange)
                 v->onChange(*v);
+        if (firstLevel)
+            engine::pruneCookCache(); // in the background
     }
     const engine::CVar& cvSensitivity = *cvars.find("m_sensitivity");
     const engine::CVar& cvInvert = *cvars.find("m_invert_y");

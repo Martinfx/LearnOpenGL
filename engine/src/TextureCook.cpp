@@ -9,6 +9,7 @@
 
 #include "engine/TextureCook.h"
 #include "engine/JobSystem.h"
+#include "engine/Log.h"
 
 #include <algorithm>
 #include <array>
@@ -17,6 +18,9 @@
 #include <cstdlib>
 #include <cstring>
 #include <system_error>
+#include <chrono>
+#include <thread>
+#include <vector>
 
 namespace engine {
 
@@ -259,6 +263,71 @@ void requestCookCacheClear()
     std::ofstream(root / "clear_requested") << "cooked textures, meshes and navmesh tiles are deleted at the next start\n";
 }
 
+void touchCookedFile(const std::filesystem::path& file)
+{
+    std::error_code ec;
+    std::filesystem::last_write_time(file, std::filesystem::file_time_type::clock::now(), ec);
+}
+
+void pruneCookCache()
+{
+    const TextureCookConfig& c = textureCookConfig();
+    if (!c.diskCache || c.cacheLimitMb == 0)
+        return;
+    const std::filesystem::path root = c.cacheDir.parent_path();
+    const std::uint64_t limit = c.cacheLimitMb * 1024ull * 1024ull;
+    std::thread([dirs = std::vector<std::filesystem::path>{c.cacheDir, root / "meshes"}, limit] { pruneCookedFiles(dirs, limit); }).detach();
+}
+
+int pruneCookedFiles(const std::vector<std::filesystem::path>& dirs, std::uint64_t limit)
+{
+    {
+        struct Entry {
+            std::filesystem::file_time_type time;
+            std::uint64_t size;
+            std::filesystem::path path;
+        };
+        std::vector<Entry> files;
+        std::uint64_t total = 0;
+        std::error_code ec;
+        for (const std::filesystem::path& dir : dirs)
+            for (std::filesystem::directory_iterator it(dir, ec), end; !ec && it != end; it.increment(ec)) {
+                std::error_code fe;
+                if (!it->is_regular_file(fe))
+                    continue;
+                const std::uint64_t size = it->file_size(fe);
+                const auto time = it->last_write_time(fe);
+                if (fe)
+                    continue;
+                files.push_back({time, size, it->path()});
+                total += size;
+            }
+        if (total <= limit)
+            return 0;
+        std::sort(files.begin(), files.end(), [](const Entry& a, const Entry& b) { return a.time < b.time; });
+        const std::uint64_t target = limit / 4 * 3;
+        std::uint64_t freed = 0;
+        int removed = 0;
+        for (const Entry& e : files) {
+            if (total - freed <= target)
+                break;
+            // Never one used this session (each use touches it) or within the last hour: the
+            // renderer may still stream its finer mips.
+            std::error_code re;
+            const auto now = std::filesystem::last_write_time(e.path, re);
+            if (re || now != e.time || std::filesystem::file_time_type::clock::now() - now < std::chrono::hours(1))
+                continue;
+            if (std::filesystem::remove(e.path, re)) { // a file being read stays (Windows) or reads on (POSIX)
+                freed += e.size;
+                ++removed;
+            }
+        }
+        LOG_INFO("cook", "Cooked cache over %llu MB: removed %d long unused files (%llu MB)",
+                 static_cast<unsigned long long>(limit >> 20), removed, static_cast<unsigned long long>(freed >> 20));
+        return removed;
+    }
+}
+
 std::size_t textureFormatBlockBytes(TextureFormat format)
 {
     switch (format) {
@@ -450,6 +519,7 @@ bool readCookedTextureInfo(const std::filesystem::path& file, CookedTexture& out
     std::fclose(f);
     if (!ok)
         return false;
+    touchCookedFile(file); // used: pruneCookCache keeps it
     out.mips.clear();
     for (const FileMip& m : mips)
         out.mips.push_back({static_cast<std::size_t>(m.offset), static_cast<std::size_t>(m.size), static_cast<int>(m.width),

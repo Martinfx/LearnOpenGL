@@ -170,9 +170,11 @@ bool readMeshCache(Model& model, const std::filesystem::path& source)
 {
     if (!textureCookConfig().diskCache)
         return false;
-    std::ifstream in(meshCachePath(source), std::ios::binary);
+    const std::filesystem::path file = meshCachePath(source);
+    std::ifstream in(file, std::ios::binary);
     if (!in)
         return false;
+    touchCookedFile(file); // used: pruneCookCache keeps it
     char magic[8] = {};
     if (!in.read(magic, sizeof(magic)) || std::memcmp(magic, kMagic, sizeof(magic)) != 0)
         return false;

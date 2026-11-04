@@ -54,8 +54,19 @@ struct TextureCookConfig {
     bool compress = true;
     bool diskCache = true;
     std::filesystem::path cacheDir;
+    // Size limit of the cooked files (textures and meshes); 0 = none. Every edit of a source
+    // cooks a new file and nothing removed the old ones: the cache grew to 12 GB.
+    std::uint64_t cacheLimitMb = 4096;
 };
 TextureCookConfig& textureCookConfig();
+// Marks a cooked file as just used (its time decides what pruneCookCache keeps).
+void touchCookedFile(const std::filesystem::path& file);
+// Deletes the longest unused cooked textures and meshes until they take 3/4 of
+// cacheLimitMb. Runs on a background thread (a scan of thousands of files); returns at once.
+void pruneCookCache();
+// The pruning itself (synchronous): oldest first down to 3/4 of `limitBytes`, never a file
+// touched within the last hour. Returns how many files it deleted.
+int pruneCookedFiles(const std::vector<std::filesystem::path>& dirs, std::uint64_t limitBytes);
 // Deletes the cooked textures and meshes (MeshCache.h) at the next start of the editor or
 // game: running processes still stream from the files, so they are not deleted now.
 void requestCookCacheClear();

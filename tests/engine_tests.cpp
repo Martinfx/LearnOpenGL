@@ -2237,6 +2237,27 @@ void testRotateGizmo()
             check(std::abs(glm::length(p - c) - r) < 1e-4f && std::abs((p - c)[axis]) < 1e-4f, "ring points lie on the circle");
 }
 
+void testCookCachePrune()
+{
+    namespace fs = std::filesystem;
+    // Four 1 MB cooked files, three unused for days and one used just now; limit 2 MB.
+    const fs::path dir = fs::temp_directory_path() / "fps_engine_test_prune";
+    fs::remove_all(dir);
+    fs::create_directories(dir);
+    const std::string mb(1024 * 1024, 'x');
+    const auto now = fs::file_time_type::clock::now();
+    for (int i = 0; i < 4; ++i) {
+        const fs::path f = dir / ("t" + std::to_string(i) + ".ctex");
+        std::ofstream(f, std::ios::binary) << mb;
+        if (i < 3)
+            fs::last_write_time(f, now - std::chrono::hours(48 + i));
+    }
+    const int removed = engine::pruneCookedFiles({dir}, 2ull * 1024 * 1024);
+    check(removed == 3 && fs::exists(dir / "t3.ctex"), "the cooked cache drops long unused files, never one used just now");
+    check(engine::pruneCookedFiles({dir}, 2ull * 1024 * 1024) == 0, "a cooked cache under its limit stays");
+    fs::remove_all(dir);
+}
+
 void testTextureCooking()
 {
     // 64x32 opaque gradient -> BC1, 7 mips (64x32 .. 1x1), 8 bytes per 4x4 block.
@@ -5117,6 +5138,7 @@ int main(int argc, char** argv)
         std::printf("Git LFS assets are not checked out: skipping %zu tests that load them\n", needAssets.size());
     const std::pair<const char*, void (*)()> tests[] = {
         {"testTextureCooking", testTextureCooking},
+        {"testCookCachePrune", testCookCachePrune},
         {"testSharedMeshes", testSharedMeshes},
         {"testTerrain", testTerrain},
         {"testFixedStep", testFixedStep},

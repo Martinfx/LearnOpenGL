@@ -368,6 +368,18 @@ void MainWindow::buildMenus()
             statusBar()->showMessage(tr("The cooked cache is cleared at the next start"), 8000);
         }
     });
+    assets->addAction(tr("Cooked cache &size limit..."), this, [this] {
+        bool ok = false;
+        const int mb = QInputDialog::getInt(this, tr("Cooked cache size limit"),
+                                            tr("Size limit of the cooked textures and meshes in MB (0 = none). The longest unused "
+                                               "files are deleted at the start of the editor and the game."),
+                                            static_cast<int>(engine::textureCookConfig().cacheLimitMb), 0, 1048576, 512, &ok);
+        if (!ok)
+            return;
+        QSettings().setValue("cache/limit_mb", mb);
+        engine::textureCookConfig().cacheLimitMb = static_cast<std::uint64_t>(mb);
+        engine::pruneCookCache();
+    });
     assets->addAction(tr("Edit &texture..."), this, [this] {
         const QString path = QFileDialog::getOpenFileName(this, tr("Edit texture"), assetPath("textures"),
                                                           tr("Images (*.png *.jpg *.jpeg)"));
@@ -440,6 +452,8 @@ void MainWindow::buildMenus()
     auto* qualityGroup = new QActionGroup(this);
     const char* qualityNames[4] = {"Low", "Medium", "High", "Ultra"};
     QSettings settings;
+    engine::textureCookConfig().cacheLimitMb = settings.value("cache/limit_mb", 4096).toULongLong();
+    engine::pruneCookCache(); // in the background
     const int qualityLevel = settings.value("render/quality", 2).toInt();
     engine::RenderQuality quality = engine::RenderQuality::preset(qualityLevel);
     quality.ssao = settings.value("render/ssao", quality.ssao).toBool();
