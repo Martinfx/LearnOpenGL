@@ -148,6 +148,10 @@ def build_models():
             glb.write_glb(os.path.join(out, name + ('_lod1' if lod else '') + '.glb'), m, tex_rel_dir='../textures', name=name)
             if lod == 0 and (getattr(m, 'ladders', None) or getattr(m, 'stash', None)):
                 spots[name] = {'spots': [], 'ladders': [list(l[:4]) + [list(l[4])] for l in m.ladders], 'stash': m.stash}
+    from zonegen import streetkit
+    for name, fn in streetkit.MODELS.items():
+        for lod in ((0, 1) if name in streetkit.LODS else (0,)):
+            glb.write_glb(os.path.join(out, name + ('_lod1' if lod else '') + '.glb'), fn(lod), tex_rel_dir='../textures', name=name)
     with open(SPOTS, 'w') as f:
         json.dump(spots, f, separators=(',', ':'))
     for s in fixtures.CABLE_SPANS:
@@ -532,6 +536,11 @@ def build():
         lx = (X - x) * math.cos(a) - (Z - z) * math.sin(a)
         lz = (X - x) * math.sin(a) + (Z - z) * math.cos(a)
         H = np.where((np.abs(lx) < L / 2 - 0.05) & (np.abs(lz) < W / 2 - 0.05), -D - 0.08, H)
+    for (x, z, yaw, name) in SUBWAYS:                     # the subway stairs: the ground drops at the grid vertices
+        a = math.radians(yaw)                             # inside the walls (zonegen/streetkit.py)
+        lx = (X - x) * math.cos(a) - (Z - z) * math.sin(a)
+        lz = (X - x) * math.sin(a) + (Z - z) * math.cos(a)
+        H = np.where((np.abs(lx) < 1.01) & (lz > -SUBWAY_L - 0.01) & (lz < -0.49), WALK - 3.9, H)
     S = splat(nz, reclaim_pts, furn['potholes'], footprints)
     inst, types = vegetation(nz, rng, S, H, reclaim_pts, furn, footprints, lots)
 
@@ -713,12 +722,124 @@ def site_lot(lv, rng, lot, spots, reclaim_pts):
     reclaim_pts.append((*f.point(lot['s'] + lot['w'] / 2, 6.0), 4.0))
 
 
+# the subway under Canal Street: two entrances on its pavements, on the 0.5 m terrain grid (x, z of the mouth, yaw
+# turning the stairs' local +z, the way up, toward the corner they face)
+SUBWAYS = [(-29.0, 62.5, 90.0, 'subway_entrance'), (32.0, 87.5, -90.0, 'subway_entrance_b')]
+SUBWAY_L = 7.0
+# bus shelters: x, z, yaw (open side toward the kerb)
+BUS_SHELTERS = [(-46.0, 86.6, 180.0), (52.0, 63.4, 0.0), (-40.0, -107.6, 0.0)]
+
+
+def subway_entrances(lv, rng, out, occupied):
+    """Stairs down to the station, shut since the city emptied: something left on the landing for whoever goes down."""
+    for k, (x, z, yaw, name) in enumerate(SUBWAYS):
+        lv.model('Subway entrance', ST + name + '.glb', x, WALK, z, yaw, group='Street furniture',
+                 lod=(ST + name + '_lod1.glb', 45), cull=260)
+        for t in np.arange(-0.5, -SUBWAY_L - 0.6, -1.0):
+            ox, oz = rot(yaw, 0.0, t)
+            occupied.append((x + ox, z + oz, 1.7))
+            out['clear'].append((x + ox, z + oz, 1.8))
+        y = WALK - 3.6
+        for j in range(rng.randint(2, 4)):                                  # rubbish bags thrown down the stairs
+            ox, oz = rot(yaw, rng.uniform(-0.45, 0.45), rng.uniform(-6.5, -5.6))
+            lv.model('Rubbish bag', P + 'trashbag/trashbag.gltf', x + ox, y - 0.03, z + oz, rng.uniform(0, 360),
+                     rng.uniform(0.85, 1.2), group='Street furniture', cull=50, coll=False)
+        ox, oz = rot(yaw, 0.35, -SUBWAY_L + 0.45)
+        if k == 0:
+            lv.ents.append(f'entity "Medkit in the subway" "pickup" {x + ox:.2f} {y + 0.05:.2f} {z + oz:.2f} 30 0.245 0.1 0.165 '
+                           '0.9 0.8 0.3 ""\n  parent "Story"\n  character "../models/props/pickups/medkit_pouch.glb" 1 0 ""\n'
+                           '  prop "amount" "1"\n  prop "item" "medkit"')
+        else:
+            lv.ents.append(f'entity "Rounds in the subway" "pickup" {x + ox:.2f} {y + 0.05:.2f} {z + oz:.2f} 75 0.285 0.105 0.197 '
+                           '0.9 0.8 0.3 ""\n  parent "Story"\n  character "../models/props/pickups/ammo_can_rifle.glb" 1 0 ""\n'
+                           '  prop "ammo_type" "5.45x39"\n  prop "amount" "45"\n  prop "item" "ammo"')
+    for (x, z, yaw) in BUS_SHELTERS:
+        lv.model('Bus shelter', ST + 'bus_shelter.glb', x, WALK, z, yaw, group='Street furniture',
+                 lod=(ST + 'bus_shelter_lod1.glb', 40), cull=200)
+        occupied.append((x, z, 2.4))
+
+
+def sidewalk_kit(lv, rng, out, occupied, free, on_road):
+    """The small things of a New York pavement: at the corners the blue mailbox, coin newspaper boxes, the red fire
+    alarm post, a payphone; along the kerbs parking meters and street trees in iron-guarded pits."""
+    def sidewalk(x, z):
+        return (not on_road(x, z, 0.3) and LY.inside_map(x, z)
+                and street_dist(np.array([x]), np.array([z]))[0] > 0.8)
+    corner_kit = (('mailbox', 0.16), ('mailbox_tipped', 0.05), ('news_boxes_3', 0.1), ('news_boxes_4', 0.06),
+                  ('fire_alarm_box', 0.13), ('phone_pedestal', 0.08))
+    names = {'mailbox': 'Mailbox', 'mailbox_tipped': 'Mailbox', 'news_boxes_3': 'Newspaper boxes',
+             'news_boxes_4': 'Newspaper boxes', 'fire_alarm_box': 'Fire alarm box', 'phone_pedestal': 'Payphone'}
+    for (cx, cz), (hx, hz) in crossings():
+        for sx in (-1, 1):
+            for sz in (-1, 1):
+                for along_ns in (True, False):
+                    r = rng.random()
+                    pick = None
+                    for name, p in corner_kit:
+                        if r < p:
+                            pick = name
+                            break
+                        r -= p
+                    if pick is None:
+                        continue
+                    d, o = rng.uniform(2.6, 6.0), rng.uniform(0.6, 0.8)
+                    if along_ns:
+                        x, z, yaw = cx + sx * (hx + o), cz + sz * (hz + d), 90.0 * sx
+                    else:
+                        x, z, yaw = cx + sx * (hx + d), cz + sz * (hz + o), 0.0 if sz > 0 else 180.0
+                    rad = 1.1 if pick.startswith('news') else 0.6
+                    if not sidewalk(x, z) or not free(x, z, rad):
+                        continue
+                    lv.model(names[pick], ST + pick + '.glb', x, WALK - 0.01, z, yaw + rng.uniform(-6, 6),
+                             group='Street furniture', cull=90, shadows=pick == 'phone_pedestal')
+                    occupied.append((x, z, rad))
+    # along the kerbs: meters in front of the shops, trees in pits
+    meters = (('parking_meter', 0.55), ('parking_meter_twin', 0.2), ('parking_meter_bent', 0.12), ('parking_meter_headless', 0.13))
+    pits = []
+    for (x0, z0, x1, z1) in carriageways():
+        ns = x1 - x0 < z1 - z0
+        a, b = (z0, z1) if ns else (x0, x1)
+        for side in (0, 1):
+            def kerb_pt(t, o):
+                if ns:
+                    return ((x0 - o, t, -90.0) if side == 0 else (x1 + o, t, 90.0))
+                return ((t, z0 - o, 180.0) if side == 0 else (t, z1 + o, 0.0))
+            if rng.random() < 0.35:                                          # a run of parking meters
+                t = rng.uniform(a + 10, max(a + 11, b - 50))
+                for _ in range(rng.randint(4, 8)):
+                    x, z, yaw = kerb_pt(t, 0.45)
+                    t += 6.4
+                    if near_crossing(x, z, ns) or not sidewalk(x, z) or not free(x, z, 0.35):
+                        continue
+                    r = rng.random()
+                    name = next((n for n, p in meters if (r := r - p) < 0), meters[0][0])
+                    lv.model('Parking meter', ST + name + '.glb', x, WALK - 0.01, z, yaw + rng.uniform(-8, 8),
+                             group='Street furniture', cull=70, shadows=False)
+                    occupied.append((x, z, 0.3))
+            t = a + rng.uniform(6, 14)
+            while t < b - 6:
+                x, z, yaw = kerb_pt(t, 1.05)
+                t += rng.uniform(9.0, 13.0)
+                if rng.random() > 0.32 or near_crossing(x, z, ns) or not sidewalk(x, z) or not free(x, z, 1.2):
+                    continue
+                r = rng.random()
+                kind = 'big' if r < 0.5 else 'young' if r < 0.78 else 'none'
+                model = 'tree_pit_bare' if (kind == 'none' and rng.random() < 0.5) else \
+                    ('tree_pit_broken' if rng.random() < 0.2 else 'tree_pit')
+                lv.model('Tree pit', ST + model + '.glb', x, WALK - 0.02, z, yaw + 90.0, group='Street furniture',
+                         cull=80, coll=False, shadows=False)
+                occupied.append((x, z, 1.0))
+                pits.append((x, z, kind))
+    out['tree_pits'] = pits
+
+
 def street_furniture(lv, rng, lots, reclaim_pts):
     """Kerbs, lamps, cables, parked wrecks, hydrants, rubbish, signals and signs: what a Lower Manhattan street has."""
     out = {'lamps': [], 'wrecks': [], 'potholes': [], 'clear': [(CAMP[0], CAMP[1], 4.0), (0.0, LY.CHURCH_Z + 6.0, 6.5)]}
     cw = carriageways()
     occupied = [(CAMP[0], CAMP[1], 4.0), (START[0], START[1], 4.0)]
     road_works(lv, rng, out, occupied)
+    subway_entrances(lv, rng, out, occupied)
 
     def free(x, z, r):
         return all(math.hypot(x - a, z - b) > r + c for a, b, c in occupied)
@@ -865,6 +986,7 @@ def street_furniture(lv, rng, lots, reclaim_pts):
             dc(lv, rng.choice(('traffic_cone', 'traffic_cone_fallen', 'traffic_drum', 'traffic_drum_fallen')),
                cx_ + rng.uniform(-hx_, hx_), cz_ + rng.uniform(-hz_, hz_), rng.uniform(0, 360), 'Street furniture', y=0.0)
         occupied.append((cx_, cz_, 3.0))
+    sidewalk_kit(lv, rng, out, occupied, free, on_road)
     # potholes, more where the street is narrow and old
     prng = np.random.default_rng(77)
     for (x0, z0, x1, z1) in cw:
@@ -1087,6 +1209,12 @@ def vegetation(nz, rng, S, H, reclaim_pts, furn, footprints, lots):
                 put(rng.choice(('weed_a', 'weed_b')), x, z, rng.uniform(0.8, 1.2))
             else:
                 put('nettle', x, z, rng.uniform(0.8, 1.2))
+    # the street trees in their pits along the kerbs (London planes in the city's lists; here what came up)
+    for (x, z, kind) in furn.get('tree_pits', []):
+        if kind == 'big':
+            put(rng.choice(('broadleaf_a', 'broadleaf_b', 'maple_a', 'ash_a')), x, z, rng.uniform(0.7, 0.9), sink=0.05)
+        elif kind == 'young':
+            put(rng.choice(TREES_YOUNG), x, z, rng.uniform(0.9, 1.2), sink=0.05)
     # shrubs and young trees where the ground is green; the yards get most of them
     tries = 0
     planted = 0
