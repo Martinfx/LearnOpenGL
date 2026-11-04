@@ -377,23 +377,23 @@ def _f(path, dens=0.1, lo=0.85, hi=1.15, cull=50, coll=0, shadows=0, far=0.6, lo
 
 
 FOLIAGE = {
-    'grass_patch': _f(V + 'grass_fresh_street.glb', 0.25, cull=70, far=0.5, lods=[(V + 'grass_fresh_street_lod1.glb', 5), (V + 'grass_fresh_street_far.glb', 10), (V + 'grass_fresh_street_far2.glb', 22)]),
+    'grass_patch': _f(V + 'grass_fresh_street.glb', 0.25, cull=55, far=0.5, lods=[(V + 'grass_fresh_street_lod1.glb', 4), (V + 'grass_fresh_street_far.glb', 8), (V + 'grass_fresh_street_far2.glb', 18)]),
     'grass_tall_a': _f(V + 'grass_tall_a.glb', lods=[(V + 'grass_tall_a_lod1.glb', 8)], cull=48),
     'grass_tall_b': _f(V + 'grass_tall_b.glb', lods=[(V + 'grass_tall_b_lod1.glb', 8)], cull=48),
-    'grass_clump': _f(V + 'grass_clump_a.glb', lods=[(V + 'grass_clump_a_lod1.glb', 5), (V + 'grass_clump_a_far.glb', 10), (V + 'grass_clump_a_far2.glb', 20)], cull=40),
-    'grass_short': _f(V + 'grass_short_a.glb', lods=[(V + 'grass_short_a_lod1.glb', 6), (V + 'grass_short_a_far.glb', 11)], cull=32),
-    'weed_a': _f(V + 'weed_a.glb', lods=[(V + 'weed_a_lod1.glb', 5), (V + 'weed_a_far.glb', 10)], cull=38),
-    'weed_b': _f(V + 'weed_b.glb', lods=[(V + 'weed_b_lod1.glb', 5), (V + 'weed_b_far.glb', 10)], cull=38),
-    'nettle': _f(V + 'nettle_tall_a.glb', lods=[(V + 'nettle_tall_a_lod1.glb', 7), (V + 'nettle_tall_a_far.glb', 14)], cull=38),
-    'dandelion_a': _f(V + 'dandelion_a.glb', lods=[(V + 'dandelion_a_lod1.glb', 6), (V + 'dandelion_a_far2.glb', 11)], cull=22),
-    'celandine_b': _f(V + 'celandine_b.glb', lods=[(V + 'celandine_b_lod1.glb', 6), (V + 'celandine_b_far.glb', 11), (V + 'celandine_b_far2.glb', 16)], cull=22),
-    'shrub_a': _f(V + 'bush_street_b.glb', 0.03, cull=160, shadows=1, far=0.8, lods=[(V + 'bush_street_b_lod1.glb', 12), (V + 'bush_street_b_lod2.glb', 30)]),
-    'shrub_b': _f(V + 'bush_street_a.glb', 0.03, cull=160, shadows=1, far=0.8, lods=[(V + 'bush_street_a_lod1.glb', 12), (V + 'bush_street_a_lod2.glb', 30)]),
-    'bush_dense': _f(V + 'bush_street_c.glb', 0.02, cull=160, shadows=1, far=0.8, lods=[(V + 'bush_street_c_lod1.glb', 12), (V + 'bush_street_c_lod2.glb', 30)]),
-    'sapling_a': _f(V + 'sapling_a.glb', 0.03, cull=220, shadows=1, far=1.0, lods=[(V + 'sapling_a_lod1.glb', 12), (V + 'sapling_a_lod2.glb', 30)]),
-    'sapling_b': _f(V + 'sapling_b.glb', 0.03, cull=220, shadows=1, far=1.0, lods=[(V + 'sapling_b_lod1.glb', 12), (V + 'sapling_b_lod2.glb', 30)]),
-    'sapling_c': _f(V + 'sapling_c.glb', 0.03, cull=200, shadows=1, far=1.0, lods=[(V + 'sapling_c_lod1.glb', 12), (V + 'sapling_c_lod2.glb', 30)]),
-    'birch_young': _f(V + 'birch_young.glb', 0.03, cull=220, shadows=1, far=1.0, lods=[(V + 'birch_young_lod1.glb', 12), (V + 'birch_young_lod2.glb', 30)]),
+    'grass_clump': _f(V + 'grass_clump_a.glb', lods=[(V + 'grass_clump_a_lod1.glb', 3.5), (V + 'grass_clump_a_far.glb', 8), (V + 'grass_clump_a_far2.glb', 15)], cull=34),
+    'grass_short': _f(V + 'grass_short_a.glb', lods=[(V + 'grass_short_a_lod1.glb', 4), (V + 'grass_short_a_far.glb', 9)], cull=28),
+    'weed_a': _f(V + 'weed_a.glb', lods=[(V + 'weed_a_lod1.glb', 3.5), (V + 'weed_a_far.glb', 8)], cull=32),
+    'weed_b': _f(V + 'weed_b.glb', lods=[(V + 'weed_b_lod1.glb', 3.5), (V + 'weed_b_far.glb', 8)], cull=32),
+    'nettle': _f(V + 'nettle_tall_a.glb', lods=[(V + 'nettle_tall_a_lod1.glb', 4.5), (V + 'nettle_tall_a_far.glb', 10)], cull=32),
+    'dandelion_a': _f(V + 'dandelion_a.glb', lods=[(V + 'dandelion_a_lod1.glb', 4), (V + 'dandelion_a_far2.glb', 9)], cull=20),
+    'celandine_b': _f(V + 'celandine_b.glb', lods=[(V + 'celandine_b_lod1.glb', 4), (V + 'celandine_b_far.glb', 9), (V + 'celandine_b_far2.glb', 14)], cull=20),
+    'shrub_a': _f(V + 'bush_street_b.glb', 0.03, cull=110, shadows=1, far=0.8, lods=[(V + 'bush_street_b_lod1.glb', 9), (V + 'bush_street_b_lod2.glb', 22)]),
+    'shrub_b': _f(V + 'bush_street_a.glb', 0.03, cull=110, shadows=1, far=0.8, lods=[(V + 'bush_street_a_lod1.glb', 9), (V + 'bush_street_a_lod2.glb', 22)]),
+    'bush_dense': _f(V + 'bush_street_c.glb', 0.02, cull=110, shadows=1, far=0.8, lods=[(V + 'bush_street_c_lod1.glb', 9), (V + 'bush_street_c_lod2.glb', 22)]),
+    'sapling_a': _f(V + 'sapling_a.glb', 0.03, cull=150, shadows=1, far=1.0, lods=[(V + 'sapling_a_lod1.glb', 12), (V + 'sapling_a_lod2.glb', 30)]),
+    'sapling_b': _f(V + 'sapling_b.glb', 0.03, cull=150, shadows=1, far=1.0, lods=[(V + 'sapling_b_lod1.glb', 12), (V + 'sapling_b_lod2.glb', 30)]),
+    'sapling_c': _f(V + 'sapling_c.glb', 0.03, cull=150, shadows=1, far=1.0, lods=[(V + 'sapling_c_lod1.glb', 12), (V + 'sapling_c_lod2.glb', 30)]),
+    'birch_young': _f(V + 'birch_young.glb', 0.03, cull=150, shadows=1, far=1.0, lods=[(V + 'birch_young_lod1.glb', 12), (V + 'birch_young_lod2.glb', 30)]),
     'broadleaf_young': _f(V + 'broadleaf_young.glb', 0.03, cull=300, coll=1, shadows=1, far=1.0, lods=[(V + 'broadleaf_young_lod1.glb', 12), (V + 'broadleaf_young_lod2.glb', 30)]),
     'broadleaf_a': _f(V + 'broadleaf_a.glb', 0.03, cull=400, coll=1, shadows=1, far=1.0, lods=[(V + 'broadleaf_a_lod1.glb', 18), (V + 'broadleaf_a_lod2.glb', 45)], imp=90),
     'broadleaf_b': _f(V + 'broadleaf_b.glb', 0.03, cull=400, coll=1, shadows=1, far=1.0, lods=[(V + 'broadleaf_b_lod1.glb', 18), (V + 'broadleaf_b_lod2.glb', 45)], imp=90),
@@ -447,7 +447,7 @@ def build():
         name = lot['model']
         label = 'Loft' if name.startswith('skeleton') else ('House' if f.kind == 'inner' else 'Closed house')
         lv.model(label, ST + name + '.glb', lot['cx'], WALK, lot['cz'], lot['yaw'], group='Houses',
-                 lod=(ST + name + '_lod1.glb', 75), cull=700)
+                 lod=(ST + name + '_lod1.glb', 55), cull=700)
         # ladders: let-down fire escape ladders and the goosenecks to the roofs (not on the closed rows: the edge)
         if f.kind == 'inner':
             for (lx, ly, lzz, h, out) in spots.get(name, {}).get('ladders', []):
