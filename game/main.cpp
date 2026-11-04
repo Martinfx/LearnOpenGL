@@ -2166,6 +2166,7 @@ int main(int argc, char** argv)
     // Frame pacing for FPS_ENGINE_STATS: the slowest frame and the time spent waiting in the swap
     // (long waits = the GPU or vsync holds the frame; short ones and slow frames = the CPU).
     double worstFrame = 0.0, swapWait = 0.0, frameTimeSum2 = 0.0;
+    double lastSwap = 0.0, typicalFrame = 0.0; // hitch detection (FPS_ENGINE_STATS)
     bool escHeld = false;
     bool padStartHeld = false, padWeaponHeld = false;
     bool quickSaveHeld = false, quickLoadHeld = false;
@@ -3420,7 +3421,8 @@ int main(int argc, char** argv)
             ENGINE_ZONE("Swap buffers");
             const double swapStart = glfwGetTime();
             glfwSwapBuffers(window);
-            swapWait += glfwGetTime() - swapStart;
+            lastSwap = glfwGetTime() - swapStart;
+            swapWait += lastSwap;
         }
         ENGINE_FRAME_MARK;
         if (const int maxFps = cvFpsMax.integer(); maxFps > 0) { // frame limiter (sleep, then spin the last bit)
@@ -3450,6 +3452,26 @@ int main(int argc, char** argv)
         fpsTimer += frameTime;
         worstFrame = std::max(worstFrame, frameTime);
         frameTimeSum2 += frameTime * frameTime;
+        // A hitch (a frame well over the usual, which players feel as a jolt): what it spent the time on.
+        if (std::getenv("FPS_ENGINE_STATS") && frame > 10) {
+            if (typicalFrame > 0.0 && frameTime > std::max(0.05, typicalFrame * 2.5)) {
+                const engine::Renderer::FrameStats& st = renderer.frameStats();
+                int slowest = 0;
+                for (int p = 1; p < engine::Renderer::PassCount; ++p)
+                    if (st.cpuMs[p] > st.cpuMs[slowest])
+                        slowest = p;
+                char line[512];
+                int n = std::snprintf(line, sizeof line, "%.1f ms (usual %.1f) | render CPU %.1f ms (%s %.1f), GPU %.1f ms, %d uploads | swap %.1f ms",
+                                      1000.0 * frameTime, 1000.0 * typicalFrame, st.cpuTotalMs, engine::Renderer::passName(slowest), st.cpuMs[slowest],
+                                      st.gpuTotalMs, st.uploads, 1000.0 * lastSwap);
+                for (std::size_t t = 0; t < frameGraph.size() && n > 0 && n < static_cast<int>(sizeof line); ++t)
+                    n += std::snprintf(line + n, sizeof line - static_cast<std::size_t>(n), "%s %s %.1f", t == 0 ? " | tasks:" : ",",
+                                       frameGraph.taskName(t), frameGraph.taskMs(t));
+                LOG_WARN("hitch", "%s", line);
+            } else {
+                typicalFrame = typicalFrame > 0.0 ? typicalFrame + (frameTime - typicalFrame) * 0.05 : frameTime;
+            }
+        }
         if (fpsTimer >= 0.5) {
             char title[256];
             char ammo[32];
