@@ -113,7 +113,9 @@ def build_models():
 
     def pts(m):
         return {'spots': [[round(float(v), 2) for v in p[:3]] + [p[3]] for p in m.spots],
-                'ladders': [[round(float(v), 3) for v in l] for l in getattr(m, 'ladders', [])]}
+                'ladders': [[round(float(v), 3) for v in l] for l in getattr(m, 'ladders', [])],
+                'shops': [[round(a, 2), round(b, 2)] for a, b in getattr(m, 'shops', [])], 'front': getattr(m, 'front', None),
+                'door': getattr(m, 'door_x', None)}
     for name, kw in LOTS.items():
         for lod in (0, 1):
             m = walkup.walkup(lod=lod, **kw)
@@ -759,6 +761,54 @@ def subway_entrances(lv, rng, out, occupied):
         occupied.append((x, z, 2.4))
 
 
+# Mulberry Street is Little Italy: the festival arches over the street (z, state), the cafes in front of the shops
+FEAST_ARCHES = [(52.0, 'up'), (38.0, 'up'), (24.0, 'leaning'), (10.0, 'up'), (-30.0, 'up'), (-43.0, 'fallen')]
+
+
+def little_italy(lv, rng, lots, out, occupied, free):
+    """The arches of lights the feast put up every September, left standing (one leaning on its wires, one down
+    across the road), and the restaurants' sidewalk cafes, tables and chairs where the last customers left them."""
+    for k, (z, state) in enumerate(FEAST_ARCHES):
+        for dz in (0.0, 1.5, -1.5, 3.0, -3.0):
+            if free(-5.0, z + dz, 0.5) and free(5.0, z + dz, 0.5):
+                z += dz
+                break
+        name = 'feast_arch' if k % 2 == 0 else 'feast_arch_b'
+        tilt = {'up': (0.0, 0.0), 'leaning': (9.0, 2.0), 'fallen': (84.0, 3.0)}[state]
+        lv.model('Feast arch', ST + name + '.glb', 0.0, WALK + (0.04 if state == 'fallen' else -0.02), z, 0.0,
+                 group='Street furniture', lod=(ST + name + '_lod1.glb', 45), cull=330, tilt=tilt,
+                 shadows=state != 'fallen')
+        occupied += [(-5.0, z, 0.5), (5.0, z, 0.5)]
+        if state == 'fallen':
+            out['clear'].append((0.0, z + 4.0, 3.0))
+    spots = json.load(open(SPOTS)) if os.path.exists(SPOTS) else {}
+    n = 0
+    for lot in lots:
+        f = lot['face']
+        if f.kind != 'inner' or f.n[1] != 0 or abs(abs(f.x0) - LY.MUL) > 0.01 or not lot['model']:
+            continue
+        info = spots.get(lot['model'], {})
+        if info.get('front') is None or rng.random() > 0.4:
+            continue
+        for (a, b) in info.get('shops', []):
+            L = b - a
+            if L < 3.2:
+                continue
+            name = 'cafe_terrace_3m' if L < 4.4 else rng.choice(('cafe_terrace_4m', 'cafe_terrace_4m_b'))
+            ox, oz = rot(lot['yaw'], (a + b) / 2, info['front'])
+            x, z = lot['cx'] + ox, lot['cz'] + oz
+            ix, iz = rot(lot['yaw'], 0.0, 1.0)                     # out of the house, into the street
+            if not free(x + ix, z + iz, 1.2):
+                continue
+            lv.model('Sidewalk cafe', ST + name + '.glb', x, WALK - 0.01, z, lot['yaw'], group='Street furniture', cull=110)
+            for t in (-1.5, 0.0, 1.5):
+                px, pz = rot(lot['yaw'], (a + b) / 2 + t, info['front'] + 1.0)
+                occupied.append((lot['cx'] + px, lot['cz'] + pz, 1.0))
+            n += 1
+            break
+    print('cafes', n)
+
+
 def sidewalk_kit(lv, rng, out, occupied, free, on_road):
     """The small things of a New York pavement: at the corners the blue mailbox, coin newspaper boxes, the red fire
     alarm post, a payphone; along the kerbs parking meters and street trees in iron-guarded pits."""
@@ -986,6 +1036,7 @@ def street_furniture(lv, rng, lots, reclaim_pts):
             dc(lv, rng.choice(('traffic_cone', 'traffic_cone_fallen', 'traffic_drum', 'traffic_drum_fallen')),
                cx_ + rng.uniform(-hx_, hx_), cz_ + rng.uniform(-hz_, hz_), rng.uniform(0, 360), 'Street furniture', y=0.0)
         occupied.append((cx_, cz_, 3.0))
+    little_italy(lv, rng, lots, out, occupied, free)
     sidewalk_kit(lv, rng, out, occupied, free, on_road)
     # potholes, more where the street is narrow and old
     prng = np.random.default_rng(77)

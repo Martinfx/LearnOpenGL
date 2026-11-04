@@ -548,6 +548,7 @@ def walkup(width=7.6, depth=18.0, floors=5, seed=0, lod=0, skin='st_brick_red', 
             m.box('debris' if brng.random() < 0.6 else ('burnt' if brng.random() < 0.5 else party), (-s, -s * 0.4, -s * 0.6), (s, s * 0.4, s * 0.6))
             m.pop()
         m.box('debris', (-hx + T, 0.0, -hz + T), (hx - T, 0.35, hz - T))     # the bed of the heap
+    m.shops, m.front, m.door_x = [(float(a_), float(b_)) for a_, b_ in shops], float(zf), float(door_x)   # for the level
     return m
 
 

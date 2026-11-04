@@ -35,6 +35,12 @@ PAL['news_yellow'] = M('paint_yellow', 1.0)
 PAL['news_blue'] = M('paint_blue', 1.0)
 PAL['news_green'] = M('paint_green', 1.0)
 PAL['news_white'] = M('paint_cream', 1.0, color=(1.1, 1.1, 1.1))
+PAL['arch_white'] = M('paint_cream', 1.0, color=(1.15, 1.12, 1.05))
+PAL['bulb'] = M(None, 1.0, color=(0.78, 0.74, 0.62), rough=0.15, metal=0.0, alpha=0.9)
+PAL['bulb_red'] = M(None, 1.0, color=(0.42, 0.16, 0.12), rough=0.15, metal=0.0, alpha=0.9)
+PAL['bulb_green'] = M(None, 1.0, color=(0.16, 0.32, 0.18), rough=0.15, metal=0.0, alpha=0.9)
+PAL['canvas'] = M('paint_cream', 1.3, color=(0.85, 0.8, 0.7))
+PAL['canvas_green'] = M('paint_green', 1.3, color=(0.7, 0.85, 0.7))
 
 
 def _mesh():
@@ -359,6 +365,133 @@ def bus_shelter(seed=1, lod=0):
     return m
 
 
+# ------------------------------------------------------------------------------------------------- Little Italy
+def _bulb(m, mat, p, r=0.034):
+    """A light bulb as a small octahedron (8 triangles), long dead."""
+    x, y, z = p
+    t, b = (x, y + r, z), (x, y - r * 1.3, z)
+    ring = [(x + r, y, z), (x, y, z + r), (x - r, y, z), (x, y, z - r)]
+    for i in range(4):
+        a, c = ring[i], ring[(i + 1) % 4]
+        m.poly(mat, [a, t, c][::-1])
+        m.poly(mat, [a, c, b][::-1])
+
+
+def _curve(m, mat, pts, w, bulbs=None, step=0.3, bulb_mats=('bulb',), rng=None, gone=0.15):
+    """A bent tube through pts (x, y) at z = 0, bulbs every `step` along it, some gone."""
+    acc = 0.0
+    for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+        m.oriented_box(mat, (x0, y0, 0.0), (x1, y1, 0.0), w, w)
+        if bulbs is None:
+            continue
+        L = math.hypot(x1 - x0, y1 - y0)
+        while acc < L:
+            t = acc / L
+            if rng.random() > gone:
+                bulbs.append((bulb_mats[rng.integers(0, len(bulb_mats))], (x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, 0.05)))
+            acc += step
+        acc -= L
+
+
+def feast_arch(lod=0, seed=1, span=10.0):
+    """The festival arches of Mulberry Street: a white tube frame from kerb to kerb, a pointed arch over the street
+    with scrolls and a crest, studded with bulbs. Nobody switched them on for twenty years. Poles at x = +-span/2."""
+    rng = np.random.default_rng(seed)
+    m = _mesh()
+    hx = span / 2
+    bulbs = [] if lod == 0 else None
+    bm = ('bulb', 'bulb', 'bulb', 'bulb_red', 'bulb_green')
+    n = 14 if lod == 0 else 7
+    for s in (-1, 1):
+        m.cylinder('arch_white', (s * hx, 0.0, 0.0), (s * hx, 5.4, 0.0), 0.06, 6)
+        m.cylinder('arch_white', (s * hx, 0.0, 0.0), (s * hx, 0.35, 0.0), 0.12, 6, r2=0.07)
+        _curve(m, 'arch_white', [(s * hx, 2.6), (s * hx, 5.3)], 0.04, bulbs, 0.3, bm, rng)
+    # the outer arch, pointed: two arcs meeting at the crest
+    outer = [(hx * math.cos(t), 5.3 + 2.3 * math.sin(t) ** 0.8) for t in np.linspace(0, math.pi, 2 * n + 1)]
+    inner = [(0.78 * hx * math.cos(t), 5.0 + 1.6 * math.sin(t) ** 0.8) for t in np.linspace(0, math.pi, 2 * n + 1)]
+    _curve(m, 'arch_white', outer, 0.05, bulbs, 0.28, bm, rng)
+    _curve(m, 'arch_white', inner, 0.04, bulbs, 0.28, bm, rng)
+    _curve(m, 'arch_white', [(-hx, 5.0), (hx, 5.0)], 0.04, bulbs, 0.32, bm, rng)
+    # struts between the arcs, scrolls in the spandrels, a ring with a star in the crest
+    for i in range(0, 2 * n + 1, 2 if lod == 0 else 4):
+        m.oriented_box('arch_white', (outer[i][0], outer[i][1], 0), (inner[i][0], inner[i][1], 0), 0.03, 0.03)
+    if lod == 0:
+        for sx in (-1, 1):
+            for cx, cy, r in ((sx * 0.5 * hx, 5.45, 0.32), (sx * 0.2 * hx, 5.35, 0.22)):
+                ring = [(cx + r * math.cos(t), cy + r * math.sin(t)) for t in np.linspace(0, 2 * math.pi, 11)]
+                _curve(m, 'arch_white', ring, 0.03, bulbs, 0.25, bm, rng)
+    cy = 7.6 + 0.62
+    ring = [(0.62 * math.cos(t), cy + 0.62 * math.sin(t)) for t in np.linspace(0, 2 * math.pi, 13 if lod == 0 else 7)]
+    _curve(m, 'arch_white', ring, 0.04, bulbs, 0.25, bm, rng)
+    for k in range(5 if lod == 0 else 0):
+        a = math.pi / 2 + 2 * math.pi * k / 5
+        _curve(m, 'arch_white', [(0, cy), (0.55 * math.cos(a), cy + 0.55 * math.sin(a))], 0.025, bulbs, 0.2, ('bulb_red',), rng)
+    for mat, p in (bulbs or []):
+        _bulb(m, mat, p)
+        _bulb(m, mat, (p[0], p[1], -0.1))
+    return m
+
+
+def _chair(m, rng, x, z, yaw, fallen=False):
+    m.push((x, 0.0, z), rot_y(yaw) @ (rot_x(-85) if fallen else np.eye(3)))
+    if fallen:
+        m.push((0, 0.2, 0))
+    else:
+        m.push((0, 0, 0))
+    for lx in (-0.18, 0.18):
+        for lz in (-0.18, 0.18):
+            m.box('steel_dark', (lx - 0.012, 0.0, lz - 0.012), (lx + 0.012, 0.45, lz + 0.012), faces='xXzZ')
+    m.box('wood_dark', (-0.21, 0.45, -0.21), (0.21, 0.48, 0.21))
+    m.box('steel_dark', (-0.19, 0.48, -0.21), (-0.17, 0.9, -0.19), faces='xXzZ')
+    m.box('steel_dark', (0.17, 0.48, -0.21), (0.19, 0.9, -0.19), faces='xXzZ')
+    m.box('wood_dark', (-0.19, 0.72, -0.22), (0.19, 0.88, -0.2))
+    m.pop()
+    m.pop()
+
+
+def cafe_terrace(length=4.4, seed=1):
+    """A restaurant's sidewalk cafe in front of its shop: planter boxes round it (the plants long dead), bistro
+    tables, chairs knocked over, a folded umbrella, its canvas rotted. Back against the house front at z = 0, it
+    takes 1.9 m of the pavement toward +Z; the way in is at the -X end."""
+    rng = np.random.default_rng(seed)
+    m = _mesh()
+    hx, D = length / 2, 1.9
+
+    def planter(x0, z0, x1, z1):
+        m.box('wood', (x0, 0.0, z0), (x1, 0.5, z1))
+        m.box('ground_dirt', (x0 + 0.04, 0.5, z0 + 0.04), (x1 - 0.04, 0.505, z1 - 0.04), faces='Y')
+        for _ in range(int(max(x1 - x0, z1 - z0) / 0.35)):
+            px, pz = rng.uniform(x0 + 0.08, x1 - 0.08), rng.uniform(z0 + 0.08, z1 - 0.08)
+            h = rng.uniform(0.4, 1.0)
+            m.cylinder('bark_dead', (px, 0.5, pz), (px + rng.uniform(-0.15, 0.15), 0.5 + h, pz + rng.uniform(-0.15, 0.15)), 0.012, 3)
+    planter(-hx + 0.9, D - 0.35, hx, D)
+    planter(hx - 0.35, 0.2, hx, D - 0.35)
+    m.box('steel_dark', (-hx, 0.0, D - 0.05), (-hx + 0.9, 0.04, D))           # where the gate was
+    n = max(1, int(length / 1.4))
+    for i in range(n):
+        x = -hx + 0.7 + (length - 1.2) * (i + 0.5) / n
+        z = rng.uniform(0.75, 1.1)
+        if rng.random() < 0.25:                                                 # a table on its side
+            m.push((x, 0.36, z), rot_y(rng.uniform(0, 360)) @ rot_z(88))
+            m.cylinder('steel_dark', (0, -0.05, 0), (0, 0.0, 0), 0.36, 10)
+            m.cylinder('steel_dark', (0, 0.0, 0), (0, 0.72, 0), 0.025, 6)
+            m.cylinder('steel_dark', (0, 0.68, 0), (0, 0.72, 0), 0.22, 8)
+            m.pop()
+        else:
+            m.cylinder('steel_dark', (x, 0.0, z), (x, 0.03, z), 0.22, 8)
+            m.cylinder('steel_dark', (x, 0.03, z), (x, 0.72, z), 0.025, 6)
+            m.cylinder('alu', (x, 0.72, z), (x, 0.75, z), 0.36, 10)
+        for a in (rng.uniform(-30, 30), 180 + rng.uniform(-30, 30)):
+            cx, cz = x + 0.55 * math.sin(math.radians(a + 90)), z + 0.55 * math.cos(math.radians(a + 90))
+            _chair(m, rng, cx, cz, a - 90, fallen=rng.random() < 0.35)
+    # the folded umbrella in its stand
+    ux, uz = hx - 0.7, 0.45
+    m.cylinder('steel_dark', (ux, 0.0, uz), (ux, 0.08, uz), 0.2, 8)
+    m.cylinder('alu', (ux, 0.0, uz), (ux, 2.5, uz), 0.02, 5)
+    m.cylinder('canvas_green' if seed % 2 else 'canvas', (ux, 1.35, uz), (ux, 2.4, uz), 0.12, 6, r2=0.03)
+    return m
+
+
 MODELS = {
     'subway_entrance': lambda lod=0: subway_entrance(lod, seed=1, broken_globe=1),
     'subway_entrance_b': lambda lod=0: subway_entrance(lod, seed=2, broken_globe=0),
@@ -376,5 +509,10 @@ MODELS = {
     'fire_alarm_box': lambda lod=0: fire_alarm_box(1),
     'phone_pedestal': lambda lod=0: phone_pedestal(1),
     'bus_shelter': lambda lod=0: bus_shelter(1, lod),
+    'feast_arch': lambda lod=0: feast_arch(lod, 1),
+    'feast_arch_b': lambda lod=0: feast_arch(lod, 2),
+    'cafe_terrace_3m': lambda lod=0: cafe_terrace(3.2, 1),
+    'cafe_terrace_4m': lambda lod=0: cafe_terrace(4.4, 2),
+    'cafe_terrace_4m_b': lambda lod=0: cafe_terrace(4.4, 3),
 }
-LODS = ('subway_entrance', 'subway_entrance_b', 'bus_shelter')
+LODS = ('subway_entrance', 'subway_entrance_b', 'bus_shelter', 'feast_arch', 'feast_arch_b')
